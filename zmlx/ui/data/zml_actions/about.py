@@ -1,4 +1,4 @@
-# ** is_sys = True
+
 # ** icon = 'info.png'
 
 from zml import *

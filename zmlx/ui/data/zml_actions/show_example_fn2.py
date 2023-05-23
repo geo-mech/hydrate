@@ -1,4 +1,5 @@
-from zml import gui
-from zmlx import find
 
-gui.execute(lambda: gui.show_fn2(find('example.fn2')), close_after_done=False)
+from zmlx.data.example_fn2 import fpath
+from zmlx.plt.show_fn2 import show_fn2
+
+show_fn2(ipath=fpath)

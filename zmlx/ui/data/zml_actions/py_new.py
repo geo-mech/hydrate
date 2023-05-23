@@ -1,7 +1,4 @@
-# -*- coding: utf-8 -*-
 
-
-# ** is_sys = True
 # ** text = '新建'
 # ** icon = 'python.png'
 

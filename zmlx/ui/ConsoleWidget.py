@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 
 
-import shutil
-
-from zml import gui, time_string
+from zml import gui, time_string, time2str
 from zmlx.ui.BreakPoint import BreakPoint
 from zmlx.ui.CodeEdit import CodeEdit
 from zmlx.ui.Config import *
@@ -11,6 +9,8 @@ from zmlx.ui.ConsoleOutput import ConsoleOutput
 from zmlx.ui.ConsoleThread import ConsoleThread
 from zmlx.ui.GuiItems import *
 from zmlx.ui.SharedValue import SharedValue
+import shutil
+import timeit
 
 
 class ConsoleWidget(QtWidgets.QWidget):
@@ -62,6 +62,8 @@ class ConsoleWidget(QtWidgets.QWidget):
             self.workspace = {'__name__': '__main__', 'gui': gui}
         self.text_when_beg = None
         self.text_when_end = None
+        self.time_beg = None
+        self.time_end = None
 
         self.restore_code()
 
@@ -150,7 +152,8 @@ class ConsoleWidget(QtWidgets.QWidget):
 
     def start_func(self, code):
         if self.thread is not None:
-            QtWidgets.QMessageBox.information(self, get_text('注意'), '内核正在运行，请等待当前任务执行结束')
+            play_error()
+            # QtWidgets.QMessageBox.information(self, get_text('注意'), '内核正在运行，请等待当前任务执行结束')
             return
         self.result = None
         if isinstance(code, str):
@@ -164,6 +167,7 @@ class ConsoleWidget(QtWidgets.QWidget):
         priority = load_console_priority()
         if self.text_when_beg is not None:
             print(f'{self.text_when_beg} ({get_priority_text(priority)})')
+        self.time_beg = timeit.default_timer()
         self.set_should_stop(False)
         self.set_should_pause(False)
         self.thread.start(priority)
@@ -177,8 +181,14 @@ class ConsoleWidget(QtWidgets.QWidget):
             self.thread = None
             self.set_should_stop(False)
             self.set_should_pause(False)
+
             if self.text_when_end is not None:
-                print(self.text_when_end)
+                print(f'{self.text_when_end}.')
+
+            self.time_end = timeit.default_timer()
+            if self.time_beg is not None and self.time_end is not None:
+                print(f'Time used = {time2str(self.time_end-self.time_beg)}')
+
             self.text_when_beg = None
             self.text_when_end = None
             if self.post_task is not None:
@@ -206,10 +216,6 @@ class ConsoleWidget(QtWidgets.QWidget):
                     thread.terminate()
 
     def set_cwd_by_dialog(self):
-        if self.thread is not None:
-            QtWidgets.QMessageBox.information(self, get_text('注意'),
-                                              f'内核正在运行，请等待当前任务执行结束\n 当前路径: \n {os.getcwd()}')
-            return
         folder = QtWidgets.QFileDialog.getExistingDirectory(self, get_text('请选择工程文件夹'), os.getcwd())
         self.set_cwd(folder)
 

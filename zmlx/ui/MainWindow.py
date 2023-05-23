@@ -99,6 +99,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.gui_api.add_func('window', lambda: self)
         self.gui_api.add_func('trigger', self.trigger)
         self.gui_api.add_func('progress', self.progress)
+        self.gui_api.add_func('show_files', self.show_files)
+        self.gui_api.add_func('set_cwd_by_dialog', self.console_widget.set_cwd_by_dialog)
 
     def __get_menu(self, name):
         assert name is not None, f'Error: name is None when get_menu'
@@ -336,6 +338,7 @@ We are very sorry for this exception. Please check your data according to the ab
     win.console_widget.sig_kernel_done.connect(lambda: results.append(win.console_widget.result))
     if code is not None:
         def codex():
+            win.console_widget.time_beg = None  # 对于外部的这种调用，不显示cpu耗时
             setup()
             return code()
 

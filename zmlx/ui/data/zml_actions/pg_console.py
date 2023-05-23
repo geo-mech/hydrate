@@ -1,5 +1,3 @@
-# ** is_sys = True
-
 
 from pyqtgraph.console import ConsoleWidget
 

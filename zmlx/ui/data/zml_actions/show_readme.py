@@ -1,6 +1,4 @@
-# ** is_sys = True
 # ** on_toolbar = True
-
 
 import zml
 from PyQt5 import QtWidgets

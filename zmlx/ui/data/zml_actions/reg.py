@@ -1,4 +1,4 @@
-# ** is_sys = True
+
 # ** text = '注册'
 
 from zml import *

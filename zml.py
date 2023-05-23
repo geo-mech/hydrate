@@ -32,9 +32,6 @@ try:
 except:
     plt = None
 
-# zml模块的版本<和README.md中的ZmlVersion保持一致>
-version = 230425
-
 # 指示当前是否为Windows系统(目前支持Windows和Linux两个系统)
 is_windows = os.name == 'nt'
 
@@ -362,53 +359,6 @@ def write_text(path, text, encoding=None):
             f.write(text)
 
 
-class DataVersion:
-    """
-    定义数据的版本. 数据的版本号为6位的int类型(yymmdd)，是数据的日期
-    """
-
-    def __init__(self, value=version):
-        """
-        初始化，设置默认的数据版本
-        """
-        assert isinstance(value, int)
-        assert 100000 <= value <= 999999
-        self.__versions = {}
-        self.__default = value
-
-    def set(self, value=None, key=None):
-        """
-        设置版本. 6位的int
-        """
-        assert isinstance(value, int)
-        assert 100000 <= value <= 999999
-        if key is None:
-            self.__default = value
-        else:
-            self.__versions[key] = value
-
-    def __getattr__(self, key):
-        """
-        返回数据的版本. 6位的int
-        """
-        return self.__versions.get(key, self.__default)
-
-    def __getitem__(self, key):
-        """
-        返回数据的版本. 6位的int
-        """
-        return self.__versions.get(key, self.__default)
-
-    def __setitem__(self, key, value):
-        """
-        设置数据的版本. 6位的int
-        """
-        self.set(key=key, value=value)
-
-
-data_version = DataVersion()
-
-
 class AppData(Object):
     """
     数据和文件管理
@@ -655,6 +605,7 @@ class DllCore:
         self.use(c_char_p, 'get_time_compile', c_void_p)
         self.dll_print_logs = get_func(self.dll, None, 'print_logs', c_char_p)
         self.use(c_char_p, 'get_timer_summary', c_void_p)
+        self.use(c_int, 'get_version')
         self.use(c_bool, 'is_parallel_enabled')
         self.use(None, 'set_parallel_enabled', c_bool)
         self.use(c_bool, 'assert_is_void')
@@ -781,6 +732,16 @@ class DllCore:
             return ''
 
     @property
+    def version(self):
+        """
+        返回内核的版本 (编译的日期)
+        """
+        if self.has_dll():
+            return core.get_version()
+        else:
+            return 100101
+
+    @property
     def compiler(self):
         """
         返回内核所采用的编译器及其版本
@@ -828,6 +789,56 @@ class DllCore:
 
 
 core = DllCore(dll=dll)
+
+# zml模块的版本(用六位数字表示的编译的日期)
+version = core.version
+
+
+class DataVersion:
+    """
+    定义数据的版本. 数据的版本号为6位的int类型(yymmdd)，是数据的日期
+    """
+
+    def __init__(self, value=version):
+        """
+        初始化，设置默认的数据版本
+        """
+        assert isinstance(value, int)
+        assert 100000 <= value <= 999999
+        self.__versions = {}
+        self.__default = value
+
+    def set(self, value=None, key=None):
+        """
+        设置版本. 6位的int
+        """
+        assert isinstance(value, int)
+        assert 100000 <= value <= 999999
+        if key is None:
+            self.__default = value
+        else:
+            self.__versions[key] = value
+
+    def __getattr__(self, key):
+        """
+        返回数据的版本. 6位的int
+        """
+        return self.__versions.get(key, self.__default)
+
+    def __getitem__(self, key):
+        """
+        返回数据的版本. 6位的int
+        """
+        return self.__versions.get(key, self.__default)
+
+    def __setitem__(self, key, value):
+        """
+        设置数据的版本. 6位的int
+        """
+        self.set(key=key, value=value)
+
+
+data_version = DataVersion()
 
 core.use(None, 'set_srand', c_uint)
 
@@ -995,11 +1006,12 @@ class License:
     def __init__(self, core):
         self.core = core
         self.license_info_has_checked = False
-        core.use(c_int, 'lic_webtime')
-        core.use(c_bool, 'lic_summary', c_void_p)
-        core.use(None, 'lic_get_serial', c_void_p, c_bool)
-        core.use(None, 'lic_create_permanent', c_void_p, c_void_p)
-        core.use(None, 'lic_load', c_void_p)
+        if self.core.has_dll():
+            self.core.use(c_int, 'lic_webtime')
+            self.core.use(c_bool, 'lic_summary', c_void_p)
+            self.core.use(None, 'lic_get_serial', c_void_p, c_bool)
+            self.core.use(None, 'lic_create_permanent', c_void_p, c_void_p)
+            self.core.use(None, 'lic_load', c_void_p)
 
     @property
     def webtime(self):
@@ -1007,9 +1019,9 @@ class License:
         Returns the timestamp on the web (not the real time).
         The program will use this time to determine whether the program has expired
         """
-        try:
+        if self.core.has_dll():
             return self.core.lic_webtime()
-        except:
+        else:
             return 100101
 
     @property
@@ -1017,17 +1029,19 @@ class License:
         """
         Returns the authorization information for this computer. Returns None if the computer is not properly authorized
         """
-        s = String()
-        if self.core.lic_summary(s.handle):
-            return s.to_str()
+        if self.core.has_dll():
+            s = String()
+            if self.core.lic_summary(s.handle):
+                return s.to_str()
 
     def get_serial(self, base64=True):
         """
         Returns the usb serial number of this computer (one of them), used for registration
         """
-        s = String()
-        self.core.lic_get_serial(s.handle, base64)
-        return s.to_str()
+        if self.core.has_dll():
+            s = String()
+            self.core.lic_get_serial(s.handle, base64)
+            return s.to_str()
 
     @property
     def usb_serial(self):
@@ -1040,11 +1054,12 @@ class License:
         """
         给定序列号(usb_serial)，返回一个针对这个serial的永久授权。仅供测试
         """
-        code = String()
-        temp = String()
-        temp.assign(serial)
-        self.core.lic_create_permanent(code.handle, temp.handle)
-        return code.to_str()
+        if self.core.has_dll():
+            code = String()
+            temp = String()
+            temp.assign(serial)
+            self.core.lic_create_permanent(code.handle, temp.handle)
+            return code.to_str()
 
     def create(self, serial):
         return self.create_permanent(serial)
@@ -1053,9 +1068,10 @@ class License:
         """
         将给定的licdata存储到默认位置
         """
-        temp = String()
-        temp.assign(code)
-        self.core.lic_load(temp.handle)
+        if self.core.has_dll():
+            temp = String()
+            temp.assign(code)
+            self.core.lic_load(temp.handle)
 
     def check(self):
         """
@@ -1068,7 +1084,10 @@ class License:
         """
         Returns whether the computer has the correct license for the software
         """
-        return self.core.lic_summary(0)
+        if self.core.has_dll():
+            return self.core.lic_summary(0)
+        else:
+            return False
 
     def check_once(self):
         """
@@ -3437,6 +3456,8 @@ class Mesh3(HasHandle):
         core.use(None, 'mesh3_set_node_attr', c_void_p, c_size_t, c_size_t, c_double)
 
         def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
+            if index is None:
+                return default_val
             value = core.mesh3_get_node_attr(self.model.handle, self.index, index)
             if min <= value <= max:
                 return value
@@ -3444,6 +3465,8 @@ class Mesh3(HasHandle):
                 return default_val
 
         def set_attr(self, index, value):
+            if index is None:
+                return self
             core.mesh3_set_node_attr(self.model.handle, self.index, index, value)
             return self
 
@@ -3523,6 +3546,8 @@ class Mesh3(HasHandle):
         core.use(None, 'mesh3_set_link_attr', c_void_p, c_size_t, c_size_t, c_double)
 
         def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
+            if index is None:
+                return default_val
             value = core.mesh3_get_link_attr(self.model.handle, self.index, index)
             if min <= value <= max:
                 return value
@@ -3530,6 +3555,8 @@ class Mesh3(HasHandle):
                 return default_val
 
         def set_attr(self, index, value):
+            if index is None:
+                return self
             core.mesh3_set_link_attr(self.model.handle, self.index, index, value)
             return self
 
@@ -3617,6 +3644,8 @@ class Mesh3(HasHandle):
         core.use(None, 'mesh3_set_face_attr', c_void_p, c_size_t, c_size_t, c_double)
 
         def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
+            if index is None:
+                return default_val
             value = core.mesh3_get_face_attr(self.model.handle, self.index, index)
             if min <= value <= max:
                 return value
@@ -3624,6 +3653,8 @@ class Mesh3(HasHandle):
                 return default_val
 
         def set_attr(self, index, value):
+            if index is None:
+                return self
             core.mesh3_set_face_attr(self.model.handle, self.index, index, value)
             return self
 
@@ -3711,6 +3742,8 @@ class Mesh3(HasHandle):
         core.use(None, 'mesh3_set_body_attr', c_void_p, c_size_t, c_size_t, c_double)
 
         def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
+            if index is None:
+                return default_val
             value = core.mesh3_get_body_attr(self.model.handle, self.index, index)
             if min <= value <= max:
                 return value
@@ -3718,6 +3751,8 @@ class Mesh3(HasHandle):
                 return default_val
 
         def set_attr(self, index, value):
+            if index is None:
+                return self
             core.mesh3_set_body_attr(self.model.handle, self.index, index, value)
             return self
 
@@ -4391,6 +4426,7 @@ class SpringSys(HasHandle):
     """
     质点弹簧系统：仅仅用于测试
     """
+
     class Node(Object):
         """
         具有质量、位置、速度属性的节点。是弹簧系统的基本概念，建模时需要将实体离散为一个个的node，将质量集中到这些node上。
@@ -4654,6 +4690,8 @@ class SpringSys(HasHandle):
             """
             该Spring的第index个自定义属性值。当不存在时，默认为一个无穷大的值(大于1.0e100)
             """
+            if index is None:
+                return default_val
             value = core.springsys_get_spring_attr(self.model.handle, self.index, index)
             if min <= value <= max:
                 return value
@@ -4666,6 +4704,8 @@ class SpringSys(HasHandle):
             """
             该Spring的第index个自定义属性值。当不存在时，默认为一个无穷大的值(大于1.0e100)
             """
+            if index is None:
+                return self
             core.springsys_set_spring_attr(self.model.handle, self.index, index, value)
             return self
 
@@ -5538,6 +5578,31 @@ class SeepageMesh(HasHandle, HasCells):
         def vol(self, value):
             core.pnw_geometry_set_node_volume(self.model.handle, self.index, value)
 
+        core.use(c_double, 'pnw_geometry_get_node_attr', c_void_p, c_size_t, c_size_t)
+
+        def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
+            """
+            第index个自定义属性
+            """
+            if index is None:
+                return default_val
+            value = core.pnw_geometry_get_node_attr(self.model.handle, self.index, index)
+            if min <= value <= max:
+                return value
+            else:
+                return default_val
+
+        core.use(None, 'pnw_geometry_set_node_attr', c_void_p, c_size_t, c_size_t, c_double)
+
+        def set_attr(self, index, value):
+            """
+            第index个自定义属性
+            """
+            if index is None:
+                return self
+            core.pnw_geometry_set_node_attr(self.model.handle, self.index, index, value)
+            return self
+
     class Face(Object):
         """
         定义cell之间的流动通道
@@ -5634,6 +5699,31 @@ class SeepageMesh(HasHandle, HasCells):
 
         def cells(self):
             return self.get_cell(0), self.get_cell(1)
+
+        core.use(c_double, 'pnw_geometry_get_bond_attr', c_void_p, c_size_t, c_size_t)
+
+        def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
+            """
+            第index个自定义属性
+            """
+            if index is None:
+                return default_val
+            value = core.pnw_geometry_get_bond_attr(self.model.handle, self.index, index)
+            if min <= value <= max:
+                return value
+            else:
+                return default_val
+
+        core.use(None, 'pnw_geometry_set_bond_attr', c_void_p, c_size_t, c_size_t, c_double)
+
+        def set_attr(self, index, value):
+            """
+            第index个自定义属性
+            """
+            if index is None:
+                return self
+            core.pnw_geometry_set_bond_attr(self.model.handle, self.index, index, value)
+            return self
 
     core.use(c_void_p, 'new_pnw_geometry')
     core.use(None, 'del_pnw_geometry', c_void_p)
@@ -5848,10 +5938,13 @@ class SeepageMesh(HasHandle, HasCells):
         return mesh
 
     @staticmethod
-    def create_cube(x=(-0.5, 0.5), y=(-0.5, 0.5), z=(-0.5, 0.5)):
+    def create_cube(x=(-0.5, 0.5), y=(-0.5, 0.5), z=(-0.5, 0.5), boxes=None):
         """
         创建一个立方体网格的Mesh. 参数x、y、z分别为三个方向上网格节点的位置，应保证是从小到大
         排列好的。
+        其中:
+            当boxes是一个list的时候，将会把各个Cell对应的box，格式为(x0, y0, z0, x1, y1, z1)附加到这个list里面，
+            用以定义各个Cell的具体形状.
         """
         assert x is not None and y is not None and z is not None
         assert len(x) + len(y) + len(z) >= 6
@@ -5885,6 +5978,9 @@ class SeepageMesh(HasHandle, HasCells):
                     assert cell is not None
                     cell.pos = (cx, cy, cz)
                     cell.vol = dx * dy * dz
+                    # 设置属性，用以定义Cell的位置的范围.
+                    if boxes is not None:
+                        boxes.append([cx - dx / 2, cy - dy / 2, cz - dz / 2, cx + dx / 2, cy + dy / 2, cz + dz / 2])
 
         def get_id(ix, iy, iz):
             """
@@ -7289,6 +7385,8 @@ class Seepage(HasHandle, HasCells):
             第index个流体自定义属性。当两个流体数据相加时，自定义属性将根据质量进行加权平均。
             当index个属性不存在时，默认为无穷大的一个值(1.0e100以上的浮点数)
             """
+            if index is None:
+                return default_val
             value = core.fluid_get_attr(self.handle, index)
             if min <= value <= max:
                 return value
@@ -7300,6 +7398,8 @@ class Seepage(HasHandle, HasCells):
             第index个流体自定义属性。当两个流体数据相加时，自定义属性将根据质量进行加权平均。
             当index个属性不存在时，默认为无穷大的一个值(1.0e100以上的浮点数)
             """
+            if index is None:
+                return self
             core.fluid_set_attr(self.handle, index, value)
             return self
 
@@ -7564,7 +7664,10 @@ class Seepage(HasHandle, HasCells):
             """
             k = max(1.0e-30, abs(dv)) / max(1.0e-30, abs(dp))
             self.k = k
-            self.v0 = v - p * k
+            v0 = v - p * k
+            self.v0 = v0
+            if v0 <= 0:
+                print(f'Warning: v0 (= {v0}) <= 0 at {self.pos}')
             return self
 
         def v2p(self, v):
@@ -7583,10 +7686,15 @@ class Seepage(HasHandle, HasCells):
 
         def fill(self, p, s):
             """
-            Fill fluid to a given pressure and saturation (uses the density of each fluid at the moment, as well as v0 and k).
+            根据此时流体的密度，孔隙的v0和k，给定的目标压力和流体饱和度，设置各个组分的质量。
                 这里p为目标压力，s为目标饱和度;
                 当各个相的饱和度的和不等于1的时候，将首先对饱和度的值进行等比例调整;
-                s作为一个数组，它的长度应该等于流体的数量或者组分的数量
+            注意：
+                s作为一个数组，它的长度应该等于流体的数量或者组分的数量(均可以);
+                当s的长度等于流体的数量的时候，需要事先设置流体中各个组分的比例;
+            注意
+                当s的总和等于0的时候，虽然给定目标压力，但是仍然不会填充流体. 此时填充后
+                所有的组分都等于0.
             """
             if not isinstance(s, Vector):
                 s = Vector(s)
@@ -7694,6 +7802,8 @@ class Seepage(HasHandle, HasCells):
             """
             该Cell的第 attr_id个自定义属性值。当不存在时，默认为一个无穷大的值(大于1.0e100)
             """
+            if index is None:
+                return default_val
             if index < 0:
                 if index == -1:
                     return self.x
@@ -7716,6 +7826,8 @@ class Seepage(HasHandle, HasCells):
             """
             该Cell的第 attr_id个自定义属性值。当不存在时，默认为一个无穷大的值(大于1.0e100)
             """
+            if index is None:
+                return self
             if index < 0:
                 if index == -1:
                     self.x = value
@@ -7747,7 +7859,9 @@ class Seepage(HasHandle, HasCells):
 
         def set_fluid_components(self, model):
             """
-            利用模型中定义的流体来设置Cell中的流体的属性
+            利用model中定义的流体来设置Cell中的流体的组分的数量.
+            注意:
+                此函数会递归地调用model中的组分定义，从而保证Cell中流体组分结构和model中完全一样.
             """
             assert isinstance(model, Seepage)
             core.seepage_cell_set_fluid_components(self.handle, model.handle)
@@ -7758,7 +7872,12 @@ class Seepage(HasHandle, HasCells):
 
         def set_fluid_property(self, p, fa_t, fa_c, model):
             """
-            利用Cell中定义的流体的属性来更新流体的比热、密度和粘性系数
+            利用model中定义的流体的属性来更新流体的比热、密度和粘性系数.
+            注意：
+                函数会使用在各个流体中由fa_t指定的温度，并根据给定的压力p来查找流体属性;
+                因此，在调用这个函数之前，务必要设置各个流体的温度 (fa_t).
+            注意：
+                在调用之前，务必保证此Cell内的流体的结构和model内fludef的结构一致。 即，应该首先调用set_fluid_components函数
             """
             assert isinstance(model, Seepage)
             core.seepage_cell_set_fluid_property(self.handle, p, fa_t, fa_c, model.handle)
@@ -7840,6 +7959,75 @@ class Seepage(HasHandle, HasCells):
             """
             return Iterators.Face(self)
 
+        def set_ini(self, ca_mc, ca_t, fa_t, fa_c, pos=None, vol=1.0, porosity=0.1, pore_modulus=1000e6, denc=1.0e6,
+                    temperature=280.0, p=1.0, s=None, pore_modulus_range=None):
+            """
+            配置初始状态. 必须保证给定温度和压力.
+            """
+            model = self.model
+            assert isinstance(model, Seepage)
+            assert model.fludef_number > 0
+
+            if pos is not None:
+                self.pos = pos
+
+            assert temperature is not None
+            assert p is not None
+
+            self.set_attr(ca_t, temperature)
+            self.set_attr(ca_mc, vol * denc)
+
+            if pore_modulus_range is None:
+                assert 1e6 < pore_modulus < 10000e6
+            else:
+                assert pore_modulus_range[0] < pore_modulus < pore_modulus_range[1]
+
+            assert 1.0e-6 < porosity
+            # 确保在给定的这个p下，孔隙度等于设置的值.
+            self.set_pore(p, vol * porosity, pore_modulus, vol * porosity)
+
+            # 设置流体的结构
+            self.set_fluid_components(model)
+
+            # 设置组分的温度.
+            for i in range(self.fluid_number):
+                self.get_fluid(i).set_attr(fa_t, temperature)
+
+            # 更新流体的比热、密度和粘性系数
+            self.set_fluid_property(p=p, fa_t=fa_t, fa_c=fa_c, model=model)
+
+            if s is not None:
+                def get_s(indexes):
+                    assert len(indexes) > 0
+                    temp = s
+                    for ind in indexes:
+                        if is_array(temp):
+                            temp = temp[ind] if ind < len(temp) else 0.0
+                        else:
+                            temp = temp if ind == 0 else 0.0
+                    return temp
+
+                s2 = []
+                vi = []
+
+                def set_flu(flu):
+                    assert isinstance(flu, Seepage.FluData)
+                    if flu.component_number == 0:
+                        s2.append(get_s(vi))
+                    else:
+                        for ind in range(flu.component_number):
+                            vi.append(ind)
+                            set_flu(flu.get_component(ind))
+                            vi.pop(-1)
+
+                for fid in range(self.fluid_number):
+                    vi.append(fid)
+                    set_flu(self.get_fluid(fid))
+                    vi.pop(-1)
+
+                # 调用上一级的fill函数来填充流体
+                self.fill(p, s2)
+
     class FaceData(HasHandle):
         core.use(c_void_p, 'new_seepage_face')
         core.use(None, 'del_seepage_face', c_void_p)
@@ -7904,6 +8092,8 @@ class Seepage(HasHandle, HasCells):
             """
             该Face的第 attr_id个自定义属性值。当不存在时，默认为一个无穷大的值(大于1.0e100)
             """
+            if index is None:
+                return default_val
             value = core.seepage_face_get_attr(self.handle, index)
             if min <= value <= max:
                 return value
@@ -7914,6 +8104,8 @@ class Seepage(HasHandle, HasCells):
             """
             该Face的第 attr_id个自定义属性值。当不存在时，默认为一个无穷大的值(大于1.0e100)
             """
+            if index is None:
+                return self
             core.seepage_face_set_attr(self.handle, index, value)
             return self
 
@@ -8623,6 +8815,56 @@ class Seepage(HasHandle, HasCells):
         for dim in range(3):
             core.seepage_set_gravity(self.handle, dim, value[dim])
 
+    core.use(c_size_t, 'seepage_get_gr_n', c_void_p)
+
+    @property
+    def gr_number(self):
+        return core.seepage_get_gr_n(self.handle)
+
+    core.use(c_void_p, 'seepage_get_gr', c_void_p, c_size_t)
+
+    def get_gr(self, idx):
+        if idx < self.gr_number:
+            return Interp1(handle=core.seepage_get_gr(self.handle, idx))
+
+    core.use(c_size_t, 'seepage_add_gr', c_void_p, c_void_p)
+
+    def add_gr(self, gr, need_id=False):
+        assert isinstance(gr, Interp1)
+        idx = core.seepage_add_gr(self.handle, gr.handle)
+        if need_id:
+            return idx
+        else:
+            return self.get_gr(idx)
+
+    core.use(None, 'seepage_clear_grs', c_void_p)
+
+    def clear_grs(self):
+        core.seepage_clear_grs(self.handle)
+
+    core.use(c_size_t, 'seepage_get_kr_n', c_void_p)
+
+    @property
+    def kr_number(self):
+        """
+        相渗曲线的数量.
+        注意:
+            对于 0 <= id < fluid_n 的曲线，是各个流体的默认相渗.
+            所以，如果需要对某些相渗进行特殊设置，务必去使用id大于流体数量的曲线.
+        """
+        return core.seepage_get_kr_n(self.handle)
+
+    def add_kr(self, saturation=None, kr=None, need_id=False):
+        """
+        添加一个相渗曲线，并且返回ID
+        """
+        index = self.kr_number
+        self.set_kr(index=index, saturation=saturation, kr=kr)
+        if need_id:
+            return index
+        else:
+            return self.get_kr(index)
+
     core.use(None, 'seepage_set_kr', c_void_p, c_size_t, c_void_p)
 
     def set_kr(self, index=None, saturation=None, kr=None):
@@ -8638,18 +8880,17 @@ class Seepage(HasHandle, HasCells):
         assert kr is not None
         if isinstance(kr, Interp1):
             assert saturation is None
-            data = kr
+            tmp = kr
         else:
             if not isinstance(saturation, Vector):
                 saturation = Vector(saturation)
             if not isinstance(kr, Vector):
                 kr = Vector(kr)
             assert len(saturation) > 0 and len(kr) > 0
-            data = Interp1()
-            data.set(x=saturation, y=kr)
+            tmp = Interp1(x=saturation, y=kr)
         if index is None:
             index = 9999999999  # Now, modify the default kr
-        core.seepage_set_kr(self.handle, index, data.handle)
+        core.seepage_set_kr(self.handle, index, tmp.handle)
 
     core.use(c_double, 'seepage_get_kr', c_void_p, c_size_t)
 
@@ -8671,6 +8912,8 @@ class Seepage(HasHandle, HasCells):
         """
         模型的第index个自定义属性
         """
+        if index is None:
+            return default_val
         value = core.seepage_get_attr(self.handle, index)
         if min <= value <= max:
             return value
@@ -8681,6 +8924,8 @@ class Seepage(HasHandle, HasCells):
         """
         模型的第index个自定义属性
         """
+        if index is None:
+            return self
         core.seepage_set_attr(self.handle, index, value)
         return self
 
@@ -8924,20 +9169,25 @@ class Seepage(HasHandle, HasCells):
         """
         return self.get_fluid_vol()
 
-    core.use(None, 'seepage_update_cond', c_void_p, c_void_p, c_void_p, c_void_p, c_double)
-    core.use(None, 'seepage_update_cond_by_attr', c_void_p, c_size_t, c_size_t, c_void_p, c_double)
+    core.use(None, 'seepage_update_cond_a', c_void_p, c_void_p, c_void_p, c_void_p, c_double)
+    core.use(None, 'seepage_update_cond_b', c_void_p, c_size_t, c_size_t, c_void_p, c_double)
+    core.use(None, 'seepage_update_cond_c', c_void_p, c_size_t, c_size_t, c_size_t, c_double)
 
     def update_cond(self, v0, g0, krf, relax_factor=1.0):
         """
         给定初始时刻各Cell流体体积vv0，各Face的导流vg0，v/v0到g/g0的映射krf，来更新此刻Face的g.
             参数v0和g0可以是Vector，也可以是属性ID
         """
-        assert isinstance(krf, Interp1)
         if isinstance(v0, Vector) and isinstance(g0, Vector):
-            core.seepage_update_cond(self.handle, v0.handle, g0.handle, krf.handle, relax_factor)
+            assert isinstance(krf, Interp1)
+            core.seepage_update_cond_a(self.handle, v0.handle, g0.handle, krf.handle, relax_factor)
         else:
             # Now, v0 is ca_v0 and g0 is fa_g0
-            core.seepage_update_cond_by_attr(self.handle, v0, g0, krf.handle, relax_factor)
+            if isinstance(krf, Interp1):
+                core.seepage_update_cond_b(self.handle, v0, g0, krf.handle, relax_factor)
+            else:
+                # 利用model中定义的kr，并且每一个Face可以有不同的kr
+                core.seepage_update_cond_c(self.handle, v0, g0, krf, relax_factor)
 
     core.use(None, 'seepage_find_inner_face_ids', c_void_p, c_void_p, c_void_p)
 
@@ -9033,27 +9283,45 @@ class Seepage(HasHandle, HasCells):
 
     @property
     def fludef_number(self):
+        """
+        模型内存储的流体定义的数量
+        """
         return core.seepage_get_fludef_n(self.handle)
 
     core.use(c_void_p, 'seepage_get_fludef', c_void_p, c_size_t)
     core.use(c_void_p, 'seepage_find_fludef', c_void_p, c_char_p)
 
     def get_fludef(self, key):
+        """
+        返回给定序号或者名字的流体定义. key可以是str类型或者是int类型.
+        """
         if isinstance(key, str):
             handle = core.seepage_find_fludef(self.handle, make_c_char_p(key))
             if handle:
                 return Seepage.FluDef(handle=handle)
-        if key < self.fludef_number:
-            handle = core.seepage_get_fludef(self.handle, key)
-            if handle:
-                return Seepage.FluDef(handle=handle)
+        else:
+            if key < self.fludef_number:
+                handle = core.seepage_get_fludef(self.handle, key)
+                if handle:
+                    return Seepage.FluDef(handle=handle)
 
     core.use(c_size_t, 'seepage_add_fludef', c_void_p, c_void_p)
 
-    def add_fludef(self, fdef):
+    def add_fludef(self, fdef, need_id=False):
+        """
+        添加一个流体定义
+        """
         assert isinstance(fdef, Seepage.FluDef)
         idx = core.seepage_add_fludef(self.handle, fdef.handle)
-        return self.get_fludef(idx)
+        if need_id:
+            return idx
+        else:
+            return self.get_fludef(idx)
+
+    core.use(None, 'seepage_clear_fludefs', c_void_p)
+
+    def clear_fludefs(self):
+        core.seepage_clear_fludefs(self.handle)
 
     core.use(c_size_t, 'seepage_get_pc_n', c_void_p)
 
@@ -9075,13 +9343,21 @@ class Seepage(HasHandle, HasCells):
 
     core.use(c_size_t, 'seepage_add_pc', c_void_p, c_void_p)
 
-    def add_pc(self, data):
+    def add_pc(self, data, need_id=False):
         """
         添加一个毛管压力曲线
         """
         assert isinstance(data, Interp1)
         idx = core.seepage_add_pc(self.handle, data.handle)
-        return self.get_pc(idx)
+        if need_id:
+            return idx
+        else:
+            return self.get_pc(idx)
+
+    core.use(None, 'seepage_clear_pcs', c_void_p)
+
+    def clear_pcs(self):
+        core.seepage_clear_pcs(self.handle)
 
     core.use(c_size_t, 'seepage_get_reaction_n', c_void_p)
 
@@ -9097,10 +9373,18 @@ class Seepage(HasHandle, HasCells):
 
     core.use(c_size_t, 'seepage_add_reaction', c_void_p, c_void_p)
 
-    def add_reaction(self, data):
+    def add_reaction(self, data, need_id=False):
         assert isinstance(data, Seepage.Reaction)
         idx = core.seepage_add_reaction(self.handle, data.handle)
-        return self.get_reaction(idx)
+        if need_id:
+            return idx
+        else:
+            return self.get_reaction(idx)
+
+    core.use(None, 'seepage_clear_reactions', c_void_p)
+
+    def clear_reactions(self):
+        core.seepage_clear_reactions(self.handle)
 
     core.use(None, 'seepage_pop_fluids', c_void_p, c_void_p)
     core.use(None, 'seepage_push_fluids', c_void_p, c_void_p)
@@ -9136,6 +9420,7 @@ class Seepage(HasHandle, HasCells):
 
             index=-10, 所有流体的总的质量 (只读)
             index=-11, 所有流体的总的体积 (只读)
+            index=-12, 根据流体的体积和pore，来计算的Cell的压力 (只读)
         """
         core.seepage_cells_write(self.handle, ctypes.cast(pointer, c_void_p), index)
 
@@ -9269,6 +9554,24 @@ class Seepage(HasHandle, HasCells):
     def del_tag(self, key):
         core.seepage_del_tag(self.handle, make_c_char_p(key))
 
+    core.use(None, 'seepage_clear_tags', c_void_p)
+
+    def clear_tags(self):
+        core.seepage_clear_tags(self.handle)
+
+    core.use(c_int64, 'seepage_reg_key', c_void_p, c_char_p, c_char_p)
+
+    def reg_key(self, ty, key):
+        """
+        注册一个键。其中ty为该键的前缀. 在注册的时候，将自动根据注册的顺序从0开始编号.
+        说明:
+            在之前的版本中，不依赖model中定义的key，反之，对于每一个属性，都有一个确定的键值.
+            这样的问题是，每个具体的问题所用的key不同，这样全部采用静态的定义，就会浪费空间.
+            因此，考虑将各个属性键的含义存储到model中，从而在计算的时候去动态读取. 这样，在
+            定义方法的时候，只需要去记录键的名字，而不需要记录具体的键值.
+        """
+        return core.seepage_reg_key(self.handle, make_c_char_p(ty), make_c_char_p(key))
+
     core.use(c_int64, 'seepage_get_key', c_void_p, c_char_p)
 
     def get_key(self, key):
@@ -9292,6 +9595,60 @@ class Seepage(HasHandle, HasCells):
         删除键值
         """
         core.seepage_del_key(self.handle, make_c_char_p(key))
+
+    core.use(None, 'seepage_clear_keys', c_void_p)
+
+    def clear_keys(self):
+        core.seepage_clear_keys(self.handle)
+
+    def reg_model_key(self, key):
+        """
+        注册并返回用于model的键值
+        """
+        return self.reg_key('mo_', key)
+
+    def reg_cell_key(self, key):
+        """
+        注册并返回用于cell的键值
+        """
+        return self.reg_key('ce_', key)
+
+    def reg_face_key(self, key):
+        """
+        注册并返回用于face的键值
+        """
+        return self.reg_key('fa_', key)
+
+    def reg_flu_key(self, key):
+        """
+        注册并返回用于flu的键值
+        """
+        return self.reg_key('fl_', key)
+
+    core.use(None, 'seepage_clamp_cell_attrs', c_void_p, c_size_t, c_double, c_double)
+
+    def clamp_cell_attrs(self, idx, lr, rr):
+        """
+        约束Cell的属性的取值
+        """
+        core.seepage_clamp_cell_attrs(self.handle, idx, lr, rr)
+
+    core.use(None, 'seepage_clamp_face_attrs', c_void_p, c_size_t, c_double, c_double)
+
+    def clamp_face_attrs(self, idx, lr, rr):
+        """
+        约束Face的属性的取值
+        """
+        core.seepage_clamp_face_attrs(self.handle, idx, lr, rr)
+
+    core.use(None, 'seepage_clamp_fluid_attrs', c_void_p, c_size_t, c_size_t, c_size_t,
+             c_size_t, c_double, c_double)
+
+    def clamp_fluid_attrs(self, fluid_id, idx, lr, rr):
+        """
+        约束流体的属性的取值
+        """
+        core.seepage_clamp_fluid_attrs(self.handle, *parse_fid3(fluid_id), idx, lr, rr)
 
     core.use(None, 'seepage_pop_cells', c_void_p, c_size_t)
 
@@ -10540,6 +10897,8 @@ class Fracture2:
         第index个自定义属性
         当index个属性不存在时，默认为无穷大的一个值(1.0e100以上的浮点数)
         """
+        if index is None:
+            return default_val
         if index < 0:
             if index == -1:
                 return self.ds
@@ -10567,6 +10926,8 @@ class Fracture2:
         第index个自定义属性
         当index个属性不存在时，默认为无穷大的一个值(1.0e100以上的浮点数)
         """
+        if index is None:
+            return self
         if index < 0:
             if index == -1:
                 self.ds = value
@@ -13121,6 +13482,8 @@ class Disc3(HasHandle):
         第index个自定义属性。
         当index个属性不存在时，默认为无穷大的一个值(1.0e100以上的浮点数)
         """
+        if index is None:
+            return default_val
         value = core.disc3_get_attr(self.handle, index)
         if min <= value <= max:
             return value
@@ -13132,6 +13495,8 @@ class Disc3(HasHandle):
         第index个自定义属性。
         当index个属性不存在时，默认为无穷大的一个值(1.0e100以上的浮点数)
         """
+        if index is None:
+            return self
         core.disc3_set_attr(self.handle, index, value)
         return self
 

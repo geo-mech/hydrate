@@ -1,4 +1,3 @@
-# ** is_sys = True
 
 import os
 
@@ -11,6 +10,4 @@ for i in range(len(dirs)):
     if i + 1 >= 9:
         print(f'\t...\nTotally {len(dirs)} Files in Work Directory')
         break
-
-win = gui.window()
-win.show_files()
+gui.show_files()

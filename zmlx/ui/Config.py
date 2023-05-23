@@ -88,6 +88,14 @@ def play_gallop():
     play_sound('gallop.wav')
 
 
+def play_ding():
+    play_sound('ding.wav')
+
+
+def play_error():
+    play_sound('Windows Error.wav')
+
+
 def save(key, value, encoding=None):
     try:
         with open(temp(key), 'w', encoding=encoding) as file:

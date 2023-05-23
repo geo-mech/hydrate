@@ -1,4 +1,3 @@
-# ** is_sys = True
 # ** icon = 'open.png'
 # ** on_toolbar = True
 

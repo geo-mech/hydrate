@@ -6,7 +6,8 @@
 
 % data = load(lastfileof('data'));
 clear
-data = load(lastfileof('c14'));
+data = load(lastfileof('h2o_inj', 1));
+% data = load('hf2\fractures.c14');
 
 figure
 
@@ -53,8 +54,8 @@ for i = n_alpha:-1:1
     y = reshape(y, length(y)/2, 2);
     z = reshape(z, length(z)/2, 2);
     c = reshape(c, length(c)/2, 2);
-    surf(x, y, z, c, 'FaceAlpha', min(1, max(0.1, (a0+a1)/2)), 'EdgeAlpha', 0.1);
-    if i == 1
+    surf(x, y, z, c, 'FaceAlpha', min(1, max(0.03, (a0+a1)/2)), 'EdgeAlpha', 0.05);
+    if i == 2
         shading interp
     end
     hold on
@@ -64,11 +65,11 @@ axis equal
 box on 
 ax = gca;
 ax.BoxStyle = 'full';
-% cm = [0 0 1;0 0.1875 1;0 0.375 1;0 0.5625 1;0 0.75 1;0 0.9375 1;0.125 1 0.875;
-%     0.3125 1 0.6875;0.5 1 0.5;0.6875 1 0.3125;0.875 1 0.125;1 0.9375 0;
-%     1 0.75 0;1 0.5625 0;1 0.375 0;1 0.1875 0];
-% colormap(cm)
-colorbar
+cm = [0 0 1;0 0.1875 1;0 0.375 1;0 0.5625 1;0 0.75 1;0 0.9375 1;0.125 1 0.875;
+    0.3125 1 0.6875;0.5 1 0.5;0.6875 1 0.3125;0.875 1 0.125;1 0.9375 0;
+    1 0.75 0;1 0.5625 0;1 0.375 0;1 0.1875 0];
+colormap(cm)
+% colorbar
 xlabel('x [m]')
 ylabel('y [m]')
 zlabel('z [m]')
