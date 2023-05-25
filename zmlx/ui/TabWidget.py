@@ -2,6 +2,7 @@
 
 from PyQt5 import QtWidgets, QtGui, QtCore
 from zmlx.ui.Config import load_pixmap
+from zml import app_data
 
 
 class TabWidget(QtWidgets.QTabWidget):
@@ -13,6 +14,22 @@ class TabWidget(QtWidgets.QTabWidget):
             self.cover = None
         self.setTabsClosable(True)
         self.tabCloseRequested.connect(self.close_tab)
+
+        text = app_data.getenv('TabPosition', default='')
+        if text == 'North':
+            self.setTabPosition(QtWidgets.QTabWidget.North)
+        if text == 'South':
+            self.setTabPosition(QtWidgets.QTabWidget.South)
+        if text == 'East':
+            self.setTabPosition(QtWidgets.QTabWidget.East)
+        if text == 'West':
+            self.setTabPosition(QtWidgets.QTabWidget.West)
+
+        text = app_data.getenv('TabShape', default='')
+        if text == 'Triangular':
+            self.setTabShape(QtWidgets.QTabWidget.Triangular)
+        if text == 'Rounded':
+            self.setTabShape(QtWidgets.QTabWidget.Rounded)
 
     def close_tab(self, index):
         widget = self.widget(index)

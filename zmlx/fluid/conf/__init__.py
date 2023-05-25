@@ -403,7 +403,7 @@ def char():
 
 
 def show_all():
-    from zmlx.plot.show_field2 import show_field2
+    from zmlx.plt.show_field2 import show_field2
     flu = h2o_steam()
     show_field2(flu.den, [1e6, 40e6], [280, 1000], caption='h2o_steam.den')
     show_field2(flu.vis, [1e6, 40e6], [280, 1000], caption='h2o_steam.vis')

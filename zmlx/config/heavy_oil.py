@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 from zml import *
 from zmlx.fluid import *
 from zmlx.fluid.kerogen import create_flu as create_kerogen
@@ -43,50 +40,59 @@ def create():
 
     # define gas
     config.igas = config.add_fluid([create_ch4(), create_h2o_gas()])
+    config.components['gas'] = config.igas
+    config.components['ch4'] = [config.igas, 0]
+    config.components['h2o_gas'] = [config.igas, 1]
 
     # water
     config.iwat = config.add_fluid(create_h2o())
+    config.components['h2o'] = config.iwat
 
     # light oil
     config.ilight_oil = config.add_fluid(create_light_oil())
+    config.components['light_oil'] = config.ilight_oil
 
     # heavy oil
     config.iheavy_oil = config.add_fluid(create_heavy_oil())
+    config.components['heavy_oil'] = config.iheavy_oil
 
     # solid phase
     config.isol = config.add_fluid([create_kerogen(), create_char(den=1800)])
+    config.components['sol'] = config.isol
+    config.components['kerogen'] = [config.isol, 0]
+    config.components['char'] = [config.isol, 1]
 
     # h2o and steam
     config.reactions.append(
         vapor_react.create(
-            ivap=(config.igas, 1),
-            iwat=config.iwat,
+            ivap=config.components['h2o_gas'],
+            iwat=config.components['h2o'],
             fa_t=config.flu_keys['temperature'],
             fa_c=config.flu_keys['specific_heat']))
 
     # The decomposition of Kerogen.
     config.reactions.append(
-        decomposition.create(index=(config.isol, 0), iweights=[(config.iheavy_oil, 0.6),
-                                                               (config.ilight_oil, 0.1),
-                                                               (config.iwat, 0.1),
-                                                               ((config.igas, 0), 0.1),
-                                                               ((config.isol, 1), 0.1),
-                                                               ],
+        decomposition.create(index=config.components['kerogen'], iweights=[(config.components['heavy_oil'], 0.6),
+                                                                           (config.components['light_oil'], 0.1),
+                                                                           (config.components['h2o'], 0.1),
+                                                                           (config.components['ch4'], 0.1),
+                                                                           (config.components['char'], 0.1),
+                                                                           ],
                              temp=565, heat=161600.0,  # From Maryelin 2023-02-23
                              rate=1.0e-8,
                              fa_t=config.flu_keys['temperature'],
                              fa_c=config.flu_keys['specific_heat']))
 
     # The decomposition of Heavy oil
-    r = decomposition.create(index=config.iheavy_oil, iweights=[(config.ilight_oil, 0.5),
-                                                                ((config.igas, 0), 0.2),
-                                                                ((config.isol, 1), 0.3),
-                                                                ],
+    r = decomposition.create(index=config.components['heavy_oil'], iweights=[(config.components['light_oil'], 0.5),
+                                                                             (config.components['ch4'], 0.2),
+                                                                             (config.components['char'], 0.3),
+                                                                             ],
                              temp=603, heat=206034.0,  # From Maryelin 2023-02-23
                              rate=1.0e-8,
                              fa_t=config.flu_keys['temperature'],
                              fa_c=config.flu_keys['specific_heat'])
-    r.add_inhibitor(sol=config.isol,
+    r.add_inhibitor(sol=config.components['sol'],
                     liq=None,
                     c=[0, 0.8, 1.0],
                     t=[0, 0, 1.0e4],  # 当固体占据的比重达到80%之后，增加裂解温度，从而限制继续分解
@@ -102,4 +108,4 @@ def create():
 
 if __name__ == '__main__':
     c = create()
-    print(c)
+    print(c.components)

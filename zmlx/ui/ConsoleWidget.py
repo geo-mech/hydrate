@@ -56,7 +56,7 @@ class ConsoleWidget(QtWidgets.QWidget):
         self.thread = None
         self.result = None
         try:
-            self.workspace = data.get()
+            self.workspace = app_data.get()
             self.workspace.update({'__name__': '__main__', 'gui': gui})
         except:
             self.workspace = {'__name__': '__main__', 'gui': gui}
@@ -109,7 +109,7 @@ class ConsoleWidget(QtWidgets.QWidget):
                                                    self.input_editor.get_fname()))
 
     def pause_clicked(self):
-        data.log(f'execute <__button_pause_clicked> of {self}')
+        app_data.log(f'execute <__button_pause_clicked> of {self}')
         self.set_should_pause(not self.should_pause())
 
     def should_pause(self):
@@ -124,7 +124,7 @@ class ConsoleWidget(QtWidgets.QWidget):
             self.refresh_buttons()
 
     def stop_clicked(self):
-        data.log(f'execute <__button_exit_clicked> of {self}')
+        app_data.log(f'execute <__button_exit_clicked> of {self}')
         self.set_should_stop(not self.flag_exit.value)
 
     def set_should_stop(self, value):
@@ -141,7 +141,7 @@ class ConsoleWidget(QtWidgets.QWidget):
                 return
         if os.path.isfile(fname):
             try:
-                shutil.copy(fname, data.root('console_history', f'{time_string()}.py'))
+                shutil.copy(fname, app_data.root('console_history', f'{time_string()}.py'))
             except:
                 pass
             self.text_when_beg = f"{get_text('Start')}: {fname}"

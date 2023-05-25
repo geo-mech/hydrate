@@ -31,8 +31,15 @@ def show_fn2(filepath):
     gui.show_fn2(filepath)
 
 
-file_processors = {'.py': edit_py, '.fn2': show_fn2}
-file_desc = {'.py': 'Python File To Execute', '.fn2': 'Fracture Network 2D'}
+def show_seepage(filepath):
+    from zml import Seepage, app_data
+    model = Seepage(path=filepath)
+    app_data.put('seepage', model)
+    print(model)
+
+
+file_processors = {'.py': edit_py, '.fn2': show_fn2, '.seepage': show_seepage}
+file_desc = {'.py': 'Python File To Execute', '.fn2': 'Fracture Network 2D', '.seepage': 'Seepage Model File'}
 
 
 def get_extensions():

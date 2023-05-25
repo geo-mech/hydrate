@@ -21,7 +21,7 @@ if __name__ == '__main__':
     flu = create_flu()
     print(flu)
     try:
-        from zmlx.plot.show_field2 import show_field2
+        from zmlx.plt.show_field2 import show_field2
 
         show_field2(flu.den, [1e6, 20e6], [270, 290])
         show_field2(flu.vis, [1e6, 20e6], [270, 290])

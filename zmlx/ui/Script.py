@@ -5,7 +5,7 @@ import os
 
 from PyQt5 import QtWidgets
 
-from zml import read_text, data
+from zml import read_text, app_data
 
 
 class Script:
@@ -34,14 +34,14 @@ class Script:
 
         if self.is_sys:
             try:
-                data.log(f'system run <{self.file}>')
+                app_data.log(f'system run <{self.file}>')
                 exec(read_text(path=self.file, encoding='utf-8', default=''),
                      win.console_widget.workspace)
             except Exception as err:
                 show_err(err)
         else:
             try:
-                data.log(f'run <{self.file}>')
+                app_data.log(f'run <{self.file}>')
                 win.console_widget.exec_file(self.file)
             except Exception as err:
                 show_err(err)
