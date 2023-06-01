@@ -3,7 +3,7 @@
 
 import os
 
-from zml import gui, data
+from zml import gui, app_data
 
 
 def code_is_in_editing(fname):
@@ -47,9 +47,9 @@ def edit_code(fname, warning=True):
                                     on_top=True,
                                     oper=lambda x: x.open(fname))
             tag = 'tip_shown_when_edit_code'
-            if widget.get_fname() == fname and not data.has_tag_today(tag):
+            if widget.get_fname() == fname and not app_data.has_tag_today(tag):
                 gui.about('成功', '文件已打开，请点击工具栏上的<执行>按钮以执行')
-                data.add_tag_today(tag)
+                app_data.add_tag_today(tag)
 
 
 def open_edit_code():

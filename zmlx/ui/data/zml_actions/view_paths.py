@@ -1,4 +1,4 @@
-from zml import data
+from zml import app_data
 
-for path in data.get_paths():
+for path in app_data.get_paths():
     print(path)

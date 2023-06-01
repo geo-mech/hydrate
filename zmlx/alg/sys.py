@@ -7,9 +7,9 @@ def get_latest_version():
     """
     try:
         try:
-            from zml import data
-            if data.has_tag_today('latest_version_checked'):
-                txt = data.getenv('latest_version')
+            from zml import app_data
+            if app_data.has_tag_today('latest_version_checked'):
+                txt = app_data.getenv('latest_version')
                 if txt is not None:
                     if len(txt) == 6:
                         return int(txt)
@@ -25,8 +25,8 @@ def get_latest_version():
         result = re.findall(r'(\w+)=(\d+)', text)
         version = dict(result).get('ZmlVersion')
         if version is not None:
-            data.setenv('latest_version', version)
-            data.add_tag_today('latest_version_checked')
+            app_data.setenv('latest_version', version)
+            app_data.add_tag_today('latest_version_checked')
             return int(version)
     except Exception as err:
         print(f'meet exception: {err}')

@@ -13,11 +13,11 @@ from zmlx.react import dissolution
 from zmlx.utility.CapillaryEffect import CapillaryEffect
 
 
-def create(has_co2=False, has_vapor=False, has_inh=False, has_ch4_in_liq=False, inh_diff_rate=None, ch4_diff_rate=None):
+def create(has_co2=False, has_steam=False, has_inh=False, has_ch4_in_liq=False, inh_diff_rate=None, ch4_diff_rate=None):
     """
     创建一个水合物的求解配置. 包含气<Id=0>、液<Id=1>和固<Id=2>三种相态;
     其中气体为：
-        [Ch4, [Co2, Vapor]], 其中Co2只有当has_co2为True时存在，Vapor只有当has_vapor的时候存在;
+        [Ch4, [Co2, Steam]], 其中Co2只有当has_co2为True时存在，Steam只有当has_steam的时候存在;
 
     液体为:
         [H2o, [Inh], [ch4]]，其中Inh代表抑制剂，当has_inh参数为True的时候存在  ch4为溶解的甲烷气体
@@ -29,7 +29,7 @@ def create(has_co2=False, has_vapor=False, has_inh=False, has_ch4_in_liq=False, 
         Ch4水合物的形成/分解
         水/冰相互转化
         Ch4水合物的形成/分解 [当has_co2参数为True的时候]
-        H2o/Vapor之间的相互转化 [当has_vapor参数为True的时候]
+        H2o/Steam之间的相互转化 [当has_steam参数为True的时候]
         Ch4在水中的溶解反应 [当has_ch4_in_liq为True的时候]
     """
     config = TherFlowConfig()
@@ -49,13 +49,21 @@ def create(has_co2=False, has_vapor=False, has_inh=False, has_ch4_in_liq=False, 
         gas.append(create_co2())
     else:
         ico2 = None
-    if has_vapor:
+    if has_steam:
         # 添加蒸汽
-        ivap = len(gas)
+        isteam = len(gas)
         gas.append(create_h2o_gas())
     else:
-        ivap = None
-    config.igas = config.add_fluid(gas)
+        isteam = None
+    igas = config.add_fluid(gas)
+    config.igas = igas
+
+    config.components['gas'] = igas
+    config.components['ch4'] = [igas, 0]
+    if ico2 is not None:
+        config.components['co2'] = [igas, ico2]
+    if isteam is not None:
+        config.components['h2o_gas'] = [igas, isteam]
 
     # 配置液体
     liq = [create_h2o(), ]
@@ -69,10 +77,28 @@ def create(has_co2=False, has_vapor=False, has_inh=False, has_ch4_in_liq=False, 
     if has_ch4_in_liq:
         ich4_in_liq = len(liq)
         add_keys(config.cell_keys, 'ch4_sol')
+        #
+        # 每个组分都需要有一个密度，这个确实有些难办，溶解在水中的气体，它其实已经不是气体了。
+        # 对于混溶的各个组分，如何确定密度，我也还没想好，也没有具体去调研别人的处理方法。
+        #
+        # 这里，主要考虑到，溶解的气体很少，其实气体组分的密度无论怎么给（因为它此时是液体
+        # 的一个组分，所以就参考水的属性，只要别太极端），对结果的影响都不会太大。
+        #
+        # 粘性系数和比热也是一样。
+        #
+        #    -- zzb, 2023-5-25
+        #
         liq.append(TherFlowConfig.FluProperty(den=500.0, vis=0.001, specific_heat=1000.0))
     else:
         ich4_in_liq = None
-    config.iliq = config.add_fluid(liq)
+    iliq = config.add_fluid(liq)
+    config.iliq = iliq
+    config.components['liq'] = iliq
+    config.components['h2o'] = [iliq, 0]
+    if iinh is not None:
+        config.components['inh'] = [iliq, iinh]
+    if ich4_in_liq is not None:
+        config.components['ch4_in_liq'] = [iliq, ich4_in_liq]
 
     # 配置固体
     sol = [create_ch4_hydrate(), create_h2o_ice()]
@@ -82,26 +108,32 @@ def create(has_co2=False, has_vapor=False, has_inh=False, has_ch4_in_liq=False, 
         sol.append(create_co2_hydrate())
     else:
         ico2_hyd = None
-    config.isol = config.add_fluid(sol)
+    isol = config.add_fluid(sol)
+    config.isol = isol
+    config.components['sol'] = isol
+    config.components['ch4_hydrate'] = [isol, 0]
+    config.components['h2o_ice'] = [isol, 1]
+    if ico2_hyd is not None:
+        config.components['co2_hydrate'] = [isol, ico2_hyd]
 
     # -------------------------------------------------------------
     # 添加甲烷水合物的相变
     r = ch4_hydrate_react.create(
-        igas=(config.igas, 0),
-        iwat=(config.iliq, 0),
-        ihyd=(config.isol, 0),
+        igas=config.components['ch4'],
+        iwat=config.components['h2o'],
+        ihyd=config.components['ch4_hydrate'],
         fa_t=config.flu_keys['temperature'],
         fa_c=config.flu_keys['specific_heat'])
     # 抑制固体比例过高，增强计算稳定性 （非常必要）
-    r.add_inhibitor(sol=config.isol,
+    r.add_inhibitor(sol=config.components['sol'],
                     liq=None,
                     c=[0, 0.8, 1.0],
                     t=[0, 0, -200.0],
                     )
     if has_inh:
         # 抑制剂修改平衡温度
-        r.add_inhibitor(sol=(config.iliq, 1),
-                        liq=(config.iliq,),
+        r.add_inhibitor(sol=config.components['inh'],
+                        liq=config.components['liq'],
                         c=salinity_c2t[0],
                         t=salinity_c2t[1])
     config.reactions.append(r)
@@ -110,8 +142,8 @@ def create(has_co2=False, has_vapor=False, has_inh=False, has_ch4_in_liq=False, 
     # 添加水和冰之间的相变
     config.reactions.append(
         icing_react.create(
-            iflu=(config.iliq, 0),
-            isol=(config.isol, 1),
+            iflu=config.components['h2o'],
+            isol=config.components['h2o_ice'],
             fa_t=config.flu_keys['temperature'],
             fa_c=config.flu_keys['specific_heat']))
 
@@ -120,28 +152,28 @@ def create(has_co2=False, has_vapor=False, has_inh=False, has_ch4_in_liq=False, 
         # 添加CO2和CO2水合物之间的相变<只要有了CO2，那么就要有水合物>
         assert ico2 is not None and ico2_hyd is not None
         r = co2_hydrate_react.create(
-            igas=(config.igas, ico2),
-            iwat=(config.iliq, 0),
-            ihyd=(config.isol, ico2_hyd),
+            igas=config.components['co2'],
+            iwat=config.components['h2o'],
+            ihyd=config.components['co2_hydrate'],
             fa_t=config.flu_keys['temperature'],
             fa_c=config.flu_keys['specific_heat'])
         if has_inh:
             # 抑制剂修改平衡温度
-            r.add_inhibitor(sol=(config.iliq, 1),
-                            liq=(config.iliq,),
+            r.add_inhibitor(sol=config.components['inh'],
+                            liq=config.components['liq'],
                             c=salinity_c2t[0],
                             t=salinity_c2t[1])
         config.reactions.append(r)
 
     # -------------------------------------------------------------
-    if has_vapor:
+    if has_steam:
         # 添加水和水蒸气之间的相变反应
         # 2022-10-19
-        assert ivap is not None
+        assert isteam is not None
         config.reactions.append(
             vapor_react.create(
-                ivap=(config.igas, ivap),
-                iwat=(config.iliq, 0),
+                ivap=config.components['h2o_gas'],
+                iwat=config.components['h2o'],
                 fa_t=config.flu_keys['temperature'],
                 fa_c=config.flu_keys['specific_heat']))
 
@@ -149,9 +181,9 @@ def create(has_co2=False, has_vapor=False, has_inh=False, has_ch4_in_liq=False, 
     if has_ch4_in_liq:
         config.reactions.append(
             dissolution.create(
-                igas=(config.igas, 0),
-                igas_in_liq=(config.iliq, ich4_in_liq),
-                iliq=config.iliq,
+                igas=config.components['ch4'],
+                igas_in_liq=config.components['ch4_in_liq'],
+                iliq=config.components['liq'],
                 ca_sol=config.cell_keys['ch4_sol'],
                 fa_c=config.flu_keys['specific_heat'],
                 fa_t=config.flu_keys['temperature']))
@@ -160,8 +192,8 @@ def create(has_co2=False, has_vapor=False, has_inh=False, has_ch4_in_liq=False, 
     if has_ch4_in_liq and ch4_diff_rate is not None:
         # 添加水中溶解气的扩散
         assert ch4_diff_rate > 0
-        i0 = (config.iliq, ich4_in_liq)
-        i1 = (config.iliq, 0)
+        i0 = config.components['ch4_in_liq']
+        i1 = config.components['h2o']
         cap = CapillaryEffect(i0, i1, s2p=([0, 1], [0, ch4_diff_rate]))
         config.diffusions.append(cap)
 
@@ -169,8 +201,8 @@ def create(has_co2=False, has_vapor=False, has_inh=False, has_ch4_in_liq=False, 
     if has_inh and inh_diff_rate is not None:
         # 添加水中盐度的扩散
         assert inh_diff_rate > 0
-        i0 = (config.iliq, 1)
-        i1 = (config.iliq, 0)
+        i0 = config.components['inh']
+        i1 = config.components['h2o']
         cap = CapillaryEffect(i0, i1, s2p=([0, 1], [0, inh_diff_rate]))
         config.diffusions.append(cap)
 
@@ -180,5 +212,10 @@ def create(has_co2=False, has_vapor=False, has_inh=False, has_ch4_in_liq=False, 
 
 
 if __name__ == '__main__':
-    c = create(True, True, True)
-    print(c)
+    c = create(True, True, True, True)
+    print(c.components)
+    print(c.flu_keys)
+    print(c.cell_keys)
+    print(c.face_keys)
+    print(c.model_keys)
+

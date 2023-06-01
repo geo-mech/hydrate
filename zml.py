@@ -288,11 +288,11 @@ def feedback(text='feedback', subject=None):
     Send some necessary statistical information to the software author by Email.
     This is important to improve this software. Thanks for your feedback!
     However, if you do not want to send anything, please run:
-        zml.data.setenv('disable_feedback', 'True')
+        zml.app_data.setenv('disable_feedback', 'True')
     then you will not send anything in the future. Thanks for using!
     """
     try:
-        if data.getenv('disable_feedback') == 'True':
+        if app_data.getenv('disable_feedback') == 'True':
             return True
         else:
             return sendmail('zhangzhaobin@mail.iggcas.ac.cn', subject=subject, text=text,
@@ -536,14 +536,14 @@ class AppData(Object):
         self.space[key] = value
 
 
-data = AppData()
+app_data = AppData()
 
 
 def load_cdll(name, first=None):
     """
     Load C-Style Dll by the given file name and the folder.
     """
-    path = data.find(name, first)
+    path = app_data.find(name, first)
     if path is not None:
         try:
             return cdll.LoadLibrary(path)
@@ -692,7 +692,7 @@ class DllCore:
             error = self.pop_error()
             while self.has_error():
                 error = f'{error} \n\n {self.pop_error()}'
-            data.log(error)
+            app_data.log(error)
             raise RuntimeError(error)
 
     def set_error_handle(self, func):
@@ -1095,10 +1095,10 @@ class License:
         """
         if not self.license_info_has_checked:
             self.license_info_has_checked = True
-            if data.has_tag_today('lic_checked'):
+            if app_data.has_tag_today('lic_checked'):
                 return
             else:
-                data.add_tag_today('lic_checked')
+                app_data.add_tag_today('lic_checked')
             if not self.exists():
                 text = f"""
 The software is not licensed on this computer. Please send the following 
@@ -1392,35 +1392,73 @@ def get_average_perm(p0, p1, get_perm, sample_dist=None, depth=0):
         此函数仅仅用于计算渗透率的平均值<在求平均的时候，考虑到了串联效应>
     """
     pos = [(p0[i] + p1[i]) / 2 for i in range(len(p0))]
-    if sample_dist is None or depth >= 4:
-        return max(get_perm(*pos), 0)
     dist = get_distance(p0, p1)
-    if sample_dist >= dist:
-        return max(get_perm(*pos), 0)
+    if sample_dist is None or depth >= 4 or sample_dist >= dist:
+        k = get_perm(*pos)
+        if isinstance(k, Tensor3):
+            assert len(p0) == 3 and len(p1) == 3
+            k = k.get_along([p1[i] - p0[i] for i in range(3)])
+            return max(k, 0.0)
+        else:
+            return max(k, 0.0)
     k1 = get_average_perm(p0, pos, get_perm, sample_dist, depth + 1)
     k2 = get_average_perm(p1, pos, get_perm, sample_dist, depth + 1)
     return k1 * k2 * 2.0 / (k1 + k2)
 
 
-def add_keys(kv, *args):
+def add_keys(*args):
     """
-    在一个字典中注册一个键值。将从0开始尝试，直到发现不存在的数值再使用. 返回最后一个键是否添加成功（只要之前不存在即添加成功）
+    在字典中注册键值。将从0开始尝试，直到发现不存在的数值再使用. 返回添加了key之后的字典对象.
+    示例:
+        from zml import *
+        keys = add_keys('x', 'y')
+        print(keys)
+        add_keys(keys, 'a', 'b', 'c')
+        print(keys)
+    输出:
+        {'x': 0, 'y': 1}
+        {'x': 0, 'y': 1, 'a': 2, 'b': 3, 'c': 4}
     """
-    result = None
+
+    # Check the input
+    n1 = 0
+    n2 = 0
     for key in args:
-        succeed = False
-        if key not in kv:
-            for val in range(len(kv) + 1):
-                if val not in kv.values():
-                    kv[key] = val
+        if isinstance(key, dict):
+            n1 += 1
+            continue
+        if isinstance(key, str):
+            n2 += 1
+            continue
+    assert n1 <= 1
+    assert n1 + n2 == len(args)
+
+    # Find the dict
+    key_vals = None
+    for key in args:
+        if isinstance(key, dict):
+            key_vals = key
+            break
+    if key_vals is None:
+        key_vals = {}
+
+    # Add keys
+    for key in args:
+        if not isinstance(key, str):
+            continue
+        if key not in key_vals:
+            values = key_vals.values()
+            succeed = False
+            for val in range(len(key_vals) + 1):
+                if val not in values:
+                    key_vals[key] = val
                     succeed = True
                 if succeed:
                     break
             assert succeed
-        else:
-            assert False, f'Try to add a key that existed: <{key}>'
-        result = succeed
-    return result
+
+    # Return the dict.
+    return key_vals
 
 
 def install(name='zml.pth', folder=None):
@@ -1445,10 +1483,10 @@ def install(name='zml.pth', folder=None):
 
 def __feedback():
     try:
-        folder_logs = os.path.join(data.folder, 'logs')
+        folder_logs = os.path.join(app_data.folder, 'logs')
         if not os.path.isdir(folder_logs):
             return
-        folder_logs_feedback = os.path.join(data.folder, 'logs_feedback')
+        folder_logs_feedback = os.path.join(app_data.folder, 'logs_feedback')
         make_dirs(folder_logs_feedback)
         has_feedback = set(os.listdir(folder_logs_feedback))
         date = datetime.datetime.now().strftime("%Y-%m-%d.log")
@@ -1464,13 +1502,13 @@ def __feedback():
 
 
 try:
-    if data.getenv('disable_auto_feedback', default='False') != 'True':
+    if app_data.getenv('disable_auto_feedback', default='False') != 'True':
         __feedback()
 except:
     pass
 
 try:
-    data.log(f'import zml <zml: {get_time_compile()}, Python: {sys.version}>')
+    app_data.log(f'import zml <zml: {get_time_compile()}, Python: {sys.version}>')
 except:
     pass
 
@@ -2983,6 +3021,19 @@ class Tensor3(HasHandle):
     @zx.setter
     def zx(self, value):
         self[(2, 0)] = value
+
+    core.use(c_double, 'tensor3_get_along', c_void_p, c_double, c_double, c_double)
+
+    def get_along(self, *args):
+        """
+        返回给定方向下的数值.
+        """
+        if len(args) == 3:
+            return core.tensor3_get_along(self.handle, *args)
+        else:
+            assert len(args) == 1
+            x = args[0]
+            return core.tensor3_get_along(self.handle, x[0], x[1], x[2])
 
 
 class Tensor2Interp2(HasHandle):
@@ -5532,25 +5583,25 @@ class SeepageMesh(HasHandle, HasCells):
             self.index = index
 
         def __str__(self):
-            return f'zml.PnwGeometry.Cell(handle = {self.model.handle}, index = {self.index}, pos = {self.pos}, volume={self.vol})'
+            return f'zml.SeepageMesh.Cell(handle = {self.model.handle}, index = {self.index}, pos = {self.pos}, volume={self.vol})'
 
-        core.use(c_double, 'pnw_geometry_get_node_pos', c_void_p,
+        core.use(c_double, 'seepage_mesh_get_cell_pos', c_void_p,
                  c_size_t,
                  c_size_t)
-        core.use(None, 'pnw_geometry_set_node_pos', c_void_p,
+        core.use(None, 'seepage_mesh_set_cell_pos', c_void_p,
                  c_size_t,
                  c_size_t,
                  c_double)
 
         @property
         def pos(self):
-            return [core.pnw_geometry_get_node_pos(self.model.handle, self.index, i) for i in range(3)]
+            return [core.seepage_mesh_get_cell_pos(self.model.handle, self.index, i) for i in range(3)]
 
         @pos.setter
         def pos(self, value):
             assert len(value) == 3
             for dim in range(3):
-                core.pnw_geometry_set_node_pos(self.model.handle, self.index,
+                core.seepage_mesh_set_cell_pos(self.model.handle, self.index,
                                                dim, value[dim])
 
         def distance(self, other):
@@ -5564,21 +5615,21 @@ class SeepageMesh(HasHandle, HasCells):
                 p1 = other
             return ((p0[0] - p1[0]) ** 2 + (p0[1] - p1[1]) ** 2 + (p0[2] - p1[2]) ** 2) ** 0.5
 
-        core.use(None, 'pnw_geometry_set_node_volume', c_void_p,
+        core.use(None, 'seepage_mesh_set_cell_volume', c_void_p,
                  c_size_t,
                  c_double)
-        core.use(c_double, 'pnw_geometry_get_node_volume', c_void_p,
+        core.use(c_double, 'seepage_mesh_get_cell_volume', c_void_p,
                  c_size_t)
 
         @property
         def vol(self):
-            return core.pnw_geometry_get_node_volume(self.model.handle, self.index)
+            return core.seepage_mesh_get_cell_volume(self.model.handle, self.index)
 
         @vol.setter
         def vol(self, value):
-            core.pnw_geometry_set_node_volume(self.model.handle, self.index, value)
+            core.seepage_mesh_set_cell_volume(self.model.handle, self.index, value)
 
-        core.use(c_double, 'pnw_geometry_get_node_attr', c_void_p, c_size_t, c_size_t)
+        core.use(c_double, 'seepage_mesh_get_cell_attr', c_void_p, c_size_t, c_size_t)
 
         def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
             """
@@ -5586,13 +5637,13 @@ class SeepageMesh(HasHandle, HasCells):
             """
             if index is None:
                 return default_val
-            value = core.pnw_geometry_get_node_attr(self.model.handle, self.index, index)
+            value = core.seepage_mesh_get_cell_attr(self.model.handle, self.index, index)
             if min <= value <= max:
                 return value
             else:
                 return default_val
 
-        core.use(None, 'pnw_geometry_set_node_attr', c_void_p, c_size_t, c_size_t, c_double)
+        core.use(None, 'seepage_mesh_set_cell_attr', c_void_p, c_size_t, c_size_t, c_double)
 
         def set_attr(self, index, value):
             """
@@ -5600,7 +5651,7 @@ class SeepageMesh(HasHandle, HasCells):
             """
             if index is None:
                 return self
-            core.pnw_geometry_set_node_attr(self.model.handle, self.index, index, value)
+            core.seepage_mesh_set_cell_attr(self.model.handle, self.index, index, value)
             return self
 
     class Face(Object):
@@ -5616,35 +5667,35 @@ class SeepageMesh(HasHandle, HasCells):
             self.index = index
 
         def __str__(self):
-            return f'zml.PnwGeometry.Face(handle = {self.model.handle}, index = {self.index}, area = {self.area}, length = {self.length}) '
+            return f'zml.SeepageMesh.Face(handle = {self.model.handle}, index = {self.index}, area = {self.area}, length = {self.length}) '
 
-        core.use(None, 'pnw_geometry_set_bond_area', c_void_p,
+        core.use(None, 'seepage_mesh_set_face_area', c_void_p,
                  c_size_t,
                  c_double)
-        core.use(c_double, 'pnw_geometry_get_bond_area', c_void_p,
+        core.use(c_double, 'seepage_mesh_get_face_area', c_void_p,
                  c_size_t)
 
         @property
         def area(self):
-            return core.pnw_geometry_get_bond_area(self.model.handle, self.index)
+            return core.seepage_mesh_get_face_area(self.model.handle, self.index)
 
         @area.setter
         def area(self, value):
-            core.pnw_geometry_set_bond_area(self.model.handle, self.index, value)
+            core.seepage_mesh_set_face_area(self.model.handle, self.index, value)
 
-        core.use(None, 'pnw_geometry_set_bond_length', c_void_p,
+        core.use(None, 'seepage_mesh_set_face_length', c_void_p,
                  c_size_t,
                  c_double)
-        core.use(c_double, 'pnw_geometry_get_bond_length', c_void_p,
+        core.use(c_double, 'seepage_mesh_get_face_length', c_void_p,
                  c_size_t)
 
         @property
         def length(self):
-            return core.pnw_geometry_get_bond_length(self.model.handle, self.index)
+            return core.seepage_mesh_get_face_length(self.model.handle, self.index)
 
         @length.setter
         def length(self, value):
-            core.pnw_geometry_set_bond_length(self.model.handle, self.index, value)
+            core.seepage_mesh_set_face_length(self.model.handle, self.index, value)
 
         @property
         def pos(self):
@@ -5655,23 +5706,23 @@ class SeepageMesh(HasHandle, HasCells):
             p1 = self.get_cell(1).pos
             return tuple([(p0[i] + p1[i]) / 2 for i in range(len(p0))])
 
-        core.use(c_size_t, 'pnw_geometry_get_bond_end0', c_void_p, c_size_t)
+        core.use(c_size_t, 'seepage_mesh_get_face_end0', c_void_p, c_size_t)
 
         @property
         def cell_i0(self):
             """
             返回第0个cell的id
             """
-            return core.pnw_geometry_get_bond_end0(self.model.handle, self.index)
+            return core.seepage_mesh_get_face_end0(self.model.handle, self.index)
 
-        core.use(c_size_t, 'pnw_geometry_get_bond_end1', c_void_p, c_size_t)
+        core.use(c_size_t, 'seepage_mesh_get_face_end1', c_void_p, c_size_t)
 
         @property
         def cell_i1(self):
             """
             返回第1个cell的id
             """
-            return core.pnw_geometry_get_bond_end1(self.model.handle, self.index)
+            return core.seepage_mesh_get_face_end1(self.model.handle, self.index)
 
         @property
         def cell_ids(self):
@@ -5700,7 +5751,7 @@ class SeepageMesh(HasHandle, HasCells):
         def cells(self):
             return self.get_cell(0), self.get_cell(1)
 
-        core.use(c_double, 'pnw_geometry_get_bond_attr', c_void_p, c_size_t, c_size_t)
+        core.use(c_double, 'seepage_mesh_get_face_attr', c_void_p, c_size_t, c_size_t)
 
         def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
             """
@@ -5708,13 +5759,13 @@ class SeepageMesh(HasHandle, HasCells):
             """
             if index is None:
                 return default_val
-            value = core.pnw_geometry_get_bond_attr(self.model.handle, self.index, index)
+            value = core.seepage_mesh_get_face_attr(self.model.handle, self.index, index)
             if min <= value <= max:
                 return value
             else:
                 return default_val
 
-        core.use(None, 'pnw_geometry_set_bond_attr', c_void_p, c_size_t, c_size_t, c_double)
+        core.use(None, 'seepage_mesh_set_face_attr', c_void_p, c_size_t, c_size_t, c_double)
 
         def set_attr(self, index, value):
             """
@@ -5722,14 +5773,14 @@ class SeepageMesh(HasHandle, HasCells):
             """
             if index is None:
                 return self
-            core.pnw_geometry_set_bond_attr(self.model.handle, self.index, index, value)
+            core.seepage_mesh_set_face_attr(self.model.handle, self.index, index, value)
             return self
 
-    core.use(c_void_p, 'new_pnw_geometry')
-    core.use(None, 'del_pnw_geometry', c_void_p)
+    core.use(c_void_p, 'new_seepage_mesh')
+    core.use(None, 'del_seepage_mesh', c_void_p)
 
     def __init__(self, path=None, handle=None):
-        super(SeepageMesh, self).__init__(handle, core.new_pnw_geometry, core.del_pnw_geometry)
+        super(SeepageMesh, self).__init__(handle, core.new_seepage_mesh, core.del_seepage_mesh)
         if handle is None:
             if path is not None:
                 self.load(path)
@@ -5740,7 +5791,7 @@ class SeepageMesh(HasHandle, HasCells):
         """
         return f'zml.SeepageMesh(handle = {self.handle}, cell_n = {self.cell_number}, face_n = {self.face_number}, volume = {self.volume})'
 
-    core.use(None, 'pnw_geometry_save', c_void_p, c_char_p)
+    core.use(None, 'seepage_mesh_save', c_void_p, c_char_p)
 
     def save(self, path):
         """
@@ -5750,33 +5801,33 @@ class SeepageMesh(HasHandle, HasCells):
             3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
         """
         if path is not None:
-            core.pnw_geometry_save(self.handle, make_c_char_p(path))
+            core.seepage_mesh_save(self.handle, make_c_char_p(path))
 
-    core.use(None, 'pnw_geometry_load', c_void_p, c_char_p)
+    core.use(None, 'seepage_mesh_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
         序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
         """
         if path is not None:
-            core.pnw_geometry_load(self.handle, make_c_char_p(path))
+            core.seepage_mesh_load(self.handle, make_c_char_p(path))
 
-    core.use(None, 'pnw_geometry_clear', c_void_p)
+    core.use(None, 'seepage_mesh_clear', c_void_p)
 
     def clear(self):
         """
         清除所有的cell和face
         """
-        core.pnw_geometry_clear(self.handle)
+        core.seepage_mesh_clear(self.handle)
 
-    core.use(c_size_t, 'pnw_geometry_get_node_number', c_void_p)
+    core.use(c_size_t, 'seepage_mesh_get_cell_n', c_void_p)
 
     @property
     def cell_number(self):
         """
         返回cell的数量
         """
-        return core.pnw_geometry_get_node_number(self.handle)
+        return core.seepage_mesh_get_cell_n(self.handle)
 
     def get_cell(self, ind):
         """
@@ -5785,7 +5836,7 @@ class SeepageMesh(HasHandle, HasCells):
         if ind < self.cell_number:
             return SeepageMesh.Cell(self, ind)
 
-    core.use(c_size_t, 'pnw_geometry_get_nearest_node_id', c_void_p,
+    core.use(c_size_t, 'seepage_mesh_get_nearest_cell_id', c_void_p,
              c_double, c_double, c_double)
 
     def get_nearest_cell(self, pos):
@@ -5793,18 +5844,18 @@ class SeepageMesh(HasHandle, HasCells):
         返回与给定位置距离最近的cell
         """
         if self.cell_number > 0:
-            return self.get_cell(core.pnw_geometry_get_nearest_node_id(self.handle, pos[0], pos[1], pos[2]))
+            return self.get_cell(core.seepage_mesh_get_nearest_cell_id(self.handle, pos[0], pos[1], pos[2]))
 
-    core.use(c_size_t, 'pnw_geometry_get_bond_number', c_void_p)
+    core.use(c_size_t, 'seepage_mesh_get_face_n', c_void_p)
 
     @property
     def face_number(self):
         """
         返回face的数量
         """
-        return core.pnw_geometry_get_bond_number(self.handle)
+        return core.seepage_mesh_get_face_n(self.handle)
 
-    core.use(c_size_t, 'pnw_geometry_get_bond', c_void_p, c_size_t, c_size_t)
+    core.use(c_size_t, 'seepage_mesh_get_face', c_void_p, c_size_t, c_size_t)
 
     def get_face(self, ind=None, cell_0=None, cell_1=None):
         """
@@ -5822,19 +5873,19 @@ class SeepageMesh(HasHandle, HasCells):
             assert isinstance(cell_1, SeepageMesh.Cell)
             assert cell_0.model.handle == self.handle
             assert cell_1.model.handle == self.handle
-            ind = core.pnw_geometry_get_bond(self.handle, cell_0.index, cell_1.index)
+            ind = core.seepage_mesh_get_face(self.handle, cell_0.index, cell_1.index)
             if ind < self.face_number:
                 return SeepageMesh.Face(self, ind)
 
-    core.use(c_size_t, 'pnw_geometry_add_node', c_void_p)
+    core.use(c_size_t, 'seepage_mesh_add_cell', c_void_p)
 
     def add_cell(self):
         """
         添加一个cell，并且返回这个新添加的cell
         """
-        return self.get_cell(core.pnw_geometry_add_node(self.handle))
+        return self.get_cell(core.seepage_mesh_add_cell(self.handle))
 
-    core.use(c_size_t, 'pnw_geometry_add_bond', c_void_p,
+    core.use(c_size_t, 'seepage_mesh_add_face', c_void_p,
              c_size_t,
              c_size_t)
 
@@ -5846,7 +5897,7 @@ class SeepageMesh(HasHandle, HasCells):
         assert isinstance(cell_1, SeepageMesh.Cell)
         assert cell_0.model.handle == self.handle
         assert cell_1.model.handle == self.handle
-        return self.get_face(core.pnw_geometry_add_bond(self.handle, cell_0.index, cell_1.index))
+        return self.get_face(core.seepage_mesh_add_face(self.handle, cell_0.index, cell_1.index))
 
     @property
     def cells(self):
@@ -5949,9 +6000,9 @@ class SeepageMesh(HasHandle, HasCells):
         assert x is not None and y is not None and z is not None
         assert len(x) + len(y) + len(z) >= 6
 
-        def is_sorted(x):
-            for i in range(len(x) - 1):
-                if x[i] >= x[i + 1]:
+        def is_sorted(vx):
+            for i in range(len(vx) - 1):
+                if vx[i] >= vx[i + 1]:
                     return False
             return True
 
@@ -6045,7 +6096,7 @@ class SeepageMesh(HasHandle, HasCells):
         assert len(x) >= 2 and len(r) >= 2
         assert r[0] >= 0
         # Moreover, both x and r should be sorted from small to big
-        # (this will be checked in function 'create_cube_pnw_geometry')
+        # (this will be checked in function 'create_cube_seepage_mesh')
 
         rmax = r[-1]
         perimeter = 2.0 * math.pi * rmax
@@ -6068,7 +6119,7 @@ class SeepageMesh(HasHandle, HasCells):
 
         return mesh
 
-    core.use(None, 'pnw_geometry_find_inner_face_ids', c_void_p, c_void_p, c_void_p)
+    core.use(None, 'seepage_mesh_find_inner_face_ids', c_void_p, c_void_p, c_void_p)
 
     def find_inner_face_ids(self, cell_ids, buffer=None):
         """
@@ -6077,10 +6128,10 @@ class SeepageMesh(HasHandle, HasCells):
         assert isinstance(cell_ids, UintVector)
         if not isinstance(buffer, UintVector):
             buffer = UintVector()
-        core.pnw_geometry_find_inner_face_ids(self.handle, buffer.handle, cell_ids.handle)
+        core.seepage_mesh_find_inner_face_ids(self.handle, buffer.handle, cell_ids.handle)
         return buffer
 
-    core.use(None, 'pnw_geometry_from_mesh3', c_void_p, c_void_p)
+    core.use(None, 'seepage_mesh_from_mesh3', c_void_p, c_void_p)
 
     @staticmethod
     def from_mesh3(mesh3, buffer=None):
@@ -6090,7 +6141,7 @@ class SeepageMesh(HasHandle, HasCells):
         assert isinstance(mesh3, Mesh3)
         if not isinstance(buffer, SeepageMesh):
             buffer = SeepageMesh()
-        core.pnw_geometry_from_mesh3(buffer.handle, mesh3.handle)
+        core.seepage_mesh_from_mesh3(buffer.handle, mesh3.handle)
         return buffer
 
 
@@ -7966,37 +8017,42 @@ class Seepage(HasHandle, HasCells):
             """
             model = self.model
             assert isinstance(model, Seepage)
-            assert model.fludef_number > 0
 
             if pos is not None:
                 self.pos = pos
 
-            assert temperature is not None
-            assert p is not None
+            if temperature is not None:
+                self.set_attr(ca_t, temperature)
 
-            self.set_attr(ca_t, temperature)
-            self.set_attr(ca_mc, vol * denc)
+            if vol is not None and denc is not None:
+                self.set_attr(ca_mc, vol * denc)
 
-            if pore_modulus_range is None:
-                assert 1e6 < pore_modulus < 10000e6
-            else:
-                assert pore_modulus_range[0] < pore_modulus < pore_modulus_range[1]
+            if pore_modulus is not None:
+                if pore_modulus_range is None:
+                    assert 1e6 < pore_modulus < 10000e6
+                else:
+                    assert pore_modulus_range[0] < pore_modulus < pore_modulus_range[1]
 
-            assert 1.0e-6 < porosity
+            if porosity is not None:
+                assert 1.0e-6 < porosity
+
             # 确保在给定的这个p下，孔隙度等于设置的值.
-            self.set_pore(p, vol * porosity, pore_modulus, vol * porosity)
+            if p is not None and vol is not None and porosity is not None and pore_modulus is not None:
+                self.set_pore(p, vol * porosity, pore_modulus, vol * porosity)
 
             # 设置流体的结构
             self.set_fluid_components(model)
 
             # 设置组分的温度.
-            for i in range(self.fluid_number):
-                self.get_fluid(i).set_attr(fa_t, temperature)
+            if temperature is not None:
+                for i in range(self.fluid_number):
+                    self.get_fluid(i).set_attr(fa_t, temperature)
 
             # 更新流体的比热、密度和粘性系数
-            self.set_fluid_property(p=p, fa_t=fa_t, fa_c=fa_c, model=model)
+            if p is not None:
+                self.set_fluid_property(p=p, fa_t=fa_t, fa_c=fa_c, model=model)
 
-            if s is not None:
+            if s is not None and self.fluid_number > 0:
                 def get_s(indexes):
                     assert len(indexes) > 0
                     temp = s
@@ -8026,7 +8082,8 @@ class Seepage(HasHandle, HasCells):
                     vi.pop(-1)
 
                 # 调用上一级的fill函数来填充流体
-                self.fill(p, s2)
+                if p is not None:
+                    self.fill(p, s2)
 
     class FaceData(HasHandle):
         core.use(c_void_p, 'new_seepage_face')
@@ -8582,7 +8639,10 @@ class Seepage(HasHandle, HasCells):
                 self.load(path)
 
     def __str__(self):
-        return f'zml.Seepage(handle = {self.handle}, cell_n={self.cell_number}, face_n={self.face_number})'
+        cell_n = self.cell_number
+        face_n = self.face_number
+        note = self.get_note()
+        return f'zml.Seepage(handle={self.handle}, cell_n={cell_n}, face_n={face_n}, note={note})'
 
     core.use(None, 'seepage_save', c_void_p, c_char_p)
 
@@ -8630,6 +8690,16 @@ class Seepage(HasHandle, HasCells):
     @fmap.setter
     def fmap(self, value):
         self.from_fmap(value, fmt='binary')
+
+    core.use(None, 'seepage_add_note', c_void_p, c_char_p)
+
+    def add_note(self, text):
+        core.seepage_add_note(self.handle, make_c_char_p(text))
+
+    core.use(c_char_p, 'seepage_get_note', c_void_p)
+
+    def get_note(self):
+        return core.seepage_get_note(self.handle).decode()
 
     core.use(None, 'seepage_clear', c_void_p)
 
@@ -8732,6 +8802,19 @@ class Seepage(HasHandle, HasCells):
                      ca_mc=None, ca_t=None, g_heat=None):
         """
         添加一个注入点. 首先尝试拷贝data；然后尝试利用给定cell、fluid_id和flu进行设置。返回新添加的Injector对象
+
+        Note that this function can be used for both fluid injection and heat injection.
+            When the parameter "fluid_id" is given, this function will be used to inject fluid,
+            and at this time, the parameter "opers" is used to set the injected volume flow rate;
+
+        When the parameter "fluid_id" is not set and both the parameters "ca_mc" and "ca_t" are set,
+            this function is used to inject heat.
+
+        When injecting heat, there are two ways to inject it. When the parameter "g_heat" is given
+            a value greater than 0, it injects heat according to temperature. At this time, "opers"
+            is used to set the temperature of the boundary during heat injection. When the parameter
+            "g_heat" is None, heat is injected according to the power, and "opers" is used to set
+            the power of the heat injection.
         """
         inj = self.get_injector(core.seepage_add_inj(self.handle))
         assert inj is not None
@@ -9878,7 +9961,7 @@ class Thermal(HasHandle):
             """
             core.thermal_set_face_cond(self.model.handle, self.index, value)
 
-    core.use(None, 'new_thermal')
+    core.use(c_void_p, 'new_thermal')
     core.use(None, 'del_thermal', c_void_p)
 
     def __init__(self, path=None, handle=None):
@@ -10034,15 +10117,13 @@ class TherFlowConfig(Object):
                 self.reactions.append(arg)
             else:
                 self.add_fluid(arg)
-        self.flu_keys = {'specific_heat': 0, 'temperature': 1}
+        self.flu_keys = add_keys('specific_heat', 'temperature')
         # fv0: 初始时刻的流体体积<流体体积的参考值>
         # vol: 网格的几何体积。这个体积乘以孔隙度，就等于孔隙体积
-        self.cell_keys = {'mc': 0, 'temperature': 1, 'g_heat': 2, 'pre': 3, 'vol': 4, 'fv0': 5,
-                          }
+        self.cell_keys = add_keys('mc', 'temperature', 'g_heat', 'pre', 'vol', 'fv0')
         # g0：初始时刻的导流系数<当流体体积为fv0的时候的导流系数>
-        self.face_keys = {'g_heat': 0, 'area': 1, 'length': 2, 'g0': 3, 'perm': 4,
-                          }
-        self.model_keys = {'dt': 0, 'time': 1, 'step': 2, 'dv_relative': 3, 'dt_min': 4, 'dt_max': 5}
+        self.face_keys = add_keys('g_heat', 'area', 'length', 'g0', 'perm', 'igr')
+        self.model_keys = add_keys('dt', 'time', 'step', 'dv_relative', 'dt_min', 'dt_max')
         # 用于更新流体的导流系数
         self.krf = None
         # 定义一些开关
@@ -10068,66 +10149,150 @@ class TherFlowConfig(Object):
         self.iterate_thermal_implicitly = True
         # 在更新流体的密度的时候，所允许的最大的流体压力
         self.pre_max = 100e6
+        # 用以存储各个组分的ID. since 2023-5-30
+        self.components = {}
 
-    def set_flu_specific_heat(self, flu, value):
+    def set_specific_heat(self, elem, value):
         """
-        设置流体的比热
+        设置比热
         """
-        flu.set_attr(self.flu_keys['specific_heat'], value)
+        if isinstance(elem, Seepage.FluData):
+            elem.set_attr(self.flu_keys['specific_heat'], value)
+            return
 
-    def set_flu_temperature(self, flu, value):
-        """
-        设置流体的温度
-        """
-        flu.set_attr(self.flu_keys['temperature'], value)
+    def get_specific_heat(self, elem):
+        if isinstance(elem, Seepage.FluData):
+            return elem.get_attr(self.flu_keys['specific_heat'])
 
-    def set_cell_mc(self, cell, value):
+    def set_temperature(self, elem, value):
         """
-        设置cell中土体的质量乘以比热
+        设置温度
         """
-        cell.set_attr(self.cell_keys['mc'], value)
+        if isinstance(elem, Seepage.FluData):
+            elem.set_attr(self.flu_keys['temperature'], value)
+            return
 
-    def set_cell_temperature(self, cell, value):
-        """
-        设置cell中基质的温度
-        """
-        cell.set_attr(self.cell_keys['temperature'], value)
+        if isinstance(elem, Seepage.CellData):
+            elem.set_attr(self.cell_keys['temperature'], value)
+            return
 
-    def set_cell_g_heat(self, cell, value):
+    def get_temperature(self, elem):
         """
-        设置cell中基质和流体进行热交换的导流系数
+        设置温度
         """
-        cell.set_attr(self.cell_keys['g_heat'], value)
+        if isinstance(elem, Seepage.FluData):
+            return elem.get_attr(self.flu_keys['temperature'])
 
-    def set_cell_vol(self, cell, value):
+        if isinstance(elem, Seepage.CellData):
+            return elem.get_attr(self.cell_keys['temperature'])
+
+    set_flu_specific_heat = set_specific_heat
+    set_flu_temperature = set_temperature
+
+    def set_mc(self, elem, value):
+        """
+        质量乘以比热
+        """
+        if isinstance(elem, Seepage.CellData):
+            elem.set_attr(self.cell_keys['mc'], value)
+            return
+
+    def get_mc(self, elem):
+        """
+        质量乘以比热
+        """
+        if isinstance(elem, Seepage.CellData):
+            return elem.get_attr(self.cell_keys['mc'])
+
+    def set_fv0(self, elem, value):
+        if isinstance(elem, Seepage.CellData):
+            elem.set_attr(self.cell_keys['fv0'], value)
+            return
+
+    def get_fv0(self, elem):
+        if isinstance(elem, Seepage.CellData):
+            return elem.get_attr(self.cell_keys['fv0'])
+
+    set_cell_mc = set_mc
+    set_cell_temperature = set_temperature
+
+    def set_g_heat(self, elem, value):
+        if isinstance(elem, Seepage.CellData):
+            elem.set_attr(self.cell_keys['g_heat'], value)
+            return
+
+        if isinstance(elem, Seepage.FaceData):
+            elem.set_attr(self.face_keys['g_heat'], value)
+            return
+
+    def get_g_heat(self, elem):
+        if isinstance(elem, Seepage.CellData):
+            return elem.get_attr(self.cell_keys['g_heat'])
+
+        if isinstance(elem, Seepage.FaceData):
+            return elem.get_attr(self.face_keys['g_heat'])
+
+    set_cell_g_heat = set_g_heat
+
+    def set_vol(self, elem, value):
         """
         设置cell的体积
         """
-        cell.set_attr(self.cell_keys['vol'], value)
+        if isinstance(elem, Seepage.CellData):
+            elem.set_attr(self.cell_keys['vol'], value)
+            return
 
-    def set_face_g_heat(self, face, value):
+    def get_vol(self, elem):
         """
-        设置face的导热系数
+        设置cell的体积
         """
-        face.set_attr(self.face_keys['g_heat'], value)
+        if isinstance(elem, Seepage.CellData):
+            return elem.get_attr(self.cell_keys['vol'])
 
-    def set_face_area(self, face, value):
+    set_cell_vol = set_vol
+    set_face_g_heat = set_g_heat
+
+    def set_area(self, elem, value):
         """
         设置face的横截面积
         """
-        face.set_attr(self.face_keys['area'], value)
+        elem.set_attr(self.face_keys['area'], value)
 
-    def set_face_length(self, face, value):
+    def get_area(self, elem):
+        """
+        设置face的横截面积
+        """
+        return elem.get_attr(self.face_keys['area'])
+
+    set_face_area = set_area
+
+    def set_length(self, face, value):
         """
         设置face的长度
         """
         face.set_attr(self.face_keys['length'], value)
 
-    def set_face_g0(self, face, value):
+    def get_length(self, face):
+        """
+        设置face的长度
+        """
+        return face.get_attr(self.face_keys['length'])
+
+    set_face_length = set_length
+
+    def set_g0(self, face, value):
         """
         设置face的初始的导流系数（在没有固体存在的时候的原始值）
         """
         face.set_attr(self.face_keys['g0'], value)
+
+    def get_g0(self, face):
+        """
+        设置face的初始的导流系数（在没有固体存在的时候的原始值）
+        """
+        return face.get_attr(self.face_keys['g0'])
+
+    set_face_g0 = set_g0
 
     def add_fluid(self, flu):
         """
@@ -10154,94 +10319,119 @@ class TherFlowConfig(Object):
         """
         return len(self.fluids)
 
-    def fill_cell(self, cell, p, s):
+    def set_cell(self, cell, pos=None, vol=None, porosity=0.1, pore_modulus=1000e6, denc=1.0e6, dist=0.1,
+                 temperature=280.0, p=1.0, s=None, pore_modulus_range=None):
         """
-        填充流体到给定的压力和饱和度（在调用此函数之前，务必首先设置好各个流体的温度）
-        """
-        assert self.fluid_number == cell.fluid_number
-        assert cell.get_attr(
-            self.cell_keys['temperature']) is not None, "please set cell temperature before fill fluids"
-        # 更新各个流体的粘性和密度
-        s2 = []
-        for fid in range(cell.fluid_number):
-            flu = cell.get_fluid(fid)
-            if fid < len(s):
-                si = s[fid]
-            else:
-                si = 0
-            if flu.component_number == 0:
-                temperature = flu.get_attr(self.flu_keys['temperature'])
-                assert temperature is not None, "please set fluid temperature before fill"
-                flu.den = self.get_fluid(fid).den(p, temperature)
-                flu.vis = self.get_fluid(fid).vis(p, temperature)
-                if is_array(si):
-                    s2.append(si[0])
-                else:
-                    s2.append(si)
-            else:
-                s_sum = 0
-                for ic in range(flu.component_number):
-                    c = flu.get_component(ic)
-                    temperature = c.get_attr(self.flu_keys['temperature'])
-                    assert temperature is not None, "please set fluid temperature before fill"
-                    c.den = self.fluids[fid][ic].den(p, temperature)
-                    c.vis = self.fluids[fid][ic].vis(p, temperature)
-                    if is_array(si):
-                        if ic < len(si):
-                            c.vol = si[ic]
-                            s_sum += si[ic]
-                        else:
-                            c.vol = 0
-                    else:
-                        if ic == 0:
-                            c.vol = 1
-                        else:
-                            c.vol = 0
-                if is_array(si):
-                    s2.append(s_sum)
-                else:
-                    s2.append(si)
-        # 调用上一级的fill函数来填充流体
-        cell.fill(p, s2)
-
-    def set_cell(self, cell, pos=None, vol=1.0, porosity=0.1, pore_modulus=1000e6, denc=1.0e6, dist=0.1,
-                 temperature=280.0, p=None, s=None, pore_modulus_range=None):
-        """
-        对渗流的单元进行配置<支持配置组分>
+        设置Cell的初始状态.
         """
         if pos is not None:
             cell.pos = pos
-        cell.fluid_number = self.fluid_number
-        cell.set_attr(self.cell_keys['vol'], vol)  # 网格的几何体积
-        cell.set_attr(self.cell_keys['temperature'], temperature)
-        cell.set_attr(self.cell_keys['mc'], vol * denc)
-        cell.set_attr(self.cell_keys['g_heat'], vol / (dist * dist))
-        if pore_modulus_range is None:
-            assert 1e6 < pore_modulus < 10000e6
         else:
-            assert pore_modulus_range[0] < pore_modulus < pore_modulus_range[1]
-        cell.set_pore(0.0, vol * porosity, pore_modulus, vol * porosity * 2)
-        for fid in range(self.fluid_number):
-            flu = cell.get_fluid(fid)
-            if isinstance(self.fluids[fid], TherFlowConfig.FluProperty):
-                flu.component_number = 0
-                flu.set_attr(self.flu_keys['specific_heat'], self.fluids[fid].specific_heat)
-                flu.set_attr(self.flu_keys['temperature'], temperature)
-            else:
-                component_n = len(self.fluids[fid])
-                flu.component_number = component_n
-                for i in range(component_n):
-                    c = flu.get_component(i)
-                    c.set_attr(self.flu_keys['specific_heat'], self.fluids[fid][i].specific_heat)
-                    c.set_attr(self.flu_keys['temperature'], temperature)
-        if p is not None and s is not None and self.fluid_number > 0:
-            self.fill_cell(cell, p, s)
-            fv = cell.fluid_vol
-            if self.has_solid:
-                assert cell.fluid_number >= 2
-                idx = cell.fluid_number - 1
-                fv -= cell.get_fluid(idx).vol
-            cell.set_attr(self.cell_keys['fv0'], fv)
+            pos = cell.pos
+
+        if vol is not None:
+            cell.set_attr(self.cell_keys['vol'], vol)
+        else:
+            vol = cell.get_attr(self.cell_keys['vol'])
+            assert vol is not None
+
+        cell.set_ini(ca_mc=self.cell_keys['mc'], ca_t=self.cell_keys['temperature'],
+                     fa_t=self.flu_keys['temperature'], fa_c=self.flu_keys['specific_heat'],
+                     pos=pos, vol=vol, porosity=porosity,
+                     pore_modulus=pore_modulus,
+                     denc=denc,
+                     temperature=temperature, p=p, s=s,
+                     pore_modulus_range=pore_modulus_range)
+
+        cell.set_attr(self.cell_keys['fv0'], cell.fluid_vol)
+        cell.set_attr(self.cell_keys['g_heat'], vol / (dist ** 2))
+
+    def set_face(self, face, area=None, length=None, perm=None, heat_cond=None, igr=None):
+        """
+        对一个Face进行配置
+        """
+        if area is not None:
+            face.set_attr(self.face_keys['area'], area)
+        else:
+            area = face.get_attr(self.face_keys['area'])
+            assert area is not None
+
+        if length is not None:
+            face.set_attr(self.face_keys['length'], length)
+        else:
+            length = face.get_attr(self.face_keys['length'])
+            assert length is not None
+
+        assert area > 0 and length > 0
+
+        if perm is not None:
+            face.set_attr(self.face_keys['perm'], perm)
+        else:
+            perm = face.get_attr(self.face_keys['perm'])
+            assert perm is not None
+
+        g0 = area * perm / length
+        face.cond = g0
+
+        face.set_attr(self.face_keys['g0'], g0)
+
+        if heat_cond is not None:
+            face.set_attr(self.face_keys['g_heat'], area * heat_cond / length)
+
+        if igr is not None:
+            face.set_attr(self.face_keys['igr'], igr)
+
+    def set_model(self, model, porosity=0.1, pore_modulus=1000e6, denc=1.0e6, dist=0.1,
+                  temperature=280.0, p=None, s=None, perm=1e-14, heat_cond=1.0,
+                  sample_dist=None, pore_modulus_range=None, igr=None):
+        """
+        设置模型的网格，并顺便设置其初始的状态.
+        --
+        注意各个参数的含义：
+            porosity: 孔隙度；
+            pore_modulus：空隙的刚度，单位Pa；正常取值在100MPa到1000MPa之间；
+            denc：土体的密度和比热的乘积；假设土体密度2000kg/m^3，比热1000，denc取值就是2.0e6；
+            dist：一个单元包含土体和流体两个部分，dist是土体和流体换热的距离。这个值越大，换热就越慢。如果希望土体和流体的温度非常接近，
+                就可以把dist设置得比较小。一般，可以设置为网格大小的几分之一；
+            temperature: 温度K
+            p：压力Pa
+            s：各个相的饱和度，tuple或者list；
+            perm：渗透率 m^2
+            heat_cond: 热传导系数
+        -
+        注意：
+            每一个参数，都可以是一个具体的数值，或者是一个和x，y，z坐标相关的一个分布
+            ( 判断是否定义了obj.__call__这样的成员函数，有这个定义，则视为一个分布，否则是一个全场一定的值)
+        --
+        注意:
+            在使用这个函数之前，请确保Cell需要已经正确设置了位置，并且具有网格体积vol这个自定义属性；
+            对于Face，需要设置面积s和长度length这两个自定义属性。否则，此函数的执行会出现错误.
+
+        """
+        porosity = Field(porosity)
+        pore_modulus = Field(pore_modulus)
+        denc = Field(denc)
+        dist = Field(dist)
+        temperature = Field(temperature)
+        p = Field(p)
+        s = Field(s)
+        perm = Field(perm)
+        heat_cond = Field(heat_cond)
+        igr = Field(igr)
+
+        for cell in model.cells:
+            assert isinstance(cell, Seepage.Cell)
+            pos = cell.pos
+            self.set_cell(cell, porosity=porosity(*pos), pore_modulus=pore_modulus(*pos), denc=denc(*pos),
+                          temperature=temperature(*pos), p=p(*pos), s=s(*pos),
+                          pore_modulus_range=pore_modulus_range, dist=dist(*pos))
+
+        for face in model.faces:
+            assert isinstance(face, Seepage.Face)
+            p0 = face.get_cell(0).pos
+            p1 = face.get_cell(1).pos
+            self.set_face(face, perm=get_average_perm(p0, p1, perm, sample_dist),
+                          heat_cond=get_average_perm(p0, p1, heat_cond, sample_dist), igr=igr(*face.pos))
 
     def add_cell(self, model, *args, **kwargs):
         """
@@ -10251,18 +10441,6 @@ class TherFlowConfig(Object):
         self.set_cell(cell, *args, **kwargs)
         return cell
 
-    def set_face(self, face, area=1, length=1, perm=1.0e-15, heat_cond=1.0):
-        """
-        对一个Face进行配置
-        """
-        g0 = area * perm / length
-        face.cond = g0
-        face.set_attr(self.face_keys['perm'], perm)
-        face.set_attr(self.face_keys['g0'], g0)
-        face.set_attr(self.face_keys['g_heat'], area * heat_cond / length)
-        face.set_attr(self.face_keys['area'], area)
-        face.set_attr(self.face_keys['length'], length)
-
     def add_face(self, model, cell0, cell1, *args, **kwargs):
         """
         添加一个Face，并且返回
@@ -10271,11 +10449,35 @@ class TherFlowConfig(Object):
         self.set_face(face, *args, **kwargs)
         return face
 
-    def create(self, mesh, *args, **kwargs):
+    def add_mesh(self, model, mesh):
+        """
+        根据给定的mesh，添加Cell和Face. 并对Cell和Face设置基本的属性.
+            对于Cell，仅仅设置位置和体积这两个属性.
+            对于Face，仅仅设置面积和长度这两个属性.
+        """
+        if mesh is not None:
+            ca_vol = self.cell_keys['vol']
+            fa_s = self.face_keys['area']
+            fa_l = self.face_keys['length']
+
+            cell_n0 = model.cell_number
+
+            for c in mesh.cells:
+                cell = model.add_cell()
+                cell.pos = c.pos
+                cell.set_attr(ca_vol, c.vol)
+
+            for f in mesh.faces:
+                face = model.add_face(model.get_cell(f.link[0] + cell_n0), model.get_cell(f.link[1] + cell_n0))
+                face.set_attr(fa_s, f.area)
+                face.set_attr(fa_l, f.length)
+
+    def create(self, mesh=None, model=None, **kwargs):
         """
         利用给定的网格来创建一个模型
         """
-        model = Seepage()
+        if model is None:
+            model = Seepage()
 
         if self.disable_update_den:
             model.add_tag('disable_update_den')
@@ -10293,9 +10495,11 @@ class TherFlowConfig(Object):
             model.add_tag('has_solid')
 
         # 添加流体的定义和反应的定义 (since 2023-4-5)
+        model.clear_fludefs()  # 首先，要清空已经存在的流体定义.
         for flu in self.fluids:
             model.add_fludef(Seepage.FluDef.create(flu))
 
+        model.clear_reactions()  # 清空已经存在的定义.
         for r in self.reactions:
             model.add_reaction(r)
 
@@ -10316,55 +10520,17 @@ class TherFlowConfig(Object):
         if self.dv_relative is not None:
             self.set_dv_relative(model, self.dv_relative)
 
-        self.set_mesh(model, mesh, *args, **kwargs)
+        if self.krf is not None:
+            igr = model.add_gr(self.krf, need_id=True)
+        else:
+            igr = None
+
+        if mesh is not None:
+            self.add_mesh(model, mesh)
+
+        self.set_model(model, igr=igr, **kwargs)
 
         return model
-
-    def set_mesh(self, model, mesh, porosity=0.1, pore_modulus=1000e6, denc=1.0e6, dist=0.1,
-                 temperature=280.0, p=None, s=None, perm=1e-14, heat_cond=1.0,
-                 sample_dist=None, pore_modulus_range=None):
-        """
-        设置模型的网格，并顺便设置其初始的状态.
-        porosity: 孔隙度；
-        pore_modulus：空隙的刚度，单位Pa；正常取值在100MPa到1000MPa之间；
-        denc：土体的密度和比热的乘积；假设土体密度2000kg/m^3，比热1000，denc取值就是2.0e6；
-        dist：一个单元包含土体和流体两个部分，dist是土体和流体换热的距离。这个值越大，换热就越慢。如果希望土体和流体的温度非常接近，就可以把dist设置
-             得比较小。一般，可以设置为网格大小的几分之一；
-        temperature: 温度K
-        p：压力Pa
-        s：各个相的饱和度，tuple或者list；
-        perm：渗透率 m^2
-        heat_cond: 热传导系数
-        -
-        每一个参数，都可以是一个具体的数值，或者是一个和x，y，z坐标相关的一个分布( 判断是否定义了obj.__call__这样的成员函数，有这个定义，则视为一个分布，否则是一个全场一定的值)
-        """
-        porosity = Field(porosity)
-        pore_modulus = Field(pore_modulus)
-        denc = Field(denc)
-        dist = Field(dist)
-        temperature = Field(temperature)
-        p = Field(p)
-        s = Field(s)
-        perm = Field(perm)
-        heat_cond = Field(heat_cond)
-
-        model.clear()
-        for c in mesh.cells:
-            gui.break_point()
-            pos = c.pos
-            self.add_cell(model, pos=pos, temperature=temperature(*pos), vol=c.vol,
-                          denc=denc(*pos), porosity=porosity(*pos),
-                          pore_modulus=pore_modulus(*pos),
-                          dist=dist(*pos), p=p(*pos), s=s(*pos), pore_modulus_range=pore_modulus_range)
-
-        for f in mesh.faces:
-            gui.break_point()
-            p0 = mesh.get_cell(f.link[0]).pos
-            p1 = mesh.get_cell(f.link[1]).pos
-            self.add_face(model, model.get_cell(f.link[0]), model.get_cell(f.link[1]), area=f.area,
-                          length=f.length,
-                          perm=get_average_perm(p0, p1, perm, sample_dist),
-                          heat_cond=get_average_perm(p0, p1, heat_cond, sample_dist))
 
     def get_dt(self, model):
         """
@@ -10467,13 +10633,14 @@ class TherFlowConfig(Object):
         assert isinstance(model, Seepage)
         if dt is not None:
             self.set_dt(model, dt)
+
         dt = self.get_dt(model)
         assert dt is not None, 'You must set dt before iterate'
 
-        if model.not_has_tag('disable_update_den'):
+        if model.not_has_tag('disable_update_den') and model.fludef_number > 0:
             model.update_den(relax_factor=0.3, fa_t=self.flu_keys['temperature'])
 
-        if model.not_has_tag('disable_update_vis'):
+        if model.not_has_tag('disable_update_vis') and model.fludef_number > 0:
             model.update_vis(ca_p=self.cell_keys['pre'], fa_t=self.flu_keys['temperature'],
                              relax_factor=1.0, min=1.0e-7, max=1.0)
 
@@ -10483,21 +10650,26 @@ class TherFlowConfig(Object):
             # 此时，认为最后一种流体其实是固体，并进行备份处理
             model.pop_fluids(self.solid_buffer)
 
-        if self.krf is not None:
-            assert isinstance(self.krf, Interp1)
-            model.update_cond(v0=self.cell_keys['fv0'], g0=self.face_keys['g0'],
-                              krf=self.krf, relax_factor=0.3)
+        if model.gr_number > 0:
+            # 此时，各个Face的导流系数是可变的.
+            # 注意：
+            #   在建模的时候，务必要设置Cell的v0属性，Face的g0属性和ikr属性，并且，在model中，应该有相应的kr和它对应。
+            #   为了不和真正流体的kr混淆，这个Face的ikr，应该大于流体的数量。
+            model.update_cond(v0=self.cell_keys['fv0'], g0=self.face_keys['g0'], krf=self.face_keys['igr'],
+                              relax_factor=0.3)
 
         # 施加cond的更新操作
         for update in self.cond_updaters:
             update(model)
 
         # 当未禁止更新flow且流体的数量非空
-        update_flow = model.not_has_tag('disable_flow') and self.fluid_number > 0
+        update_flow = model.not_has_tag('disable_flow') and model.fludef_number > 0
 
         if update_flow:
-            r1 = model.iterate(dt=dt, solver=solver, fa_s=fa_s, fa_q=fa_q,
-                               fa_k=fa_k, ca_p=self.cell_keys['pre'])
+            if model.has_tag('has_inertia'):
+                r1 = model.iterate(dt=dt, solver=solver, fa_s=fa_s, fa_q=fa_q, fa_k=fa_k, ca_p=self.cell_keys['pre'])
+            else:
+                r1 = model.iterate(dt=dt, solver=solver, ca_p=self.cell_keys['pre'])
         else:
             r1 = None
 
@@ -10518,7 +10690,7 @@ class TherFlowConfig(Object):
             r2 = None
 
         # 不存在禁止标识且存在流体
-        exchange_heat = model.not_has_tag('disable_heat_exchange') and self.fluid_number > 0
+        exchange_heat = model.not_has_tag('disable_heat_exchange') and model.fludef_number > 0
 
         if exchange_heat:
             model.exchange_heat(dt=dt, ca_g=self.cell_keys['g_heat'],

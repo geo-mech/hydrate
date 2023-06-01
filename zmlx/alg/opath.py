@@ -12,7 +12,7 @@ def opath(*args):
     返回一个用于输出的文件路径. 如果给定的args为空，则返回root路径（由 current_work_directory 定义的环境变量或者当前工作路径）
     等同于UI界面设置的工作目录
     """
-    root = data.getenv('current_work_directory', encoding='utf-8', default=os.getcwd())
+    root = app_data.getenv('current_work_directory', encoding='utf-8', default=os.getcwd())
     assert not is_chinese(root), f'String contains Chinese. root: {root}'
 
     if len(args) > 0:
@@ -44,7 +44,7 @@ def set(folder=None):
         make_dirs(folder)
 
     if os.path.isdir(folder):
-        data.setenv('current_work_directory', folder, encoding='utf-8')
+        app_data.setenv('current_work_directory', folder, encoding='utf-8')
 
 
 class TaskFolder:

@@ -13,7 +13,7 @@ def create_flu():
 
 
 def show_all():
-    from zmlx.plot.show_field2 import show_field2
+    from zmlx.plt.show_field2 import show_field2
     flu = create_flu()
     show_field2(flu.den, [1e6, 40e6], [280, 1000], caption='den.txt')
     show_field2(flu.vis, [1e6, 40e6], [280, 1000], caption='vis.txt')

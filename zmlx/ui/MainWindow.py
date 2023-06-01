@@ -3,7 +3,7 @@
 
 import sys
 
-from zml import gui
+from zml import gui, lic
 from zmlx.ui.CodeAlg import edit_code
 from zmlx.ui.Config import *
 from zmlx.ui.ConsoleWidget import ConsoleWidget
@@ -50,6 +50,26 @@ class MainWindow(QtWidgets.QMainWindow):
         self.status_bar.addPermanentWidget(self.propress_label)
         self.status_bar.addPermanentWidget(self.propress_bar)
         self.progress(visible=False)
+
+        self.init_later_timer = QtCore.QTimer(self)
+        self.init_later_timer.timeout.connect(self.__init_later)
+        self.init_later_timer.start(2000)
+
+    def __init_later(self):
+        """
+        执行一些可能会比较耗时（但是又不那么关键的）的初始化任务
+        """
+        self.init_later_timer.stop()
+        # ----
+        try:
+            if lic.summary is None:
+                toolbar = self.__get_toolbar('NoLicense')
+                toolbar.setStyleSheet('background-color:rgb(255, 255, 0)')
+                action = QtWidgets.QAction(self)
+                action.setText('版本已过期，请更新并联网使用，谢谢！')
+                toolbar.addAction(action)
+        except:
+            pass
 
     def __init_actions(self):
         scripts = {}
@@ -279,10 +299,15 @@ class MainWindow(QtWidgets.QMainWindow):
             self.propress_label.setVisible(visible)
 
 
+class MySplashScreen(QtWidgets.QSplashScreen):
+    def mousePressEvent(self, event):
+        pass
+
+
 def execute(code=None, keep_cwd=True, close_after_done=True):
     try:
-        from zml import data
-        data.log(f'gui_execute. code={code}, file={__file__}')
+        from zml import app_data
+        app_data.log(f'gui_execute. code={code}, file={__file__}')
     except:
         pass
 
@@ -294,7 +319,14 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
 
     if not keep_cwd:
         load_cwd()
+
     app = QtWidgets.QApplication(sys.argv)
+
+    splash = MySplashScreen()
+    splash.setPixmap(load_pixmap('splash.jpg'))
+    splash.show()
+    app.processEvents()  # 处理主进程事件
+
     win = MainWindow()
 
     def f1():
@@ -309,8 +341,15 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
 
     f1()
 
-    load_window_size(win, 'main_window_size')
-    load_window_style(win, 'zml_main.qss')
+    try:
+        load_window_size(win, 'main_window_size')
+    except:
+        pass
+
+    try:
+        load_window_style(win, 'zml_main.qss')
+    except:
+        pass
 
     def my_excepthook(type, value, tb):
         message = f"""Exception Type: {type}
@@ -323,6 +362,9 @@ We are very sorry for this exception. Please check your data according to the ab
 
     sys.excepthook = my_excepthook
     win.show()
+
+    splash.finish(win)  # 隐藏启动界面
+    splash.deleteLater()
 
     def setup():
         for path in find_all('zml_gui_setup.py'):

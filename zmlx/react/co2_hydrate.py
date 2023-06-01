@@ -58,7 +58,7 @@ def create(igas, iwat, ihyd, fa_t, fa_c):
 if __name__ == '__main__':
     # 和甲烷水合物比较(总的来说，各个参数都在接近的的量级)
     from zmlx.react.ch4_hydrate import vp as vp1, vt as vt1
-    from zmlx.plot import plot2
+    from zmlx.plt import plot2
 
     from zmlx.react.ch4_hydrate import get_mg_vs_mh as get_mg
     from zmlx.react.ch4_hydrate import get_dheat as get_dh

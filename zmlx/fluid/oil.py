@@ -78,7 +78,7 @@ if __name__ == '__main__':
         den = flu.den(p, T)
         print(f'p = {p}Pa, T = {T}K, vis = {vis}Pa.s, den = {den}kg/m^3')
     try:
-        from zmlx.plot.show_field2 import show_field2
+        from zmlx.plt.show_field2 import show_field2
 
         show_field2(flu.vis, [1e6, 40e6], [300, 1000])
         show_field2(flu.den, [1e6, 40e6], [300, 1000])

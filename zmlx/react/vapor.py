@@ -31,7 +31,7 @@ def __compare():
     参考文献：Wagner, W.; Pruss, A., The IAPWS Formulation 1995 for the Thermodynamic Properties of Ordinary Water Substance for General
         and Scientific Use, J. Phys. Chem. Ref. Data, 2002, 31, 2, 387-535, https://doi.org/10.1063/1.1461829 .
     """
-    from zmlx.plot import plot2
+    from zmlx.plt import plot2
 
     vt = [float(i) for i in range(290, 700)]
     vp = [exp(9.3876 - 3826.36 / (t - 45.47)) * 1.0e6 for t in vt]

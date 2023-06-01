@@ -2,9 +2,9 @@
 
 
 import os
-from zml import data, gui
+from zml import app_data, gui
 
-filepath = data.temp('zml_search_paths')
+filepath = app_data.temp('zml_search_paths')
 
 
 def get_paths():

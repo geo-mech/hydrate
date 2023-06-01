@@ -8,10 +8,14 @@ zmlx: zml模块的扩展，将首先引入zml的所有功能，并定义数据�
     2. 用户可添加文件，但勿修改现有文件内容；
 """
 
-import zml
 from zml import *
 from zmlx.alg import get_latest_version, clamp, opath, linspace, \
     has_PyQt5, has_numpy, has_matplotlib, join_paths
+import os
+
+# 部分函数容易混淆，借助zml调用
+import zml
+do_plot = zml.plot
 
 try:
     from zmlx.config import create_hydrate as create_hydconfig
@@ -19,7 +23,7 @@ except:
     pass
 
 try:
-    from zmlx.plot import plot2
+    from zmlx.plt import plot2
 except:
     pass
 
@@ -28,7 +32,6 @@ try:
     has_gui = True
 except:
     has_gui = False
-
 
 try:
     from zmlx.utility import GuiIterator
@@ -55,24 +58,17 @@ try:
 except:
     pass
 
-
-import os
-
 try:
-    # 尝试导入numpy，后续可能有不少代码会依赖于此
-    import numpy
-    np = numpy
+    import numpy as np
 except:
     np = None
 
-do_plot = zml.plot
-
 try:
     folder = os.path.dirname(__file__)
-    zml.data.add_path(folder)
-    zml.data.add_path(os.path.join(folder, 'data'))
+    app_data.add_path(folder)
+    app_data.add_path(os.path.join(folder, 'data'))
     if has_gui:
-        zml.data.add_path(os.path.join(folder, 'ui', 'data'))
+        app_data.add_path(os.path.join(folder, 'ui', 'data'))
 except:
     pass
 
