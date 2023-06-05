@@ -1318,13 +1318,17 @@ def get_last_file(folder):
         return os.path.join(folder, max(files))
 
 
-def write_py(path, data, **kwargs):
+def write_py(path, data=None, **kwargs):
     """
     Save the data to a file in .py format. Note that the data must be correctly converted to a string.
     If data is a string, make sure it does not contain special characters such as ' and "
     """
     if path is None:
         return
+    if data is None and len(kwargs) == 0:
+        return
+    if data is None:
+        data = {}
     if isinstance(data, dict):
         data.update(kwargs)
     else:
@@ -2746,6 +2750,53 @@ class Array2(HasHandle):
             if y is not None:
                 self[1] = y
 
+    core.use(None, 'array2_save', c_void_p, c_char_p)
+
+    def save(self, path):
+        """
+        序列化保存. 可选扩展名:
+            1: .txt  文本格式 (跨平台，基本不可读)
+            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
+            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        """
+        if path is not None:
+            core.array2_save(self.handle, make_c_char_p(path))
+
+    core.use(None, 'array2_load', c_void_p, c_char_p)
+
+    def load(self, path):
+        """
+        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        """
+        if path is not None:
+            core.array2_load(self.handle, make_c_char_p(path))
+
+    core.use(None, 'array2_write_fmap', c_void_p, c_void_p, c_char_p)
+    core.use(None, 'array2_read_fmap', c_void_p, c_void_p, c_char_p)
+
+    def to_fmap(self, fmt='binary'):
+        """
+        将数据序列化到一个Filemap中. 其中fmt的取值可以为: text, xml和binary
+        """
+        fmap = FileMap()
+        core.array2_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
+        return fmap
+
+    def from_fmap(self, fmap, fmt='binary'):
+        """
+        从Filemap中读取序列化的数据. 其中fmt的取值可以为: text, xml和binary
+        """
+        assert isinstance(fmap, FileMap)
+        core.array2_read_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
+
+    @property
+    def fmap(self):
+        return self.to_fmap(fmt='binary')
+
+    @fmap.setter
+    def fmap(self, value):
+        self.from_fmap(value, fmt='binary')
+
     def __str__(self):
         return f'zml.Array2({self[0]}, {self[1]})'
 
@@ -2797,6 +2848,53 @@ class Array3(HasHandle):
                 self[2] = z
         else:
             assert x is None and y is None and z is None
+
+    core.use(None, 'array3_save', c_void_p, c_char_p)
+
+    def save(self, path):
+        """
+        序列化保存. 可选扩展名:
+            1: .txt  文本格式 (跨平台，基本不可读)
+            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
+            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        """
+        if path is not None:
+            core.array3_save(self.handle, make_c_char_p(path))
+
+    core.use(None, 'array3_load', c_void_p, c_char_p)
+
+    def load(self, path):
+        """
+        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        """
+        if path is not None:
+            core.array3_load(self.handle, make_c_char_p(path))
+
+    core.use(None, 'array3_write_fmap', c_void_p, c_void_p, c_char_p)
+    core.use(None, 'array3_read_fmap', c_void_p, c_void_p, c_char_p)
+
+    def to_fmap(self, fmt='binary'):
+        """
+        将数据序列化到一个Filemap中. 其中fmt的取值可以为: text, xml和binary
+        """
+        fmap = FileMap()
+        core.array3_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
+        return fmap
+
+    def from_fmap(self, fmap, fmt='binary'):
+        """
+        从Filemap中读取序列化的数据. 其中fmt的取值可以为: text, xml和binary
+        """
+        assert isinstance(fmap, FileMap)
+        core.array3_read_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
+
+    @property
+    def fmap(self):
+        return self.to_fmap(fmt='binary')
+
+    @fmap.setter
+    def fmap(self, value):
+        self.from_fmap(value, fmt='binary')
 
     def __str__(self):
         return f'zml.Array3({self[0]}, {self[1]}, {self[2]})'
@@ -2853,6 +2951,53 @@ class Tensor2(HasHandle):
                 self.yy = yy
             if xy is not None:
                 self.xy = xy
+
+    core.use(None, 'tensor2_save', c_void_p, c_char_p)
+
+    def save(self, path):
+        """
+        序列化保存. 可选扩展名:
+            1: .txt  文本格式 (跨平台，基本不可读)
+            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
+            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        """
+        if path is not None:
+            core.tensor2_save(self.handle, make_c_char_p(path))
+
+    core.use(None, 'tensor2_load', c_void_p, c_char_p)
+
+    def load(self, path):
+        """
+        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        """
+        if path is not None:
+            core.tensor2_load(self.handle, make_c_char_p(path))
+
+    core.use(None, 'tensor2_write_fmap', c_void_p, c_void_p, c_char_p)
+    core.use(None, 'tensor2_read_fmap', c_void_p, c_void_p, c_char_p)
+
+    def to_fmap(self, fmt='binary'):
+        """
+        将数据序列化到一个Filemap中. 其中fmt的取值可以为: text, xml和binary
+        """
+        fmap = FileMap()
+        core.tensor2_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
+        return fmap
+
+    def from_fmap(self, fmap, fmt='binary'):
+        """
+        从Filemap中读取序列化的数据. 其中fmt的取值可以为: text, xml和binary
+        """
+        assert isinstance(fmap, FileMap)
+        core.tensor2_read_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
+
+    @property
+    def fmap(self):
+        return self.to_fmap(fmt='binary')
+
+    @fmap.setter
+    def fmap(self, value):
+        self.from_fmap(value, fmt='binary')
 
     def __str__(self):
         return f'zml.Tensor2({self.xx}, {self.yy}, {self.xy})'
@@ -2950,6 +3095,53 @@ class Tensor3(HasHandle):
 
     def __init__(self, handle=None):
         super(Tensor3, self).__init__(handle, core.new_tensor3, core.del_tensor3)
+
+    core.use(None, 'tensor3_save', c_void_p, c_char_p)
+
+    def save(self, path):
+        """
+        序列化保存. 可选扩展名:
+            1: .txt  文本格式 (跨平台，基本不可读)
+            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
+            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        """
+        if path is not None:
+            core.tensor3_save(self.handle, make_c_char_p(path))
+
+    core.use(None, 'tensor3_load', c_void_p, c_char_p)
+
+    def load(self, path):
+        """
+        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        """
+        if path is not None:
+            core.tensor3_load(self.handle, make_c_char_p(path))
+
+    core.use(None, 'tensor3_write_fmap', c_void_p, c_void_p, c_char_p)
+    core.use(None, 'tensor3_read_fmap', c_void_p, c_void_p, c_char_p)
+
+    def to_fmap(self, fmt='binary'):
+        """
+        将数据序列化到一个Filemap中. 其中fmt的取值可以为: text, xml和binary
+        """
+        fmap = FileMap()
+        core.tensor3_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
+        return fmap
+
+    def from_fmap(self, fmap, fmt='binary'):
+        """
+        从Filemap中读取序列化的数据. 其中fmt的取值可以为: text, xml和binary
+        """
+        assert isinstance(fmap, FileMap)
+        core.tensor3_read_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
+
+    @property
+    def fmap(self):
+        return self.to_fmap(fmt='binary')
+
+    @fmap.setter
+    def fmap(self, value):
+        self.from_fmap(value, fmt='binary')
 
     def __str__(self):
         return f'zml.Tensor3({self.xx}, {self.yy}, {self.zz}, {self.xy}, {self.yz}, {self.zx})'
@@ -3271,6 +3463,53 @@ class Coord2(HasHandle):
             if origin is not None and xdir is not None:
                 self.set(origin, xdir)
 
+    core.use(None, 'coord2_save', c_void_p, c_char_p)
+
+    def save(self, path):
+        """
+        序列化保存. 可选扩展名:
+            1: .txt  文本格式 (跨平台，基本不可读)
+            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
+            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        """
+        if path is not None:
+            core.coord2_save(self.handle, make_c_char_p(path))
+
+    core.use(None, 'coord2_load', c_void_p, c_char_p)
+
+    def load(self, path):
+        """
+        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        """
+        if path is not None:
+            core.coord2_load(self.handle, make_c_char_p(path))
+
+    core.use(None, 'coord2_write_fmap', c_void_p, c_void_p, c_char_p)
+    core.use(None, 'coord2_read_fmap', c_void_p, c_void_p, c_char_p)
+
+    def to_fmap(self, fmt='binary'):
+        """
+        将数据序列化到一个Filemap中. 其中fmt的取值可以为: text, xml和binary
+        """
+        fmap = FileMap()
+        core.coord2_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
+        return fmap
+
+    def from_fmap(self, fmap, fmt='binary'):
+        """
+        从Filemap中读取序列化的数据. 其中fmt的取值可以为: text, xml和binary
+        """
+        assert isinstance(fmap, FileMap)
+        core.coord2_read_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
+
+    @property
+    def fmap(self):
+        return self.to_fmap(fmt='binary')
+
+    @fmap.setter
+    def fmap(self, value):
+        self.from_fmap(value, fmt='binary')
+
     def __str__(self):
         return f'zml.Coord2(origin = {self.origin}, xdir = {self.xdir})'
 
@@ -3340,6 +3579,53 @@ class Coord3(HasHandle):
                 self.set(origin, xdir, ydir)
         else:
             assert origin is None and xdir is None and ydir is None
+
+    core.use(None, 'coord3_save', c_void_p, c_char_p)
+
+    def save(self, path):
+        """
+        序列化保存. 可选扩展名:
+            1: .txt  文本格式 (跨平台，基本不可读)
+            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
+            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        """
+        if path is not None:
+            core.coord3_save(self.handle, make_c_char_p(path))
+
+    core.use(None, 'coord3_load', c_void_p, c_char_p)
+
+    def load(self, path):
+        """
+        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        """
+        if path is not None:
+            core.coord3_load(self.handle, make_c_char_p(path))
+
+    core.use(None, 'coord3_write_fmap', c_void_p, c_void_p, c_char_p)
+    core.use(None, 'coord3_read_fmap', c_void_p, c_void_p, c_char_p)
+
+    def to_fmap(self, fmt='binary'):
+        """
+        将数据序列化到一个Filemap中. 其中fmt的取值可以为: text, xml和binary
+        """
+        fmap = FileMap()
+        core.coord3_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
+        return fmap
+
+    def from_fmap(self, fmap, fmt='binary'):
+        """
+        从Filemap中读取序列化的数据. 其中fmt的取值可以为: text, xml和binary
+        """
+        assert isinstance(fmap, FileMap)
+        core.coord3_read_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
+
+    @property
+    def fmap(self):
+        return self.to_fmap(fmt='binary')
+
+    @fmap.setter
+    def fmap(self, value):
+        self.from_fmap(value, fmt='binary')
 
     def __str__(self):
         """
@@ -4235,6 +4521,53 @@ class LinearExpr(HasHandle):
 
     def __init__(self, handle=None):
         super(LinearExpr, self).__init__(handle, core.new_linear_expr, core.del_linear_expr)
+
+    core.use(None, 'linear_expr_save', c_void_p, c_char_p)
+
+    def save(self, path):
+        """
+        序列化保存. 可选扩展名:
+            1: .txt  文本格式 (跨平台，基本不可读)
+            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
+            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        """
+        if path is not None:
+            core.linear_expr_save(self.handle, make_c_char_p(path))
+
+    core.use(None, 'linear_expr_load', c_void_p, c_char_p)
+
+    def load(self, path):
+        """
+        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        """
+        if path is not None:
+            core.linear_expr_load(self.handle, make_c_char_p(path))
+
+    core.use(None, 'linear_expr_write_fmap', c_void_p, c_void_p, c_char_p)
+    core.use(None, 'linear_expr_read_fmap', c_void_p, c_void_p, c_char_p)
+
+    def to_fmap(self, fmt='binary'):
+        """
+        将数据序列化到一个Filemap中. 其中fmt的取值可以为: text, xml和binary
+        """
+        fmap = FileMap()
+        core.linear_expr_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
+        return fmap
+
+    def from_fmap(self, fmap, fmt='binary'):
+        """
+        从Filemap中读取序列化的数据. 其中fmt的取值可以为: text, xml和binary
+        """
+        assert isinstance(fmap, FileMap)
+        core.linear_expr_read_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
+
+    @property
+    def fmap(self):
+        return self.to_fmap(fmt='binary')
+
+    @fmap.setter
+    def fmap(self, value):
+        self.from_fmap(value, fmt='binary')
 
     def __eq__(self, rhs):
         return self.handle == rhs.handle
@@ -7339,6 +7672,53 @@ class Seepage(HasHandle, HasCells):
             else:
                 assert mass is None and den is None and vis is None and vol is None
 
+        core.use(None, 'fluid_save', c_void_p, c_char_p)
+    
+        def save(self, path):
+            """
+            序列化保存. 可选扩展名:
+                1: .txt  文本格式 (跨平台，基本不可读)
+                2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
+                3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+            """
+            if path is not None:
+                core.fluid_save(self.handle, make_c_char_p(path))
+    
+        core.use(None, 'fluid_load', c_void_p, c_char_p)
+    
+        def load(self, path):
+            """
+            序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+            """
+            if path is not None:
+                core.fluid_load(self.handle, make_c_char_p(path))
+    
+        core.use(None, 'fluid_write_fmap', c_void_p, c_void_p, c_char_p)
+        core.use(None, 'fluid_read_fmap', c_void_p, c_void_p, c_char_p)
+    
+        def to_fmap(self, fmt='binary'):
+            """
+            将数据序列化到一个Filemap中. 其中fmt的取值可以为: text, xml和binary
+            """
+            fmap = FileMap()
+            core.fluid_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
+            return fmap
+    
+        def from_fmap(self, fmap, fmt='binary'):
+            """
+            从Filemap中读取序列化的数据. 其中fmt的取值可以为: text, xml和binary
+            """
+            assert isinstance(fmap, FileMap)
+            core.fluid_read_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
+    
+        @property
+        def fmap(self):
+            return self.to_fmap(fmt='binary')
+    
+        @fmap.setter
+        def fmap(self, value):
+            self.from_fmap(value, fmt='binary')
+
         core.use(c_double, 'fluid_get_mass', c_void_p)
         core.use(None, 'fluid_set_mass', c_void_p, c_double)
 
@@ -8877,6 +9257,14 @@ class Seepage(HasHandle, HasCells):
         """
         return Iterators.Injector(self)
 
+    core.use(None, 'seepage_apply_injs', c_void_p, c_double)
+
+    def apply_injectors(self, dt):
+        """
+        所有的注入点执行注入操作.
+        """
+        core.seepage_apply_injs(self.handle, dt)
+
     core.use(c_double, 'seepage_get_gravity', c_void_p, c_size_t)
     core.use(None, 'seepage_set_gravity', c_void_p, c_size_t, c_double)
 
@@ -9271,6 +9659,11 @@ class Seepage(HasHandle, HasCells):
             else:
                 # 利用model中定义的kr，并且每一个Face可以有不同的kr
                 core.seepage_update_cond_c(self.handle, v0, g0, krf, relax_factor)
+
+    core.use(None, 'seepage_update_g0', c_void_p, c_size_t, c_size_t, c_size_t, c_size_t)
+
+    def update_g0(self, fa_g0, fa_k, fa_s, fa_l):
+        core.seepage_update_g0(self.handle, fa_g0, fa_k, fa_s, fa_l)
 
     core.use(None, 'seepage_find_inner_face_ids', c_void_p, c_void_p, c_void_p)
 
@@ -10644,6 +11037,9 @@ class TherFlowConfig(Object):
             model.update_vis(ca_p=self.cell_keys['pre'], fa_t=self.flu_keys['temperature'],
                              relax_factor=1.0, min=1.0e-7, max=1.0)
 
+        if model.injector_number > 0:
+            model.apply_injectors(dt)
+
         has_solid = model.has_tag('has_solid')
 
         if has_solid:
@@ -11260,10 +11656,34 @@ class FractureNetwork2(HasHandle):
         """
         core.fnet2_copy_attr(self.handle, idest, isrc)
 
+    core.use(c_double, 'fnet2_get_dn_min', c_void_p)
+    core.use(c_double, 'fnet2_get_dn_max', c_void_p)
+
+    @property
+    def dn_min(self):
+        return core.fnet2_get_dn_min(self.handle)
+
+    @property
+    def dn_max(self):
+        return core.fnet2_get_dn_max(self.handle)
+
+    core.use(c_double, 'fnet2_get_ds_min', c_void_p)
+    core.use(c_double, 'fnet2_get_ds_max', c_void_p)
+
+    @property
+    def ds_min(self):
+        return core.fnet2_get_ds_min(self.handle)
+
+    @property
+    def ds_max(self):
+        return core.fnet2_get_ds_max(self.handle)
+
 
 class InfManager2(HasHandle):
     """
     二维裂缝的管理（建立应力影响矩阵）
+    注意：
+        这是一个临时变量，因此没有提供save/load函数。在调用update_matrix之后，矩阵会自动创建.
     """
     core.use(c_void_p, 'new_fmanager2')
     core.use(None, 'del_fmanager2', c_void_p)
@@ -11402,6 +11822,8 @@ class Hf2Alg:
     def update_seepage_topology(seepage, network, fa_id):
         """
         建立和裂缝对应的流动模型.
+            其中：
+            fa_id为裂缝的自定义属性的ID，用以存储这个裂缝单元对应的Seepage中的Cell的ID.
             注意：
             1. 这里的seepage需要被这个裂缝系统所独占。即，这里建立的目标，是裂缝单元和seepage中的Cell一对一。但是，为了确保存储在
             fracture中的Cell的id不发生变化，这里不允许删除seepage中的Cell。当裂缝变少的时候，多余的Cell将会被标记成为孤立的Cell，
@@ -11478,6 +11900,7 @@ class Hf2Alg:
             return
 
         if isinstance(manager, InfManager2):
+            assert fa_id is not None
             core.hf2_alg_update_pore0(seepage.handle, manager.handle, fa_id)
             return
 
@@ -13775,20 +14198,19 @@ class Disc3Vec(HasHandle):
         core.vdisc3_create_mesh(self.handle, buffer.handle, count, da, na, fa)
         return buffer
 
-    core.use(None, 'vdisc3_modify_perm', c_void_p, c_void_p, c_void_p, c_size_t, c_size_t, c_size_t)
+    core.use(None, 'vdisc3_modify_perm', c_void_p, c_void_p, c_size_t, c_size_t, c_size_t, c_size_t)
 
-    def modify_perm(self, vk, seepage, ca_fp, da_pc, da_k):
+    def modify_perm(self, seepage, fa_k, ca_fp, da_pc, da_k):
         """
         对于圆盘控制的face，检查流体压力是否超过了临界值。如果流体压力超过了临界值，则相当于裂缝打开，则增加face渗透率；
         其中：
+            fa_k: 定义face位置的渗透率
             ca_fp：定义Cell的流体压力
-            fa_k：定义face的渗透率
             da_pc：定义圆盘的临界流体压力
             da_k：定义圆盘的渗透率
         """
         assert isinstance(seepage, Seepage)
-        assert isinstance(vk, Vector)
-        core.vdisc3_modify_perm(self.handle, vk.handle, seepage.handle, ca_fp, da_pc, da_k)
+        core.vdisc3_modify_perm(self.handle, seepage.handle, fa_k, ca_fp, da_pc, da_k)
 
 
 if __name__ == "__main__":

@@ -1,12 +1,45 @@
-# -*- coding: utf-8 -*-
 """
 基于Matplotlib的二维绘图
 """
 
 from zml import gui, plot as do_plot
-from zmlx.plt.kernels import kernels
 
 version = 221027
+
+
+def plot(ax, *args, **kwargs):
+    """
+    利用给定的x，y来画一个二维的曲线，并且添加到给定的坐标轴ax上
+    """
+    return ax.plot(*args, **kwargs)
+
+
+def tricontourf(ax, x=None, y=None, z=None, ipath=None, ix=None, iy=None, iz=None,
+                triangulation=None, levels=20, cmap='coolwarm'):
+    """
+    利用给定的x，y，z来画一个二维的云图
+    """
+    if ipath is not None:
+        import numpy as np
+        data = np.loadtxt(ipath, float)
+        if ix is not None:
+            x = data[:, ix]
+        if iy is not None:
+            y = data[:, iy]
+        if iz is not None:
+            z = data[:, iz]
+
+    if triangulation is None:
+        return ax.tricontourf(x, y, z, levels=levels, cmap=cmap, antialiased=True)
+    else:
+        return ax.tricontourf(triangulation, z, levels=levels, cmap=cmap, antialiased=True)
+
+
+"""
+用于绘图的内核函数
+对于内核函数，规定其第一个参数，一定需要是一个fig.axes类的对象，将在这个坐标轴上绘图
+"""
+kernels = {'plot': plot, 'tricontourf': tricontourf}
 
 
 def plot2(caption=None, gui_only=False, title=None, fname=None, dpi=300,
@@ -15,6 +48,9 @@ def plot2(caption=None, gui_only=False, title=None, fname=None, dpi=300,
     """
     调用其它内核函数来做一个二维的绘图. 可以多个数据叠加绘图;
     其中plots为绘图的数据，其中的每一个item都是一个dict，在每一个dict中，必须包含三个元素：name, args和krargs
+    注意：
+        当gui_only为True的时候，则只有的GUI上面绘图;
+        当给定的title的时候，将在图片的顶部显示一个标题.
     """
     if gui_only and not gui.exists():
         return

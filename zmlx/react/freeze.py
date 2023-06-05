@@ -1,8 +1,4 @@
-# -*- coding: utf-8 -*-
-
-
-from zml import Reaction
-from zmlx.alg.make_index import make_index
+from zmlx.react import melt
 
 
 def create(iflu, isol, vp, vt, temp, heat, fa_t, fa_c, t2q=None):
@@ -27,16 +23,10 @@ def create(iflu, isol, vp, vt, temp, heat, fa_t, fa_c, t2q=None):
         当温度t小于0的时候，q大于0；
         当温度t大于0的时候，q小于0；
     """
-    data = Reaction()
-    data.add_component(index=make_index(iflu), weight=-1, fa_t=fa_t, fa_c=fa_c)
-    data.add_component(index=make_index(isol), weight=1, fa_t=fa_t, fa_c=fa_c)
-    data.set_p2t(vp, vt)
-    data.temp = temp
-    assert heat > 0, 'Heat released when fluid convert to solid <icing>'
-    data.heat = heat
-    if t2q is None:
-        data.set_t2q([-300, 0, 300], [300, 0, -300])
-    else:
-        assert len(t2q) == 2
-        data.set_t2q(*t2q)
-    return data
+    if t2q is not None:
+        t, q = t2q
+        q = [-x for x in q]
+        t2q = [t, q]
+
+    return melt.create(sol=isol, flu=iflu, vp=vp, vt=vt, temp=temp, heat=heat,
+                       fa_t=fa_t, fa_c=fa_c, t2q=t2q)

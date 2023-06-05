@@ -322,10 +322,14 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
 
     app = QtWidgets.QApplication(sys.argv)
 
-    splash = MySplashScreen()
-    splash.setPixmap(load_pixmap('splash.jpg'))
-    splash.show()
-    app.processEvents()  # 处理主进程事件
+    splash_fig = load_pixmap('splash.jpg')
+    if splash_fig is not None:
+        splash = MySplashScreen()
+        splash.setPixmap(load_pixmap('splash.jpg'))
+        splash.show()
+        app.processEvents()  # 处理主进程事件
+    else:
+        splash = None
 
     win = MainWindow()
 
@@ -363,8 +367,9 @@ We are very sorry for this exception. Please check your data according to the ab
     sys.excepthook = my_excepthook
     win.show()
 
-    splash.finish(win)  # 隐藏启动界面
-    splash.deleteLater()
+    if splash is not None:
+        splash.finish(win)  # 隐藏启动界面
+        splash.deleteLater()
 
     def setup():
         for path in find_all('zml_gui_setup.py'):

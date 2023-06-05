@@ -1,29 +1,19 @@
-# -*- coding: utf-8 -*-
-"""
-定义水气液转化临界曲线
-"""
-
+from zmlx.react import melt
 from math import exp
-from zml import Reaction
-from zmlx.alg.make_index import make_index
 
 
 def create(ivap, iwat, fa_t, fa_c):
     """
-    建立水蒸气和水之间的相变
+    创建水气化成为水蒸气的反应(以及其逆过程)
         ivap: 水蒸气的ID；iwat水的ID
     """
-    react = Reaction()
     # 使用Antoine 公式，实际上这个温度范围可能已经超过了该公式的适用范围
     vt = [float(i) for i in range(290, 700)]
     vp = [exp(9.3876 - 3826.36 / (t - 45.47)) * 1.0e6 for t in vt]
-    react.set_p2t(vp, vt)
-    react.temp = 273 + 100
-    react.dheat = 2.26e6
-    react.set_t2q([-300, 0, 300], [300, 0, -300])
-    react.add_component(index=make_index(ivap), weight=-1, fa_t=fa_t, fa_c=fa_c)
-    react.add_component(index=make_index(iwat), weight=1, fa_t=fa_t, fa_c=fa_c)
-    return react
+
+    return melt.create(sol=iwat, flu=ivap,
+                       temp=273 + 100,
+                       heat=2.26e6, fa_t=fa_t, fa_c=fa_c, vp=vp, vt=vt, t2q=None)
 
 
 def __compare():

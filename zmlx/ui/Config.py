@@ -15,8 +15,7 @@ except:
 from zml import app_data, read_py, read_text
 
 try:
-    folder = os.path.dirname(__file__)
-    app_data.add_path(os.path.join(folder, 'data'))
+    app_data.add_path(os.path.join(os.path.dirname(__file__), 'data'))
 except:
     pass
 

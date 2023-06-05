@@ -27,8 +27,19 @@ try:
 except:
     pass
 
+
 try:
-    from zmlx.ui import tricontourf, plotxy, find, find_all
+    from zmlx.plt.tricontourf import tricontourf
+except:
+    pass
+
+try:
+    from zmlx.plt.plotxy import plotxy
+except:
+    pass
+
+try:
+    from zmlx.ui import find, find_all
     has_gui = True
 except:
     has_gui = False
@@ -64,11 +75,11 @@ except:
     np = None
 
 try:
-    folder = os.path.dirname(__file__)
-    app_data.add_path(folder)
-    app_data.add_path(os.path.join(folder, 'data'))
+    __folder = os.path.dirname(__file__)
+    app_data.add_path(__folder)
+    app_data.add_path(os.path.join(__folder, 'data'))
     if has_gui:
-        app_data.add_path(os.path.join(folder, 'ui', 'data'))
+        app_data.add_path(os.path.join(__folder, 'ui', 'data'))
 except:
     pass
 
