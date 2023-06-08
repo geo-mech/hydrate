@@ -9,9 +9,9 @@ from zmlx.fluid.conf.gas_viscosity.c2h6 import gas_vis_c2h6
 from zml import Interp2, TherFlowConfig, data_version
 
 
-def create_flu(tmin=280, tmax=1500, pmin=1.0e6, pmax=40.0e6):
+def create_flu(tmin=280, tmax=1000, pmin=1.0e6, pmax=40.0e6):
     
-    assert 250 < tmin < tmax < 2000
+    assert 250 < tmin < tmax < 1500
     assert 0.01e6 < pmin < pmax < 50.0e6
 
     

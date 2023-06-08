@@ -9,10 +9,10 @@ from zmlx.fluid.conf.gas_density.c11h24 import den_c11h24
 from zmlx.fluid.conf.gas_viscosity.c11h24 import gas_vis_c11h24
 from zml import Interp2, TherFlowConfig, data_version
 
-def create_flu(tmin=280, tmax=1500, pmin=1.0e6, pmax=40.0e6):
+def create_flu(tmin=280, tmax=850, pmin=1.0e6, pmax=20.0e6):
     
-    assert 280 < tmin < tmax < 2000
-    assert 1.0e6 < pmin < pmax < 40.0e6
+    assert 250 < tmin < tmax < 900
+    assert 0.01e6 < pmin < pmax < 30.0e6
     
     def gas_den(P, T):
         density = den_c11h24(P, T)
@@ -21,7 +21,7 @@ def create_flu(tmin=280, tmax=1500, pmin=1.0e6, pmax=40.0e6):
         return gas_den(P, T)
     def create_density():
         den = Interp2()
-        den.create(pmin, 1e6, pmax, tmin, 10, 900, get_density)
+        den.create(pmin, 1e6, pmax, tmin, 10, tmax, get_density)
         return den  
     
     def gas_vis(P, T):
