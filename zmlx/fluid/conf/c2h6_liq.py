@@ -9,8 +9,10 @@ from zmlx.fluid.conf.liqu_viscosity.c2h6 import liq_vis_c2h6
 from zml import Interp2, TherFlowConfig, data_version
 
 
-def create_flu(tmin=280, tmax=2000, pmin=1.0e6, pmax=40.0e6):
+def create_flu(tmin=200, tmax=280, pmin=1.0e6, pmax=20.0e6):
     
+    assert 150 < tmin < tmax < 260
+    assert 0.01e6 < pmin < pmax < 30.0e6
     
     def liq_den(P, T):
         density = liq_den_c2h6(P, T)
@@ -21,7 +23,7 @@ def create_flu(tmin=280, tmax=2000, pmin=1.0e6, pmax=40.0e6):
 
     def create_density():
         den = Interp2()
-        den.create(pmin, 1e6, pmax, 20, 10, 280, get_density)
+        den.create(pmin, 1e6, pmax, 20, 10, tmax, get_density)
         return den
 
     def liq_vis(P, T):

@@ -7,7 +7,11 @@ from zmlx.fluid.conf.liqu_density.c22h46 import liq_den_c22h46
 from zmlx.fluid.conf.liqu_viscosity.c22h46 import liq_vis_c22h46
 from zml import Interp2, TherFlowConfig, data_version
 
-def create_flu(tmin=280, tmax=2000, pmin=1.0e6, pmax=40.0e6):
+def create_flu(tmin=280, tmax=700, pmin=1.0e6, pmax=20.0e6):
+    
+    assert 250 < tmin < tmax < 750
+    assert 0.01e6 < pmin < pmax < 30.0e6
+    
     def liq_den(P, T):
         density = liq_den_c22h46(P, T)
         return density

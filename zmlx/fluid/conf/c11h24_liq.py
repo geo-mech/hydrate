@@ -9,7 +9,11 @@ from zmlx.fluid.conf.liqu_density.c11h24 import liq_den_c11h24
 from zmlx.fluid.conf.liqu_viscosity.c11h24 import liq_vis_c11h24
 from zml import Interp2, TherFlowConfig, data_version
 
-def create_flu(tmin=280, tmax=2000, pmin=1.0e6, pmax=40.0e6):   
+def create_flu(tmin=280, tmax=600, pmin=1.0e6, pmax=20.0e6):   
+    
+    assert 250 < tmin < tmax < 650
+    assert 0.01e6 < pmin < pmax < 30.0e6
+    
     def liq_den(P, T):
         density = liq_den_c11h24(P,T)
         return density
