@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Created on Sun Jun 11 12:08:13 2023
+Create a reversible reaction of <(Ca(OH)2)> dehydration and <(CaO)> hydration.
+During dehydratation process (heat storage), <(Ca(OH)2)> absorbs heat and decomposes to produce <(CaO)> and <(H2O)>.
+In the exothermic process, <(CaO)> reacts with <(H2O)> to form <(Ca(OH)2)>, 
+releasing stored chemical energy as heat.
+by Maryelin
 
-@author: Maryelin
 """
-
-import zmlx.react.Solid_deshydra as deshydratation
+import zmlx.react.endothermic as endothermic
 from zml import Interp1, data_version
 import numpy as np
 
@@ -29,7 +31,7 @@ def create_p2t():
     return Interp1(x=vp, y=vt).to_evenly_spaced(300)
 
 
-def get_mg_vs_mh():
+def get_mca_vs_mcaoh():
     """
     Returns the mass of Calcium Carbonate produced after 1kg of  Ca(OH)2 dehydrate
     Ca(OH)2 (s) ↔ CaO (s)+ H2O (g)
@@ -39,26 +41,27 @@ def get_mg_vs_mh():
 
 
 def get_dheat():
+    
     """
     Calories consumed to deshidrate 1kg of Calcium Hydroxide
      ---
      Ca(OH)2 (s) ↔ CaO (s)+ H2O (g) ∆H = 104.4 kJ/mol
      by https://doi.org/10.3390/en16073019
-    """
-    if data_version.CaOH2_deshydra >= 221029:
-        return (104.4e3 / 74.093E-3) * get_mg_vs_mh()
-    else:
-        return (104.4e3 / 74.093E-3) * get_mg_vs_mh()
+    """   
+    return (104.4e3 / 74.093E-3) * get_mca_vs_mcaoh()
+    
 
-
-def create(iCaOH2, iwat, iCaO, fa_t, fa_c):
+def create(iCaOH2, iliq, iCaO, fa_t, fa_c):
     """
     Under atmospheric pressure, the heat storage temperature of
     Ca(OH)2 ranges from 400 to 600 ◦C, and the heat release temperature ranges from 25 ◦C to
     approximately 500 ◦C (as determined from the partial pressure of the steam involved in the reaction)
     by https://doi.org/10.3390/su10082660
     """
-    return deshydratation.create(vp=vp, vt=vt, temp=(500 + 273.15), heat=get_dheat(),
-                          mg=get_mg_vs_mh(),
-                          isol_d=iCaOH2, iliq=iwat, isol=iCaO,
-                          fa_t=fa_t, fa_c=fa_c)
+    return endothermic.create(left=[(iCaOH2, 1.0), ],
+                              right=[(iCaO, 1.0), (iliq, 1.0 - get_mca_vs_mcaoh())],
+                              temp=(500 + 273.15), heat=get_dheat(),
+                              rate=1.0,
+                              fa_t=fa_t, fa_c=fa_c,
+                              l2r=True, r2l=True,
+                              p2t=[vp, vt], t2q=None)
