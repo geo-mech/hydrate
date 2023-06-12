@@ -56,10 +56,10 @@ def create(iCaOH2, iliq, iCaO, fa_t, fa_c):
     Under atmospheric pressure, the heat storage temperature of
     Ca(OH)2 ranges from 400 to 600 ◦C, and the heat release temperature ranges from 25 ◦C to
     approximately 500 ◦C (as determined from the partial pressure of the steam involved in the reaction)
-    by https://doi.org/10.3390/su10082660
+    by https://doi.org/10.3390/en16073019
     """
     return endothermic.create(left=[(iCaOH2, 1.0), ],
-                              right=[(iCaO, 1.0), (iliq, 1.0 - get_mca_vs_mcaoh())],
+                              right=[(iCaO, get_mca_vs_mcaoh()), (iliq, 1.0 - get_mca_vs_mcaoh())],
                               temp=(500 + 273.15), heat=get_dheat(),
                               rate=1.0,
                               fa_t=fa_t, fa_c=fa_c,
