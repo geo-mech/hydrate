@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 
-from zmlx.alg.loadcol import loadcol
+from zmlx.alg.load_col import load_col
 import os
 
 
@@ -9,13 +9,13 @@ import os
 fpath = os.path.join(os.path.dirname(__file__), 'example.fn2')
 
 # 裂缝位置
-pos = loadcol(fpath, index=[0, 1, 2, 3])
+pos = load_col(fpath, index=[0, 1, 2, 3])
 
 # 裂缝宽度
-w = loadcol(fpath, 4)
+w = load_col(fpath, 4)
 
 # 裂缝颜色
-c = loadcol(fpath, 6)
+c = load_col(fpath, 6)
 
 
 if __name__ == '__main__':

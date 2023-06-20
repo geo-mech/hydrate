@@ -1,29 +1,5 @@
-# -*- coding: utf-8 -*-
+from zmlx.alg.load_col import load_col as loadcol
+import warnings
 
-
-import os
-
-from zml import is_array
-
-
-def loadcol(fname, index=0, dtype=float):
-    """
-    从给定的数据文件导入一列数据。 其中index为列的编号
-    """
-    if not os.path.isfile(fname):
-        return []
-    data = []
-    with open(fname, 'r') as file:
-        for line in file.readlines():
-            try:
-                vx = [dtype(x) for x in line.split()]
-                if is_array(index):
-                    vy = [vx[i] for i in index if i < len(vx)]
-                    if len(vy) == len(index):
-                        data.append(vy)
-                else:
-                    if index < len(vx):
-                        data.append(vx[index])
-            except:
-                pass
-    return data
+warnings.warn('please import load_col instead.', DeprecationWarning)
+__all__ = ['loadcol']

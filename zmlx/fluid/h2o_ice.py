@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
 from zml import TherFlowConfig
+import warnings
 
 
-def create_flu():
+def create():
     """
     冰的密度：https://zhidao.baidu.com/question/327692583825967245.html
     https://baike.baidu.com/item/%E5%86%B0/84742
@@ -23,6 +24,11 @@ def create_flu():
     return TherFlowConfig.FluProperty(den=den,
                                       vis=1.0e30,
                                       specific_heat=specific_heat)
+
+
+def create_flu(*args, **kwargs):
+    warnings.warn('use function <create> instead', DeprecationWarning)
+    return create(*args, **kwargs)
 
 
 if __name__ == '__main__':

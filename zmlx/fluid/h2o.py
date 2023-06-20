@@ -5,9 +5,10 @@
 
 import math
 from zml import Interp2, TherFlowConfig
+import warnings
 
 
-def create_flu(tmin=272.0, tmax=300.0, pmin=1e6, pmax=40e6):
+def create(tmin=272.0, tmax=300.0, pmin=1e6, pmax=40e6):
     """
     创建液体水的参数
 
@@ -46,6 +47,11 @@ def create_flu(tmin=272.0, tmax=300.0, pmin=1e6, pmax=40e6):
 
     specific_heat = 4200.0
     return TherFlowConfig.FluProperty(den=create_density(), vis=create_viscosity(), specific_heat=specific_heat)
+
+
+def create_flu(*args, **kwargs):
+    warnings.warn('use function <create> instead', DeprecationWarning)
+    return create(*args, **kwargs)
 
 
 def show_all():

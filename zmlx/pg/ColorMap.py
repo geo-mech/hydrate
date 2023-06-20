@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import pyqtgraph.colormap as pgc
 
 

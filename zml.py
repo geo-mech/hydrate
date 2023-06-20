@@ -17,6 +17,9 @@ import math
 import os
 import sys
 import warnings
+
+warnings.simplefilter("default")  # 警告默认显示
+
 from ctypes import cdll, c_void_p, c_char_p, c_int, c_int64, c_bool, c_double, c_size_t, c_uint, CFUNCTYPE, \
     POINTER
 from typing import Iterable
@@ -96,7 +99,7 @@ class ConsoleApi:
             else:
                 plt.show()
         except Exception as err:
-            print(f'Error in zml.ConsoleApi.plot: {err}')
+            warnings.warn(f'meet exception <{err}> when run <{kernel}>')
 
     def command(self, name, *args, **kwargs):
         """
@@ -1428,6 +1431,9 @@ def add_keys(*args):
     n1 = 0
     n2 = 0
     for key in args:
+        if isinstance(key, AttrKeys):
+            key.add_keys(*args)
+            return key
         if isinstance(key, dict):
             n1 += 1
             continue
@@ -1463,6 +1469,37 @@ def add_keys(*args):
 
     # Return the dict.
     return key_vals
+
+
+class AttrKeys:
+    """
+    用以管理属性. 自动从0开始编号.
+    """
+    def __init__(self, *args):
+        self.__keys = {}
+        self.add_keys(*args)
+
+    def __str__(self):
+        return f'{self.__keys}'
+
+    def __getattr__(self, item):
+        return self.__keys[item]
+
+    def __getitem__(self, item):
+        return self.__keys[item]
+
+    def values(self):
+        return self.__keys.values()
+
+    def add_keys(self, *args):
+        for key in args:
+            if isinstance(key, str):
+                if key not in self.__keys:
+                    values = self.values()
+                    for val in range(len(self.__keys) + 1):
+                        if val not in values:
+                            self.__keys[key] = val
+                            break
 
 
 def install(name='zml.pth', folder=None):
@@ -2742,13 +2779,17 @@ class Array2(HasHandle):
     core.use(c_void_p, 'new_array2')
     core.use(None, 'del_array2', c_void_p)
 
-    def __init__(self, x=None, y=None, handle=None):
+    def __init__(self, x=None, y=None, path=None, handle=None):
         super(Array2, self).__init__(handle, core.new_array2, core.del_array2)
         if handle is None:
+            if path is not None:
+                self.load(path)
             if x is not None:
                 self[0] = x
             if y is not None:
                 self[1] = y
+        else:
+            assert x is None and y is None and path is None
 
     core.use(None, 'array2_save', c_void_p, c_char_p)
 
@@ -2837,9 +2878,11 @@ class Array3(HasHandle):
     core.use(c_void_p, 'new_array3')
     core.use(None, 'del_array3', c_void_p)
 
-    def __init__(self, x=None, y=None, z=None, handle=None):
+    def __init__(self, x=None, y=None, z=None, path=None, handle=None):
         super(Array3, self).__init__(handle, core.new_array3, core.del_array3)
         if handle is None:
+            if path is not None:
+                self.load(path)
             if x is not None:
                 self[0] = x
             if y is not None:
@@ -2847,7 +2890,7 @@ class Array3(HasHandle):
             if z is not None:
                 self[2] = z
         else:
-            assert x is None and y is None and z is None
+            assert x is None and y is None and z is None and path is None
 
     core.use(None, 'array3_save', c_void_p, c_char_p)
 
@@ -2939,18 +2982,22 @@ class Tensor2(HasHandle):
     core.use(c_void_p, 'new_tensor2')
     core.use(None, 'del_tensor2', c_void_p)
 
-    def __init__(self, xx=None, yy=None, xy=None, handle=None):
+    def __init__(self, xx=None, yy=None, xy=None, path=None, handle=None):
         """
         初始化
         """
         super(Tensor2, self).__init__(handle, core.new_tensor2, core.del_tensor2)
         if handle is None:
+            if path is not None:
+                self.load(path)
             if xx is not None:
                 self.xx = xx
             if yy is not None:
                 self.yy = yy
             if xy is not None:
                 self.xy = xy
+        else:
+            assert xx is None and yy is None and xy is None and path is None
 
     core.use(None, 'tensor2_save', c_void_p, c_char_p)
 
@@ -3093,8 +3140,25 @@ class Tensor3(HasHandle):
     core.use(c_void_p, 'new_tensor3')
     core.use(None, 'del_tensor3', c_void_p)
 
-    def __init__(self, handle=None):
+    def __init__(self, xx=None, yy=None, zz=None, xy=None, yz=None, zx=None, path=None, handle=None):
         super(Tensor3, self).__init__(handle, core.new_tensor3, core.del_tensor3)
+        if handle is None:
+            if path is not None:
+                self.load(path)
+            if xx is not None:
+                self.xx = xx
+            if yy is not None:
+                self.yy = yy
+            if zz is not None:
+                self.zz = zz
+            if xy is not None:
+                self.xy = xy
+            if yz is not None:
+                self.yz = yz
+            if zx is not None:
+                self.zx = zx
+        else:
+            assert xx is None and yy is None and zz is None and xy is None and yz is None and zx is None
 
     core.use(None, 'tensor3_save', c_void_p, c_char_p)
 
@@ -3457,9 +3521,11 @@ class Coord2(HasHandle):
     core.use(c_void_p, 'new_coord2')
     core.use(None, 'del_coord2', c_void_p)
 
-    def __init__(self, origin=None, xdir=None, handle=None):
+    def __init__(self, origin=None, xdir=None, path=None, handle=None):
         super(Coord2, self).__init__(handle, core.new_coord2, core.del_coord2)
         if handle is None:
+            if path is not None:
+                self.load(path)
             if origin is not None and xdir is not None:
                 self.set(origin, xdir)
 
@@ -3565,7 +3631,7 @@ class Coord3(HasHandle):
     core.use(c_void_p, 'new_coord3')
     core.use(None, 'del_coord3', c_void_p)
 
-    def __init__(self, origin=None, xdir=None, ydir=None, handle=None):
+    def __init__(self, origin=None, xdir=None, ydir=None, path=None, handle=None):
         """
         构造函数，并在需要的时候初始化
         :param origin: 坐标原点
@@ -3575,6 +3641,8 @@ class Coord3(HasHandle):
         """
         super(Coord3, self).__init__(handle, core.new_coord3, core.del_coord3)
         if handle is None:
+            if path is not None:
+                self.load(path)
             if origin is not None and xdir is not None and ydir is not None:
                 self.set(origin, xdir, ydir)
         else:
@@ -6226,11 +6294,15 @@ class SeepageMesh(HasHandle, HasCells):
         """
         添加一个face，连接两个给定的cell
         """
-        assert isinstance(cell_0, SeepageMesh.Cell)
-        assert isinstance(cell_1, SeepageMesh.Cell)
-        assert cell_0.model.handle == self.handle
-        assert cell_1.model.handle == self.handle
-        return self.get_face(core.seepage_mesh_add_face(self.handle, cell_0.index, cell_1.index))
+        if isinstance(cell_0, SeepageMesh.Cell):
+            assert cell_0.model.handle == self.handle
+            cell_0 = cell_0.index
+
+        if isinstance(cell_1, SeepageMesh.Cell):
+            assert cell_1.model.handle == self.handle
+            cell_1 = cell_1.index
+
+        return self.get_face(core.seepage_mesh_add_face(self.handle, cell_0, cell_1))
 
     @property
     def cells(self):
@@ -9163,14 +9235,19 @@ class Seepage(HasHandle, HasCells):
         """
         在两个给定的Cell之间创建Face（注意：两个Cell之间只能有一个Face）
         """
-        assert isinstance(cell0, Seepage.Cell)
-        assert isinstance(cell1, Seepage.Cell)
-        assert cell0.model.handle == self.handle
-        assert cell1.model.handle == self.handle
-        assert cell0.index < self.cell_number
-        assert cell1.index < self.cell_number
-        assert cell0.index != cell1.index
-        face_id = core.seepage_add_face(self.handle, cell0.index, cell1.index)
+        if isinstance(cell0, Seepage.Cell):
+            assert cell0.model.handle == self.handle
+            cell0 = cell0.index
+
+        if isinstance(cell1, Seepage.Cell):
+            assert cell1.model.handle == self.handle
+            cell1 = cell1.index
+
+        assert cell0 < self.cell_number
+        assert cell1 < self.cell_number
+        assert cell0 != cell1
+
+        face_id = core.seepage_add_face(self.handle, cell0, cell1)
         face = self.get_face(face_id)
         if face is not None and data is not None:
             face.clone(data)
@@ -9412,7 +9489,8 @@ class Seepage(HasHandle, HasCells):
         """
         返回所有指定元素的属性 <作为Vector返回>.
         """
-        warnings.warn('please use function <Seepage.cells_write> and <Seepage.faces_write> instead', DeprecationWarning)
+        warnings.warn('please use function <Seepage.cells_write> and <Seepage.faces_write> instead. '
+                      'Will remove after 2024-6-14', DeprecationWarning)
         if not isinstance(buffer, Vector):
             buffer = Vector()
         if key == 'cells_v0':
@@ -9435,7 +9513,8 @@ class Seepage(HasHandle, HasCells):
         """
         设置所有指定元素的属性
         """
-        warnings.warn('please use function <Seepage.cells_read> and <Seepage.faces_read> instead', DeprecationWarning)
+        warnings.warn('please use function <Seepage.cells_read> and <Seepage.faces_read> instead. '
+                      'will be removed after 2024-6-14', DeprecationWarning)
         assert isinstance(value, Vector)
         if key == 'cells':
             core.seepage_set_cells_attr(self.handle, index, value.handle)
@@ -10014,21 +10093,30 @@ class Seepage(HasHandle, HasCells):
 
     core.use(c_bool, 'seepage_has_tag', c_void_p, c_char_p)
 
-    def has_tag(self, key):
-        return core.seepage_has_tag(self.handle, make_c_char_p(key))
+    def has_tag(self, tag):
+        """
+        返回模型是否包含给定的这个标签
+        """
+        return core.seepage_has_tag(self.handle, make_c_char_p(tag))
 
-    def not_has_tag(self, key):
-        return not self.has_tag(key)
+    def not_has_tag(self, tag):
+        return not self.has_tag(tag)
 
     core.use(None, 'seepage_add_tag', c_void_p, c_char_p)
 
-    def add_tag(self, key):
-        core.seepage_add_tag(self.handle, make_c_char_p(key))
+    def add_tag(self, tag):
+        """
+        在模型中添加给定的标签
+        """
+        core.seepage_add_tag(self.handle, make_c_char_p(tag))
 
     core.use(None, 'seepage_del_tag', c_void_p, c_char_p)
 
-    def del_tag(self, key):
-        core.seepage_del_tag(self.handle, make_c_char_p(key))
+    def del_tag(self, tag):
+        """
+        删除模型中的给定的标签
+        """
+        core.seepage_del_tag(self.handle, make_c_char_p(tag))
 
     core.use(None, 'seepage_clear_tags', c_void_p)
 
@@ -10045,6 +10133,11 @@ class Seepage(HasHandle, HasCells):
             这样的问题是，每个具体的问题所用的key不同，这样全部采用静态的定义，就会浪费空间.
             因此，考虑将各个属性键的含义存储到model中，从而在计算的时候去动态读取. 这样，在
             定义方法的时候，只需要去记录键的名字，而不需要记录具体的键值.
+        关于前缀：
+            m_: 模型的属性
+            n_: Cell属性
+            b_: Face属性
+            f_: 流体的属性
         """
         return core.seepage_reg_key(self.handle, make_c_char_p(ty), make_c_char_p(key))
 
@@ -10081,25 +10174,25 @@ class Seepage(HasHandle, HasCells):
         """
         注册并返回用于model的键值
         """
-        return self.reg_key('mo_', key)
+        return self.reg_key('m_', key)
 
     def reg_cell_key(self, key):
         """
         注册并返回用于cell的键值
         """
-        return self.reg_key('ce_', key)
+        return self.reg_key('n_', key)
 
     def reg_face_key(self, key):
         """
         注册并返回用于face的键值
         """
-        return self.reg_key('fa_', key)
+        return self.reg_key('b_', key)
 
     def reg_flu_key(self, key):
         """
         注册并返回用于flu的键值
         """
-        return self.reg_key('fl_', key)
+        return self.reg_key('f_', key)
 
     core.use(None, 'seepage_clamp_cell_attrs', c_void_p, c_size_t, c_double, c_double)
 
@@ -10510,13 +10603,13 @@ class TherFlowConfig(Object):
                 self.reactions.append(arg)
             else:
                 self.add_fluid(arg)
-        self.flu_keys = add_keys('specific_heat', 'temperature')
+        self.flu_keys = AttrKeys('specific_heat', 'temperature')
         # fv0: 初始时刻的流体体积<流体体积的参考值>
         # vol: 网格的几何体积。这个体积乘以孔隙度，就等于孔隙体积
-        self.cell_keys = add_keys('mc', 'temperature', 'g_heat', 'pre', 'vol', 'fv0')
+        self.cell_keys = AttrKeys('mc', 'temperature', 'g_heat', 'pre', 'vol', 'fv0')
         # g0：初始时刻的导流系数<当流体体积为fv0的时候的导流系数>
-        self.face_keys = add_keys('g_heat', 'area', 'length', 'g0', 'perm', 'igr')
-        self.model_keys = add_keys('dt', 'time', 'step', 'dv_relative', 'dt_min', 'dt_max')
+        self.face_keys = AttrKeys('g_heat', 'area', 'length', 'g0', 'perm', 'igr')
+        self.model_keys = AttrKeys('dt', 'time', 'step', 'dv_relative', 'dt_min', 'dt_max')
         # 用于更新流体的导流系数
         self.krf = None
         # 定义一些开关
@@ -10538,8 +10631,6 @@ class TherFlowConfig(Object):
         self.dt_min = None
         self.dt_ini = None
         self.dv_relative = None
-        # 在迭代温度场的时候，是否利用饮食地求解
-        self.iterate_thermal_implicitly = True
         # 在更新流体的密度的时候，所允许的最大的流体压力
         self.pre_max = 100e6
         # 用以存储各个组分的ID. since 2023-5-30
@@ -10957,6 +11048,14 @@ class TherFlowConfig(Object):
         """
         model.set_attr(self.model_keys['time'], value)
 
+    def update_time(self, model, dt=None):
+        """
+        更新模型的时间
+        """
+        if dt is None:
+            dt = self.get_dt(model)
+        self.set_time(model, self.get_time(model) + dt)
+
     def get_step(self, model):
         """
         返回模型迭代的次数
@@ -11134,54 +11233,21 @@ class TherFlowConfig(Object):
             dt2 = 1.0e100
         return min(dt1, dt2)
 
-    def to_fmap(self, fmt='binary'):
-        """
-        将数据序列化到一个Filemap中. 其中fmt的取值可以为: text, xml和binary
-        """
-        warnings.warn('This class is a pure method and no longer supports storage. remove after 2024-5-5',
+    def to_fmap(self, *args, **kwargs):
+        warnings.warn('<TherFlowConfig.to_fmap> will be removed after 2024-5-5',
                       DeprecationWarning)
-        fmap = FileMap()
-        fmap.set('cell_keys', f'{self.cell_keys}')
-        fmap.set('face_keys', f'{self.face_keys}')
-        fmap.set('flu_keys', f'{self.flu_keys}')
-        fmap.set('model_keys', f'{self.model_keys}')
-        for fid in range(self.fluid_number):
-            fmap.set(f'fluid_{fid}', self.get_fluid(fid).to_fmap(fmt=fmt))
-        return fmap
 
-    def from_fmap(self, fmap, fmt='binary'):
-        """
-        从Filemap中读取序列化的数据. 其中fmt的取值可以为: text, xml和binary
-        """
-        warnings.warn('This class is a pure method and no longer supports storage. remove after 2024-5-5',
+    def from_fmap(self, *args, **kwargs):
+        warnings.warn('<TherFlowConfig.from_fmap> will be removed after 2024-5-5',
                       DeprecationWarning)
-        self.fluids.clear()
-        self.cell_keys = eval(fmap.get('cell_keys').data)
-        self.face_keys = eval(fmap.get('face_keys').data)
-        self.flu_keys = eval(fmap.get('flu_keys').data)
-        self.model_keys = eval(fmap.get('model_keys').data)
-        for fid in range(1000):
-            key = f'fluid_{fid}'
-            if fmap.has_key(key):
-                flu = TherFlowConfig.FluProperty()
-                flu.from_fmap(fmap.get(key), fmt=fmt)
-                self.add_fluid(flu)
-            else:
-                break
 
-    def save(self, path):
-        warnings.warn('This class is a pure method and no longer supports storage. remove after 2024-5-5',
+    def save(self, *args, **kwargs):
+        warnings.warn('<TherFlowConfig.save> will be removed after 2024-5-5',
                       DeprecationWarning)
-        if path is not None:
-            self.to_fmap(fmt='binary').save(path)
 
-    def load(self, path):
-        warnings.warn('This class is a pure method and no longer supports storage. remove after 2024-5-5',
+    def load(self, *args, **kwargs):
+        warnings.warn('<TherFlowConfig.load> will be removed after 2024-5-5',
                       DeprecationWarning)
-        if path is not None:
-            fmap = FileMap()
-            fmap.load(path)
-            self.from_fmap(fmap, fmt='binary')
 
     def update_g0(self, model, fa_g0=None, fa_k=None, fa_s=None, fa_l=None):
         """
@@ -11974,6 +12040,149 @@ class Hf2Alg:
         if ca_fp is None:
             ca_fp = 99999999  # Now, will not update fluid pressure
         core.hf2_alg_exchange_fluids(layers.handle, pipe.handle, dt, ca_g, ca_fp)
+
+
+class Hf2Model(HasHandle):
+    """
+    定义二维压裂模型(主要用于组织数据)
+    """
+    core.use(c_void_p, 'new_hf2')
+    core.use(None, 'del_hf2', c_void_p)
+
+    def __init__(self, path=None, handle=None):
+        super(Hf2Model, self).__init__(handle, core.new_hf2, core.del_hf2)
+        if handle is None:
+            if path is not None:
+                self.load(path)
+
+    core.use(None, 'hf2_save', c_void_p, c_char_p)
+
+    def save(self, path):
+        """
+        序列化保存. 可选扩展名:
+            1: .txt  文本格式 (跨平台，基本不可读)
+            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
+            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        """
+        if path is not None:
+            core.hf2_save(self.handle, make_c_char_p(path))
+
+    core.use(None, 'hf2_load', c_void_p, c_char_p)
+
+    def load(self, path):
+        """
+        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        """
+        if path is not None:
+            core.hf2_load(self.handle, make_c_char_p(path))
+
+    core.use(None, 'hf2_write_fmap', c_void_p, c_void_p, c_char_p)
+    core.use(None, 'hf2_read_fmap', c_void_p, c_void_p, c_char_p)
+
+    def to_fmap(self, fmt='binary'):
+        """
+        将数据序列化到一个Filemap中. 其中fmt的取值可以为: text, xml和binary
+        """
+        fmap = FileMap()
+        core.hf2_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
+        return fmap
+
+    def from_fmap(self, fmap, fmt='binary'):
+        """
+        从Filemap中读取序列化的数据. 其中fmt的取值可以为: text, xml和binary
+        """
+        assert isinstance(fmap, FileMap)
+        core.hf2_read_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
+
+    @property
+    def fmap(self):
+        return self.to_fmap(fmt='binary')
+
+    @fmap.setter
+    def fmap(self, value):
+        self.from_fmap(value, fmt='binary')
+
+    core.use(c_void_p, 'hf2_get_network', c_void_p)
+
+    @property
+    def network(self):
+        """
+        裂缝网络。存储的是一个个裂缝单元，这些单元是纯固体的，不包含任何流体的信息
+        """
+        return FractureNetwork2(handle=core.hf2_get_network(self.handle))
+
+    core.use(c_void_p, 'hf2_get_manager', c_void_p)
+
+    @property
+    def manager(self):
+        """
+        裂缝单元的管理，用以建立裂缝单元之间的应力关系，并且自动管理影响矩阵(这是一个临时变量，在序列化的时候不需要存储)
+        """
+        return InfManager2(handle=core.hf2_get_manager(self.handle))
+
+    core.use(c_void_p, 'hf2_get_flow', c_void_p)
+
+    @property
+    def flow(self):
+        """
+        和裂缝单元对应的流动体系(用以存储流体，并且模拟流体的流动).
+        """
+        return Seepage(handle=core.hf2_get_flow(self.handle))
+
+    core.use(c_void_p, 'hf2_get_seepage', c_void_p)
+
+    @property
+    def seepage(self):
+        """
+        和天然裂缝对应的渗流体系. 在更新这一部分流动的时候，会临时将flow中的Cell附加过来(但是不会附加flow中的Face)，从而
+        模拟主裂缝和天然裂缝流体的交互的过程.
+        """
+        return Seepage(handle=core.hf2_get_seepage(self.handle))
+
+    core.use(c_void_p, 'hf2_get_buffer', c_void_p)
+
+    @property
+    def buffer(self):
+        """
+        流体的缓冲区。当裂缝体系和外部进行流体交换的时候，如果裂缝的容积不够，则可以加入这个缓冲区。在每一步更新的
+        时候，会首先将缓冲区附加到seepage中，然后更新seepage中的流动，再将缓冲区从seepage中弹出来，从而得到了
+        进入到缓冲区中的流体.
+        """
+        return Seepage(handle=core.hf2_get_buffer(self.handle))
+
+    core.use(c_void_p, 'hf2_get_sol2', c_void_p)
+
+    @property
+    def sol2(self):
+        """
+        二维DDM的基本解，用于定义固体的基本参数。对于边界元来说，储层的弹性性质必须是均匀的。
+        """
+        return DDMSolution2(handle=core.hf2_get_sol2(self.handle))
+
+    core.use(c_double, 'hf2_get_attr', c_void_p, c_size_t)
+    core.use(None, 'hf2_set_attr',
+             c_void_p, c_size_t, c_double)
+
+    def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
+        """
+        模型的第index个自定义属性
+        """
+        if index is None:
+            return default_val
+        value = core.hf2_get_attr(self.handle, index)
+        if min <= value <= max:
+            return value
+        else:
+            return default_val
+
+    def set_attr(self, index, value):
+        """
+        模型的第index个自定义属性
+        """
+        if index is None:
+            return self
+        core.hf2_set_attr(self.handle, index, value)
+        return self
 
 
 class InvasionPercolation(HasHandle):

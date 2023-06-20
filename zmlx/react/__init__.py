@@ -1,5 +1,11 @@
 # -*- coding: utf-8 -*-
 
 
-from zmlx.react.ch4_hydrate import create as create_ch4_hydrate
-from zmlx.react.co2_hydrate import create as create_co2_hydrate
+from . import ch4_hydrate
+from . import co2_hydrate
+
+create_ch4_hydrate = ch4_hydrate.create
+create_co2_hydrate = co2_hydrate.create
+
+__all__ = ['ch4_hydrate', 'co2_hydrate', 'create_ch4_hydrate']
+

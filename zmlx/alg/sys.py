@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
 
+import warnings
+
+
 def get_latest_version():
     """
     返回程序的最新的版本
@@ -29,7 +32,7 @@ def get_latest_version():
             app_data.add_tag_today('latest_version_checked')
             return int(version)
     except Exception as err:
-        print(f'meet exception: {err}')
+        warnings.warn(f'meet exception <{err}> when run <{get_latest_version}>')
         return
 
 

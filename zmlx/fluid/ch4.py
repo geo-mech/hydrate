@@ -6,11 +6,11 @@ by 张召彬
 """
 
 import math
-
+import warnings
 from zml import Interp2, TherFlowConfig, data_version
 
 
-def create_flu(tmin=270, tmax=290, pmin=1e6, pmax=40e6):
+def create(tmin=270, tmax=290, pmin=1e6, pmax=40e6):
     """
     参考：http://www.basechem.org/chemical/434
 
@@ -48,6 +48,11 @@ def create_flu(tmin=270, tmax=290, pmin=1e6, pmax=40e6):
         # 之前随手写的，错了
         specific_heat = 1000.0
     return TherFlowConfig.FluProperty(den=create_density(), vis=create_viscosity(), specific_heat=specific_heat)
+
+
+def create_flu(*args, **kwargs):
+    warnings.warn('use function <create> instead', DeprecationWarning)
+    return create(*args, **kwargs)
 
 
 if __name__ == '__main__':
