@@ -20,11 +20,11 @@ p = 10000000.0Pa, T = 500K, vis = 0.0063358958456372905Pa.s, den = 898.062894kg/
 """
 
 from math import log, exp
-
 from zml import Interp2, TherFlowConfig
+import warnings
 
 
-def create_flu(tmin=270, tmax=1000, pmin=1e6, pmax=40e6):
+def create(tmin=270, tmax=1000, pmin=1e6, pmax=40e6):
     def oil_den(pressure, temp):
         """
         Nourozieh, H., et al. (2015). "Density and Viscosity of Athabasca Bitumen Samples at Temperatures up to 200° C and Pressures up to 10 MPa." SPE Reservoir Evaluation & Engineering 18(03): 375-386.
@@ -68,6 +68,11 @@ def create_flu(tmin=270, tmax=1000, pmin=1e6, pmax=40e6):
 
     specific_heat = 1800
     return TherFlowConfig.FluProperty(den=create_density(), vis=create_viscosity(), specific_heat=specific_heat)
+
+
+def create_flu(*args, **kwargs):
+    warnings.warn('use function <create> instead', DeprecationWarning)
+    return create(*args, **kwargs)
 
 
 if __name__ == '__main__':

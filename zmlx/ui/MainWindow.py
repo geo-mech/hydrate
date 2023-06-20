@@ -2,7 +2,7 @@
 
 
 import sys
-
+import warnings
 from zml import gui, lic
 from zmlx.ui.CodeAlg import edit_code
 from zmlx.ui.Config import *
@@ -248,7 +248,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     assert dpi is not None
                     widget.savefig(fname=fname, dpi=dpi)
             except Exception as err:
-                print(f'Error run kernel in .plot: {err}')
+                warnings.warn(f'meet exception <{err}> when run <{kernel}>')
 
     def cmd_status(self, *args, **kwargs):
         self.status_bar.showMessage(*args, **kwargs)
@@ -337,9 +337,11 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
         gui.push(win.gui_api)
         print(f'Push Gui: {win.gui_api}')
         sys.stdout = win.console_widget.output_widget
+        sys.stderr = win.console_widget.output_widget
 
     def f2():
         sys.stdout = sys.__stdout__
+        sys.stderr = sys.__stderr__
         print('Pop Gui')
         gui.pop()
 

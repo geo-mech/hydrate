@@ -3,12 +3,18 @@
 
 from zml import Interp2, TherFlowConfig
 import os
+import warnings
 
 
-def create_flu():
+def create():
     return TherFlowConfig.FluProperty(den=Interp2(path=os.path.join(os.path.dirname(__file__), 'den.txt')),
                                       vis=Interp2(path=os.path.join(os.path.dirname(__file__), 'vis.txt')),
                                       specific_heat=2225.062344139651)
+
+
+def create_flu(*args, **kwargs):
+    warnings.warn('use function <create> instead', DeprecationWarning)
+    return create(*args, **kwargs)
 
 
 def show_all():

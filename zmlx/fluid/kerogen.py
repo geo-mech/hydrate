@@ -2,6 +2,7 @@
 
 
 from zml import TherFlowConfig
+import warnings
 
 
 def create_flu_v0():
@@ -26,7 +27,7 @@ def create_flu_v0():
                                       specific_heat=specific_heat)
 
 
-def create_flu():
+def create():
     """
     Data from Maryelin.
 
@@ -39,6 +40,11 @@ def create_flu():
     vis = 1.0e30
     specific_heat = 829  # J/ Kg K # Longmaxi Fm. Xiang etal, 2020
     return TherFlowConfig.FluProperty(den=den, vis=vis, specific_heat=specific_heat)
+
+
+def create_flu(*args, **kwargs):
+    warnings.warn('use function <create> instead', DeprecationWarning)
+    return create(*args, **kwargs)
 
 
 if __name__ == '__main__':

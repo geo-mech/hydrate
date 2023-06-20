@@ -45,14 +45,15 @@ def get_dheat():
     return 394225.0
 
 
-def create(igas, iwat, ihyd, fa_t, fa_c):
+def create(igas, iwat, ihyd, fa_t, fa_c, dissociation=True, formation=True):
     """
     创建一个水合物反应(平衡态的反应，反应的速率给的非常大)
     by 张召彬
     """
     return hydrate.create(vp=vp, vt=vt, temp=273.15, heat=get_dheat(),
                           mg=get_mg_vs_mh(),
-                          igas=igas, iliq=iwat, isol=ihyd, fa_t=fa_t, fa_c=fa_c)
+                          igas=igas, iliq=iwat, isol=ihyd, fa_t=fa_t, fa_c=fa_c,
+                          dissociation=dissociation, formation=formation)
 
 
 if __name__ == '__main__':

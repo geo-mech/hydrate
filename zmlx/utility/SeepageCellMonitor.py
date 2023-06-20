@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 
+import warnings
 from zml import is_array
 
 
@@ -81,7 +82,7 @@ class SeepageCellMonitor:
                 for i in range(len(self.vm)):
                     self.vm[i].append(vm[i])
         except Exception as err:
-            print(f'{self.update}: {err}')
+            warnings.warn(f'meet exception when update. err = {err}. function = {self.update}')
 
     def get_prod(self, index=None, np=None):
         """
@@ -98,7 +99,7 @@ class SeepageCellMonitor:
             else:
                 return np.array(self.vt), np.array(vm)
         except Exception as err:
-            print(f'{self.get_prod}: {err}')
+            warnings.warn(f'meet exception when call function <{self.get_prod}>, err = <{err}>')
 
     def get_rate(self, index=None, np=None):
         """
@@ -114,7 +115,7 @@ class SeepageCellMonitor:
             else:
                 return np.array(x[1:]), np.array(q)
         except Exception as err:
-            print(f'{self.get_rate}: {err}')
+            warnings.warn(f'meet exception <{err}> when call function <{self.get_rate}>')
 
     def save(self, path):
         """
@@ -132,7 +133,7 @@ class SeepageCellMonitor:
                         file.write(f'{self.vm[ind][step]}\t')
                     file.write('\n')
         except Exception as err:
-            print(f'{self.save}: {err}')
+            warnings.warn(f'meet exception <{err}> when call function <{self.save}>')
 
     def plot(self, index, **kwargs):
         """
@@ -142,7 +143,7 @@ class SeepageCellMonitor:
             self.plot_prod(index, **kwargs)
             self.plot_rate(index, **kwargs)
         except Exception as err:
-            print(f'{self.plot}: {err}')
+            warnings.warn(f'meet exception <{err}> when call function <{self.plot}>')
 
     def plot_prod(self, index, **kwargs):
         """
@@ -157,7 +158,7 @@ class SeepageCellMonitor:
             kw.update(kwargs)
             plotxy(x, y, **kw)
         except Exception as err:
-            print(f'{self.plot_prod}: {err}')
+            warnings.warn(f'meet exception <{err}> when call function <{self.plot_prod}>')
 
     def plot_rate(self, index, **kwargs):
         """
@@ -173,4 +174,4 @@ class SeepageCellMonitor:
             kw.update(kwargs)
             plotxy(x, y, **kw)
         except Exception as err:
-            print(f'{self.plot_rate}: {err}')
+            warnings.warn(f'meet exception <{err}> when call function <{self.plot_rate}>')

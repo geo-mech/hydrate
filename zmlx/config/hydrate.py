@@ -15,7 +15,8 @@ from zmlx.utility.CapillaryEffect import CapillaryEffect
 
 class Config(TherFlowConfig):
     def __init__(self, has_co2=False, has_steam=False, has_inh=False, has_ch4_in_liq=False, inh_diff_rate=None,
-                 ch4_diff_rate=None):
+                 ch4_diff_rate=None,
+                 support_ch4_hyd_diss=True, support_ch4_hyd_form=True):
         """
         创建一个水合物的求解配置. 包含气<Id=0>、液<Id=1>和固<Id=2>三种相态;
         其中气体为：
@@ -78,7 +79,7 @@ class Config(TherFlowConfig):
             inh_id = None
         if has_ch4_in_liq:
             ich4_in_liq = len(liq)
-            add_keys(self.cell_keys, 'ch4_sol')
+            self.cell_keys.add_keys('ch4_sol')
             #
             # 每个组分都需要有一个密度，这个确实有些难办，溶解在水中的气体，它其实已经不是气体了。
             # 对于混溶的各个组分，如何确定密度，我也还没想好，也没有具体去调研别人的处理方法。
@@ -121,11 +122,11 @@ class Config(TherFlowConfig):
         # -------------------------------------------------------------
         # 添加甲烷水合物的相变
         r = ch4_hydrate_react.create(
-            igas=self.components['ch4'],
-            iwat=self.components['h2o'],
+            igas=self.components['ch4'], iwat=self.components['h2o'],
             ihyd=self.components['ch4_hydrate'],
-            fa_t=self.flu_keys['temperature'],
-            fa_c=self.flu_keys['specific_heat'])
+            fa_t=self.flu_keys['temperature'], fa_c=self.flu_keys['specific_heat'],
+            dissociation=support_ch4_hyd_diss, formation=support_ch4_hyd_form
+        )
         # 抑制固体比例过高，增强计算稳定性 （非常必要）
         r.add_inhibitor(sol=self.components['sol'],
                         liq=None,

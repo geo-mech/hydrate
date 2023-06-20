@@ -1,5 +1,6 @@
 
 from zml import make_parent
+import warnings
 
 
 def append_file(filename, text):
@@ -13,5 +14,6 @@ def append_file(filename, text):
         if filename is not None:
             with open(make_parent(filename), 'a') as file:
                 file.write(text)
-    except:
-        pass
+    except Exception as err:
+        warnings.warn(f'meet exception in append_file. filename={filename}. error={err}')
+

@@ -1,9 +1,9 @@
 from zml import *
 from zmlx.fluid import *
-from zmlx.fluid.kerogen import create_flu as create_kerogen
-from zmlx.fluid.oil import create_flu as create_heavy_oil
-from zmlx.fluid.c11h24 import create_flu as create_light_oil
-from zmlx.fluid.char import create_flu as create_char
+from zmlx.fluid.kerogen import create as create_kerogen
+from zmlx.fluid.oil import create as create_heavy_oil
+from zmlx.fluid.c11h24 import create as create_light_oil
+from zmlx.fluid.char import create as create_char
 
 from zmlx.kr.create_krf import create_krf
 from zmlx.react import decomposition
