@@ -26,14 +26,16 @@ from typing import Iterable
 
 try:
     import numpy as np
-except:
+except Exception as _err:
     # 当numpy没有安装的时候，部分功能将不可用
     np = None
+    warnings.warn(f'cannot import numpy in zml. error = {_err}')
 
 try:
     import matplotlib.pyplot as plt
-except:
+except Exception as _err:
     plt = None
+    warnings.warn(f'cannot import matplotlib in zml. error = {_err}')
 
 # 指示当前是否为Windows系统(目前支持Windows和Linux两个系统)
 is_windows = os.name == 'nt'
@@ -7161,6 +7163,24 @@ class _SeepageNumpyAdaptor:
             """
             self.set(-1, value)
 
+        @property
+        def dr(self):
+            return self.get(-2)
+
+        @dr.setter
+        def dr(self, value):
+            self.set(-2, value)
+
+        def get_dv(self, index=None, buf=None):
+            """
+            上一次迭代经过Face流体的体积.
+            """
+            if index is None:
+                return self.get(-19, buf=buf)
+            else:
+                assert 0 <= index < 9, f'index = {index} is not permitted'
+                return self.get(-10-index, buf=buf)
+
     class _Fluids:
         """
         用以批量读取或者设置某一种流体的属性
@@ -10002,6 +10022,13 @@ class Seepage(HasHandle, HasCells):
         """
         导出属性: 当 index >= 0 的时候，为属性ID；如果index < 0，则：
             index=-1, cond
+            index=-2, dr
+
+            index=-10, dv of fluid 0
+            index=-11, dv of fluid 1
+            index=-12, dv of fluid 2
+            ...
+            index=-19, dv of fluid ALL
         """
         core.seepage_faces_write(self.handle, ctypes.cast(pointer, c_void_p), index)
 
@@ -10011,6 +10038,7 @@ class Seepage(HasHandle, HasCells):
         """
         导入属性: 当 index >= 0 的时候，为属性ID；如果index < 0，则：
             index=-1, cond
+            index=-2, dr
         """
         if pointer is not None:
             core.seepage_faces_read(self.handle, ctypes.cast(pointer, c_void_p), 0, index)

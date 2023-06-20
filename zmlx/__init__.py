@@ -12,6 +12,7 @@ from zml import *
 from zmlx.alg import get_latest_version, clamp, opath, linspace, \
     has_PyQt5, has_numpy, has_matplotlib, join_paths
 import os
+import warnings
 
 # 部分函数容易混淆，借助zml调用
 import zml
@@ -19,60 +20,62 @@ do_plot = zml.plot
 
 try:
     from zmlx.config import create_hydrate as create_hydconfig
-except:
-    pass
+except Exception as err:
+    warnings.warn(f'meet exception when import create_hydconfig. error = {err}')
 
 try:
     from zmlx.plt import plot2
-except:
-    pass
+except Exception as err:
+    warnings.warn(f'meet exception when import plot2. error = {err}')
 
 
 try:
     from zmlx.plt.tricontourf import tricontourf
-except:
-    pass
+except Exception as err:
+    warnings.warn(f'meet exception when import tricontourf. error = {err}')
 
 try:
     from zmlx.plt.plotxy import plotxy
-except:
-    pass
+except Exception as err:
+    warnings.warn(f'meet exception when import plotxy. error = {err}')
 
 try:
     from zmlx.ui import find, find_all
     has_gui = True
-except:
+except Exception as err:
     has_gui = False
+    warnings.warn(f'meet exception when import find, find_all. error = {err}')
 
 try:
     from zmlx.utility import GuiIterator
-except:
-    pass
+except Exception as err:
+    warnings.warn(f'meet exception when import GuiIterator. error = {err}')
 
 try:
     from zmlx.utility import LinearField
-except:
-    pass
+except Exception as err:
+    warnings.warn(f'meet exception when import LinearField. error = {err}')
 
 try:
     from zmlx.utility import PressureController
-except:
-    pass
+except Exception as err:
+    warnings.warn(f'meet exception when import PressureController. error = {err}')
 
 try:
     from zmlx.utility import SaveManager
-except:
-    pass
+except Exception as err:
+    warnings.warn(f'meet exception when import SaveManager. error = {err}')
 
 try:
     from zmlx.utility import SeepageCellMonitor
-except:
-    pass
+except Exception as err:
+    warnings.warn(f'meet exception when import SeepageCellMonitor. error = {err}')
 
 try:
     import numpy as np
-except:
+except Exception as err:
     np = None
+    warnings.warn(f'meet exception when import numpy. error = {err}')
 
 try:
     __folder = os.path.dirname(__file__)
@@ -80,8 +83,8 @@ try:
     app_data.add_path(os.path.join(__folder, 'data'))
     if has_gui:
         app_data.add_path(os.path.join(__folder, 'ui', 'data'))
-except:
-    pass
+except Exception as err:
+    warnings.warn(f'meet exception when add path to app_data. error = {err}')
 
 
 def get_path(*args):
