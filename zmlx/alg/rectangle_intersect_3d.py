@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # print控制
-print_enable = False
+print_enable = True
 
 
 def calculate_rectangle_vertices(center, midpoint1, midpoint2):
@@ -163,7 +163,7 @@ def point_in_rectangle(point, rectangle):
     else:
         return False
 
-
+#! 测试该函数是否存在问题
 def line_rect_intersection(p1, p2, rect):
     """
     计算2d线段与矩形的位置情况
@@ -278,7 +278,8 @@ def calculate_3d_rectangle_intersect(center1, edge1_center1, edge2_center1,
     e_dist = 0
 
     # 判断是否可能相交
-    if distance - max_distance > e_dist:
+    #! 问题出在这
+    if distance - 10 * max_distance > e_dist:
         if print_enable:
             print("两个矩形不可能相交")
         return None
@@ -287,7 +288,7 @@ def calculate_3d_rectangle_intersect(center1, edge1_center1, edge2_center1,
         tranform_matrix = calculate_transform_matrix(rect2_vertices)
 
         # 将全局坐标转换为局部坐标 右上开始，顺指针输出坐标，
-        # 局部坐标定: 矩形2中心点为O，中心点到邻边中心点分别为XY轴，两轴叉乘法向量为Z轴
+        # 局部坐标定义: 矩形2中心点为O，中心点到邻边中心点分别为XY轴，两轴叉乘法向量为Z轴
         local_coord = [
             np.dot(tranform_matrix[0], vertex) for vertex in rect1_vertices
         ]
@@ -312,7 +313,8 @@ def calculate_3d_rectangle_intersect(center1, edge1_center1, edge2_center1,
         distribution = get_points_distribution(local_z)
         label = list(distribution.keys())[0]
         value = list(distribution.values())[0]
-
+        if print_enable:
+            print(f'相交情况：{label}')
         if label == 'no':
             # 一侧四点 无交点
             return None
@@ -338,7 +340,7 @@ def calculate_3d_rectangle_intersect(center1, edge1_center1, edge2_center1,
             else:
                 #todo 两个矩形在相同平面
                 assert len(value) == 4
-                # 
+                #
                 return '相同平面'
 
         elif label == '22':
@@ -351,22 +353,22 @@ def calculate_3d_rectangle_intersect(center1, edge1_center1, edge2_center1,
         elif label == '13':
             # 13分布
             if value == 1 or value == 2:
-                intersec1 = calculate_intersection_point(local_coord[value],
-                                                        local_coord[value+1])
-                intersec2 = calculate_intersection_point(local_coord[value],
-                                                        local_coord[value-1])
+                intersec1 = calculate_intersection_point(
+                    local_coord[value], local_coord[value + 1])
+                intersec2 = calculate_intersection_point(
+                    local_coord[value], local_coord[value - 1])
             elif value == 0:
-                intersec1 = calculate_intersection_point(local_coord[0],
-                                                        local_coord[1])
-                intersec2 = calculate_intersection_point(local_coord[0],
-                                                        local_coord[3])
+                intersec1 = calculate_intersection_point(
+                    local_coord[0], local_coord[1])
+                intersec2 = calculate_intersection_point(
+                    local_coord[0], local_coord[3])
             else:
                 assert value == 3
-                intersec1 = calculate_intersection_point(local_coord[3],
-                                                        local_coord[0])
-                intersec2 = calculate_intersection_point(local_coord[3],
-                                                        local_coord[2])
-       
+                intersec1 = calculate_intersection_point(
+                    local_coord[3], local_coord[0])
+                intersec2 = calculate_intersection_point(
+                    local_coord[3], local_coord[2])
+
         # 交线与X-O-Y平面内的矩形的关系：一个交点，两个交点，无交点（相离，包含）
         local_intersect_line = line_rect_intersection(intersec1, intersec2,
                                                       local_rect2_vertices)
@@ -406,15 +408,29 @@ if __name__ == '__main__':
     # edge2_center2 = (0, 1, 1)
 
     # test2
-    center1 = (0, 0, 0)
-    edge1_center1 = (0.8, 0, 0)
-    edge2_center1 = (0, 1, 1)
+    # center1 = (0, 0, 0)
+    # edge1_center1 = (0.8, 0, 0)
+    # edge2_center1 = (0, 1, 1)
 
-    center2 = (0, 0, 0)
-    edge1_center2 = (1, 0, 0)
-    edge2_center2 = (0, 1, 0)
+    # center2 = (0, 0, 0)
+    # edge1_center2 = (1, 0, 0)
+    # edge2_center2 = (0, 1, 0)
 
-    intersect = calculate_3d_rectangle_intersect(center1, edge1_center1,
-                                                 edge2_center1, center2,
-                                                 edge1_center2, edge2_center2)
+    #! 测试输出links 生成的坐标，计算中心点距离已经大于对角线之和很多，依旧显示相交，22分布，显示无交点
+    rect1 = [
+        -9.498886074404114, -64.06598101748703, -5.4327506447085625,
+        -9.498886074404114, -64.06598101748703, 3.127855415897498,
+        0.06453034660202661, -62.802910736812834, -5.4327506447085625
+    ]
+
+    rect2 = [
+        -7.686086611529921, -57.63878292184205, -11.209247886761027,
+        -7.686086611529921, -57.63878292184205, -0.2243994019125406,
+        -8.428821481371562, -45.6415498441866, -11.209247886761027
+    ]
+
+    intersect = calculate_3d_rectangle_intersect(
+        (rect1[0], rect1[1], rect1[2]), (rect1[3], rect1[4], rect1[5]),
+        (rect1[6], rect1[7], rect1[8]), (rect2[0], rect2[1], rect2[2]),
+        (rect2[3], rect2[4], rect2[5]), (rect2[6], rect2[7], rect2[8]))
     print(intersect)
