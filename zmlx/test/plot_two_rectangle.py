@@ -2,6 +2,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 from zmlx.alg.rectangle_intersect_3d import calculate_rectangle_vertices, calculate_3d_rectangle_intersect
 
+"""
+单独绘制两个矩形，观察相交情况是否与计算一致、
+
+by xutao
+
+"""
+
 
 def plot_rectangle(vertices, ax):
     """
@@ -26,13 +33,13 @@ if __name__ == '__main__':
     ax = fig.add_subplot(111, projection='3d')
 
     # 读取坐标数据
-    d = np.loadtxt('D:/Daily/2023.06.15 矩形相交算法/vertices.txt')
+    d = np.loadtxt('hydrate/zmlx/alg/rectangle_intersect_3d_test/vertices.txt')
 
     # 读取demo相交索引数据
-    demo_links = np.loadtxt('D:/Daily/2023.06.15 矩形相交算法/demo_links.txt',dtype=int)
+    demo_links = np.loadtxt('hydrate/zmlx/alg/rectangle_intersect_3d_test/demo_links.txt',dtype=int)
 
     # 读取计算相交索引数据
-    cal_links = np.loadtxt('D:/Daily/2023.06.15 矩形相交算法/cal_links.txt',dtype=int)
+    cal_links = np.loadtxt('hydrate/zmlx/alg/rectangle_intersect_3d_test/cal_links.txt',dtype=int)
 
     # 定义矩形
     rect1 = d[int(cal_links[0][0])]

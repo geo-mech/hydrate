@@ -1,5 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
+"""
+计算两个三维空间的矩形的相交情况，相交返回交点，不相交返回None
+
+by xutao 
+
+2023.06.29
+"""
+
 
 # print控制
 print_enable = False
