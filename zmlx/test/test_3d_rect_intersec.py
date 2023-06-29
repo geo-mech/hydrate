@@ -1,5 +1,15 @@
 from zmlx.alg.dfn_v3 import *
 from zmlx.alg.rectangle_intersect_3d import *
+
+
+"""
+生成若干组矩形，存储坐标及相交情况，存储计算得到相交情况
+
+by xutao
+
+"""
+
+
 import numpy as np
 # 创建矩形（都是竖直方向的矩形）
 fractures = create_demo()
