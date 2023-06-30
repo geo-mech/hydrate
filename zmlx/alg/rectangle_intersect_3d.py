@@ -8,9 +8,8 @@ by xutao
 2023.06.29
 """
 
-
 # print控制
-print_enable = False
+print_enable = True
 
 
 def calculate_rectangle_vertices(center, midpoint1, midpoint2):
@@ -146,40 +145,40 @@ def line_rect_intersection(p1, p2, local_rect2, rect2_local_xy_range):
     """
     计算2d线段与矩形的位置情况
 
-    :param: p1: 线段起点
-    :param: p2: 线段终点
-    :param: local_rect2: 矩形2顶点local坐标
-    :param: rect2_local_xy_range: 矩形2local_xy范围x_min, y_min, x_max, y_max
-    :return 有交点返回交点，无交点返回None
+    :param p1: 线段起点
+    :param p2: 线段终点
+    :param local_rect2: 矩形2顶点local坐标
+    :param rect2_local_xy_range: 矩形2local_xy范围x_min, y_min, x_max, y_max
+    :return: 有交点返回交点，无交点返回None
 
     """
+    # center到mid1的距离为x，center到mid2的距离为y
+    rectangle = rect2_local_xy_range
+
+
+
     # 矩形的四个顶点
     r1, r2, r3, r4 = local_rect2
-    # center到mid1的距离为x，center到mid1的距离为y
 
-    rectangle = rect2_local_xy_range
     # 矩形的四条边
     edges = [(r1, r2), (r2, r3), (r3, r4), (r4, r1)]
+    
     intersections = []
     for edge in edges:
         intersection = line_line_intersection(p1, p2, edge[0], edge[1])
         if intersection is not None:
             intersections.append(intersection)
+    # 如果两个点都在矩形内部，直接返回交点
+    p1_bool = point_in_rectangle(p1, rectangle)
+    p2_bool = point_in_rectangle(p2, rectangle)
     # 判断交点情况
-    if len(intersections) == 0:
+    if p1_bool and p2_bool:
+        return p1, p2
+    elif len(intersections) == 0:
         # 线段与矩形边无交点
-        if point_in_rectangle(p1, rectangle) and point_in_rectangle(
-                p2, rectangle):
-            # 包含
-            return p1, p2
-        else:
-            # 相离
-            return None
-    elif len(intersections) == 1:
-        # 一个交点
-        return intersections
-    elif len(intersections) == 2:
-        # 两个交点
+        return None
+    else: 
+        # 1个或2个交点
         return intersections
 
 
@@ -368,26 +367,39 @@ def calculate_3d_rectangle_intersect(center1, r1_mid1, r1_mid2, center2,
                                                       local_rect2_vertices,
                                                       rect2_local_xy_range)
 
+        # 判断交点是否在矩形内部
+        p1_bool = point_in_rectangle(intersec1, rect2_local_xy_range)
+        p2_bool = point_in_rectangle(intersec2, rect2_local_xy_range)
+
+
         # 判断局部坐标系下是否存在交点
         if local_intersect_line is None:
             #不存在交点
             return None
+        # 存在交点
+        elif len(local_intersect_line) == 1:
+            # 交点为顶点，且线段端点均在2d矩形外部
+            assert (p1_bool and p2_bool) is not True
+            if p1_bool ==  True and p2_bool == False:
+                local_intersect_line.append(intersec1)
+            elif p1_bool ==  False and p2_bool == True:
+                local_intersect_line.append(intersec2)
+            
+        # 添加z轴，设置为零
+        z_coordinates = np.array([0])
 
-        else:  # 存在交点
-            # 添加z轴，设置为零
-            z_coordinates = np.array([0])
+        # 为二维坐标添加z值
+        local_intersect_line_3d = [
+            np.hstack((vertex, z_coordinates))
+            for vertex in local_intersect_line
+        ]
 
-            # 为二维坐标添加z值
-            local_intersect_line_3d = [
-                np.hstack((vertex, z_coordinates))
-                for vertex in local_intersect_line
-            ]
-            # 局部->全局: 坐标p 点乘 旋转矩阵R 再加上局部坐标系原点坐标
-            global_intersect_line = [
-                np.dot(vertex, rotation_matrix) + np.array(center2)
-                for vertex in local_intersect_line_3d
-            ]
-            return global_intersect_line
+        # 局部->全局: 坐标p 点乘 旋转矩阵R 再加上局部坐标系原点坐标
+        global_intersect_line = [
+            np.dot(vertex, rotation_matrix) + np.array(center2)
+            for vertex in local_intersect_line_3d
+        ]
+        return global_intersect_line
 
 
 if __name__ == '__main__':
@@ -409,9 +421,9 @@ if __name__ == '__main__':
                            dtype=int)
 
     # 定义矩形
-    rect1 = d[int(demo_links[100][0])]
+    rect1 = d[int(demo_links[1023][0])]
 
-    rect2 = d[int(demo_links[100][1])]
+    rect2 = d[int(demo_links[1023][1])]
 
     # 代码计算相交情况
     intersect = calculate_3d_rectangle_intersect(
