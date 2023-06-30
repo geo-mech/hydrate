@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
-import numpy as np
 from zmlx.alg.rectangle_intersect_3d import calculate_rectangle_vertices, calculate_3d_rectangle_intersect
-
+from zmlx.data import rect_intersec_3d as rect
 """
 单独绘制两个矩形，观察相交情况是否与计算一致、
 
@@ -33,13 +32,13 @@ if __name__ == '__main__':
     ax = fig.add_subplot(111, projection='3d')
 
     # 读取坐标数据
-    d = np.loadtxt('hydrate/zmlx/alg/rectangle_intersect_3d_test/vertices.txt')
+    d = rect.get_demo_rect_vertices()
 
     # 读取demo相交索引数据
-    demo_links = np.loadtxt('hydrate/zmlx/alg/rectangle_intersect_3d_test/demo_links.txt',dtype=int)
+    demo_links = rect.get_demo_rect_index()
 
     # 读取计算相交索引数据
-    cal_links = np.loadtxt('hydrate/zmlx/alg/rectangle_intersect_3d_test/cal_links.txt',dtype=int)
+    cal_links = rect.get_cal_rect_index()
 
     # 定义矩形
     rect1 = d[int(cal_links[0][0])]
@@ -52,7 +51,6 @@ if __name__ == '__main__':
         (rect1[6], rect1[7], rect1[8]), (rect2[0], rect2[1], rect2[2]),
         (rect2[3], rect2[4], rect2[5]), (rect2[6], rect2[7], rect2[8]))
     print(intersect)
-    
 
     # 绘制两个矩形
     plot_rectangle(
@@ -63,8 +61,6 @@ if __name__ == '__main__':
         calculate_rectangle_vertices((rect2[0], rect2[1], rect2[2]),
                                      (rect2[3], rect2[4], rect2[5]),
                                      (rect2[6], rect2[7], rect2[8])), ax)
-    
+
     # 显示图形
     plt.show()
-
-

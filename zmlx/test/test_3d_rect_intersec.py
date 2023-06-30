@@ -1,16 +1,8 @@
+
 from zmlx.alg.dfn_v3 import *
 from zmlx.alg.rectangle_intersect_3d import *
-
-
-"""
-生成若干组矩形，存储坐标及相交情况，存储计算得到相交情况
-
-by xutao
-
-"""
-
-
 import numpy as np
+import os
 # 创建矩形（都是竖直方向的矩形）
 fractures = create_demo()
 
@@ -19,14 +11,17 @@ links = create_links(fractures)
 print(f'count of links: {len(links)} (有多少对矩形之间存在共有的线段)')
 
 # 保存相交矩形序号
-np.savetxt('hydrate/zmlx/alg/rectangle_intersect_3d_test/demo_links.txt', links, fmt='%4d')
+demo_path = os.path.join(os.path.dirname(__file__), 'rectangle_intersect_3d_test', 'demo_links.txt')
+
+np.savetxt(demo_path, links, fmt='%4d')
 
 # 转化为一系列三维矩形
 # 每一个矩形用9个数字表示 （矩形中心坐标、相邻两个边的坐标）
 rc3 = to_rc3(fractures)
 
 # 保存相交矩形顶点坐标
-np.savetxt('hydrate/zmlx/alg/rectangle_intersect_3d_test/vertices.txt', rc3, fmt='%05f')
+vertices_path = os.path.join(os.path.dirname(__file__), 'rectangle_intersect_3d_test', 'vertices.txt')
+np.savetxt(vertices_path, rc3, fmt='%05f')
 
 num = 0
 test_links = []
@@ -45,7 +40,8 @@ for i in range(len(rc3)):
             num += 1
 
 # 保存计算得到相交矩形序号
-np.savetxt('hydrate/zmlx/alg/rectangle_intersect_3d_test/cal_links.txt', np.array(test_links),fmt='%4d') 
+cal_path = os.path.join(os.path.dirname(__file__), 'rectangle_intersect_3d_test', 'cal_links.txt')
+np.savetxt(cal_path, np.array(test_links),fmt='%4d') 
 
 # 输出计算得到相交对数
 print(f'计算得到相交矩形对数{num}')
