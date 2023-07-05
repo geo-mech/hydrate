@@ -1,14 +1,51 @@
 # -*- coding: utf-8 -*-
+"""
+定义数据格式 fn2，主要包括4列数据，用于定义裂缝位置，1列数据，用于定义裂缝的宽度，
+1列数据，用于定义裂缝的颜色（如压力）
+"""
 
 
-from zml import is_array, Fracture2
+from zml import is_array, gui
 from zmlx.plt.plot2 import plot2
 from zmlx.plt.get_color import get_color
+import warnings
+
 
 try:
     import numpy as np
-except:
+except Exception as err:
     np = None
+    warnings.warn(f'warning. file: {__file__}. msg: {err}')
+
+
+def from_network2(network=None, seepage=None, ca_c=None, fa_id=None, fa_c=None):
+    """
+    对于颜色:
+        将首先从裂缝的fa_c属性中获得，如果获得失败，则从seepage的Cell的ca_c属性获得.
+    返回：
+        裂缝的位置，缝宽，颜色
+    """
+    pos = []
+    w = []
+    c = []
+    if network is not None:
+        for fracture in network.get_fractures():
+            pos.append(fracture.pos)
+            w.append(-fracture.dn)
+            if fa_c is not None:
+                tmp = fracture.get_attr(index=fa_c)
+                if tmp is not None:
+                    c.append(tmp)
+                    continue
+            if ca_c is not None and seepage is not None and fa_id is not None:
+                cell_id = round(fracture.get_attr(fa_id))
+                if cell_id < seepage.cell_number:
+                    tmp = seepage.get_cell(cell_id).get_attr(ca_c)
+                    if tmp is not None:
+                        c.append(tmp)
+                        continue
+            c.append(-fracture.dn)
+    return pos, w, c
 
 
 def show_fn2(pos=None, w=None, c=None, w_max=4, network=None, seepage=None,
@@ -24,27 +61,7 @@ def show_fn2(pos=None, w=None, c=None, w_max=4, network=None, seepage=None,
     """
     if pos is None or w is None or c is None:
         if network is not None:
-            pos = []
-            w = []
-            c = []
-            for fracture in network.get_fractures():
-                assert isinstance(fracture, Fracture2)
-                pos.append(fracture.pos)
-                w.append(-fracture.dn)
-                if fa_c is not None:
-                    tmp = fracture.get_attr(index=fa_c)
-                    if tmp is not None:
-                        c.append(tmp)
-                        continue
-                if ca_c is not None and seepage is not None and fa_id is not None:
-                    cell_id = round(fracture.get_attr(fa_id))
-                    if cell_id < seepage.cell_number:
-                        tmp = seepage.get_cell(cell_id).get_attr(ca_c)
-                        if tmp is not None:
-                            c.append(tmp)
-                            continue
-                # Now, the color is not defined, then finally use fracture width
-                c.append(-fracture.dn)
+            pos, w, c = from_network2(network=network, seepage=seepage, ca_c=ca_c, fa_id=fa_id, fa_c=fa_c)
 
     if pos is None or w is None or c is None:
         if ipath is not None and np is not None:
@@ -122,8 +139,7 @@ def show_fn2(pos=None, w=None, c=None, w_max=4, network=None, seepage=None,
 
 def test():
     from zmlx.data.example_fn2 import pos, w, c
-
-    show_fn2(pos, w, c)
+    gui.execute(lambda: show_fn2(pos, w, c), close_after_done=False)
 
 
 if __name__ == '__main__':

@@ -2,7 +2,8 @@ from zml import plot, gui
 
 
 def tricontourf(x=None, y=None, z=None, ipath=None, ix=None, iy=None, iz=None, caption=None, gui_only=False,
-                title=None, triangulation=None, fname=None, dpi=300, levels=20, cmap='coolwarm'):
+                title=None, triangulation=None, fname=None, dpi=300, levels=20, cmap='coolwarm',
+                xlabel=None, ylabel=None):
     """
     利用给定的x，y，z来画一个二维的云图
     """
@@ -22,8 +23,8 @@ def tricontourf(x=None, y=None, z=None, ipath=None, ix=None, iy=None, iz=None, c
     def f(fig):
         ax = fig.subplots()
         ax.set_aspect('equal')
-        ax.set_xlabel('x/m')
-        ax.set_ylabel('y/m')
+        ax.set_xlabel('x/m' if xlabel is None else xlabel)
+        ax.set_ylabel('y/m' if ylabel is None else ylabel)
         if title is not None:
             ax.set_title(title)
         if triangulation is None:

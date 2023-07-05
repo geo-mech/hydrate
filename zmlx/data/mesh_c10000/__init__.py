@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 from zml import read_text
 import os
 

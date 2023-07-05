@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 from zmlx.alg.load_col import load_col
 import os
 

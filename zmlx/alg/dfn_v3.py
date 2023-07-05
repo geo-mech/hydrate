@@ -1,11 +1,9 @@
-# -*- coding: utf-8 -*-
-
-
-from zml import *
+from zml import Dfn2, gui
 from zmlx.alg.linspace import linspace
 from zmlx.alg.clamp import clamp
 import random
-from zmlx.alg.seg_intersection import seg_intersection
+from zmlx.geometry.rect_v3 import intersected, get_area
+from zmlx.geometry.rect_3d import from_v3
 
 
 def create_fractures(box=None, p21=None, angles=None, lengths=None, heights=None, l_min=None):
@@ -60,30 +58,6 @@ def create_fractures(box=None, p21=None, angles=None, lengths=None, heights=None
     return fractures
 
 
-def intersected(a, b):
-    """
-    返回两个给定的竖直裂缝a和b是否相交
-    """
-    assert len(a) == 6 and len(b) == 6
-    az0, az1 = a[2], a[5]
-    bz0, bz1 = b[2], b[5]
-    if max(bz0, bz1) <= min(az0, az1):
-        return False
-    if min(bz0, bz1) >= max(az0, az1):
-        return False
-    xy = seg_intersection(*a[0: 2], *a[3: 5], *b[0: 2], *b[3: 5])
-    return xy is not None
-
-
-def get_area(f3):
-    """
-    返回一个裂缝的面积
-    """
-    assert len(f3) == 6
-    x0, y0, z0, x1, y1, z1 = f3
-    return get_distance((x0, y0), (x1, y1)) * abs(z0 - z1)
-
-
 def remove_small(fractures):
     """
     删除那些非常小的裂缝，并且返回
@@ -125,34 +99,35 @@ def save_c14(path, fractures):
             file.write(f'{x0} {x0} {x1} {x1} {y0} {y0} {y1} {y1} {z0} {z1} {z0} {z1} 0 0\n')
 
 
-def center(x, y):
+def __cen(x, y):
     """
     返回点x和y的中心点
     """
     return [(x[i] + y[i]) / 2 for i in range(3)]
 
 
+def __sym(c, x):
+    """
+    返回x关于中心点x的对称点
+    """
+    return [c[i] * 2 - x[i] for i in range(3)]
+
+
 def to_rc3(fractures):
     """
-    将竖直的裂缝（用6个数字表示）修改为用9个数字（矩形中心坐标和两个相邻边的中心坐标）表示的三维矩形的形式
+    将<多个>竖直的裂缝（用6个数字表示）修改为用9个数字（矩形中心坐标和两个相邻边的中心坐标）表示的三维矩形的形式
     """
-    rc3 = []
-    for x0, y0, z0, x1, y1, z1 in fractures:
-        p0 = center([x0, y0, z0], [x1, y1, z1])
-        p1 = [(x0 + x1) / 2, (y0 + y1) / 2, z1]
-        p2 = [x0, y0, (z0 + z1) / 2]
-        rc3.append(p0 + p1 + p2)
-    return rc3
+    return [from_v3(v3) for v3 in fractures]
 
 
-def create_demo():
+def create_demo(heights=None):
     """
     创建一个用于计算测试的裂缝
     """
     fx = create_fractures(p21=0.3, angles=linspace(-0.2, 0.2, 100),
-                          lengths=linspace(10, 20, 100))
+                          lengths=linspace(10, 20, 100), heights=heights)
     fy = create_fractures(p21=0.7, angles=linspace(1.57 - 0.2, 1.57 + 0.2, 100),
-                          lengths=linspace(20, 40, 100))
+                          lengths=linspace(20, 40, 100), heights=heights)
 
     print(f'count of fx: {len(fx)}')
     print(f'count of fy: {len(fy)}')
@@ -169,7 +144,7 @@ def create_demo():
 def test():
     from zmlx.pg.show_rc3 import show_rc3
     import random
-    rc3 = to_rc3(create_demo())
+    rc3 = to_rc3(create_demo(heights=linspace(5, 10, 30)))
     color = []
     alpha = []
     for _ in rc3:
@@ -178,5 +153,31 @@ def test():
     show_rc3(rc3, color=color, alpha=alpha, caption='dfn_v3')
 
 
+def test2():
+    def xxx(fractures):
+        """
+        寻找相互连通的裂缝组合
+        """
+        from zml import Hf2Alg
+        links = []
+        for i0 in range(len(fractures)):
+            a = fractures[i0]
+            for i1 in range(i0 + 1, len(fractures)):
+                b = fractures[i1]
+                if Hf2Alg.rect_v3_intersected(a, b):
+                    links.append([i0, i1])
+        return links
+    import timeit
+    fractures = create_demo()
+    t1 = timeit.default_timer()
+    links = create_links(fractures)
+    t2 = timeit.default_timer()
+    print(f'count links = {len(links)}. time = {t2 - t1}')
+    links = xxx(fractures)
+    t3 = timeit.default_timer()
+    print(f'count links = {len(links)}. time = {t3 - t2}')
+
+
 if __name__ == '__main__':
-    gui.execute(test, close_after_done=False)
+    test2()
+    # gui.execute(test, close_after_done=False)
