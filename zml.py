@@ -1477,6 +1477,7 @@ class AttrKeys:
     """
     用以管理属性. 自动从0开始编号.
     """
+
     def __init__(self, *args):
         self.__keys = {}
         self.add_keys(*args)
@@ -2391,6 +2392,9 @@ class Interp1(HasHandle):
     core.use(None, 'interp1_get_vy', c_void_p, c_void_p)
 
     def get_data(self):
+        """
+        返回内核数据的拷贝
+        """
         x = Vector()
         y = Vector()
         core.interp1_get_vx(self.handle, x.handle)
@@ -2422,6 +2426,9 @@ class Interp1(HasHandle):
     core.use(None, 'interp1_to_evenly_spaced', c_void_p, c_size_t, c_size_t)
 
     def to_evenly_spaced(self, nmin=100, nmax=1000):
+        """
+        将插值转化成为均匀的间隔，这样查找会更快.
+        """
         core.interp1_to_evenly_spaced(self.handle, nmin, nmax)
         return self
 
@@ -3829,21 +3836,21 @@ class Mesh3(HasHandle):
         core.use(c_size_t, 'mesh3_get_node_link_id', c_void_p, c_size_t, c_size_t)
 
         def get_link(self, index):
-            if index < self.link_number:
+            if 0 <= index < self.link_number:
                 i = core.mesh3_get_node_link_id(self.model.handle, self.index, index)
                 return self.model.get_link(i)
 
         core.use(c_size_t, 'mesh3_get_node_face_id', c_void_p, c_size_t, c_size_t)
 
         def get_face(self, index):
-            if index < self.face_number:
+            if 0 <= index < self.face_number:
                 i = core.mesh3_get_node_face_id(self.model.handle, self.index, index)
                 return self.model.get_face(i)
 
         core.use(c_size_t, 'mesh3_get_node_body_id', c_void_p, c_size_t, c_size_t)
 
         def get_body(self, index):
-            if index < self.body_number:
+            if 0 <= index < self.body_number:
                 i = core.mesh3_get_node_body_id(self.model.handle, self.index, index)
                 return self.model.get_body(i)
 
@@ -3874,6 +3881,8 @@ class Mesh3(HasHandle):
         def set_attr(self, index, value):
             if index is None:
                 return self
+            if value is None:
+                value = 1.0e200
             core.mesh3_set_node_attr(self.model.handle, self.index, index, value)
             return self
 
@@ -3905,21 +3914,21 @@ class Mesh3(HasHandle):
         core.use(c_size_t, 'mesh3_get_link_node_id', c_void_p, c_size_t, c_size_t)
 
         def get_node(self, index):
-            if index < self.node_number:
+            if 0 <= index < self.node_number:
                 i = core.mesh3_get_link_node_id(self.model.handle, self.index, index)
                 return self.model.get_node(i)
 
         core.use(c_size_t, 'mesh3_get_link_face_id', c_void_p, c_size_t, c_size_t)
 
         def get_face(self, index):
-            if index < self.face_number:
+            if 0 <= index < self.face_number:
                 i = core.mesh3_get_link_face_id(self.model.handle, self.index, index)
                 return self.model.get_face(i)
 
         core.use(c_size_t, 'mesh3_get_link_body_id', c_void_p, c_size_t, c_size_t)
 
         def get_body(self, index):
-            if index < self.body_number:
+            if 0 <= index < self.body_number:
                 i = core.mesh3_get_link_body_id(self.model.handle, self.index, index)
                 return self.model.get_body(i)
 
@@ -3964,6 +3973,8 @@ class Mesh3(HasHandle):
         def set_attr(self, index, value):
             if index is None:
                 return self
+            if value is None:
+                value = 1.0e200
             core.mesh3_set_link_attr(self.model.handle, self.index, index, value)
             return self
 
@@ -3995,21 +4006,21 @@ class Mesh3(HasHandle):
         core.use(c_size_t, 'mesh3_get_face_node_id', c_void_p, c_size_t, c_size_t)
 
         def get_node(self, index):
-            if index < self.node_number:
+            if 0 <= index < self.node_number:
                 i = core.mesh3_get_face_node_id(self.model.handle, self.index, index)
                 return self.model.get_node(i)
 
         core.use(c_size_t, 'mesh3_get_face_link_id', c_void_p, c_size_t, c_size_t)
 
         def get_link(self, index):
-            if index < self.link_number:
+            if 0 <= index < self.link_number:
                 i = core.mesh3_get_face_link_id(self.model.handle, self.index, index)
                 return self.model.get_link(i)
 
         core.use(c_size_t, 'mesh3_get_face_body_id', c_void_p, c_size_t, c_size_t)
 
         def get_body(self, index):
-            if index < self.body_number:
+            if 0 <= index < self.body_number:
                 i = core.mesh3_get_face_body_id(self.model.handle, self.index, index)
                 return self.model.get_body(i)
 
@@ -4062,6 +4073,8 @@ class Mesh3(HasHandle):
         def set_attr(self, index, value):
             if index is None:
                 return self
+            if value is None:
+                value = 1.0e200
             core.mesh3_set_face_attr(self.model.handle, self.index, index, value)
             return self
 
@@ -4093,21 +4106,21 @@ class Mesh3(HasHandle):
         core.use(c_size_t, 'mesh3_get_body_node_id', c_void_p, c_size_t, c_size_t)
 
         def get_node(self, index):
-            if index < self.node_number:
+            if 0 <= index < self.node_number:
                 i = core.mesh3_get_body_node_id(self.model.handle, self.index, index)
                 return self.model.get_node(i)
 
         core.use(c_size_t, 'mesh3_get_body_link_id', c_void_p, c_size_t, c_size_t)
 
         def get_link(self, index):
-            if index < self.link_number:
+            if 0 <= index < self.link_number:
                 i = core.mesh3_get_body_link_id(self.model.handle, self.index, index)
                 return self.model.get_link(i)
 
         core.use(c_size_t, 'mesh3_get_body_face_id', c_void_p, c_size_t, c_size_t)
 
         def get_face(self, index):
-            if index < self.face_number:
+            if 0 <= index < self.face_number:
                 i = core.mesh3_get_body_face_id(self.model.handle, self.index, index)
                 return self.model.get_face(i)
 
@@ -4160,6 +4173,8 @@ class Mesh3(HasHandle):
         def set_attr(self, index, value):
             if index is None:
                 return self
+            if value is None:
+                value = 1.0e200
             core.mesh3_set_body_attr(self.model.handle, self.index, index, value)
             return self
 
@@ -4230,19 +4245,19 @@ class Mesh3(HasHandle):
         return core.mesh3_get_body_number(self.handle)
 
     def get_node(self, index):
-        if index < self.node_number:
+        if 0 <= index < self.node_number:
             return Mesh3.Node(self, index)
 
     def get_link(self, index):
-        if index < self.link_number:
+        if 0 <= index < self.link_number:
             return Mesh3.Link(self, index)
 
     def get_face(self, index):
-        if index < self.face_number:
+        if 0 <= index < self.face_number:
             return Mesh3.Face(self, index)
 
     def get_body(self, index):
-        if index < self.body_number:
+        if 0 <= index < self.body_number:
             return Mesh3.Body(self, index)
 
     @property
@@ -5160,6 +5175,8 @@ class SpringSys(HasHandle):
             """
             if index is None:
                 return self
+            if value is None:
+                value = 1.0e200
             core.springsys_set_spring_attr(self.model.handle, self.index, index, value)
             return self
 
@@ -5341,28 +5358,28 @@ class SpringSys(HasHandle):
         """
         返回节点对象
         """
-        if index < self.node_number:
+        if 0 <= index < self.node_number:
             return SpringSys.Node(self, index)
 
     def get_virtual_node(self, index):
         """
         返回虚拟节点对象
         """
-        if index < self.virtual_node_number:
+        if 0 <= index < self.virtual_node_number:
             return SpringSys.VirtualNode(self, index)
 
     def get_spring(self, index):
         """
         返回弹簧对象
         """
-        if index < self.spring_number:
+        if 0 <= index < self.spring_number:
             return SpringSys.Spring(self, index)
 
     def get_damper(self, index):
         """
         返回阻尼器对象
         """
-        if index < self.damper_number:
+        if 0 <= index < self.damper_number:
             return SpringSys.Damper(self, index)
 
     @property
@@ -6054,6 +6071,8 @@ class SeepageMesh(HasHandle, HasCells):
             """
             if index is None:
                 return self
+            if value is None:
+                value = 1.0e200
             core.seepage_mesh_set_cell_attr(self.model.handle, self.index, index, value)
             return self
 
@@ -6176,6 +6195,8 @@ class SeepageMesh(HasHandle, HasCells):
             """
             if index is None:
                 return self
+            if value is None:
+                value = 1.0e200
             core.seepage_mesh_set_face_attr(self.model.handle, self.index, index, value)
             return self
 
@@ -6771,15 +6792,15 @@ class Trimesh2(HasHandle):
         return core.trimesh2_get_triangle_number(self.handle)
 
     def get_node(self, index):
-        if index < self.node_number:
+        if 0 <= index < self.node_number:
             return Trimesh2.Node(self, index)
 
     def get_link(self, index):
-        if index < self.link_number:
+        if 0 <= index < self.link_number:
             return Trimesh2.Link(self, index)
 
     def get_triangle(self, index):
-        if index < self.triangle_number:
+        if 0 <= index < self.triangle_number:
             return Trimesh2.Triangle(self, index)
 
     core.use(c_size_t, 'trimesh2_get_nearest_node_id', c_void_p, c_double, c_double)
@@ -7179,7 +7200,7 @@ class _SeepageNumpyAdaptor:
                 return self.get(-19, buf=buf)
             else:
                 assert 0 <= index < 9, f'index = {index} is not permitted'
-                return self.get(-10-index, buf=buf)
+                return self.get(-10 - index, buf=buf)
 
     class _Fluids:
         """
@@ -7765,7 +7786,7 @@ class Seepage(HasHandle, HasCells):
                 assert mass is None and den is None and vis is None and vol is None
 
         core.use(None, 'fluid_save', c_void_p, c_char_p)
-    
+
         def save(self, path):
             """
             序列化保存. 可选扩展名:
@@ -7775,19 +7796,19 @@ class Seepage(HasHandle, HasCells):
             """
             if path is not None:
                 core.fluid_save(self.handle, make_c_char_p(path))
-    
+
         core.use(None, 'fluid_load', c_void_p, c_char_p)
-    
+
         def load(self, path):
             """
             序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
             """
             if path is not None:
                 core.fluid_load(self.handle, make_c_char_p(path))
-    
+
         core.use(None, 'fluid_write_fmap', c_void_p, c_void_p, c_char_p)
         core.use(None, 'fluid_read_fmap', c_void_p, c_void_p, c_char_p)
-    
+
         def to_fmap(self, fmt='binary'):
             """
             将数据序列化到一个Filemap中. 其中fmt的取值可以为: text, xml和binary
@@ -7795,18 +7816,18 @@ class Seepage(HasHandle, HasCells):
             fmap = FileMap()
             core.fluid_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
             return fmap
-    
+
         def from_fmap(self, fmap, fmt='binary'):
             """
             从Filemap中读取序列化的数据. 其中fmt的取值可以为: text, xml和binary
             """
             assert isinstance(fmap, FileMap)
             core.fluid_read_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
-    
+
         @property
         def fmap(self):
             return self.to_fmap(fmt='binary')
-    
+
         @fmap.setter
         def fmap(self, value):
             self.from_fmap(value, fmt='binary')
@@ -7923,6 +7944,8 @@ class Seepage(HasHandle, HasCells):
             """
             if index is None:
                 return self
+            if value is None:
+                value = 1.0e200
             core.fluid_set_attr(self.handle, index, value)
             return self
 
@@ -8351,6 +8374,8 @@ class Seepage(HasHandle, HasCells):
             """
             if index is None:
                 return self
+            if value is None:
+                value = 1.0e200
             if index < 0:
                 if index == -1:
                     self.x = value
@@ -8455,7 +8480,7 @@ class Seepage(HasHandle, HasCells):
             """
             与该Cell相邻的第index个Cell。当index个Cell不存在时，返回None
             """
-            assert index < self.cell_number
+            assert 0 <= index < self.cell_number
             cell_id = core.seepage_get_cell_cell_id(self.model.handle, self.index, index)
             return self.model.get_cell(cell_id)
 
@@ -8464,7 +8489,7 @@ class Seepage(HasHandle, HasCells):
             与该Cell连接的第index个Face。当index个Face不存在时，返回None
             注：改Face的另一侧，即为get_cell返回的Cell
             """
-            assert index < self.face_number
+            assert 0 <= index < self.face_number
             face_id = core.seepage_get_cell_face_id(self.model.handle, self.index, index)
             return self.model.get_face(face_id)
 
@@ -8635,6 +8660,8 @@ class Seepage(HasHandle, HasCells):
             """
             if index is None:
                 return self
+            if value is None:
+                value = 1.0e200
             core.seepage_face_set_attr(self.handle, index, value)
             return self
 
@@ -9220,20 +9247,20 @@ class Seepage(HasHandle, HasCells):
         """
         返回第index个Cell对象
         """
-        if index < self.cell_number:
+        if 0 <= index < self.cell_number:
             return Seepage.Cell(self, index)
 
     def get_face(self, index):
         """
         返回第index个Face对象
         """
-        if index < self.face_number:
+        if 0 <= index < self.face_number:
             return Seepage.Face(self, index)
 
     core.use(c_void_p, 'seepage_get_inj', c_void_p, c_size_t)
 
     def get_injector(self, index):
-        if index < self.injector_number:
+        if 0 <= index < self.injector_number:
             return Seepage.Injector(handle=core.seepage_get_inj(self.handle, index))
 
     core.use(c_size_t, 'seepage_add_cell', c_void_p)
@@ -9494,6 +9521,8 @@ class Seepage(HasHandle, HasCells):
         """
         if index is None:
             return self
+        if value is None:
+            value = 1.0e200
         core.seepage_set_attr(self.handle, index, value)
         return self
 
@@ -10821,7 +10850,7 @@ class TherFlowConfig(Object):
         """
         返回给定序号的流体定义
         """
-        assert index < self.fluid_number
+        assert 0 <= index < self.fluid_number
         return self.fluids[index]
 
     @property
@@ -11452,7 +11481,8 @@ class Fracture2:
     @property
     def uid(self):
         """
-        裂缝的全局ID。在程序启动之后，裂缝的ID将会是唯一的，并且是递增的。因此uid的数值越大，则表明裂缝创建得越晚
+        裂缝的全局ID。在程序启动之后，裂缝的ID将会是唯一的，并且是递增的。因此uid的数值越大，则表明裂缝创建得越晚。 另外，在裂缝扩展
+        的过程种，也可以用这个uid来判断，哪些裂缝是新的。
         """
         return core.frac2_get_uid(self.handle)
 
@@ -11588,6 +11618,8 @@ class Fracture2:
         第index个自定义属性
         当index个属性不存在时，默认为无穷大的一个值(1.0e100以上的浮点数)
         """
+        if value is None:
+            value = 1.0e200
         if index is None:
             return self
         if index < 0:
@@ -11672,13 +11704,14 @@ class FractureNetwork2(HasHandle):
 
     core.use(None, 'fnet2_get_fractures', c_void_p, c_void_p)
 
-    def get_fractures(self):
+    def get_fractures(self, buffer=None):
         """
         返回所有的裂缝单元
         """
-        vvp = PtrVector()
-        core.fnet2_get_fractures(self.handle, vvp.handle)
-        return [Fracture2(handle=vvp[i]) for i in range(vvp.size)]
+        if not isinstance(buffer, PtrVector):
+            buffer = PtrVector()
+        core.fnet2_get_fractures(self.handle, buffer.handle)
+        return [Fracture2(handle=buffer[i]) for i in range(buffer.size)]
 
     core.use(None, 'fnet2_adjust', c_void_p, c_double, c_double)
 
@@ -11771,6 +11804,30 @@ class FractureNetwork2(HasHandle):
     @property
     def ds_max(self):
         return core.fnet2_get_ds_max(self.handle)
+
+    core.use(None, 'fnet2_update_dist2tip', c_void_p, c_size_t, c_size_t)
+
+    def update_dist2tip(self, fa_dist, va_dist):
+        """
+        更新各个裂缝距离裂缝尖端的距离，并存储在属性fa_dist中。va_dist为各个节点距离裂缝尖端的距离，仅仅作为辅助计算的临时变量
+        """
+        core.fnet2_update_dist2tip(self.handle, fa_dist, va_dist)
+
+    core.use(None, 'fnet2_update_cluster', c_void_p, c_size_t)
+
+    def update_cluster(self, fa_cid):
+        """
+        更新cluster (将裂缝单元划分为相互孤立的cluster)
+        """
+        core.fnet2_update_cluster(self.handle, fa_cid)
+
+    core.use(None, 'fnet2_update_fh', c_void_p, c_size_t, c_size_t, c_size_t, c_double)
+
+    def update_fh(self, fa_h, fa_cid, fa_dist, h_vs_l):
+        """
+        假定裂缝的形状为一个椭圆，从而根据裂缝的长度来更新裂缝的高度
+        """
+        core.fnet2_update_fh(self.handle, fa_h, fa_cid, fa_dist, h_vs_l)
 
 
 class InfManager2(HasHandle):
@@ -12069,6 +12126,37 @@ class Hf2Alg:
             ca_fp = 99999999  # Now, will not update fluid pressure
         core.hf2_alg_exchange_fluids(layers.handle, pipe.handle, dt, ca_g, ca_fp)
 
+    core.use(c_bool, 'hf2_alg_rect_v3_intersected', c_double, c_double, c_double, c_double, c_double, c_double,
+             c_double, c_double, c_double, c_double, c_double, c_double)
+
+    @staticmethod
+    def rect_v3_intersected(a, b):
+        """
+        返回两个给定的竖直裂缝a和b是否相交
+        """
+        assert len(a) == 6 and len(b) == 6
+        return core.hf2_alg_rect_v3_intersected(*a, *b)
+
+    core.use(None, 'hf2_alg_create_links', c_void_p, c_void_p, c_size_t,
+             c_size_t, c_size_t, c_size_t,
+             c_size_t, c_size_t, c_size_t,
+             c_size_t, c_size_t, c_size_t,
+             c_double, c_double, c_double, c_double, c_double, c_double)
+
+    @staticmethod
+    def create_links(seepage, cell_n, keys, v3, buf=None):
+        """
+        对于seepage模型，读取cell中定义的竖直的矩形的信息，返回和给定的矩形相交的所有的Cell的ID
+        """
+        if buf is None:
+            buf = UintVector()
+        assert isinstance(seepage, Seepage)
+        assert len(v3) == 6
+        core.hf2_alg_create_links(buf.handle, seepage.handle, cell_n, keys.x0, keys.y0, keys.z0,
+                                  keys.x1, keys.y1, keys.z1,
+                                  keys.x2, keys.y2, keys.z2, *v3)
+        return buf.to_list()
+
 
 class Hf2Model(HasHandle):
     """
@@ -12176,6 +12264,7 @@ class Hf2Model(HasHandle):
         时候，会首先将缓冲区附加到seepage中，然后更新seepage中的流动，再将缓冲区从seepage中弹出来，从而得到了
         进入到缓冲区中的流体.
         """
+        warnings.warn('the <buffer> may be deleted after 2024-6-30', DeprecationWarning)
         return Seepage(handle=core.hf2_get_buffer(self.handle))
 
     core.use(c_void_p, 'hf2_get_sol2', c_void_p)
@@ -12209,6 +12298,8 @@ class Hf2Model(HasHandle):
         """
         if index is None:
             return self
+        if value is None:
+            value = 1.0e200
         core.hf2_set_attr(self.handle, index, value)
         return self
 
@@ -12759,14 +12850,14 @@ class InvasionPercolation(HasHandle):
         添加一个Node，并返回新添加的Node对象
         """
         index = core.ip_add_node(self.handle)
-        if index < self.node_n:
+        if 0 <= index < self.node_n:
             return self.get_node(index)
 
     def get_node(self, index):
         """
         返回序号为index的Node对象
         """
-        if index < self.node_n:
+        if 0 <= index < self.node_n:
             return InvasionPercolation.Node(self, index)
 
     core.use(c_size_t, 'ip_add_bond', c_void_p, c_size_t, c_size_t)
@@ -12781,14 +12872,14 @@ class InvasionPercolation(HasHandle):
             node1 = node1.index
         assert self.node_n > node0 != node1 < self.node_n
         index = core.ip_add_bond(self.handle, node0, node1)
-        if index < self.bond_n:
+        if 0 <= index < self.bond_n:
             return self.get_bond(index)
 
     def get_bond(self, index):
         """
         返回给定序号的Bond
         """
-        if index < self.bond_n:
+        if 0 <= index < self.bond_n:
             return InvasionPercolation.Bond(self, index)
 
     core.use(c_size_t, 'ip_get_bond_id', c_void_p, c_size_t, c_size_t)
@@ -12812,7 +12903,7 @@ class InvasionPercolation(HasHandle):
         if isinstance(node1, InvasionPercolation.Node):
             node1 = node1.index
         index = self.get_bond_id(node0, node1)
-        if index < self.bond_n:
+        if 0 <= index < self.bond_n:
             return self.get_bond(index)
 
     core.use(c_size_t, 'ip_get_node_n', c_void_p)
@@ -12853,7 +12944,7 @@ class InvasionPercolation(HasHandle):
         """
         第index个出口对应的Node的序号
         """
-        assert index < self.outlet_n
+        assert 0 <= index < self.outlet_n
         assert value < self.node_n
         core.ip_set_outlet(self.handle, index, value)
 
@@ -12863,7 +12954,7 @@ class InvasionPercolation(HasHandle):
         """
         第index个出口对应的Node的序号
         """
-        assert index < self.outlet_n
+        assert 0 <= index < self.outlet_n
         return core.ip_get_outlet(self.handle, index)
 
     def add_outlet(self, node_id):
@@ -12975,7 +13066,7 @@ class InvasionPercolation(HasHandle):
         """
         返回第index个注入点
         """
-        if index < self.inj_n:
+        if 0 <= index < self.inj_n:
             return InvasionPercolation.Injector(self, index)
 
     def add_inj(self, node_id=None, phase=None, qinj=None):
@@ -14329,6 +14420,8 @@ class Disc3(HasHandle):
         """
         if index is None:
             return self
+        if value is None:
+            value = 1.0e200
         core.disc3_set_attr(self.handle, index, value)
         return self
 

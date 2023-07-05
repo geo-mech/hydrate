@@ -4,63 +4,31 @@
 """
 
 from zml import *
+from zmlx.alg.clamp import clamp
+from zmlx.geometry import rect_3d as rect3
 from zmlx.pg.plot3 import *
 from zmlx.pg.get_color import get_color
-from zmlx.alg.clamp import clamp
 from zmlx.pg.colormap import coolwarm
 import warnings
 
 
-def center(x, y):
-    """
-    返回点x和y的中心点
-    """
-    return [(x[i] + y[i]) / 2 for i in range(3)]
-
-
-def symmet(c, x):
-    """
-    返回x关于中心点x的对称点
-    """
-    return [c[i] * 2 - x[i] for i in range(3)]
-
-
-def show_rc3(rc3, color=None, alpha=None, cmap=None, caption=None, on_top=None):
+def show_rc3(rc3, color=None, alpha=None, cmap=None, caption=None, on_top=None,
+             reset_dist=True, reset_cent=True, gl_option=None):
     """
     显示一组三维的离散裂缝网络
+        gl_option:  opaque, translucent, additive
     """
     assert len(rc3) > 0
 
     vertexes = []
     faces = []
 
-    for c0, c1, c2, a0, a1, a2, b0, b1, b2 in rc3:
-        p0 = [c0, c1, c2]
-
-        p1 = [a0, a1, a2]
-        p2 = [b0, b1, b2]
-        p3 = symmet(p0, p1)
-        p4 = symmet(p0, p2)
-
-        p5 = center(p1, p2)
-        p6 = center(p2, p3)
-        p7 = center(p3, p4)
-        p8 = center(p4, p1)
-
-        p1 = symmet(p5, p0)
-        p2 = symmet(p6, p0)
-        p3 = symmet(p7, p0)
-        p4 = symmet(p8, p0)
-
+    for data in rc3:
         i0 = len(vertexes)
-
-        vertexes.append(p1)
-        vertexes.append(p2)
-        vertexes.append(p3)
-        vertexes.append(p4)
-
         faces.append([i0, i0 + 1, i0 + 2])
         faces.append([i0, i0 + 2, i0 + 3])
+        for vtx in rect3.get_vertexes(data):
+            vertexes.append(vtx)
 
     vertexes = np.array(vertexes)
     faces = np.array(faces)
@@ -137,13 +105,17 @@ def show_rc3(rc3, color=None, alpha=None, cmap=None, caption=None, on_top=None):
     if hasattr(widget, 'mesh_1'):
         widget.mesh_1.setMeshData(vertexes=vertexes, faces=faces, faceColors=colors,
                                   smooth=False)
+        if reset_dist:
+            set_distance(get_distance([x_min, y_min, z_min], [x_max, y_max, z_max]))
+        if reset_cent:
+            set_center([(x_min + x_max) / 2, (y_min + y_max) / 2, (z_min + z_max) / 2])
     else:
         widget.mesh_1 = Mesh(vertexes=vertexes, faces=faces, faceColors=colors,
                              smooth=False)
-        widget.mesh_1.setGLOptions('opaque')
+        widget.mesh_1.setGLOptions('opaque' if gl_option is None else gl_option)
         add_item(widget.mesh_1)
         set_distance(get_distance([x_min, y_min, z_min], [x_max, y_max, z_max]))
-        set_center(center([x_min, y_min, z_min], [x_max, y_max, z_max]))
+        set_center([(x_min + x_max) / 2, (y_min + y_max) / 2, (z_min + z_max) / 2])
 
     if hasattr(widget, 'line_1'):
         add_box([x_min, y_min, z_min], [x_max, y_max, z_max],
@@ -153,4 +125,18 @@ def show_rc3(rc3, color=None, alpha=None, cmap=None, caption=None, on_top=None):
                                 [x_max, y_max, z_max])
 
 
+def test():
+    from zmlx.alg.dfn_v3 import to_rc3, create_demo
+    import random
+    rc3 = to_rc3(create_demo())
+    color = []
+    alpha = []
+    for _ in rc3:
+        color.append(random.uniform(0, 1))
+        alpha.append(random.uniform(0, 1) ** 3)
+    show_rc3(rc3, color=color, alpha=alpha, caption='dfn_v3')
+
+
+if __name__ == '__main__':
+    gui.execute(test, close_after_done=False)
 
