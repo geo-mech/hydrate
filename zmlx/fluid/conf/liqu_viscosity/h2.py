@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Fri Jan 27 19:12:20 2023
 
@@ -10,9 +9,8 @@ https://pubs.acs.org/doi/abs/10.1021/i160007a014#
 
 """
 
+
 def liq_vis_h2(P, T):
     tc = 33.18
-    vis = (208e-5 * (T / tc)**0.65) * 0.001
+    vis = (208e-5 * (T / tc) ** 0.65) * 0.001
     return vis
-
-

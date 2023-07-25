@@ -1,6 +1,3 @@
-from zmlx.alg.load_txt import load_txt as loadtxt
-import warnings
+from zmlx.io.load_txt import load_txt as loadtxt
 
-warnings.warn('please import load_txt instead', DeprecationWarning)
 __all__ = ['loadtxt']
-

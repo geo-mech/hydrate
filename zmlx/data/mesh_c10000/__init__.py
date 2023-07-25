@@ -1,5 +1,6 @@
-from zml import read_text
 import os
+
+from zml import read_text
 
 xy_data = read_text(os.path.join(os.path.dirname(__file__), 'xy'))
 tri_data = read_text(os.path.join(os.path.dirname(__file__), 'tri'))

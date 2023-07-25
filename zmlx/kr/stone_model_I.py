@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 import numpy as np
 
 
@@ -61,6 +58,5 @@ if __name__ == '__main__':
         from zml import plot
 
         plot(f)
-    except:
-        pass
-
+    except Exception as err:
+        print(err)

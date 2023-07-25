@@ -1,7 +1,4 @@
-# -*- coding: utf-8 -*-
-
-
-from zmlx.alg.get_seg_point_distance import get_seg_point_distance
+from zmlx.geometry.get_seg_point_distance import get_seg_point_distance
 
 
 def get_faces_around_seg(seg, dist, model):

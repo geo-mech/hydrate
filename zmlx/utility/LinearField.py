@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 class LinearField:
     """
     线性的温度场或者压力场。用于辅助建模;

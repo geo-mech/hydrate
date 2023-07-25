@@ -26,4 +26,3 @@ def intersected(a, b):
         return False
     xy = seg_intersection(*a[0: 2], *a[3: 5], *b[0: 2], *b[3: 5])
     return xy is not None
-

@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
+# ** desc = '基于弹簧系统计算应力的传播'
 
-
-from zmlx.data.mesh_c10000 import x, y, tri
 from zmlx import *
+from zmlx.data.mesh_c10000 import x, y, tri
 import math
 
 
@@ -12,6 +11,7 @@ def plot(z):
         ax.set_aspect('equal')
         cntr2 = ax.tricontourf(x, y, z, levels=20, cmap="coolwarm")
         fig.colorbar(cntr2, ax=ax)
+
     zml.plot(f, clear=True, caption='位移场')
 
 
@@ -37,7 +37,6 @@ def create_model(triangles, x, y):
             x0, y0, x1, y1 = x[link[0]], y[link[0]], x[link[1]], y[link[1]]
             dist = math.sqrt(math.pow(x0 - x1, 2) + math.pow(y0 - y1, 2))
             spr = model.add_spring(virtual_nodes=[virtual_nodes[inode] for inode in link], len0=dist, k=1)
-            pos = spr.pos
             if get_norm(tri_x, tri_y) < 0.2:
                 spr.len0 *= 1.01
     return model
@@ -51,7 +50,6 @@ def get_node_pos(model):
 
 
 def main():
-
     model = create_model(tri, x, y)
     print(model)
 
@@ -72,4 +70,4 @@ def main():
 
 
 if __name__ == '__main__':
-    gui(main, keep_cwd=True, close_after_done=False)
+    gui.execute(main, keep_cwd=True, close_after_done=False)

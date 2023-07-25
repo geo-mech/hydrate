@@ -1,8 +1,4 @@
-# -*- coding: utf-8 -*-
-
 from zml import *
-import os
-import numpy as np
 
 # 读取生成的相交矩阵序号
 demo_path = os.path.join(os.path.dirname(__file__), 'demo_links.txt')
@@ -19,7 +15,7 @@ def get_demo_rect_index():
     """
     读取生成的相交矩阵序号
     """
-    return np.loadtxt(demo_path,dtype=int)
+    return np.loadtxt(demo_path, dtype=int)
 
 
 def get_demo_rect_vertices():
@@ -33,7 +29,8 @@ def get_cal_rect_index():
     """
     读取计算得到的相交矩阵序号
     """
-    return np.loadtxt(result_path,dtype=int)
+    return np.loadtxt(result_path, dtype=int)
+
 
 if __name__ == '__main__':
     print(get_demo_rect_index())

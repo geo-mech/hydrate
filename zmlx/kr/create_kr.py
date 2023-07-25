@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 from zmlx.alg.linspace import linspace
 
 
@@ -37,7 +34,10 @@ if __name__ == '__main__':
             ax = fig.subplots()
             ax.plot(vs, kg)
             ax.plot(vs, kw)
+
+
         from zml import plot
+
         plot(f)
     except:
         pass

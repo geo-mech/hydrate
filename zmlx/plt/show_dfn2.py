@@ -1,7 +1,5 @@
-# -*- coding: utf-8 -*-
-
-
-from zml import Dfn2, gui
+from zml import Dfn2
+from zmlx.ui.GuiBuffer import gui
 from zmlx.plt.plot2 import plot2
 
 
@@ -58,5 +56,3 @@ def __test(opath=None, show=False, angle=None, length=None,
 if __name__ == '__main__':
     gui.execute(lambda: __test(show=True, p21=0.2, lmin=2, pos_range=[-100, -100, 100, 100]),
                 close_after_done=False)
-
-

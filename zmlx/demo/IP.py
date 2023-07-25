@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-
+# ** desc = '侵入逾渗(IP)模型计算油气运移成藏'
 
 from zml import *
 import random
@@ -49,30 +48,14 @@ def create():
 
 def show(model):
     def f(fig):
+        x = model.nodes_write(-1)
+        y = model.nodes_write(-2)
+        v = model.nodes_write(-4)
         ax = fig.add_subplot()
-
-        vx = []
-        vy = []
-        for i in range(model.node_n):
-            node = model.get_node(i)
-            x, y, z = node.pos
-            if node.phase == 0:
-                vx.append(x)
-                vy.append(y)
-        ax.scatter(vx, vy, c='tab:blue', s=3, label='Water',
+        ax.scatter(x[v < 0.5], y[v < 0.5], c='tab:blue', s=3, label='Water',
                    alpha=0.2, edgecolors='none')
-
-        vx = []
-        vy = []
-        for i in range(model.node_n):
-            node = model.get_node(i)
-            x, y, z = node.pos
-            if node.phase == 1:
-                vx.append(x)
-                vy.append(y)
-        ax.scatter(vx, vy, c='tab:orange', s=8, label='Oil',
+        ax.scatter(x[v >= 0.5], y[v >= 0.5], c='tab:orange', s=8, label='Oil',
                    alpha=0.7, edgecolors='none')
-
         ax.legend()
         ax.grid(True)
         ax.axis('equal')
@@ -93,13 +76,9 @@ def solve(model):
             show(model)
 
 
-def execute(guimode=True, close_after_done=False):
-    if guimode:
-        gui(lambda: solve(create()), close_after_done=close_after_done)
-    else:
-        solve(create())
+def execute(gui_mode=True, close_after_done=False):
+    gui.execute(lambda: solve(create()), close_after_done=close_after_done, disable_gui=not gui_mode)
 
 
 if __name__ == '__main__':
     execute()
-

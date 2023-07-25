@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 定义CO2水合物的基本参数
 
@@ -10,6 +9,7 @@ Zhou X, Fan S, Liang D, et al., 2008. . Energy Conversion and Management, 49(8):
 
 import zmlx.react.hydrate as hydrate
 from zml import Interp1
+from zmlx.alg.interp1 import interp1
 
 # 温度
 vt = [265, 273.25, 274.33, 275.6, 276.12, 276.63, 277.34, 278.09, 279.32, 280.02,
@@ -21,6 +21,20 @@ vp = [952740, 1152740, 1263150, 1479310, 1586770, 1694230, 1802670,
       2016120, 2546270, 2759470, 2972170, 3708620, 4549820, 6332280,
       8219490, 10001700, 12203200, 16394400, 21214300, 27291500, 30644500,
       34835700]
+
+
+def get_p(t):
+    """
+    返回给定的温度对应的压力
+    """
+    return interp1(vt, vp, t)
+
+
+def get_t(p):
+    """
+    返回给定压力对应的温度
+    """
+    return interp1(vp, vt, p)
 
 
 def create_t2p():
@@ -45,14 +59,14 @@ def get_dheat():
     return 394225.0
 
 
-def create(igas, iwat, ihyd, fa_t, fa_c, dissociation=True, formation=True):
+def create(gas, wat, hyd, fa_t=None, fa_c=None, dissociation=True, formation=True):
     """
     创建一个水合物反应(平衡态的反应，反应的速率给的非常大)
     by 张召彬
     """
     return hydrate.create(vp=vp, vt=vt, temp=273.15, heat=get_dheat(),
                           mg=get_mg_vs_mh(),
-                          igas=igas, iliq=iwat, isol=ihyd, fa_t=fa_t, fa_c=fa_c,
+                          gas=gas, liq=wat, hyd=hyd, fa_t=fa_t, fa_c=fa_c,
                           dissociation=dissociation, formation=formation)
 
 
@@ -69,4 +83,6 @@ if __name__ == '__main__':
 
     d3 = {'name': 'plot', 'args': [vt1, vp1], 'kwargs': {'c': 'b'}}
     d4 = {'name': 'plot', 'args': [vt, vp], 'kwargs': {'c': 'r'}}
+    from zmlx.plt.plot2 import plot2
+
     plot2(xlabel='x', ylabel='y', data=(d3, d4))

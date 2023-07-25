@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 # 导入matplotlib模块并使用Qt5Agg
 import os
 
@@ -8,7 +6,7 @@ import matplotlib
 matplotlib.use('Qt5Agg')
 # 使用 matplotlib中的FigureCanvas (在使用 Qt5 Backends中 FigureCanvas继承自QtWidgets.QWidget)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from PyQt5 import QtWidgets, QtCore, QtGui
+from zmlx.ui.Qt import QtWidgets, QtCore, QtGui
 import matplotlib.pyplot as plt
 
 
@@ -39,6 +37,9 @@ class MatplotWidget(QtWidgets.QWidget):
                                                          filter='jpg图片(*.jpg);;所有文件(*.*)')
         if fpath is not None and len(fpath) > 0:
             self.savefig(fname=fpath, dpi=300)
+
+    def export_data(self):
+        self.savefig_by_dlg()
 
     @property
     def figure(self):

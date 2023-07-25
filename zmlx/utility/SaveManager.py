@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
-
-
 import os
-from zmlx.alg.make_fname import make_fname
 import warnings
+
+from zmlx.filesys.make_fname import make_fname
 
 
 class SaveManager:
@@ -37,6 +35,10 @@ class SaveManager:
         self.save = save
         assert isinstance(ext, str) or ext is None
         self.ext = ext
+        if self.ext is not None:
+            assert isinstance(self.ext, str)
+            if len(self.ext) > 0:
+                assert self.ext[0] == '.'
         assert isinstance(time_unit, str) or time_unit is None
         self.time_unit = time_unit
         self.time_last_save = -1.0e100  # 上一次正确存储的时间

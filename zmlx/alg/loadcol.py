@@ -1,5 +1,3 @@
-from zmlx.alg.load_col import load_col as loadcol
-import warnings
+from zmlx.io.load_col import load_col as loadcol
 
-warnings.warn('please import load_col instead.', DeprecationWarning)
 __all__ = ['loadcol']

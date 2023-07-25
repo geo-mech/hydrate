@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 from zmlx.plt.plot2 import plot2
 
 

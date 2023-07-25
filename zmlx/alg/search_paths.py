@@ -1,18 +1,16 @@
-# -*- coding: utf-8 -*-
-
-
 import os
-from zml import app_data, gui
 
-filepath = app_data.temp('zml_search_paths')
+from zmlx.ui.GuiBuffer import gui
+from zml import app_data
 
 
 def get_paths():
     try:
         paths = []
-        with open(filepath, 'r') as file:
-            for line in file.readlines():
-                paths.append(line.strip())
+        for line in app_data.getenv(key='path', default='').splitlines():
+            line = line.strip()
+            if os.path.isdir(line):
+                paths.append(line)
         return paths
     except:
         return []
@@ -27,9 +25,7 @@ def add_path(paths, path):
 
 def save_paths(paths):
     try:
-        with open(filepath, 'w') as file:
-            for path in paths:
-                file.write(f'{path}\n')
+        app_data.setenv('path', '\n'.join(paths))
     except:
         pass
 
@@ -44,4 +40,3 @@ def choose_path():
             gui.information('成功', f'成功添加了搜索路径: \n<{folder}> \n\n下次启动软件时生效!')
         except Exception as e:
             print(e)
-

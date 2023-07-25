@@ -1,77 +1,41 @@
-#### 介绍
+### 介绍
 
-储层多场耦合计算模块 ([_IggHydrate_](https://gitee.com/geomech/hydrate))
+[IGG-Hydrate](https://gitee.com/geomech/hydrate): 储层*热/流/固/化耦合*(THMC)计算模块@[IGG](http://www.igg.cas.cn/)
+ 
+### 版本
 
-@[中科院地质地球所](http://www.igg.cas.cn/).
+ZmlVersion=240109
 
-#### 作者
+### 用途
 
-[张召彬](http://sourcedb.igg.cas.cn/cn/zjrck/201703/t20170306_4755492.html)，[李守定](http://sourcedb.igg.cas.cn/cn/zjrck/201412/t20141218_4278784.html)，[赫建明](http://sourcedb.igg.cas.cn/cn/zjrck/201203/t20120302_3448658.html)，[李晓](http://sourcedb.igg.cas.cn/cn/zjrck/200907/t20090713_2065538.html)，徐涛，李宇轩，Maryelin
+1. 天然气水合物储层成藏/开发;
+2. 重油原位转化;
 
-#### 版本
+### 功能
+1. 多相多组分流动，支持: 水/蒸气/水冰，ch4/ch4水合物，co2/co2水合物，盐度/砂，油/重油/干酪根;  
+2. 反应: 水的蒸发/结冰/融化; ch4水合物形成/分解; co2水合物形成/分解; 干酪根/重油裂解;
+3. 热传导/对流;
 
-ZmlVersion=230705
+### 授权
 
-#### 网址
+使用前请[联系作者](http://sourcedb.igg.cas.cn/cn/zjrck/201703/t20170306_4755492.html).
 
-https://gitee.com/geomech/hydrate 
+### 联系
 
-#### 功能
+zhangzhaobin@mail.iggcas.ac.cn;
 
-1) 多相多组分流动.
-2) 热传导.
-3) 扩散.
-4) 化学反应.
-5) 应力.
-6) 裂缝扩展.
+### 安装
 
-#### 特点
+1. Windows 10/11, x64, 安装[VC_redist.x64.exe](https://gitee.com/geomech/hydrate/attach_files);
+2. 安装[Python](https://www.python.org/) 3.7+，并配置`numpy`, `scipy`, `PyQt5`, `matplotlib`;
+3. 将`zml.py`所在文件夹添加到Python[搜索路径](https://zhuanlan.zhihu.com/p/530589364);
 
-1) 支持结构/非结构网格;
-2) 支持任意多相流动，且任意相都支持多组分;
-3) 流体/组分支持自定义属性(如温度、颗粒浓度等)，且属性会随着流动输运;
-4) 支持利用数据来自定义流体(无需公式);
-5) 支持组分之间的化学反应;
-6) 提供底层API，可以对单元，流体，组分进行精细化读/写操作;
-7) 作为[Python](https://www.python.org/)模块可被第三方软件调用; 
+### 使用
 
-#### 联系
+1. 参考[zmlx/demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo);
+2. 运行`UI.pyw`启动界面;
 
-如遇bug、疑问或建议，以及建模需求，请在[Issues页面](https://gitee.com/geomech/hydrate/issues)，[新建Issue](https://gitee.com/geomech/hydrate/issues/new)，或[联系作者](http://sourcedb.igg.cas.cn/cn/zjrck/201703/t20170306_4755492.html). 
+### 开发
 
-#### 运行环境
-
-1) 安装[Python](https://www.python.org/) 3.7及以上版本. 建议安装[WinPython](https://winpython.github.io/).   
-2) 安装[VC_redist.x64.exe](https://gitee.com/geomech/hydrate/attach_files).
-3) 为方便下载、更新及提交代码，建议[注册Gitee账号](https://gitee.com/signup)并安装配置[Git](https://git-scm.com/). 
-
-#### 安装
-
-1) 从[https://gitee.com/geomech/hydrate](https://gitee.com/geomech/hydrate)下载或拉取代码 <注意不要存入中文路径>.
-2) 把下载后的文件夹添加到Python搜索路径. 
-
-#### 更新
-
-1) [下载](https://gitee.com/geomech/hydrate)或[拉取](https://gitee.com/geomech/hydrate.git)代码并覆盖原文件即完成更新. 
-2) 请每个月至少更新一次. 
-
-#### 使用
-1) 所有功能均封装在模块`zml`和`zmlx`里，可在 [Python](https://www.python.org/) 3.7+环境中`import`. 
-2) 运行`UI.pyw`可启动软件界面.
-3) 参考[zmlx/demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)中的例子来建模，如有需求请[咨询作者](http://sourcedb.igg.cas.cn/cn/zjrck/201703/t20170306_4755492.html). 
-
-#### 授权
-
-[联系作者](http://sourcedb.igg.cas.cn/cn/zjrck/201703/t20170306_4755492.html)以使用，并承诺：
-1) 使用[最新版](https://gitee.com/geomech/hydrate). 
-2) 及时[报告bug](https://gitee.com/geomech/hydrate/issues/new).
-
-#### 开发者
-
-欢迎/感谢成为*开发者*，请注意:
-
-1) <font color="#FF0000">只</font>修改文件夹 [zmlx](https://gitee.com/geomech/hydrate/tree/master/zmlx) 里面的内容；
-2) <font color="#FF0000">只</font>修改<font color="#FF0000">自己</font>创建的文件; 非自己创建的文件的bug，请[新建Issue](https://gitee.com/geomech/hydrate/issues/new)来反馈;
-
-
-
+1. 使用[Fork + Pull 模式](https://help.gitee.com/base/pullrequest/Fork+Pull)参与开发;
+2. 只修改自己创建的文件(如果在其它文件里发现bug，请[新建Issue](https://gitee.com/geomech/hydrate/issues/new)来反馈).

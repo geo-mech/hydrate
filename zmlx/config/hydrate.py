@@ -1,9 +1,12 @@
-# -*- coding: utf-8 -*-
-
-
 from zml import *
 from zmlx.react.alpha.salinity import data as salinity_c2t
-from zmlx.fluid import *
+from zmlx.fluid.ch4 import create as create_ch4
+from zmlx.fluid.ch4_hydrate import create as create_ch4_hydrate
+from zmlx.fluid.co2 import create as create_co2
+from zmlx.fluid.co2_hydrate import create as create_co2_hydrate
+from zmlx.fluid.h2o import create as create_h2o
+from zmlx.fluid.h2o_gas import create as create_h2o_gas
+from zmlx.fluid.h2o_ice import create as create_h2o_ice
 from zmlx.kr.create_krf import create_krf
 from zmlx.react import ch4_hydrate as ch4_hydrate_react
 from zmlx.react import co2_hydrate as co2_hydrate_react
@@ -11,12 +14,13 @@ from zmlx.react import h2o_ice as icing_react
 from zmlx.react import vapor as vapor_react
 from zmlx.react import dissolution
 from zmlx.utility.CapillaryEffect import CapillaryEffect
+from zmlx.config.TherFlowConfig import TherFlowConfig
 
 
 class Config(TherFlowConfig):
     def __init__(self, has_co2=False, has_steam=False, has_inh=False, has_ch4_in_liq=False, inh_diff_rate=None,
                  ch4_diff_rate=None,
-                 support_ch4_hyd_diss=True, support_ch4_hyd_form=True):
+                 support_ch4_hyd_diss=True, support_ch4_hyd_form=True, krf=None):
         """
         创建一个水合物的求解配置. 包含气<Id=0>、液<Id=1>和固<Id=2>三种相态;
         其中气体为：
@@ -122,31 +126,30 @@ class Config(TherFlowConfig):
         # -------------------------------------------------------------
         # 添加甲烷水合物的相变
         r = ch4_hydrate_react.create(
-            igas=self.components['ch4'], iwat=self.components['h2o'],
-            ihyd=self.components['ch4_hydrate'],
+            gas=self.components['ch4'], wat=self.components['h2o'],
+            hyd=self.components['ch4_hydrate'],
             fa_t=self.flu_keys['temperature'], fa_c=self.flu_keys['specific_heat'],
             dissociation=support_ch4_hyd_diss, formation=support_ch4_hyd_form
         )
         # 抑制固体比例过高，增强计算稳定性 （非常必要）
-        r.add_inhibitor(sol=self.components['sol'],
-                        liq=None,
-                        c=[0, 0.8, 1.0],
-                        t=[0, 0, -200.0],
-                        )
+        r['inhibitors'].append(create_dict(sol=self.components['sol'],
+                                           liq=None,
+                                           c=[0, 0.8, 1.0],
+                                           t=[0, 0, -200.0]))
         if has_inh:
             # 抑制剂修改平衡温度
-            r.add_inhibitor(sol=self.components['inh'],
-                            liq=self.components['liq'],
-                            c=salinity_c2t[0],
-                            t=salinity_c2t[1])
+            r['inhibitors'].append(create_dict(sol=self.components['inh'],
+                                               liq=self.components['liq'],
+                                               c=salinity_c2t[0],
+                                               t=salinity_c2t[1]))
         self.reactions.append(r)
 
         # -------------------------------------------------------------
         # 添加水和冰之间的相变
         self.reactions.append(
             icing_react.create(
-                iflu=self.components['h2o'],
-                isol=self.components['h2o_ice'],
+                flu=self.components['h2o'],
+                sol=self.components['h2o_ice'],
                 fa_t=self.flu_keys['temperature'],
                 fa_c=self.flu_keys['specific_heat']))
 
@@ -155,23 +158,22 @@ class Config(TherFlowConfig):
             # 添加CO2和CO2水合物之间的相变<只要有了CO2，那么就要有水合物>
             assert ico2 is not None and ico2_hyd is not None
             r = co2_hydrate_react.create(
-                igas=self.components['co2'],
-                iwat=self.components['h2o'],
-                ihyd=self.components['co2_hydrate'],
+                gas=self.components['co2'],
+                wat=self.components['h2o'],
+                hyd=self.components['co2_hydrate'],
                 fa_t=self.flu_keys['temperature'],
                 fa_c=self.flu_keys['specific_heat'])
             # 抑制固体比例过高，增强计算稳定性 （非常必要）
-            r.add_inhibitor(sol=self.components['sol'],
+            r['inhibitors'].append(create_dict(sol=self.components['sol'],
                             liq=None,
                             c=[0, 0.8, 1.0],
-                            t=[0, 0, -200.0],
-                            )
+                            t=[0, 0, -200.0],))
             if has_inh:
                 # 抑制剂修改平衡温度
-                r.add_inhibitor(sol=self.components['inh'],
+                r['inhibitors'].append(create_dict(sol=self.components['inh'],
                                 liq=self.components['liq'],
                                 c=salinity_c2t[0],
-                                t=salinity_c2t[1])
+                                t=salinity_c2t[1]))
             self.reactions.append(r)
 
         # -------------------------------------------------------------
@@ -181,8 +183,8 @@ class Config(TherFlowConfig):
             assert steam_id is not None
             self.reactions.append(
                 vapor_react.create(
-                    ivap=self.components['h2o_gas'],
-                    iwat=self.components['h2o'],
+                    vap=self.components['h2o_gas'],
+                    wat=self.components['h2o'],
                     fa_t=self.flu_keys['temperature'],
                     fa_c=self.flu_keys['specific_heat']))
 
@@ -190,9 +192,9 @@ class Config(TherFlowConfig):
         if has_ch4_in_liq:
             self.reactions.append(
                 dissolution.create(
-                    igas=self.components['ch4'],
-                    igas_in_liq=self.components['ch4_in_liq'],
-                    iliq=self.components['liq'],
+                    gas=self.components['ch4'],
+                    gas_in_liq=self.components['ch4_in_liq'],
+                    liq=self.components['liq'],
                     ca_sol=self.cell_keys['ch4_sol'],
                     fa_c=self.flu_keys['specific_heat'],
                     fa_t=self.flu_keys['temperature']))
@@ -215,8 +217,10 @@ class Config(TherFlowConfig):
             cap = CapillaryEffect(i0, i1, s2p=([0, 1], [0, inh_diff_rate]))
             self.diffusions.append(cap)
 
-        x, y = create_krf()
-        self.krf = Interp1(x=x, y=y)
+        if krf is None:
+            self.krf = create_krf(as_interp=True)
+        else:
+            self.krf = krf
 
 
 def create(*args, **kwargs):
@@ -230,4 +234,3 @@ if __name__ == '__main__':
     print(c.cell_keys)
     print(c.face_keys)
     print(c.model_keys)
-

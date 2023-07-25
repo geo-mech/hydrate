@@ -1,5 +1,6 @@
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+
 """
 计算两个三维空间的矩形的相交情况，相交返回交点，不相交返回None
 
@@ -80,7 +81,7 @@ def get_points_distribution(local_z):
     :param local_z:局部坐标系下的矩形四个顶点z坐标
     :return: 返回点的分布情况及对应的索引（字典）
     """
-    #获得四个z坐标的，检查四个数的符号
+    # 获得四个z坐标的，检查四个数的符号
     assert len(local_z) == 4
 
     product = np.prod(local_z)
@@ -155,14 +156,12 @@ def line_rect_intersection(p1, p2, local_rect2, rect2_local_xy_range):
     # center到mid1的距离为x，center到mid2的距离为y
     rectangle = rect2_local_xy_range
 
-
-
     # 矩形的四个顶点
     r1, r2, r3, r4 = local_rect2
 
     # 矩形的四条边
     edges = [(r1, r2), (r2, r3), (r3, r4), (r4, r1)]
-    
+
     intersections = []
     for edge in edges:
         intersection = line_line_intersection(p1, p2, edge[0], edge[1])
@@ -177,7 +176,7 @@ def line_rect_intersection(p1, p2, local_rect2, rect2_local_xy_range):
     elif len(intersections) == 0:
         # 线段与矩形边无交点
         return None
-    else: 
+    else:
         # 1个或2个交点
         return intersections
 
@@ -278,7 +277,7 @@ def calculate_3d_rectangle_intersect(center1, r1_mid1, r1_mid2, center2,
         # 将全局坐标转换为局部坐标 右上开始，顺指针输出坐标，
         # 局部坐标定义: 矩形2中心点为O，中心点到mid1,mid2分别为X、Y轴，两轴叉乘法向量为Z轴
         # 全局->局部：全局坐标先减去局部坐标中心点（矩形2中心）再与旋转矩阵转置做点积
-        #! 点积注意顺序，无交换律
+        # ! 点积注意顺序，无交换律
         local_coord = [
             np.dot((vertex - np.array(center2)), rotation_matrix.T)
             for vertex in rect1_vertices
@@ -331,7 +330,7 @@ def calculate_3d_rectangle_intersect(center1, r1_mid1, r1_mid2, center2,
                 return line_rect_intersection(point1, point2,
                                               rect2_local_xy_range)
             else:
-                #todo 两个矩形在相同平面，包含，相离，相交等尚未实现
+                # todo 两个矩形在相同平面，包含，相离，相交等尚未实现
                 assert len(value) == 4
 
                 return '相同平面'
@@ -371,20 +370,19 @@ def calculate_3d_rectangle_intersect(center1, r1_mid1, r1_mid2, center2,
         p1_bool = point_in_rectangle(intersec1, rect2_local_xy_range)
         p2_bool = point_in_rectangle(intersec2, rect2_local_xy_range)
 
-
         # 判断局部坐标系下是否存在交点
         if local_intersect_line is None:
-            #不存在交点
+            # 不存在交点
             return None
         # 存在交点
         elif len(local_intersect_line) == 1:
             # 交点为顶点，且线段端点均在2d矩形外部
             assert (p1_bool and p2_bool) is not True
-            if p1_bool ==  True and p2_bool == False:
+            if p1_bool == True and p2_bool == False:
                 local_intersect_line.append(intersec1)
-            elif p1_bool ==  False and p2_bool == True:
+            elif p1_bool == False and p2_bool == True:
                 local_intersect_line.append(intersec2)
-            
+
         # 添加z轴，设置为零
         z_coordinates = np.array([0])
 

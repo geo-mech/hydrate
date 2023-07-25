@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 def mean(*args):
     """
     计算给定的各个参数的平均值

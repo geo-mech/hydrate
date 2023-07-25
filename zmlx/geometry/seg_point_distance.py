@@ -37,4 +37,3 @@ if __name__ == '__main__':
     p2 = (1, 0, 0)
     p3 = (2, 0, 0)
     print(seg_point_distance((p1, p2), p3))
-

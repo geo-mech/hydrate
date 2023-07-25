@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
 """
 定义甲烷水合物的基本参数
 """
 
 import zmlx.react.hydrate as hydrate
+from zmlx.alg.interp1 import interp1
 from zml import Interp1, data_version
 
 """
@@ -20,6 +20,20 @@ vp = [5262.24, 8054.63, 11965.9, 18591.3, 32551.1, 56148.2, 94000.9, 147142, 209
       3.23978e+06, 4.56786e+06, 6.11232e+06, 8.68254e+06, 1.23335e+07, 1.5089e+07, 2.01908e+07, 2.60274e+07,
       3.16053e+07, 3.95423e+07, 5.13549e+07, 7.24068e+07, 8.85833e+07, 1.05184e+08, 1.23967e+08, 1.46104e+08,
       1.73484e+08, 1.98446e+08, 2.57728e+08, 3.0149e+08, 3.57991e+08, 3.97448e+08, 4.47894e+08]
+
+
+def get_p(t):
+    """
+    返回给定的温度对应的压力
+    """
+    return interp1(vt, vp, t)
+
+
+def get_t(p):
+    """
+    返回给定压力对应的温度
+    """
+    return interp1(vp, vt, p)
 
 
 def create_t2p():
@@ -50,13 +64,13 @@ def get_dheat(Nh=6.0):
         return (62.8e3 / 16.0E-3) * get_mg_vs_mh(Nh)
 
 
-def create(igas, iwat, ihyd, fa_t, fa_c, dissociation=True, formation=True):
+def create(gas, wat, hyd, fa_t=None, fa_c=None, dissociation=True, formation=True):
     """
     创建一个水合物反应(平衡态的反应，反应的速率给的非常大)
     by 张召彬
     """
     return hydrate.create(vp=vp, vt=vt, temp=273.15, heat=get_dheat(6),
                           mg=get_mg_vs_mh(6),
-                          igas=igas, iliq=iwat, isol=ihyd,
+                          gas=gas, liq=wat, hyd=hyd,
                           fa_t=fa_t, fa_c=fa_c,
                           dissociation=dissociation, formation=formation)

@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
-
-
 import timeit
-from zml import time2str, gui
 import warnings
+
+from zmlx.ui.GuiBuffer import gui
+from zml import time2str
 
 
 class GuiIterator:

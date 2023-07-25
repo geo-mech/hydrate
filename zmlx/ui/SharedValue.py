@@ -1,7 +1,4 @@
-# -*- coding: utf-8 -*-
-
-
-from PyQt5 import QtCore
+from zmlx.ui.Qt import QtCore
 
 
 class SharedValue:

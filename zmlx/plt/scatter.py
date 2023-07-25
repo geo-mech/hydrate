@@ -27,4 +27,3 @@ def scatter(items=None, get_val=None, x=None, y=None, z=None, c=None, get_pos=No
             cb.set_label(cb_label)
 
     plot(kernel=kernel, caption=caption, clear=True)
-

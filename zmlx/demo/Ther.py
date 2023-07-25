@@ -1,6 +1,5 @@
-"""
-基于Seepage类的温度场计算
-"""
+# ** desc = '基于Seepage类的温度场计算'
+
 from zmlx import *
 
 
@@ -46,11 +45,7 @@ def solve(model):
 
 
 def execute(gui_mode=True, close_after_done=False):
-    model = create()
-    if gui_mode:
-        gui.execute(solve, close_after_done=close_after_done, args=(model, ))
-    else:
-        solve(model)
+    gui.execute(solve, close_after_done=close_after_done, args=(create(),), disable_gui=not gui_mode)
 
 
 if __name__ == '__main__':

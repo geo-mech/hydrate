@@ -1,13 +1,8 @@
-
 # ** text = '注册'
+# ** is_sys = True
+# ** icon = 'reg.png'
 
-from zml import *
+from zmlx.ui.GuiBuffer import gui
+from zmlx.ui.Widgets.RegTool import RegTool
 
-text = f"""请发送以下内容给作者(zhangzhaobin@mail.iggcas.ac.cn): 
-   1. 姓名、单位及联系方式;
-   2. 本机识别码: 
-<{reg()}>. 
-感谢使用!
-"""
-print(text)
-gui.about('提示', text)
+gui.get_widget(type=RegTool, caption='注册', on_top=True, icon='reg.png')

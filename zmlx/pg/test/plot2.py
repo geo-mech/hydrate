@@ -1,8 +1,8 @@
-# -*- coding: utf-8 -*-
+import time
+
+import numpy as np
 
 from zmlx.pg.plot2 import *
-import time
-import numpy as np
 
 
 def test1():

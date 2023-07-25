@@ -1,11 +1,8 @@
-# -*- coding: utf-8 -*-
-
-
-from zml import gui
-import pyqtgraph.opengl as gl
-import pyqtgraph as pg
 import numpy as np
+import pyqtgraph as pg
+import pyqtgraph.opengl as gl
 
+from zmlx.ui.GuiBuffer import gui
 
 __Captions = [None]
 
@@ -19,7 +16,8 @@ def apply(oper=None, caption=None, on_top=None):
     if caption is not None:
         __Captions[0] = caption
     if gui.exists() and oper is not None:
-        gui.get_widget(type=gl.GLViewWidget, oper=oper, caption=__Captions[0], on_top=on_top)
+        gui.get_widget(type=gl.GLViewWidget, oper=oper, caption=__Captions[0], on_top=on_top,
+                       icon='gpu.png')
 
 
 def get_widget(caption=None, on_top=None):
@@ -32,10 +30,19 @@ def get_widget(caption=None, on_top=None):
 def make_fn(name):
     def func(*args, caption=None, on_top=None, **kwargs):
         result = []
-        apply(oper=lambda widget: result.append(getattr(widget, name)(*args, **kwargs)),
-              caption=caption, on_top=on_top)
+
+        def oper(widget):
+            try:
+                f = getattr(widget, name)
+                r = f(*args, **kwargs)
+                result.append(r)
+            except Exception as err:
+                print(err)
+
+        apply(oper=oper, caption=caption, on_top=on_top)
         if len(result) > 0:
             return result[0]
+
     return func
 
 
@@ -52,9 +59,11 @@ def set_option(key, value, **kwargs):
     """
     设置一个选项
     """
+
     def f(widget):
         widget.opts[key] = value
         widget.update()
+
     apply(oper=f, **kwargs)
 
 
@@ -125,4 +134,3 @@ if __name__ == '__main__':
                          set_center([-2.5, -2.5, -2.5]),
                          set_distance(50),
                          ), close_after_done=False)
-

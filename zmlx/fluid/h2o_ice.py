@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
-
-from zml import TherFlowConfig
 import warnings
 
+from zml import Seepage
 
-def create():
+
+def create(name=None):
     """
     冰的密度：https://zhidao.baidu.com/question/327692583825967245.html
     https://baike.baidu.com/item/%E5%86%B0/84742
@@ -21,9 +20,9 @@ def create():
     """
     den = 917.0
     specific_heat = 2100.0
-    return TherFlowConfig.FluProperty(den=den,
-                                      vis=1.0e30,
-                                      specific_heat=specific_heat)
+    return Seepage.FluDef(den=den,
+                          vis=1.0e30,
+                          specific_heat=specific_heat, name=name)
 
 
 def create_flu(*args, **kwargs):
@@ -32,5 +31,5 @@ def create_flu(*args, **kwargs):
 
 
 if __name__ == '__main__':
-    flu = create_flu()
+    flu = create()
     print(flu)

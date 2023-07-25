@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
-
+import time
 
 from zmlx.pg.plot3 import *
-import time
-import numpy as np
-
 
 g = Grid()
 
@@ -33,7 +29,6 @@ for i in range(3, 53):
 sp1 = Scatter(pos=pos, size=size, color=color, pxMode=False)
 sp1.translate(5, 5, 0)
 
-
 pos = np.random.random(size=(100000, 3))
 pos *= [10, -10, 10]
 pos[0] = (0, 0, 0)
@@ -42,7 +37,6 @@ d2 = (pos ** 2).sum(axis=1) ** 0.5
 size = np.random.random(size=pos.shape[0]) * 10
 sp2 = Scatter(pos=pos, color=(1, 1, 1, 1), size=size)
 phase = 0.
-
 
 pos3 = np.zeros((100, 100, 3))
 pos3[:, :, :2] = np.mgrid[:100, :100].transpose(1, 2, 0) * [-0.1, 0.1]
@@ -88,4 +82,3 @@ def main():
 
 if __name__ == '__main__':
     gui.execute(main, close_after_done=False)
-

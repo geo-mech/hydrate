@@ -6,19 +6,23 @@
 from zml import *
 from zmlx.alg.clamp import clamp
 from zmlx.geometry import rect_3d as rect3
-from zmlx.pg.plot3 import *
-from zmlx.pg.get_color import get_color
 from zmlx.pg.colormap import coolwarm
-import warnings
+from zmlx.pg.get_color import get_color
+from zmlx.pg.plot3 import *
 
 
 def show_rc3(rc3, color=None, alpha=None, cmap=None, caption=None, on_top=None,
-             reset_dist=True, reset_cent=True, gl_option=None):
+             reset_dist=True, reset_cent=True, gl_option=None, print_box=False,
+             clim=None, alim=None):
     """
     显示一组三维的离散裂缝网络
         gl_option:  opaque, translucent, additive
     """
-    assert len(rc3) > 0
+    if not gui.exists():
+        return
+
+    if len(rc3) <= 0:
+        return
 
     vertexes = []
     faces = []
@@ -62,14 +66,20 @@ def show_rc3(rc3, color=None, alpha=None, cmap=None, caption=None, on_top=None,
         return lr, rr
 
     # 颜色的范围
-    cl, cr = get_r(get_c, len(rc3))
-    if cl + 1.0e-10 >= cr:
-        cl = cr - 1.0
+    if clim is not None:
+        cl, cr = clim
+    else:
+        cl, cr = get_r(get_c, len(rc3))
+        if cl + 1.0e-10 >= cr:
+            cl = cr - 1.0
 
     # 透明度的范围
-    al, ar = get_r(get_a, len(rc3))
-    if al + 1.0e-10 >= ar:
-        al = ar - 1.0
+    if alim is not None:
+        al, ar = alim
+    else:
+        al, ar = get_r(get_a, len(rc3))
+        if al + 1.0e-10 >= ar:
+            al = ar - 1.0
 
     if cmap is None:
         cmap = coolwarm()
@@ -117,16 +127,17 @@ def show_rc3(rc3, color=None, alpha=None, cmap=None, caption=None, on_top=None,
         set_distance(get_distance([x_min, y_min, z_min], [x_max, y_max, z_max]))
         set_center([(x_min + x_max) / 2, (y_min + y_max) / 2, (z_min + z_max) / 2])
 
+    box = [[x_min, y_min, z_min], [x_max, y_max, z_max]]
+    if print_box:
+        print(f'box = {box}')
     if hasattr(widget, 'line_1'):
-        add_box([x_min, y_min, z_min], [x_max, y_max, z_max],
-                line=widget.line_1)
+        add_box(*box, line=widget.line_1)
     else:
-        widget.line_1 = add_box([x_min, y_min, z_min],
-                                [x_max, y_max, z_max])
+        widget.line_1 = add_box(*box)
 
 
 def test():
-    from zmlx.alg.dfn_v3 import to_rc3, create_demo
+    from zmlx.geometry.dfn_v3 import to_rc3, create_demo
     import random
     rc3 = to_rc3(create_demo())
     color = []
@@ -139,4 +150,3 @@ def test():
 
 if __name__ == '__main__':
     gui.execute(test, close_after_done=False)
-

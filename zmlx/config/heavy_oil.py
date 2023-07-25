@@ -1,13 +1,15 @@
 from zml import *
-from zmlx.fluid import *
 from zmlx.fluid.kerogen import create as create_kerogen
 from zmlx.fluid.oil import create as create_heavy_oil
 from zmlx.fluid.c11h24 import create as create_light_oil
 from zmlx.fluid.char import create as create_char
-
+from zmlx.fluid.ch4 import create as create_ch4
+from zmlx.fluid.h2o import create as create_h2o
+from zmlx.fluid.h2o_gas import create as create_h2o_gas
 from zmlx.kr.create_krf import create_krf
 from zmlx.react import decomposition
 from zmlx.react import vapor as vapor_react
+from zmlx.config.TherFlowConfig import TherFlowConfig
 
 
 def create():
@@ -65,29 +67,29 @@ def create():
     # h2o and steam
     config.reactions.append(
         vapor_react.create(
-            ivap=config.components['h2o_gas'],
-            iwat=config.components['h2o'],
+            vap=config.components['h2o_gas'],
+            wat=config.components['h2o'],
             fa_t=config.flu_keys['temperature'],
             fa_c=config.flu_keys['specific_heat']))
 
     # The decomposition of Kerogen.
     config.reactions.append(
-        decomposition.create(index=config.components['kerogen'], iweights=[(config.components['heavy_oil'], 0.6),
-                                                                           (config.components['light_oil'], 0.1),
-                                                                           (config.components['h2o'], 0.1),
-                                                                           (config.components['ch4'], 0.1),
-                                                                           (config.components['char'], 0.1),
-                                                                           ],
+        decomposition.create(left=config.components['kerogen'], right=[(config.components['heavy_oil'], 0.6),
+                                                                       (config.components['light_oil'], 0.1),
+                                                                       (config.components['h2o'], 0.1),
+                                                                       (config.components['ch4'], 0.1),
+                                                                       (config.components['char'], 0.1),
+                                                                       ],
                              temp=565, heat=161600.0,  # From Maryelin 2023-02-23
                              rate=1.0e-8,
                              fa_t=config.flu_keys['temperature'],
                              fa_c=config.flu_keys['specific_heat']))
 
     # The decomposition of Heavy oil
-    r = decomposition.create(index=config.components['heavy_oil'], iweights=[(config.components['light_oil'], 0.5),
-                                                                             (config.components['ch4'], 0.2),
-                                                                             (config.components['char'], 0.3),
-                                                                             ],
+    r = decomposition.create(left=config.components['heavy_oil'], right=[(config.components['light_oil'], 0.5),
+                                                                         (config.components['ch4'], 0.2),
+                                                                         (config.components['char'], 0.3),
+                                                                         ],
                              temp=603, heat=206034.0,  # From Maryelin 2023-02-23
                              rate=1.0e-8,
                              fa_t=config.flu_keys['temperature'],
@@ -100,8 +102,7 @@ def create():
     config.reactions.append(r)
 
     # 残余饱和度设置为0，确保任何时候，都可以有导流能力
-    x, y = create_krf(0, 2)
-    config.krf = Interp1(x=x, y=y)
+    config.krf = create_krf(0, 2, as_interp=True)
 
     return config
 

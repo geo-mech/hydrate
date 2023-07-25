@@ -1,7 +1,5 @@
-# -*- coding: utf-8 -*-
-
-
 import warnings
+
 from zml import is_array
 
 
@@ -52,7 +50,7 @@ class SeepageCellMonitor:
 
     def __init__(self, get_t, cell):
         """
-        初始化：给定的<get_t>应为一个函数，用以返回时间；cell为Seepage的一个Cell对象(或者多个Cell对象);
+        初始化：给定的<get_t>应为一个函数，用以返回时间(时间的单位应该是秒)；cell为Seepage的一个Cell对象(或者多个Cell对象);
         """
         self.get_t = get_t
         if is_array(cell):
@@ -150,7 +148,7 @@ class SeepageCellMonitor:
         显示累积生产曲线
         """
         try:
-            from zmlx.ui import plotxy
+            from zmlx.plt.plotxy import plotxy
             x, y = self.get_prod(index)
             x = [xi / (3600 * 24) for xi in x]
             kw = {}
@@ -165,7 +163,7 @@ class SeepageCellMonitor:
         显示生产速率曲线
         """
         try:
-            from zmlx.ui import plotxy
+            from zmlx.plt.plotxy import plotxy
             x, y = self.get_rate(index)
             x = [xi / (3600 * 24) for xi in x]
             y = [yi * (3600 * 24) for yi in y]

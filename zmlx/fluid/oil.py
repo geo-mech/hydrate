@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Define the property of oil.
 
@@ -19,12 +18,13 @@ p = 10000000.0Pa, T = 500K, vis = 0.0063358958456372905Pa.s, den = 898.062894kg/
 
 """
 
-from math import log, exp
-from zml import Interp2, TherFlowConfig
 import warnings
+from math import log, exp
+
+from zml import Interp2, Seepage
 
 
-def create(tmin=270, tmax=1000, pmin=1e6, pmax=40e6):
+def create(t_min=270, t_max=1000, p_min=1e6, p_max=40e6, name=None):
     def oil_den(pressure, temp):
         """
         Nourozieh, H., et al. (2015). "Density and Viscosity of Athabasca Bitumen Samples at Temperatures up to 200° C and Pressures up to 10 MPa." SPE Reservoir Evaluation & Engineering 18(03): 375-386.
@@ -58,16 +58,16 @@ def create(tmin=270, tmax=1000, pmin=1e6, pmax=40e6):
 
     def create_density():
         den = Interp2()
-        den.create(pmin, 1e6, pmax, tmin, 10, tmax, get_density)
+        den.create(p_min, 1e6, p_max, t_min, 10, t_max, get_density)
         return den
 
     def create_viscosity():
         vis = Interp2()
-        vis.create(pmin, 1e6, pmax, tmin, 10, tmax, get_viscosity)
+        vis.create(p_min, 1e6, p_max, t_min, 10, t_max, get_viscosity)
         return vis
 
     specific_heat = 1800
-    return TherFlowConfig.FluProperty(den=create_density(), vis=create_viscosity(), specific_heat=specific_heat)
+    return Seepage.FluDef(den=create_density(), vis=create_viscosity(), specific_heat=specific_heat, name=name)
 
 
 def create_flu(*args, **kwargs):
@@ -76,7 +76,7 @@ def create_flu(*args, **kwargs):
 
 
 if __name__ == '__main__':
-    flu = create_flu()
+    flu = create()
     print(flu)
     for p, T in [(10e6, 280), (10e6, 300), (10e6, 350), (10e6, 400), (10e6, 500)]:
         vis = flu.vis(p, T)

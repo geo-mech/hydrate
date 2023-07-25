@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 def clamp(value, left=None, right=None):
     """
     对于给定值，将它限定在给定的范围内

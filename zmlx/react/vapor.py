@@ -1,8 +1,9 @@
-from zmlx.react import melt
 from math import exp
 
+from zmlx.react import melt
 
-def create(ivap, iwat, fa_t, fa_c):
+
+def create(vap, wat, fa_t=None, fa_c=None):
     """
     创建水气化成为水蒸气的反应(以及其逆过程)
         ivap: 水蒸气的ID；iwat水的ID
@@ -11,7 +12,7 @@ def create(ivap, iwat, fa_t, fa_c):
     vt = [float(i) for i in range(290, 700)]
     vp = [exp(9.3876 - 3826.36 / (t - 45.47)) * 1.0e6 for t in vt]
 
-    return melt.create(sol=iwat, flu=ivap,
+    return melt.create(sol=wat, flu=vap,
                        temp=273 + 100,
                        heat=2.26e6, fa_t=fa_t, fa_c=fa_c, vp=vp, vt=vt, t2q=None)
 
@@ -21,7 +22,7 @@ def __compare():
     参考文献：Wagner, W.; Pruss, A., The IAPWS Formulation 1995 for the Thermodynamic Properties of Ordinary Water Substance for General
         and Scientific Use, J. Phys. Chem. Ref. Data, 2002, 31, 2, 387-535, https://doi.org/10.1063/1.1461829 .
     """
-    from zmlx.plt import plot2
+    from zmlx.plt.plot2 import plot2
 
     vt = [float(i) for i in range(290, 700)]
     vp = [exp(9.3876 - 3826.36 / (t - 45.47)) * 1.0e6 for t in vt]
