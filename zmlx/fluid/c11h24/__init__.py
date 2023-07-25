@@ -7,7 +7,7 @@ import warnings
 
 
 def create():
-    specific_heat = 2157.82 #J/kg K
+    specific_heat = 2157.82  # J/kg K
     return TherFlowConfig.FluProperty(den=Interp2(path=os.path.join(os.path.dirname(__file__), 'den.txt')),
                                       vis=Interp2(path=os.path.join(os.path.dirname(__file__), 'vis.txt')),
                                       specific_heat=specific_heat)
@@ -27,4 +27,5 @@ def show_all():
 
 if __name__ == '__main__':
     from zml import gui
+
     gui.execute(show_all, close_after_done=False)

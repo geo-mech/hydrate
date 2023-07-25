@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 from random import uniform
 import math
 
@@ -26,4 +23,3 @@ def rand_dir3(norm=1.0, max_try=200, default=None):
 if __name__ == '__main__':
     for i in range(30):
         print(rand_dir3())
-

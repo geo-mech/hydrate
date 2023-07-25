@@ -1,4 +1,3 @@
-
 class ImageField:
     def __init__(self, fname, normal_dir, xrange, yrange, crange):
         """
@@ -36,6 +35,3 @@ class ImageField:
         return self.interp.get(x, y)  # 'nearest' 找到数值
         # gray = 100
         # return (100 / 255) * (self.crange[1] - self.crange[0]) + self.crange[0]
-
-
-

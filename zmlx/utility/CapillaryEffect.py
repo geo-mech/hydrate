@@ -14,6 +14,7 @@ class CapillaryEffect:
         另外，这里还假设，毛管压力的这种效果，相对于储层的降压等效应，对流体流动的影响是相对小的，因此是一个相对较慢的变量，也就是
         说，在一个时间步dt内，由于毛管效应所交换的流体是比较少的。
     """
+
     def __init__(self, fid0, fid1, s2p=None):
         """
         建立两种流体之间毛管力效果的模型。其中fid0和fid1定义两种流体的ID。注意，这里只考虑到流体，不考虑各种流体内的组分。因为
@@ -103,8 +104,8 @@ class CapillaryEffect:
                     s, p = args[curve_id]
                     assert len(s) == len(p) and len(s) >= 2
                     for i in range(1, len(s)):
-                        assert s[i-1] < s[i]
-                        assert p[i-1] < p[i]
+                        assert s[i - 1] < s[i]
+                        assert p[i - 1] < p[i]
                     s2p = Interp1(x=s, y=p)
                 # print(len(vvi[curve_id]), s2p)
                 cap.add_pc(vvi[curve_id], s2p)
@@ -123,4 +124,3 @@ class CapillaryEffect:
             assert s[i - 1] < s[i]
             assert p[i - 1] < p[i]
         return Interp1(x=s, y=p)
-

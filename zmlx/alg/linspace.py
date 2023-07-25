@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 def linspace(start, stop, num=50):
     """
     Return evenly spaced numbers over a specified interval.

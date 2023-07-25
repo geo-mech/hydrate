@@ -5,6 +5,7 @@
 
 from zml import data_version, TherFlowConfig
 import warnings
+
 """
 甲烷水合物的比热随着温度和压力略有变化，但是变化的幅度很小，所以可以视为常数:
 参考：
@@ -25,6 +26,7 @@ def create():
     return TherFlowConfig.FluProperty(den=919.7,
                                       vis=1.0e30,
                                       specific_heat=specific_heat)
+
 
 def create_flu(*args, **kwargs):
     warnings.warn('use function <create> instead', DeprecationWarning)

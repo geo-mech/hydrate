@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 from zmlx.alg.get_seg_point_distance import get_seg_point_distance
 
 

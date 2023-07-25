@@ -21,6 +21,7 @@ def make_fn(name):
               caption=caption, on_top=on_top)
         if len(result) > 0:
             return result[0]
+
     return func
 
 
@@ -47,4 +48,3 @@ view_rect = make_fn('viewRect')
 set_log_mode = make_fn('setLogMode')
 show_grid = make_fn('showGrid')
 show_axis = make_fn('showAxis')
-

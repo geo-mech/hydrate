@@ -1,9 +1,12 @@
-# -*- coding: utf-8 -*-
-
-
 from zml import *
 from zmlx.react.alpha.salinity import data as salinity_c2t
-from zmlx.fluid import *
+from zmlx.fluid.ch4 import create as create_ch4
+from zmlx.fluid.ch4_hydrate import create as create_ch4_hydrate
+from zmlx.fluid.co2 import create as create_co2
+from zmlx.fluid.co2_hydrate import create as create_co2_hydrate
+from zmlx.fluid.h2o import create as create_h2o
+from zmlx.fluid.h2o_gas import create as create_h2o_gas
+from zmlx.fluid.h2o_ice import create as create_h2o_ice
 from zmlx.kr.create_krf import create_krf
 from zmlx.react import ch4_hydrate as ch4_hydrate_react
 from zmlx.react import co2_hydrate as co2_hydrate_react
@@ -230,4 +233,3 @@ if __name__ == '__main__':
     print(c.cell_keys)
     print(c.face_keys)
     print(c.model_keys)
-

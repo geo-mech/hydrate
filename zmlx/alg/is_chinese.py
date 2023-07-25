@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 def is_chinese(string):
     """
     检查整个字符串是否包含中文:

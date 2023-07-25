@@ -21,8 +21,8 @@ def create(igas, igas_in_liq, iliq, ca_sol, fa_t, fa_c, rate=1.0):
 
     assert 0 <= fa_t != fa_c and fa_c >= 0
 
-    r.add_component(index=make_index(igas), weight=-1.0, fa_t=fa_t, fa_c=fa_c)         # 左侧物质
-    r.add_component(index=make_index(igas_in_liq), weight=1.0, fa_t=fa_t, fa_c=fa_c)   # 右侧物质
+    r.add_component(index=make_index(igas), weight=-1.0, fa_t=fa_t, fa_c=fa_c)  # 左侧物质
+    r.add_component(index=make_index(igas_in_liq), weight=1.0, fa_t=fa_t, fa_c=fa_c)  # 右侧物质
 
     r.temp = 280
     r.heat = 0
@@ -75,4 +75,3 @@ def test():
 
 if __name__ == '__main__':
     test()
-

@@ -160,4 +160,3 @@ if __name__ == '__main__':  # 测试用代码
     # result = np.log10(np.absolute(result))  # 对数识别时绘图测试需再转换一次
     plt.contourf(x, y, result, 500, cmap=plt.cm.jet)
     plt.savefig('resulteg01.png', dpi=200)
-

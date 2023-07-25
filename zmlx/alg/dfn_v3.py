@@ -167,6 +167,7 @@ def test2():
                 if Hf2Alg.rect_v3_intersected(a, b):
                     links.append([i0, i1])
         return links
+
     import timeit
     fractures = create_demo()
     t1 = timeit.default_timer()

@@ -12,8 +12,8 @@ def create():
                                       vis=Interp2(path=os.path.join(os.path.dirname(__file__), 'vis.txt')),
                                       specific_heat=1850.0)
 
-create_flu = create
 
+create_flu = create
 
 if __name__ == '__main__':
     flu = create_flu()

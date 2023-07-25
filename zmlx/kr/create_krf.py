@@ -35,7 +35,10 @@ if __name__ == '__main__':
         def f(fig):
             ax = fig.subplots()
             ax.plot(x, y)
+
+
         from zml import plot
+
         plot(f)
     except:
         pass

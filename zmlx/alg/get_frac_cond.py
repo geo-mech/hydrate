@@ -17,4 +17,3 @@ def get_frac_cond(fracture_aperture, fracture_length, fracture_height, fluid_vis
 
 
 g_1cm = get_frac_cond(1.0e-3, 1.0, 1.0, 1.0) * 10.0  # 1cm缝宽对应导流系数
-

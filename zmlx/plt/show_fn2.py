@@ -4,12 +4,10 @@
 1列数据，用于定义裂缝的颜色（如压力）
 """
 
-
 from zml import is_array, gui
 from zmlx.plt.plot2 import plot2
 from zmlx.plt.get_color import get_color
 import warnings
-
 
 try:
     import numpy as np
@@ -134,7 +132,7 @@ def show_fn2(pos=None, w=None, c=None, w_max=4, network=None, seepage=None,
         'levels': 10}})
 
     kwargs['aspect'] = 'equal'
-    plot2(data=data,  **kwargs)
+    plot2(data=data, **kwargs)
 
 
 def test():

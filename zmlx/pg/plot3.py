@@ -6,7 +6,6 @@ import pyqtgraph.opengl as gl
 import pyqtgraph as pg
 import numpy as np
 
-
 __Captions = [None]
 
 Line = gl.GLLinePlotItem
@@ -36,6 +35,7 @@ def make_fn(name):
               caption=caption, on_top=on_top)
         if len(result) > 0:
             return result[0]
+
     return func
 
 
@@ -52,9 +52,11 @@ def set_option(key, value, **kwargs):
     """
     设置一个选项
     """
+
     def f(widget):
         widget.opts[key] = value
         widget.update()
+
     apply(oper=f, **kwargs)
 
 
@@ -125,4 +127,3 @@ if __name__ == '__main__':
                          set_center([-2.5, -2.5, -2.5]),
                          set_distance(50),
                          ), close_after_done=False)
-

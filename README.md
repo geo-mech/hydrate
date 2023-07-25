@@ -41,7 +41,8 @@ https://gitee.com/geomech/hydrate
 
 #### 运行环境
 
-1) 安装[Python](https://www.python.org/) 3.7及以上版本. 建议安装[WinPython](https://winpython.github.io/).   
+1) 安装[Python](https://www.python.org/) 3.7及以上版本. 建议安装[WinPython](https://winpython.github.io/) (网盘链接：https://pan.baidu.com/s/1PnqdA28GdUKhA9A_7x20zQ?pwd=mba8 
+提取码：mba8).   
 2) 安装[VC_redist.x64.exe](https://gitee.com/geomech/hydrate/attach_files).
 3) 为方便下载、更新及提交代码，建议[注册Gitee账号](https://gitee.com/signup)并安装配置[Git](https://git-scm.com/). 
 
@@ -68,10 +69,9 @@ https://gitee.com/geomech/hydrate
 
 #### 开发者
 
-欢迎/感谢成为*开发者*，请注意:
+欢迎/感谢成为开发者，请注意:
 
-1) <font color="#FF0000">只</font>修改文件夹 [zmlx](https://gitee.com/geomech/hydrate/tree/master/zmlx) 里面的内容；
-2) <font color="#FF0000">只</font>修改<font color="#FF0000">自己</font>创建的文件; 非自己创建的文件的bug，请[新建Issue](https://gitee.com/geomech/hydrate/issues/new)来反馈;
-
-
+1) 请使用[Fork + Pull 模式](https://help.gitee.com/base/pullrequest/Fork+Pull)参与开发；
+2) 只修改[zmlx](https://gitee.com/geomech/hydrate/tree/master/zmlx)里面的内容；
+3) 只修改自己创建的文件; 其它bug请[新建Issue](https://gitee.com/geomech/hydrate/issues/new)来反馈;
 

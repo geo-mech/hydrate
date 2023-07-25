@@ -198,7 +198,7 @@ def __get_gui_execute():
     """
     try:
         import PyQt5  # 界面依赖PyQt5
-        from zmlx.ui import execute
+        from zmlx.ui.MainWindow import execute
         return execute
     except Exception as err:
         raise err
@@ -1640,34 +1640,46 @@ class Field:
     """
 
     class Constant:
+        """
+        A constant field
+        """
         def __init__(self, value):
+            """
+            construct with the constant value
+            """
             self.__value = value
 
-        def __call__(self, *args):
+        def __call__(self, *args, **kwargs):
+            """
+            return the value when call
+            """
             return self.__value
 
     def __init__(self, value):
+        """
+        create the field. treat it as a constant field when it is not a function(__call__ not defined)
+        """
         if hasattr(value, '__call__'):
             self.__field = value
         else:
             self.__field = Field.Constant(value)
 
-    def __call__(self, *args):
-        return self.__field(*args)
+    def __call__(self, *args, **kwargs):
+        return self.__field(*args, **kwargs)
 
 
 class Vector(HasHandle):
     """
     Mapping C++ class: std::vector<double>
     """
-    core.use(c_void_p, 'new_vector')
-    core.use(None, 'del_vector', c_void_p)
+    core.use(c_void_p, 'new_vf')
+    core.use(None, 'del_vf', c_void_p)
 
     def __init__(self, value=None, path=None, handle=None):
         """
         Create this Vector object, and possibly initialize it
         """
-        super(Vector, self).__init__(handle, core.new_vector, core.del_vector)
+        super(Vector, self).__init__(handle, core.new_vf, core.del_vf)
         if handle is None:
             self.set(value)
             if path is not None:
@@ -1678,7 +1690,7 @@ class Vector(HasHandle):
     def __str__(self):
         return f'zml.Vector({self.to_list()})'
 
-    core.use(None, 'vector_save', c_void_p, c_char_p)
+    core.use(None, 'vf_save', c_void_p, c_char_p)
 
     def save(self, path):
         """
@@ -1688,43 +1700,43 @@ class Vector(HasHandle):
             3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
         """
         if path is not None:
-            core.vector_save(self.handle, make_c_char_p(path))
+            core.vf_save(self.handle, make_c_char_p(path))
 
-    core.use(None, 'vector_load', c_void_p, c_char_p)
+    core.use(None, 'vf_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
         序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
         """
         if path is not None:
-            core.vector_load(self.handle, make_c_char_p(path))
+            core.vf_load(self.handle, make_c_char_p(path))
 
-    core.use(c_size_t, 'vector_size', c_void_p)
+    core.use(c_size_t, 'vf_size', c_void_p)
 
     @property
     def size(self):
-        return core.vector_size(self.handle)
+        return core.vf_size(self.handle)
 
-    core.use(None, 'vector_resize', c_void_p, c_size_t)
+    core.use(None, 'vf_resize', c_void_p, c_size_t)
 
     @size.setter
     def size(self, value):
-        core.vector_resize(self.handle, value)
+        core.vf_resize(self.handle, value)
 
     def __len__(self):
         return self.size
 
-    core.use(c_double, 'vector_get', c_void_p, c_size_t)
+    core.use(c_double, 'vf_get', c_void_p, c_size_t)
 
     def __getitem__(self, idx):
         if idx < self.size:
-            return core.vector_get(self.handle, idx)
+            return core.vf_get(self.handle, idx)
 
-    core.use(None, 'vector_set', c_void_p, c_size_t, c_double)
+    core.use(None, 'vf_set', c_void_p, c_size_t, c_double)
 
     def __setitem__(self, idx, value):
         assert idx < self.size
-        core.vector_set(self.handle, idx, value)
+        core.vf_set(self.handle, idx, value)
 
     def append(self, value):
         """
@@ -1759,21 +1771,21 @@ class Vector(HasHandle):
         else:
             return []
 
-    core.use(None, 'vector_read', c_void_p, c_void_p)
+    core.use(None, 'vf_read', c_void_p, c_void_p)
 
     def read_memory(self, pointer):
         """
         读取内存数据
         """
-        core.vector_read(self.handle, ctypes.cast(pointer, c_void_p))
+        core.vf_read(self.handle, ctypes.cast(pointer, c_void_p))
 
-    core.use(None, 'vector_write', c_void_p, c_void_p)
+    core.use(None, 'vf_write', c_void_p, c_void_p)
 
     def write_memory(self, pointer):
         """
         将数据写入到给定的内存地址
         """
-        core.vector_write(self.handle, ctypes.cast(pointer, c_void_p))
+        core.vf_write(self.handle, ctypes.cast(pointer, c_void_p))
 
     def read_numpy(self, data):
         """
@@ -1803,14 +1815,14 @@ class Vector(HasHandle):
             a = np.zeros(shape=self.size, dtype=float)
             return self.write_numpy(a)
 
-    core.use(c_void_p, 'vector_pointer', c_void_p)
+    core.use(c_void_p, 'vf_pointer', c_void_p)
 
     @property
     def pointer(self):
         """
         首个元素的指针
         """
-        ptr = core.vector_pointer(self.handle)
+        ptr = core.vf_pointer(self.handle)
         if ptr:
             return ctypes.cast(ptr, POINTER(c_double))
 
@@ -1819,16 +1831,16 @@ class IntVector(HasHandle):
     """
     映射C++类：std::vector<long long>
     """
-    core.use(c_void_p, 'new_llong_vector')
-    core.use(None, 'del_llong_vector', c_void_p)
+    core.use(c_void_p, 'new_vi')
+    core.use(None, 'del_vi', c_void_p)
 
     def __init__(self, value=None, handle=None):
-        super(IntVector, self).__init__(handle, core.new_llong_vector, core.del_llong_vector)
+        super(IntVector, self).__init__(handle, core.new_vi, core.del_vi)
         if handle is None:
             if value is not None:
                 self.set(value)
 
-    core.use(None, 'llong_vector_save', c_void_p, c_char_p)
+    core.use(None, 'vi_save', c_void_p, c_char_p)
 
     def save(self, path):
         """
@@ -1838,43 +1850,43 @@ class IntVector(HasHandle):
             3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
         """
         if path is not None:
-            core.llong_vector_save(self.handle, make_c_char_p(path))
+            core.vi_save(self.handle, make_c_char_p(path))
 
-    core.use(None, 'llong_vector_load', c_void_p, c_char_p)
+    core.use(None, 'vi_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
         序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
         """
         if path is not None:
-            core.llong_vector_load(self.handle, make_c_char_p(path))
+            core.vi_load(self.handle, make_c_char_p(path))
 
-    core.use(c_size_t, 'llong_vector_size', c_void_p)
+    core.use(c_size_t, 'vi_size', c_void_p)
 
     @property
     def size(self):
-        return core.llong_vector_size(self.handle)
+        return core.vi_size(self.handle)
 
-    core.use(None, 'llong_vector_resize', c_void_p, c_size_t)
+    core.use(None, 'vi_resize', c_void_p, c_size_t)
 
     @size.setter
     def size(self, value):
-        core.llong_vector_resize(self.handle, value)
+        core.vi_resize(self.handle, value)
 
     def __len__(self):
         return self.size
 
-    core.use(c_int64, 'llong_vector_get', c_void_p, c_size_t)
+    core.use(c_int64, 'vi_get', c_void_p, c_size_t)
 
     def __getitem__(self, idx):
         assert idx < self.size
-        return core.llong_vector_get(self.handle, idx)
+        return core.vi_get(self.handle, idx)
 
-    core.use(None, 'llong_vector_set', c_void_p, c_size_t, c_int64)
+    core.use(None, 'vi_set', c_void_p, c_size_t, c_int64)
 
     def __setitem__(self, idx, value):
         assert idx < self.size
-        core.llong_vector_set(self.handle, idx, value)
+        core.vi_set(self.handle, idx, value)
 
     def append(self, value):
         """
@@ -1895,14 +1907,14 @@ class IntVector(HasHandle):
             elements.append(self[i])
         return elements
 
-    core.use(c_void_p, 'llong_vector_pointer', c_void_p)
+    core.use(c_void_p, 'vi_pointer', c_void_p)
 
     @property
     def pointer(self):
         """
         首个元素的指针
         """
-        ptr = core.llong_vector_pointer(self.handle)
+        ptr = core.vi_pointer(self.handle)
         if ptr:
             return ctypes.cast(ptr, POINTER(c_int64))
 
@@ -1914,16 +1926,16 @@ class UintVector(HasHandle):
     """
     映射C++类：std::vector<std::size_t>
     """
-    core.use(c_void_p, 'new_size_vector')
-    core.use(None, 'del_size_vector', c_void_p)
+    core.use(c_void_p, 'new_vui')
+    core.use(None, 'del_vui', c_void_p)
 
     def __init__(self, value=None, handle=None):
-        super(UintVector, self).__init__(handle, core.new_size_vector, core.del_size_vector)
+        super(UintVector, self).__init__(handle, core.new_vui, core.del_vui)
         if handle is None:
             if value is not None:
                 self.set(value)
 
-    core.use(None, 'size_vector_save', c_void_p, c_char_p)
+    core.use(None, 'vui_save', c_void_p, c_char_p)
 
     def save(self, path):
         """
@@ -1933,49 +1945,49 @@ class UintVector(HasHandle):
             3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
         """
         if path is not None:
-            core.size_vector_save(self.handle, make_c_char_p(path))
+            core.vui_save(self.handle, make_c_char_p(path))
 
-    core.use(None, 'size_vector_load', c_void_p, c_char_p)
+    core.use(None, 'vui_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
         序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
         """
         if path is not None:
-            core.size_vector_load(self.handle, make_c_char_p(path))
+            core.vui_load(self.handle, make_c_char_p(path))
 
-    core.use(None, 'size_vector_print', c_void_p, c_char_p)
+    core.use(None, 'vui_print', c_void_p, c_char_p)
 
     def print_file(self, path):
         if path is not None:
-            core.size_vector_print(self.handle, make_c_char_p(path))
+            core.vui_print(self.handle, make_c_char_p(path))
 
-    core.use(c_size_t, 'size_vector_size', c_void_p)
+    core.use(c_size_t, 'vui_size', c_void_p)
 
     @property
     def size(self):
-        return core.size_vector_size(self.handle)
+        return core.vui_size(self.handle)
 
-    core.use(None, 'size_vector_resize', c_void_p, c_size_t)
+    core.use(None, 'vui_resize', c_void_p, c_size_t)
 
     @size.setter
     def size(self, value):
-        core.size_vector_resize(self.handle, value)
+        core.vui_resize(self.handle, value)
 
     def __len__(self):
         return self.size
 
-    core.use(c_size_t, 'size_vector_get', c_void_p, c_size_t)
+    core.use(c_size_t, 'vui_get', c_void_p, c_size_t)
 
     def __getitem__(self, idx):
         assert idx < self.size
-        return core.size_vector_get(self.handle, idx)
+        return core.vui_get(self.handle, idx)
 
-    core.use(None, 'size_vector_set', c_void_p, c_size_t, c_size_t)
+    core.use(None, 'vui_set', c_void_p, c_size_t, c_size_t)
 
     def __setitem__(self, idx, value):
         assert idx < self.size
-        core.size_vector_set(self.handle, idx, value)
+        core.vui_set(self.handle, idx, value)
 
     def append(self, value):
         """
@@ -1996,54 +2008,54 @@ class UintVector(HasHandle):
             elements.append(self[i])
         return elements
 
-    core.use(c_void_p, 'size_vector_pointer', c_void_p)
+    core.use(c_void_p, 'vui_pointer', c_void_p)
 
     @property
     def pointer(self):
         """
         首个元素的指针
         """
-        ptr = core.size_vector_pointer(self.handle)
+        ptr = core.vui_pointer(self.handle)
         if ptr:
             return ctypes.cast(ptr, POINTER(c_size_t))
 
 
 class StrVector(HasHandle):
-    core.use(c_void_p, 'new_string_vector')
-    core.use(None, 'del_string_vector', c_void_p)
+    core.use(c_void_p, 'new_vs')
+    core.use(None, 'del_vs', c_void_p)
 
     def __init__(self, handle=None):
-        super(StrVector, self).__init__(handle, core.new_string_vector, core.del_string_vector)
+        super(StrVector, self).__init__(handle, core.new_vs, core.del_vs)
 
-    core.use(c_size_t, 'string_vector_size', c_void_p)
+    core.use(c_size_t, 'vs_size', c_void_p)
 
     @property
     def size(self):
-        return core.string_vector_size(self.handle)
+        return core.vs_size(self.handle)
 
-    core.use(None, 'string_vector_resize', c_void_p, c_size_t)
+    core.use(None, 'vs_resize', c_void_p, c_size_t)
 
     @size.setter
     def size(self, value):
-        core.string_vector_resize(self.handle, value)
+        core.vs_resize(self.handle, value)
 
     def __len__(self):
         return self.size
 
-    core.use(None, 'string_vector_get', c_void_p, c_size_t, c_void_p)
+    core.use(None, 'vs_get', c_void_p, c_size_t, c_void_p)
 
     def __getitem__(self, idx):
         assert idx < self.size
         s = String()
-        core.string_vector_get(self.handle, idx, s.handle)
+        core.vs_get(self.handle, idx, s.handle)
         return s.to_str()
 
-    core.use(None, 'string_vector_set', c_void_p, c_size_t, c_void_p)
+    core.use(None, 'vs_set', c_void_p, c_size_t, c_void_p)
 
     def __setitem__(self, idx, value):
         assert idx < self.size
         s = String(value=value)
-        core.string_vector_set(self.handle, idx, s.handle)
+        core.vs_set(self.handle, idx, s.handle)
 
     def set(self, value):
         self.size = len(value)
@@ -2063,35 +2075,35 @@ class PtrVector(HasHandle):
     利用这个PtrVector与内核进行交互。
         注意：把handle存入这个PtrVector后，如果原始的对象被销毁，则内核读取的时候会出现致命错误。因此，PtrVector在使用的时候必须非常谨慎。
     """
-    core.use(c_void_p, 'new_voidp_vector')
-    core.use(None, 'del_voidp_vector', c_void_p)
+    core.use(c_void_p, 'new_vp')
+    core.use(None, 'del_vp', c_void_p)
 
     def __init__(self, value=None, handle=None):
         """
         初始化
         """
-        super(PtrVector, self).__init__(handle, core.new_voidp_vector, core.del_voidp_vector)
+        super(PtrVector, self).__init__(handle, core.new_vp, core.del_vp)
         if handle is None:
             if value is not None:
                 self.set(value)
 
-    core.use(c_size_t, 'voidp_vector_size', c_void_p)
+    core.use(c_size_t, 'vp_size', c_void_p)
 
     @property
     def size(self):
         """
         元素的数量
         """
-        return core.voidp_vector_size(self.handle)
+        return core.vp_size(self.handle)
 
-    core.use(None, 'voidp_vector_resize', c_void_p, c_size_t)
+    core.use(None, 'vp_resize', c_void_p, c_size_t)
 
     @size.setter
     def size(self, value):
         """
         设置元素的数量，并默认利用nullptr进行填充
         """
-        core.voidp_vector_resize(self.handle, value)
+        core.vp_resize(self.handle, value)
 
     def __len__(self):
         """
@@ -2099,23 +2111,23 @@ class PtrVector(HasHandle):
         """
         return self.size
 
-    core.use(c_void_p, 'voidp_vector_get', c_void_p, c_size_t)
+    core.use(c_void_p, 'vp_get', c_void_p, c_size_t)
 
     def __getitem__(self, idx):
         """
         返回地址
         """
         assert idx < self.size
-        return core.voidp_vector_get(self.handle, idx)
+        return core.vp_get(self.handle, idx)
 
-    core.use(None, 'voidp_vector_set', c_void_p, c_size_t, c_void_p)
+    core.use(None, 'vp_set', c_void_p, c_size_t, c_void_p)
 
     def __setitem__(self, idx, value):
         """
         设置地址
         """
         assert idx < self.size
-        core.voidp_vector_set(self.handle, idx, value)
+        core.vp_set(self.handle, idx, value)
 
     def set(self, value):
         """
@@ -2208,16 +2220,16 @@ class Matrix2(HasHandle):
     """
     映射C++类：zml::matrix_ty<double, 2>
     """
-    core.use(c_void_p, 'new_matrix2')
-    core.use(None, 'del_matrix2', c_void_p)
+    core.use(c_void_p, 'new_mat2')
+    core.use(None, 'del_mat2', c_void_p)
 
     def __init__(self, path=None, handle=None):
-        super(Matrix2, self).__init__(handle, core.new_matrix2, core.del_matrix2)
+        super(Matrix2, self).__init__(handle, core.new_mat2, core.del_mat2)
         if handle is None:
             if path is not None:
                 self.load(path)
 
-    core.use(None, 'matrix2_save', c_void_p, c_char_p)
+    core.use(None, 'mat2_save', c_void_p, c_char_p)
 
     def save(self, path):
         """
@@ -2227,33 +2239,33 @@ class Matrix2(HasHandle):
             3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
         """
         if path is not None:
-            core.matrix2_save(self.handle, make_c_char_p(path))
+            core.mat2_save(self.handle, make_c_char_p(path))
 
-    core.use(None, 'matrix2_load', c_void_p, c_char_p)
+    core.use(None, 'mat2_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
         序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
         """
         if path is not None:
-            core.matrix2_load(self.handle, make_c_char_p(path))
+            core.mat2_load(self.handle, make_c_char_p(path))
 
-    core.use(c_size_t, 'matrix2_size_0', c_void_p)
-    core.use(c_size_t, 'matrix2_size_1', c_void_p)
+    core.use(c_size_t, 'mat2_size_0', c_void_p)
+    core.use(c_size_t, 'mat2_size_1', c_void_p)
 
     @property
     def size_0(self):
-        return core.matrix2_size_0(self.handle)
+        return core.mat2_size_0(self.handle)
 
     @property
     def size_1(self):
-        return core.matrix2_size_1(self.handle)
+        return core.mat2_size_1(self.handle)
 
-    core.use(None, 'matrix2_resize', c_void_p, c_size_t, c_size_t)
+    core.use(None, 'mat2_resize', c_void_p, c_size_t, c_size_t)
 
     def resize(self, value):
         assert len(value) == 2
-        core.matrix2_resize(self.handle, value[0], value[1])
+        core.mat2_resize(self.handle, value[0], value[1])
 
     @property
     def size(self):
@@ -2263,19 +2275,19 @@ class Matrix2(HasHandle):
     def size(self, value):
         self.resize(value)
 
-    core.use(c_double, 'matrix2_get', c_void_p, c_size_t, c_size_t)
+    core.use(c_double, 'mat2_get', c_void_p, c_size_t, c_size_t)
 
     def get(self, key0, key1):
         assert key0 < self.size_0
         assert key1 < self.size_1
-        return core.matrix2_get(self.handle, key0, key1)
+        return core.mat2_get(self.handle, key0, key1)
 
-    core.use(None, 'matrix2_set', c_void_p, c_size_t, c_size_t, c_double)
+    core.use(None, 'mat2_set', c_void_p, c_size_t, c_size_t, c_double)
 
     def set(self, key0, key1, value):
         assert key0 < self.size_0
         assert key1 < self.size_1
-        core.matrix2_set(self.handle, key0, key1, value)
+        core.mat2_set(self.handle, key0, key1, value)
 
     def __getitem__(self, key):
         assert len(key) == 2
@@ -2288,6 +2300,223 @@ class Matrix2(HasHandle):
         i = key[0]
         j = key[1]
         self.set(i, j, value)
+
+    core.use(None, 'mat2_clone', c_void_p, c_void_p)
+
+    def clone(self, other):
+        """
+        克隆数据
+        """
+        assert isinstance(other, Matrix2)
+        core.mat2_clone(self.handle, other.handle)
+
+
+class Matrix3(HasHandle):
+    """
+    映射C++类：zml::matrix_ty<double, 3>
+    """
+    core.use(c_void_p, 'new_mat3')
+    core.use(None, 'del_mat3', c_void_p)
+
+    def __init__(self, path=None, handle=None):
+        super(Matrix3, self).__init__(handle, core.new_mat3, core.del_mat3)
+        if handle is None:
+            if path is not None:
+                self.load(path)
+
+    core.use(None, 'mat3_save', c_void_p, c_char_p)
+
+    def save(self, path):
+        """
+        序列化保存. 可选扩展名:
+            1: .txt  文本格式 (跨平台，基本不可读)
+            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
+            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        """
+        if path is not None:
+            core.mat3_save(self.handle, make_c_char_p(path))
+
+    core.use(None, 'mat3_load', c_void_p, c_char_p)
+
+    def load(self, path):
+        """
+        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        """
+        if path is not None:
+            core.mat3_load(self.handle, make_c_char_p(path))
+
+    core.use(c_size_t, 'mat3_size_0', c_void_p)
+    core.use(c_size_t, 'mat3_size_1', c_void_p)
+    core.use(c_size_t, 'mat3_size_2', c_void_p)
+
+    @property
+    def size_0(self):
+        return core.mat3_size_0(self.handle)
+
+    @property
+    def size_1(self):
+        return core.mat3_size_1(self.handle)
+
+    @property
+    def size_2(self):
+        return core.mat3_size_2(self.handle)
+
+    core.use(None, 'mat3_resize', c_void_p, c_size_t, c_size_t, c_size_t)
+
+    def resize(self, value):
+        assert len(value) == 3
+        core.mat3_resize(self.handle, value[0], value[1], value[2])
+
+    @property
+    def size(self):
+        """
+        矩阵大小
+        """
+        return self.size_0, self.size_1, self.size_2
+
+    @size.setter
+    def size(self, value):
+        """
+        矩阵大小
+        """
+        self.resize(value)
+
+    core.use(c_double, 'mat3_get', c_void_p, c_size_t, c_size_t, c_size_t)
+
+    def get(self, key0, key1, key2):
+        """
+        读取元素
+        """
+        assert key0 < self.size_0
+        assert key1 < self.size_1
+        assert key2 < self.size_2
+        return core.mat3_get(self.handle, key0, key1, key2)
+
+    core.use(None, 'mat3_set', c_void_p, c_size_t, c_size_t, c_size_t, c_double)
+
+    def set(self, key0, key1, key2, value):
+        """
+        设置元素
+        """
+        assert key0 < self.size_0
+        assert key1 < self.size_1
+        assert key2 < self.size_2
+        core.mat3_set(self.handle, key0, key1, key2, value)
+
+    def __getitem__(self, key):
+        """
+        读取元素
+        """
+        assert len(key) == 3
+        return self.get(*key)
+
+    def __setitem__(self, key, value):
+        """
+        设置元素
+        """
+        assert len(key) == 3
+        self.set(*key, value)
+
+    core.use(None, 'mat3_clone', c_void_p, c_void_p)
+
+    def clone(self, other):
+        """
+        克隆数据
+        """
+        assert isinstance(other, Matrix3)
+        core.mat3_clone(self.handle, other.handle)
+
+
+class Tensor3Matrix3(HasHandle):
+    """
+    映射C++类：zml::matrix_ty<zml::tensor3_ty, 3>
+    """
+    core.use(c_void_p, 'new_ts3mat3')
+    core.use(None, 'del_ts3mat3', c_void_p)
+
+    def __init__(self, path=None, handle=None):
+        super(Tensor3Matrix3, self).__init__(handle, core.new_ts3mat3, core.del_ts3mat3)
+        if handle is None:
+            if path is not None:
+                self.load(path)
+
+    core.use(None, 'ts3mat3_save', c_void_p, c_char_p)
+
+    def save(self, path):
+        """
+        序列化保存. 可选扩展名:
+            1: .txt  文本格式 (跨平台，基本不可读)
+            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
+            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        """
+        if path is not None:
+            core.ts3mat3_save(self.handle, make_c_char_p(path))
+
+    core.use(None, 'ts3mat3_load', c_void_p, c_char_p)
+
+    def load(self, path):
+        """
+        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        """
+        if path is not None:
+            core.ts3mat3_load(self.handle, make_c_char_p(path))
+
+    core.use(c_size_t, 'ts3mat3_size_0', c_void_p)
+    core.use(c_size_t, 'ts3mat3_size_1', c_void_p)
+    core.use(c_size_t, 'ts3mat3_size_2', c_void_p)
+
+    @property
+    def size_0(self):
+        return core.ts3mat3_size_0(self.handle)
+
+    @property
+    def size_1(self):
+        return core.ts3mat3_size_1(self.handle)
+
+    @property
+    def size_2(self):
+        return core.ts3mat3_size_2(self.handle)
+
+    core.use(None, 'ts3mat3_resize', c_void_p, c_size_t, c_size_t, c_size_t)
+
+    def resize(self, value):
+        assert len(value) == 3
+        core.ts3mat3_resize(self.handle, value[0], value[1], value[2])
+
+    @property
+    def size(self):
+        return self.size_0, self.size_1, self.size_2
+
+    @size.setter
+    def size(self, value):
+        self.resize(value)
+
+    core.use(c_void_p, 'ts3mat3_get', c_void_p, c_size_t, c_size_t, c_size_t)
+
+    def get(self, key0, key1, key2):
+        """
+        返回某个元素的引用.
+        """
+        assert key0 < self.size_0
+        assert key1 < self.size_1
+        assert key2 < self.size_2
+        return Tensor3(handle=core.ts3mat3_get(self.handle, key0, key1, key2))
+
+    def __getitem__(self, key):
+        """
+        返回某个元素的引用.
+        """
+        assert len(key) == 3
+        return self.get(*key)
+
+    core.use(None, 'ts3mat3_clone', c_void_p, c_void_p)
+
+    def clone(self, other):
+        """
+        克隆数据
+        """
+        assert isinstance(other, Tensor3Matrix3)
+        core.ts3mat3_clone(self.handle, other.handle)
 
 
 class Interp1(HasHandle):
@@ -2882,6 +3111,13 @@ class Array2(HasHandle):
         assert len(values) == 2
         return Array2(x=values[0], y=values[1])
 
+    def clone(self, other):
+        """
+        克隆数据
+        """
+        for i in range(2):
+            self.set(i, other[i])
+
 
 class Array3(HasHandle):
     core.use(c_void_p, 'new_array3')
@@ -2982,6 +3218,13 @@ class Array3(HasHandle):
     def from_list(values):
         assert len(values) == 3
         return Array3(x=values[0], y=values[1], z=values[2])
+
+    def clone(self, other):
+        """
+        克隆数据
+        """
+        for i in range(3):
+            self.set(i, other[i])
 
 
 class Tensor2(HasHandle):
@@ -3144,6 +3387,15 @@ class Tensor2(HasHandle):
         xy = self.xy / value
         return Tensor2(xx=xx, yy=yy, xy=xy)
 
+    core.use(None, 'tensor2_clone', c_void_p, c_void_p)
+
+    def clone(self, other):
+        """
+        克隆数据
+        """
+        assert isinstance(other, Tensor2)
+        core.tensor2_clone(self.handle, other.handle)
+
 
 class Tensor3(HasHandle):
     core.use(c_void_p, 'new_tensor3')
@@ -3300,6 +3552,15 @@ class Tensor3(HasHandle):
             x = args[0]
             return core.tensor3_get_along(self.handle, x[0], x[1], x[2])
 
+    core.use(None, 'tensor3_clone', c_void_p, c_void_p)
+
+    def clone(self, other):
+        """
+        克隆数据
+        """
+        assert isinstance(other, Tensor3)
+        core.tensor3_clone(self.handle, other.handle)
+
 
 class Tensor2Interp2(HasHandle):
     core.use(c_void_p, 'new_tensor2interp2')
@@ -3406,6 +3667,9 @@ class Tensor2Interp2(HasHandle):
 
 
 class Tensor3Interp3(HasHandle):
+    """
+    三阶张量的三维插值. 
+    """
     core.use(c_void_p, 'new_tensor3interp3')
     core.use(None, 'del_tensor3interp3', c_void_p)
 
@@ -3785,7 +4049,7 @@ class Coord3(HasHandle):
 
 class Mesh3(HasHandle):
     """
-    三维网格类
+    三维网格类，有点(Node)、线(Link)、面(Face)、体(Body)所组成的网络.
     """
 
     class Node(Object):
@@ -4540,64 +4804,6 @@ class Alg:
         :return: None
         """
         core.prepare_zml(make_c_char_p(code_path), make_c_char_p(target_folder), make_c_char_p(znetwork_folder))
-
-
-class Tensor2Field2(HasHandle):
-    """
-    二阶张量的二维插值场
-       注：!!!<测试用，后续可能会移除>!!!
-    """
-    core.use(c_void_p, 'new_tensor2_field2')
-    core.use(None, 'del_tensor2_field2', c_void_p)
-
-    def __init__(self, path=None, handle=None):
-        warnings.warn('zml.Tensor2Field2 may be removed in future', DeprecationWarning)
-        super(Tensor2Field2, self).__init__(handle, core.new_tensor2_field2, core.del_tensor2_field2)
-        if handle is None:
-            if path is not None:
-                self.load(path)
-
-    core.use(None, 'tensor2_field2_save', c_void_p, c_char_p)
-
-    def save(self, path):
-        """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
-        """
-        if path is not None:
-            core.tensor2_field2_save(self.handle, make_c_char_p(path))
-
-    core.use(None, 'tensor2_field2_load', c_void_p, c_char_p)
-
-    def load(self, path):
-        """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
-        """
-        if path is not None:
-            core.tensor2_field2_load(self.handle, make_c_char_p(path))
-
-    core.use(c_bool, 'tensor2_field2_empty', c_void_p)
-
-    @property
-    def empty(self):
-        return core.tensor2_field2_empty(self.handle)
-
-    core.use(None, 'tensor2_field2_clear', c_void_p)
-
-    def clear(self):
-        core.tensor2_field2_clear(self.handle)
-
-    core.use(None, 'tensor2_field2_get', c_void_p, c_double, c_double, c_size_t)
-
-    def __getitem__(self, key):
-        assert len(key) == 2
-        x = key[0]
-        y = key[1]
-        tensor = Tensor2()
-        core.tensor2_field2_get(self.handle, x, y, tensor.handle)
-        return tensor
 
 
 class LinearExpr(HasHandle):
@@ -11721,11 +11927,16 @@ class FractureNetwork2(HasHandle):
         """
         core.fnet2_adjust(self.handle, lave, angle_min)
 
-    core.use(c_size_t, 'fnet2_extend_tip', c_void_p, c_void_p, c_void_p, c_double, c_double, c_double, c_double)
     core.use(c_size_t, 'fnet2_create_branch', c_void_p, c_void_p, c_void_p, c_double)
+    core.use(c_size_t, 'fnet2_extend_tip', c_void_p, c_void_p, c_void_p,
+             c_double, c_double, c_double, c_double)
+    core.use(c_size_t, 'fnet2_extend_tip3', c_void_p,
+             c_void_p, c_double, c_double, c_double, c_double, c_double, c_double, c_double,
+             c_void_p,
+             c_double, c_double, c_double, c_double)
 
     def extend(self, kic=None, sol2=None, lave=None, dn_min=1.0e-7, lex=0.3, dangle_max=10.0,
-               has_branch=True):
+               has_branch=True, z=0, left=None, right=None):
         """
         尝试扩展裂缝，并返回扩展的数量.
             lex:   扩展的长度与lave的比值
@@ -11743,10 +11954,20 @@ class FractureNetwork2(HasHandle):
             assert lave is not None
             count += core.fnet2_create_branch(self.handle, kic.handle, sol2.handle, lave)
         if 0.01 < lex < 0.99:
-            assert isinstance(kic, Tensor2)
             assert isinstance(sol2, DDMSolution2)
             assert lave is not None
-            count += core.fnet2_extend_tip(self.handle, kic.handle, sol2.handle, dn_min, lave, lex, dangle_max)
+            if isinstance(kic, Tensor2):
+                assert isinstance(kic, Tensor2)
+                count += core.fnet2_extend_tip(self.handle, kic.handle, sol2.handle,
+                                               dn_min, lave, lex, dangle_max)
+            else:
+                assert isinstance(kic, Tensor3Matrix3)
+                assert left is not None
+                assert right is not None
+                count += core.fnet2_extend_tip3(self.handle, kic.handle,
+                                                left[0], left[1], left[2], right[0], right[1], right[2],
+                                                z,
+                                                sol2.handle, dn_min, lave, lex, dangle_max)
         return count
 
     core.use(None, 'fnet2_get_induced', c_void_p, c_void_p, c_void_p,
@@ -11843,8 +12064,13 @@ class InfManager2(HasHandle):
         super(InfManager2, self).__init__(handle, core.new_fmanager2, core.del_fmanager2)
 
     core.use(None, 'fmanager2_update1', c_void_p, c_void_p, c_void_p, c_void_p, c_double)
+    core.use(None, 'fmanager2_update2', c_void_p, c_void_p, c_void_p, c_void_p, c_double, c_double)
+    core.use(None, 'fmanager2_update3', c_void_p, c_void_p, c_void_p, c_void_p,
+             c_double, c_double, c_double,
+             c_double, c_double, c_double,
+             c_double, c_double)
 
-    def update_matrix(self, network, sol, stress, dist):
+    def update_matrix(self, network, sol, stress, dist, z=0, left=None, right=None):
         """
         更新应力影响矩阵. 其中：
             dist为应力影响的范围. 当两个裂缝之间的距离大于dist的时候，则它们之间不会产生
@@ -11853,8 +12079,19 @@ class InfManager2(HasHandle):
         """
         assert isinstance(network, FractureNetwork2)
         assert isinstance(sol, DDMSolution2)
-        assert isinstance(stress, Tensor2)
-        core.fmanager2_update1(self.handle, network.handle, sol.handle, stress.handle, dist)
+        if isinstance(stress, Tensor2):
+            core.fmanager2_update1(self.handle, network.handle, sol.handle, stress.handle, dist)
+        elif isinstance(stress, Tensor3Interp3):
+            core.fmanager2_update2(self.handle, network.handle, sol.handle, stress.handle, z, dist)
+        else:
+            assert isinstance(stress, Tensor3Matrix3)
+            assert left is not None
+            assert right is not None
+            core.fmanager2_update3(self.handle, network.handle, sol.handle,
+                                   stress.handle,
+                                   left[0], left[1], left[2],
+                                   right[0], right[1], right[2],
+                                   z, dist)
 
     core.use(c_size_t, 'fmanager2_update_disp', c_void_p, c_double, c_double, c_size_t, c_double)
 
@@ -12217,6 +12454,42 @@ class Hf2Model(HasHandle):
     @fmap.setter
     def fmap(self, value):
         self.from_fmap(value, fmt='binary')
+
+    core.use(c_void_p, 'hf2_get_left', c_void_p)
+
+    @property
+    def left(self):
+        """
+        左侧边界 （左侧边界和右侧边界组成了一个立方体的盒子）
+        """
+        return Array3(handle=core.hf2_get_left(self.handle))
+
+    core.use(c_void_p, 'hf2_get_right', c_void_p)
+
+    @property
+    def right(self):
+        """
+        右侧边界 （左侧边界和右侧边界组成了一个立方体的盒子）
+        """
+        return Array3(handle=core.hf2_get_right(self.handle))
+
+    core.use(c_void_p, 'hf2_get_insitu_stress', c_void_p)
+
+    @property
+    def insitu_stress(self):
+        """
+        原始地应力（一个张量矩阵）
+        """
+        return Tensor3Matrix3(handle=core.hf2_get_insitu_stress(self.handle))
+
+    core.use(c_void_p, 'hf2_get_kic', c_void_p)
+
+    @property
+    def kic(self):
+        """
+        断裂韧度（一个张量矩阵）
+        """
+        return Tensor3Matrix3(handle=core.hf2_get_kic(self.handle))
 
     core.use(c_void_p, 'hf2_get_network', c_void_p)
 

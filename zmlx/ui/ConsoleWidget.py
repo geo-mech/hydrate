@@ -187,7 +187,7 @@ class ConsoleWidget(QtWidgets.QWidget):
 
             self.time_end = timeit.default_timer()
             if self.time_beg is not None and self.time_end is not None:
-                print(f'Time used = {time2str(self.time_end-self.time_beg)}')
+                print(f'Time used = {time2str(self.time_end - self.time_beg)}')
 
             self.text_when_beg = None
             self.text_when_end = None

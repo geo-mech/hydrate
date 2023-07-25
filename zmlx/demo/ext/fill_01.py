@@ -13,7 +13,7 @@ dll.fill_01.argtypes = (ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctype
 
 
 def fill_01(v):
-    dll.fill_01(v.handle, zml.dll.vector_set, zml.dll.get_rand, v.size)
+    dll.fill_01(v.handle, zml.dll.vf_set, zml.dll.get_rand, v.size)
 
 
 def test(count):

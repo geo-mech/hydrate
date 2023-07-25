@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 def has_module(name):
     """
     测试是否存在给定名字的库

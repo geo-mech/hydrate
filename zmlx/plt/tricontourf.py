@@ -35,4 +35,3 @@ def tricontourf(x=None, y=None, z=None, ipath=None, ix=None, iy=None, iz=None, c
 
     if not gui_only or gui.exists():
         plot(kernel=f, caption=caption, clear=True, fname=fname, dpi=dpi)
-

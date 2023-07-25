@@ -64,8 +64,8 @@ class Len0Updater:
         assert isinstance(map, ElementMap)
         self.buffer1.read_numpy(self.strain)
         map.get_values(source=self.buffer1, buffer=self.buffer2, default=0.0)  # 此时buffer2记录了各个弹簧位置的应变(如果没有找到，则应变为0)
-        self.buffer2.write_numpy(self.len1) # 此时len1记录了各个弹簧的应变
-        self.len1 *= self.len0 # 此时len1记录了各个弹簧的长度的变化量
-        self.len1 += self.len0 # 此时len1为弹簧的变形之后的长度
+        self.buffer2.write_numpy(self.len1)  # 此时len1记录了各个弹簧的应变
+        self.len1 *= self.len0  # 此时len1记录了各个弹簧的长度的变化量
+        self.len1 += self.len0  # 此时len1为弹簧的变形之后的长度
         self.buffer2.read_numpy(self.len1)
-        springsys.set_len0(self.buffer2) # 应用到弹簧模型
+        springsys.set_len0(self.buffer2)  # 应用到弹簧模型

@@ -279,4 +279,3 @@ except Exception as err:
 
 def get_default_code():
     return code_in_editor
-

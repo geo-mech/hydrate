@@ -26,5 +26,5 @@ def show_all():
 
 if __name__ == '__main__':
     from zml import gui
-    gui.execute(show_all, close_after_done=False)
 
+    gui.execute(show_all, close_after_done=False)

@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 from zml import *
 
 
@@ -16,4 +13,3 @@ def join_cols(*args):
         v.write_numpy(a)
         cols.append(a)
     return np.concatenate(cols, axis=1)
-

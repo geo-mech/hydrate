@@ -9,4 +9,3 @@ def create(iflu, isol, fa_t, fa_c, temp=273.15, heat=336000.0, enable_melt=True,
     assert 0 < heat
     return melt.create(sol=isol, flu=iflu, temp=temp, heat=heat,
                        fa_t=fa_t, fa_c=fa_c, l2r=enable_melt, r2l=enable_freeze)
-

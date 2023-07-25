@@ -4,9 +4,7 @@
 from zml import *
 import os
 
-
 fpath = os.path.join(os.path.dirname(__file__), 'discs')
-
 
 # 数据的坐标范围 [m]
 xr = (-7.5, 7.5)
@@ -38,4 +36,3 @@ def get_discs(set_ids=None, da_set=None):
 
 if __name__ == '__main__':
     print(get_discs())
-

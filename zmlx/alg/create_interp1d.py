@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 from scipy.interpolate import interp1d
 
 

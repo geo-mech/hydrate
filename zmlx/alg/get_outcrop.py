@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 from zml import *
 
 
@@ -42,4 +39,3 @@ def get_outcrop(disc, box=None, coords=None, attr_id=None):
             seg = get_outcrop(disc[i], box=box, coords=coords, attr_id=attr_id)
             segments = segments + seg
         return segments
-

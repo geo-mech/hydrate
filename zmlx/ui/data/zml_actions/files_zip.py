@@ -1,3 +1,5 @@
+# ** text = '压缩'
+
 import os
 import zipfile
 

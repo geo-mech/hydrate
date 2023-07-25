@@ -2,7 +2,7 @@
 
 
 from zmlx.react.freeze import create as create_freeze
-from zmlx.alg.loadcol import loadcol
+from zmlx.alg.load_col import load_col as loadcol
 import os
 
 
@@ -24,4 +24,3 @@ def create(igas, iliq, fa_t, fa_c, t2q=None):
 
 if __name__ == '__main__':
     print(create(0, 1, 0, 1))
-

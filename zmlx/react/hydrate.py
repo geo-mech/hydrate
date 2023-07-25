@@ -20,4 +20,3 @@ def create(igas, iliq, isol, mg, vp, vt, temp, heat, fa_t, fa_c, t2q=None,
                               l2r=dissociation,  # 允许水合物分解
                               r2l=formation,  # 允许水合物生成
                               p2t=[vp, vt], t2q=t2q)
-

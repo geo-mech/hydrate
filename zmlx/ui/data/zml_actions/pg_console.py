@@ -1,3 +1,4 @@
+# ** text = 'Python控制台'
 
 from pyqtgraph.console import ConsoleWidget
 

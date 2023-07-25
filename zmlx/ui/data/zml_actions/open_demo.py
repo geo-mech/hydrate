@@ -1,4 +1,3 @@
-
 # ** on_toolbar = True
 # ** icon = 'python.png'
 # ** dependency = """from zmlx import get_path \nimport os\nassert os.path.isdir(get_path('demo'))"""

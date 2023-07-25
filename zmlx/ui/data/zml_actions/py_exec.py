@@ -8,6 +8,6 @@
 # ** icon = 'begin.png'
 
 
-from zmlx.ui import exec_code_in_editing
+from zmlx.ui.CodeAlg import exec_code_in_editing
 
 exec_code_in_editing()

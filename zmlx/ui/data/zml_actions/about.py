@@ -1,9 +1,7 @@
-
 # ** icon = 'info.png'
 
 from zml import *
 from zmlx import get_latest_version
-
 
 latest_version = get_latest_version()
 

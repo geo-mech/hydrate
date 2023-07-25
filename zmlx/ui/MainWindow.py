@@ -150,6 +150,8 @@ class MainWindow(QtWidgets.QMainWindow):
         action = QtWidgets.QAction(self)
         if iconname is not None:
             action.setIcon(load_icon(iconname))
+        else:
+            action.setIcon(load_icon('python.png'))
         action.setEnabled(enabled)
         if tooltip is not None:
             assert isinstance(tooltip, str)

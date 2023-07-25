@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 import os
 from zml import app_data, gui
 
@@ -44,4 +41,3 @@ def choose_path():
             gui.information('成功', f'成功添加了搜索路径: \n<{folder}> \n\n下次启动软件时生效!')
         except Exception as e:
             print(e)
-

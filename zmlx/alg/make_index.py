@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 from zml import is_array
 
 
