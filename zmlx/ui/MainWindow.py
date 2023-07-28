@@ -1,8 +1,5 @@
-# -*- coding: utf-8 -*-
-
-
 import sys
-import warnings
+
 from zml import gui, lic
 from zmlx.ui.CodeAlg import edit_code
 from zmlx.ui.Config import *

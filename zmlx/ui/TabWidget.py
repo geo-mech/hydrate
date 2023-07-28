@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
-
 from PyQt5 import QtWidgets, QtGui, QtCore
-from zmlx.ui.Config import load_pixmap
+
 from zml import app_data
+from zmlx.ui.Config import load_pixmap
 
 
 class TabWidget(QtWidgets.QTabWidget):

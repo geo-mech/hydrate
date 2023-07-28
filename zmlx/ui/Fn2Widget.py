@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 from matplotlib import cm
 
 from zmlx.ui.Config import *

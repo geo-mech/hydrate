@@ -1,9 +1,11 @@
 # ** on_toolbar = True
 # ** icon = 'info.png'
 
-import zml
-from PyQt5 import QtWidgets
 import os
+
+from PyQt5 import QtWidgets
+
+import zml
 
 
 def set_md(widget):

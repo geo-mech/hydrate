@@ -1,3 +1,8 @@
+"""
+todo:
+    此模块后续可能需要转移到io中，因为和文件的输入输出更加接近
+    @20230726
+"""
 from zml import *
 from zmlx.filesys.join_paths import join_paths
 from zmlx.alg.is_chinese import is_chinese

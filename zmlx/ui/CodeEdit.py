@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 from PyQt5 import QtCore, QtWidgets
 
 from zml import read_text, write_text, gui

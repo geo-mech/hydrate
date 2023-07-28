@@ -1178,20 +1178,20 @@ def get_distance(p1, p2):
     """
     Returns the distance between two points
     """
-    dist = 0
+    dist = 0.0
     for i in range(min(len(p1), len(p2))):
-        dist += math.pow(p1[i] - p2[i], 2)
-    return math.sqrt(dist)
+        dist += (p1[i] - p2[i]) ** 2
+    return dist ** 0.5
 
 
 def get_norm(p):
     """
     Returns the distance from the origin
     """
-    dist = 0
-    for i in range(len(p)):
-        dist += math.pow(p[i], 2)
-    return math.sqrt(dist)
+    dist = 0.0
+    for dim in range(len(p)):
+        dist += p[dim] ** 2
+    return dist ** 0.5
 
 
 def clock(func):
@@ -1643,6 +1643,7 @@ class Field:
         """
         A constant field
         """
+
         def __init__(self, value):
             """
             construct with the constant value
@@ -7519,7 +7520,7 @@ class Seepage(HasHandle, HasCells):
 
     class Reaction(HasHandle):
         """
-        定义一个化学反应。反应所需要的物质定义在Seepage.Cell中。这里，所谓化学反应，是一种或者几种流体（或者流体的组分）转化为另外一种或者几种
+        定义一个化学反应。反应所需要的物质存储在Seepage.Cell中。这里，所谓化学反应，是一种或者几种流体（或者流体的组分）转化为另外一种或者几种
         流体或者组分，并吸收或者释放能量的过程。这个Reaction，即定义参与反应的各种物质的比例、反应的速度以及反应过程中的能量变化。基于Seepage
         类模拟水合物的分解或者生成、冰的形成和融化、重油的裂解等，均基于此Reaction类进行定义。
         """
@@ -7528,7 +7529,7 @@ class Seepage(HasHandle, HasCells):
 
         def __init__(self, path=None, handle=None):
             """
-            初始化一个反应。当给定fpath的时候，则载入之前创建好的反应。
+            初始化一个反应。当给定path的时候，则载入之前创建好并序列化存储的反应。
             """
             super(Seepage.Reaction, self).__init__(handle, core.new_reaction, core.del_reaction)
             if handle is None:
@@ -7593,17 +7594,18 @@ class Seepage(HasHandle, HasCells):
         @property
         def heat(self):
             """
-            发生1kg物质的化学反应<1kg的左侧物质，转化为1kg的右侧物质>释放的热量，单位焦耳
+            发生1kg物质的化学反应<1kg的左侧物质，转化为1kg的右侧物质>释放的热量，单位焦耳.
+            注意，如果反应是吸热反应，则此heat为负值.
             """
             return core.reaction_get_dheat(self.handle)
 
         @heat.setter
         def heat(self, value):
-            """
-            发生1kg物质的化学反应<1kg的左侧物质，转化为1kg的右侧物质>释放的热量，单位焦耳
-            """
             core.reaction_set_dheat(self.handle, value)
 
+        # 兼容之前的接口 (deprecated)
+        # todo:
+        #   删除dheat属性. (after 2024.02.01)
         dheat = heat
 
         core.use(None, 'reaction_set_t0', c_void_p, c_double)
@@ -7612,7 +7614,7 @@ class Seepage(HasHandle, HasCells):
         @property
         def temp(self):
             """
-            和dheat对应的参考温度，只有当反应前后的温度都等于此temp的时候，释放的热量才可以使用dheat来定义
+            和heat对应的参考温度，只有当反应前后的温度都等于此temp的时候，释放的热量才可以使用heat来定义.
             """
             return core.reaction_get_t0(self.handle)
 
@@ -7624,7 +7626,9 @@ class Seepage(HasHandle, HasCells):
 
         def set_p2t(self, p, t):
             """
-            设置不同的压力下，反应可以发生的临界温度。
+            设置不同的压力下，反应可以发生的临界温度. 对于吸热反应，只有当温度大于此临界温度的时候，反应才会发生；
+            对于放热反应，温度小于临界温度的时候，反应才会发生。
+            此反应目前不适用于“燃烧”这种反应（后续可能会添加支持）。
             """
             if not isinstance(p, Vector):
                 p = Vector(p)
@@ -7637,6 +7641,10 @@ class Seepage(HasHandle, HasCells):
         def set_t2q(self, t, q):
             """
             设置当温度偏离平衡温度的时候反应的速率。
+                对于吸热反应，随着温度的增加，反应的速率应当增加；
+                对于放热反应，随着温度的降低，反应的速率降低；
+                当温度偏移量为0的时候，反应的速率为0.
+            此处，反应的速率定义为，对于1kg的物质，在1s内发生反应的质量.
             """
             if not isinstance(t, Vector):
                 t = Vector(t)
@@ -7657,6 +7665,9 @@ class Seepage(HasHandle, HasCells):
         core.use(None, 'reaction_clear_components', c_void_p)
 
         def clear_components(self):
+            """
+            清除所有的反应组分
+            """
             core.reaction_clear_components(self.handle)
 
         core.use(None, 'reaction_add_inhibitor', c_void_p,
@@ -7678,6 +7689,9 @@ class Seepage(HasHandle, HasCells):
         core.use(None, 'reaction_clear_inhibitors', c_void_p)
 
         def clear_inhibitors(self):
+            """
+            清除所有的抑制剂定义
+            """
             core.reaction_clear_inhibitors(self.handle)
 
         core.use(None, 'reaction_react', c_void_p, c_void_p, c_double)
@@ -7701,14 +7715,15 @@ class Seepage(HasHandle, HasCells):
             """
             同adjust_weights
             """
-            warnings.warn('Use <adjust_weights>', DeprecationWarning)
+            warnings.warn('Use <adjust_weights>. this function will be removed after 2024-1-1',
+                          DeprecationWarning)
             self.adjust_weights()
 
         core.use(c_double, 'reaction_get_rate', c_void_p, c_void_p)
 
         def get_rate(self, cell):
             """
-            获得给定Cell在当前状态下的<瞬时的>反应速率
+            获得给定Cell在当前状态(温度、压力、抑制剂等条件)下的<瞬时的>反应速率. 此函数主要用于测试.
             """
             assert isinstance(cell, Seepage.CellData)
             return core.reaction_get_rate(self.handle, cell.handle)
@@ -7719,7 +7734,11 @@ class Seepage(HasHandle, HasCells):
         @property
         def idt(self):
             """
-            Cell的属性ID，用以定义反应作用到该Cell上的时候，平衡温度的调整量. 这允许在不同的Cell上，有不同的反应温度.
+            Cell的属性ID。Cell的此属性用以定义反应作用到该Cell上的时候，平衡温度的调整量.
+            这允许在不同的Cell上，有不同的反应温度.
+            默认情况下，此属性不定义，则反应在各个Cell上的温度是一样的。
+            注：
+                此属性为一个测试功能，当后续有更好的实现方案的时候，可能会被移除。
             """
             return core.reaction_get_idt(self.handle)
 
@@ -7733,8 +7752,10 @@ class Seepage(HasHandle, HasCells):
         @property
         def wdt(self):
             """
-            和idt配合使用. 在Cell定义温度调整量的时候，可以利用这个权重再对这个调整量进行调整.
+            和idt配合使用. 在Cell定义温度调整量的时候，可以利用这个权重再对这个调整量进行（缩放）调整.
             比如，当Cell给的温度的调整量的单位不是K的时候，可以利用wdt属性来添加一个倍率.
+            注：
+                此属性为一个测试功能，当后续有更好的实现方案的时候，可能会被移除。
             """
             return core.reaction_get_wdt(self.handle)
 
@@ -7748,7 +7769,8 @@ class Seepage(HasHandle, HasCells):
         @property
         def irate(self):
             """
-            Cell的属性ID，用以定义反应作用到该Cell上的时候，反应速率应该乘以的倍数。若定义这个属性，且Cell的这个属性值小于等于0，那么
+            Cell的属性ID。
+            Cell的此属性用以定义反应作用到该Cell上的时候，反应速率应该乘以的倍数。若定义这个属性，且Cell的这个属性值小于等于0，那么
             反应在这个Cell上将不会发生
                 Note: 如果希望某个反应只在部分Cell上发生，则可以利用这个属性来实现
             """
@@ -7760,15 +7782,16 @@ class Seepage(HasHandle, HasCells):
 
     class FluDef(HasHandle):
         """
-        流体属性的定义。其中流体的密度和粘性系数都被视为压力和温度的函数，并且利用二维插值来存储。
-            比热容被视为常数(这可能不严谨，但是大多数情况下够用)
+        流体定义。在本程序中，我们假设流体的密度和粘性系数都是压力和温度的函数，并且利用二维插值来存储。
+            比热容被视为常数(这可能不严谨，但是大多数情况下够用).
+        流体定义被存储在Seepage中，被所有的Cell所共用。
         """
         core.use(c_void_p, 'new_fludef')
         core.use(None, 'del_fludef', c_void_p)
 
         def __init__(self, den=1000.0, vis=1.0e-3, specific_heat=4200, name=None, handle=None):
             """
-            构造函数。当handle为None的时候，会进行必要的初始化.
+            构造函数。当handle为None的时候，会进行必要的初始化(否则，给定的初始化参数不起作用).
             """
             super(Seepage.FluDef, self).__init__(handle, core.new_fludef, core.del_fludef)
             if handle is None:
@@ -7848,7 +7871,8 @@ class Seepage(HasHandle, HasCells):
         @property
         def den(self):
             """
-            流体密度的插值 （只有当组分的数量为0的时候才可以使用）
+            流体密度的插值
+                只有当组分的数量为0的时候才可以使用, 否则触发异常
             """
             assert self.component_number == 0
             return Interp2(handle=core.fludef_get_den(self.handle))
@@ -7865,7 +7889,8 @@ class Seepage(HasHandle, HasCells):
         @property
         def vis(self):
             """
-            流体粘性的插值（只有当组分的数量为0的时候才可以使用）
+            流体粘性的插值
+                只有当组分的数量为0的时候才可以使用, 否则触发异常
             """
             assert self.component_number == 0
             return Interp2(handle=core.fludef_get_vis(self.handle))
@@ -7973,10 +7998,24 @@ class Seepage(HasHandle, HasCells):
             core.fludef_clone(self.handle, other.handle)
 
     class FluData(HasHandle):
+        """
+        流体数据(存储在Cell中)。一个流体数据由以下属性组成：
+        1、流体的质量、密度、粘性系数。
+        2、流体的自定义属性。
+            在FluData内存储一个浮点型的数组，存储一系列自定义的属性，用于辅助存储和计算。自定义属性从0开始编号。
+        3、流体的组分。
+            流体的组分亦采用FluData类进行定义（即FluData为一个嵌套的类），因此，流体的组分也具有和流体同样的数据。流体的组分存储在
+            一个数组内，且从0开始编号。当流体的组分数量不为0的时候，则存储在流体自身的数据自动失效，并利用组分的属性来自动计算
+            这些组分作为一个整体的属性。如：流体的质量等于各个组分的质量之和，体积等于各个组分的体积之和，自定义属性则等于不同组分
+            根据质量的加权平均。
+        """
         core.use(c_void_p, 'new_fluid')
         core.use(None, 'del_fluid', c_void_p)
 
         def __init__(self, mass=None, den=None, vis=None, vol=None, handle=None):
+            """
+            创建给定handle的引用，或者创建流体数据.
+            """
             super(Seepage.FluData, self).__init__(handle, core.new_fluid, core.del_fluid)
             if handle is None:
                 if mass is not None:
@@ -8087,15 +8126,17 @@ class Seepage(HasHandle, HasCells):
             """
             流体密度 kg/m^3
                 注意: 流体不可压缩，除非外部修改，否则密度永远维持不变
+            假设：
+                在计算的过程中，流体的密度不会发生剧烈的变化，因此，在一次迭代的过程中，流体的密度可以
+                视为不变的。在一次迭代之后，可以根据最新的温度和压力来更新流体的密度。
+            注意：
+                在利用TherFlowConfig来iterate的时候，如果模型中存储了流体的定义，那么流体密度的
+                更新会被自动调用，从而保证流体的密度总是最新的。
             """
             return core.fluid_get_den(self.handle)
 
         @den.setter
         def den(self, value):
-            """
-            流体密度 kg/m^3
-                注意: 流体不可压缩，除非外部修改，否则密度永远维持不变
-            """
             assert value > 0
             core.fluid_set_den(self.handle, value)
 
@@ -8107,22 +8148,21 @@ class Seepage(HasHandle, HasCells):
             """
             流体粘性系数. Pa.s
                 注意: 除非外部修改，否则vis维持不变
+            流体粘性的更新规则和密度相似。
             """
             return core.fluid_get_vis(self.handle)
 
         @vis.setter
         def vis(self, value):
-            """
-            流体粘性系数. Pa.s
-                注意: 除非外部修改，否则vis维持不变
-            """
             assert value > 0
             core.fluid_set_vis(self.handle, value)
 
         @property
         def is_solid(self):
             """
-            该流体单元在计算内核中是否可以被视为固体；
+            该流体单元在计算内核中是否可以被视为固体.
+            注意：
+                该属性将被弃用
             """
             warnings.warn('FluData.is_solid will be deleted after 2024-5-5', DeprecationWarning)
             return self.vis >= 0.5e30
@@ -8133,10 +8173,10 @@ class Seepage(HasHandle, HasCells):
         def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
             """
             第index个流体自定义属性。当两个流体数据相加时，自定义属性将根据质量进行加权平均。
-            当index个属性不存在时，默认为无穷大的一个值(1.0e100以上的浮点数)
             """
             if index is None:
                 return default_val
+            # 当index个属性不存在时，默认为无穷大的一个值(1.0e100以上的浮点数)
             value = core.fluid_get_attr(self.handle, index)
             if min <= value <= max:
                 return value
@@ -8145,8 +8185,7 @@ class Seepage(HasHandle, HasCells):
 
         def set_attr(self, index, value):
             """
-            第index个流体自定义属性。当两个流体数据相加时，自定义属性将根据质量进行加权平均。
-            当index个属性不存在时，默认为无穷大的一个值(1.0e100以上的浮点数)
+            参考get_attr函数
             """
             if index is None:
                 return self
@@ -8158,6 +8197,9 @@ class Seepage(HasHandle, HasCells):
         core.use(None, 'fluid_clone', c_void_p, c_void_p)
 
         def clone(self, other):
+            """
+            拷贝所有的数据
+            """
             assert isinstance(other, Seepage.FluData)
             core.fluid_clone(self.handle, other.handle)
 
@@ -8233,17 +8275,6 @@ class Seepage(HasHandle, HasCells):
             core.fluid_set_components(self.handle, fdef.handle)
 
     class Fluid(FluData):
-        """
-        Fluid为Cell内存储的流体数据。Fluid由以下属性组成：
-
-        1、流体的质量、密度、粘性系数。
-        2、流体的自定义属性。在Fluid内存储一个浮点型的数组，存储一系列自定义的属性，用于辅助存储和计算。自定义属性从0开始编号。
-        3、流体的组分。
-            注意：流体的组分亦采用Fluid类进行定义（即Fluid为一个嵌套的类），因此，流体的组分也具有和流体同样的数据。流体的组分存储在
-                一个数组内，且从0开始编号。当流体的组分数量不为0的时候，则存储在流体自身的数据自动失效，并利用组分的属性来自动计算
-                这些组分作为一个整体的属性。如：流体的质量等于各个组分的质量之和，体积等于各个组分的体积之和，自定义属性则等于不同组分
-                根据质量的加权平均。
-        """
         core.use(c_void_p, 'seepage_cell_get_fluid', c_void_p, c_size_t)
 
         def __init__(self, cell, fid):
@@ -8323,6 +8354,9 @@ class Seepage(HasHandle, HasCells):
 
         @property
         def x(self):
+            """
+            在三维空间中的x坐标
+            """
             return core.seepage_cell_get_pos(self.handle, 0)
 
         @x.setter
@@ -8331,6 +8365,9 @@ class Seepage(HasHandle, HasCells):
 
         @property
         def y(self):
+            """
+            在三维空间中的y坐标
+            """
             return core.seepage_cell_get_pos(self.handle, 1)
 
         @y.setter
@@ -8339,6 +8376,9 @@ class Seepage(HasHandle, HasCells):
 
         @property
         def z(self):
+            """
+            在三维空间中的z坐标
+            """
             return core.seepage_cell_get_pos(self.handle, 2)
 
         @z.setter
@@ -8354,9 +8394,6 @@ class Seepage(HasHandle, HasCells):
 
         @pos.setter
         def pos(self, value):
-            """
-            该Cell在三维空间的坐标
-            """
             assert len(value) == 3
             for dim in range(3):
                 core.seepage_cell_set_pos(self.handle, dim, value[dim])
@@ -8365,12 +8402,10 @@ class Seepage(HasHandle, HasCells):
             """
             返回距离另外一个Cell或者另外一个位置的距离
             """
-            p0 = self.pos
             if hasattr(other, 'pos'):
-                p1 = other.pos
+                return get_distance(self.pos, other.pos)
             else:
-                p1 = other
-            return ((p0[0] - p1[0]) ** 2 + (p0[1] - p1[1]) ** 2 + (p0[2] - p1[2]) ** 2) ** 0.5
+                return get_distance(self.pos, other)
 
         core.use(c_double, 'seepage_cell_get_v0', c_void_p)
         core.use(None, 'seepage_cell_set_v0', c_void_p, c_double)
@@ -8378,15 +8413,14 @@ class Seepage(HasHandle, HasCells):
         @property
         def v0(self):
             """
-            当流体压力等于0时，该Cell内流体的存储空间 m^3
+            当流体压力等于0时，该Cell内流体的存储空间 m^3.
+            注意:
+                务必设置合适的刚度和孔隙度，使得v0的数值大于0
             """
             return core.seepage_cell_get_v0(self.handle)
 
         @v0.setter
         def v0(self, value):
-            """
-            当流体压力等于0时，该Cell内流体的存储空间 m^3
-            """
             assert value >= 1.0e-10
             core.seepage_cell_set_v0(self.handle, value)
 
@@ -8396,17 +8430,12 @@ class Seepage(HasHandle, HasCells):
         @property
         def k(self):
             """
-            The amount by which the volume (m^3) of the pore space increases when the fluid pressure increases by 1Pa.
-            The smaller the value of k, the greater the stiffness of the pore space
+            流体压力增加1Pa的时候，孔隙体积的增加量(m^3). k的数值越小，则刚度越大.
             """
             return core.seepage_cell_get_k(self.handle)
 
         @k.setter
         def k(self, value):
-            """
-            The amount by which the volume (m^3) of the pore space increases when the fluid pressure increases by 1Pa.
-            The smaller the value of k, the greater the stiffness of the pore space
-            """
             core.seepage_cell_set_k(self.handle, value)
 
         def set_pore(self, p, v, dp, dv):
@@ -8424,13 +8453,13 @@ class Seepage(HasHandle, HasCells):
 
         def v2p(self, v):
             """
-            Given the volume of fluid in the Cell, calculate the pressure of the fluid
+            给定内部流体的体积，根据孔隙刚度计算孔隙内流体的压力.
             """
             return (v - self.v0) / self.k
 
         def p2v(self, p):
             """
-            Calculate the volume of the fluid given the fluid pressure in the Cell
+            给定内部流体的压力，根据孔隙刚度计算内部流体的体积
             """
             return self.v0 + p * self.k
 
@@ -8477,10 +8506,6 @@ class Seepage(HasHandle, HasCells):
 
         @fluid_number.setter
         def fluid_number(self, value):
-            """
-            The amount of fluid in the cell
-            (at least set to 1, and needs to be set to the same value for all cells in the model)
-            """
             assert 0 <= value < 10
             core.seepage_cell_set_fluid_n(self.handle, value)
 

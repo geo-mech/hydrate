@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 from PyQt5.QtCore import QRegExp, Qt
 from PyQt5.QtGui import QFont, QColor, QSyntaxHighlighter, QTextCharFormat
 

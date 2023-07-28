@@ -1,10 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 用于程序的配置存储。这里所有函数均不抛出异常
 """
 
 import os
 import warnings
+
 from PyQt5 import QtGui, QtWidgets, QtCore
 
 try:

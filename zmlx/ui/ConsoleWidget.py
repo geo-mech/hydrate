@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
-
+import shutil
+import timeit
 
 from zml import gui, time_string, time2str
 from zmlx.ui.BreakPoint import BreakPoint
@@ -9,8 +9,6 @@ from zmlx.ui.ConsoleOutput import ConsoleOutput
 from zmlx.ui.ConsoleThread import ConsoleThread
 from zmlx.ui.GuiItems import *
 from zmlx.ui.SharedValue import SharedValue
-import shutil
-import timeit
 
 
 class ConsoleWidget(QtWidgets.QWidget):

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 # 导入matplotlib模块并使用Qt5Agg
 import os
 

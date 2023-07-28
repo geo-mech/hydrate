@@ -131,10 +131,13 @@ class ConfigFile:
         if default is None and doc is None:
             return
 
-        self.file.put(*self.keys, key, 'value', default)
-        self.file.put(*self.keys, key, 'default', default)
-        self.file.put(*self.keys, key, 'type', f'{type(default)}')
-        self.file.put(*self.keys, key, 'doc', doc)
+        if default is not None:
+            self.file.put(*self.keys, key, 'value', default)
+            self.file.put(*self.keys, key, 'default', default)
+            self.file.put(*self.keys, key, 'type', f'{type(default)}')
+        if doc is not None:
+            self.file.put(*self.keys, key, 'doc', doc)
+
         self.file.save()
 
         # 返回默认值

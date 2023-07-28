@@ -1,5 +1,7 @@
 from zmlx.plt.scatter import scatter
 from zmlx.plt.tricontourf import tricontourf
 from zmlx.plt.plotxy import plotxy
+import warnings
 
-__all__ = ['scatter', 'tricontourf', 'plotxy']
+warnings.warn('zmlx.ui.Matplot will be deleted. Use zmlx.plt instead', DeprecationWarning)
+

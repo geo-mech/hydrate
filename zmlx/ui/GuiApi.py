@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 from PyQt5 import QtCore, QtWidgets
 
 from zmlx.ui.Config import get_text
