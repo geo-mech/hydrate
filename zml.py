@@ -2734,8 +2734,8 @@ class Interp2(HasHandle):
         """
         创建插值。其中y=get_value(x)为给定的函数
         """
-        assert xmin < xmax and dx > 0
-        assert ymin < ymax and dy > 0
+        assert xmin <= xmax and dx >= 0
+        assert ymin <= ymax and dy >= 0
         Kernel = CFUNCTYPE(c_double, c_double, c_double)
         core.interp2_create(self.handle, xmin, dx, xmax, ymin, dy, ymax, Kernel(get_value))
 
@@ -2843,9 +2843,9 @@ class Interp3(HasHandle):
         """
         创建插值。其中y=get_value(x)为给定的函数
         """
-        assert xmin < xmax and dx > 0
-        assert ymin < ymax and dy > 0
-        assert zmin < zmax and dz > 0
+        assert xmin <= xmax and dx >= 0
+        assert ymin <= ymax and dy >= 0
+        assert zmin <= zmax and dz >= 0
         Kernel = CFUNCTYPE(c_double, c_double, c_double, c_double)
         core.interp3_create(self.handle, xmin, dx, xmax, ymin, dy, ymax, zmin, dz, zmax,
                             Kernel(get_value))
@@ -7789,34 +7789,39 @@ class Seepage(HasHandle, HasCells):
         core.use(c_void_p, 'new_fludef')
         core.use(None, 'del_fludef', c_void_p)
 
-        def __init__(self, den=1000.0, vis=1.0e-3, specific_heat=4200, name=None, handle=None):
+        def __init__(self, den=1000.0, vis=1.0e-3, specific_heat=4200, name=None, path=None, handle=None):
             """
             构造函数。当handle为None的时候，会进行必要的初始化(否则，给定的初始化参数不起作用).
             """
             super(Seepage.FluDef, self).__init__(handle, core.new_fludef, core.del_fludef)
             if handle is None:
                 # 现在，这是一个新建数据
-                if isinstance(vis, Interp2):
-                    self.vis = vis
+                if path is not None:
+                    self.load(path)
                 else:
-                    assert 1.0e-7 < vis < 1.0e40
-                    val = Interp2()
-                    val.create(0.1e6, 30e6, 200e6, 1, 3000, 10000.0, lambda p, t: vis)
-                    self.vis = val
+                    if isinstance(vis, Interp2):
+                        self.vis = vis
+                    else:
+                        assert 1.0e-7 < vis < 1.0e40
+                        val = Interp2()
+                        val.create(0.1e6, 30e6, 200e6, 1, 3000, 10000.0, lambda p, t: vis)
+                        self.vis = val
 
-                if isinstance(den, Interp2):
-                    self.den = den
-                else:
-                    assert 1.0e-3 < den < 1.0e5
-                    val = Interp2()
-                    val.create(0.1e6, 30e6, 200e6, 1, 3000, 10000.0, lambda p, t: den)
-                    self.den = val
+                    if isinstance(den, Interp2):
+                        self.den = den
+                    else:
+                        assert 1.0e-3 < den < 1.0e5
+                        val = Interp2()
+                        val.create(0.1e6, 30e6, 200e6, 1, 3000, 10000.0, lambda p, t: den)
+                        self.den = val
 
-                assert 100 < specific_heat < 100000
-                self.specific_heat = specific_heat
+                    assert 100 < specific_heat < 100000
+                    self.specific_heat = specific_heat
 
-                if name is not None:
-                    self.name = name
+                    if name is not None:
+                        self.name = name
+            else:
+                assert path is None
 
         core.use(None, 'fludef_save', c_void_p, c_char_p)
 

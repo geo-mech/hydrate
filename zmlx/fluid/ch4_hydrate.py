@@ -1,10 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 定义甲烷水合物的基本参数
 """
 
-from zml import data_version, TherFlowConfig
 import warnings
+
+from zml import data_version, TherFlowConfig
 
 """
 甲烷水合物的比热随着温度和压力略有变化，但是变化的幅度很小，所以可以视为常数:

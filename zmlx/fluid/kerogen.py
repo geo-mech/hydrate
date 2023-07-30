@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
-
+import warnings
 
 from zml import TherFlowConfig
-import warnings
 
 
 def create_flu_v0():

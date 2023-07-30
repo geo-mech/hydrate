@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 from zml import *
 import random
 import numpy as np
@@ -76,6 +73,7 @@ def show(model):
         ax.legend()
         ax.grid(True)
         ax.axis('equal')
+
     plot(f)
 
 
@@ -93,8 +91,8 @@ def solve(model):
             show(model)
 
 
-def execute(guimode=True, close_after_done=False):
-    if guimode:
+def execute(gui_mode=True, close_after_done=False):
+    if gui_mode:
         gui(lambda: solve(create()), close_after_done=close_after_done)
     else:
         solve(create())
@@ -102,4 +100,3 @@ def execute(guimode=True, close_after_done=False):
 
 if __name__ == '__main__':
     execute()
-

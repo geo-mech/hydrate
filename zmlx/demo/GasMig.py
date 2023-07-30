@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """
 测试：纵向二维。浮力作用下气体运移成藏过程模拟。
 """
 
 from zmlx import *
-from zmlx.fluid import *
 from zmlx.alg.make_fname import make_fname
 
 
@@ -90,9 +88,9 @@ def solve(config, model, folder=None):
     information('计算结束', iterate.time_info())
 
 
-def execute(guimode=True, close_after_done=False):
+def execute(gui_mode=True, close_after_done=False):
     config, model = create()
-    if guimode:
+    if gui_mode:
         gui.execute(solve, close_after_done=close_after_done,
                     args=(config, model, 'GasMig'))
     else:

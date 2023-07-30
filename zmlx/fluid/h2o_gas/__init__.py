@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
-
+import os
 
 from zml import Interp2, TherFlowConfig
-import os
 
 
 def create():

@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 from zmlx import *
 
 
@@ -50,8 +47,8 @@ def solve(config, model):
             print(f'step = {step}, dt = {dt}, time = {t}, report={r}')
 
 
-def execute(guimode=True, close_after_done=False):
-    if guimode:
+def execute(gui_mode=True, close_after_done=False):
+    if gui_mode:
         gui.execute(lambda: solve(*create()), close_after_done=close_after_done)
     else:
         solve(*create())
@@ -59,4 +56,3 @@ def execute(guimode=True, close_after_done=False):
 
 if __name__ == '__main__':
     execute()
-

@@ -101,25 +101,17 @@ class ConfigFile:
             else:
                 self.keys = list(keys)
 
-    def put(self, key, value, direct=False):
+    def put(self, key, value):
         """
         存入数据(和get对应)
         """
-        if direct:
-            self.file.put(*self.keys, key, value)
-            self.file.save()
-        else:
-            self.file.put(*self.keys, key, 'value', value)
-            self.file.save()
+        self.file.put(*self.keys, key, 'value', value)
+        self.file.save()
 
-    def get(self, key, default=None, doc=None, direct=False):
+    def get(self, key, default=None, doc=None):
         """
         读取数据(和put对应)
         """
-        if direct:
-            assert default is None and doc is None
-            return self.file.get(*self.keys, key)
-
         value = self.file.get(*self.keys, key, 'value')
         if value is not None:
             if default is not None:
@@ -143,11 +135,11 @@ class ConfigFile:
         # 返回默认值
         return default
 
-    def __call__(self, key, default=None, doc=None, direct=False):
+    def __call__(self, key, default=None, doc=None):
         """
         读取数据(和put对应)
         """
-        return self.get(key, default=default, doc=doc, direct=direct)
+        return self.get(key, default=default, doc=doc)
 
     def child(self, key, doc=None):
         """
@@ -156,9 +148,10 @@ class ConfigFile:
         assert isinstance(self.keys, list)
         config = ConfigFile(file=self.file, keys=self.keys + [key, ])
         if doc is not None:
-            value = config.get('doc', direct=True)
+            value = config.file.get(*config.keys, 'doc')
             if value is None:
-                config.put('doc', doc, direct=True)
+                config.file.put(*config.keys, 'doc', doc)
+                config.file.save()
         return config
 
     def __getitem__(self, key):
@@ -166,6 +159,14 @@ class ConfigFile:
         返回其中一个分支
         """
         return self.child(key)
+
+    @property
+    def folder(self):
+        """
+        Json文件所在文件夹
+        """
+        if self.path is not None:
+            return os.path.dirname(self.path)
 
     @property
     def path(self):
@@ -181,14 +182,68 @@ class ConfigFile:
         """
         return self.file.get(*self.keys)
 
-    def as_path(self, key, default=None, doc=None, direct=False):
+    def set_dirs(self, *args):
         """
-        返回一个文件路径(以这个json所在的文件夹为根目录的相对路径)
+        设置数据目录
         """
+        self.file.put('data_dirs', list(args))
+        self.file.save()
+
+    def add_dirs(self, *args):
+        """
+        添加数据目录
+        """
+        if len(args) > 0:
+            value = self.file.get('data_dirs')
+            if not isinstance(value, list):
+                value = []
+            count = 0
+            for name in args:
+                if isinstance(name, str):
+                    value.append(name)
+                    count += 1
+            if count > 0:
+                self.set_dirs(*value)
+
+    def get_dirs(self):
+        """
+        返回数据目录(确保返回的目录必然是存在的)
+        """
+        dirs = self.file.get('data_dirs')
+        if isinstance(dirs, list):
+            folders = []
+            for name in dirs:
+                if isinstance(name, str):
+                    if os.path.isdir(name):
+                        folders.append(name)
+                    else:
+                        if self.path is not None:
+                            path = join_paths(self.folder, name)
+                            if os.path.isdir(path):
+                                folders.append(path)
+            return folders
+
+    def find_file(self, filename=None, key=None, default=None, doc=None):
+        """
+        查找已经存在的文件(或者文件夹)，并且返回文路径
+        """
+        if filename is None:
+            if key is not None:
+                if default is None:
+                    default = ''
+                filename = self.get(key=key, default=default, doc=doc)
+
+        if filename is None:
+            return
+
         if self.path is not None:
-            if default is None:
-                default = ''
-            if doc is None:
-                doc = 'relative file path'
-            return join_paths(os.path.dirname(self.path),
-                              self.get(key=key, default=default, doc=doc, direct=direct))
+            path = join_paths(os.path.dirname(self.path), filename)
+            if os.path.exists(path):
+                return path
+
+        dirs = self.get_dirs()
+        if dirs is not None:
+            for folder in dirs:
+                path = join_paths(folder, filename)
+                if os.path.exists(path):
+                    return path

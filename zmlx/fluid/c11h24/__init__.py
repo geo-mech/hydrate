@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
-
-
-from zml import Interp2, TherFlowConfig
 import os
 import warnings
+
+from zml import Interp2, TherFlowConfig
 
 
 def create():

@@ -1,8 +1,8 @@
-
 from zmlx.alg.dfn_v3 import *
 from zmlx.alg.rectangle_intersect_3d import *
 import numpy as np
 import os
+
 # 创建矩形（都是竖直方向的矩形）
 fractures = create_demo()
 
@@ -36,12 +36,12 @@ for i in range(len(rc3)):
             (rc3[j][6], rc3[j][7], rc3[j][8]))
         if intersec is not None:
             # print(i, j)
-            test_links.append([i,j])
+            test_links.append([i, j])
             num += 1
 
 # 保存计算得到相交矩形序号
 cal_path = os.path.join(os.path.dirname(__file__), 'rectangle_intersect_3d_test', 'cal_links.txt')
-np.savetxt(cal_path, np.array(test_links),fmt='%4d') 
+np.savetxt(cal_path, np.array(test_links), fmt='%4d')
 
 # 输出计算得到相交对数
 print(f'计算得到相交矩形对数{num}')

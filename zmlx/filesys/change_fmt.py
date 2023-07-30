@@ -38,7 +38,7 @@ def change_fmt(convert=None, ext=None, path=None, keywords=None, keep_file=True,
             print('Succeed!')
 
 
-def proc(argv):
+def main(argv):
     """
     处理预定义的一些命令
     """
@@ -109,4 +109,4 @@ def proc(argv):
 
 
 if __name__ == '__main__':
-    proc(sys.argv)
+    main(sys.argv)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 定义甲烷气体的参数
 
@@ -7,6 +6,7 @@ by 张召彬
 
 import math
 import warnings
+
 from zml import Interp2, TherFlowConfig, data_version
 
 

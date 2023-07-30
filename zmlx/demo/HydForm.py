@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 测试：纵向二维。浮力作用下气体运移成藏过程模拟。
 """
@@ -9,7 +8,7 @@ from zmlx.alg.make_fname import make_fname
 
 def create():
     mesh = SeepageMesh.create_cube(np.linspace(0, 300, 150), np.linspace(0, 500, 250), (-0.5, 0.5))
-    config = create_hydconfig(has_inh=True,        # 存在抑制剂
+    config = create_hydconfig(has_inh=True,  # 存在抑制剂
                               has_ch4_in_liq=True  # 存在溶解气
                               )
     config.dt_max = 3600 * 24
@@ -97,9 +96,9 @@ def solve(config, model, folder=None):
     information('计算结束', iterate.time_info())
 
 
-def execute(guimode=True, close_after_done=False):
+def execute(gui_mode=True, close_after_done=False):
     config, model = create()
-    if guimode:
+    if gui_mode:
         gui.execute(solve, close_after_done=close_after_done,
                     args=(config, model, 'HydForm'))
     else:

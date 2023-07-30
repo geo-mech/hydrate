@@ -135,4 +135,3 @@ def test_hf2():
 
 if __name__ == '__main__':
     gui_exec(test_hf2, close_after_done=False)
-

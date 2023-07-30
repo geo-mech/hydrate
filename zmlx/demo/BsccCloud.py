@@ -8,7 +8,6 @@ import numpy as np
 from zmlx.alg.sbatch import sbatch
 from zml import make_parent
 
-
 # 进行因素分析的时候，可变变量的数量，应该等于函数run的参数的数量
 n_vari = 2
 
@@ -41,4 +40,3 @@ def main(argv):
 
 if __name__ == '__main__':
     main(sys.argv)
-

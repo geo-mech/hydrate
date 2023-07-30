@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 from zmlx.alg.rectangle_intersect_3d import calculate_rectangle_vertices, calculate_3d_rectangle_intersect
 from zmlx.data import rect_intersec_3d as rect
+
 """
 单独绘制两个矩形，观察相交情况是否与计算一致、
 
@@ -26,7 +27,6 @@ def plot_rectangle(vertices, ax):
 
 
 if __name__ == '__main__':
-
     # 创建3D图形对象
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')

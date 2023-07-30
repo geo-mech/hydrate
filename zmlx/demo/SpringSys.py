@@ -1,8 +1,5 @@
-# -*- coding: utf-8 -*-
-
-
-from zmlx.data.mesh_c10000 import x, y, tri
 from zmlx import *
+from zmlx.data.mesh_c10000 import x, y, tri
 import math
 
 
@@ -12,6 +9,7 @@ def plot(z):
         ax.set_aspect('equal')
         cntr2 = ax.tricontourf(x, y, z, levels=20, cmap="coolwarm")
         fig.colorbar(cntr2, ax=ax)
+
     zml.plot(f, clear=True, caption='位移场')
 
 
@@ -51,7 +49,6 @@ def get_node_pos(model):
 
 
 def main():
-
     model = create_model(tri, x, y)
     print(model)
 

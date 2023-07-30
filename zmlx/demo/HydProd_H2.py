@@ -1,6 +1,5 @@
 from zmlx import *
 
-
 config = create_hydconfig()
 config.dt_min = 1
 config.dt_max = 24 * 3600
@@ -24,9 +23,9 @@ def create():
 
     def get_s(*args):
         if is_prod(*args):
-            return [(0, ), (1, ), (0, )]
+            return [(0,), (1,), (0,)]
         else:
-            return [(0, ), (0.6, ), (0.4, )]
+            return [(0,), (0.6,), (0.4,)]
 
     model = config.create(mesh=mesh,
                           porosity=lambda *args: 1e6 if boundary(*args) or is_prod(*args) else 0.3,
@@ -65,4 +64,3 @@ def solve(model):
 
 if __name__ == '__main__':
     gui.execute(lambda: solve(create()), close_after_done=False)
-

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Define the property of oil.
 
@@ -19,9 +18,10 @@ p = 10000000.0Pa, T = 500K, vis = 0.0063358958456372905Pa.s, den = 898.062894kg/
 
 """
 
-from math import log, exp
-from zml import Interp2, TherFlowConfig
 import warnings
+from math import log, exp
+
+from zml import Interp2, TherFlowConfig
 
 
 def create(tmin=270, tmax=1000, pmin=1e6, pmax=40e6):

@@ -1,10 +1,10 @@
-# -*- coding: utf-8 -*-
 """
 定义二氧化碳水合物的基本参数
 """
 
-from zml import TherFlowConfig
 import warnings
+
+from zml import TherFlowConfig
 
 
 def create():

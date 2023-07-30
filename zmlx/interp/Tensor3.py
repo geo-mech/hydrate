@@ -11,7 +11,7 @@ class Interp3:
     关于三阶张量的三维插值. 使用NearestNDInterpolator的这种插值的方式
     """
 
-    def __init__(self, fname=None):
+    def __init__(self, filename=None):
         """
         初始化.           数据格式:
             x  y  z  hmax  hmin  angl  vert
@@ -23,9 +23,9 @@ class Interp3:
         self.hmin = None
         self.angl = None
         self.vert = None
-        self.create(fname)
+        self.create(filename)
 
-    def create(self, fname):
+    def create(self, filename):
         """
         读取数据，创建插值. 数据格式:
             x  y  z  hmax  hmin  angl  vert
@@ -33,7 +33,7 @@ class Interp3:
         或者如果只有一行数据，则格式为：
             hmax  hmin  angl  vert
         """
-        data = np.loadtxt(fname)
+        data = np.loadtxt(filename)
         if len(data.shape) == 2:
             assert data.shape[0] >= 1, f'shape = {data.shape}'
             assert data.shape[1] >= 7, f'shape = {data.shape}'
@@ -61,33 +61,34 @@ class Interp3:
         return zml.Tensor3(xx=ts2.xx, yy=ts2.yy, zz=vert, xy=ts2.xy, yz=0, zx=0)
 
 
-def from_config(config, default_name=None, default_text=None):
+def from_file(file=None, filename=None, text=None):
     """
     根据参数配置文件来创建一个张量场
     """
-    if not isinstance(config, ConfigFile):
-        config = ConfigFile(config)
+    if file is not None:
+        if not isinstance(file, ConfigFile):
+            file = ConfigFile(file)
 
-    assert isinstance(config, ConfigFile)
+    if filename is None:
+        filename = ''
 
-    if default_name is None:
-        default_name = ''
-    # 尝试从文件中读取数据
-    name = config.as_path('filename', default=default_name,
-                          doc='first, try to read file. format: [x  y  z  hmax  hmin  angl  vert]')
+    if file is not None:
+        filename = file.find_file(key='filename', default=filename,
+                                  doc='first, try to read file. format: [x  y  z  hmax  hmin  angl  vert]')
 
-    if name is not None:
-        if os.path.isfile(name):
-            return Interp3(fname=name)
+    if filename is not None:
+        if os.path.isfile(filename):
+            return Interp3(filename=filename)
 
     # 尝试直接读取
-    if default_text is None:
-        default_text = "0 0 0 0"
+    if text is None:
+        text = "0 0 0 0"
 
-    text = config.get('text', default=default_text,
-                      doc='use when name is not a file. format: [hmax  hmin  angl  vert]')
+    if file is not None:
+        text = file.get('text', default=text,
+                        doc='use when name is not a file. format: [hmax  hmin  angl  vert]')
 
-    return Interp3(fname=StringIO(text))
+    return Interp3(filename=StringIO(text))
 
 
 def test_1():

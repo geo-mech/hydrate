@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 from zmlx import *
 from zmlx.utility.CapillaryEffect import CapillaryEffect
 
@@ -136,9 +133,9 @@ def solve(model, cap):
             show(x, y, model.numpy.fluids(1).vol, caption='饱和度')
 
 
-def execute(guimode=True, close_after_done=False):
+def execute(gui_mode=True, close_after_done=False):
     model, cap = create()
-    if guimode:
+    if gui_mode:
         gui.execute(solve, args=(model, cap), close_after_done=close_after_done)
     else:
         solve(model, cap)
