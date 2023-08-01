@@ -28,10 +28,11 @@ def read(path, encoding=None, default=None):
 
 
 class Wrapper:
-    def __init__(self, path=None):
+    def __init__(self, path=None, read_only=None):
         """
         关联一个Json文件
         """
+        self.read_only = False if read_only is None else read_only
         self.path = path
         self.data = {}
         if self.path is not None:
@@ -44,8 +45,9 @@ class Wrapper:
         """
         保存到文件
         """
-        if self.path is not None:
-            write(self.path, self.data)
+        if not self.read_only:
+            if self.path is not None:
+                write(self.path, self.data)
 
     def get(self, *args):
         """
@@ -83,19 +85,21 @@ class ConfigFile:
     json输入文件(配置文件)
     """
 
-    def __init__(self, file, keys=None):
+    def __init__(self, file, keys=None, read_only=None):
         """
         初始化
         """
         if isinstance(file, ConfigFile):
             assert isinstance(file.keys, list)
+            assert read_only is None
             self.file = file.file
             self.keys = file.keys + list(keys)
         else:
             if isinstance(file, Wrapper):
                 self.file = file
+                assert read_only is None
             else:
-                self.file = Wrapper(file)
+                self.file = Wrapper(file, read_only=read_only)
             if keys is None:
                 self.keys = []
             else:
@@ -225,7 +229,7 @@ class ConfigFile:
 
     def find_file(self, filename=None, key=None, default=None, doc=None):
         """
-        查找已经存在的文件(或者文件夹)，并且返回文路径
+        查找已经存在的文件(或者文件夹)，并且返回文路径. 确保返回的类型为str
         """
         if filename is None:
             if key is not None:
@@ -234,10 +238,11 @@ class ConfigFile:
                 filename = self.get(key=key, default=default, doc=doc)
 
         if filename is None:
-            return
+            return ''
 
         if self.path is not None:
             path = join_paths(os.path.dirname(self.path), filename)
+            assert path is not None
             if os.path.exists(path):
                 return path
 
@@ -245,5 +250,13 @@ class ConfigFile:
         if dirs is not None:
             for folder in dirs:
                 path = join_paths(folder, filename)
+                assert path is not None
                 if os.path.exists(path):
                     return path
+
+        return ''
+
+
+def get_child(json, key, doc=None):
+    if isinstance(json, ConfigFile):
+        return json.child(key=key, doc=doc)

@@ -4,7 +4,7 @@ from zmlx.alg.clamp import clamp
 import random
 from zmlx.geometry.rect_v3 import intersected, get_area
 from zmlx.geometry.rect_3d import from_v3
-from zmlx.io.json import ConfigFile
+from zmlx.io.json_ex import ConfigFile
 
 
 def create_fractures(box=None, p21=None, angles=None, lengths=None, heights=None, l_min=None):
@@ -142,21 +142,21 @@ def create_demo(heights=None):
     return fractures
 
 
-def from_file_(file=None, box=None,
+def from_json_(json=None, box=None,
                p21=0.0, a_min=0.0, a_max=0.0, l_min=10.0, l_max=20.0, h_min=5.0, h_max=10.0):
     """
     根据配置创建一组裂缝
     """
-    if file is not None:
-        if not isinstance(file, ConfigFile):
-            assert isinstance(file, str)
-            file = ConfigFile(file)
+    if json is not None:
+        if not isinstance(json, ConfigFile):
+            assert isinstance(json, str)
+            json = ConfigFile(json)
 
     if box is None:
         box = [0, 0, 0, 1, 1, 1]
 
-    if file is not None:
-        box = file(key='box', default=box,
+    if json is not None:
+        box = json(key='box', default=box,
                    doc='The position range of the fractures')
 
     assert len(box) == 6
@@ -166,24 +166,24 @@ def from_file_(file=None, box=None,
     assert y0 < y1
     assert z0 < z1
 
-    if isinstance(file, ConfigFile):
-        p21 = file(key='p21', default=p21, doc='the fracture density')
+    if isinstance(json, ConfigFile):
+        p21 = json(key='p21', default=p21, doc='the fracture density')
 
     assert 0.0 <= p21 < 2.0
 
     if p21 > 0:
-        if isinstance(file, ConfigFile):
-            a_min = file('a_min', default=a_min,
+        if isinstance(json, ConfigFile):
+            a_min = json('a_min', default=a_min,
                          doc='The minimum angle between fracture and x axis')
-            a_max = file('a_max', default=a_max,
+            a_max = json('a_max', default=a_max,
                          doc='The maximum angle between fracture and x axis')
-            l_min = file('l_min', default=l_min,
+            l_min = json('l_min', default=l_min,
                          doc='The minimum fracture length')
-            l_max = file('l_max', default=l_max,
+            l_max = json('l_max', default=l_max,
                          doc='The maximum fracture length')
-            h_min = file('h_min', default=h_min,
+            h_min = json('h_min', default=h_min,
                          doc='The minimum fracture height')
-            h_max = file('h_max', default=h_max,
+            h_max = json('h_max', default=h_max,
                          doc='The maximum fracture height')
         return create_fractures(box=box, p21=p21, angles=linspace(a_min, a_max, 100),
                                 lengths=linspace(l_min, l_max, 100),
@@ -192,18 +192,18 @@ def from_file_(file=None, box=None,
         return []
 
 
-def from_file(file=None, count=0, box=None,
+def from_json(json=None, count=0, box=None,
               p21=0.0, a_min=0.0, a_max=0.0, l_min=10.0, l_max=20.0, h_min=5.0, h_max=10.0):
     """
     根据给定的输入配置，来创建一个dfn
     """
-    if file is not None:
-        if not isinstance(file, ConfigFile):
-            assert isinstance(file, str)
-            file = ConfigFile(file)
+    if json is not None:
+        if not isinstance(json, ConfigFile):
+            assert isinstance(json, str)
+            json = ConfigFile(json)
 
-    if file is not None:
-        count = file(key='count',
+    if json is not None:
+        count = json(key='count',
                      default=0,
                      doc='The count of fracture sets')
     assert 0 <= count < 10
@@ -214,8 +214,8 @@ def from_file(file=None, count=0, box=None,
     fractures = []
 
     for i in range(count):
-        temp = from_file_(
-            file=file.child(f'set{i}', doc=f'the setting of fracture set {i}') if file is not None else None,
+        temp = from_json_(
+            json=json.child(f'set{i}', doc=f'the setting of fracture set {i}') if json is not None else None,
             box=box,
             p21=p21, a_min=a_min, a_max=a_max, l_min=l_min, l_max=l_max, h_min=h_min, h_max=h_max
         )
@@ -265,7 +265,7 @@ def test_2():
 
 def test_3():
     from zmlx.filesys.opath import opath
-    fractures = from_file(opath('dfn_v3.json'))
+    fractures = from_json(opath('dfn_v3.json'))
     print(f'count of fractures = {len(fractures)}')
 
 

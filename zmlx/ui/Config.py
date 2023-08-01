@@ -14,7 +14,7 @@ except Exception as err:
     warnings.warn(f'error import QtMultimedia. error = {err}, may not play sound')
 
 from zml import app_data, read_text
-from zmlx.alg.json_ex import read as read_json
+from zmlx.io.json_ex import read as read_json
 
 try:
     app_data.add_path(os.path.join(os.path.dirname(__file__), 'data'))
