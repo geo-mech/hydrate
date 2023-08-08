@@ -1,7 +1,8 @@
 from scipy.interpolate import NearestNDInterpolator
 from zml import *
-from zmlx.io.json_ex import ConfigFile
-from zmlx.io.array import from_json as get_array
+from zmlx.ptree.array import array
+from zmlx.ptree.box import box3
+from zmlx.ptree.shape import shape3
 
 
 class Ts3Interp3:
@@ -60,40 +61,31 @@ class Ts3Interp3:
         return Tensor3(xx=ts2.xx, yy=ts2.yy, zz=vert, xy=ts2.xy, yz=0, zx=0)
 
 
-def get_ts3intp3(json=None, data=None, file=None, text=None):
+def get_ts3intp3(pt=None, data=None, file=None, text=None):
     """
     根据参数配置文件来创建一个张量场
     """
     if text is None:
         text = "0 0 0 0"
-    data = get_array(json=json, data=data, text=text, file=file)
+    data = array(pt=pt, data=data, text=text, file=file)
     return Ts3Interp3(data)
 
 
-def from_json(json=None, box=None, shape=None, interp=None, data=None, text=None, file=None, buffer=None):
+def ts3mat3(pt, box=None, shape=None, interp=None, data=None, text=None, file=None, buffer=None):
     """
     设置张量场。注意，如果file有定义，则最终使用file定义的数值
     """
     if not isinstance(buffer, Tensor3Matrix3):
         buffer = Tensor3Matrix3()
 
-    if json is not None:
-        if not isinstance(json, ConfigFile):
-            json = ConfigFile(json)
-
     if interp is None:
-        interp = get_ts3intp3(json=json, data=data, text=text, file=file)
+        interp = get_ts3intp3(pt=pt, data=data, text=text, file=file)
 
     if not isinstance(interp, Ts3Interp3):
         warnings.warn('can not set buffer without given interp as Ts3Interp3')
         return buffer
 
-    if shape is None:
-        shape = [2, 2, 2]
-
-    if json is not None:
-        shape = json(key='shape', default=shape,
-                     doc='The grid number along dimension each dimension [jx, jy, jz]')
+    shape = shape3(pt, default=shape if shape is not None else [2, 2, 2])
 
     # 检查数据的范围.
     assert shape is not None
@@ -102,13 +94,7 @@ def from_json(json=None, box=None, shape=None, interp=None, data=None, text=None
     assert shape[0] < 1000 and shape[1] < 1000 and shape[2] < 1000
 
     buffer.size = shape
-
-    if box is None:
-        box = [0, 0, 0, 1, 1, 1]
-
-    if json is not None:
-        box = json(key='box', default=box,
-                   doc='The position range [xmin, ymin, zmin, xmax, ymax, zmax]')
+    box = box3(pt, default=box if box is not None else [0, 0, 0, 1, 1, 1])
 
     assert len(box) == 6
     left = box[0: 3]

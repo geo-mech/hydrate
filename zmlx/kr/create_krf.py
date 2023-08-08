@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
-
-
 from zmlx.alg.linspace import linspace
+from zml import Interp1
 
 
-def create_krf(faic=0.2, n=2.0):
+def create_krf(faic=0.2, n=2.0, as_interp=False):
     """
     当部分孔隙空间被水合物占据的时候，计算流体渗透率的折减. 其中faic为临界孔隙度和原始孔隙度的比值;
     返回：
@@ -24,7 +22,10 @@ def create_krf(faic=0.2, n=2.0):
         else:
             k = ((s - faic) / (1 - faic)) ** n
             kr.append(max(0.0, min(1.0, k)))
-    return vs, kr
+    if as_interp:
+        return Interp1(x=vs, y=kr)
+    else:
+        return vs, kr
 
 
 if __name__ == '__main__':

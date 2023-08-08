@@ -19,7 +19,7 @@ from zmlx.utility.CapillaryEffect import CapillaryEffect
 class Config(TherFlowConfig):
     def __init__(self, has_co2=False, has_steam=False, has_inh=False, has_ch4_in_liq=False, inh_diff_rate=None,
                  ch4_diff_rate=None,
-                 support_ch4_hyd_diss=True, support_ch4_hyd_form=True):
+                 support_ch4_hyd_diss=True, support_ch4_hyd_form=True, krf=None):
         """
         创建一个水合物的求解配置. 包含气<Id=0>、液<Id=1>和固<Id=2>三种相态;
         其中气体为：
@@ -218,8 +218,10 @@ class Config(TherFlowConfig):
             cap = CapillaryEffect(i0, i1, s2p=([0, 1], [0, inh_diff_rate]))
             self.diffusions.append(cap)
 
-        x, y = create_krf()
-        self.krf = Interp1(x=x, y=y)
+        if krf is None:
+            self.krf = create_krf(as_interp=True)
+        else:
+            self.krf = krf
 
 
 def create(*args, **kwargs):

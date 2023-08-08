@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 from zmlx.alg.linspace import linspace
 
 

@@ -101,8 +101,7 @@ def create():
     config.reactions.append(r)
 
     # 残余饱和度设置为0，确保任何时候，都可以有导流能力
-    x, y = create_krf(0, 2)
-    config.krf = Interp1(x=x, y=y)
+    config.krf = create_krf(0, 2, as_interp=True)
 
     return config
 

@@ -11,7 +11,7 @@ def create_fracture_kr():
 
 
 if __name__ == '__main__':
-    from zmlx.ui.Matplot import plotxy
+    from zmlx.plt.plotxy import plotxy
 
     x, y = create_fracture_kr()
     plotxy(x, y)

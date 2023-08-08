@@ -2,8 +2,9 @@ import numpy as np
 from scipy.interpolate import NearestNDInterpolator, LinearNDInterpolator
 from zml import Interp3
 from zmlx.alg.join_cols import join_cols
-from zmlx.io.array import from_json as get_array
-from zmlx.io.json_ex import ConfigFile, get_child
+from zmlx.ptree.array import array
+from zmlx.ptree.box import box3
+from zmlx.ptree.shape import shape3
 
 
 def create_const(value):
@@ -55,18 +56,12 @@ def create_linear(box, shape, x, y, z, v, rescale=True):
     return f
 
 
-def from_json(json=None, data=None, text=None, file=None, box=None, shape=None, rescale=True):
+def interp3(pt, data=None, text=None, file=None, box=None, shape=None, rescale=True):
     """
     利用配置文件来创建3维的插值，在创建的过程中，会将后面给定的参数作为默认参数使用。如果cfg中定义了相应的参数，则最终会使用cfg中
     定义的参数值。
     """
-    if json is not None:
-        if not isinstance(json, ConfigFile):
-            json = ConfigFile(json)
-
-    data = get_array(json=get_child(json, key='data',
-                                    doc='The interp data (array with 4 columns)'),
-                     data=data, text=text, file=file)
+    data = array(pt=pt, data=data, text=text, file=file)
 
     if data is None:
         return
@@ -83,26 +78,17 @@ def from_json(json=None, data=None, text=None, file=None, box=None, shape=None, 
     z = data[:, 2]
     v = data[:, 3]
 
-    if box is None:
-        box = [0, 0, 0, 1, 1, 1]
-    if shape is None:
-        shape = [1, 1, 1]
-
-    if json is not None:
-        box = json(key='box', default=box,
-                   doc='The range of the interp. format: x_min, y_min, z_min, x_max, y_max, z_max')
-        shape = json(key='shape', default=shape,
-                     doc='The count of grid along each dimension')
+    box = box3(pt, default=box if box is not None else [0, 0, 0, 1, 1, 1])
+    shape = shape3(pt, default=shape if shape is not None else [1, 1, 1])
 
     assert len(box) == 6
     assert box[0] <= box[3] and box[1] <= box[4] and box[2] <= box[5]
     assert len(shape) == 3
     assert shape[0] >= 1 and shape[1] >= 1 and shape[2] >= 1
 
-    if json is not None:
-        rescale = json(key='rescale', default=rescale,
-                       doc='Rescale points to unit cube before performing interpolation. '
-                           'This is useful if some of the input dimensions have '
-                           'incommensurable units and differ by many orders of magnitude.')
+    rescale = pt(key='rescale', default=rescale,
+                 doc='Rescale points to unit cube before performing interpolation. '
+                     'This is useful if some of the input dimensions have '
+                     'incommensurable units and differ by many orders of magnitude.')
 
     return create_linear(box=box, shape=shape, x=x, y=y, z=z, v=v, rescale=rescale)

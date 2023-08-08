@@ -150,7 +150,7 @@ class SeepageCellMonitor:
         显示累积生产曲线
         """
         try:
-            from zmlx.ui import plotxy
+            from zmlx.plt.plotxy import plotxy
             x, y = self.get_prod(index)
             x = [xi / (3600 * 24) for xi in x]
             kw = {}
@@ -165,7 +165,7 @@ class SeepageCellMonitor:
         显示生产速率曲线
         """
         try:
-            from zmlx.ui import plotxy
+            from zmlx.plt.plotxy import plotxy
             x, y = self.get_rate(index)
             x = [xi / (3600 * 24) for xi in x]
             y = [yi * (3600 * 24) for yi in y]
