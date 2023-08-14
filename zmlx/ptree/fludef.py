@@ -1,6 +1,7 @@
 import os
 from zml import Seepage
 from zmlx.ptree.interp2 import interp2
+from zmlx.ptree.ptree import PTree
 
 
 def fludef(pt, den=None, vis=None, specific_heat=None, file=None):
@@ -8,6 +9,18 @@ def fludef(pt, den=None, vis=None, specific_heat=None, file=None):
     利用配置文件载入/创建流体的定义. 注意，file后面的参数，是在读取file的时候所采用的默认值。如果file也定义了同样的参数，则
     最终使用file中定义的数值.
     """
+    assert isinstance(pt, PTree)
+    comp_n = pt(key='comp_n', default=0, doc='The number of components')
+    if comp_n > 0:
+        data = Seepage.FluDef()
+        for i in range(comp_n):
+            flu_i = fludef(pt=pt.child(key=f'comp{i}', doc=f'The setting of component {i}'),
+                           den=den, vis=vis,
+                           specific_heat=specific_heat, file=file)
+            assert isinstance(flu_i, Seepage.FluDef)
+            data.add_component(flu_i)
+        return data
+
     file = pt(key='file', default=file if file is not None else '',
               doc='The file name of fluid. Will first try to import the pre-defined '
                   'fluid in zmlx.fluid. If not found, will then try to read the '
@@ -84,39 +97,32 @@ def fludef(pt, den=None, vis=None, specific_heat=None, file=None):
     return Seepage.FluDef(den=den, vis=vis, specific_heat=specific_heat)
 
 
-def set_fludefs(model, pt, fluid_n=0, den=None, vis=None, specific_heat=None):
+def fludefs(pt, den=None, vis=None, specific_heat=None, file=None, fluid_n=0):
+    """
+    创建多个流体定义
+    """
+    fluid_n = pt(key='fluid_n', default=fluid_n, doc='The count of fluids', cast=int)
+    if fluid_n <= 0:
+        return []
+
+    fdefs = []
+    for i in range(fluid_n):
+        flu_i = fludef(pt=pt.child(key=f'fluid{i}', doc=f'The settings of the fluid {i}'),
+                       den=den, vis=vis, specific_heat=specific_heat, file=file)
+        assert isinstance(flu_i, Seepage.FluDef)
+        fdefs.append(flu_i)
+    return fdefs
+
+
+def set_fludefs(model, pt, fluid_n=0, den=None, vis=None, specific_heat=None, file=None):
     """
     设置模型中的流体定义. 注意，此函数会首先清除模型中的已有的流体定义
     """
     assert isinstance(model, Seepage)
-
     model.clear_fludefs()
-
-    fluid_n = pt(key='fluid_n', default=fluid_n, doc='The count of fluids', cast=int)
-
-    if fluid_n <= 0:
-        return
-
-    for idx in range(fluid_n):
-        pt_i = pt.child(key=f'fluid{idx}',
-                        doc=f'The settings of the fluid {idx}')
-
-        comp_n = pt_i(key='comp_n', default=0,
-                      doc='The count of the components for this fluid')
-
-        if comp_n == 0:
-            flu = fludef(pt_i, den=den, vis=vis, specific_heat=specific_heat)
-            assert isinstance(flu, Seepage.FluDef)
-            model.add_fludef(flu)
-        else:
-            flu = Seepage.FluDef()
-            for comp_i in range(comp_n):
-                comp = fludef(pt_i.child(f'comp{comp_i}',
-                                         doc=f'The settings of the component {comp_i}'),
-                              den=den, vis=vis, specific_heat=specific_heat)
-                assert isinstance(comp, Seepage.FluDef)
-                flu.add_component(comp)
-            assert flu.component_number == comp_n
-            model.add_fludef(flu)
-
+    fdefs = fludefs(pt=pt, den=den, vis=vis, specific_heat=specific_heat,
+                    file=file, fluid_n=fluid_n)
+    assert len(fdefs) == fluid_n
+    for f in fdefs:
+        model.add_fludef(f)
     assert model.fludef_number == fluid_n

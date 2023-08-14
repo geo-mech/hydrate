@@ -1,83 +1,57 @@
-#### 介绍
+### 介绍
 
-储层多场耦合计算模块 ([_IggHydrate_](https://gitee.com/geomech/hydrate))
+[IggHydrate](https://gitee.com/geomech/hydrate): 储层及样品尺度水合物形成/分解计算模块. @[中科院地质地球所(Igg)](http://www.igg.cas.cn/)
 
-@[中科院地质地球所](http://www.igg.cas.cn/).
+### 主要功能
 
-#### 作者
+多相多组分渗流；化学反应；热传导/对流；扩散；应力、变形等. 
 
-[张召彬](http://sourcedb.igg.cas.cn/cn/zjrck/201703/t20170306_4755492.html)，[李守定](http://sourcedb.igg.cas.cn/cn/zjrck/201412/t20141218_4278784.html)，[赫建明](http://sourcedb.igg.cas.cn/cn/zjrck/201203/t20120302_3448658.html)，[李晓](http://sourcedb.igg.cas.cn/cn/zjrck/200907/t20090713_2065538.html)
-，徐涛，李宇轩，Maryelin
+### 特点
 
-#### 版本
+1) 支持任意多个相态、组分、化学反应；且流体和组分均支持任意多个自定义属性;
+2) 基于数据体定义流体、化学反应等，不需要公式;
+3) 作为开放的[Python](https://www.python.org/)模块（而不是封闭的软件），可以对单元、流体、组分、反应，以及计算流程等进行精细化操作和控制;
+4) 支持结构/非结构网格; 支持一维/二维/三维计算; 除了水合物，也可以用于页岩油气、干热岩等其它渗流/传热/反应耦合问题;
+5) 完全自主开发的源代码。
+ 
+### 版本
 
-ZmlVersion=230728
+ZmlVersion=230814
 
-#### 网址
+### 联系
 
-https://gitee.com/geomech/hydrate
+如遇bug、疑问或建议，以及建模需求（渗流/传热/反应耦合问题，不限于水合物），欢迎[新建Issue](https://gitee.com/geomech/hydrate/issues/new)，或直接[联系作者](http://sourcedb.igg.cas.cn/cn/zjrck/201703/t20170306_4755492.html).
 
-#### 功能
+### 使用
 
-1) 多相多组分流动.
-2) 热传导.
-3) 扩散.
-4) 化学反应.
-5) 应力.
-6) 裂缝扩展.
+#### Python配置(Windows系统): 
+1) 安装[Python](https://www.python.org/) 3.7及以上版本，并安装numpy, scipy, PyQt5, matplotlib等第三方模块; 建议使用[WinPython](https://winpython.github.io/)(方便管理第三方模块). 
+2) 安装[VC_redist.x64.exe](https://gitee.com/geomech/hydrate/attach_files);
+3) 如需要Linux版本，请[联系作者](http://sourcedb.igg.cas.cn/cn/zjrck/201703/t20170306_4755492.html).
 
-#### 特点
+#### 拉取/下载代码：
 
-1) 支持结构/非结构网格;
-2) 支持任意多相流动，且任意相都支持多组分;
-3) 流体/组分支持自定义属性(如温度、颗粒浓度等)，且属性会随着流动输运;
-4) 支持利用数据来自定义流体(无需公式);
-5) 支持组分之间的化学反应;
-6) 提供底层API，可以对单元，流体，组分进行精细化读/写操作;
-7) 作为[Python](https://www.python.org/)模块可被第三方软件调用;
+1) [注册Gitee账号](https://gitee.com/signup)并安装配置[Git](https://git-scm.com/);
+2) 从[https://gitee.com/geomech/hydrate](https://gitee.com/geomech/hydrate)拉取或者下载代码;
+3) 将`zml.py`所在文件夹添加到Python搜索路径(运行`UI.pyw`可自动执行该操作).
 
-#### 联系
+#### 建模：
 
-如遇bug、疑问或建议，以及建模需求，请在[Issues页面](https://gitee.com/geomech/hydrate/issues)，[新建Issue](https://gitee.com/geomech/hydrate/issues/new)
-，或[联系作者](http://sourcedb.igg.cas.cn/cn/zjrck/201703/t20170306_4755492.html).
+1) 所有功能均封装在模块`zml`和`zmlx`里，可在 [Python](https://www.python.org/) 3.7+环境中`import`来使用；
+2) 参考[zmlx/demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)
+   中的例子来建模，有问题请[咨询作者](http://sourcedb.igg.cas.cn/cn/zjrck/201703/t20170306_4755492.html).
 
-#### 运行环境
+### 授权
 
-1) 安装[Python](https://www.python.org/) 3.7及以上版本. 建议安装[WinPython](https://winpython.github.io/) (
-   网盘链接：https://pan.baidu.com/s/1PnqdA28GdUKhA9A_7x20zQ?pwd=mba8
-   提取码：mba8).
-2) 安装[VC_redist.x64.exe](https://gitee.com/geomech/hydrate/attach_files).
-3) 为方便下载、更新及提交代码，建议[注册Gitee账号](https://gitee.com/signup)并安装配置[Git](https://git-scm.com/).
+免费用于非商业用途。使用前请[联系作者](http://sourcedb.igg.cas.cn/cn/zjrck/201703/t20170306_4755492.html)，并承诺：
 
-#### 安装
+1) 帮助改进程序，并[报告bug](https://gitee.com/geomech/hydrate/issues/new);
+2) 使用[最新版](https://gitee.com/geomech/hydrate)(每月请至少更新一次). 
 
-1) 从[https://gitee.com/geomech/hydrate](https://gitee.com/geomech/hydrate)下载或拉取代码 <注意不要存入中文路径>.
-2) 把下载后的文件夹添加到Python搜索路径.
+### 成为开发者
 
-#### 更新
+欢迎并感谢您成为开发者。请注意:
 
-1) [下载](https://gitee.com/geomech/hydrate)或[拉取](https://gitee.com/geomech/hydrate.git)代码并覆盖原文件即完成更新.
-2) 请每个月至少更新一次.
-
-#### 使用
-
-1) 所有功能均封装在模块`zml`和`zmlx`里，可在 [Python](https://www.python.org/) 3.7+环境中`import`.
-2) 运行`UI.pyw`可启动软件界面.
-3) 参考[zmlx/demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)
-   中的例子来建模，如有需求请[咨询作者](http://sourcedb.igg.cas.cn/cn/zjrck/201703/t20170306_4755492.html).
-
-#### 授权
-
-[联系作者](http://sourcedb.igg.cas.cn/cn/zjrck/201703/t20170306_4755492.html)以使用，并承诺：
-
-1) 使用[最新版](https://gitee.com/geomech/hydrate).
-2) 及时[报告bug](https://gitee.com/geomech/hydrate/issues/new).
-
-#### 开发者
-
-欢迎/感谢成为开发者，请注意:
-
-1) 请使用[Fork + Pull 模式](https://help.gitee.com/base/pullrequest/Fork+Pull)参与开发；
-2) 只修改[zmlx](https://gitee.com/geomech/hydrate/tree/master/zmlx)里面的内容；
-3) 只修改自己创建的文件; 其它bug请[新建Issue](https://gitee.com/geomech/hydrate/issues/new)来反馈;
-
+1) 请使用Gitee推荐的[Fork + Pull 模式](https://help.gitee.com/base/pullrequest/Fork+Pull)参与开发；
+2) 只修改[zmlx](https://gitee.com/geomech/hydrate/tree/master/zmlx)文件夹里面的内容；
+3) 只修改自己创建的文件; 如果在其它文件里发现bug，请[新建Issue](https://gitee.com/geomech/hydrate/issues/new)来反馈;

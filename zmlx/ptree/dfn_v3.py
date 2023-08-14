@@ -16,7 +16,7 @@ def dfn_v3(pt, p21=0.0, box=None, angles=None, lengths=None, l_min=None, heights
     if set_n > 0:
         fractures = []
         for idx in range(set_n):
-            fractures = fractures + dfn_v3(pt=pt.child(f'set_{idx}'), p21=p21,
+            fractures = fractures + dfn_v3(pt=pt.child(f'set{idx}'), p21=p21,
                                            box=box, angles=angles, lengths=lengths,
                                            l_min=l_min, heights=heights)
         return fractures

@@ -106,6 +106,16 @@ class PTree:
                 except:
                     pass
 
+        value = self.buf.get(*self.keys, key)
+        if value is not None and not isinstance(value, dict):
+            if cast is None:
+                return value
+            else:
+                try:
+                    return cast(value)
+                except:
+                    pass
+
         if default is None and doc is None:
             return
 

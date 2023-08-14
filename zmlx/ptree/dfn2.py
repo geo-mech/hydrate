@@ -6,11 +6,20 @@ import warnings
 from zmlx.geometry.point_distance import point_distance
 
 
-def dfn2(pt, p21=0.0, box=None, angles=None, lengths=None, l_min=None):
+def dfn2(pt, p21=0.0, box=None, angles=None, lengths=None, l_min=None, set_n=0):
     """
     从ptree中读取数据，并创建二维的dfn
     """
     assert isinstance(pt, PTree)
+
+    set_n = pt('set_n', default=set_n, doc='The count of fracture sets')
+    if set_n > 0:
+        fractures = []
+        for idx in range(set_n):
+            fractures = fractures + dfn2(pt=pt.child(f'set{idx}'), p21=p21,
+                                         box=box, angles=angles, lengths=lengths,
+                                         l_min=l_min)
+        return fractures
 
     p21 = pt('p21', default=p21, doc='The length of fracture in unit area')
     if p21 <= 0:
