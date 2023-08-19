@@ -12,7 +12,7 @@ def dfn2(pt, p21=0.0, box=None, angles=None, lengths=None, l_min=None, set_n=0):
     """
     assert isinstance(pt, PTree)
 
-    set_n = pt('set_n', default=set_n, doc='The count of fracture sets')
+    set_n = pt(key='set_n', default=set_n, doc='The count of fracture sets')
     if set_n > 0:
         fractures = []
         for idx in range(set_n):
@@ -21,7 +21,7 @@ def dfn2(pt, p21=0.0, box=None, angles=None, lengths=None, l_min=None, set_n=0):
                                          l_min=l_min)
         return fractures
 
-    p21 = pt('p21', default=p21, doc='The length of fracture in unit area')
+    p21 = pt(key='p21', default=p21, doc='The length of fracture in unit area')
     if p21 <= 0:
         warnings.warn('p21 <= 0')
         return []
@@ -50,7 +50,7 @@ def dfn2(pt, p21=0.0, box=None, angles=None, lengths=None, l_min=None, set_n=0):
         warnings.warn('lengths are not positive')
         return []
 
-    l_min = pt('l_min', default=l_min if l_min is not None else point_distance(box[0:3], box[3:6]) * 0.001,
+    l_min = pt(key='l_min', default=l_min if l_min is not None else point_distance(box[0:3], box[3:6]) * 0.001,
                doc='The minimum distance between fractures')
 
     buf = Dfn2()

@@ -11,7 +11,7 @@ class GuiApi(QtCore.QObject):
         self.sig_proc.connect(self.proc)
         self.break_point = break_point
         self.flag_exit = flag_exit
-        self.funcs = {"add_func": self.add_func}
+        self.funcs = {"add_func": self.add_func, "list_all": self.list_all}
         self.res = None
         self.err = None
         self.mtx = QtCore.QMutex()
@@ -22,6 +22,9 @@ class GuiApi(QtCore.QObject):
     def add_func(self, key, func):
         self.funcs[key] = func
         return self
+
+    def list_all(self):
+        return self.funcs.keys()
 
     def proc(self, arg):
         assert len(arg) == 2
@@ -81,6 +84,9 @@ class GuiApi(QtCore.QObject):
         def about(*args, **kwargs):
             QtWidgets.QMessageBox.about(parent, *get_text(args), **get_text(kwargs))
 
+        def warning(*args, **kwargs):
+            QtWidgets.QMessageBox.warning(parent, *get_text(args), **get_text(kwargs))
+
         def get_existing_directory(*args, **kwargs):
             folder = QtWidgets.QFileDialog.getExistingDirectory(None, *get_text(args), **get_text(kwargs))
             return folder
@@ -94,7 +100,7 @@ class GuiApi(QtCore.QObject):
             else:
                 return True
 
-        return {'question': question, "information": information, "about": about,
+        return {'question': question, "information": information, "about": about, "warning": warning,
                 'get_open_file_name': get_open_file_name,
                 'get_save_file_name': get_save_file_name,
                 'get_existing_directory': get_existing_directory,

@@ -1,5 +1,6 @@
 # ** on_toolbar = True
 # ** icon = 'info.png'
+# ** text = 'ReadMe'
 
 import os
 

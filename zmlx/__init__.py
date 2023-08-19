@@ -15,6 +15,7 @@ from zmlx.alg.sys import get_latest_version
 from zmlx.alg.clamp import clamp
 from zmlx.alg.linspace import linspace
 from zmlx.alg.has_module import has_numpy, has_PyQt5, has_matplotlib
+from zmlx.alg.make_fname import make_fname
 import os
 import warnings
 
@@ -23,6 +24,8 @@ import zml
 
 do_plot = zml.plot
 
+setenv = app_data.setenv
+getenv = app_data.getenv
 
 try:
     from zmlx.fluid.ch4 import create as create_ch4

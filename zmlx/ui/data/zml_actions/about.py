@@ -1,4 +1,5 @@
 # ** icon = 'info.png'
+# ** text = '关于'
 
 from zml import *
 from zmlx import get_latest_version

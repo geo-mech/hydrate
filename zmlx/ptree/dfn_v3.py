@@ -12,7 +12,7 @@ def dfn_v3(pt, p21=0.0, box=None, angles=None, lengths=None, l_min=None, heights
     """
     assert isinstance(pt, PTree)
 
-    set_n = pt('set_n', default=set_n, doc='The count of fracture sets')
+    set_n = pt(key='set_n', default=set_n, doc='The count of fracture sets')
     if set_n > 0:
         fractures = []
         for idx in range(set_n):

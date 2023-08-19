@@ -11,7 +11,7 @@ class Hf2ColorMap:
         for i in range(cm.N):
             c = [float(s) for s in cm(i)]
             if len(c) >= 3:
-                colors.append(QtGui.QColor(c[0] * 255, c[1] * 255, c[2] * 255))
+                colors.append(QtGui.QColor(int(c[0] * 255), int(c[1] * 255), int(c[2] * 255)))
         return colors
 
     @staticmethod

@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 # ** is_sys = True
 # ** text = '执行'
 # ** on_toolbar = True

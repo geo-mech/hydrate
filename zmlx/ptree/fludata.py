@@ -36,7 +36,7 @@ def fludata(pt, mass=0.0, den=1000.0, vis=1.0e-3, attrs=None, file=None):
     else:
         data = Seepage.FluData()
         for i in range(comp_n):
-            comp = fludata(pt=pt.child(f'comp_{i}',
+            comp = fludata(pt=pt.child(key=f'comp{i}',
                                        doc=f'The settings for component {i}'),
                            mass=mass, den=den, vis=vis, attrs=attrs)
             data.add_component(comp)

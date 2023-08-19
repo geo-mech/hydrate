@@ -1,3 +1,6 @@
+# ** text = '打标签'
+# ** menu = "文件"
+
 from zml import *
 
 print_tag()

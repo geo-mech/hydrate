@@ -1,23 +1,15 @@
 import os
 
 from PyQt5 import QtWidgets
-
-from zml import read_text, app_data
+from zmlx.ui.alg.code_config import code_config
+from zmlx.ui.alg.read_text import read_text
+from zml import app_data
 
 
 class Script:
     def __init__(self, file):
         self.file = file
-        text = read_text(path=file, encoding='utf-8', default=None)
-        self.config = {}
-        if text is not None:
-            for line in text.splitlines():
-                if len(line) >= 4:
-                    if line[0: 4] == '# **':
-                        try:
-                            exec(line[4:].strip(), None, self.config)
-                        except Exception as err:
-                            print(err)
+        self.config = code_config(path=file, encoding='utf-8')
 
     def __call__(self, win):
         assert win is not None
@@ -74,3 +66,7 @@ class Script:
     @property
     def tooltip(self):
         return self.config.get('tooltip', None)
+
+    @property
+    def menu(self):
+        return self.config.get('menu', None)

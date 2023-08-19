@@ -1,37 +1,44 @@
 from zmlx.filesys.path import *
 from zmlx.filesys.make_parent import make_parent
 from zmlx.io.json_ex import read as read_json, write as write_json
+from zml import app_data
 import os
 
-__all__ = ['PTree', 'Buffer', 'get_child', 'json_file']
+
+def remove_doc(data):
+    if not isinstance(data, dict):
+        return
+
+    doc = data.get('doc', None)
+    if isinstance(doc, dict):
+        data.pop('doc')
+
+    for key, val in data.items():
+        remove_doc(val)
 
 
-class Buffer:
+class Adaptor:
     def __init__(self, data=None, path=None, read=None, write=None):
         """
         关联数据/文件
         """
-        self.data = data if isinstance(data, dict) else {}
+        if not isinstance(data, dict) and read is not None and isfile(path):
+            data = read(path)
+
+        if not isinstance(data, dict):
+            self.data = {}
+        else:
+            self.data = data
+
         self.path = path
-        self.read = read
         self.write = write
-        if self.read is not None:
-            if isfile(self.path):
-                self.data = read(self.path)
-                if not isinstance(self.data, dict):
-                    self.data = {}
 
     def save(self):
         """
         保存到文件
         """
         assert isinstance(self.data, dict)
-        try:
-            readonly = self.data.get('readonly', False)
-        except:
-            readonly = False
-
-        if self.write is not None and self.path is not None and not readonly:
+        if self.write is not None and self.path is not None and not self.data.get('readonly', False):
             self.write(self.path, self.data)
 
     def get(self, *args):
@@ -50,6 +57,12 @@ class Buffer:
         """
         添加一个键值
         """
+        if len(args) == 0:
+            return
+        if len(args) == 1:
+            assert isinstance(args[0], dict)
+            self.data = args[0]
+            return
         assert len(args) >= 2
         data = self.data
         for idx in range(len(args) - 2):
@@ -69,45 +82,63 @@ class PTree:
     配置文件
     """
 
-    def __init__(self, buf, keys=None):
+    def __init__(self, ada, keys=None):
         """
         初始化
         """
-        if isinstance(buf, PTree):
-            self.buf = buf.buf
-            self.keys = buf.keys + list(keys)
+        if isinstance(ada, PTree):
+            self.ada = ada.ada
+            self.keys = ada.keys + list(keys)
         else:
-            assert isinstance(buf, Buffer)
-            self.buf = buf
+            assert isinstance(ada, Adaptor)
+            self.ada = ada
             self.keys = [] if keys is None else list(keys)
-        assert isinstance(self.buf, Buffer)
+        assert isinstance(self.ada, Adaptor)
+
+    @property
+    def data(self):
+        """
+        文件数据 (self.keys所对应的分支)
+        """
+        return self.ada.get(*self.keys)
+
+    @data.setter
+    def data(self, value):
+        """
+        文件数据 (self.keys所对应的分支)
+        """
+        assert isinstance(value, dict)
+        self.ada.put(*self.keys, value)
+        self.ada.save()
+
+    def remove_doc(self):
+        """
+        删除所有的doc
+        """
+        remove_doc(self.data)
+        self.ada.save()
 
     def put(self, key, value):
         """
         存入数据(和get对应)
         """
-        assert isinstance(self.buf, Buffer)
-        self.buf.put(*self.keys, key, 'value', value)
-        self.buf.save()
+        assert isinstance(self.ada, Adaptor)
+        self.ada.put(*self.keys, key, value)
+        self.ada.save()
 
     def get(self, key, default=None, doc=None, cast=None):
         """
         读取数据(和put对应)
         """
-        assert isinstance(self.buf, Buffer)
+        assert isinstance(self.ada, Adaptor)
 
-        value = self.buf.get(*self.keys, key, 'value')
+        if doc is not None:
+            if self.ada.get(*self.keys, 'doc', key) is None:
+                self.ada.put(*self.keys, 'doc', key, doc)
+                self.ada.save()
+
+        value = self.ada.get(*self.keys, key)
         if value is not None:
-            if cast is None:
-                return value
-            else:
-                try:
-                    return cast(value)
-                except:
-                    pass
-
-        value = self.buf.get(*self.keys, key)
-        if value is not None and not isinstance(value, dict):
             if cast is None:
                 return value
             else:
@@ -120,13 +151,8 @@ class PTree:
             return
 
         if default is not None:
-            self.buf.put(*self.keys, key, 'value', default)
-
-        if default is not None or doc is not None:
-            summary = f'default = {default}, type = {type(default)}, doc = {doc}'
-            self.buf.put(*self.keys, key, 'doc', summary)
-
-        self.buf.save()
+            self.ada.put(*self.keys, key, default)
+            self.ada.save()
 
         if default is not None:
             if cast is None:
@@ -150,10 +176,10 @@ class PTree:
         assert isinstance(self.keys, list)
         pt = PTree(self, [key, ])
         if doc is not None:
-            value = pt.buf.get(*pt.keys, 'doc')
+            value = self.ada.get(*self.keys, 'doc', key)
             if value is None:
-                pt.buf.put(*pt.keys, 'doc', doc)
-                pt.buf.save()
+                self.ada.put(*self.keys, 'doc', key, doc)
+                self.ada.save()
         return pt
 
     def __getitem__(self, key):
@@ -167,8 +193,8 @@ class PTree:
         """
         文件路径
         """
-        assert isinstance(self.buf, Buffer)
-        return self.buf.path
+        assert isinstance(self.ada, Adaptor)
+        return self.ada.path
 
     @property
     def folder(self):
@@ -179,29 +205,21 @@ class PTree:
         if isdir(path):
             return path
 
-    @property
-    def data(self):
-        """
-        文件数据 (self.keys所对应的分支)
-        """
-        assert isinstance(self.buf, Buffer)
-        return self.buf.get(*self.keys) if len(self.keys) > 0 else self.buf.data
-
     def set_dirs(self, *args):
         """
         设置数据目录
         """
-        assert isinstance(self.buf, Buffer)
-        self.buf.put('data_dirs', list(args))
-        self.buf.save()
+        assert isinstance(self.ada, Adaptor)
+        self.ada.put('data_dirs', list(args))
+        self.ada.save()
 
     def add_dirs(self, *args):
         """
         添加数据目录
         """
-        assert isinstance(self.buf, Buffer)
+        assert isinstance(self.ada, Adaptor)
         if len(args) > 0:
-            value = self.buf.get('data_dirs')
+            value = self.ada.get('data_dirs')
             if not isinstance(value, list):
                 value = []
             count = 0
@@ -216,8 +234,8 @@ class PTree:
         """
         返回数据目录(确保返回的目录必然是存在的)
         """
-        assert isinstance(self.buf, Buffer)
-        dirs = self.buf.get('data_dirs')
+        assert isinstance(self.ada, Adaptor)
+        dirs = self.ada.get('data_dirs')
         if isinstance(dirs, list):
             folders = []
             for name in dirs:
@@ -256,6 +274,11 @@ class PTree:
                 if exists(path):
                     return path
 
+        path = app_data.find(filename)
+        if path is not None:
+            if exists(path):
+                return path
+
         return ''
 
     def opath(self, *args):
@@ -277,4 +300,4 @@ def json_file(filename):
     """
     将Json文件作为一个PTree来使用
     """
-    return PTree(buf=Buffer(data=None, path=filename, read=read_json, write=write_json))
+    return PTree(ada=Adaptor(data=None, path=filename, read=read_json, write=write_json))

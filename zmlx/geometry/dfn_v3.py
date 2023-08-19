@@ -1,10 +1,10 @@
-from zml import Dfn2
-from zmlx.alg.linspace import linspace
-from zmlx.alg.clamp import clamp
 import random
-from zmlx.geometry.rect_v3 import intersected, get_area
+
+from zml import Dfn2
+from zmlx.alg.clamp import clamp
+from zmlx.alg.linspace import linspace
 from zmlx.geometry.rect_3d import from_v3
-from zmlx.ptree.box import box3
+from zmlx.geometry.rect_v3 import intersected, get_area
 
 
 def from_segs(segs, z_min, z_max, heights):
@@ -151,79 +151,6 @@ def create_demo(heights=None):
     return fractures
 
 
-def from_ptree_(pt=None, box=None,
-                p21=0.0, a_min=0.0, a_max=0.0, l_min=10.0, l_max=20.0, h_min=5.0, h_max=10.0):
-    """
-    根据配置创建一组裂缝
-    """
-    if box is None:
-        box = [0, 0, 0, 1, 1, 1]
-
-    if pt is not None:
-        box = box3(pt, default=box)
-
-    assert len(box) == 6
-    x0, y0, z0, x1, y1, z1 = box
-
-    assert x0 < x1
-    assert y0 < y1
-    assert z0 < z1
-
-    if pt is not None:
-        p21 = pt(key='p21', default=p21, doc='the fracture density')
-
-    assert 0.0 <= p21 < 2.0
-
-    if p21 > 0:
-        if pt is not None:
-            a_min = pt('a_min', default=a_min,
-                       doc='The minimum angle between fracture and x axis')
-            a_max = pt('a_max', default=a_max,
-                       doc='The maximum angle between fracture and x axis')
-            l_min = pt('l_min', default=l_min,
-                       doc='The minimum fracture length')
-            l_max = pt('l_max', default=l_max,
-                       doc='The maximum fracture length')
-            h_min = pt('h_min', default=h_min,
-                       doc='The minimum fracture height')
-            h_max = pt('h_max', default=h_max,
-                       doc='The maximum fracture height')
-        return create_fractures(box=box, p21=p21, angles=linspace(a_min, a_max, 100),
-                                lengths=linspace(l_min, l_max, 100),
-                                heights=linspace(h_min, h_max, 100))
-    else:
-        return []
-
-
-def from_ptree(pt=None, count=0, box=None,
-               p21=0.0, a_min=0.0, a_max=0.0, l_min=10.0, l_max=20.0, h_min=5.0, h_max=10.0):
-    """
-    根据给定的输入配置，来创建一个dfn
-    """
-    if pt is not None:
-        count = pt(key='count',
-                   default=0,
-                   doc='The count of fracture sets')
-
-    assert 0 <= count < 10
-
-    if count == 0:
-        return []
-
-    fractures = []
-
-    for i in range(count):
-        temp = from_ptree_(
-            pt=pt.child(f'set{i}', doc=f'the setting of fracture set {i}') if pt is not None else None,
-            box=box,
-            p21=p21, a_min=a_min, a_max=a_max, l_min=l_min, l_max=l_max, h_min=h_min, h_max=h_max
-        )
-        fractures = fractures + temp
-
-    fractures = remove_small(fractures)
-    return fractures
-
-
 def test_1():
     from zmlx.pg.show_rc3 import show_rc3
     import random
@@ -260,4 +187,3 @@ def test_2():
     links = xxx(fractures)
     t3 = timeit.default_timer()
     print(f'count links = {len(links)}. time = {t3 - t2}')
-

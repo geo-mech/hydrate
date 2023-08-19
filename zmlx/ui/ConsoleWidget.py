@@ -7,7 +7,6 @@ from zmlx.ui.CodeEdit import CodeEdit
 from zmlx.ui.Config import *
 from zmlx.ui.ConsoleOutput import ConsoleOutput
 from zmlx.ui.ConsoleThread import ConsoleThread
-from zmlx.ui.GuiItems import *
 from zmlx.ui.SharedValue import SharedValue
 
 
@@ -33,7 +32,7 @@ class ConsoleWidget(QtWidgets.QWidget):
         self.splitter.setStretchFactor(1, 1)
 
         h_layout = QtWidgets.QHBoxLayout()
-        h_layout.addItem(h_spacer())
+        h_layout.addItem(QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum))
 
         def add_button(text, icon, slot):
             button = QtWidgets.QPushButton(self)
@@ -47,7 +46,7 @@ class ConsoleWidget(QtWidgets.QWidget):
                                       lambda: self.exec_file(fname=None))
         self.button_pause = add_button('暂停', 'pause.png', self.pause_clicked)
         self.button_exit = add_button('终止', 'stop.png', self.stop_clicked)
-        h_layout.addItem(h_spacer())
+        h_layout.addItem(QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum))
         main_layout.addLayout(h_layout)
 
         self.kernel_err = None
@@ -162,13 +161,13 @@ class ConsoleWidget(QtWidgets.QWidget):
         self.thread.sig_err.connect(self.__kernel_err)
         if self.pre_task is not None:
             self.pre_task()
-        priority = load_console_priority()
+        priority = load_priority()
         if self.text_when_beg is not None:
-            print(f'{self.text_when_beg} ({get_priority_text(priority)})')
+            print(f'{self.text_when_beg} ({priority})')
         self.time_beg = timeit.default_timer()
         self.set_should_stop(False)
         self.set_should_pause(False)
-        self.thread.start(priority)
+        self.thread.start(priority_value(priority))
         self.sig_kernel_started.emit()
         self.refresh_buttons()
 

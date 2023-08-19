@@ -1,6 +1,7 @@
 # ** is_sys = True
 # ** icon = 'kill.png'
+# ** text = '强制结束'
 
 from zml import gui
 
-gui.window().console_widget.kill_thread()
+gui.kill_thread()

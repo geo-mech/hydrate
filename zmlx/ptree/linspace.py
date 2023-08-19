@@ -8,19 +8,19 @@ def linspace(pt, start=0.0, stop=0.0, num=50, endpoint=True):
     """
     assert isinstance(pt, PTree)
 
-    num = pt('num', default=num,
+    num = pt(key='num', default=num,
              doc='Number of samples to generate')
 
     if num <= 0:
         return np.array([])
 
-    start = pt('start', default=start,
+    start = pt(key='start', default=start,
                doc='The starting value of the sequence')
 
-    stop = pt('stop', default=stop,
+    stop = pt(key='stop', default=stop,
               doc='The end value of the sequence')
 
-    endpoint = pt('endpoint', default=endpoint,
+    endpoint = pt(key='endpoint', default=endpoint,
                   doc='If True, `stop` is the last sample. Otherwise, it is not included')
 
     return np.linspace(start=start, stop=stop, num=num, endpoint=endpoint)

@@ -1,5 +1,6 @@
 # ** icon = 'refresh.png'
+# ** text = '刷新'
 
 from zml import *
 
-gui.window().refresh()
+gui.refresh()

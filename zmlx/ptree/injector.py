@@ -95,7 +95,7 @@ def injectors(pt, pos=None, radi=None, fluid_id=None, mass=0.0, den=1000.0, vis=
     inj_n = pt(key='inj_n', default=inj_n, doc='The count of injectors')
     injs = []
     for i in range(inj_n):
-        data = injector(pt=pt.child(f'inj{i}', doc=f'The setting of inj {i}'),
+        data = injector(pt=pt.child(key=f'inj{i}', doc=f'The setting of inj {i}'),
                         pos=pos, radi=radi, fluid_id=fluid_id, mass=mass, den=den, vis=vis, attrs=attrs,
                         t2q=t2q, file=file, time=time, rate=rate, g_heat=g_heat, ca_mc=ca_mc, ca_t=ca_t)
         assert isinstance(data, Seepage.Injector)

@@ -1,8 +1,8 @@
 # ** text = '解压缩'
+# ** menu = "文件"
 
 import os
 import zipfile
-
 from zml import gui
 
 dataname = 'files.zip'

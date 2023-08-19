@@ -1,4 +1,5 @@
 # ** text = '压缩'
+# ** menu = "文件"
 
 import os
 import zipfile

@@ -1,4 +1,5 @@
 # ** tooltip = '查找当前路径下所有扩展名为.fn2的文件并进行循环绘图显示'
+# ** text = 'fn2动画'
 
 import os
 import time

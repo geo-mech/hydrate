@@ -1,6 +1,7 @@
 # ** icon = 'open.png'
 # ** on_toolbar = True
+# ** text = '打开'
 
-from zmlx.ui.FileAlg import open_file_by_dlg
+from zml import gui
 
-open_file_by_dlg()
+gui.open_file_by_dlg()

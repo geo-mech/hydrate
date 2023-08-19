@@ -1,39 +1,30 @@
-[
-  {
-    "title": "文件",
-    "actions": [
-      "set_cwd.py",
-      "quit.py",
-      "open.py",
-      "open_demo.py",
-      "print_tag.py"
-    ]
-  },
-  {
-    "title": "脚本",
-    "actions": [
-      "py_edit.py",
-      "py_new.py",
-      "py_exec.py",
-      "kill_thread.py"
-    ]
-  },
-  {
-    "title": "显示",
-    "actions": [
-      "refresh.py",
-      "cls.py",
-      "show_files.py",
-      "show_variables.py",
-      "view_paths.py",
-      "pg_console.py"
-    ]
-  },
-  {
-    "title": "帮助",
-    "actions": [
-      "about.py",
-      "show_readme.py"
-    ]
-  }
-]
+{
+  "文件": [
+    "workdir.py",
+    "quit.py",
+    "open.py",
+    "demo.py"
+  ],
+  "脚本": [
+    "py_new.py",
+    "py_exec.py",
+    "kill.py"
+  ],
+  "显示": [
+    "refresh.py",
+    "cls.py",
+    "filesys.py",
+    "memory.py",
+    "timer.py",
+    "console.py"
+  ],
+  "设置": [
+    "search.py",
+    "env.py"
+  ],
+  "帮助": [
+    "about.py",
+    "readme.py",
+    "reg.py"
+  ]
+}
