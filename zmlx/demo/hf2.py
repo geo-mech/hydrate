@@ -1,3 +1,5 @@
+# ** desc = '页岩水力压裂 （拟三维）'
+
 from zmlx import *
 from zmlx.plt.show_fn2 import show_fn2
 

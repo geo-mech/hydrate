@@ -13,6 +13,7 @@ class TabWidget(QtWidgets.QTabWidget):
             self.cover = None
         self.setTabsClosable(True)
         self.tabCloseRequested.connect(self.close_tab)
+        self.setMovable(True)
 
         text = app_data.getenv('TabPosition', default='')
         if text == 'North':
@@ -84,6 +85,6 @@ class TabWidget(QtWidgets.QTabWidget):
 
 
 if __name__ == '__main__':
-    from zmlx.ui.WidgetAlg import show_widget
+    from zmlx.ui.alg.show_widget import show_widget
 
     show_widget(TabWidget)

@@ -9,13 +9,12 @@ import time
 import timeit
 
 
-class FileWidget(QtWidgets.QTableWidget):
+class CwdViewer(QtWidgets.QTableWidget):
     def __init__(self, parent=None):
-        super(FileWidget, self).__init__(parent)
+        super(CwdViewer, self).__init__(parent)
         self.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.Stretch)
         self.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
 
-        self.folder = None
         self.clicked.connect(self.item_clicked)
         self.doubleClicked.connect(self.item_double_clicked)
         self.timer = QtCore.QTimer()
@@ -23,18 +22,16 @@ class FileWidget(QtWidgets.QTableWidget):
         self.timer.start(500)
         self.refresh()
 
-    def set_dir(self, folder=None):
-        if folder is None:
-            folder = os.getcwd()
-        self.clear()
-        self.folder = folder
-        assert isinstance(self.folder, str)
-
-        if os.path.isdir(self.folder):
-            data = [['..', '文件夹', '', ''], ]
-            for name in os.listdir(self.folder):
-
-                path = os.path.join(self.folder, name)
+    def __refresh(self):
+        folder = os.getcwd()
+        data = [['..', '文件夹', '', ''], ]
+        try:
+            names = os.listdir(folder)
+        except:
+            names = []
+        for name in names:
+            path = os.path.join(folder, name)
+            try:
                 if os.path.isfile(path):
                     data.append([name, '文件', fsize2str(os.path.getsize(path)),
                                  f'{time.ctime(os.path.getmtime(path))}'])
@@ -43,18 +40,23 @@ class FileWidget(QtWidgets.QTableWidget):
                 if os.path.isdir(path):
                     data.append([name, '文件夹', '', ''])
                     continue
-
-            self.setRowCount(len(data))
-            self.setColumnCount(4)
-            self.setHorizontalHeaderLabels(['名称', '类型', '大小', '修改时间'])
-
-            for irow in range(len(data)):
-                for icol in range(4):
-                    self.setItem(irow, icol, QtWidgets.QTableWidgetItem(data[irow][icol]))
+            except:
+                pass
+        self.setRowCount(len(data))
+        self.setColumnCount(4)
+        self.setHorizontalHeaderLabels(['名称', '类型', '大小', '修改时间'])
+        for irow in range(len(data)):
+            for icol in range(4):
+                self.setItem(irow, icol, QtWidgets.QTableWidgetItem(data[irow][icol]))
 
     def refresh(self):
         cpu_t = timeit.default_timer()
-        self.set_dir(self.folder)
+        #
+        try:
+            self.__refresh()
+        except:
+            self.clear()
+        #
         cpu_t = timeit.default_timer() - cpu_t
         msec = clamp(int(cpu_t * 200 / 0.001), 200, 8000)
         self.timer.setInterval(msec)
@@ -65,9 +67,9 @@ class FileWidget(QtWidgets.QTableWidget):
         item = self.item(index.row(), index.column())
         text = item.text()
         if text == '..':
-            fpath = os.path.dirname(self.folder)
+            fpath = os.path.dirname(os.getcwd())
         else:
-            fpath = os.path.join(self.folder, text)
+            fpath = os.path.join(os.getcwd(), text)
 
         if os.path.isfile(fpath):
             ext = os.path.splitext(fpath)[-1]
@@ -81,14 +83,14 @@ class FileWidget(QtWidgets.QTableWidget):
         item = self.item(index.row(), index.column())
         text = item.text()
         if text == '..':
-            fpath = os.path.dirname(self.folder)
+            fpath = os.path.dirname(os.getcwd())
         else:
-            fpath = os.path.join(self.folder, text)
+            fpath = os.path.join(os.getcwd(), text)
         gui.open_file(fpath)
 
 
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
-    w = FileWidget()
+    w = CwdViewer()
     w.show()
     sys.exit(app.exec_())

@@ -11,6 +11,7 @@ except:
     QtMultimedia = None
     pass
 
+from zmlx.ui.alg.write_text import write_text
 from zmlx.ui.alg.read_text import read_text
 from zmlx.ui.alg.read_json import read_json
 from zmlx.ui.alg.clamp import clamp
@@ -98,24 +99,16 @@ def play_error():
 
 
 def save(key, value, encoding=None):
-    try:
-        with open(temp(key), 'w', encoding=encoding) as file:
-            file.write(f'{value}')
-    except:
-        pass
+    write_text(path=temp(key), text=f'{value}', encoding=encoding)
 
 
-def load(key, value='', encoding=None):
-    try:
-        with open(find(key), 'r', encoding=encoding) as file:
-            return file.read()
-    except:
-        pass
+def load(key, default='', encoding=None):
+    return read_text(path=find(key), default=default, encoding=encoding)
 
 
 def load_window_style(win, name, extra=''):
     try:
-        value = load(name, '', encoding='UTF-8')
+        value = load(name, default='', encoding='UTF-8')
         win.setStyleSheet(f'{value};{extra}')
     except:
         pass
@@ -123,7 +116,7 @@ def load_window_style(win, name, extra=''):
 
 def load_window_size(win, name):
     try:
-        words = app_data.getenv(name, encoding='utf-8').split()
+        words = app_data.getenv(name, encoding='utf-8', default='').split()
         rect = QtWidgets.QDesktopWidget().availableGeometry()
         if len(words) == 2:
             w = clamp(int(words[0]), rect.width() * 0.4, rect.width() * 0.8)
@@ -238,11 +231,16 @@ def get_action_files():
     """
     files = {}
     for path in reversed(find_all('zml_actions')):
-        if path is not None and os.path.isdir(path):
-            for filename in os.listdir(path):
-                name, ext = os.path.splitext(filename)
-                if ext == '.py' or ext == '.pyw':
-                    files[filename] = os.path.join(path, filename)
+        if path is None:
+            continue
+        if not os.path.isdir(path):
+            continue
+        for filename in os.listdir(path):
+            if filename == '__init__.py':
+                continue
+            name, ext = os.path.splitext(filename)
+            if ext == '.py' or ext == '.pyw':
+                files[filename] = os.path.join(path, filename)
     return files
 
 

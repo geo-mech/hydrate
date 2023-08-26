@@ -1,6 +1,6 @@
-"""
-基于Seepage类的温度场计算
-"""
+
+# ** desc = '基于Seepage类的温度场计算 （利用TherFlowConfig建模）'
+
 from zmlx import *
 
 

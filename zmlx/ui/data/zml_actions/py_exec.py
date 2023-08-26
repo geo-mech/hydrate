@@ -1,5 +1,5 @@
 # ** is_sys = True
-# ** text = '执行'
+# ** text = '运行'
 # ** on_toolbar = True
 # ** tooltip = '运行当前标签页面显示的脚本'
 # ** icon = 'begin.png'

@@ -1,3 +1,5 @@
+# ** desc = '基于弹簧系统计算应力的传播'
+
 from zmlx import *
 from zmlx.data.mesh_c10000 import x, y, tri
 import math

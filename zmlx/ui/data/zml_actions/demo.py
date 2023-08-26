@@ -1,19 +1,9 @@
 # ** on_toolbar = True
 # ** icon = 'python.png'
-# ** dependency = """from zmlx import get_path \nimport os\nassert os.path.isdir(get_path('demo'))"""
 # ** text = '示例'
 
-import os
 
-from zmlx import get_path, gui
+from zmlx.ui.Widgets.Demo import DemoWidget
+from zml import gui
 
-
-def run():
-    folder = get_path('demo')
-    if os.path.isdir(folder):
-        gui.open_file_by_dlg(folder)
-    else:
-        gui.information('失败', '未找到demos文件夹')
-
-
-gui.execute(run, close_after_done=False)
+gui.get_widget(type=DemoWidget, caption='示例', on_top=True, oper=lambda w: w.refresh)

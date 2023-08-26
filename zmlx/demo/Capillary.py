@@ -1,3 +1,5 @@
+# ** desc = '流体在毛管力驱动下的流动'
+
 from zmlx import *
 from zmlx.utility.CapillaryEffect import CapillaryEffect
 

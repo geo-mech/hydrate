@@ -1,36 +1,37 @@
 import sys
 import warnings
-import time
 from zml import gui, lic
 from zmlx.ui.Config import *
 from zmlx.ui.ConsoleWidget import ConsoleWidget
 from zmlx.ui.GuiApi import GuiApi
 from zmlx.ui.Script import Script
 from zmlx.ui.TabWidget import TabWidget
+from zmlx.ui.alg.show_seepage import show_seepage
+from zmlx.ui.alg.show_txt import show_txt
+from zmlx.ui.alg.has_permission import has_permission
+from zmlx.ui.alg.show_fileinfo import show_fileinfo
+from zmlx.ui.alg.samefile import samefile
+from zmlx.ui.Widgets.TextEdit import TextEdit
+from zmlx.ui.CodeEdit import CodeEdit
+from zmlx.ui.TaskProc import TaskProc
+from PyQt5 import QtCore
 
 
 class MainWindow(QtWidgets.QMainWindow):
+    sig_cwd_changed = QtCore.pyqtSignal(str)
+    sig_do_task = QtCore.pyqtSignal()
+
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
         self.setWindowIcon(load_icon('app.png'))
         self.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
-
-        def show_seepage(filepath):
-            from zml import Seepage, app_data
-            model = Seepage(path=filepath)
-            app_data.put('seepage', model)
-            print(model)
-
-        def show_txt(filepath):
-            from zml import read_text
-            print(f'{filepath}:\n\n')
-            print(read_text(path=filepath, encoding='utf-8'))
-            print('\n')
+        self.task_proc = TaskProc(self)
 
         self.file_processors = {'.py': [self.open_code, 'Python File To Execute'],
                                 '.fn2': [self.show_fn2, 'Fracture Network 2D'],
                                 '.seepage': [show_seepage, 'Seepage Model File'],
                                 '.txt': [show_txt, 'Text file'],
+                                '.json': [show_txt, 'Json file'],
                                 '.xml': [show_txt, 'Xml file']
                                 }
 
@@ -54,10 +55,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.titleText = None
         self.__init_actions()
         self.__init_gui_api()
-        self.console_widget.sig_cwd_changed.connect(self.refresh)
-        self.console_widget.sig_cwd_changed.connect(self.show_files)
+
+        self.sig_cwd_changed.connect(self.refresh)
+        self.sig_cwd_changed.connect(self.view_cwd)
+        self.sig_cwd_changed.connect(self.console_widget.restore_code)
 
         self.status_bar = QtWidgets.QStatusBar(self)
+        self.status_bar.showMessage('正在初始化 ..')  # 在__init_later中显示“就绪”
         self.setStatusBar(self.status_bar)
         self.propress_label = QtWidgets.QLabel()
         self.propress_bar = QtWidgets.QProgressBar()
@@ -84,6 +88,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 toolbar.addAction(action)
         except:
             pass
+
+        self.status_bar.showMessage('就绪')
 
     def __init_actions(self):
         scripts = {}
@@ -133,14 +139,15 @@ class MainWindow(QtWidgets.QMainWindow):
         self.gui_api.add_func('window', lambda: self)
         self.gui_api.add_func('trigger', self.trigger)
         self.gui_api.add_func('progress', self.progress)
-        self.gui_api.add_func('show_files', self.show_files)
+        self.gui_api.add_func('view_cwd', self.view_cwd)
         self.gui_api.add_func('close', self.close)
         self.gui_api.add_func('open_code', self.open_code)
         self.gui_api.add_func('exec_current', self.exec_current)
         self.gui_api.add_func('open_file', self.open_file)
         self.gui_api.add_func('open_file_by_dlg', self.open_file_by_dlg)
-        self.gui_api.add_func('set_cwd', self.console_widget.set_cwd)
-        self.gui_api.add_func('set_cwd_by_dialog', self.console_widget.set_cwd_by_dialog)
+        self.gui_api.add_func('set_cwd', self.set_cwd)
+        self.gui_api.add_func('set_cwd_by_dialog', self.set_cwd_by_dialog)
+        self.gui_api.add_func('open_text', self.open_text)
         self.gui_api.add_func('kill_thread', self.console_widget.kill_thread)
         self.gui_api.add_func('cls', self.console_widget.output_widget.clear)
 
@@ -203,7 +210,7 @@ class MainWindow(QtWidgets.QMainWindow):
         try:
             current = self.tab_widget.currentWidget()
             if hasattr(current, 'refresh'):
-                current.refresh()
+                self.task_proc.add(lambda: current.refresh())
         except:
             pass
 
@@ -246,17 +253,17 @@ class MainWindow(QtWidgets.QMainWindow):
             if widget is not None:
                 self.tab_widget.setCurrentWidget(widget)
             if oper is not None:
-                oper(widget)
+                self.task_proc.add(lambda: oper(widget))
             return widget
         else:
             if on_top:
                 self.tab_widget.setCurrentWidget(widget)
             if oper is not None:
-                oper(widget)
+                self.task_proc.add(lambda: oper(widget))
             return widget
 
     def get_figure_widget(self, clear=None, **kwargs):
-        from .MatplotWidget import MatplotWidget
+        from zmlx.ui.MatplotWidget import MatplotWidget
         widget = self.get_widget(type=MatplotWidget, **kwargs)
         if clear:
             fig = widget.figure
@@ -265,7 +272,7 @@ class MainWindow(QtWidgets.QMainWindow):
         return widget
 
     def show_fn2(self, filepath, **kwargs):
-        from zmlx.ui.Fn2Widget import Fn2Widget
+        from zmlx.ui.Widgets.Fn2Widget import Fn2Widget
         if kwargs.get('caption') is None:
             kwargs['caption'] = 'Fractures'
         widget = self.get_widget(type=Fn2Widget, **kwargs)
@@ -296,10 +303,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.titleText = title
         self.refresh()
 
-    def show_files(self):
-        from zmlx.ui.Widgets.FileWidget import FileWidget
-        widget = self.get_widget(type=FileWidget, caption='文件', on_top=True, oper=lambda w: w.refresh())
-        widget.set_dir()
+    def view_cwd(self):
+        from zmlx.ui.Widgets.CwdViewer import CwdViewer
+        self.get_widget(type=CwdViewer, caption='文件', on_top=True, oper=lambda w: w.refresh())
 
     def progress(self, label=None, range=None, value=None, visible=None):
         """
@@ -319,41 +325,46 @@ class MainWindow(QtWidgets.QMainWindow):
             self.propress_bar.setVisible(visible)
             self.propress_label.setVisible(visible)
 
-    def __code_opened(self, fname):
-        def samefile(x, y):
-            try:
-                return os.path.samefile(x, y)
-            except:
-                return False
-
-        if samefile(fname, self.console_widget.get_fname()):
-            return True
-        from zmlx.ui.CodeEdit import CodeEdit
-        for i in range(self.tab_widget.count()):
-            widget = self.tab_widget.widget(i)
-            if isinstance(widget, CodeEdit):
-                if samefile(fname, widget.get_fname()):
-                    return True
-        return False
-
     def open_code(self, fname, warning=True):
-        if not gui.exists() or not isinstance(fname, str):
+        if not isinstance(fname, str):
             return
+
+        def code_opened(fname):
+            if samefile(fname, self.console_widget.get_fname()):
+                return True
+            for i in range(self.tab_widget.count()):
+                w = self.tab_widget.widget(i)
+                if isinstance(w, CodeEdit):
+                    if samefile(fname, w.get_fname()):
+                        return True
+            return False
+
         if len(fname) > 0:
-            if self.__code_opened(fname):
+            if code_opened(fname):
                 if warning:
                     QtWidgets.QMessageBox.information(self,
                                                       'Warning', f'文件已在编辑: {fname}')
             else:
-                from zmlx.ui.CodeEdit import CodeEdit
                 widget = self.get_widget(type=CodeEdit, caption=os.path.basename(fname),
                                          on_top=True,
                                          oper=lambda x: x.open(fname))
-                tag = 'tip_shown_when_edit_code'
-                if widget.get_fname() == fname and not app_data.has_tag_today(tag):
+                if widget.get_fname() == fname and not app_data.has_tag_today('tip_shown_when_edit_code'):
                     QtWidgets.QMessageBox.about(self, '成功',
                                                 '文件已打开，请点击工具栏上的<执行>按钮以执行')
-                    app_data.add_tag_today(tag)
+                    app_data.add_tag_today('tip_shown_when_edit_code')
+
+    def open_text(self, fname):
+        if not isinstance(fname, str):
+            return
+        if len(fname) > 0:
+            for i in range(self.tab_widget.count()):
+                w = self.tab_widget.widget(i)
+                if isinstance(w, TextEdit):
+                    if samefile(fname, w.get_fname()):
+                        return
+            self.get_widget(type=TextEdit, caption=os.path.basename(fname),
+                            on_top=True,
+                            oper=lambda x: x.set_fname(fname))
 
     def exec_current(self):
         from zmlx.ui.CodeEdit import CodeEdit
@@ -370,7 +381,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         if not os.path.isfile(filepath):
             if os.path.isdir(filepath):
-                self.console_widget.set_cwd(filepath)
+                self.set_cwd(filepath)
             return
 
         ext = os.path.splitext(filepath)[-1]
@@ -384,14 +395,7 @@ class MainWindow(QtWidgets.QMainWindow):
         proc = self.file_processors.get(ext, None)
         if proc is None:
             if os.path.isfile(filepath):
-                try:
-                    print(f'File   Path: {filepath}')
-                    print(f'File   Size: {os.path.getsize(filepath) / (1024 * 1024)} Mb')
-                    print(f'Access Time: {time.ctime(os.path.getatime(filepath))}')
-                    print(f'Modify Time: {time.ctime(os.path.getmtime(filepath))}')
-                    print('\n\n')
-                except:
-                    pass
+                show_fileinfo(filepath)
             return
         try:
             assert len(proc) == 2
@@ -418,6 +422,21 @@ class MainWindow(QtWidgets.QMainWindow):
                                       folder, f'{temp}All File(*.*)')
         if os.path.isfile(filepath):
             self.open_file(filepath)
+
+    def set_cwd(self, folder):
+        if isinstance(folder, str):
+            if os.path.isdir(folder):
+                if has_permission(folder):
+                    try:
+                        os.chdir(folder)
+                        save_cwd()
+                        self.sig_cwd_changed.emit(os.getcwd())
+                    except:
+                        pass
+
+    def set_cwd_by_dialog(self):
+        folder = QtWidgets.QFileDialog.getExistingDirectory(self, get_text('请选择工程文件夹'), os.getcwd())
+        self.set_cwd(folder)
 
 
 class MySplashScreen(QtWidgets.QSplashScreen):

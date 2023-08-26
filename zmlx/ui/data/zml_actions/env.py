@@ -1,5 +1,6 @@
 # ** text = '设置env'
 # ** dependency = """from zmlx.ui.Widgets.EnvEdit import MultiLineEdit"""
+# ** is_sys = True
 
 from zmlx.ui.Widgets.EnvEdit import MultiLineEdit
 from zml import gui

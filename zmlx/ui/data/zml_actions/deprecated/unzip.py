@@ -1,5 +1,5 @@
 # ** text = '解压缩'
-# ** menu = "文件"
+# ** menu = "操作"
 
 import os
 import zipfile

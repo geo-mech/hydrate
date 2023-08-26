@@ -22,7 +22,7 @@ class CodeEdit(QtWidgets.QTextEdit):
         return QtWidgets.QTextEdit.event(self, event)
 
     def enterEvent(self, event):
-        gui.status(f"Editor: {self.__fname}", 3000)
+        gui.status(f"Code Editor: {self.__fname}", 3000)
 
     def save(self):
         """

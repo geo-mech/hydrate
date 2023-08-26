@@ -1,7 +1,7 @@
 from matplotlib import cm
 
 from zmlx.ui.Config import *
-from zmlx.ui.GraphicsView import GraphicsView
+from zmlx.ui.Widgets.GraphicsView import GraphicsView
 
 
 class Hf2ColorMap:

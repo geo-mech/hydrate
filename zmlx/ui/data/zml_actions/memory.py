@@ -2,6 +2,7 @@
 # ** text = '变量'
 # ** on_toolbar = 1
 # ** icon = 'variables.png'
+# ** is_sys = True
 
 from zmlx.ui.Widgets.MemViewer import MemViewer
 from zml import gui

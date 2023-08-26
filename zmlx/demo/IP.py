@@ -1,3 +1,5 @@
+# ** desc = '侵入逾渗(IP)模型计算油气运移成藏'
+
 from zml import *
 import random
 import numpy as np

@@ -14,7 +14,6 @@ class ConsoleWidget(QtWidgets.QWidget):
     sig_kernel_started = QtCore.pyqtSignal()
     sig_kernel_done = QtCore.pyqtSignal()
     sig_kernel_err = QtCore.pyqtSignal(str)
-    sig_cwd_changed = QtCore.pyqtSignal(str)
 
     def __init__(self, parent, pre_task=None, post_task=None):
         super(ConsoleWidget, self).__init__(parent)
@@ -28,7 +27,7 @@ class ConsoleWidget(QtWidgets.QWidget):
         self.output_widget = ConsoleOutput(self.splitter)
         self.input_editor = CodeEdit(self.splitter)
 
-        self.splitter.setStretchFactor(0, 1)
+        self.splitter.setStretchFactor(0, 2)
         self.splitter.setStretchFactor(1, 1)
 
         h_layout = QtWidgets.QHBoxLayout()
@@ -42,8 +41,9 @@ class ConsoleWidget(QtWidgets.QWidget):
             h_layout.addWidget(button)
             return button
 
-        self.button_exec = add_button('执行', 'begin.png',
+        self.button_exec = add_button('运行', 'begin.png',
                                       lambda: self.exec_file(fname=None))
+        self.button_exec.setShortcut('Ctrl+Return')
         self.button_pause = add_button('暂停', 'pause.png', self.pause_clicked)
         self.button_exit = add_button('终止', 'stop.png', self.stop_clicked)
         h_layout.addItem(QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum))
@@ -68,8 +68,6 @@ class ConsoleWidget(QtWidgets.QWidget):
         self.flag_exit = SharedValue(False)
         self.pre_task = pre_task
         self.post_task = post_task
-
-        self.sig_cwd_changed.connect(self.restore_code)
 
     def refresh_buttons(self):
         if self.should_pause():
@@ -211,19 +209,6 @@ class ConsoleWidget(QtWidgets.QWidget):
                     thread = self.thread
                     thread.sig_done.emit()
                     thread.terminate()
-
-    def set_cwd_by_dialog(self):
-        folder = QtWidgets.QFileDialog.getExistingDirectory(self, get_text('请选择工程文件夹'), os.getcwd())
-        self.set_cwd(folder)
-
-    def set_cwd(self, folder):
-        if len(folder) > 0 and os.path.isdir(folder):
-            try:
-                os.chdir(folder)
-                save_cwd()
-                self.sig_cwd_changed.emit(os.path.abspath(os.getcwd()))
-            except:
-                pass
 
     def writeline(self, text):
         self.output_widget.write(f'{text}\n')

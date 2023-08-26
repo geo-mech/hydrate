@@ -1,11 +1,11 @@
 {
   "文件": [
-    "workdir.py",
+    "set_cwd.py",
     "quit.py",
     "open.py",
     "demo.py"
   ],
-  "脚本": [
+  "代码": [
     "py_new.py",
     "py_exec.py",
     "kill.py"
@@ -13,10 +13,13 @@
   "显示": [
     "refresh.py",
     "cls.py",
-    "filesys.py",
+    "view_cwd.py",
     "memory.py",
     "timer.py",
     "console.py"
+  ],
+  "操作": [
+    "print_tag.py"
   ],
   "设置": [
     "search.py",
@@ -25,6 +28,7 @@
   "帮助": [
     "about.py",
     "readme.py",
-    "reg.py"
+    "reg.py",
+    "homepage.py"
   ]
 }

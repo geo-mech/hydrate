@@ -1,5 +1,5 @@
 # ** text = '搜索路径'
-
+# ** is_sys = True
 
 from zml import gui
 from zmlx.ui.Widgets.FileFind import FileFind
