@@ -5,9 +5,8 @@
 
 import os
 
-from PyQt5 import QtWidgets
-
 import zml
+from zmlx.ui.Qt import QtWidgets
 
 
 def set_md(widget):
@@ -20,4 +19,4 @@ def set_md(widget):
 
 
 zml.gui.get_widget(type=QtWidgets.QTextBrowser, caption='ReadMe',
-                   on_top=True, oper=set_md)
+                   on_top=True, oper=set_md, icon='info.png')

@@ -115,6 +115,36 @@ class Timer:
 timer = Timer()
 
 
+def clock(func):
+    """
+    Timing for Python functions. Reference https://blog.csdn.net/BobAuditore/article/details/79377679
+
+from zml import clock, timer
+import time
+
+
+@clock
+def run(seconds):
+    time.sleep(seconds)
+    print(f"sleep for {seconds} seconds")
+
+
+if __name__ == '__main__':
+    for i in range(3):
+        run(0.1)
+    print(timer)
+    """
+
+    def clocked(*args, **kwargs):
+        key = func.__name__
+        timer.beg(key)
+        result = func(*args, **kwargs)
+        timer.end(key)
+        return result
+
+    return clocked
+
+
 class Object:
     def set(self, **kwargs):
         """
@@ -1270,35 +1300,6 @@ def get_norm(p):
     for dim in range(len(p)):
         dist += p[dim] ** 2
     return dist ** 0.5
-
-
-def clock(func):
-    """
-    Timing for Python functions. Reference https://blog.csdn.net/BobAuditore/article/details/79377679
-
-import time
-import zml
-
-@zml.clock
-def run(seconds):
-    time.sleep(seconds)
-    print('HHH')
-
-if __name__ == '__main__':
-    run(1)
-    """
-
-    def clocked(*args, **kwargs):
-        import timeit
-        t0 = timeit.default_timer()
-        result = func(*args, **kwargs)
-        elapsed = timeit.default_timer() - t0
-        name = func.__name__
-        arg_str = ', '.join(repr(arg) for arg in args)
-        print('[%0.8fs] %s(%s) -> %r' % (elapsed, name, arg_str, result))
-        return result
-
-    return clocked
 
 
 core.use(c_bool, 'confuse_file', c_char_p, c_char_p, c_char_p, c_bool)

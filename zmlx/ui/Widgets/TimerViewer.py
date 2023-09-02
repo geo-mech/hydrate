@@ -1,8 +1,9 @@
-from PyQt5 import QtWidgets, QtCore
-from zmlx.utility.Timer import timer
-from zmlx.alg.clamp import clamp
-from zml import time2str
 import timeit
+
+from zml import time2str
+from zmlx.alg.clamp import clamp
+from zmlx.ui.Qt import QtWidgets, QtCore
+from zmlx.utility.Timer import timer
 
 
 class TimerViewer(QtWidgets.QTableWidget):

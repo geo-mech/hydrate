@@ -1,11 +1,9 @@
-import sys
-from PyQt5 import QtWidgets, QtCore
 from zml import *
 from zmlx.alg.sys import get_latest_version
+from zmlx.ui.Qt import QtWidgets, QtCore
 
 
 class About(QtWidgets.QTableWidget):
-
     sigRefresh = QtCore.pyqtSignal()
 
     def __init__(self, parent=None):
@@ -47,6 +45,3 @@ if __name__ == '__main__':
     w = About()
     w.show()
     sys.exit(app.exec_())
-
-
-

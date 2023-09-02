@@ -301,3 +301,25 @@ def json_file(filename):
     将Json文件作为一个PTree来使用
     """
     return PTree(ada=Adaptor(data=None, path=filename, read=read_json, write=write_json))
+
+
+def python_file(filename):
+    """
+    将Python文件作为一个PTree来使用
+    """
+    from zml import read_py, write_py
+
+    def read(path):
+        return read_py(path=path, data={}, encoding='utf-8', globals=None, text=None, key=None)
+
+    return PTree(ada=Adaptor(data=None, path=filename, read=read, write=write_py))
+
+
+def open_pt(filename):
+    ext = os.path.splitext(filename)[-1]
+    if ext is not None:
+        if ext.lower() == '.json':
+            return json_file(filename)
+        if ext.lower() == '.py' or ext.lower() == '.pyw':
+            return python_file(filename)
+

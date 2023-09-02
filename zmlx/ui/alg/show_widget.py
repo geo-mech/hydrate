@@ -1,6 +1,6 @@
 import sys
 
-from PyQt5 import QtWidgets
+from zmlx.ui.Qt import QtWidgets
 
 
 def show_widget(widget, width=800, height=600, *args, **kwargs):

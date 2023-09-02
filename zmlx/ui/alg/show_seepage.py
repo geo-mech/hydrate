@@ -1,4 +1,5 @@
-from zml import Seepage, app_data
+from zml import Seepage
+from zml import app_data
 
 
 def show_seepage(filepath):

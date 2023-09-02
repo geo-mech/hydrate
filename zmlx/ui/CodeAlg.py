@@ -1,11 +1,11 @@
 import os
-
+from zml import app_data
 from zml import gui
 
 
-def edit_code(fname, warning=True):
+def edit_code(fname):
     if gui.exists():
-        gui.open_code(fname, warning=warning)
+        gui.open_code(fname)
 
 
 def new_code():
@@ -16,5 +16,6 @@ def new_code():
 
 
 def exec_code_in_editing():
-    if gui.exists():
-        gui.exec_current()
+    main_window = app_data.space.get('main_window', None)
+    if main_window is not None:
+        main_window.exec_current()

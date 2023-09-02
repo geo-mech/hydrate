@@ -1,6 +1,7 @@
-from PyQt5 import QtWidgets
 import sys
+
 from zml import reg
+from zmlx.ui.Qt import QtWidgets
 
 
 class RegTool(QtWidgets.QWidget):

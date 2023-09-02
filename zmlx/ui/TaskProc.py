@@ -1,5 +1,6 @@
-from PyQt5 import QtCore
 from queue import Queue
+
+from zmlx.ui.Qt import QtCore
 
 
 class TaskProc(QtCore.QObject):
@@ -26,4 +27,3 @@ class TaskProc(QtCore.QObject):
                 self.__sig_do_task.emit()
         except:
             pass
-

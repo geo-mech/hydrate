@@ -1,9 +1,7 @@
-from PyQt5 import QtCore, QtWidgets
-from zmlx.ui.alg.read_text import read_text
-from zmlx.ui.alg.write_text import write_text
-from zml import gui
+from zml import gui, read_text, write_text
 from zmlx.ui.Config import code_in_editor
 from zmlx.ui.PythonHighlighter import PythonHighlighter
+from zmlx.ui.Qt import QtCore, QtWidgets
 
 
 class CodeEdit(QtWidgets.QTextEdit):

@@ -1,9 +1,10 @@
 # ** text = '设置env'
 # ** dependency = """from zmlx.ui.Widgets.EnvEdit import MultiLineEdit"""
 # ** is_sys = True
+# ** icon = 'set.png'
 
-from zmlx.ui.Widgets.EnvEdit import MultiLineEdit
 from zml import gui
+from zmlx.ui.Widgets.EnvEdit import MultiLineEdit
 
 
 def init(widget):
@@ -16,4 +17,4 @@ def init(widget):
 
 
 gui.get_widget(type=MultiLineEdit, caption='设置Env',
-               on_top=True, init=init)
+               on_top=True, init=init, icon='set.png')

@@ -3,19 +3,11 @@
 """
 
 import os
-from PyQt5 import QtGui, QtWidgets, QtCore
 
-try:
-    from PyQt5 import QtMultimedia
-except:
-    QtMultimedia = None
-    pass
-
-from zmlx.ui.alg.write_text import write_text
-from zmlx.ui.alg.read_text import read_text
-from zmlx.ui.alg.read_json import read_json
-from zmlx.ui.alg.clamp import clamp
-from zml import app_data
+from zml import app_data, read_text, write_text
+from zmlx.alg.clamp import clamp
+from zmlx.ui.Qt import QtGui, QtWidgets, QtCore, QtMultimedia
+from zmlx.io.json_ex import read as read_json
 
 try:
     app_data.add_path(os.path.join(os.path.dirname(__file__), 'data'))

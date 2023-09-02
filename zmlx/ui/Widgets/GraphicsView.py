@@ -1,4 +1,4 @@
-from PyQt5 import QtWidgets, QtGui
+from zmlx.ui.Qt import QtWidgets, QtGui
 
 
 class GraphicsView(QtWidgets.QGraphicsView):

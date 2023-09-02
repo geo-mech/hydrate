@@ -1,20 +1,21 @@
 import sys
 import warnings
-from zml import gui, lic
+
+from zml import gui, lic, app_data
+from zmlx.filesys.has_permission import has_permission
+from zmlx.filesys.samefile import samefile
+from zmlx.filesys.show_fileinfo import show_fileinfo
+from zmlx.ui.CodeEdit import CodeEdit
 from zmlx.ui.Config import *
 from zmlx.ui.ConsoleWidget import ConsoleWidget
 from zmlx.ui.GuiApi import GuiApi
+from zmlx.ui.Qt import QtCore
 from zmlx.ui.Script import Script
 from zmlx.ui.TabWidget import TabWidget
+from zmlx.ui.TaskProc import TaskProc
+from zmlx.ui.Widgets.TextEdit import TextEdit
 from zmlx.ui.alg.show_seepage import show_seepage
 from zmlx.ui.alg.show_txt import show_txt
-from zmlx.ui.alg.has_permission import has_permission
-from zmlx.ui.alg.show_fileinfo import show_fileinfo
-from zmlx.ui.alg.samefile import samefile
-from zmlx.ui.Widgets.TextEdit import TextEdit
-from zmlx.ui.CodeEdit import CodeEdit
-from zmlx.ui.TaskProc import TaskProc
-from PyQt5 import QtCore
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -231,7 +232,7 @@ class MainWindow(QtWidgets.QMainWindow):
         super(MainWindow, self).resizeEvent(event)
         save_window_size(self, 'main_window_size')
 
-    def get_widget(self, type, caption=None, on_top=None, init=None, type_kw=None, oper=None):
+    def get_widget(self, type, caption=None, on_top=None, init=None, type_kw=None, oper=None, icon=None):
         """
         返回一个控件，其中type为类型，caption为标题，现有的控件，只有类型和标题都满足，才会返回，否则就
         创建新的控件。
@@ -240,18 +241,20 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         widget = self.tab_widget.find_widget(type=type, text=caption)
         if widget is None:
-            count_max = 50
+            count_max = 100
             assert self.tab_widget.count() < count_max, f'maximum count of tab_widget is {count_max}'
             if type_kw is None:
                 type_kw = {}
             widget = type(self.tab_widget, **type_kw)
+            assert widget is not None
             if init is not None:
                 init(widget)
             if caption is None:
                 caption = 'untitled'
-            self.tab_widget.addTab(widget, caption)
-            if widget is not None:
-                self.tab_widget.setCurrentWidget(widget)
+            index = self.tab_widget.addTab(widget, caption)
+            if icon is not None:
+                self.tab_widget.setTabIcon(index, load_icon(icon))
+            self.tab_widget.setCurrentWidget(widget)
             if oper is not None:
                 self.task_proc.add(lambda: oper(widget))
             return widget
@@ -305,7 +308,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def view_cwd(self):
         from zmlx.ui.Widgets.CwdViewer import CwdViewer
-        self.get_widget(type=CwdViewer, caption='文件', on_top=True, oper=lambda w: w.refresh())
+        self.get_widget(type=CwdViewer, caption='文件', on_top=True, oper=lambda w: w.refresh(), icon='cwd.png')
 
     def progress(self, label=None, range=None, value=None, visible=None):
         """
@@ -325,30 +328,29 @@ class MainWindow(QtWidgets.QMainWindow):
             self.propress_bar.setVisible(visible)
             self.propress_label.setVisible(visible)
 
-    def open_code(self, fname, warning=True):
+    def open_code(self, fname):
         if not isinstance(fname, str):
             return
 
-        def code_opened(fname):
-            if samefile(fname, self.console_widget.get_fname()):
-                return True
+        def get_widget(fname):
             for i in range(self.tab_widget.count()):
                 w = self.tab_widget.widget(i)
                 if isinstance(w, CodeEdit):
                     if samefile(fname, w.get_fname()):
-                        return True
-            return False
+                        return w
 
         if len(fname) > 0:
-            if code_opened(fname):
-                if warning:
-                    QtWidgets.QMessageBox.information(self,
-                                                      'Warning', f'文件已在编辑: {fname}')
+            if samefile(fname, self.console_widget.get_fname()):
+                return
+            widget = get_widget(fname)
+            if widget is not None:
+                self.tab_widget.setCurrentWidget(widget)
+                return
             else:
-                widget = self.get_widget(type=CodeEdit, caption=os.path.basename(fname),
-                                         on_top=True,
-                                         oper=lambda x: x.open(fname))
-                if widget.get_fname() == fname and not app_data.has_tag_today('tip_shown_when_edit_code'):
+                self.get_widget(type=CodeEdit, caption=os.path.basename(fname),
+                                on_top=True,
+                                oper=lambda x: x.open(fname), icon='python.png')
+                if not app_data.has_tag_today('tip_shown_when_edit_code'):
                     QtWidgets.QMessageBox.about(self, '成功',
                                                 '文件已打开，请点击工具栏上的<执行>按钮以执行')
                     app_data.add_tag_today('tip_shown_when_edit_code')
@@ -361,6 +363,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 w = self.tab_widget.widget(i)
                 if isinstance(w, TextEdit):
                     if samefile(fname, w.get_fname()):
+                        self.tab_widget.setCurrentWidget(w)
                         return
             self.get_widget(type=TextEdit, caption=os.path.basename(fname),
                             on_top=True,
@@ -372,8 +375,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.tab_widget.currentWidget().save()
             self.console_widget.exec_file(self.tab_widget.currentWidget().get_fname())
         else:
-            QtWidgets.QMessageBox.information(self,
-                                              '失败', '请首先定位到脚本页面')
+            self.console_widget.exec_file()
 
     def open_file(self, filepath):
         if not isinstance(filepath, str):
@@ -446,7 +448,6 @@ class MySplashScreen(QtWidgets.QSplashScreen):
 
 def execute(code=None, keep_cwd=True, close_after_done=True):
     try:
-        from zml import app_data
         app_data.log(f'gui_execute. code={code}, file={__file__}')
     except:
         pass
@@ -474,6 +475,7 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
     win = MainWindow()
 
     def f1():
+        app_data.space['main_window'] = win
         gui.push(win.gui_api)
         print(f'Push Gui: {win.gui_api}')
         sys.stdout = win.console_widget.output_widget
@@ -484,6 +486,7 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
         sys.stderr = sys.__stderr__
         print('Pop Gui')
         gui.pop()
+        app_data.space['main_window'] = None
 
     f1()
 

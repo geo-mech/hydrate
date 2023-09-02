@@ -1,8 +1,8 @@
-from PyQt5.QtCore import QRegExp, Qt
-from PyQt5.QtGui import QFont, QColor, QSyntaxHighlighter, QTextCharFormat
+from zmlx.ui.Qt import QtCore, QtGui
+from zmlx.ui.alg.zml_names import zml_names
 
 
-class PythonHighlighter(QSyntaxHighlighter):
+class PythonHighlighter(QtGui.QSyntaxHighlighter):
     """
     原文链接：https://blog.csdn.net/xiaoyangyang20/article/details/68923133
     """
@@ -31,52 +31,52 @@ class PythonHighlighter(QSyntaxHighlighter):
                     "property", "range", "reduce", "repr", "reversed",
                     "round", "set", "setattr", "slice", "sorted",
                     "staticmethod", "str", "sum", "super", "tuple", "type",
-                    "vars", "zip"]
+                    "vars", "zip", "zml", "zmlx"] + zml_names()
         CONSTANTS = ["False", "True", "None", "NotImplemented",
                      "Ellipsis"]
 
-        PythonHighlighter.Rules.append((QRegExp(
+        PythonHighlighter.Rules.append((QtCore.QRegExp(
             "|".join([r"\b%s\b" % keyword for keyword in KEYWORDS])),
                                         "keyword"))
-        PythonHighlighter.Rules.append((QRegExp(
+        PythonHighlighter.Rules.append((QtCore.QRegExp(
             "|".join([r"\b%s\b" % builtin for builtin in BUILTINS])),
                                         "builtin"))
-        PythonHighlighter.Rules.append((QRegExp(
+        PythonHighlighter.Rules.append((QtCore.QRegExp(
             "|".join([r"\b%s\b" % constant
                       for constant in CONSTANTS])), "constant"))
-        PythonHighlighter.Rules.append((QRegExp(
+        PythonHighlighter.Rules.append((QtCore.QRegExp(
             r"\b[+-]?[0-9]+[lL]?\b"
             r"|\b[+-]?0[xX][0-9A-Fa-f]+[lL]?\b"
             r"|\b[+-]?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?\b"),
                                         "number"))
-        PythonHighlighter.Rules.append((QRegExp(
+        PythonHighlighter.Rules.append((QtCore.QRegExp(
             r"\bPyQt4\b|\bQt?[A-Z][a-z]\w+\b"), "pyqt"))
-        PythonHighlighter.Rules.append((QRegExp(r"\b@\w+\b"),
+        PythonHighlighter.Rules.append((QtCore.QRegExp(r"\b@\w+\b"),
                                         "decorator"))
-        stringRe = QRegExp(r"""(?:'[^']*'|"[^"]*")""")
+        stringRe = QtCore.QRegExp(r"""(?:'[^']*'|"[^"]*")""")
         stringRe.setMinimal(True)
         PythonHighlighter.Rules.append((stringRe, "string"))
-        self.stringRe = QRegExp(r"""(:?"["]".*"["]"|'''.*''')""")
+        self.stringRe = QtCore.QRegExp(r"""(:?"["]".*"["]"|'''.*''')""")
         self.stringRe.setMinimal(True)
         PythonHighlighter.Rules.append((self.stringRe, "string"))
-        self.tripleSingleRe = QRegExp(r"""'''(?!")""")
-        self.tripleDoubleRe = QRegExp(r'''"""(?!')''')
+        self.tripleSingleRe = QtCore.QRegExp(r"""'''(?!")""")
+        self.tripleDoubleRe = QtCore.QRegExp(r'''"""(?!')''')
 
     @staticmethod
     def initializeFormats():
-        baseFormat = QTextCharFormat()
+        baseFormat = QtGui.QTextCharFormat()
         # baseFormat.setFontFamily("courier")
         # baseFormat.setFontPointSize(12)
-        for name, color in (("normal", Qt.black),
-                            ("keyword", Qt.darkBlue), ("builtin", Qt.darkRed),
-                            ("constant", Qt.darkGreen),
-                            ("decorator", Qt.darkBlue), ("comment", Qt.darkGreen),
-                            ("string", Qt.darkYellow), ("number", Qt.darkMagenta),
-                            ("error", Qt.darkRed), ("pyqt", Qt.darkCyan)):
-            format = QTextCharFormat(baseFormat)
-            format.setForeground(QColor(color))
+        for name, color in (("normal", QtCore.Qt.black),
+                            ("keyword", QtCore.Qt.darkBlue), ("builtin", QtCore.Qt.darkRed),
+                            ("constant", QtCore.Qt.darkGreen),
+                            ("decorator", QtCore.Qt.darkBlue), ("comment", QtCore.Qt.darkGreen),
+                            ("string", QtCore.Qt.darkYellow), ("number", QtCore.Qt.darkMagenta),
+                            ("error", QtCore.Qt.darkRed), ("pyqt", QtCore.Qt.darkCyan)):
+            format = QtGui.QTextCharFormat(baseFormat)
+            format.setForeground(QtGui.QColor(color))
             if name in ("keyword", "decorator"):
-                format.setFontWeight(QFont.Bold)
+                format.setFontWeight(QtGui.QFont.Bold)
             if name == "comment":
                 format.setFontItalic(True)
             PythonHighlighter.Formats[name] = format
@@ -118,7 +118,7 @@ class PythonHighlighter(QSyntaxHighlighter):
 
         # Slow but good quality highlighting for comments. For more
         # speed, comment this out and add the following to __init__:
-        # PythonHighlighter.Rules.append((QRegExp(r"#.*"), "comment"))
+        # PythonHighlighter.Rules.append((QtCore.QRegExp(r"#.*"), "comment"))
         if not text:
             pass
         elif text[0] == "#":

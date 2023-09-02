@@ -3,7 +3,7 @@
 # ** is_sys = True
 
 
-from PyQt5 import QtWidgets
 from zml import gui
+from zmlx.ui.Qt import QtWidgets
 
 gui.get_widget(type=QtWidgets.QCalendarWidget, caption='日历', on_top=True)

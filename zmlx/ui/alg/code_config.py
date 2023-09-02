@@ -1,4 +1,4 @@
-from zmlx.ui.alg.read_text import read_text
+from zml import read_text
 
 
 def code_config(path=None, encoding=None):
@@ -19,5 +19,3 @@ def code_config(path=None, encoding=None):
         return config
     except:
         return {}
-
-

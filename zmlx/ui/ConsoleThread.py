@@ -1,4 +1,4 @@
-from PyQt5 import QtCore
+from zmlx.ui.Qt import QtCore
 
 
 class ConsoleThread(QtCore.QThread):

@@ -1,7 +1,8 @@
-from PyQt5 import QtWidgets, QtCore
+import timeit
+
 from zml import app_data
 from zmlx.alg.clamp import clamp
-import timeit
+from zmlx.ui.Qt import QtWidgets, QtCore
 
 
 class MemViewer(QtWidgets.QTableWidget):

@@ -1,8 +1,9 @@
-from PyQt5 import QtWidgets
-from zmlx.alg.fsize2str import fsize2str
 import os
 import sys
 import time
+
+from zmlx.alg.fsize2str import fsize2str
+from zmlx.ui.Qt import QtWidgets
 
 
 class FileViewer(QtWidgets.QTableWidget):
@@ -62,7 +63,7 @@ class FileViewer(QtWidgets.QTableWidget):
                 if ext is not None:
                     if ext.lower() == '.py' or ext.lower() == '.pyw':
                         from zml import gui
-                        gui.open_code(path, False)
+                        gui.open_code(path)
         except:
             pass
 

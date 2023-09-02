@@ -1,8 +1,9 @@
-from PyQt5 import QtWidgets
-from zmlx import get_path
-from zmlx.ui.alg.code_config import code_config
 import os
 import sys
+
+from zmlx import get_path
+from zmlx.ui.Qt import QtWidgets
+from zmlx.ui.alg.code_config import code_config
 
 
 class DemoWidget(QtWidgets.QTableWidget):
@@ -69,7 +70,7 @@ class DemoWidget(QtWidgets.QTableWidget):
                 if ext is not None:
                     if ext.lower() == '.py' or ext.lower() == '.pyw':
                         from zml import gui
-                        gui.open_code(path, False)
+                        gui.open_code(path)
 
             if os.path.isdir(path):
                 os.startfile(path)

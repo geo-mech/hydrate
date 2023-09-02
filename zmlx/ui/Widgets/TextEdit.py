@@ -1,7 +1,5 @@
-from PyQt5 import QtWidgets
-from zmlx.ui.alg.read_text import read_text
-from zmlx.ui.alg.write_text import write_text
-from zml import gui
+from zml import gui, read_text, write_text
+from zmlx.ui.Qt import QtWidgets
 
 
 class TextEdit(QtWidgets.QTextEdit):

@@ -8,7 +8,6 @@
 from zmlx.alg.has_module import has_module
 from zmlx.alg.pip_install import pip_install
 
-
 names = ['numpy', 'scipy', 'matplotlib', 'pyqtgraph', 'PyQt5']
 
 print('\n\n')

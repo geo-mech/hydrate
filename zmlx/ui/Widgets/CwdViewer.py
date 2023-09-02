@@ -1,12 +1,12 @@
 import os
 import sys
-
-from PyQt5 import QtWidgets, QtCore
-from zmlx.alg.fsize2str import fsize2str
-from zmlx.alg.clamp import clamp
-from zml import gui
 import time
 import timeit
+
+from zml import gui
+from zmlx.alg.clamp import clamp
+from zmlx.alg.fsize2str import fsize2str
+from zmlx.ui.Qt import QtWidgets, QtCore
 
 
 class CwdViewer(QtWidgets.QTableWidget):
@@ -75,7 +75,7 @@ class CwdViewer(QtWidgets.QTableWidget):
             ext = os.path.splitext(fpath)[-1]
             if ext is not None:
                 if ext.lower() == '.py' or ext.lower() == '.pyw':
-                    gui.open_code(fpath, False)
+                    gui.open_code(fpath)
 
     def item_double_clicked(self, index):
         if index.column() != 0:

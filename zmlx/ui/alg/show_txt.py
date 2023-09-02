@@ -1,7 +1,7 @@
-from zmlx.ui.alg.read_text import read_text
-from zmlx.ui.alg.show_fileinfo import show_fileinfo
 import os
-from zml import gui
+
+from zml import gui, read_text
+from zmlx.filesys.show_fileinfo import show_fileinfo
 
 
 def show_txt(filepath):

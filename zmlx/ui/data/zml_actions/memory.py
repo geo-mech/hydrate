@@ -4,7 +4,7 @@
 # ** icon = 'variables.png'
 # ** is_sys = True
 
-from zmlx.ui.Widgets.MemViewer import MemViewer
 from zml import gui
+from zmlx.ui.Widgets.MemViewer import MemViewer
 
-gui.get_widget(type=MemViewer, caption='变量', on_top=True, oper=lambda w: w.refresh)
+gui.get_widget(type=MemViewer, caption='变量', on_top=True, oper=lambda w: w.refresh, icon='variables.png')

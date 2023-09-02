@@ -1,9 +1,8 @@
 import os
 
-from PyQt5 import QtWidgets
+from zml import app_data, read_text
+from zmlx.ui.Qt import QtWidgets
 from zmlx.ui.alg.code_config import code_config
-from zmlx.ui.alg.read_text import read_text
-from zml import app_data
 
 
 class Script:

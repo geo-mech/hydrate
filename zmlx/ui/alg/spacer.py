@@ -1,4 +1,4 @@
-from PyQt5 import QtWidgets
+from zmlx.ui.Qt import QtWidgets
 
 
 def v_spacer():

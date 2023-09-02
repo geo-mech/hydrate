@@ -1,13 +1,14 @@
-import shutil
 import timeit
 
-from zml import gui, time_string, time2str
+from zml import gui, time2str
 from zmlx.ui.BreakPoint import BreakPoint
 from zmlx.ui.CodeEdit import CodeEdit
 from zmlx.ui.Config import *
 from zmlx.ui.ConsoleOutput import ConsoleOutput
 from zmlx.ui.ConsoleThread import ConsoleThread
 from zmlx.ui.SharedValue import SharedValue
+from zmlx.ui.alg.add_code_history import add_code_history
+from zmlx.filesys.samefile import samefile
 
 
 class ConsoleWidget(QtWidgets.QWidget):
@@ -27,7 +28,7 @@ class ConsoleWidget(QtWidgets.QWidget):
         self.output_widget = ConsoleOutput(self.splitter)
         self.input_editor = CodeEdit(self.splitter)
 
-        self.splitter.setStretchFactor(0, 2)
+        self.splitter.setStretchFactor(0, 3)
         self.splitter.setStretchFactor(1, 1)
 
         h_layout = QtWidgets.QHBoxLayout()
@@ -93,15 +94,8 @@ class ConsoleWidget(QtWidgets.QWidget):
             self.button_exec.setEnabled(False)
             self.button_pause.setEnabled(True)
             self.button_exit.setEnabled(True)
-
-            def same_file(a, b):
-                try:
-                    return os.path.samefile(a, b)
-                except:
-                    return False
-
-            self.input_editor.setVisible(same_file(self.workspace.get('__file__', None),
-                                                   self.input_editor.get_fname()))
+            self.input_editor.setVisible(samefile(self.workspace.get('__file__', None),
+                                                  self.input_editor.get_fname()))
 
     def pause_clicked(self):
         app_data.log(f'execute <__button_pause_clicked> of {self}')
@@ -135,12 +129,10 @@ class ConsoleWidget(QtWidgets.QWidget):
             if fname is None:
                 return
         if os.path.isfile(fname):
-            try:
-                shutil.copy(fname, app_data.root('console_history', f'{time_string()}.py'))
-            except:
-                pass
-            self.text_when_beg = f"{get_text('Start')}: {fname}"
-            self.text_when_end = get_text('Done')
+            add_code_history(fname)
+            rel = os.path.relpath(fname)
+            self.text_when_beg = f"Start: {fname if len(fname) < len(rel) * 2 else rel}"
+            self.text_when_end = 'Done'
             self.workspace['__file__'] = fname
             self.start_func(lambda:
                             exec(read_text(fname, encoding='utf-8', default=''), self.workspace))
@@ -148,7 +140,6 @@ class ConsoleWidget(QtWidgets.QWidget):
     def start_func(self, code):
         if self.thread is not None:
             play_error()
-            # QtWidgets.QMessageBox.information(self, get_text('注意'), '内核正在运行，请等待当前任务执行结束')
             return
         self.result = None
         if isinstance(code, str):
@@ -178,11 +169,11 @@ class ConsoleWidget(QtWidgets.QWidget):
             self.set_should_pause(False)
 
             if self.text_when_end is not None:
-                print(f'{self.text_when_end}.')
+                print(self.text_when_end)
 
             self.time_end = timeit.default_timer()
             if self.time_beg is not None and self.time_end is not None:
-                print(f'Time used = {time2str(self.time_end - self.time_beg)}')
+                print(f'Time used = {time2str(self.time_end - self.time_beg)}\n')
 
             self.text_when_beg = None
             self.text_when_end = None
@@ -193,8 +184,8 @@ class ConsoleWidget(QtWidgets.QWidget):
 
     def __kernel_err(self, err):
         self.kernel_err = err
+        print(f'Error: {err}')
         self.sig_kernel_err.emit(err)
-        QtWidgets.QMessageBox.information(self, 'Error', err)
 
     def kill_thread(self):
         """

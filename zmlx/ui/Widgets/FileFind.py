@@ -1,7 +1,8 @@
-from PyQt5 import QtWidgets
 import sys
+
 from zml import app_data
 from zmlx.alg.search_paths import choose_path
+from zmlx.ui.Qt import QtWidgets
 
 
 class FileFind(QtWidgets.QWidget):

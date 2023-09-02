@@ -1,4 +1,4 @@
-from PyQt5 import QtCore, QtWidgets, QtGui
+from zmlx.ui.Qt import QtCore, QtWidgets, QtGui
 
 
 class ConsoleOutput(QtWidgets.QTextBrowser):

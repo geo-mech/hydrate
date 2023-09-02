@@ -1,6 +1,5 @@
-from PyQt5 import QtCore, QtWidgets
-
 from zmlx.ui.Config import get_text
+from zmlx.ui.Qt import QtCore, QtWidgets
 
 
 class GuiApi(QtCore.QObject):

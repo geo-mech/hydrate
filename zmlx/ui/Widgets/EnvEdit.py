@@ -1,6 +1,7 @@
-from PyQt5 import QtWidgets
-from zml import app_data
 import sys
+
+from zml import app_data
+from zmlx.ui.Qt import QtWidgets
 
 
 class LineEdit(QtWidgets.QLineEdit):
@@ -47,9 +48,15 @@ class MultiLineEdit(QtWidgets.QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.grid = QtWidgets.QGridLayout(self)
+        layout = QtWidgets.QVBoxLayout(self)
+        self.grid = QtWidgets.QGridLayout()
         self.grid.setColumnStretch(0, 1)
         self.grid.setColumnStretch(1, 2)
+        self.grid.setContentsMargins(0, 50, 0, 0)
+        self.grid.setVerticalSpacing(30)
+        layout.addLayout(self.grid)
+        layout.addItem(QtWidgets.QSpacerItem(0, 0,
+                                             QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding))
         self.items = []
 
     def add(self, key, label=None, items=None):
