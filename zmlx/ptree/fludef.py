@@ -122,7 +122,5 @@ def set_fludefs(model, pt, fluid_n=0, den=None, vis=None, specific_heat=None, fi
     model.clear_fludefs()
     fdefs = fludefs(pt=pt, den=den, vis=vis, specific_heat=specific_heat,
                     file=file, fluid_n=fluid_n)
-    assert len(fdefs) == fluid_n
     for f in fdefs:
         model.add_fludef(f)
-    assert model.fludef_number == fluid_n

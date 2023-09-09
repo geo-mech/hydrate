@@ -260,14 +260,10 @@ class GuiBuffer:
             self.name = name
 
         def __call__(self, *args, **kwargs):
-            key = f'gui command: {self.name}'
-            timer.beg(key)
             if self.gui is not None:
-                result = self.gui.command(self.name, *args, **kwargs)
+                return self.gui.command(self.name, *args, **kwargs)
             else:
-                result = console.command(self.name, *args, **kwargs)
-            timer.end(key)
-            return result
+                return console.command(self.name, *args, **kwargs)
 
     def __getattr__(self, name):
         return GuiBuffer.Agent(self.get(), name)
@@ -650,6 +646,15 @@ class AppData(Object):
 
 
 app_data = AppData()
+
+
+try:
+    disable_timer = app_data.getenv(key='disable_timer', encoding='utf-8', default='False')
+    if disable_timer == 'True':
+        timer.enabled = False
+        app_data.log(f'timer disabled')
+except:
+    pass
 
 
 def load_cdll(name, first=None):
@@ -10028,8 +10033,24 @@ class Seepage(HasHandle, HasCells):
         此函数会自动跳过不存在的CellID.
             since 2023-4-20
         """
+        if count <= 0:
+            return
         assert isinstance(other, Seepage)
         core.seepage_clone_cells(self.handle, other.handle, ibeg0, ibeg1, count)
+
+    core.use(None, 'seepage_clone_inner_faces', c_void_p, c_void_p, c_size_t, c_size_t, c_size_t)
+
+    def clone_inner_faces(self, ibeg0, other, ibeg1, count):
+        """
+        拷贝Face数据:
+            将other的[ibeg1, ibeg1+count)范围内的Cell对应的Face，拷贝到self的[ibeg0, ibeg0+count)范围内的Cell对应的Face
+        此函数会自动跳过不存在的CellID.
+            since 2023-9-3
+        """
+        if count <= 0:
+            return
+        assert isinstance(other, Seepage)
+        core.seepage_clone_inner_faces(self.handle, other.handle, ibeg0, ibeg1, count)
 
     def iterate(self, *args, **kwargs):
         if self.__updater is None:
@@ -10426,7 +10447,7 @@ class Seepage(HasHandle, HasCells):
 
     def append(self, other, cell_i0=None, with_faces=True):
         """
-        将other中所有的Cell和Face追加到这个模型中，并且从这个模型的cell_i0开始，和other的cell之间
+        将other中所有的Cell和Face追加到这个模型中，并且从这个模型的cell_i0开始，和从other新添加的cell之间
         建立一一对应的Face. 默认情况下，仅仅追加，但是不建立和现有的Cell的连接。
             2023-4-19
 
@@ -10438,7 +10459,7 @@ class Seepage(HasHandle, HasCells):
 
         注意函数实际的执行顺序：
             第一步：添加other的所有的Cell
-            第二步：添加other的所有的Face（如何with_faces属性为True的时候）
+            第二步：添加other的所有的Face (with_faces属性为True的时候)
             第三步：创建一些额外Face连接 (从这个模型的cell_i0开始，和other的cell之间)
 
         """

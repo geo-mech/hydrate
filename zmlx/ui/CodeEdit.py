@@ -1,4 +1,4 @@
-from zml import gui, read_text, write_text
+from zml import gui, read_text, write_text, app_data
 from zmlx.ui.Config import code_in_editor
 from zmlx.ui.PythonHighlighter import PythonHighlighter
 from zmlx.ui.Qt import QtCore, QtWidgets
@@ -21,6 +21,12 @@ class CodeEdit(QtWidgets.QTextEdit):
 
     def enterEvent(self, event):
         gui.status(f"Code Editor: {self.__fname}", 3000)
+
+    def export_data(self):
+        fpath, _ = QtWidgets.QFileDialog.getSaveFileName(self, '导出代码',
+                                                         '', f'Python File(*.py)')
+        if len(fpath) > 0:
+            write_text(path=fpath, text=self.toPlainText(), encoding='utf-8')
 
     def save(self):
         """
@@ -52,3 +58,12 @@ class CodeEdit(QtWidgets.QTextEdit):
         返回当前的存储路径
         """
         return self.__fname
+
+    def console_exec(self):
+        main_window = app_data.space.get('main_window', None)
+        if main_window is not None:
+            try:
+                self.save()
+                main_window.console_widget.exec_file(self.get_fname())
+            except:
+                pass

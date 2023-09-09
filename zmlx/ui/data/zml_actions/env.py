@@ -14,6 +14,7 @@ def init(widget):
     widget.add(label='内核优先级', key='console_priority', items=['LowestPriority', 'LowPriority',
                                                                   'InheritPriority', 'NormalPriority',
                                                                   'HighPriority', 'HighestPriority'])
+    widget.add(label='禁用计时器', key='disable_timer', items=['False', 'True'])
 
 
 gui.get_widget(type=MultiLineEdit, caption='设置Env',

@@ -33,6 +33,13 @@ class Adaptor:
         self.path = path
         self.write = write
 
+    @property
+    def doc_writable(self):
+        """
+        是否允许文档写入
+        """
+        return self.data.get('doc_writable', True)
+
     def save(self):
         """
         保存到文件
@@ -132,7 +139,7 @@ class PTree:
         """
         assert isinstance(self.ada, Adaptor)
 
-        if doc is not None:
+        if doc is not None and self.ada.doc_writable:
             if self.ada.get(*self.keys, 'doc', key) is None:
                 self.ada.put(*self.keys, 'doc', key, doc)
                 self.ada.save()
@@ -175,7 +182,7 @@ class PTree:
         """
         assert isinstance(self.keys, list)
         pt = PTree(self, [key, ])
-        if doc is not None:
+        if doc is not None and self.ada.doc_writable:
             value = self.ada.get(*self.keys, 'doc', key)
             if value is None:
                 self.ada.put(*self.keys, 'doc', key, doc)

@@ -1,6 +1,7 @@
+import os
 import timeit
 
-from zml import time2str
+from zml import *
 from zmlx.alg.clamp import clamp
 from zmlx.ui.Qt import QtWidgets, QtCore
 from zmlx.utility.Timer import timer
@@ -16,6 +17,14 @@ class TimerViewer(QtWidgets.QTableWidget):
         self.timer.timeout.connect(self.refresh)
         self.timer.start(500)
         self.refresh()
+
+    def export_data(self):
+        fpath, _ = QtWidgets.QFileDialog.getSaveFileName(self, '导出Timer',
+                                                         '', f'Text File(*.txt)')
+        with open(make_parent(fpath), 'w', encoding='utf-8') as file:
+            for key, val in timer.key2nt.items():
+                n, t = val
+                file.write(f'{key}\t{n}\t{t}\n')
 
     def refresh(self):
         """

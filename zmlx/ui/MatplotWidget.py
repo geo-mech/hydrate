@@ -38,6 +38,9 @@ class MatplotWidget(QtWidgets.QWidget):
         if fpath is not None and len(fpath) > 0:
             self.savefig(fname=fpath, dpi=300)
 
+    def export_data(self):
+        self.savefig_by_dlg()
+
     @property
     def figure(self):
         return self.__figure

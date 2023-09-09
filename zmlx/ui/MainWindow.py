@@ -41,6 +41,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.splitter = QtWidgets.QSplitter(widget)
         self.splitter.setOrientation(QtCore.Qt.Horizontal)
         self.tab_widget = TabWidget(self.splitter)
+        self.tab_widget.currentChanged.connect(self.update_widget_actions)
         self.console_widget = ConsoleWidget(self.splitter)
         self.gui_api = GuiApi(widget, self.console_widget.get_break_point(), self.console_widget.get_flag_exit())
         self.splitter.setStretchFactor(0, 1)
@@ -73,6 +74,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.init_later_timer = QtCore.QTimer(self)
         self.init_later_timer.timeout.connect(self.__init_later)
         self.init_later_timer.start(2000)
+        self.update_widget_actions()  # 更新一些和控件相关的action的显示
 
     def __init_later(self):
         """
@@ -199,6 +201,23 @@ class MainWindow(QtWidgets.QMainWindow):
             action.setShortcut(shortcut)
         return action
 
+    def update_widget_actions(self):
+        widget = self.tab_widget.currentWidget()
+
+        def set_visible(name, value):
+            try:
+                ac = getattr(self, name)
+                ac.setEnabled(value)
+            except:
+                pass
+
+        def f(action_name, func_name):
+            set_visible(action_name, hasattr(widget, func_name))
+
+        for a, b in [('action_export_data', 'export_data'),
+                     ('action_exec_current', 'console_exec')]:
+            f(a, b)
+
     def refresh(self):
         """
         尝试刷新标题以及当前的页面
@@ -267,6 +286,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def get_figure_widget(self, clear=None, **kwargs):
         from zmlx.ui.MatplotWidget import MatplotWidget
+        if kwargs.get('icon', None) is None:
+            kwargs['icon'] = 'matplotlib.png'
         widget = self.get_widget(type=MatplotWidget, **kwargs)
         if clear:
             fig = widget.figure
@@ -370,7 +391,6 @@ class MainWindow(QtWidgets.QMainWindow):
                             oper=lambda x: x.set_fname(fname))
 
     def exec_current(self):
-        from zmlx.ui.CodeEdit import CodeEdit
         if isinstance(self.tab_widget.currentWidget(), CodeEdit):
             self.tab_widget.currentWidget().save()
             self.console_widget.exec_file(self.tab_widget.currentWidget().get_fname())
