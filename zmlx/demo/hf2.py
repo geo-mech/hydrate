@@ -105,7 +105,7 @@ class Config(TherFlowConfig):
         model.flow.iterate(dt=self.get_dt(model), ca_p=self.cell_keys.pre)
 
         # 更新固体
-        model.manager.update_boundary(model.flow, fa_id=self.frac_keys.id, fh=thick)
+        model.network.update_boundary(seepage=model.flow, fa_id=self.frac_keys.id, fh=thick)
         model.manager.update_disp()
         model.network.extend(kic=self.get_kic(model), sol2=model.sol2,
                              has_branch=False, lave=self.get_lave(model))

@@ -9,7 +9,7 @@ https://calfem-for-python.readthedocs.io/en/latest/_modules/calfem/core.html#pla
 import numpy as np
 
 
-def stiffness(x0, x1, x2, y0, y1, y2, E, nu):
+def stiffness(x0, x1, x2, y0, y1, y2, E, mu):
     """
     Calculate the stiffness matrix for a triangular plane stress element.
     
@@ -46,9 +46,9 @@ def stiffness(x0, x1, x2, y0, y1, y2, E, nu):
         [1, ex[2], ey[2]]
     ]))
     # Stress elastic matrix
-    Dm = E / (1 - nu ** 2) * np.mat([[1, nu, 0],
-                                     [nu, 1, 0],
-                                     [0, 0, (1 - nu) / 2]])
+    Dm = E / (1 - mu ** 2) * np.mat([[1, mu, 0],
+                                     [mu, 1, 0],
+                                     [0, 0, (1 - mu) / 2]])
 
     # constant for the Constant Strain Triangle
     B = np.mat([
@@ -58,9 +58,13 @@ def stiffness(x0, x1, x2, y0, y1, y2, E, nu):
     ]) * np.linalg.inv(C)
 
     ke = np.transpose(B) * Dm * B * A * te
-    k = [np.triu(ke)]  # to show the upper part
+    # k = [np.triu(ke)]  # to show the upper part
 
     return ke
 
 
-print(stiffness(x0=2.25, x1=2.40, x2=1.5, y0=0.75, y1=1.65, y2=1.0, E=200e5, nu=0.32))
+if __name__ == '__main__':
+    m = stiffness(x0=0, x1=1, x2=0.5, y0=0, y1=0, y2=1.0, E=200e5, mu=0.32)
+    np.savetxt('m.txt', m, fmt='%0.2f')
+    print(m)
+    print(m.shape)

@@ -6,7 +6,8 @@ Created on Sun Feb 19 15:38:08 2023
 """
 import numpy as np
 
-def stiffness(x0, x1, x2, x3, y0, y1, y2, y3, z0, z1, z2, z3, E, nu):
+
+def stiffness(x0, x1, x2, x3, y0, y1, y2, y3, z0, z1, z2, z3, E, mu):
     """
     Calculate the stiffness matrix for a tetrahedral stress element.
     
@@ -61,13 +62,13 @@ def stiffness(x0, x1, x2, x3, y0, y1, y2, y3, z0, z1, z2, z3, E, nu):
                [0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0 ],
                ])*np.linalg.inv(C) #reemplantar la distribucion de esto en el papel.
     
-    Dm = E/((1 - nu)*(1 - 2*nu)) * np.mat([
-                                            [1 - nu,   nu,     nu,        0,        0,        0],
-                                            [    nu, 1-nu,     nu,        0,        0,        0],
-                                            [    nu,   nu, 1 - nu,        0,        0,        0],
-                                            [     0,    0,      0, 1/2 - nu,        0,        0],
-                                            [     0,    0,      0,        0, 1/2 - nu,        0],
-                                            [     0,    0,      0,        0,        0, 1/2 - nu]     
+    Dm = E / ((1 - mu) * (1 - 2 * mu)) * np.mat([
+                                            [1 - mu, mu, mu, 0, 0, 0],
+                                            [mu, 1 - mu, mu, 0, 0, 0],
+                                            [mu, mu, 1 - mu, 0, 0, 0],
+                                            [0, 0, 0, 1 / 2 - mu, 0, 0],
+                                            [0, 0, 0, 0, 1 / 2 - mu, 0],
+                                            [0, 0, 0, 0, 0, 1 / 2 - mu]
                                             ])
     
 
@@ -76,5 +77,10 @@ def stiffness(x0, x1, x2, x3, y0, y1, y2, y3, z0, z1, z2, z3, E, nu):
 
     return ke
 
-print( stiffness(x0=0, x1=0, x2=10, x3=0, y0=0, y1=0, y2=0, y3=15, z0=0, z1=20, z2=0, z3=0, E=200e5, nu=0.32))
+
+if __name__ == '__main__':
+    m = stiffness(x0=0, x1=0, x2=10, x3=0, y0=0, y1=0, y2=0, y3=15, z0=0, z1=20, z2=0, z3=0, E=200e5, mu=0.32)
+    np.savetxt('m.txt', m, fmt='%0.2f')
+    print(m)
+    print(m.shape)
 

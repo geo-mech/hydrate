@@ -45,9 +45,8 @@ def get_rc3(cell, keys):
     """
     读取属性，返回rc3格式的三维矩形.
     """
-    rc3 = []
-    for i in (keys.x0, keys.y0, keys.z0,
-              keys.x1, keys.y1, keys.z1,
+    rc3 = cell.pos
+    for i in (keys.x1, keys.y1, keys.z1,
               keys.x2, keys.y2, keys.z2):
         v = cell.get_attr(i)
         if v is None:
@@ -68,9 +67,7 @@ def set_rc3(cell, rc3, keys):
         rc3 = [1.0e200, ] * 9
 
     assert len(rc3) >= 9
-    cell.set_attr(keys.x0, rc3[0])
-    cell.set_attr(keys.y0, rc3[1])
-    cell.set_attr(keys.z0, rc3[2])
+    cell.pos = rc3[0: 3]
 
     cell.set_attr(keys.x1, rc3[3])
     cell.set_attr(keys.y1, rc3[4])
@@ -143,7 +140,6 @@ def get_vertexes(rc3):
         return
 
     p0 = rc3[0: 3]
-
     p1 = rc3[3: 6]
     p2 = rc3[6: 9]
     p3 = __sym(p0, p1)

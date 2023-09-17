@@ -42,109 +42,6 @@ except Exception as _err:
 is_windows = os.name == 'nt'
 
 
-class Timer:
-    """
-    用以辅助统计函数的执行耗时。对于每一个函数，都应该有一个key，来表示这个函数在内存存储的名字.
-    -
-        张召彬  2023-7-7
-    """
-
-    def __init__(self):
-        """
-        用一个空表（字典）来进行初始化. 字典的key是待统计的函数的名字，值为运行的次数和总耗时.
-        """
-        self.enabled = True
-        self.key2nt = {}
-        self.__key2t = {}
-
-    def __str__(self):
-        """
-        将数据转化为字符串输出.
-        """
-        return f'{self.key2nt}'
-
-    def __call__(self, key, func, *args, **kwargs):
-        """
-        调用一个函数，并且记录调用的cpu耗时，以及调用的次数. 返回函数的执行结果.
-            注意，这个函数将抛出func运行的异常.
-            func后面的参数将传递给func.
-        """
-        if self.enabled:
-            cpu_t = timeit.default_timer()
-            r = func(*args, **kwargs)
-            cpu_t = timeit.default_timer() - cpu_t
-            nt = self.key2nt.get(key, None)
-            if nt is None:
-                self.key2nt[key] = [1, cpu_t]
-            else:
-                nt[0] += 1
-                nt[1] += cpu_t
-            return r
-        else:
-            return func(*args, **kwargs)
-
-    def beg(self, key):
-        """
-        开始一段测试
-        """
-        if self.enabled:
-            self.__key2t[key] = timeit.default_timer()
-
-    def end(self, key):
-        """
-        结束一段测试(并且记录)
-        """
-        if self.enabled:
-            t0 = self.__key2t.get(key, None)
-            if t0 is not None:
-                cpu_t = timeit.default_timer() - t0
-                nt = self.key2nt.get(key, None)
-                if nt is None:
-                    self.key2nt[key] = [1, cpu_t]
-                else:
-                    nt[0] += 1
-                    nt[1] += cpu_t
-
-    def clear(self):
-        """
-        清除所有的统计结果. （临时数据保留）
-        """
-        self.key2nt = {}
-
-
-timer = Timer()
-
-
-def clock(func):
-    """
-    Timing for Python functions. Reference https://blog.csdn.net/BobAuditore/article/details/79377679
-
-from zml import clock, timer
-import time
-
-
-@clock
-def run(seconds):
-    time.sleep(seconds)
-    print(f"sleep for {seconds} seconds")
-
-
-if __name__ == '__main__':
-    for i in range(3):
-        run(0.1)
-    print(timer)
-    """
-
-    def clocked(*args, **kwargs):
-        key = func.__name__
-        timer.beg(key)
-        result = func(*args, **kwargs)
-        timer.end(key)
-        return result
-
-    return clocked
-
-
 class Object:
     def set(self, **kwargs):
         """
@@ -268,7 +165,7 @@ class GuiBuffer:
     def __getattr__(self, name):
         return GuiBuffer.Agent(self.get(), name)
 
-    def execute(self, func, keep_cwd=True, close_after_done=True, args=None, kwargs=None):
+    def execute(self, func, keep_cwd=True, close_after_done=True, args=None, kwargs=None, disable_gui=False):
         """
         尝试在gui模式下运行给定的函数 func
         """
@@ -279,7 +176,7 @@ class GuiBuffer:
                 y = kwargs if kwargs is not None else {}
                 return func(*x, **y)
 
-        if self.exists():
+        if self.exists() or disable_gui:
             return fx()
         try:
             f = self.__get_execute()
@@ -648,15 +545,6 @@ class AppData(Object):
 app_data = AppData()
 
 
-try:
-    disable_timer = app_data.getenv(key='disable_timer', encoding='utf-8', default='False')
-    if disable_timer == 'True':
-        timer.enabled = False
-        app_data.log(f'timer disabled')
-except:
-    pass
-
-
 def load_cdll(name, first=None):
     """
     Load C-Style Dll by the given file name and the folder.
@@ -722,7 +610,6 @@ class DllCore:
         self.use(None, 'set_log_nmax', c_size_t)
         self.use(c_char_p, 'get_time_compile', c_void_p)
         self.dll_print_logs = get_func(self.dll, None, 'print_logs', c_char_p)
-        self.use(c_char_p, 'get_timer_summary', c_void_p)
         self.use(c_int, 'get_version')
         self.use(c_bool, 'is_parallel_enabled')
         self.use(None, 'set_parallel_enabled', c_bool)
@@ -791,16 +678,6 @@ class DllCore:
         """
         if self.has_dll():
             self.set_parallel_enabled(value)
-
-    @property
-    def timer_summary(self):
-        """
-        Returns cpu time-consuming statistics, only for calculation and testing
-        """
-        if self.has_dll():
-            return self.get_timer_summary(0).decode()
-        else:
-            return ''
 
     def check_error(self):
         """
@@ -910,6 +787,125 @@ core = DllCore(dll=dll)
 
 # zml模块的版本(用六位数字表示的编译的日期)
 version = core.version
+
+
+class Timer:
+    """
+    用以辅助统计函数的执行耗时。对于每一个函数，都应该有一个key，来表示这个函数在内存存储的名字.
+    -
+        张召彬  2023-7-7
+    """
+
+    def __init__(self, co):
+        """
+        用一个空表（字典）来进行初始化. 字典的key是待统计的函数的名字，值为运行的次数和总耗时.
+        """
+        assert isinstance(co, DllCore), f'the type of <co> should be {type(DllCore)}'
+        co.use(c_char_p, 'timer_summary', c_void_p)
+        co.use(None, 'timer_log', c_char_p, c_double)
+        co.use(None, 'timer_reset')
+        co.use(c_bool, 'timer_enabled')
+        co.use(None, 'timer_enable', c_bool)
+        self.__key2t = {}
+        self.co = co  # core
+
+    def __call__(self, key, func, *args, **kwargs):
+        """
+        调用一个函数，并且记录调用的cpu耗时，以及调用的次数. 返回函数的执行结果.
+            注意，这个函数将抛出func运行的异常.
+            func后面的参数将传递给func.
+        """
+        self.beg(key)
+        r = func(*args, **kwargs)
+        self.end(key)
+        return r
+
+    def __str__(self):
+        """
+        将数据转化为字符串输出.
+        """
+        return self.summary()
+
+    def summary(self):
+        """
+        Returns cpu time-consuming statistics, only for calculation and testing
+        """
+        return self.co.timer_summary(0).decode()
+
+    @property
+    def key2nt(self):
+        try:
+            return eval(self.summary())
+        except:
+            return {}
+
+    def log(self, name, seconds):
+        """
+        记录一个过程的耗时
+        """
+        self.co.timer_log(make_c_char_p(name), seconds)
+
+    def clear(self):
+        """
+        重置
+        """
+        self.co.timer_reset()
+
+    def enabled(self, value=None):
+        """
+        cpu计时器是否处于打开的状态
+        """
+        if value is not None:
+            self.co.timer_enable(value)
+        return self.co.timer_enabled()
+
+    def beg(self, key):
+        """
+        开始一段测试
+        """
+        self.__key2t[key] = timeit.default_timer()
+
+    def end(self, key):
+        """
+        结束一段测试(并且记录)
+        """
+        t0 = self.__key2t.get(key, None)
+        if t0 is not None:
+            cpu_t = timeit.default_timer() - t0
+            self.log(key, cpu_t)
+
+
+timer = Timer(co=core)
+
+
+def clock(func):
+    """
+    Timing for Python functions. Reference https://blog.csdn.net/BobAuditore/article/details/79377679
+
+from zml import clock, timer
+import time
+
+
+@clock
+def run(seconds):
+    time.sleep(seconds)
+    print(f"sleep for {seconds} seconds")
+
+
+if __name__ == '__main__':
+    for i in range(3):
+        run(0.1)
+    print(timer)
+    """
+
+    def clocked(*args, **kwargs):
+        key = func.__name__
+        timer.beg(key)
+        result = func(*args, **kwargs)
+        timer.end(key)
+        return result
+
+    return clocked
 
 
 class DataVersion:
@@ -1632,6 +1628,14 @@ def __feedback():
 try:
     if app_data.getenv('disable_auto_feedback', default='False') != 'True':
         __feedback()
+except:
+    pass
+
+try:
+    disable_timer = app_data.getenv(key='disable_timer', encoding='utf-8', default='False')
+    if disable_timer == 'True':
+        timer.enabled(False)
+        app_data.log(f'timer disabled')
 except:
     pass
 
@@ -4644,6 +4648,10 @@ class Mesh3(HasHandle):
     core.use(c_size_t, 'mesh3_add_face4', c_void_p, c_size_t, c_size_t, c_size_t, c_size_t)
 
     def add_face(self, links):
+        """
+        根据给定的links来创建一个face并且返回。注意，在创建的过程中，会自动识别links的端点的位置，并且对nodes进行
+        排序，从而尽可能保证，face的所有的nodes，恰好能够按照顺序形成一个闭环。 Comment @ 23-09-16
+        """
         for elem in links:
             assert isinstance(elem, Mesh3.Link)
         if len(links) == 3:
@@ -4966,6 +4974,10 @@ class LinearExpr(HasHandle):
     def c(self, value):
         core.linear_expr_set_c(self.handle, value)
 
+    def set_c(self, value):
+        self.c = value
+        return self 
+
     core.use(c_size_t, 'linear_expr_get_length', c_void_p)
 
     @property
@@ -4988,11 +5000,13 @@ class LinearExpr(HasHandle):
 
     def add(self, index, weight):
         core.linear_expr_add(self.handle, index, weight)
+        return self
 
     core.use(None, 'linear_expr_clear', c_void_p)
 
     def clear(self):
         core.linear_expr_clear(self.handle)
+        return self 
 
     core.use(None, 'linear_expr_plus', c_void_p, c_size_t, c_size_t)
     core.use(None, 'linear_expr_multiply', c_void_p, c_size_t, c_double)
@@ -12180,6 +12194,48 @@ class FractureNetwork2(HasHandle):
         """
         core.fnet2_update_fh(self.handle, fa_h, fa_cid, fa_dist, h_vs_l)
 
+    core.use(None, 'fnet2_update_boundary', c_void_p, c_void_p, c_size_t, c_double)
+    core.use(None, 'fnet2_update_boundary_by_layers', c_void_p, c_void_p, c_size_t)
+
+    def update_boundary(self, seepage, fa_id, fh=None):
+        """
+        在DDM中，流体是作为固体计算的边界。此函数根据此刻的流体情况来更新固体计算的边界条件。
+        其中:
+            seepage 可以为一个或者多个Seepage类。当Seepage为多个时，其指针存储在PtrVector中;
+            fa_id 为裂缝单元中存储的流体Cell的ID。
+
+        注意：
+            对于各个裂缝单元，将首先计算它对应的Cell(用fa_id指定)中的流体的体积，然后计算裂缝的长度，并使用
+            给定的fh或者裂缝内存储的裂缝高度来计算裂缝的面积，进而计算流体的厚度。这个厚度就是对裂缝开度的一个
+            非常硬的约束，也是后续计算裂缝的dn和ds的时候的边界条件.
+        """
+        if isinstance(seepage, Seepage):
+            if fh is None:
+                fh = -1  # Now, using the fracture height defined in fracture.
+            core.fnet2_update_boundary(self.handle, seepage.handle, fa_id, fh)
+        else:
+            if not isinstance(seepage, PtrVector):
+                seepage = PtrVector.from_objects(seepage)
+            core.fnet2_update_boundary_by_layers(self.handle, seepage.handle, fa_id)
+
+    core.use(None, 'fnet2_mark_tips', c_void_p, c_size_t)
+
+    def mark_tips(self, fa_is_tip):
+        """
+        标记位于尖端的裂缝单元。对于尖端的单元，将自定义属性fa_is_tip的值设置为1，对于其它的单元，fa_is_tip的值设置为0.
+            since 2023-9-14
+        """
+        core.fnet2_mark_tips(self.handle, fa_is_tip)
+
+    core.use(None, 'fnet2_mark_length', c_void_p, c_size_t)
+
+    def mark_length(self, fa_length):
+        """
+        标记出裂缝单元的长度
+            since 2023-9-14
+        """
+        core.fnet2_mark_length(self.handle, fa_length)
+
 
 class InfManager2(HasHandle):
     """
@@ -12246,6 +12302,7 @@ class InfManager2(HasHandle):
             给定的fh或者裂缝内存储的裂缝高度来计算裂缝的面积，进而计算流体的厚度。这个厚度就是对裂缝开度的一个
             非常硬的约束，也是后续计算裂缝的dn和ds的时候的边界条件.
         """
+        warnings.warn('please use FractureNetwork2.update_boundary instead', DeprecationWarning)
         if isinstance(seepage, Seepage):
             if fh is None:
                 fh = -1  # Now, using the fracture height defined in fracture.
@@ -12334,14 +12391,17 @@ class ExHistory(HasHandle):
 
 
 class Hf2Alg:
-    core.use(None, 'hf2_alg_update_seepage_topology', c_void_p, c_void_p, c_size_t)
+    core.use(None, 'hf2_alg_update_seepage_topology', c_void_p, c_void_p, c_size_t,
+             c_size_t, c_size_t, c_size_t)
 
     @staticmethod
-    def update_seepage_topology(seepage, network, fa_id):
+    def update_seepage_topology(seepage, network, fa_id, fa_new=None, cell_new=None, face_new=None):
         """
         建立和裂缝对应的流动模型.
             其中：
             fa_id为裂缝的自定义属性的ID，用以存储这个裂缝单元对应的Seepage中的Cell的ID.
+            fa_new为裂缝的自定义属性的ID，当这个属性非0时，表示这是一个新的裂缝单元（新添加的，或者被新分隔的，均被视为新的单元）
+            cell_new和face_new是seepage中cell和face的属性ID，用于表示这是否为新的cell或者face
             注意：
             1. 这里的seepage需要被这个裂缝系统所独占。即，这里建立的目标，是裂缝单元和seepage中的Cell一对一。但是，为了确保存储在
             fracture中的Cell的id不发生变化，这里不允许删除seepage中的Cell。当裂缝变少的时候，多余的Cell将会被标记成为孤立的Cell，
@@ -12352,7 +12412,11 @@ class Hf2Alg:
         """
         assert isinstance(seepage, Seepage)
         assert isinstance(network, FractureNetwork2)
-        core.hf2_alg_update_seepage_topology(seepage.handle, network.handle, fa_id)
+        core.hf2_alg_update_seepage_topology(seepage.handle, network.handle, fa_id,
+                                             fa_new if fa_new is not None else 99999999,
+                                             cell_new if cell_new is not None else 99999999,
+                                             face_new if face_new is not None else 99999999
+                                             )
 
     core.use(None, 'hf2_alg_update_seepage_cell_pos', c_void_p, c_void_p, c_void_p, c_size_t)
 
@@ -12507,7 +12571,6 @@ class Hf2Alg:
     core.use(None, 'hf2_alg_create_links', c_void_p, c_void_p, c_size_t,
              c_size_t, c_size_t, c_size_t,
              c_size_t, c_size_t, c_size_t,
-             c_size_t, c_size_t, c_size_t,
              c_double, c_double, c_double, c_double, c_double, c_double)
 
     @staticmethod
@@ -12519,7 +12582,7 @@ class Hf2Alg:
             buf = UintVector()
         assert isinstance(seepage, Seepage)
         assert len(v3) == 6
-        core.hf2_alg_create_links(buf.handle, seepage.handle, cell_n, keys.x0, keys.y0, keys.z0,
+        core.hf2_alg_create_links(buf.handle, seepage.handle, cell_n,
                                   keys.x1, keys.y1, keys.z1,
                                   keys.x2, keys.y2, keys.z2, *v3)
         return buf.to_list()
@@ -12602,6 +12665,15 @@ class Hf2Model(HasHandle):
         右侧边界 （左侧边界和右侧边界组成了一个立方体的盒子）
         """
         return Array3(handle=core.hf2_get_right(self.handle))
+
+    core.use(c_void_p, 'hf2_get_stress', c_void_p)
+
+    @property
+    def stress(self):
+        """
+        总的地应力（一个张量矩阵），这个可能需要事实调整改变
+        """
+        return Tensor3Matrix3(handle=core.hf2_get_stress(self.handle))
 
     core.use(c_void_p, 'hf2_get_insitu_stress', c_void_p)
 

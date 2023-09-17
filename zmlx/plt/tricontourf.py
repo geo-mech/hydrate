@@ -3,9 +3,9 @@ from zml import plot, gui
 
 def tricontourf(x=None, y=None, z=None, ipath=None, ix=None, iy=None, iz=None, caption=None, gui_only=False,
                 title=None, triangulation=None, fname=None, dpi=300, levels=20, cmap='coolwarm',
-                xlabel=None, ylabel=None):
+                xlabel='x', ylabel='y', aspect='equal', clabel=None):
     """
-    利用给定的x，y，z来画一个二维的云图
+    利用给定的x，y，z来画一个二维的云图.
     """
     if gui_only and not gui.exists():
         return
@@ -22,16 +22,26 @@ def tricontourf(x=None, y=None, z=None, ipath=None, ix=None, iy=None, iz=None, c
 
     def f(fig):
         ax = fig.subplots()
-        ax.set_aspect('equal')
-        ax.set_xlabel('x/m' if xlabel is None else xlabel)
-        ax.set_ylabel('y/m' if ylabel is None else ylabel)
+
+        if aspect is not None:
+            ax.set_aspect(aspect)
+
+        if xlabel is not None:
+            ax.set_xlabel(xlabel)
+
+        if ylabel is not None:
+            ax.set_ylabel(ylabel)
+
         if title is not None:
             ax.set_title(title)
-        if triangulation is None:
-            contour = ax.tricontourf(x, y, z, levels=levels, cmap=cmap, antialiased=True)
-        else:
-            contour = ax.tricontourf(triangulation, z, levels=levels, cmap=cmap, antialiased=True)
-        fig.colorbar(contour, ax=ax)
 
-    if not gui_only or gui.exists():
-        plot(kernel=f, caption=caption, clear=True, fname=fname, dpi=dpi)
+        if triangulation is None:
+            ct = ax.tricontourf(x, y, z, levels=levels, cmap=cmap, antialiased=True)
+        else:
+            ct = ax.tricontourf(triangulation, z, levels=levels, cmap=cmap, antialiased=True)
+
+        cbar = fig.colorbar(ct, ax=ax)
+        if clabel is not None:
+            cbar.set_label(clabel)
+
+    plot(kernel=f, caption=caption, clear=True, fname=fname, dpi=dpi)
