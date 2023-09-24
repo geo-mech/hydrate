@@ -134,6 +134,7 @@ class ConsoleWidget(QtWidgets.QWidget):
             self.text_when_beg = f"Start: {fname if len(fname) < len(rel) * 2 else rel}"
             self.text_when_end = 'Done'
             self.workspace['__file__'] = fname
+            app_data.log(f'execute file: {fname}')  # since 230923
             self.start_func(lambda:
                             exec(read_text(fname, encoding='utf-8', default=''), self.workspace))
 
@@ -186,6 +187,10 @@ class ConsoleWidget(QtWidgets.QWidget):
         self.kernel_err = err
         print(f'Error: {err}')
         self.sig_kernel_err.emit(err)
+        try:
+            app_data.log(f'meet exception: {err}')
+        except:
+            pass
 
     def kill_thread(self):
         """

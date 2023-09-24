@@ -4976,7 +4976,7 @@ class LinearExpr(HasHandle):
 
     def set_c(self, value):
         self.c = value
-        return self 
+        return self
 
     core.use(c_size_t, 'linear_expr_get_length', c_void_p)
 
@@ -5006,7 +5006,7 @@ class LinearExpr(HasHandle):
 
     def clear(self):
         core.linear_expr_clear(self.handle)
-        return self 
+        return self
 
     core.use(None, 'linear_expr_plus', c_void_p, c_size_t, c_size_t)
     core.use(None, 'linear_expr_multiply', c_void_p, c_size_t, c_double)
@@ -5044,7 +5044,26 @@ class LinearExpr(HasHandle):
 
 class DynSys(HasHandle):
     """
-    质量-弹性动力学系统.
+    质量-弹性动力学系统。用以实现固体计算的模型。对于任何固体的变形及运动问题，都可以归结为两个概念，即质量和弹性。对于任何一个自由度，
+    都可以定义“质量”和“位置”。
+
+    由于整个体系是线性的，因此，某个自由度的“受力”一定是一个或者多个自由度“位置”的线性函数，即
+        f = ax + b                                                       (1)
+    其中f代表各个自由度的“受力”，x代表各个自由度的“位置”，f和x均为N阶向量，其中N为自由度的数量。
+    a是一个N*N的稀疏矩阵，b为一个长度为N的常向量。
+
+    同时，在给定时间步长dt之后，一个自由度在dt之后的“位置”，也是dt之后“受力”的线性函数。根据牛顿第2定律，有
+        x=x0 + v0*dt + 0.5*(f/m)*dt*dt                                   (2)
+    整理可得:
+        x = cf + d                                                       (3)
+    其中 c=0.5*dt*dt/m, d=x0 + v0*dt. 其中m为各个自由度的质量，x0为上一次更新之后的各个自由度的位置, v0为各个自由度的速度. 其中
+    m, x0, v0均为长度为N的向量.
+
+    以上方程(1)和(3)构成了以向量x和向量f为未知量的N阶的线性方程组，求解之后，即可得到t0+dt时刻之后，整个体系各个自由度的“位置”向量x和
+    “受力”向量f，并进一步得到各个自由度的速度v.
+
+    以上步骤完成一次迭代。
+
     """
     core.use(c_void_p, 'new_dynsys')
     core.use(None, 'del_dynsys', c_void_p)
@@ -5614,6 +5633,12 @@ class SpringSys(HasHandle):
         core.springsys_print_node_pos(self.handle, make_c_char_p(path))
 
     def iterate(self, dt, dynsys, solver):
+        """
+        向前迭代dt时间步长。具体地，将执行如何步骤：
+            1、尝试创建DynSys(只有当DynSys的size不正确的时候才去更新)
+            2、更新DynSys (借助给定的solver)
+            3、从DynSys读取数据，更新弹簧各个Node的位置和速度
+        """
         assert isinstance(dynsys, DynSys)
         if dynsys.size != self.node_number * 3:
             dynsys.size = self.node_number * 3
@@ -5875,21 +5900,33 @@ class SpringSys(HasHandle):
     core.use(None, 'springsys_export_mas_pos_vel', c_void_p, c_void_p)
 
     def export_mas_pos_vel(self, dynsys):
+        """
+        将节点的质量、速度、位置导出到dynsys(需要在每一步执行)
+        """
         core.springsys_export_mas_pos_vel(self.handle, dynsys.handle)
 
     core.use(None, 'springsys_export_p2f', c_void_p, c_void_p)
 
     def export_p2f(self, dynsys):
+        """
+        将系数矩阵导出到dynsys (需要在发生显著变形的时候去调用)
+        """
         core.springsys_export_p2f(self.handle, dynsys.handle)
 
     core.use(None, 'springsys_update_pos_vel', c_void_p, c_void_p)
 
     def update_pos_vel(self, dynsys):
+        """
+        从dynsys读取数据，更新各个Node的位置和速度
+        """
         core.springsys_update_pos_vel(self.handle, dynsys.handle)
 
     core.use(None, 'springsys_apply_dampers', c_void_p, c_double)
 
     def apply_dampers(self, dt):
+        """
+        应用减速过程
+        """
         core.springsys_apply_dampers(self.handle, dt)
 
     core.use(None, 'springsys_modify_pos', c_void_p, c_size_t, c_double, c_double)
@@ -9323,6 +9360,17 @@ class Seepage(HasHandle, HasCells):
         def ca_t(self, value):
             core.injector_set_ca_t(self.handle, value)
 
+        core.use(c_size_t, 'injector_get_ca_no_inj', c_void_p)
+        core.use(None, 'injector_set_ca_no_inj', c_void_p, c_size_t)
+
+        @property
+        def ca_no_inj(self):
+            return core.injector_get_ca_no_inj(self.handle)
+
+        @ca_no_inj.setter
+        def ca_no_inj(self, value):
+            core.injector_set_ca_no_inj(self.handle, value)
+
         core.use(None, 'injector_add_oper', c_void_p, c_double, c_double)
 
         def add_oper(self, time, qinj):
@@ -12588,6 +12636,107 @@ class Hf2Alg:
         return buf.to_list()
 
 
+class FracScatter3(HasHandle):
+    """
+    将裂缝离散成为散点，从而判断裂缝之间的位置关系
+    """
+    core.use(c_void_p, 'new_fsc3')
+    core.use(None, 'del_fsc3', c_void_p)
+
+    def __init__(self, path=None, handle=None):
+        super(FracScatter3, self).__init__(handle, core.new_fsc3, core.del_fsc3)
+        if handle is None:
+            if path is not None:
+                self.load(path)
+
+    core.use(None, 'fsc3_save', c_void_p, c_char_p)
+
+    def save(self, path):
+        """
+        序列化保存. 可选扩展名:
+            1: .txt  文本格式 (跨平台，基本不可读)
+            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
+            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        """
+        if path is not None:
+            core.fsc3_save(self.handle, make_c_char_p(path))
+
+    core.use(None, 'fsc3_load', c_void_p, c_char_p)
+
+    def load(self, path):
+        """
+        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        """
+        if path is not None:
+            core.fsc3_load(self.handle, make_c_char_p(path))
+
+    core.use(None, 'fsc3_write_fmap', c_void_p, c_void_p, c_char_p)
+    core.use(None, 'fsc3_read_fmap', c_void_p, c_void_p, c_char_p)
+
+    def to_fmap(self, fmt='binary'):
+        """
+        将数据序列化到一个Filemap中. 其中fmt的取值可以为: text, xml和binary
+        """
+        fmap = FileMap()
+        core.fsc3_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
+        return fmap
+
+    def from_fmap(self, fmap, fmt='binary'):
+        """
+        从Filemap中读取序列化的数据. 其中fmt的取值可以为: text, xml和binary
+        """
+        assert isinstance(fmap, FileMap)
+        core.fsc3_read_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
+
+    @property
+    def fmap(self):
+        return self.to_fmap(fmt='binary')
+
+    @fmap.setter
+    def fmap(self, value):
+        self.from_fmap(value, fmt='binary')
+
+    core.use(None, 'fsc3_set_gr', c_void_p, c_double, c_double, c_double, c_double, c_double, c_double)
+
+    def set_gr(self, center, offset):
+        """
+        设置格子
+        """
+        assert len(center) == 3
+        assert len(offset) == 3
+        core.fsc3_set_gr(self.handle, *center, *offset)
+
+    core.use(None, 'fsc3_set', c_void_p, c_size_t,
+             c_double, c_double, c_double,
+             c_double, c_double, c_double,
+             c_double, c_double, c_double)
+
+    def set(self, idx, center, p0, p1):
+        """
+        设置一个裂缝，并且自动生成它的散点. 其中center为三维矩形的中心点坐标, p0和p1分别为两个相邻的边的中心点的坐标.
+        """
+        assert len(center) == 3
+        assert len(p0) == 3
+        assert len(p1) == 3
+        core.fsc3_set(self.handle, idx, *center, *p0, *p1)
+
+    core.use(c_size_t, 'fsc3_size', c_void_p)
+    core.use(None, 'fsc3_resize', c_void_p, c_size_t)
+
+    @property
+    def size(self):
+        return core.fsc3_size(self.handle)
+
+    @size.setter
+    def size(self, value):
+        core.fsc3_resize(self.handle, value)
+
+    core.use(c_size_t, 'fsc3_get_intersection', c_void_p, c_size_t, c_size_t)
+
+    def get_intersection(self, i0, i1):
+        return core.fsc3_get_intersection(self.handle, i0, i1)
+
+
 class Hf2Model(HasHandle):
     """
     定义二维压裂模型(主要用于组织数据)
@@ -12750,6 +12899,15 @@ class Hf2Model(HasHandle):
         二维DDM的基本解，用于定义固体的基本参数。对于边界元来说，储层的弹性性质必须是均匀的。
         """
         return DDMSolution2(handle=core.hf2_get_sol2(self.handle))
+
+    core.use(c_void_p, 'hf2_get_scatter', c_void_p)
+
+    @property
+    def scatter(self):
+        """
+        裂缝单元的散点
+        """
+        return FracScatter3(handle=core.hf2_get_scatter(self.handle))
 
     core.use(c_double, 'hf2_get_attr', c_void_p, c_size_t)
     core.use(None, 'hf2_set_attr',
@@ -15013,9 +15171,54 @@ class Disc3Vec(HasHandle):
             ca_fp：定义Cell的流体压力
             da_pc：定义圆盘的临界流体压力
             da_k：定义圆盘的渗透率
+
+        注意：
+            这个函数在运行的过程中，除了修改渗透率之外，还会修改圆盘的face_ids这个属性，这样的涉及其实是很不好的.
+            后续将移除.
         """
+        warnings.warn('Disc3.face_ids is modified when modify_perm. function remove after 2024-9-21',
+                      DeprecationWarning)
         assert isinstance(seepage, Seepage)
         core.vdisc3_modify_perm(self.handle, seepage.handle, fa_k, ca_fp, da_pc, da_k)
+
+
+class Sigma3:
+    core.use(None, 'sigma3_get1', c_void_p,
+             c_double, c_double, c_double,
+             c_double, c_double, c_double,
+             c_double, c_double, c_double)
+
+    core.use(None, 'sigma3_get2', c_void_p,
+             c_double, c_double, c_double,
+             c_double, c_double, c_double,
+             c_double, c_double, c_double,
+             c_double, c_double, c_double,
+             c_double, c_double, c_double,
+             c_double, c_double)
+
+    @staticmethod
+    def get_induced(pos, disp, G, mu, area=None, triangle=None, buffer=None):
+        """
+        返回诱导应力.
+        """
+        if not isinstance(buffer, Tensor3):
+            buffer = Tensor3()
+        if area is not None:
+            core.sigma3_get1(buffer.handle, pos[0], pos[1], pos[2], disp[0], disp[1], disp[2], area, G, mu)
+            return buffer
+        else:
+            assert triangle is not None
+            p0, p1, p2 = triangle
+            x0, y0, z0 = p0
+            x1, y1, z1 = p1
+            x2, y2, z2 = p2
+            core.sigma3_get2(buffer.handle, pos[0], pos[1], pos[2],
+                             x0, y0, z0,
+                             x1, y1, z1,
+                             x2, y2, z2,
+                             disp[0], disp[1], disp[2],
+                             G, mu)
+            return buffer
 
 
 if __name__ == "__main__":

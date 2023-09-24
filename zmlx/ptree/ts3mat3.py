@@ -1,8 +1,10 @@
 from scipy.interpolate import NearestNDInterpolator
+
 from zml import *
 from zmlx.ptree.array import array
 from zmlx.ptree.box import box3
-from zmlx.ptree.shape import shape3
+from zmlx.ptree.ptree import PTree, open_pt
+from zmlx.ptree.size import size3
 
 
 class Ts3Interp3:
@@ -61,55 +63,84 @@ class Ts3Interp3:
         return Tensor3(xx=ts2.xx, yy=ts2.yy, zz=vert, xy=ts2.xy, yz=0, zx=0)
 
 
-def get_ts3intp3(pt=None, data=None, file=None, text=None):
+def get_ts3intp3(pt):
     """
     根据参数配置文件来创建一个张量场
     """
-    if text is None:
-        text = "0 0 0 0"
-    data = array(pt=pt, data=data, text=text, file=file)
+    data = array(pt)
     return Ts3Interp3(data)
 
 
-def ts3mat3(pt, box=None, shape=None, interp=None, data=None, text=None, file=None, buffer=None):
+def ts3mat3(pt, buffer=None):
     """
     设置张量场。注意，如果file有定义，则最终使用file定义的数值
     """
+    assert isinstance(pt, PTree)
     if not isinstance(buffer, Tensor3Matrix3):
         buffer = Tensor3Matrix3()
 
-    if interp is None:
-        interp = get_ts3intp3(pt=pt, data=data, text=text, file=file)
+    interp = get_ts3intp3(pt['data'])
 
     if not isinstance(interp, Ts3Interp3):
-        warnings.warn('can not set buffer without given interp as Ts3Interp3')
+        print('can not set without given interp as Ts3Interp3')
         return buffer
 
-    shape = shape3(pt, default=shape if shape is not None else [2, 2, 2])
+    size = size3(pt['size'])
 
     # 检查数据的范围.
-    assert shape is not None
-    assert len(shape) == 3
-    assert shape[0] >= 1 and shape[1] >= 1 and shape[2] >= 1
-    assert shape[0] < 1000 and shape[1] < 1000 and shape[2] < 1000
+    assert size is not None
+    assert len(size) == 3
+    assert size[0] >= 1 and size[1] >= 1 and size[2] >= 1
+    assert size[0] < 1000 and size[1] < 1000 and size[2] < 1000
 
-    buffer.size = shape
-    box = box3(pt, default=box if box is not None else [0, 0, 0, 1, 1, 1])
+    buffer.size = size
+    box = box3(pt['box'])
 
     assert len(box) == 6
     left = box[0: 3]
     right = box[3: 6]
 
-    step = [(right[i] - left[i]) / max(1.0, shape[i] - 1) for i in range(3)]
+    step = [(right[i] - left[i]) / max(1.0, size[i] - 1) for i in range(3)]
 
     # 遍历，设置矩阵的元素.
-    for i0 in range(shape[0]):
+    for i0 in range(size[0]):
         x0 = left[0] + i0 * step[0]
-        for i1 in range(shape[1]):
+        for i1 in range(size[1]):
             x1 = left[1] + i1 * step[1]
-            for i2 in range(shape[2]):
+            for i2 in range(size[2]):
                 x2 = left[2] + i2 * step[2]
                 stress = interp(x0, x1, x2)
                 buffer[(i0, i1, i2)].clone(stress)
 
     return buffer
+
+
+def test():
+    pt = PTree()
+    pt.data = {
+        "size": [
+            4,
+            4,
+            4
+        ],
+        "box": [
+            0,
+            0,
+            0,
+            1,
+            1,
+            1
+        ],
+        "data": [
+            1,
+            2,
+            3,
+            4
+        ]
+    }
+    m = ts3mat3(pt)
+    print(m.size)
+
+
+if __name__ == '__main__':
+    test()

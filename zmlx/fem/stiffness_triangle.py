@@ -64,7 +64,10 @@ def stiffness(x0, x1, x2, y0, y1, y2, E, mu):
 
 
 if __name__ == '__main__':
-    m = stiffness(x0=0, x1=1, x2=0.5, y0=0, y1=0, y2=1.0, E=200e5, mu=0.32)
-    np.savetxt('m.txt', m, fmt='%0.2f')
-    print(m)
-    print(m.shape)
+    m1 = stiffness(x0=0, x1=1, x2=0.5,
+                   y0=0, y1=0, y2=1.0, E=200e5, mu=0.32)
+    m2 = stiffness(x0=0, x1=0.5, x2=1,
+                   y0=0, y1=1.0, y2=0, E=200e5, mu=0.32)
+    print(m1)
+    print(m2)
+

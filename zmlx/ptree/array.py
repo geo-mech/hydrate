@@ -4,49 +4,51 @@
 import os
 from io import StringIO
 import numpy as np
-from zmlx.ptree.linspace import linspace
+from zmlx.ptree.ptree import PTree
 
 
-def filter_0d(data):
-    if len(data.shape) == 0:
-        return data.flatten()
-    else:
-        return data
-
-
-def array(pt, data=None, text=None, file=None, doc=None):
+def _cast(data, pt=None):
     """
-    读取并生成numpy的array。将首先读取data，然后尝试text，最后是读取文件file，直到得到一个非空的array
-    并返回。
-    注意，返回的array必然是非空的；输入的参数data、text和file均为读取json的默认值，如果json中有相应
-    的定义，则最终使用json中的定义。
+    从给定的数据构造array. 可能会返回None, 以及np的array (可能为空)
     """
-    data = pt(key='data', default=data if data is not None else [],
-              doc='The data that will be converted to numpy array' if doc is None else doc)
+    if isinstance(data, (list, tuple)):
+        return np.array(data, dtype=float)
 
-    data = np.asarray(data)
+    if isinstance(data, (int, float)):
+        return np.array([data], dtype=float)
 
-    if len(data.flatten()) > 0:
-        return filter_0d(data)
+    if isinstance(data, str):
+        # 尝试文件
+        fname = pt.find(data) if pt is not None else data
+        if os.path.isfile(fname):
+            return np.loadtxt(fname)
+        # 尝试脚本
+        try:
+            return eval(data, {'np': np})
+        except:
+            pass
+        # 尝试文本
+        try:
+            return np.loadtxt(StringIO(data))
+        except:
+            pass
 
-    text = pt(key='text', default=text if text is not None else '',
-              doc='The text that will be converted to numpy array' if doc is None else doc)
 
-    if len(text) > 0:
-        data = np.loadtxt(StringIO(text))
+def array(pt):
+    """
+    将PTree节点转化为numpy的array.
+        可能会返回None, 以及np的array (可能为空)
+    """
+    assert isinstance(pt, PTree)
+    return pt(cast=lambda data: _cast(data, pt))
 
-    if len(data.flatten()) > 0:
-        return filter_0d(data)
 
-    file = pt.find_file(key='file', default=file if file is not None else '',
-                        doc='The file that will be read to numpy array' if doc is None else doc)
-    assert isinstance(file, str)
+def test():
+    pt = PTree()
+    pt.fill('x', [1, 2, 3])
+    print(array(pt['x']))
+    print(pt.data)
 
-    if os.path.isfile(file):
-        data = np.loadtxt(file)
-        if len(data.flatten()) > 0:
-            return filter_0d(data)
 
-    data = linspace(pt.child('linspace'), num=0)
-    if len(data.flatten()) > 0:
-        return filter_0d(data)
+if __name__ == '__main__':
+    test()

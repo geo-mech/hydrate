@@ -18,6 +18,9 @@ def show_rc3(rc3, color=None, alpha=None, cmap=None, caption=None, on_top=None,
     显示一组三维的离散裂缝网络
         gl_option:  opaque, translucent, additive
     """
+    if not gui.exists():
+        return
+
     assert len(rc3) > 0
 
     vertexes = []

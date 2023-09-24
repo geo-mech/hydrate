@@ -468,7 +468,7 @@ class MySplashScreen(QtWidgets.QSplashScreen):
 
 def execute(code=None, keep_cwd=True, close_after_done=True):
     try:
-        app_data.log(f'gui_execute. code={code}, file={__file__}')
+        app_data.log(f'gui_execute. file={__file__}')
     except:
         pass
 

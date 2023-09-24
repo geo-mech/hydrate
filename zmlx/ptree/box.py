@@ -1,26 +1,37 @@
-def box(pt, ndim, default=None):
-    assert 0 < ndim < 10
-
-    if default is not None:
-        assert len(default) == ndim * 2
-
-    left, right = [], []
-    for dim in range(ndim):
-        a = pt(key=f'left{dim}', default=default[dim] if default is not None else 0.0,
-               doc=f'The left range of dimension {dim}', cast=float)
-        b = pt(key=f'right{dim}', default=default[dim + ndim] if default is not None else 0.0,
-               doc=f'The right range of dimension {dim}', cast=float)
-        assert a <= b
-        left.append(a)
-        right.append(b)
-
-    return left + right
+from zmlx.ptree.array import array
+from zmlx.ptree.ptree import PTree, open_pt
 
 
-def box2(pt, default=None):
-    return box(pt, ndim=2, default=default)
+def box(pt, ndim):
+    assert isinstance(pt, PTree)
+    data = array(pt)
+    if data is None:
+        return
+    if len(data) // 2 >= ndim:
+        data_dim = len(data) // 2
+        left, right = [], []
+        for dim in range(ndim):
+            a = data[dim]
+            b = data[dim + data_dim]
+            assert a <= b
+            left.append(a)
+            right.append(b)
+        return left + right
 
 
-def box3(pt, default=None):
-    return box(pt, ndim=3, default=default)
+def box2(pt):
+    return box(pt, ndim=2)
 
+
+def box3(pt):
+    return box(pt, ndim=3)
+
+
+def test():
+    pt = open_pt('box.json')
+    print(box2(pt))
+    print(pt.data)
+
+
+if __name__ == '__main__':
+    test()

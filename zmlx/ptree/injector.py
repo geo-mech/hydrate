@@ -1,74 +1,60 @@
-from zmlx.filesys.path import *
 from zml import Seepage
-from zmlx.ptree.fludata import fludata
+from zmlx.filesys.path import *
 from zmlx.ptree.array import array
+from zmlx.ptree.fludata import fludata
 from zmlx.ptree.ptree import PTree
-import warnings
 
 
-def injector(pt, pos=None, radi=None, fluid_id=None, mass=0.0, den=1000.0, vis=1.0e-3, attrs=None,
-             t2q=None, file=None, time=None, rate=None, g_heat=None, ca_mc=None, ca_t=None, save_to=None):
+def injector(pt):
     """
     创建注入点.
     """
     assert isinstance(pt, PTree)
+
+    if isinstance(pt.data, str):
+        file = pt.find(pt.data)
+        if exists(file):
+            return Seepage.Injector(path=file)
+
     data = Seepage.Injector()
 
-    # 尝试从文件中读取数据
-    file = pt.find_file(key='file', default=file if file is not None else '',
-                        doc='The file where to load the injector')
+    pos = pt('pos', doc='The position in 3d. (a list)')
+    if pos is not None:
+        data.pos = pos
 
-    if isfile(file):
-        try:
-            data.load(file)
-            return data
-        except:
-            pass
-
-    pos = pt(key='pos', default=pos if pos is not None else [0, 0, 0],
-             doc='The position in 3d')
-    assert len(pos) == 3
-    data.pos = pos
-
-    time = pt(key='time', default=time)
+    time = pt('time', doc='The current time')
     if time is not None:
         data.time = time
 
-    rate = pt(key='rate', default=rate)
+    rate = pt('rate', doc='The current rate')
     if rate is not None:
         data.add_oper(-1.0e100, rate)
 
-    data.radi = pt(key='radi',
-                   default=radi if radi is not None else data.radi,
-                   doc='The controlling radius')
+    radi = pt('radi', doc='The controlling radius [m]')
+    if radi is not None:
+        data.radi = radi
 
-    g_heat = pt(key='g_heat', default=g_heat)
+    g_heat = pt('g_heat')
     if g_heat is not None:
         data.g_heat = g_heat
 
-    ca_mc = pt(key='ca_mc', default=ca_mc)
+    ca_mc = pt('ca_mc')
     if ca_mc is not None:
         data.ca_mc = ca_mc
 
-    ca_t = pt(key='ca_t', default=ca_t)
+    ca_t = pt('ca_t')
     if ca_t is not None:
         data.ca_t = ca_t
 
-    pt_flu = pt.child(key='flu', doc='The setting of fluid data')
-
-    fluid_id = pt_flu(key='id',
-                      default=fluid_id if fluid_id is not None else [],
-                      doc='the fluid index')
-    if 0 < len(fluid_id) <= 2:
+    fluid_id = pt('fluid_id')
+    if fluid_id is not None:
         data.set_fid(fluid_id)
 
-    flu = fludata(pt=pt_flu,
-                  mass=mass, den=den, vis=vis, attrs=attrs)
+    flu = fludata(pt['flu'])
     assert isinstance(flu, Seepage.FluData)
     data.flu.clone(flu)
 
-    t2q = array(pt=pt.child(key='t2q', doc='The setting of t2q'),
-                data=None if t2q is None else t2q)
+    t2q = array(pt['t2q'])
 
     if t2q is not None:
         if len(t2q.flatten()) == 1:
@@ -79,36 +65,28 @@ def injector(pt, pos=None, radi=None, fluid_id=None, mass=0.0, den=1000.0, vis=1
                 q = t2q[i, 1]
                 data.add_oper(t, q)
 
-    save_to = pt(key='save_to', default=save_to)
-    if save_to is not None:
-        try:
-            data.save(pt.opath(save_to))
-        except:
-            warnings.warn(f'can not save data to file: {save_to}')
-
     return data
 
 
-def injectors(pt, pos=None, radi=None, fluid_id=None, mass=0.0, den=1000.0, vis=1.0e-3, attrs=None,
-              t2q=None, file=None, time=None, rate=None, g_heat=None, ca_mc=None, ca_t=None, inj_n=0):
+def injectors(pt):
     assert isinstance(pt, PTree)
-    inj_n = pt(key='inj_n', default=inj_n, doc='The count of injectors')
+    inj_n = pt('inj_n', doc='The count of injectors', cast=int)
+    if inj_n is None:
+        return []
     injs = []
     for i in range(inj_n):
-        data = injector(pt=pt.child(key=f'inj{i}', doc=f'The setting of inj {i}'),
-                        pos=pos, radi=radi, fluid_id=fluid_id, mass=mass, den=den, vis=vis, attrs=attrs,
-                        t2q=t2q, file=file, time=time, rate=rate, g_heat=g_heat, ca_mc=ca_mc, ca_t=ca_t)
+        data = injector(pt[f'inj{i}'])
         assert isinstance(data, Seepage.Injector)
         injs.append(data)
     return injs
 
 
 def test():
-    from zmlx.ptree.ptree import json_file
-    from zmlx.filesys.opath import opath
-    pt = json_file(opath('inj.json'))
-    data = injector(pt)
-    print(data)
+    pt = PTree()
+    pt.data = {'inj_n': 2}
+    injs = injectors(pt)
+    for inj in injs:
+        print(inj)
 
 
 if __name__ == '__main__':

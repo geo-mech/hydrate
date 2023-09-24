@@ -29,7 +29,6 @@ class Script:
                 show_err(err)
         else:
             try:
-                app_data.log(f'run <{self.file}>')
                 win.console_widget.exec_file(self.file)
             except Exception as err:
                 show_err(err)

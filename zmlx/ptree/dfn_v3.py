@@ -1,55 +1,71 @@
-from zmlx.ptree.box import box3
+import os
+import numpy as np
+from zmlx.geometry.dfn_v3 import from_segs, remove_small
 from zmlx.ptree.array import array
-from zmlx.ptree.ptree import PTree
-import warnings
-from zmlx.geometry.dfn_v3 import from_segs
+from zmlx.ptree.box import box3
 from zmlx.ptree.dfn2 import dfn2
+from zmlx.ptree.ptree import PTree
 
 
-def dfn_v3(pt, p21=0.0, box=None, angles=None, lengths=None, l_min=None, heights=None, set_n=0):
+def dfn_v3(pt):
     """
     创建一组dfn_v3
     """
     assert isinstance(pt, PTree)
 
-    set_n = pt(key='set_n', default=set_n, doc='The count of fracture sets')
-    if set_n > 0:
+    if isinstance(pt.data, str):
+        fname = pt.find(pt.data)
+        if os.path.isfile(fname):  # 尝试读取文件
+            return np.loadtxt(fname, dtype=float).tolist()
+
+    set_n = pt('set_n', doc='The count of fracture sets')
+    if set_n is not None:
+        assert set_n > 0
         fractures = []
         for idx in range(set_n):
-            fractures = fractures + dfn_v3(pt=pt.child(f'set{idx}'), p21=p21,
-                                           box=box, angles=angles, lengths=lengths,
-                                           l_min=l_min, heights=heights)
+            fractures = fractures + dfn_v3(pt[f'set{idx}'])
         return fractures
 
-    box = box3(pt, default=box)
+    box = box3(pt['box'])
     assert len(box) == 6
 
     if abs(box[0] - box[3]) * abs(box[1] - box[4]) * abs(box[2] - box[5]) < 1.0e-15:
-        warnings.warn('volume too small')
+        print('volume too small')
         return []
 
-    segs = dfn2(pt, p21=p21, box=[box[0], box[1], box[3], box[4]],
-                angles=angles, lengths=lengths, l_min=l_min)
+    segs = dfn2(pt)
 
     if len(segs) == 0:
-        warnings.warn('no segments')
+        print('no segments')
         return []
 
-    text = ' '.join([str(x) for x in heights]) if heights is not None else ''
-    heights = array(pt.child('heights'), text=text)
+    heights = array(pt['heights'])
     if heights is None:
-        warnings.warn('heights not set')
+        print('heights not set')
         return []
     assert len(heights) > 0
 
-    return from_segs(segs=segs, z_min=box[2], z_max=box[5], heights=heights)
+    fractures = from_segs(segs=segs, z_min=box[2], z_max=box[5], heights=heights)
+    if pt('remove_small', doc='Remove the small fractures'):
+        return remove_small(fractures)
+    else:
+        return fractures
 
 
 def test():
-    from zmlx.filesys.opath import opath
-    from zmlx.ptree import json_file
-    for f in dfn_v3(pt=json_file(opath('dfn2.json'))):
+    pt = PTree()
+    pt.data = {
+        "box": [0, 0, 0, 30, 30, 30],
+        "p21": 1.0,
+        "angles": "np.linspace(0, 0.4, 10)",
+        "lengths": "np.linspace(5, 10, 100)",
+        "heights": "np.linspace(5,10,100)",
+        "remove_small": True
+    }
+    fractures = dfn_v3(pt)
+    for f in fractures:
         print(f)
+    print(len(fractures))
 
 
 if __name__ == '__main__':

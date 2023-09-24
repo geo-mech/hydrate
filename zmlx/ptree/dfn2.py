@@ -1,57 +1,65 @@
-from zmlx.ptree.box import box2
-from zmlx.ptree.array import array
-from zmlx.ptree.ptree import PTree
+import os
+
+import numpy as np
+
 from zml import Dfn2
-import warnings
 from zmlx.geometry.point_distance import point_distance
+from zmlx.ptree.array import array
+from zmlx.ptree.box import box2
+from zmlx.ptree.ptree import PTree
 
 
-def dfn2(pt, p21=0.0, box=None, angles=None, lengths=None, l_min=None, set_n=0):
+def dfn2(pt):
     """
     从ptree中读取数据，并创建二维的dfn
     """
     assert isinstance(pt, PTree)
 
-    set_n = pt(key='set_n', default=set_n, doc='The count of fracture sets')
-    if set_n > 0:
+    if isinstance(pt.data, str):
+        fname = pt.find(pt.data)
+        if os.path.isfile(fname):  # 尝试读取文件
+            return np.loadtxt(fname, dtype=float).tolist()
+
+    set_n = pt('set_n', doc='The count of fracture sets')
+    if set_n is not None:
+        assert set_n > 0
         fractures = []
         for idx in range(set_n):
-            fractures = fractures + dfn2(pt=pt.child(f'set{idx}'), p21=p21,
-                                         box=box, angles=angles, lengths=lengths,
-                                         l_min=l_min)
+            fractures = fractures + dfn2(pt[f'set{idx}'])
         return fractures
 
-    p21 = pt(key='p21', default=p21, doc='The length of fracture in unit area')
-    if p21 <= 0:
-        warnings.warn('p21 <= 0')
+    p21 = pt('p21', doc='The length of fracture in 1m^2')
+    if p21 is None:
+        print('p21 is None')
         return []
 
-    box = box2(pt, default=box)
+    assert p21 >= 0
+
+    box = box2(pt['box'])
     assert len(box) == 4
     if abs(box[0] - box[2]) * abs(box[1] - box[3]) < 1.0e-10:
-        warnings.warn('area too small')
+        print('area too small')
         return []
 
-    text = ' '.join([str(x) for x in angles]) if angles is not None else ''
-    angles = array(pt.child('angles'), text=text)
+    angles = array(pt['angles'])
     if angles is None:
-        warnings.warn('angles not set')
+        print('angles not set')
         return []
     assert len(angles) > 0
 
-    text = ' '.join([str(x) for x in lengths]) if lengths is not None else ''
-    lengths = array(pt.child('lengths'), text=text)
+    lengths = array(pt['lengths'])
     if lengths is None:
-        warnings.warn('lengths not set')
+        print('lengths not set')
         return []
 
     lengths = [x for x in lengths if x > 0]
     if len(lengths) == 0:
-        warnings.warn('lengths are not positive')
+        print('lengths are not positive')
         return []
 
-    l_min = pt(key='l_min', default=l_min if l_min is not None else point_distance(box[0:3], box[3:6]) * 0.001,
-               doc='The minimum distance between fractures')
+    l_min = pt('l_min', doc='The minimum distance between fractures')
+    if l_min is None:
+        l_min = point_distance(box[0:2], box[2:4]) * 0.001
 
     buf = Dfn2()
     buf.range = box
@@ -61,9 +69,15 @@ def dfn2(pt, p21=0.0, box=None, angles=None, lengths=None, l_min=None, set_n=0):
 
 
 def test():
-    from zmlx.filesys.opath import opath
-    from zmlx.ptree import json_file
-    print(dfn2(pt=json_file(opath('dfn2.json'))))
+    pt = PTree()
+    pt.data = {
+        "p21": 1,
+        "box": "0 0 10 10",
+        "angles": 0,
+        "lengths": "np.linspace(5,10,100)"
+    }
+    for f in dfn2(pt):
+        print(f)
 
 
 if __name__ == '__main__':

@@ -127,7 +127,7 @@ def to_rc3(fractures):
     """
     将<多个>竖直的裂缝（用6个数字表示）修改为用9个数字（矩形中心坐标和两个相邻边的中心坐标）表示的三维矩形的形式
     """
-    return [from_v3(v3) for v3 in fractures]
+    return from_v3(fractures, multiple=True)
 
 
 def create_demo(heights=None):
