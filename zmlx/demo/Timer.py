@@ -1,7 +1,7 @@
 # ** desc = '用以展示timer的使用方法'
 
-from zml import timer, clock, gui
 from time import sleep
+from zml import timer, clock, gui
 
 
 # 利用zml.clock修饰的函数在调用的时候会被自动纳入计时

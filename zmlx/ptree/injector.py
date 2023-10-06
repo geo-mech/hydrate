@@ -2,7 +2,7 @@ from zml import Seepage
 from zmlx.filesys.path import *
 from zmlx.ptree.array import array
 from zmlx.ptree.fludata import fludata
-from zmlx.ptree.ptree import PTree
+from zmlx.ptree.ptree import PTree, as_ptree
 
 
 def injector(pt):
@@ -70,24 +70,11 @@ def injector(pt):
 
 def injectors(pt):
     assert isinstance(pt, PTree)
-    inj_n = pt('inj_n', doc='The count of injectors', cast=int)
-    if inj_n is None:
-        return []
+    assert isinstance(pt.data, list)
     injs = []
-    for i in range(inj_n):
-        data = injector(pt[f'inj{i}'])
+    for item in pt.data:
+        data = injector(as_ptree(item, pt.path))
         assert isinstance(data, Seepage.Injector)
         injs.append(data)
     return injs
 
-
-def test():
-    pt = PTree()
-    pt.data = {'inj_n': 2}
-    injs = injectors(pt)
-    for inj in injs:
-        print(inj)
-
-
-if __name__ == '__main__':
-    test()

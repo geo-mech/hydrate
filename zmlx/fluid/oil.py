@@ -76,7 +76,7 @@ def create_flu(*args, **kwargs):
 
 
 if __name__ == '__main__':
-    flu = create_flu()
+    flu = create()
     print(flu)
     for p, T in [(10e6, 280), (10e6, 300), (10e6, 350), (10e6, 400), (10e6, 500)]:
         vis = flu.vis(p, T)

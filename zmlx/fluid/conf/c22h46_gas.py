@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 
 C2H22 = Docosane

@@ -6,7 +6,7 @@ from zml import Dfn2
 from zmlx.geometry.point_distance import point_distance
 from zmlx.ptree.array import array
 from zmlx.ptree.box import box2
-from zmlx.ptree.ptree import PTree
+from zmlx.ptree.ptree import PTree, as_ptree
 
 
 def dfn2(pt):
@@ -20,12 +20,10 @@ def dfn2(pt):
         if os.path.isfile(fname):  # 尝试读取文件
             return np.loadtxt(fname, dtype=float).tolist()
 
-    set_n = pt('set_n', doc='The count of fracture sets')
-    if set_n is not None:
-        assert set_n > 0
+    if isinstance(pt.data, list):
         fractures = []
-        for idx in range(set_n):
-            fractures = fractures + dfn2(pt[f'set{idx}'])
+        for item in pt.data:
+            fractures = fractures + dfn2(as_ptree(item, path=pt.path))
         return fractures
 
     p21 = pt('p21', doc='The length of fracture in 1m^2')
@@ -70,12 +68,19 @@ def dfn2(pt):
 
 def test():
     pt = PTree()
-    pt.data = {
-        "p21": 1,
-        "box": "0 0 10 10",
-        "angles": 0,
-        "lengths": "np.linspace(5,10,100)"
-    }
+    pt.data = [
+        {
+            "p21": 1,
+            "box": "0 0 10 10",
+            "angles": 0,
+            "lengths": "np.linspace(5,10,100)"
+        },
+        {
+            "p21": 1,
+            "box": "0 0 10 10",
+            "angles": 1,
+            "lengths": "np.linspace(5,10,100)"
+        }]
     for f in dfn2(pt):
         print(f)
 

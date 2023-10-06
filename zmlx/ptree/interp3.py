@@ -5,19 +5,9 @@ from zml import Interp3
 from zmlx.alg.join_cols import join_cols
 from zmlx.ptree.array import array
 from zmlx.ptree.box import box3
-from zmlx.ptree.ptree import PTree, open_pt
+from zmlx.ptree.ptree import PTree
 from zmlx.ptree.size import size3
-
-
-def create_const(value):
-    """
-    创建常量场(给定的数值)
-    """
-    f = Interp3()
-    f.create(xmin=0, dx=0, xmax=0,
-             ymin=0, dy=0, ymax=0,
-             zmin=0, dz=0, zmax=0, get_value=lambda *args: value)
-    return f
+from zmlx.filesys.path import *
 
 
 def create_linear(box, size, x, y, z, v, rescale=True):
@@ -25,7 +15,7 @@ def create_linear(box, size, x, y, z, v, rescale=True):
     创建zml插值
     """
     if len(v) == 1:
-        return create_const(v[0])
+        return Interp3.create_const(v[0])
 
     points = join_cols(x, y, z)
     values = v
@@ -63,6 +53,17 @@ def interp3(pt):
     利用配置文件来创建3维的插值
     """
     assert isinstance(pt, PTree)
+
+    if isinstance(pt.data, str):   # 尝试读取文件
+        fname = pt.find(pt.data)
+        if isfile(fname):
+            return Interp3(path=fname)
+        else:
+            return
+
+    if isinstance(pt.data, (int, float)):   # 创建常量.
+        return Interp3.create_const(pt.data)
+
     data = array(pt['data'])
 
     if data is None:
@@ -70,7 +71,7 @@ def interp3(pt):
 
     if len(data.shape) == 1:
         if len(data) == 1:
-            return create_const(data[0])
+            return Interp3.create_const(data[0])
 
     assert len(data.shape) == 2
     assert data.shape[1] >= 4

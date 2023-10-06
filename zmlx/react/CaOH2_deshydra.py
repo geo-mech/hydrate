@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+
 """
 Create a reversible reaction of <(Ca(OH)2)> dehydration and <(CaO)> hydration.
 During dehydratation process (heat storage), <(Ca(OH)2)> absorbs heat and decomposes to produce <(CaO)> and <(H2O)>.

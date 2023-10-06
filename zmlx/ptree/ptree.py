@@ -10,8 +10,9 @@ class Adaptor:
         """
         关联数据/文件
         """
-        if data is None and read is not None and isfile(path):
-            data = read(path)
+        if data is None and read is not None and path is not None:
+            if isfile(path):
+                data = read(path)
 
         if data is None:
             self.data = {}
@@ -143,6 +144,10 @@ class PTree:
         """
         self.put(value)
 
+    @property
+    def path(self):
+        return self.ada.path
+
     def __getitem__(self, *keys):
         """
         返回其中一个分支
@@ -234,12 +239,19 @@ def _open_py(filename):
 
 
 def open_pt(filename):
+    if not isinstance(filename, str):
+        return
     ext = os.path.splitext(filename)[-1]
     if ext is not None:
         if ext.lower() == '.json':
             return _open_json(filename)
         if ext.lower() == '.py' or ext.lower() == '.pyw':
             return _open_py(filename)
+
+
+def as_ptree(data, path=None):
+    ada = Adaptor(data=data, path=path)
+    return PTree(ada=ada)
 
 
 def _test():

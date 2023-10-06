@@ -46,4 +46,4 @@ def create_flu(*args, **kwargs):
 
 
 if __name__ == '__main__':
-    print(create_flu())
+    print(create())

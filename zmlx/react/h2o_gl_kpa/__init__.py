@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+
 
 
 from zmlx.react.freeze import create as create_freeze

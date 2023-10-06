@@ -17,7 +17,7 @@ def stiff2(face, E, mu, h=1.0):
     else:
         x3, y3, z3 = face.get_node(3).pos
         stiff = qua4_stiff(x0, x1, x2, x3, y0, y1, y2, y3, E=E, mu=mu) * h
-    if stiff[0, 0] < 0:
+    if stiff[0, 0] >= 0:
         return stiff
     else:
         return -stiff

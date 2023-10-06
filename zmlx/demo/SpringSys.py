@@ -37,7 +37,6 @@ def create_model(triangles, x, y):
             x0, y0, x1, y1 = x[link[0]], y[link[0]], x[link[1]], y[link[1]]
             dist = math.sqrt(math.pow(x0 - x1, 2) + math.pow(y0 - y1, 2))
             spr = model.add_spring(virtual_nodes=[virtual_nodes[inode] for inode in link], len0=dist, k=1)
-            pos = spr.pos
             if get_norm(tri_x, tri_y) < 0.2:
                 spr.len0 *= 1.01
     return model

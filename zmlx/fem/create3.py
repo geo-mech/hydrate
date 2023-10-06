@@ -3,8 +3,8 @@
 """
 
 from zml import *
-from zmlx.fem.stiff3 import stiff3
 from zmlx.fem.attr_getter import attr_getter
+from zmlx.fem.stiff3 import stiff3
 
 
 def create3(mesh, ba_E=None, ba_mu=None, ba_den=None, b_E=1.0, b_mu=0.2, b_den=1.0):
@@ -88,7 +88,7 @@ def create3(mesh, ba_E=None, ba_mu=None, ba_den=None, b_E=1.0, b_mu=0.2, b_den=1
                     for ib in range(ndim):
                         expr = model.get_p2f(node_i0 * ndim + ia)
                         assert isinstance(expr, LinearExpr)
-                        k = stiff[i0 * ndim + ia, i1 * ndim + ib]
+                        k = -stiff[i0 * ndim + ia, i1 * ndim + ib]
                         expr.c = expr.c - k * model.get_pos(node_i1 * ndim + ib)
                         expr.add(index=node_i1 * ndim + ib, weight=k)
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Sun Feb 19 15:38:08 2023
 
@@ -28,51 +27,50 @@ def stiffness(x0, x1, x2, x3, y0, y1, y2, y3, z0, z1, z2, z3, E, mu):
     ex = [x0, x1, x2, x3]
     ey = [y0, y1, y2, y3]
     ez = [z0, z1, z2, z3]
-    te = 1 #(Thickness) in our case is z 
-    
-    #the matrix C contains the coordinates of the tet4 corner nodes
-    C = np.mat([
-        [1, ex[0], ey[0], ez[0],     0,     0,     0,     0,      0,      0,      0,      0],
-        [0,     0,     0,     0,     1, ex[0],  ey[0],ez[0],      0,      0,      0,      0],
-        [0,     0,     0,     0,     0,     0,     0,    0,       1,  ex[0],  ey[0],  ez[0]],
-        [1, ex[1], ey[1], ez[1],     0,     0,     0,     0,      0,      0,      0,      0],
-        [0,     0,     0,     0,     1, ex[1],  ey[1],ez[1],      0,      0,      0,      0],
-        [0,     0,     0,     0,     0,     0,     0,    0,       1,  ex[1],  ey[1],  ez[1]],
-        [1, ex[2], ey[2], ez[2],     0,     0,     0,     0,      0,      0,      0,      0],
-        [0,     0,     0,     0,     1, ex[2],  ey[2],ez[2],      0,      0,      0,      0],
-        [0,     0,     0,     0,     0,     0,     0,    0,       1,  ex[2],  ey[2],  ez[2]],
-        [1, ex[3], ey[3], ez[3],     0,     0,     0,     0,      0,      0,      0,      0],
-        [0,     0,     0,     0,     1, ex[3],  ey[3],ez[3],      0,      0,      0,      0],
-        [0,     0,     0,     0,     0,     0,     0,    0,       1,  ex[3],  ey[3],  ez[3]]
-        ])
-    
-    V = (1/6)*np.linalg.det(np.mat([
-                                    [1, ex[0], ey[0], ez[0]],
-                                    [1, ex[1], ey[1], ez[1]],
-                                    [1, ex[2], ey[2], ez[2]],
-                                    [1, ex[3], ey[3], ez[3]]
-                                    ]))
-    #constant for the Constant Strain tet4 
-    B = np.mat([
-               [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ],
-               [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0 ],
-               [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 ],
-               [0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0 ],
-               [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0 ],
-               [0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0 ],
-               ])*np.linalg.inv(C) #reemplantar la distribucion de esto en el papel.
-    
-    Dm = E / ((1 - mu) * (1 - 2 * mu)) * np.mat([
-                                            [1 - mu, mu, mu, 0, 0, 0],
-                                            [mu, 1 - mu, mu, 0, 0, 0],
-                                            [mu, mu, 1 - mu, 0, 0, 0],
-                                            [0, 0, 0, 1 / 2 - mu, 0, 0],
-                                            [0, 0, 0, 0, 1 / 2 - mu, 0],
-                                            [0, 0, 0, 0, 0, 1 / 2 - mu]
-                                            ])
-    
+    te = 1  # (Thickness) in our case is z
 
-    ke = np.transpose(B)*Dm*B*V
+    # the matrix C contains the coordinates of the tet4 corner nodes
+    C = np.mat([
+        [1, ex[0], ey[0], ez[0], 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, ex[0], ey[0], ez[0], 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 1, ex[0], ey[0], ez[0]],
+        [1, ex[1], ey[1], ez[1], 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, ex[1], ey[1], ez[1], 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 1, ex[1], ey[1], ez[1]],
+        [1, ex[2], ey[2], ez[2], 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, ex[2], ey[2], ez[2], 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 1, ex[2], ey[2], ez[2]],
+        [1, ex[3], ey[3], ez[3], 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, ex[3], ey[3], ez[3], 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 1, ex[3], ey[3], ez[3]]
+    ])
+
+    V = (1 / 6) * np.linalg.det(np.mat([
+        [1, ex[0], ey[0], ez[0]],
+        [1, ex[1], ey[1], ez[1]],
+        [1, ex[2], ey[2], ez[2]],
+        [1, ex[3], ey[3], ez[3]]
+    ]))
+    # constant for the Constant Strain tet4
+    B = np.mat([
+        [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+        [0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0],
+        [0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0],
+    ]) * np.linalg.inv(C)  # reemplantar la distribucion de esto en el papel.
+
+    Dm = E / ((1 - mu) * (1 - 2 * mu)) * np.mat([
+        [1 - mu, mu, mu, 0, 0, 0],
+        [mu, 1 - mu, mu, 0, 0, 0],
+        [mu, mu, 1 - mu, 0, 0, 0],
+        [0, 0, 0, 1 / 2 - mu, 0, 0],
+        [0, 0, 0, 0, 1 / 2 - mu, 0],
+        [0, 0, 0, 0, 0, 1 / 2 - mu]
+    ])
+
+    ke = np.transpose(B) * Dm * B * V
     # k = [np.triu(ke)] #to show the upper part
 
     return ke
@@ -83,4 +81,3 @@ if __name__ == '__main__':
     np.savetxt('m.txt', m, fmt='%0.2f')
     print(m)
     print(m.shape)
-

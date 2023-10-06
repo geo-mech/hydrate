@@ -21,7 +21,8 @@ def show_rc3(rc3, color=None, alpha=None, cmap=None, caption=None, on_top=None,
     if not gui.exists():
         return
 
-    assert len(rc3) > 0
+    if len(rc3) <= 0:
+        return
 
     vertexes = []
     faces = []

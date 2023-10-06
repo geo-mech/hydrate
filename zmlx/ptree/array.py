@@ -7,7 +7,7 @@ import numpy as np
 from zmlx.ptree.ptree import PTree
 
 
-def _cast(data, pt=None):
+def _cast(data, pt):
     """
     从给定的数据构造array. 可能会返回None, 以及np的array (可能为空)
     """
@@ -19,7 +19,7 @@ def _cast(data, pt=None):
 
     if isinstance(data, str):
         # 尝试文件
-        fname = pt.find(data) if pt is not None else data
+        fname = pt.find(data)
         if os.path.isfile(fname):
             return np.loadtxt(fname)
         # 尝试脚本

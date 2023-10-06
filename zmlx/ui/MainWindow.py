@@ -264,10 +264,16 @@ class MainWindow(QtWidgets.QMainWindow):
             assert self.tab_widget.count() < count_max, f'maximum count of tab_widget is {count_max}'
             if type_kw is None:
                 type_kw = {}
-            widget = type(self.tab_widget, **type_kw)
-            assert widget is not None
+            try:
+                widget = type(self.tab_widget, **type_kw)
+                assert isinstance(widget, type)
+            except:
+                return
             if init is not None:
-                init(widget)
+                try:
+                    init(widget)
+                except:
+                    pass
             if caption is None:
                 caption = 'untitled'
             index = self.tab_widget.addTab(widget, caption)

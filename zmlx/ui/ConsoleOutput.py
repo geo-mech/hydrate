@@ -1,4 +1,6 @@
 from zmlx.ui.Qt import QtCore, QtWidgets, QtGui
+from zml import gui, get_dir, version
+import sys
 
 
 class ConsoleOutput(QtWidgets.QTextBrowser):
@@ -26,3 +28,6 @@ class ConsoleOutput(QtWidgets.QTextBrowser):
         self.moveCursor(QtGui.QTextCursor.End)
         self.insertPlainText(text)
         self.__length += len(text)
+
+    def enterEvent(self, event):
+        gui.status(f'System: zml ({version}) at <{get_dir()}> with Python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}')

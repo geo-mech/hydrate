@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 from zml import gui
 import pyqtgraph.opengl as gl
 import pyqtgraph as pg
@@ -32,8 +29,16 @@ def get_widget(caption=None, on_top=None):
 def make_fn(name):
     def func(*args, caption=None, on_top=None, **kwargs):
         result = []
-        apply(oper=lambda widget: result.append(getattr(widget, name)(*args, **kwargs)),
-              caption=caption, on_top=on_top)
+
+        def oper(widget):
+            try:
+                f = getattr(widget, name)
+                r = f(*args, **kwargs)
+                result.append(r)
+            except Exception as err:
+                print(err)
+
+        apply(oper=oper, caption=caption, on_top=on_top)
         if len(result) > 0:
             return result[0]
 

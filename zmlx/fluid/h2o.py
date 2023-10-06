@@ -56,7 +56,7 @@ def create_flu(*args, **kwargs):
 
 def show_all():
     from zmlx.plt.show_field2 import show_field2
-    flu = create_flu()
+    flu = create()
     show_field2(flu.den, [1e6, 40e6], [280, 300], caption='den')
     show_field2(flu.vis, [1e6, 40e6], [280, 300], caption='vis')
 

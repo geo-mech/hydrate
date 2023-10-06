@@ -1,6 +1,7 @@
 from zml import *
 from zmlx.alg.sys import get_latest_version
 from zmlx.ui.Qt import QtWidgets, QtCore
+import sys
 
 
 class About(QtWidgets.QTableWidget):
@@ -21,14 +22,16 @@ class About(QtWidgets.QTableWidget):
             while core.has_log():
                 print(core.pop_log())
             print('\n\n')
-        data = [['About', about()],
-                ['当前版本', f'{version}'],
+        data = [['安装路径', f'{get_dir()}'],
+                ['运行环境', f'Python {sys.version}'],
+                ['当前版本', f'{version}; {core.time_compile}; {core.compiler}'],
                 ['最新版本', f'{latest_version}'],
                 ['是否需要更新', '是' if version < latest_version else '否'],
                 ['网址', 'https://gitee.com/geomech/hydrate'],
                 ['作者', 'Zhang Zhaobin'],
                 ['单位', '中国科学院地质与地球物理研究所'],
-                ['授权情况', f'{summary}'],
+                ['联系邮箱', 'zhangzhaobin@mail.iggcas.ac.cn'],
+                ['本机授权情况', f'{summary}'],
                 ]
         self.setRowCount(len(data))
         self.setColumnCount(2)

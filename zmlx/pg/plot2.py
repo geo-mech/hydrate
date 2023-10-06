@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-
-
 import pyqtgraph as pg
 from zml import gui
 

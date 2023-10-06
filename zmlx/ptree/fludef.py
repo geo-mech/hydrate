@@ -2,116 +2,113 @@ import os
 
 from zml import Seepage
 from zmlx.ptree.interp2 import interp2
-from zmlx.ptree.ptree import PTree
+from zmlx.ptree.ptree import PTree, as_ptree
 
 
 def fludef(pt):
     """
     利用配置文件载入/创建流体的定义
     """
-    assert isinstance(pt, PTree)
+    if not isinstance(pt, PTree):
+        pt = as_ptree(pt)
 
-    comp_n = pt('comp_n', doc='The number of components')
-    if comp_n is not None:
-        assert comp_n > 0
-        data = Seepage.FluDef()
-        for i in range(comp_n):
-            flu_i = fludef(pt[f'comp{i}'])
-            assert isinstance(flu_i, Seepage.FluDef)
-            data.add_component(flu_i)
-        return data
+    data = pt.data
 
-    if isinstance(pt.data, str):
-        file = pt.data
-        if file == '@c11h24':
+    if isinstance(data, list):
+        f_def = Seepage.FluDef()
+        for item in data:
+            f_def.add_component(fludef(as_ptree(item, pt.path)))
+        return f_def
+
+    if isinstance(data, str):
+        if data == '@c11h24':
             from zmlx.fluid.c11h24 import create
             return create()
 
-        if file == '@ch4_lyx':
+        if data == '@ch4_lyx':
             from zmlx.fluid.ch4_lyx import create
             return create()
 
-        if file == '@co2':
+        if data == '@co2':
             from zmlx.fluid.co2 import create
             return create()
 
-        if file == '@h2o_gas':
+        if data == '@h2o_gas':
             from zmlx.fluid.h2o_gas import create
             return create()
 
-        if file == '@ch4':
+        if data == '@ch4':
             from zmlx.fluid.ch4 import create
             return create()
 
-        if file == '@ch4_hydrate':
+        if data == '@ch4_hydrate':
             from zmlx.fluid.ch4_hydrate import create
             return create()
 
-        if file == '@char':
+        if data == '@char':
             from zmlx.fluid.char import create
             return create()
 
-        if file == '@co2_hydrate':
+        if data == '@co2_hydrate':
             from zmlx.fluid.co2_hydrate import create
             return create()
 
-        if file == '@h2o':
+        if data == '@h2o':
             from zmlx.fluid.h2o import create
             return create()
 
-        if file == '@h2o_ice':
+        if data == '@h2o_ice':
             from zmlx.fluid.h2o_ice import create
             return create()
 
-        if file == '@kerogen':
+        if data == '@kerogen':
             from zmlx.fluid.kerogen import create
             return create()
 
-        if file == '@oil':
+        if data == '@oil':
             from zmlx.fluid.oil import create
             return create()
 
-        file = pt.find(file)
-        if isinstance(file, str):
-            if os.path.isfile(file):
+        fname = pt.find(data)
+        if isinstance(fname, str):
+            if os.path.isfile(fname):
                 try:
-                    return Seepage.FluDef(path=file)
+                    return Seepage.FluDef(path=fname)
                 except:
                     pass
 
+    assert isinstance(data, dict)
     # 下面创建一个自定义的数据.
-    data = Seepage.FluDef()
+    f_def = Seepage.FluDef()
 
     den = interp2(pt['den'])
     if den is not None:
-        data.den = den
+        f_def.den = den
+    else:
+        f_def.den.clear()    # 删除
 
     vis = interp2(pt['vis'])
     if vis is not None:
-        data.vis = vis
+        f_def.vis = vis
+    else:
+        f_def.vis.clear()    # 删除
 
     specific_heat = pt('specific_heat', doc='the specific heat of the fluid')
     if specific_heat is not None:
-        data.specific_heat = specific_heat
+        f_def.specific_heat = specific_heat
 
-    return data
+    return f_def
 
 
 def fludefs(pt):
     """
     创建多个流体定义
     """
-    fluid_n = pt('fluid_n', doc='The count of fluids', cast=int)
-    if fluid_n is None:
-        return []
-
-    assert fluid_n > 0
-    fdefs = []
-    for i in range(fluid_n):
-        flu_i = fludef(pt[f'fluid{i}'])
-        assert isinstance(flu_i, Seepage.FluDef)
-        fdefs.append(flu_i)
-    return fdefs
+    assert isinstance(pt.data, list)
+    f_defs = []
+    for item in pt.data:
+        f_defs.append(fludef(as_ptree(item, pt.path)))
+    return f_defs
 
 
 def set_fludefs(model, pt):

@@ -93,7 +93,7 @@ def create2(mesh, fa_E=None, fa_mu=None, fa_den=None, fa_h=None,
                     for ib in range(ndim):
                         expr = model.get_p2f(node_i0 * ndim + ia)
                         assert isinstance(expr, LinearExpr)
-                        k = stiff[i0 * ndim + ia, i1 * ndim + ib]
+                        k = -stiff[i0 * ndim + ia, i1 * ndim + ib]
                         expr.c = expr.c - k * model.get_pos(node_i1 * ndim + ib)
                         expr.add(index=node_i1 * ndim + ib, weight=k)
 

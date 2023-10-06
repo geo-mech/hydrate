@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Wed Feb 15 12:00:10 2023
 
@@ -70,4 +69,3 @@ if __name__ == '__main__':
                    y0=0, y1=1.0, y2=0, E=200e5, mu=0.32)
     print(m1)
     print(m2)
-

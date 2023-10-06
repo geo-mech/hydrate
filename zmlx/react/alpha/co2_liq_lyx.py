@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+
 """
 定义二氧化碳气液转化临界曲线
 参考文献：Span, R.; Wagner, W., A New Equation of State for Carbon Dioxide Covering the Fluid Region from the Triple-Point

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 from zmlx.pg.plot2 import *
 import time
 import numpy as np

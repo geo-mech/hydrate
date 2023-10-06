@@ -1,10 +1,10 @@
 # ** desc = '此例子说明：如何在北京超算上同时计算多个算例 （仅供示例，勿直接执行）'
 
-import sys
 import os
+import sys
 import numpy as np
-from zmlx.alg.sbatch import sbatch
 from zml import make_parent
+from zmlx.alg.sbatch import sbatch
 
 # 进行因素分析的时候，可变变量的数量，应该等于函数run的参数的数量
 n_vari = 2

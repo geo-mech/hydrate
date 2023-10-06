@@ -23,7 +23,7 @@ def create_flu(*args, **kwargs):
 
 
 if __name__ == '__main__':
-    flu = create_flu()
+    flu = create()
     print(flu)
     try:
         from zmlx.plt.show_field2 import show_field2

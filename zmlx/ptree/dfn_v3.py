@@ -4,7 +4,7 @@ from zmlx.geometry.dfn_v3 import from_segs, remove_small
 from zmlx.ptree.array import array
 from zmlx.ptree.box import box3
 from zmlx.ptree.dfn2 import dfn2
-from zmlx.ptree.ptree import PTree
+from zmlx.ptree.ptree import PTree, as_ptree
 
 
 def dfn_v3(pt):
@@ -17,13 +17,13 @@ def dfn_v3(pt):
         fname = pt.find(pt.data)
         if os.path.isfile(fname):  # 尝试读取文件
             return np.loadtxt(fname, dtype=float).tolist()
+        else:
+            return []
 
-    set_n = pt('set_n', doc='The count of fracture sets')
-    if set_n is not None:
-        assert set_n > 0
+    if isinstance(pt.data, list):
         fractures = []
-        for idx in range(set_n):
-            fractures = fractures + dfn_v3(pt[f'set{idx}'])
+        for item in pt.data:
+            fractures = fractures + dfn_v3(as_ptree(item, path=pt.path))
         return fractures
 
     box = box3(pt['box'])
@@ -54,14 +54,24 @@ def dfn_v3(pt):
 
 def test():
     pt = PTree()
-    pt.data = {
-        "box": [0, 0, 0, 30, 30, 30],
-        "p21": 1.0,
-        "angles": "np.linspace(0, 0.4, 10)",
-        "lengths": "np.linspace(5, 10, 100)",
-        "heights": "np.linspace(5,10,100)",
-        "remove_small": True
-    }
+    pt.data = [
+        {
+            "box": [0, 0, 0, 30, 30, 30],
+            "p21": 1.0,
+            "angles": "np.linspace(0, 0.4, 10)",
+            "lengths": "np.linspace(5, 10, 100)",
+            "heights": "np.linspace(5,10,100)",
+            "remove_small": True
+        },
+        {
+            "box": [0, 0, 0, 30, 30, 30],
+            "p21": 1.0,
+            "angles": "np.linspace(1, 1.4, 10)",
+            "lengths": "np.linspace(5, 10, 100)",
+            "heights": "np.linspace(5,10,100)",
+            "remove_small": True
+        }
+    ]
     fractures = dfn_v3(pt)
     for f in fractures:
         print(f)
