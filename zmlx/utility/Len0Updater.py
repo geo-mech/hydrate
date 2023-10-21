@@ -1,8 +1,4 @@
-
-
-
 from zml import *
-import numpy as np
 
 
 class Len0Updater:

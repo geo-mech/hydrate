@@ -1,16 +1,16 @@
 import warnings
 
-from zml import TherFlowConfig
+from zml import Seepage
 
 
-def create(den=1100):
+def create(den=1100, name=None):
     """
     Data from Maryelin.
         密度在1100到1800之间
     """
     vis = 1.0e30
     specific_heat = 1380
-    return TherFlowConfig.FluProperty(den=den, vis=vis, specific_heat=specific_heat)
+    return Seepage.FluDef(den=den, vis=vis, specific_heat=specific_heat, name=name)
 
 
 def create_flu(*args, **kwargs):

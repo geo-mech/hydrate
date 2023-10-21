@@ -1,7 +1,6 @@
 from zml import *
 from zmlx.alg.sys import get_latest_version
 from zmlx.ui.Qt import QtWidgets, QtCore
-import sys
 
 
 class About(QtWidgets.QTableWidget):

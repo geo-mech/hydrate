@@ -3,10 +3,10 @@
 @author: Maryelin
 """
 
-from zml import TherFlowConfig
+from zml import Seepage
 
 
-def create():
+def create(name=None):
     """
     Calcium oxide appears as an odorless, white or gray-white solid in the form of hard lumps
     Density, MW = https://pubchem.ncbi.nlm.nih.gov/compound/Calcium-oxide
@@ -20,7 +20,7 @@ def create():
     den = 3340
     vis = 1.0e30
     specific_heat = 946.51
-    return TherFlowConfig.FluProperty(den=den, vis=vis, specific_heat=specific_heat)
+    return Seepage.FluDef(den=den, vis=vis, specific_heat=specific_heat, name=name)
 
 
 if __name__ == '__main__':

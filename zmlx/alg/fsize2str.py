@@ -1,4 +1,3 @@
-
 def fsize2str(size):
     size /= 1024
     if size < 2000:
@@ -14,5 +13,3 @@ def fsize2str(size):
     else:
         size /= 1024
         return '%0.2f Tb' % size
-
-

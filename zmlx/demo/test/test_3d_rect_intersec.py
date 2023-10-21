@@ -1,4 +1,4 @@
-from zmlx.alg.dfn_v3 import *
+from zmlx.geometry.dfn_v3 import *
 from zmlx.alg.rectangle_intersect_3d import *
 import numpy as np
 import os

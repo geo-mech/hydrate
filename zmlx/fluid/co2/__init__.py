@@ -4,7 +4,7 @@ import warnings
 from zml import TherFlowConfig, Interp2
 
 
-def create():
+def create(name=None):
     """
     创建CO2数据；压力范围：1MPa到30MPa；温度范围250K到300K
     """
@@ -14,7 +14,7 @@ def create():
     specific_heat = 2844.8
     return TherFlowConfig.FluProperty(den=Interp2(path=os.path.join(os.path.dirname(__file__), 'den.txt')),
                                       vis=Interp2(path=os.path.join(os.path.dirname(__file__), 'vis.txt')),
-                                      specific_heat=specific_heat)
+                                      specific_heat=specific_heat, name=name)
 
 
 def create_flu(*args, **kwargs):

@@ -1,6 +1,6 @@
-from zmlx.pg.plot3 import *
 import time
-import numpy as np
+
+from zmlx.pg.plot3 import *
 
 g = Grid()
 

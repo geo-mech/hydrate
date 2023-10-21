@@ -1,7 +1,5 @@
-
-
-
 import warnings
+
 from zml import is_array
 
 

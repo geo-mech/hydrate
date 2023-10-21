@@ -1,6 +1,6 @@
-import numpy as np
 import cv2
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 def fig2matrix(fig_path, cm_path, c_min=0, c_max=1, transfunc='linear', errorlimit=1000, mend=False):

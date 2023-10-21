@@ -3,7 +3,9 @@
 """
 import os
 from io import StringIO
+
 import numpy as np
+
 from zmlx.ptree.ptree import PTree
 
 

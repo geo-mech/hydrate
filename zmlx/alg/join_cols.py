@@ -1,5 +1,4 @@
 from zml import *
-import numpy as np
 
 
 def join_cols(*args):

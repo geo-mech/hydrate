@@ -13,11 +13,6 @@ def test():
         print(i)
 
         timer('0', sleep, 0.01)
-        timer(1, sleep, 0.02)
-
-        timer.beg(2)
-        sleep(0.1)
-        timer.end(2)
 
         timer.beg('3')
         sleep(0.1)

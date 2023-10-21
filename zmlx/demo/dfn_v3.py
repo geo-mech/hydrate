@@ -1,7 +1,7 @@
 # ** desc = '创建一个三维的DFN(竖直的裂缝)并且基于pg来显示'
 
 from zml import gui
-from zmlx.alg.dfn_v3 import to_rc3, create_demo
+from zmlx.geometry.dfn_v3 import to_rc3, create_demo
 from zmlx.pg.show_rc3 import show_rc3
 
 

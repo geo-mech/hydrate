@@ -1,5 +1,6 @@
-import pyqtgraph.opengl as gl
 import warnings
+
+import pyqtgraph.opengl as gl
 
 Scatter = gl.GLScatterPlotItem
 Line = gl.GLLinePlotItem

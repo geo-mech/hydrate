@@ -1,5 +1,5 @@
-from json import *
 import warnings
+from json import *
 
 
 def write(path, obj, encoding=None, indent=2):

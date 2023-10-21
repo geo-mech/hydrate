@@ -1,6 +1,3 @@
-import os
-import timeit
-
 from zml import *
 from zmlx.alg.clamp import clamp
 from zmlx.ui.Qt import QtWidgets, QtCore

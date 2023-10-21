@@ -1,5 +1,3 @@
-import numpy as np
-
 from zml import *
 from zmlx.fem.cube2tet import cube2tet
 from zmlx.fem.stiffness_tet4 import stiffness as tet4_stiff

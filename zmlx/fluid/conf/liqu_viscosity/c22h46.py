@@ -9,7 +9,8 @@ Viscosity oof Compressed Athabasca Bitumen
 
 import numpy as np
 
-def liq_vis_c22h46(P, T): #Mehrotra and Svrcek, 1986
+
+def liq_vis_c22h46(P, T):  # Mehrotra and Svrcek, 1986
     b1 = 22.8515
     b2 = -3.5784
     b3 = int(0.00511938)

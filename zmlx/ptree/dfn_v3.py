@@ -1,5 +1,7 @@
 import os
+
 import numpy as np
+
 from zmlx.geometry.dfn_v3 import from_segs, remove_small
 from zmlx.ptree.array import array
 from zmlx.ptree.box import box3

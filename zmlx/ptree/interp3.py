@@ -3,11 +3,11 @@ from scipy.interpolate import NearestNDInterpolator, LinearNDInterpolator
 
 from zml import Interp3
 from zmlx.alg.join_cols import join_cols
+from zmlx.filesys.path import *
 from zmlx.ptree.array import array
 from zmlx.ptree.box import box3
 from zmlx.ptree.ptree import PTree
 from zmlx.ptree.size import size3
-from zmlx.filesys.path import *
 
 
 def create_linear(box, size, x, y, z, v, rescale=True):
@@ -54,14 +54,14 @@ def interp3(pt):
     """
     assert isinstance(pt, PTree)
 
-    if isinstance(pt.data, str):   # 尝试读取文件
+    if isinstance(pt.data, str):  # 尝试读取文件
         fname = pt.find(pt.data)
         if isfile(fname):
             return Interp3(path=fname)
         else:
             return
 
-    if isinstance(pt.data, (int, float)):   # 创建常量.
+    if isinstance(pt.data, (int, float)):  # 创建常量.
         return Interp3.create_const(pt.data)
 
     data = array(pt['data'])

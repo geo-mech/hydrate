@@ -18,11 +18,12 @@ https://github.com/CalebBell/chemicals
 TEMP = (20-280)K
 
 """
+import chemicals  # pip install chemicals (https://chemicals.readthedocs.io/index.html#installation)
 import numpy as np
-import chemicals #  pip install chemicals (https://chemicals.readthedocs.io/index.html#installation)
 
-def liq_den_co2(P,T):
-    #parameters COSTALD
+
+def liq_den_co2(P, T):
+    # parameters COSTALD
     a = -9.070217
     b = 62.45326
     d = -135.1102
@@ -31,34 +32,34 @@ def liq_den_co2(P,T):
     h = 1.14188
     j = 0.0861488
     k = 0.0344483
-    
-    #compound properties
+
+    # compound properties
     PM = 0.04401  # Kg/mol
-    Tc = 304.12 #K
-    Pc = 7.3774E+6 #Pa
-    Vc = 9.407E-5 #m3/mol
+    Tc = 304.12  # K
+    Pc = 7.3774E+6  # Pa
+    Vc = 9.407E-5  # m3/mol
     omega = 0.225
-    
-    
-    #Vapor Pressure Antoine (Yaws Carl)
-    t = T - 273.15 #convert kelvin to celsius 
+
+    # Vapor Pressure Antoine (Yaws Carl)
+    t = T - 273.15  # convert kelvin to celsius
     A = 7.58828
     B = 861.82
     C = 271.883
-    LOGP = A -(B/(t+C))
-    Pv = 10**(LOGP) * 133.32 #convert mmHg to Pa
-    Psat = Pv 
-    
-    #Saturation liquid Volumen
-    Vs = chemicals.volume.COSTALD(T, Tc, Vc, omega) # https://chemicals.readthedocs.io/chemicals.volume.html#pure-high-pressure-liquid-correlations
-    
-    #COSTALD EQUATION
-    e = np.exp(f + omega*(g + h*omega))
-    C = j + k*omega
-    tau = (1.0 - T/Tc)
-    tau13 = tau**(1.0/3.0)
-    B = Pc*(-1.0 + a*tau13 + b*tau13*tau13 + d*tau + e*tau*tau13)   
-    l = (B + P)/(B + Psat)
-    V = Vs*(1.0 - C*np.log(l)) #m3/mol
+    LOGP = A - (B / (t + C))
+    Pv = 10 ** (LOGP) * 133.32  # convert mmHg to Pa
+    Psat = Pv
+
+    # Saturation liquid Volumen
+    Vs = chemicals.volume.COSTALD(T, Tc, Vc,
+                                  omega)  # https://chemicals.readthedocs.io/chemicals.volume.html#pure-high-pressure-liquid-correlations
+
+    # COSTALD EQUATION
+    e = np.exp(f + omega * (g + h * omega))
+    C = j + k * omega
+    tau = (1.0 - T / Tc)
+    tau13 = tau ** (1.0 / 3.0)
+    B = Pc * (-1.0 + a * tau13 + b * tau13 * tau13 + d * tau + e * tau * tau13)
+    l = (B + P) / (B + Psat)
+    V = Vs * (1.0 - C * np.log(l))  # m3/mol
     den = (1 / V) * PM
     return den

@@ -3,10 +3,11 @@
 1列数据，用于定义裂缝的颜色（如压力）
 """
 
-from zml import is_array, gui
-from zmlx.plt.plot2 import plot2
-from zmlx.plt.get_color import get_color
 import warnings
+
+from zml import is_array, gui
+from zmlx.plt.get_color import get_color
+from zmlx.plt.plot2 import plot2
 
 try:
     import numpy as np

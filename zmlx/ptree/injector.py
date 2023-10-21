@@ -77,4 +77,3 @@ def injectors(pt):
         assert isinstance(data, Seepage.Injector)
         injs.append(data)
     return injs
-

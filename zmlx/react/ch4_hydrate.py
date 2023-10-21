@@ -1,4 +1,3 @@
-
 """
 定义甲烷水合物的基本参数
 """
@@ -50,13 +49,13 @@ def get_dheat(Nh=6.0):
         return (62.8e3 / 16.0E-3) * get_mg_vs_mh(Nh)
 
 
-def create(igas, iwat, ihyd, fa_t, fa_c, dissociation=True, formation=True):
+def create(gas, wat, hyd, fa_t=None, fa_c=None, dissociation=True, formation=True):
     """
     创建一个水合物反应(平衡态的反应，反应的速率给的非常大)
     by 张召彬
     """
     return hydrate.create(vp=vp, vt=vt, temp=273.15, heat=get_dheat(6),
                           mg=get_mg_vs_mh(6),
-                          igas=igas, iliq=iwat, isol=ihyd,
+                          gas=gas, liq=wat, hyd=hyd,
                           fa_t=fa_t, fa_c=fa_c,
                           dissociation=dissociation, formation=formation)

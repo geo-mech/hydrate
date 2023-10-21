@@ -1,6 +1,6 @@
 import warnings
 
-from zml import TherFlowConfig
+from zml import Seepage
 
 
 def create_flu_v0():
@@ -20,12 +20,12 @@ def create_flu_v0():
     """
     den = 1500
     specific_heat = 2000
-    return TherFlowConfig.FluProperty(den=den,
-                                      vis=1.0e30,
-                                      specific_heat=specific_heat)
+    return Seepage.FluDef(den=den,
+                          vis=1.0e30,
+                          specific_heat=specific_heat)
 
 
-def create():
+def create(name=None):
     """
     Data from Maryelin.
 
@@ -37,7 +37,7 @@ def create():
     den = 2590  # kg/m3 Longmaxi FM (Baoyun Zhao 2021)
     vis = 1.0e30
     specific_heat = 829  # J/ Kg K # Longmaxi Fm. Xiang etal, 2020
-    return TherFlowConfig.FluProperty(den=den, vis=vis, specific_heat=specific_heat)
+    return Seepage.FluDef(den=den, vis=vis, specific_heat=specific_heat, name=name)
 
 
 def create_flu(*args, **kwargs):

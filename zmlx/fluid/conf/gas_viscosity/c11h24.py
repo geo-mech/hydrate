@@ -10,9 +10,10 @@ Compounds, Knovel, 2003
 original units = µP
 """
 
+
 def gas_vis_c11h24(P, T):
     A = -3.8819
     B = 0.1874
     C = -0.000019892
-    viscosity = (A + B*T + (C * (T**2))) * 1.0e-7 #pa*s
+    viscosity = (A + B * T + (C * (T ** 2))) * 1.0e-7  # pa*s
     return viscosity

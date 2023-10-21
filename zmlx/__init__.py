@@ -8,13 +8,14 @@ zmlx: zml模块的扩展，将首先引入zml的所有功能，并定义数据�
 """
 
 from zml import *
+from zmlx.config.TherFlowConfig import TherFlowConfig, SeepageTher    # 覆盖zml中的定义
 from zmlx.filesys.join_paths import join_paths
 from zmlx.filesys.opath import opath
 from zmlx.alg.sys import get_latest_version
 from zmlx.alg.clamp import clamp
 from zmlx.alg.linspace import linspace
 from zmlx.alg.has_module import has_numpy, has_PyQt5, has_matplotlib
-from zmlx.alg.make_fname import make_fname
+from zmlx.filesys.make_fname import make_fname
 import os
 import warnings
 

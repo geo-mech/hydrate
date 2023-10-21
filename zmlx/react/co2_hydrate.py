@@ -1,4 +1,3 @@
-
 """
 定义CO2水合物的基本参数
 
@@ -45,14 +44,14 @@ def get_dheat():
     return 394225.0
 
 
-def create(igas, iwat, ihyd, fa_t, fa_c, dissociation=True, formation=True):
+def create(gas, wat, hyd, fa_t=None, fa_c=None, dissociation=True, formation=True):
     """
     创建一个水合物反应(平衡态的反应，反应的速率给的非常大)
     by 张召彬
     """
     return hydrate.create(vp=vp, vt=vt, temp=273.15, heat=get_dheat(),
                           mg=get_mg_vs_mh(),
-                          igas=igas, iliq=iwat, isol=ihyd, fa_t=fa_t, fa_c=fa_c,
+                          gas=gas, liq=wat, hyd=hyd, fa_t=fa_t, fa_c=fa_c,
                           dissociation=dissociation, formation=formation)
 
 
@@ -69,4 +68,6 @@ if __name__ == '__main__':
 
     d3 = {'name': 'plot', 'args': [vt1, vp1], 'kwargs': {'c': 'b'}}
     d4 = {'name': 'plot', 'args': [vt, vp], 'kwargs': {'c': 'r'}}
+    from zmlx.plt.plot2 import plot2
+
     plot2(xlabel='x', ylabel='y', data=(d3, d4))

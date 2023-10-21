@@ -18,9 +18,9 @@ Also includes thermal conductivity and viscosity,
 
 from pyXSteam.XSteam import XSteam
 
-def den_h2o(P, T): # units p = Pa
-        pressure = P * (1 / 1000000)
-        steamTable = XSteam(XSteam.UNIT_SYSTEM_BARE) # m/kg/sec/K/MPa/W
-        density = steamTable.rho_pt(pressure, T)
-        return density 
-    
+
+def den_h2o(P, T):  # units p = Pa
+    pressure = P * (1 / 1000000)
+    steamTable = XSteam(XSteam.UNIT_SYSTEM_BARE)  # m/kg/sec/K/MPa/W
+    density = steamTable.rho_pt(pressure, T)
+    return density

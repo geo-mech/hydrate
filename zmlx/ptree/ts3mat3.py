@@ -3,7 +3,7 @@ from scipy.interpolate import NearestNDInterpolator
 from zml import *
 from zmlx.ptree.array import array
 from zmlx.ptree.box import box3
-from zmlx.ptree.ptree import PTree, open_pt
+from zmlx.ptree.ptree import PTree
 from zmlx.ptree.size import size3
 
 

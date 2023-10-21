@@ -1,5 +1,6 @@
-from zmlx.io.load_txt import load_txt
 from io import StringIO
+
+from zmlx.io.load_txt import load_txt
 
 
 def load_col(fname=None, index=0, dtype=float, text=None):

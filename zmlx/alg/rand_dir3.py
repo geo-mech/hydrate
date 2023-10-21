@@ -1,5 +1,5 @@
-from random import uniform
 import math
+from random import uniform
 
 
 def rand_dir3(norm=1.0, max_try=200, default=None):

@@ -6,8 +6,8 @@ import os
 
 from zml import app_data, read_text, write_text
 from zmlx.alg.clamp import clamp
-from zmlx.ui.Qt import QtGui, QtWidgets, QtCore, QtMultimedia
 from zmlx.io.json_ex import read as read_json
+from zmlx.ui.Qt import QtGui, QtWidgets, QtCore, QtMultimedia
 
 try:
     app_data.add_path(os.path.join(os.path.dirname(__file__), 'data'))

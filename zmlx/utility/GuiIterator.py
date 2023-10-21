@@ -1,9 +1,7 @@
-
-
-
 import timeit
-from zml import time2str, gui
 import warnings
+
+from zml import time2str, gui
 
 
 class GuiIterator:

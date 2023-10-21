@@ -46,10 +46,7 @@ class FileFind(QtWidgets.QWidget):
             self.output.setPlainText('未找到')
             return
         else:
-            text = ''
-            for path in results:
-                text = text + path + '\n'
-            self.output.setPlainText(text)
+            self.output.setPlainText('\n'.join(results))
 
     def addPath(self):
         choose_path()

@@ -1,10 +1,14 @@
-from zml import *
+"""
+用于管理动态的属性
+"""
+from zml import Seepage
 
 
-class AttrKeys:
+class DynKeys:
     """
     用以管理动态的属性
     """
+
     def __init__(self, model, ty):
         assert isinstance(model, Seepage)
         assert isinstance(ty, str)
@@ -24,35 +28,35 @@ def model_keys(m):
     """
     注册并返回用于model的键值 (与 model.reg_model_key 保持一致)
     """
-    return AttrKeys(m, 'm_')
+    return DynKeys(m, 'm_')
 
 
 def cell_keys(m):
     """
     注册并返回用于cell的键值 (与 model.reg_cell_key 保持一致)
     """
-    return AttrKeys(m, 'n_')
+    return DynKeys(m, 'n_')
 
 
 def face_keys(m):
     """
     注册并返回用于face的键值(与 model.reg_face_key 保持一致)
     """
-    return AttrKeys(m, 'b_')
+    return DynKeys(m, 'b_')
 
 
 def flu_keys(m):
     """
     注册并返回用于flu的键值(与 model.reg_flu_key 保持一致)
     """
-    return AttrKeys(m, 'f_')
+    return DynKeys(m, 'f_')
 
 
 def frac_keys(m):
     """
     注册并返回用于frac的键值
     """
-    return AttrKeys(m, 'fr_')
+    return DynKeys(m, 'fr_')
 
 
 def test():
@@ -68,4 +72,3 @@ def test():
 
 if __name__ == '__main__':
     test()
-

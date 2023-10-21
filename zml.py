@@ -85,7 +85,8 @@ class ConsoleApi:
         """
         print(f'args={args}, kwargs={kwargs}')
 
-    def plot(self, kernel, **kwargs):
+    @staticmethod
+    def plot(kernel, **kwargs):
         """
         在非GUI模式下绘图(或者显示并阻塞程序执行，或者输出文件但不显示)
         """
@@ -381,13 +382,10 @@ class AppData(Object):
         # 自定义的文件搜索路径
         self.paths = []
         try:
-            for config_file in self.find_all('zml_search_paths'):
-                if os.path.isfile(config_file):
-                    with open(config_file, 'r') as file:
-                        for line in file.readlines():
-                            line = line.strip()
-                            if os.path.isdir(line):
-                                self.add_path(line)
+            for line in self.getenv(key='path', default='').splitlines():
+                line = line.strip()
+                if os.path.isdir(line):
+                    self.add_path(line)
         except:
             pass
 
@@ -587,6 +585,13 @@ def get_func(dll, restype, name, *argtypes):
     return fn
 
 
+def get_file():
+    """
+    返回当前文件路径
+    """
+    return os.path.realpath(__file__)
+
+
 def get_dir():
     """
     返回当前文件所在的文件夹的路径
@@ -594,10 +599,7 @@ def get_dir():
     return os.path.dirname(os.path.realpath(__file__))
 
 
-if is_windows:
-    dll = load_cdll('zml.dll', first=get_dir())
-else:
-    dll = load_cdll('zml.so.1', first=get_dir())
+dll = load_cdll('zml.dll' if is_windows else 'zml.so.1', first=get_dir())
 
 
 class DllCore:
@@ -1684,50 +1686,50 @@ class Iterator:
 class Iterators:
     class Cell(Iterator):
         def __init__(self, model):
-            super(Iterators.Cell, self).__init__(model, model.cell_number, lambda model, ind: model.get_cell(ind))
+            super(Iterators.Cell, self).__init__(model, model.cell_number, lambda m, ind: m.get_cell(ind))
 
     class Face(Iterator):
         def __init__(self, model):
-            super(Iterators.Face, self).__init__(model, model.face_number, lambda model, ind: model.get_face(ind))
+            super(Iterators.Face, self).__init__(model, model.face_number, lambda m, ind: m.get_face(ind))
 
     class Node(Iterator):
         def __init__(self, model):
-            super(Iterators.Node, self).__init__(model, model.node_number, lambda model, ind: model.get_node(ind))
+            super(Iterators.Node, self).__init__(model, model.node_number, lambda m, ind: m.get_node(ind))
 
     class Link(Iterator):
         def __init__(self, model):
-            super(Iterators.Link, self).__init__(model, model.link_number, lambda model, ind: model.get_link(ind))
+            super(Iterators.Link, self).__init__(model, model.link_number, lambda m, ind: m.get_link(ind))
 
     class Body(Iterator):
         def __init__(self, model):
-            super(Iterators.Body, self).__init__(model, model.body_number, lambda model, ind: model.get_body(ind))
+            super(Iterators.Body, self).__init__(model, model.body_number, lambda m, ind: m.get_body(ind))
 
     class VirtualNode(Iterator):
         def __init__(self, model):
             super(Iterators.VirtualNode, self).__init__(model, model.virtual_node_number,
-                                                        lambda model, ind: model.get_virtual_node(ind))
+                                                        lambda m, ind: m.get_virtual_node(ind))
 
     class Element(Iterator):
         def __init__(self, model):
             super(Iterators.Element, self).__init__(model, model.element_number,
-                                                    lambda model, ind: model.get_element(ind))
+                                                    lambda m, ind: m.get_element(ind))
 
     class Spring(Iterator):
         def __init__(self, model):
-            super(Iterators.Spring, self).__init__(model, model.spring_number, lambda model, ind: model.get_spring(ind))
+            super(Iterators.Spring, self).__init__(model, model.spring_number, lambda m, ind: m.get_spring(ind))
 
     class Damper(Iterator):
         def __init__(self, model):
-            super(Iterators.Damper, self).__init__(model, model.damper_number, lambda model, ind: model.get_damper(ind))
+            super(Iterators.Damper, self).__init__(model, model.damper_number, lambda m, ind: m.get_damper(ind))
 
     class Fluid(Iterator):
         def __init__(self, model):
-            super(Iterators.Fluid, self).__init__(model, model.fluid_number, lambda model, ind: model.get_fluid(ind))
+            super(Iterators.Fluid, self).__init__(model, model.fluid_number, lambda m, ind: m.get_fluid(ind))
 
     class Injector(Iterator):
         def __init__(self, model):
             super(Iterators.Injector, self).__init__(model, model.injector_number,
-                                                     lambda model, ind: model.get_injector(ind))
+                                                     lambda m, ind: m.get_injector(ind))
 
 
 class Field:
@@ -2856,8 +2858,8 @@ class Interp2(HasHandle):
         """
         assert xmin <= xmax and dx >= 0
         assert ymin <= ymax and dy >= 0
-        Kernel = CFUNCTYPE(c_double, c_double, c_double)
-        core.interp2_create(self.handle, xmin, dx, xmax, ymin, dy, ymax, Kernel(get_value))
+        kernel = CFUNCTYPE(c_double, c_double, c_double)
+        core.interp2_create(self.handle, xmin, dx, xmax, ymin, dy, ymax, kernel(get_value))
 
     @staticmethod
     def create_const(value):
@@ -2980,9 +2982,9 @@ class Interp3(HasHandle):
         assert xmin <= xmax and dx >= 0
         assert ymin <= ymax and dy >= 0
         assert zmin <= zmax and dz >= 0
-        Kernel = CFUNCTYPE(c_double, c_double, c_double, c_double)
+        kernel = CFUNCTYPE(c_double, c_double, c_double, c_double)
         core.interp3_create(self.handle, xmin, dx, xmax, ymin, dy, ymax, zmin, dz, zmax,
-                            Kernel(get_value))
+                            kernel(get_value))
 
     @staticmethod
     def create_const(value):
@@ -3778,9 +3780,9 @@ class Tensor2Interp2(HasHandle):
         """
         创建插值。其中y=get_value(x)为给定的函数
         """
-        Kernel = CFUNCTYPE(c_double, c_double, c_double, c_size_t)
+        kernel = CFUNCTYPE(c_double, c_double, c_double, c_size_t)
         core.tensor2interp2_create(self.handle, xmin, dx, xmax, ymin, dy, ymax,
-                                   Kernel(get_value))
+                                   kernel(get_value))
 
     core.use(c_bool, 'tensor2interp2_empty', c_void_p)
 
@@ -3886,9 +3888,9 @@ class Tensor3Interp3(HasHandle):
         """
         创建插值。其中y=get_value(x)为给定的函数
         """
-        Kernel = CFUNCTYPE(c_double, c_double, c_double, c_double, c_size_t)
+        kernel = CFUNCTYPE(c_double, c_double, c_double, c_double, c_size_t)
         core.tensor3interp3_create(self.handle, xmin, dx, xmax, ymin, dy, ymax, zmin, dz, zmax,
-                                   Kernel(get_value))
+                                   kernel(get_value))
 
     def create_constant(self, value):
         if isinstance(value, Tensor3):
@@ -4778,8 +4780,8 @@ class Mesh3(HasHandle):
         if should_del is None:
             core.mesh3_del_isolated_links(self.handle)
         else:
-            Kernel = CFUNCTYPE(c_bool, c_size_t)
-            core.mesh3_del_links(self.handle, Kernel(should_del))
+            kernel = CFUNCTYPE(c_bool, c_size_t)
+            core.mesh3_del_links(self.handle, kernel(should_del))
 
     core.use(None, 'mesh3_del_faces', c_void_p, c_void_p)
     core.use(None, 'mesh3_del_isolated_faces', c_void_p)
@@ -5125,6 +5127,9 @@ class DynSys(HasHandle):
     “受力”向量f，并进一步得到各个自由度的速度v.
 
     以上步骤完成一次迭代。
+
+    todo:
+        对于pos、vel和mas的读写，需要支持向量化操作. 对于p2f，也尽量设计向量化操作的方法. @23-10-08
 
     """
     core.use(c_void_p, 'new_dynsys')
@@ -6006,314 +6011,6 @@ class SpringSys(HasHandle):
         core.springsys_modify_pos(self.handle, idim, left, right)
 
 
-class FemTri6(HasHandle):
-    """
-    三角形有限元模型。其中每个单元（三角形）有6个自由度(x1, y1, x2, y2, x3, y3)。
-    !!!<尚未完成，仅供测试>!!!
-    """
-
-    class Node(Object):
-        def __init__(self, model, index):
-            assert isinstance(model, FemTri6)
-            assert isinstance(index, int)
-            assert index < model.node_number
-            self.model = model
-            self.index = index
-
-        core.use(c_double, 'fem_tri6_get_node_pos', c_void_p, c_size_t, c_size_t)
-
-        @property
-        def pos(self):
-            """
-            节点初始位置
-            """
-            return [core.fem_tri6_get_node_pos(self.model.handle, self.index, i) for i in range(2)]
-
-        core.use(None, 'fem_tri6_set_node_pos', c_void_p, c_size_t,
-                 c_double, c_double)
-
-        @pos.setter
-        def pos(self, value):
-            core.fem_tri6_set_node_pos(self.model.handle, self.index, value[0], value[1])
-
-        core.use(c_double, 'fem_tri6_get_node_disp', c_void_p, c_size_t, c_size_t)
-
-        @property
-        def disp(self):
-            """
-            节点位移(当前位置-初始位置)
-            """
-            x = core.fem_tri6_get_node_disp(self.model.handle, self.index, 0)
-            y = core.fem_tri6_get_node_disp(self.model.handle, self.index, 1)
-            return x, y
-
-        core.use(c_double, 'fem_tri6_get_node_vel', c_void_p, c_size_t, c_size_t)
-
-        @property
-        def vel(self):
-            x = core.fem_tri6_get_node_vel(self.model.handle, self.index, 0)
-            y = core.fem_tri6_get_node_vel(self.model.handle, self.index, 1)
-            return x, y
-
-        core.use(None, 'fem_tri6_set_node_vel', c_void_p, c_size_t,
-                 c_double, c_double)
-
-        @vel.setter
-        def vel(self, value):
-            core.fem_tri6_set_node_vel(self.model.handle, self.index, value[0], value[1])
-
-        core.use(c_double, 'fem_tri6_get_node_virtual_mass', c_void_p, c_size_t, c_size_t)
-
-        def get_virtual_mass(self, idim):
-            """
-            第idim个维度的虚拟质量
-            """
-            return core.fem_tri6_get_node_virtual_mass(self.model.handle, self.index, idim)
-
-        core.use(None, 'fem_tri6_set_node_virtual_mass', c_void_p, c_size_t, c_size_t,
-                 c_double)
-
-        def set_virtual_mass(self, idim, value):
-            """
-            第idim个维度的虚拟质量
-            """
-            core.fem_tri6_set_node_virtual_mass(self.model.handle, self.index, idim, value)
-
-        @property
-        def virtual_mass(self):
-            """
-            虚拟质量（两个维度独立，这个和之前的版本不同）
-            """
-            return self.get_virtual_mass(0), self.get_virtual_mass(1)
-
-        @virtual_mass.setter
-        def virtual_mass(self, value):
-            """
-            虚拟质量（两个维度独立，这个和之前的版本不同）
-            """
-            if hasattr(value, '__getitem__'):
-                for idim in range(2):
-                    self.set_virtual_mass(idim, value[idim])
-            else:
-                for idim in range(2):
-                    self.set_virtual_mass(idim, value)
-
-        core.use(c_double, 'fem_tri6_get_node_force', c_void_p, c_size_t,
-                 c_size_t)
-
-        @property
-        def force(self):
-            x = core.fem_tri6_get_node_force(self.model.handle, self.index, 0)
-            y = core.fem_tri6_get_node_force(self.model.handle, self.index, 1)
-            return x, y
-
-        core.use(None, 'fem_tri6_set_node_force', c_void_p, c_size_t,
-                 c_double, c_double)
-
-        @force.setter
-        def force(self, value):
-            core.fem_tri6_set_node_force(self.model.handle, self.index, value[0], value[1])
-
-    class Element(Object):
-        def __init__(self, model, index):
-            assert isinstance(model, FemTri6)
-            assert isinstance(index, int)
-            assert index < model.element_number
-            self.model = model
-            self.index = index
-
-        core.use(c_double, 'fem_tri6_get_element_young_modulus', c_void_p, c_size_t)
-
-        @property
-        def young_modulus(self):
-            return core.fem_tri6_get_element_young_modulus(self.model.handle, self.index)
-
-        core.use(None, 'fem_tri6_set_element_young_modulus', c_void_p, c_size_t,
-                 c_double)
-
-        @young_modulus.setter
-        def young_modulus(self, value):
-            core.fem_tri6_set_element_young_modulus(self.model.handle, self.index, value)
-
-        core.use(c_double, 'fem_tri6_get_element_poisson_ratio', c_void_p, c_size_t)
-
-        @property
-        def poisson_ratio(self):
-            return core.fem_tri6_get_element_poisson_ratio(self.model.handle, self.index)
-
-        core.use(None, 'fem_tri6_set_element_poisson_ratio', c_void_p, c_size_t,
-                 c_double)
-
-        @poisson_ratio.setter
-        def poisson_ratio(self, value):
-            core.fem_tri6_set_element_poisson_ratio(self.model.handle, self.index, value)
-
-        core.use(c_double, 'fem_tri6_get_element_strain0_xx', c_void_p, c_size_t)
-        core.use(c_double, 'fem_tri6_get_element_strain0_yy', c_void_p, c_size_t)
-        core.use(c_double, 'fem_tri6_get_element_strain0_xy', c_void_p, c_size_t)
-
-        @property
-        def initial_strain(self):
-            xx = core.fem_tri6_get_element_strain0_xx(self.model.handle, self.index)
-            yy = core.fem_tri6_get_element_strain0_yy(self.model.handle, self.index)
-            xy = core.fem_tri6_get_element_strain0_xy(self.model.handle, self.index)
-            return xx, yy, xy
-
-        core.use(None, 'fem_tri6_set_element_strain0', c_void_p, c_size_t,
-                 c_double, c_double, c_double)
-
-        @initial_strain.setter
-        def initial_strain(self, value):
-            core.fem_tri6_set_element_strain0(self.model.handle, self.index, value[0], value[1], value[2])
-
-        core.use(c_double, 'fem_tri6_get_element_mass', c_void_p, c_size_t)
-
-        @property
-        def mass(self):
-            return core.fem_tri6_get_element_mass(self.model.handle, self.index)
-
-        core.use(None, 'fem_tri6_set_element_mass', c_void_p, c_size_t,
-                 c_double)
-
-        @mass.setter
-        def mass(self, value):
-            core.fem_tri6_set_element_mass(self.model.handle, self.index, value)
-
-        core.use(c_double, 'fem_tri6_get_element_center', c_void_p, c_size_t,
-                 c_size_t)
-
-        @property
-        def center(self):
-            x = core.fem_tri6_get_element_center(self.model.handle, self.index, 0)
-            y = core.fem_tri6_get_element_center(self.model.handle, self.index, 1)
-            return x, y
-
-    core.use(c_void_p, 'new_fem_tri6')
-    core.use(None, 'del_fem_tri6', c_void_p)
-
-    def __init__(self, path=None, handle=None):
-        super(FemTri6, self).__init__(handle, core.new_fem_tri6, core.del_fem_tri6)
-        if handle is None:
-            if path is not None:
-                self.load(path)
-
-    def __str__(self):
-        return f'zml.FemTri6(handle = {self.handle}, node_n = {self.node_number}, element_n = {self.element_number})'
-
-    core.use(None, 'fem_tri6_save', c_void_p, c_char_p)
-
-    def save(self, path):
-        """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
-        """
-        if path is not None:
-            core.fem_tri6_save(self.handle, make_c_char_p(path))
-
-    core.use(None, 'fem_tri6_load', c_void_p, c_char_p)
-
-    def load(self, path):
-        """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
-        """
-        if path is not None:
-            core.fem_tri6_load(self.handle, make_c_char_p(path))
-
-    core.use(None, 'fem_tri6_load_trimesh', c_void_p, c_char_p,
-             c_char_p, c_size_t)
-    core.use(None, 'fem_tri6_load_trimesh_auto', c_void_p, c_char_p,
-             c_char_p)
-
-    def load_trimesh(self, nodefile, trianglefile, index_start_from=None):
-        if index_start_from is None:
-            core.fem_tri6_load_trimesh_auto(self.handle, make_c_char_p(nodefile),
-                                            make_c_char_p(trianglefile))
-        else:
-            core.fem_tri6_load_trimesh(self.handle, make_c_char_p(nodefile), make_c_char_p(trianglefile),
-                                       index_start_from)
-
-    core.use(None, 'fem_tri6_set_trimesh', c_void_p, c_size_t)
-
-    def set_trimesh(self, trimesh):
-        assert isinstance(trimesh, Trimesh2)
-        core.fem_tri6_set_trimesh(self.handle, trimesh.handle)
-
-    core.use(c_size_t, 'fem_tri6_get_node_n', c_void_p)
-
-    @property
-    def node_number(self):
-        return core.fem_tri6_get_node_n(self.handle)
-
-    def get_node(self, node_id):
-        if node_id < self.node_number:
-            return FemTri6.Node(self, node_id)
-
-    core.use(c_size_t, 'fem_tri6_get_element_number', c_void_p)
-
-    @property
-    def element_number(self):
-        return core.fem_tri6_get_element_number(self.handle)
-
-    def get_element(self, element_id):
-        if element_id < self.element_number:
-            return FemTri6.Element(self, element_id)
-
-    core.use(c_double, 'fem_tri6_get_gravity', c_void_p, c_size_t)
-
-    @property
-    def gravity(self):
-        x = core.fem_tri6_get_gravity(self.handle, 0)
-        y = core.fem_tri6_get_gravity(self.handle, 1)
-        return x, y
-
-    core.use(None, 'fem_tri6_set_gravity', c_void_p,
-             c_double, c_double)
-
-    @gravity.setter
-    def gravity(self, value):
-        core.fem_tri6_set_gravity(self.handle, value[0], value[1])
-
-    @property
-    def nodes(self):
-        """
-        返回node的迭代器，方便对所有的node进行遍历
-        """
-        return Iterators.Node(self)
-
-    @property
-    def elements(self):
-        """
-        返回element的迭代器，方便对所有的element进行遍历
-        """
-        return Iterators.Element(self)
-
-    core.use(c_size_t, 'fem_tri6_get_nearest_node_index', c_void_p, c_double, c_double)
-
-    def get_nearest_node(self, x, y):
-        ind = core.fem_tri6_get_nearest_node_index(self.handle, x, y)
-        return self.get_node(ind)
-
-    core.use(c_size_t, 'fem_tri6_iterate', c_void_p, c_double, c_double)
-
-    def iterate(self, dt, pos_err_max=1.0e-6):
-        lic.check_once()
-        return core.fem_tri6_iterate(self.handle, dt, pos_err_max)
-
-    core.use(None, 'fem_tri6_slow_down', c_void_p, c_double)
-
-    def slow_down(self, scale):
-        core.fem_tri6_slow_down(self.handle, scale)
-
-    def print_node_disp(self, path):
-        with open(path, 'w') as file:
-            for node in self.nodes:
-                for value in node.disp:
-                    file.write(f'{value}\t')
-                file.write('\n')
-
-
 class HasCells(Object):
     def get_pos_range(self, dim):
         """
@@ -6977,340 +6674,6 @@ class SeepageMesh(HasHandle, HasCells):
         return buffer
 
 
-class Trimesh2(HasHandle):
-    class Node(Object):
-        def __init__(self, model, index):
-            assert isinstance(model, Trimesh2)
-            assert isinstance(index, int)
-            assert index < model.node_number
-            self.model = model
-            self.index = index
-
-        core.use(c_size_t, 'trimesh2_node_get_link_number', c_void_p, c_size_t)
-
-        @property
-        def link_n(self):
-            return core.trimesh2_node_get_link_number(self.model.handle, self.index)
-
-        core.use(c_size_t, 'trimesh2_node_get_triangle_number', c_void_p, c_size_t)
-
-        @property
-        def triangle_n(self):
-            return core.trimesh2_node_get_triangle_number(self.model.handle, self.index)
-
-        core.use(c_size_t, 'trimesh2_node_get_link_id', c_void_p, c_size_t, c_size_t)
-
-        def get_link_id(self, i):
-            return core.trimesh2_node_get_link_id(self.model.handle, self.index, i)
-
-        core.use(c_size_t, 'trimesh2_node_get_triangle_id', c_void_p, c_size_t, c_size_t)
-
-        def get_triangle_id(self, i):
-            return core.trimesh2_node_get_triangle_id(self.model.handle, self.index, i)
-
-        core.use(c_double, 'trimesh2_node_get_pos', c_void_p, c_size_t, c_size_t)
-
-        @property
-        def pos(self):
-            return [core.trimesh2_node_get_pos(self.model.handle, self.index, i) for i in range(2)]
-
-        core.use(c_bool, 'trimesh2_node_on_border', c_void_p, c_size_t)
-
-        @property
-        def on_border(self):
-            return core.trimesh2_node_on_border(self.model.handle, self.index)
-
-        core.use(c_int, 'trimesh2_node_get_tag', c_void_p, c_size_t)
-
-        @property
-        def tag(self):
-            return core.trimesh2_node_get_tag(self.model.handle, self.index)
-
-        core.use(None, 'trimesh2_node_set_tag', c_void_p, c_size_t, c_int)
-
-        @tag.setter
-        def tag(self, value):
-            core.trimesh2_node_set_tag(self.model.handle, self.index, value)
-
-    class Link(Object):
-        def __init__(self, model, index):
-            assert isinstance(model, Trimesh2)
-            assert isinstance(index, int)
-            assert index < model.link_number
-            self.model = model
-            self.index = index
-
-        core.use(c_size_t, 'trimesh2_link_get_node_number', c_void_p, c_size_t)
-
-        @property
-        def node_n(self):
-            return core.trimesh2_link_get_node_number(self.model.handle, self.index)
-
-        core.use(c_size_t, 'trimesh2_link_get_triangle_number', c_void_p, c_size_t)
-
-        @property
-        def triangle_n(self):
-            return core.trimesh2_link_get_triangle_number(self.model.handle, self.index)
-
-        core.use(c_size_t, 'trimesh2_link_get_node_id', c_void_p, c_size_t, c_size_t)
-
-        def get_node_id(self, i):
-            return core.trimesh2_link_get_node_id(self.model.handle, self.index, i)
-
-        core.use(c_size_t, 'trimesh2_link_get_triangle_id', c_void_p, c_size_t, c_size_t)
-
-        def get_triangle_id(self, i):
-            return core.trimesh2_link_get_triangle_id(self.model.handle, self.index, i)
-
-        core.use(c_double, 'trimesh2_link_get_length', c_void_p, c_size_t)
-
-        @property
-        def length(self):
-            return core.trimesh2_link_get_length(self.model.handle, self.index)
-
-    class Triangle(Object):
-        def __init__(self, model, index):
-            assert isinstance(model, Trimesh2)
-            assert isinstance(index, int)
-            assert index < model.triangle_number
-            self.model = model
-            self.index = index
-
-        core.use(c_size_t, 'trimesh2_triangle_get_node_number', c_void_p, c_size_t)
-
-        @property
-        def node_n(self):
-            return core.trimesh2_triangle_get_node_number(self.model.handle, self.index)
-
-        core.use(c_size_t, 'trimesh2_triangle_get_link_number', c_void_p, c_size_t)
-
-        @property
-        def link_n(self):
-            return core.trimesh2_triangle_get_link_number(self.model.handle, self.index)
-
-        core.use(c_size_t, 'trimesh2_triangle_get_node_id', c_void_p, c_size_t, c_size_t)
-
-        def get_node_id(self, i):
-            return core.trimesh2_triangle_get_node_id(self.model.handle, self.index, i)
-
-        core.use(c_size_t, 'trimesh2_triangle_get_link_id', c_void_p, c_size_t, c_size_t)
-
-        def get_link_id(self, i):
-            return core.trimesh2_triangle_get_link_id(self.model.handle, self.index, i)
-
-        core.use(c_double, 'trimesh2_triangle_get_area', c_void_p, c_size_t)
-
-        @property
-        def area(self):
-            return core.trimesh2_triangle_get_area(self.model.handle, self.index)
-
-        core.use(c_double, 'trimesh2_triangle_get_center', c_void_p, c_size_t, c_size_t)
-
-        @property
-        def center(self):
-            x = core.trimesh2_triangle_get_center(self.model.handle, self.index, 0)
-            y = core.trimesh2_triangle_get_center(self.model.handle, self.index, 1)
-            return x, y
-
-    core.use(c_void_p, 'new_trimesh2')
-    core.use(None, 'del_trimesh2', c_void_p)
-
-    def __init__(self, path=None, handle=None):
-        super(Trimesh2, self).__init__(handle, core.new_trimesh2, core.del_trimesh2)
-        if handle is None:
-            if path is not None:
-                self.load(path)
-
-    def __str__(self):
-        return f'zml.Trimesh2(handle = {self.handle}, node_n = {self.node_number}, link_n = {self.link_number}, triangle_n = {self.triangle_number})'
-
-    core.use(None, 'trimesh2_load_triangle_file', c_void_p, c_char_p,
-             c_char_p, c_size_t)
-    core.use(None, 'trimesh2_load_triangle_file_auto', c_void_p, c_char_p,
-             c_char_p)
-
-    def load_triangle_file(self, vertexfile, trianglefile, indexstart=None):
-        if indexstart is None:
-            core.trimesh2_load_triangle_file_auto(self.handle,
-                                                  make_c_char_p(vertexfile),
-                                                  make_c_char_p(trianglefile))
-        else:
-            core.trimesh2_load_triangle_file(self.handle,
-                                             make_c_char_p(vertexfile),
-                                             make_c_char_p(trianglefile), indexstart)
-
-    core.use(None, 'trimesh2_save_triangle_file', c_void_p, c_char_p,
-             c_char_p, c_size_t)
-
-    def save_triangle_file(self, vertexfile, trianglefile, indexstart=1):
-        if indexstart is None:
-            core.trimesh2_save_triangle_file(self.handle,
-                                             make_c_char_p(vertexfile),
-                                             make_c_char_p(trianglefile), 1)
-        else:
-            core.trimesh2_save_triangle_file(self.handle,
-                                             make_c_char_p(vertexfile),
-                                             make_c_char_p(trianglefile), indexstart)
-
-    core.use(None, 'trimesh2_load', c_void_p, c_char_p)
-
-    def load(self, path):
-        """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
-        """
-        if path is not None:
-            core.trimesh2_load(self.handle, make_c_char_p(path))
-
-    core.use(None, 'trimesh2_save', c_void_p, c_char_p)
-
-    def save(self, path):
-        """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
-        """
-        if path is not None:
-            core.trimesh2_save(self.handle, make_c_char_p(path))
-
-    @property
-    def summary(self):
-        return f'{self}'
-
-    core.use(c_size_t, 'trimesh2_get_node_number', c_void_p)
-
-    @property
-    def node_number(self):
-        return core.trimesh2_get_node_number(self.handle)
-
-    core.use(c_size_t, 'trimesh2_get_link_number', c_void_p)
-
-    @property
-    def link_number(self):
-        return core.trimesh2_get_link_number(self.handle)
-
-    core.use(c_size_t, 'trimesh2_get_triangle_number', c_void_p)
-
-    @property
-    def triangle_number(self):
-        return core.trimesh2_get_triangle_number(self.handle)
-
-    def get_node(self, index):
-        if 0 <= index < self.node_number:
-            return Trimesh2.Node(self, index)
-
-    def get_link(self, index):
-        if 0 <= index < self.link_number:
-            return Trimesh2.Link(self, index)
-
-    def get_triangle(self, index):
-        if 0 <= index < self.triangle_number:
-            return Trimesh2.Triangle(self, index)
-
-    core.use(c_size_t, 'trimesh2_get_nearest_node_id', c_void_p, c_double, c_double)
-
-    def get_nearest_node_id(self, x, y):
-        return core.trimesh2_get_nearest_node_id(self.handle, x, y)
-
-    def get_nearest_node(self, x, y):
-        return self.get_node(self.get_nearest_node_id(x, y))
-
-    core.use(c_size_t, 'trimesh2_get_nearest_link_id', c_void_p, c_double, c_double)
-
-    def get_nearest_link_id(self, x, y):
-        return core.trimesh2_get_nearest_link_id(self.handle, x, y)
-
-    def get_nearest_link(self, x, y):
-        return self.get_link(self.get_nearest_link_id(x, y))
-
-    core.use(c_size_t, 'trimesh2_get_nearest_triangle_id', c_void_p, c_double, c_double)
-
-    def get_nearest_triangle_id(self, x, y):
-        return core.trimesh2_get_nearest_triangle_id(self.handle, x, y)
-
-    def get_nearest_triangle(self, x, y):
-        return self.get_triangle(self.get_nearest_triangle_id(x, y))
-
-    core.use(None, 'trimesh2_adjust', c_void_p)
-
-    def adjust(self):
-        """
-        对于随机创建的三角形网格，进行一些自动调整，使得三角形的形状更好。注意：此为测试功能
-        """
-        core.trimesh2_adjust(self.handle)
-
-    def create_pnw(self):
-        pnw = SeepageMesh()
-
-        for i in range(self.triangle_number):
-            triangle = self.get_triangle(i)
-            x, y = triangle.center
-            cell = pnw.add_cell()
-            cell.pos = (x, y, 0)
-            cell.vol = triangle.area
-
-        for i in range(self.link_number):
-            lnk = self.get_link(i)
-            if lnk.triangle_n == 2:
-                i0 = lnk.get_triangle_id(0)
-                i1 = lnk.get_triangle_id(1)
-                assert self.triangle_number > i0 != i1 < self.triangle_number
-                face = pnw.add_face(i0, i1)
-                face.area = lnk.length
-                face.length = get_distance(self.get_triangle(i0).center, self.get_triangle(i1).center)
-
-        return pnw
-
-    core.use(None, 'trimesh2_compute_node_strain_by_disp', c_void_p, c_char_p, c_char_p)
-
-    @staticmethod
-    def compute_node_strain_by_disp(trimesh, strain_file, disp_file):
-        assert isinstance(trimesh, Trimesh2)
-        core.trimesh2_compute_node_strain_by_disp(trimesh.handle, make_c_char_p(strain_file),
-                                                  make_c_char_p(disp_file))
-
-    core.use(None, 'trimesh2_from_mesh3', c_void_p, c_void_p)
-
-    def from_mesh3(self, mesh3):
-        assert isinstance(mesh3, Mesh3)
-        core.trimesh2_from_mesh3(self.handle, mesh3.handle)
-
-    core.use(None, 'trimesh2_to_mesh3', c_void_p, c_void_p, c_double)
-
-    def to_mesh3(self, z=0):
-        mesh3 = Mesh3()
-        core.trimesh2_to_mesh3(self.handle, mesh3.handle, z)
-        return mesh3
-
-    core.use(None, 'trimesh2_create_rand_in_circle_with_preexisted', c_void_p,
-             c_double, c_double,
-             c_void_p, c_void_p)
-
-    @staticmethod
-    def create_rand_in_circle(radius, lmin=None, points=None):
-        if points is not None:
-            vx = Vector([p[0] for p in points])
-            vy = Vector([p[1] for p in points])
-        else:
-            vx = Vector()
-            vy = Vector()
-        data = Trimesh2()
-        if lmin is None:
-            lmin = radius / 30
-        core.trimesh2_create_rand_in_circle_with_preexisted(data.handle, radius, lmin, vx.handle, vy.handle)
-        return data
-
-    core.use(None, 'trimesh2_create_triprism', c_void_p, c_void_p, c_void_p)
-
-    def to_triprism_mesh3(self, vz):
-        if not isinstance(vz, Vector):
-            vz = Vector(vz)
-        mesh = Mesh3()
-        assert isinstance(vz, Vector)
-        core.trimesh2_create_triprism(self.handle, mesh.handle, vz.handle)
-        return mesh
-
-
 class ElementMap(HasHandle):
     class Element(Object):
         def __init__(self, model, index):
@@ -7857,6 +7220,9 @@ class Seepage(HasHandle, HasCells):
             添加一种反应物质。其中index为Seepage.Cell中定义的流体组分的序号，weight为发生1kg的反应的时候此物质变化的质量，其中左侧物质
             的weight为负值，右侧为正值。fa_t为定义流体温度的属性ID，fa_c为定义流体比热的属性ID
             """
+            assert fa_t is not None
+            assert fa_c is not None
+            assert abs(weight) <= 1.00001
             core.reaction_add_component(self.handle, *parse_fid3(index), weight, fa_t, fa_c)
 
         core.use(None, 'reaction_clear_components', c_void_p)
@@ -7996,11 +7362,15 @@ class Seepage(HasHandle, HasCells):
                 if path is not None:
                     self.load(path)
                 else:
-                    self.vis = vis
-                    self.den = den
-                    self.specific_heat = specific_heat
-                    if name is not None:
-                        self.name = name
+                    if vis is not None:
+                        self.vis = vis
+                    if den is not None:
+                        self.den = den
+                    if specific_heat is not None:
+                        self.specific_heat = specific_heat
+                # 只要给定name，无论是load，还是create，都修改name
+                if name is not None:
+                    self.name = name
             else:
                 assert path is None
 
@@ -8052,7 +7422,6 @@ class Seepage(HasHandle, HasCells):
             self.from_fmap(value, fmt='binary')
 
         core.use(c_void_p, 'fludef_get_den', c_void_p)
-        core.use(None, 'fludef_set_den', c_void_p, c_void_p)
 
         @property
         def den(self):
@@ -8065,16 +7434,21 @@ class Seepage(HasHandle, HasCells):
 
         @den.setter
         def den(self, value):
+            """
+            设置密度数据，参数为None的时候，则清除现有数据
+            """
             assert self.component_number == 0
-            if isinstance(value, Interp2):
-                core.fludef_set_den(self.handle, value.handle)
-            else:  # 转化为二维插值
-                assert 1.0e-3 < value < 1.0e5
-                itp = Interp2.create_const(value)
-                core.fludef_set_den(self.handle, itp.handle)
+            if value is None:
+                self.den.clear()
+            else:
+                if isinstance(value, Interp2):
+                    self.den.clone(value)
+                else:  # 转化为二维插值
+                    assert 1.0e-3 < value < 1.0e5
+                    itp = Interp2.create_const(value)
+                    self.den.clone(itp)
 
         core.use(c_void_p, 'fludef_get_vis', c_void_p)
-        core.use(None, 'fludef_set_vis', c_void_p, c_void_p)
 
         @property
         def vis(self):
@@ -8087,13 +7461,19 @@ class Seepage(HasHandle, HasCells):
 
         @vis.setter
         def vis(self, value):
+            """
+            设置粘性数据，参数为None的时候，则清除现有数据
+            """
             assert self.component_number == 0
-            if isinstance(value, Interp2):
-                core.fludef_set_vis(self.handle, value.handle)
-            else:  # 转化为二维插值
-                assert 1.0e-7 < value < 1.0e40
-                itp = Interp2.create_const(value)
-                core.fludef_set_vis(self.handle, itp.handle)
+            if value is None:
+                self.vis.clear()
+            else:
+                if isinstance(value, Interp2):
+                    self.vis.clone(value)
+                else:  # 转化为二维插值
+                    assert 1.0e-7 < value < 1.0e40
+                    itp = Interp2.create_const(value)
+                    self.vis.clone(itp)
 
         core.use(c_double, 'fludef_get_specific_heat', c_void_p)
         core.use(None, 'fludef_set_specific_heat', c_void_p, c_double)
@@ -8146,22 +7526,32 @@ class Seepage(HasHandle, HasCells):
 
         core.use(c_size_t, 'fludef_add_component', c_void_p, c_void_p)
 
-        def add_component(self, flu):
+        def add_component(self, flu, name=None):
             """
             添加流体组分，并返回组分的ID
             """
             assert isinstance(flu, Seepage.FluDef)
-            return core.fludef_add_component(self.handle, flu.handle)
+            idx = core.fludef_add_component(self.handle, flu.handle)
+            if name is not None:
+                self.get_component(idx).name = name
+            return idx
 
         @staticmethod
-        def create(defs):
+        def create(defs, name=None):
             """
-            将存储在list中的多个流体的定义，组合成为一个具有多个组分的单个流体定义
+            将存储在list中的多个流体的定义，组合成为一个具有多个组分的单个流体定义.
+            当给定name的时候，则返回的数据使用此name.
+            注意：
+                此函数将返回给定数据的拷贝，因此，原始的数据并不会被引用和修改.
             """
             if isinstance(defs, Seepage.FluDef):
-                return defs
-            else:
                 result = Seepage.FluDef()
+                result.clone(defs)
+                if name is not None:
+                    result.name = name
+                return result
+            else:
+                result = Seepage.FluDef(name=name)
                 for x in defs:
                     result.add_component(Seepage.FluDef.create(x))
                 return result
@@ -8174,12 +7564,13 @@ class Seepage(HasHandle, HasCells):
             """
             流体组分的名称.
             """
-            assert self.component_number == 0
             return core.fludef_get_name(self.handle).decode()
 
         @name.setter
         def name(self, value):
-            assert self.component_number == 0
+            """
+            流体组分的名称.
+            """
             core.fludef_set_name(self.handle, make_c_char_p(value))
 
         core.use(None, 'fludef_clone', c_void_p, c_void_p)
@@ -8190,6 +7581,16 @@ class Seepage(HasHandle, HasCells):
             """
             assert isinstance(other, Seepage.FluDef)
             core.fludef_clone(self.handle, other.handle)
+
+        def get_copy(self, name=None):
+            """
+            返回当前数据的一个拷贝(修改返回数据的name)
+            """
+            data = Seepage.FluDef()
+            data.clone(self)
+            if name is not None:
+                data.name = name
+            return data
 
     class FluData(HasHandle):
         """
@@ -8703,12 +8104,17 @@ class Seepage(HasHandle, HasCells):
             assert 0 <= value < 10
             core.seepage_cell_set_fluid_n(self.handle, value)
 
-        def get_fluid(self, index):
+        def get_fluid(self, *args):
             """
-            Returns the index-th fluid object in the Cell
+            返回给定序号的流体.(当参数数量为1的时候，返回Seepage.Fluid对象; 当参数数量大于1的时候，返回Seepage.FluData对象)
             """
-            assert 0 <= index < self.fluid_number
-            return Seepage.Fluid(self, index)
+            if len(args) > 0:
+                assert 0 <= args[0] < self.fluid_number
+                flu = Seepage.Fluid(self, args[0])
+                if len(args) > 1:
+                    for i in range(1, len(args)):
+                        flu = flu.get_component(args[i])
+                return flu
 
         @property
         def fluids(self):
@@ -8719,15 +8125,12 @@ class Seepage(HasHandle, HasCells):
 
         def get_component(self, indexes):
             """
-            Get the fluid component with the given indexes
+            返回给定序号的组分.
             """
-            assert len(indexes) >= 1
-            flu = self.get_fluid(indexes[0])
-            indexes = indexes[1:]
-            while len(indexes) > 0:
-                flu = flu.get_component(indexes[0])
-                indexes = indexes[1:]
-            return flu
+            if is_array(indexes):
+                return self.get_fluid(*indexes)
+            else:
+                return self.get_fluid(indexes)
 
         core.use(c_double, 'seepage_cell_get_fluid_vol', c_void_p)
 
@@ -9628,7 +9031,8 @@ class Seepage(HasHandle, HasCells):
 
     core.use(None, 'seepage_add_note', c_void_p, c_char_p)
 
-    def add_note(self, text):
+    def add_note(self, text: str):
+        assert isinstance(text, str)
         core.seepage_add_note(self.handle, make_c_char_p(text))
 
     core.use(c_char_p, 'seepage_get_note', c_void_p)
@@ -10113,12 +9517,12 @@ class Seepage(HasHandle, HasCells):
                     vols.extend(get_vols(flu.get_component(i)))
                 return vols
 
-        def to_str(cell):
+        def to_str(c):
             vols = []
-            for i in range(cell.fluid_number):
-                vols.extend(get_vols(cell.get_fluid(i)))
+            for i in range(c.fluid_number):
+                vols.extend(get_vols(c.get_fluid(i)))
             vol = sum(vols)
-            s = f'{cell.pre}\t{vol}'
+            s = f'{c.pre}\t{vol}'
             for v in vols:
                 s = f'{s}\t{v / vol}'
             return s
@@ -10282,9 +9686,9 @@ class Seepage(HasHandle, HasCells):
     core.use(None, 'seepage_get_linear_dpre', c_void_p, c_void_p, c_void_p,
              c_size_t, c_size_t, c_size_t,
              c_size_t, c_size_t, c_size_t,
-             c_void_p, c_double, c_void_p)
+             c_void_p, c_size_t, c_double, c_void_p)
 
-    def get_linear_dpre(self, fid0, fid1, s2p, vs0=None, vk=None, ds=0.05, cell_ids=None):
+    def get_linear_dpre(self, fid0, fid1, s2p=None, ca_ipc=99999999, vs0=None, vk=None, ds=0.05, cell_ids=None):
         """
         更新两种流体之间压力差和饱和度之间的线性关系
         """
@@ -10292,12 +9696,14 @@ class Seepage(HasHandle, HasCells):
             vs0 = Vector()
         if not isinstance(vk, Vector):
             vk = Vector()
-        assert isinstance(s2p, Interp1)
         if cell_ids is not None:
             if not isinstance(cell_ids, UintVector):
                 cell_ids = UintVector(cell_ids)
-        core.seepage_get_linear_dpre(self.handle, vs0.handle, vk.handle, *parse_fid3(fid0), *parse_fid3(fid1),
-                                     s2p.handle, ds,
+        core.seepage_get_linear_dpre(self.handle, vs0.handle, vk.handle,
+                                     *parse_fid3(fid0),
+                                     *parse_fid3(fid1),
+                                     s2p.handle if isinstance(s2p, Interp1) else 0,
+                                     ca_ipc, ds,
                                      0 if cell_ids is None else cell_ids.handle)
         return vs0, vk
 
@@ -10336,14 +9742,15 @@ class Seepage(HasHandle, HasCells):
         core.seepage_get_face_average(self.handle, buffer.handle, face_vals.handle)
         return buffer
 
-    core.use(None, 'seepage_heating', c_void_p, c_size_t, c_size_t, c_void_p, c_double)
+    core.use(None, 'seepage_heating', c_void_p, c_size_t, c_size_t, c_size_t, c_double)
 
-    def heating(self, ca_mc, ca_t, powers, dt):
+    def heating(self, ca_mc, ca_t, ca_p, dt):
         """
-        按照各个Cell给定的功率来对各个Cell进行加热
+        按照各个Cell给定的功率来对各个Cell进行加热.
+        其中：
+            ca_p：定义Cell加热的功率
         """
-        assert isinstance(powers, Vector)
-        core.seepage_heating(self.handle, ca_mc, ca_t, powers.handle, dt)
+        core.seepage_heating(self.handle, ca_mc, ca_t, ca_p, dt)
 
     core.use(c_size_t, 'seepage_get_fludef_n', c_void_p)
 
@@ -10354,31 +9761,46 @@ class Seepage(HasHandle, HasCells):
         """
         return core.seepage_get_fludef_n(self.handle)
 
-    core.use(c_void_p, 'seepage_get_fludef', c_void_p, c_size_t)
-    core.use(c_void_p, 'seepage_find_fludef', c_void_p, c_char_p)
+    core.use(c_bool, 'seepage_find_fludef', c_void_p, c_char_p, c_void_p)
+
+    def find_fludef(self, name, buffer=None):
+        """
+        查找给定name的流体定义的ID
+        """
+        if not isinstance(buffer, UintVector):
+            buffer = UintVector()
+        else:
+            buffer.size = 0
+        found = core.seepage_find_fludef(self.handle, make_c_char_p(name), buffer.handle)
+        if found:
+            return buffer.to_list()
+
+    core.use(c_void_p, 'seepage_get_fludef', c_void_p, c_size_t, c_size_t, c_size_t)
 
     def get_fludef(self, key):
         """
-        返回给定序号或者名字的流体定义. key可以是str类型或者是int类型.
+        返回给定序号或者名字的流体定义. key可以是str类型/int类型/list类型.
         """
         if isinstance(key, str):
-            handle = core.seepage_find_fludef(self.handle, make_c_char_p(key))
-            if handle:
-                return Seepage.FluDef(handle=handle)
-        else:
-            if key < self.fludef_number:
-                handle = core.seepage_get_fludef(self.handle, key)
-                if handle:
-                    return Seepage.FluDef(handle=handle)
+            key = self.find_fludef(key)
+        if key is None:
+            return
+        handle = core.seepage_get_fludef(self.handle, *parse_fid3(key))
+        if handle:
+            return Seepage.FluDef(handle=handle)
 
     core.use(c_size_t, 'seepage_add_fludef', c_void_p, c_void_p)
 
-    def add_fludef(self, fdef, need_id=False):
+    def add_fludef(self, fdef, need_id=False, name=None):
         """
         添加一个流体定义
         """
-        assert isinstance(fdef, Seepage.FluDef)
+        if not isinstance(fdef, Seepage.FluDef):
+            # 此时，可能是一个list
+            fdef = Seepage.FluDef.create(fdef)
         idx = core.seepage_add_fludef(self.handle, fdef.handle)
+        if name is not None:
+            self.get_fludef(idx).name = name
         if need_id:
             return idx
         else:
@@ -10387,7 +9809,18 @@ class Seepage(HasHandle, HasCells):
     core.use(None, 'seepage_clear_fludefs', c_void_p)
 
     def clear_fludefs(self):
+        """
+        清除所有的流体定义
+        """
         core.seepage_clear_fludefs(self.handle)
+
+    def set_fludefs(self, *args):
+        """
+        清除并设置所有的流体定义
+        """
+        self.clear_fludefs()
+        for fdef in args:
+            self.add_fludef(fdef)
 
     core.use(c_size_t, 'seepage_get_pc_n', c_void_p)
 
@@ -10423,6 +9856,9 @@ class Seepage(HasHandle, HasCells):
     core.use(None, 'seepage_clear_pcs', c_void_p)
 
     def clear_pcs(self):
+        """
+        清除所有的毛管压力曲线
+        """
         core.seepage_clear_pcs(self.handle)
 
     core.use(c_size_t, 'seepage_get_reaction_n', c_void_p)
@@ -10440,7 +9876,11 @@ class Seepage(HasHandle, HasCells):
     core.use(c_size_t, 'seepage_add_reaction', c_void_p, c_void_p)
 
     def add_reaction(self, data, need_id=False):
-        assert isinstance(data, Seepage.Reaction)
+        """
+        添加一个反应
+        """
+        if not isinstance(data, Seepage.Reaction):
+            data = self.create_reaction(**data)
         idx = core.seepage_add_reaction(self.handle, data.handle)
         if need_id:
             return idx
@@ -10450,7 +9890,87 @@ class Seepage(HasHandle, HasCells):
     core.use(None, 'seepage_clear_reactions', c_void_p)
 
     def clear_reactions(self):
+        """
+        清除所有的反应
+        """
         core.seepage_clear_reactions(self.handle)
+
+    def create_reaction(self, **kwargs):
+        """
+        根据给定的参数，创建一个反应（可能需要读取model中的流体定义，以及会在model中注册属性）
+        """
+        data = Seepage.Reaction()
+
+        temp = kwargs.get('temp', None)
+        if temp is not None:
+            data.temp = temp
+
+        heat = kwargs.get('heat', None)
+        if heat is not None:
+            data.heat = heat
+
+        p2t = kwargs.get('p2t', None)
+        if p2t is not None:
+            p, t = p2t
+            data.set_p2t(p, t)
+
+        t2q = kwargs.get('t2q', None)
+        if t2q is not None:
+            t, q = t2q
+            data.set_t2q(t, q)
+
+        components = kwargs.get('components', None)
+        if components is not None:
+            for comp in components:
+                kind = comp.get('kind')
+                if isinstance(kind, str):
+                    kind = self.find_fludef(kind)
+                    
+                weight = comp.get('weight')
+                assert -1 <= weight <= 1
+
+                fa_t = comp.get('fa_t', None)
+                assert fa_t is not None
+                if isinstance(fa_t, str):
+                    fa_t = self.reg_flu_key(fa_t)
+
+                fa_c = comp.get('fa_c', None)
+                assert fa_c is not None
+                if isinstance(fa_c, str):
+                    fa_c = self.reg_flu_key(fa_c)
+
+                data.add_component(index=kind, weight=weight, fa_t=fa_t, fa_c=fa_c)
+
+        inhibitors = kwargs.get('inhibitors', None)
+        if inhibitors is not None:
+            for inh in inhibitors:
+                sol = inh.get('sol')
+                if isinstance(sol, str):
+                    sol = self.find_fludef(sol)
+                    
+                liq = inh.get('liq')
+                if isinstance(liq, str):
+                    liq = self.find_fludef(liq)
+
+                data.add_inhibitor(sol=sol, liq=liq, c=inh.get('c'), t=inh.get('t'))
+
+        idt = kwargs.get('idt', None)
+        if idt is not None:
+            if isinstance(idt, str):
+                idt = self.reg_cell_key(idt)
+            data.idt = idt
+
+        wdt = kwargs.get('wdt', None)
+        if wdt is not None:
+            data.wdt = wdt
+
+        irate = kwargs.get('irate', None)
+        if irate is not None:
+            if isinstance(irate, str):
+                irate = self.reg_cell_key(irate)
+            data.irate = irate
+
+        return data
 
     core.use(None, 'seepage_pop_fluids', c_void_p, c_void_p)
     core.use(None, 'seepage_push_fluids', c_void_p, c_void_p)
@@ -10477,13 +9997,13 @@ class Seepage(HasHandle, HasCells):
 
     def cells_write(self, index, pointer):
         """
-        导出属性: 当 index >= 0 的时候，为属性ID；如果index < 0，则：
+        导出属性(所有的Cell): 当 index >= 0 的时候，为属性ID; 如果index < 0，则：
             index=-1, x坐标
             index=-2, y坐标
             index=-3, z坐标
             index=-4, v0 of pore
             index=-5, k  of pore
-
+        --- (以下为只读属性):
             index=-10, 所有流体的总的质量 (只读)
             index=-11, 所有流体的总的体积 (只读)
             index=-12, 根据流体的体积和pore，来计算的Cell的压力 (只读)
@@ -10712,9 +10232,9 @@ class Seepage(HasHandle, HasCells):
         注册并返回用于flu的键值
         """
         return self.reg_key('f_', key)
-    
+
     core.use(None, 'seepage_get_keys', c_void_p, c_void_p)
-    
+
     def get_keys(self):
         """
         返回所有的keys（作为dict）
@@ -10722,9 +10242,9 @@ class Seepage(HasHandle, HasCells):
         s = String()
         core.seepage_get_keys(self.handle, s.handle)
         return eval(s.to_str())
-    
+
     core.use(None, 'seepage_get_tags', c_void_p, c_void_p)
-    
+
     def get_tags(self):
         """
         返回所有的tags（作为set）
@@ -11135,6 +10655,7 @@ class TherFlowConfig(Object):
         """
         给定流体属性进行初始化. 给定的参数应该为流体属性定义(或者多个流体组成的混合物)、或者是化学反应的定义
         """
+        warnings.warn('zml.TherFlowConfig will be removed in future, please use zmlx.config.TherFlowConfig.TherFlowConfig instead', DeprecationWarning)
         self.fluids = []
         self.reactions = []  # 组分之间的反应
         for arg in args:
@@ -11809,7 +11330,7 @@ SeepageTher = TherFlowConfig
 
 class ConjugateGradientSolver(HasHandle):
     """
-    An wrapper of the ConjugateGradientSolver from Eigen
+    The wrapper of the ConjugateGradientSolver from Eigen
     """
     core.use(c_void_p, 'new_cg_sol')
     core.use(None, 'del_cg_sol', c_void_p)
@@ -12695,902 +12216,34 @@ class InvasionPercolation(HasHandle):
         core.ip_get_node_pos(self.handle, x.handle, y.handle, z.handle, phase)
         return x, y, z
 
-
-class DDMSolution2(HasHandle):
-    """
-    二维DDM的基本解
-    """
-    core.use(c_void_p, 'new_ddm_sol2')
-    core.use(None, 'del_ddm_sol2', c_void_p)
-
-    def __init__(self, handle=None):
-        super(DDMSolution2, self).__init__(handle, core.new_ddm_sol2, core.del_ddm_sol2)
-
-    core.use(None, 'ddm_sol2_save', c_void_p, c_char_p)
-    core.use(None, 'ddm_sol2_load', c_void_p, c_char_p)
-
-    def save(self, path):
-        """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
-        """
-        if path is not None:
-            core.ddm_sol2_save(self.handle, make_c_char_p(path))
-
-    def load(self, path):
-        """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
-        """
-        if path is not None:
-            core.ddm_sol2_load(self.handle, make_c_char_p(path))
-
-    core.use(None, 'ddm_sol2_set_alpha', c_void_p, c_double)
-    core.use(c_double, 'ddm_sol2_get_alpha', c_void_p)
-
-    @property
-    def alpha(self):
-        return core.ddm_sol2_get_alpha(self.handle)
-
-    @alpha.setter
-    def alpha(self, value):
-        core.ddm_sol2_set_alpha(self.handle, value)
-
-    core.use(None, 'ddm_sol2_set_beta', c_void_p, c_double)
-    core.use(c_double, 'ddm_sol2_get_beta', c_void_p)
-
-    @property
-    def beta(self):
-        return core.ddm_sol2_get_beta(self.handle)
-
-    @beta.setter
-    def beta(self, value):
-        core.ddm_sol2_set_beta(self.handle, value)
-
-    core.use(None, 'ddm_sol2_set_shear_modulus', c_void_p, c_double)
-    core.use(c_double, 'ddm_sol2_get_shear_modulus', c_void_p)
-
-    @property
-    def shear_modulus(self):
-        return core.ddm_sol2_get_shear_modulus(self.handle)
-
-    @shear_modulus.setter
-    def shear_modulus(self, value):
-        core.ddm_sol2_set_shear_modulus(self.handle, value)
-
-    core.use(None, 'ddm_sol2_set_poisson_ratio', c_void_p, c_double)
-    core.use(c_double, 'ddm_sol2_get_poisson_ratio', c_void_p)
-
-    @property
-    def poisson_ratio(self):
-        return core.ddm_sol2_get_poisson_ratio(self.handle)
-
-    @poisson_ratio.setter
-    def poisson_ratio(self, value):
-        core.ddm_sol2_set_poisson_ratio(self.handle, value)
-
-    core.use(None, 'ddm_sol2_set_adjust_coeff', c_void_p, c_double)
-    core.use(c_double, 'ddm_sol2_get_adjust_coeff', c_void_p)
-
-    @property
-    def adjust_coeff(self):
-        return core.ddm_sol2_get_adjust_coeff(self.handle)
-
-    @adjust_coeff.setter
-    def adjust_coeff(self, value):
-        core.ddm_sol2_set_adjust_coeff(self.handle, value)
-
-    core.use(None, 'ddm_sol2_get_induced', c_void_p, c_void_p,
-             c_double, c_double, c_double, c_double,
-             c_double, c_double, c_double, c_double,
-             c_double, c_double, c_double)
-
-    def get_induced(self, pos, fracture, ds, dn, height):
-        """
-        返回一个裂缝单元的诱导应力
-        """
-        assert len(fracture) == 4
-        stress = Tensor2()
-        if len(pos) == 2:
-            core.ddm_sol2_get_induced(self.handle, stress.handle, *pos, *pos,
-                                      *fracture, ds, dn, height)
-        else:
-            assert len(pos) == 4
-            core.ddm_sol2_get_induced(self.handle, stress.handle, *pos,
-                                      *fracture, ds, dn, height)
-        return stress
-
-
-class Fracture2:
-    """
-    二维裂缝单元
-    """
-
-    def __init__(self, handle):
-        self.handle = handle
-
-    core.use(c_double, 'frac2_get_pos', c_void_p, c_size_t)
-
-    @property
-    def pos(self):
-        """
-        返回一个长度为4的list，表示裂缝的位置。格式为 [x0, y0, x1, y1]。其中(x0, y0)为
-        裂缝第一个端点的位置，(x1, y1)第二个端点的位置坐标;
-        """
-        return [core.frac2_get_pos(self.handle, i) for i in range(4)]
-
-    core.use(c_size_t, 'frac2_get_uid', c_void_p)
-
-    @property
-    def uid(self):
-        """
-        裂缝的全局ID。在程序启动之后，裂缝的ID将会是唯一的，并且是递增的。因此uid的数值越大，则表明裂缝创建得越晚。 另外，在裂缝扩展
-        的过程种，也可以用这个uid来判断，哪些裂缝是新的。
-        """
-        return core.frac2_get_uid(self.handle)
-
-    core.use(None, 'frac2_set_ds', c_void_p, c_double)
-    core.use(c_double, 'frac2_get_ds', c_void_p)
-
-    @property
-    def ds(self):
-        """
-        切向位移间断
-        """
-        return core.frac2_get_ds(self.handle)
-
-    @ds.setter
-    def ds(self, value):
-        assert -1e6 < value < 1e6
-        core.frac2_set_ds(self.handle, value)
-
-    core.use(None, 'frac2_set_dn', c_void_p, c_double)
-    core.use(c_double, 'frac2_get_dn', c_void_p)
-
-    @property
-    def dn(self):
-        """
-        法向位移间断
-        """
-        return core.frac2_get_dn(self.handle)
-
-    @dn.setter
-    def dn(self, value):
-        assert -1e6 < value < 1.0
-        core.frac2_set_dn(self.handle, value)
-
-    core.use(None, 'frac2_set_h', c_void_p, c_double)
-    core.use(c_double, 'frac2_get_h', c_void_p)
-
-    @property
-    def h(self):
-        """
-        裂缝的高度
-        """
-        return core.frac2_get_h(self.handle)
-
-    @h.setter
-    def h(self, value):
-        assert -1.0e-2 < value < 1e100
-        core.frac2_set_h(self.handle, value)
-
-    core.use(None, 'frac2_set_fric', c_void_p, c_double)
-    core.use(c_double, 'frac2_get_fric', c_void_p)
-
-    @property
-    def fric(self):
-        """
-        摩擦系数
-        """
-        return core.frac2_get_fric(self.handle)
-
-    @fric.setter
-    def fric(self, value):
-        assert 0 < value < 100
-        core.frac2_set_fric(self.handle, value)
-
-    core.use(None, 'frac2_set_p0', c_void_p, c_double)
-    core.use(c_double, 'frac2_get_p0', c_void_p)
-
-    @property
-    def p0(self):
-        """
-        当dn=0的时候，内部流体的压力（内部流体压力随着裂缝开度的增加<即随着dn降低>而降低）
-        """
-        return core.frac2_get_p0(self.handle)
-
-    @p0.setter
-    def p0(self, value):
-        """
-        当dn=0的时候，内部流体的压力（内部流体压力随着裂缝开度的增加<即随着dn降低>而降低）
-        """
-        core.frac2_set_p0(self.handle, value)
-
-    core.use(None, 'frac2_set_k', c_void_p, c_double)
-    core.use(c_double, 'frac2_get_k', c_void_p)
-
-    @property
-    def k(self):
-        """
-        dn增大1(缝宽减小1)的时候的压力增加量(>=0)
-        """
-        return core.frac2_get_k(self.handle)
-
-    @k.setter
-    def k(self, value):
-        """
-        dn增大1(缝宽减小1)的时候的压力增加量(>=0)
-        """
-        assert 0 <= value
-        core.frac2_set_k(self.handle, value)
-
-    core.use(c_double, 'frac2_get_attr', c_void_p, c_size_t)
-    core.use(None, 'frac2_set_attr', c_void_p, c_size_t, c_double)
-
-    def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
-        """
-        第index个自定义属性
-        当index个属性不存在时，默认为无穷大的一个值(1.0e100以上的浮点数)
-        """
-        if index is None:
-            return default_val
-        if index < 0:
-            if index == -1:
-                return self.ds
-            if index == -2:
-                return self.dn
-            if index == -3:
-                return self.h
-            if index == -4:
-                return self.fric
-            if index == -5:
-                return self.p0
-            if index == -6:
-                return self.k
-            if index == -11:  # 宽度
-                return -self.dn
-            return default_val
-        value = core.frac2_get_attr(self.handle, index)
-        if min <= value <= max:
-            return value
-        else:
-            return default_val
-
-    def set_attr(self, index, value):
-        """
-        第index个自定义属性
-        当index个属性不存在时，默认为无穷大的一个值(1.0e100以上的浮点数)
-        """
-        if value is None:
-            value = 1.0e200
-        if index is None:
-            return self
-        if index < 0:
-            if index == -1:
-                self.ds = value
-                return self
-            if index == -2:
-                self.dn = value
-                return self
-            if index == -3:
-                self.h = value
-                return self
-            if index == -4:
-                self.fric = value
-                return self
-            if index == -5:
-                self.p0 = value
-                return self
-            if index == -6:
-                self.k = value
-                return self
-            else:
-                return self
-        else:
-            core.frac2_set_attr(self.handle, index, value)
-            return self
-
-
-class FractureNetwork2(HasHandle):
-    """
-    二维裂缝网络
-    """
-    core.use(c_void_p, 'new_fnet2')
-    core.use(None, 'del_fnet2', c_void_p)
-
-    def __init__(self, handle=None):
-        super(FractureNetwork2, self).__init__(handle, core.new_fnet2, core.del_fnet2)
-
-    def __str__(self):
-        return f'zml.FractureNetwork2(handle = {self.handle}, vtx_n = {self.vtx_n}, frac_n = {self.frac_n})'
-
-    core.use(None, 'fnet2_save', c_void_p, c_char_p)
-    core.use(None, 'fnet2_load', c_void_p, c_char_p)
-
-    def save(self, path):
-        """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
-        """
-        if path is not None:
-            core.fnet2_save(self.handle, make_c_char_p(path))
-
-    def load(self, path):
-        """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
-        """
-        if path is not None:
-            core.fnet2_load(self.handle, make_c_char_p(path))
-
-    core.use(c_size_t, 'fnet2_get_frac_n', c_void_p)
-
-    @property
-    def frac_n(self):
-        return core.fnet2_get_frac_n(self.handle)
-
-    core.use(c_size_t, 'fnet2_get_vtx_n', c_void_p)
-
-    @property
-    def vtx_n(self):
-        return core.fnet2_get_vtx_n(self.handle)
-
-    core.use(None, 'fnet2_add', c_void_p, c_double, c_double, c_double, c_double, c_double)
-
-    def add_fracture(self, pos, lave):
-        """
-        添加裂缝
-        """
-        assert len(pos) == 4
-        core.fnet2_add(self.handle, *pos, lave)
-
-    core.use(None, 'fnet2_get_fractures', c_void_p, c_void_p)
-
-    def get_fractures(self, buffer=None):
-        """
-        返回所有的裂缝单元
-        """
-        if not isinstance(buffer, PtrVector):
-            buffer = PtrVector()
-        core.fnet2_get_fractures(self.handle, buffer.handle)
-        return [Fracture2(handle=buffer[i]) for i in range(buffer.size)]
-
-    core.use(None, 'fnet2_adjust', c_void_p, c_double, c_double)
-
-    def adjust(self, lave, angle_min=0.4):
-        """
-        调整裂缝格局，尽量避免病态的情况出现
-        """
-        core.fnet2_adjust(self.handle, lave, angle_min)
-
-    core.use(c_size_t, 'fnet2_create_branch', c_void_p, c_void_p, c_void_p, c_double)
-    core.use(c_size_t, 'fnet2_extend_tip', c_void_p, c_void_p, c_void_p,
-             c_double, c_double, c_double, c_double)
-    core.use(c_size_t, 'fnet2_extend_tip3', c_void_p,
-             c_void_p, c_double, c_double, c_double, c_double, c_double, c_double, c_double,
-             c_void_p,
-             c_double, c_double, c_double, c_double)
-
-    def extend(self, kic=None, sol2=None, lave=None, dn_min=1.0e-7, lex=0.3, dangle_max=10.0,
-               has_branch=True, z=0, left=None, right=None):
-        """
-        尝试扩展裂缝，并返回扩展的数量.
-            lex:   扩展的长度与lave的比值
-        注意：
-            在裂缝扩展的过程中，裂缝单元的数量可能并不会发生改变. 在扩展的时候，会首先将尖端的单元拉长。只有
-            当这个尖端的裂缝的长度被拉长到不得不分割的时候，才会被分成两个裂缝单元。在这个尖端被分割的时候，
-            裂缝的数据(包括所有的属性)，将会被分割之后的两个单元所共同继承. 因此，当裂缝单元通过fa_id属性
-            来定义裂缝单元对应的Cell的id的时候，在裂缝扩展的时候，将可能会出现，两个单元所对应的cell为同
-            一个的情况(在 update_seepage_topology 的时候，会考虑到这个问题，并自动对相应的Cell进行拆分).
-        """
-        count = 0
-        if has_branch:
-            assert isinstance(kic, Tensor2)
-            assert isinstance(sol2, DDMSolution2)
-            assert lave is not None
-            count += core.fnet2_create_branch(self.handle, kic.handle, sol2.handle, lave)
-        if 0.01 < lex < 0.99:
-            assert isinstance(sol2, DDMSolution2)
-            assert lave is not None
-            if isinstance(kic, Tensor2):
-                assert isinstance(kic, Tensor2)
-                count += core.fnet2_extend_tip(self.handle, kic.handle, sol2.handle,
-                                               dn_min, lave, lex, dangle_max)
-            else:
-                assert isinstance(kic, Tensor3Matrix3)
-                assert left is not None
-                assert right is not None
-                count += core.fnet2_extend_tip3(self.handle, kic.handle,
-                                                left[0], left[1], left[2], right[0], right[1], right[2],
-                                                z,
-                                                sol2.handle, dn_min, lave, lex, dangle_max)
-        return count
-
-    core.use(None, 'fnet2_get_induced', c_void_p, c_void_p, c_void_p,
-             c_double, c_double, c_double, c_double)
-
-    def get_induced(self, pos, sol2):
-        """
-        返回所有裂缝的诱导应力
-        """
-        assert isinstance(sol2, DDMSolution2)
-        stress = Tensor2()
-        if len(pos) == 2:
-            core.fnet2_get_induced(self.handle, stress.handle, sol2.handle, *pos, *pos)
-        else:
-            assert len(pos) == 4
-            core.fnet2_get_induced(self.handle, stress.handle, sol2.handle, *pos)
-        return stress
-
-    core.use(None, 'fnet2_update_h_by_layers', c_void_p, c_void_p, c_size_t, c_double, c_double)
-
-    def update_h_by_layers(self, layers, fa_id, layer_h, w_min):
-        """
-        利用分层的数据来更新各个裂缝单元的高度;
-        """
-        if not isinstance(layers, PtrVector):
-            layers = PtrVector.from_objects(layers)
-        core.fnet2_update_h_by_layers(self.handle, layers.handle, fa_id, layer_h, w_min)
-
-    core.use(None, 'fnet2_copy_attr', c_void_p, c_size_t, c_size_t)
-
-    def copy_attr(self, idest, isrc):
-        """
-        将ID为isrc的裂缝单元属性复制到idest位置
-        """
-        core.fnet2_copy_attr(self.handle, idest, isrc)
-
-    core.use(c_double, 'fnet2_get_dn_min', c_void_p)
-    core.use(c_double, 'fnet2_get_dn_max', c_void_p)
-
-    @property
-    def dn_min(self):
-        return core.fnet2_get_dn_min(self.handle)
-
-    @property
-    def dn_max(self):
-        return core.fnet2_get_dn_max(self.handle)
-
-    core.use(c_double, 'fnet2_get_ds_min', c_void_p)
-    core.use(c_double, 'fnet2_get_ds_max', c_void_p)
-
-    @property
-    def ds_min(self):
-        return core.fnet2_get_ds_min(self.handle)
-
-    @property
-    def ds_max(self):
-        return core.fnet2_get_ds_max(self.handle)
-
-    core.use(None, 'fnet2_update_dist2tip', c_void_p, c_size_t, c_size_t)
-
-    def update_dist2tip(self, fa_dist, va_dist):
-        """
-        更新各个裂缝距离裂缝尖端的距离，并存储在属性fa_dist中。va_dist为各个节点距离裂缝尖端的距离，仅仅作为辅助计算的临时变量
-        """
-        core.fnet2_update_dist2tip(self.handle, fa_dist, va_dist)
-
-    core.use(None, 'fnet2_update_cluster', c_void_p, c_size_t)
-
-    def update_cluster(self, fa_cid):
-        """
-        更新cluster (将裂缝单元划分为相互孤立的cluster)
-        """
-        core.fnet2_update_cluster(self.handle, fa_cid)
-
-    core.use(None, 'fnet2_update_fh', c_void_p, c_size_t, c_size_t, c_size_t, c_double)
-
-    def update_fh(self, fa_h, fa_cid, fa_dist, h_vs_l):
-        """
-        假定裂缝的形状为一个椭圆，从而根据裂缝的长度来更新裂缝的高度
-        """
-        core.fnet2_update_fh(self.handle, fa_h, fa_cid, fa_dist, h_vs_l)
-
-    core.use(None, 'fnet2_update_boundary', c_void_p, c_void_p, c_size_t, c_double)
-    core.use(None, 'fnet2_update_boundary_by_layers', c_void_p, c_void_p, c_size_t)
-
-    def update_boundary(self, seepage, fa_id, fh=None):
-        """
-        在DDM中，流体是作为固体计算的边界。此函数根据此刻的流体情况来更新固体计算的边界条件。
-        其中:
-            seepage 可以为一个或者多个Seepage类。当Seepage为多个时，其指针存储在PtrVector中;
-            fa_id 为裂缝单元中存储的流体Cell的ID。
-
-        注意：
-            对于各个裂缝单元，将首先计算它对应的Cell(用fa_id指定)中的流体的体积，然后计算裂缝的长度，并使用
-            给定的fh或者裂缝内存储的裂缝高度来计算裂缝的面积，进而计算流体的厚度。这个厚度就是对裂缝开度的一个
-            非常硬的约束，也是后续计算裂缝的dn和ds的时候的边界条件.
-        """
-        if isinstance(seepage, Seepage):
-            if fh is None:
-                fh = -1  # Now, using the fracture height defined in fracture.
-            core.fnet2_update_boundary(self.handle, seepage.handle, fa_id, fh)
-        else:
-            if not isinstance(seepage, PtrVector):
-                seepage = PtrVector.from_objects(seepage)
-            core.fnet2_update_boundary_by_layers(self.handle, seepage.handle, fa_id)
-
-    core.use(None, 'fnet2_mark_tips', c_void_p, c_size_t)
-
-    def mark_tips(self, fa_is_tip):
-        """
-        标记位于尖端的裂缝单元。对于尖端的单元，将自定义属性fa_is_tip的值设置为1，对于其它的单元，fa_is_tip的值设置为0.
-            since 2023-9-14
-        """
-        core.fnet2_mark_tips(self.handle, fa_is_tip)
-
-    core.use(None, 'fnet2_mark_length', c_void_p, c_size_t)
-
-    def mark_length(self, fa_length):
-        """
-        标记出裂缝单元的长度
-            since 2023-9-14
-        """
-        core.fnet2_mark_length(self.handle, fa_length)
-
-
-class InfManager2(HasHandle):
-    """
-    二维裂缝的管理（建立应力影响矩阵）
-    注意：
-        这是一个临时变量，因此没有提供save/load函数。在调用update_matrix之后，矩阵会自动创建.
-    """
-    core.use(c_void_p, 'new_fmanager2')
-    core.use(None, 'del_fmanager2', c_void_p)
-
-    def __init__(self, handle=None):
-        super(InfManager2, self).__init__(handle, core.new_fmanager2, core.del_fmanager2)
-
-    core.use(None, 'fmanager2_update1', c_void_p, c_void_p, c_void_p, c_void_p, c_double)
-    core.use(None, 'fmanager2_update2', c_void_p, c_void_p, c_void_p, c_void_p, c_double, c_double)
-    core.use(None, 'fmanager2_update3', c_void_p, c_void_p, c_void_p, c_void_p,
-             c_double, c_double, c_double,
-             c_double, c_double, c_double,
-             c_double, c_double)
-
-    def update_matrix(self, network, sol, stress, dist, z=0, left=None, right=None):
-        """
-        更新应力影响矩阵. 其中：
-            dist为应力影响的范围. 当两个裂缝之间的距离大于dist的时候，则它们之间不会产生
-            实时的应力影响。也就是说，会利用它们此刻的开度和剪切来计算应力，而这部分应力在
-            后续不会随着它们开度的变化而变化。
-        """
-        assert isinstance(network, FractureNetwork2)
-        assert isinstance(sol, DDMSolution2)
-        if isinstance(stress, Tensor2):
-            core.fmanager2_update1(self.handle, network.handle, sol.handle, stress.handle, dist)
-        elif isinstance(stress, Tensor3Interp3):
-            core.fmanager2_update2(self.handle, network.handle, sol.handle, stress.handle, z, dist)
-        else:
-            assert isinstance(stress, Tensor3Matrix3)
-            assert left is not None
-            assert right is not None
-            core.fmanager2_update3(self.handle, network.handle, sol.handle,
-                                   stress.handle,
-                                   left[0], left[1], left[2],
-                                   right[0], right[1], right[2],
-                                   z, dist)
-
-    core.use(c_size_t, 'fmanager2_update_disp', c_void_p, c_double, c_double, c_size_t, c_double)
-
-    def update_disp(self, gradw_max=0, err_max=0.1, iter_max=10000, ratio_max=0.99):
-        """
-        更新裂缝单元的位移(dn和ds)
-        """
-        return core.fmanager2_update_disp(self.handle, gradw_max, err_max, iter_max, ratio_max)
-
-    core.use(None, 'fmanager2_update_boundary', c_void_p, c_void_p, c_size_t, c_double)
-    core.use(None, 'fmanager2_update_boundary_by_layers', c_void_p, c_void_p, c_size_t)
-
-    def update_boundary(self, seepage, fa_id, fh=None):
-        """
-        在DDM中，流体是作为固体计算的边界。此函数根据此刻的流体情况来更新固体计算的边界条件。
-        其中:
-            seepage 可以为一个或者多个Seepage类。当Seepage为多个时，其指针存储在PtrVector中;
-            fa_id 为裂缝单元中存储的流体Cell的ID。
-
-        注意：
-            对于各个裂缝单元，将首先计算它对应的Cell(用fa_id指定)中的流体的体积，然后计算裂缝的长度，并使用
-            给定的fh或者裂缝内存储的裂缝高度来计算裂缝的面积，进而计算流体的厚度。这个厚度就是对裂缝开度的一个
-            非常硬的约束，也是后续计算裂缝的dn和ds的时候的边界条件.
-        """
-        warnings.warn('please use FractureNetwork2.update_boundary instead', DeprecationWarning)
-        if isinstance(seepage, Seepage):
-            if fh is None:
-                fh = -1  # Now, using the fracture height defined in fracture.
-            core.fmanager2_update_boundary(self.handle, seepage.handle, fa_id, fh)
-        else:
-            if not isinstance(seepage, PtrVector):
-                seepage = PtrVector.from_objects(seepage)
-            core.fmanager2_update_boundary_by_layers(self.handle, seepage.handle, fa_id)
-
-
-class ExHistory(HasHandle):
-    core.use(c_void_p, 'new_exhistory')
-    core.use(None, 'del_exhistory', c_void_p)
-
-    def __init__(self, path=None, handle=None):
-        super(ExHistory, self).__init__(handle, core.new_exhistory, core.del_exhistory)
-        if handle is None:
-            if path is not None:
-                self.load(path)
-
-    core.use(None, 'exhistory_save', c_void_p, c_char_p)
-
-    def save(self, path):
-        """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
-        """
-        if path is not None:
-            core.exhistory_save(self.handle, make_c_char_p(path))
-
-    core.use(None, 'exhistory_load', c_void_p, c_char_p)
-
-    def load(self, path):
-        """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
-        """
-        if path is not None:
-            core.exhistory_load(self.handle, make_c_char_p(path))
-
-    core.use(None, 'exhistory_write_fmap', c_void_p, c_void_p, c_char_p)
-    core.use(None, 'exhistory_read_fmap', c_void_p, c_void_p, c_char_p)
-
-    def to_fmap(self, fmt='binary'):
-        """
-        将数据序列化到一个Filemap中. 其中fmt的取值可以为: text, xml和binary
-        """
-        fmap = FileMap()
-        core.exhistory_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
-        return fmap
-
-    def from_fmap(self, fmap, fmt='binary'):
-        """
-        从Filemap中读取序列化的数据. 其中fmt的取值可以为: text, xml和binary
-        """
-        assert isinstance(fmap, FileMap)
-        core.exhistory_read_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
-
-    @property
-    def fmap(self):
-        return self.to_fmap(fmt='binary')
-
-    @fmap.setter
-    def fmap(self, value):
-        self.from_fmap(value, fmt='binary')
-
-    core.use(None, 'exhistory_record', c_void_p, c_double, c_size_t)
-
-    def record(self, dt, n_extend):
-        """
-        记录扩展的过程
-        :param dt: 采用的时间步长
-        :param n_extend: 扩展的数量
-        """
-        core.exhistory_record(self.handle, dt, n_extend)
-
-    core.use(c_double, 'exhistory_get_best_dt', c_void_p, c_double)
-
-    def get_best_dt(self, prob):
-        """
-        返回给定扩展概率下面最佳的时间步长
-        :param prob: 扩展的概率. 如果希望每10步裂缝可以发生一次扩展，则prob应该设置为0.1
-        """
-        return core.exhistory_get_best_dt(self.handle, prob)
-
-
-class Hf2Alg:
-    core.use(None, 'hf2_alg_update_seepage_topology', c_void_p, c_void_p, c_size_t,
-             c_size_t, c_size_t, c_size_t)
-
-    @staticmethod
-    def update_seepage_topology(seepage, network, fa_id, fa_new=None, cell_new=None, face_new=None):
-        """
-        建立和裂缝对应的流动模型.
-            其中：
-            fa_id为裂缝的自定义属性的ID，用以存储这个裂缝单元对应的Seepage中的Cell的ID.
-            fa_new为裂缝的自定义属性的ID，当这个属性非0时，表示这是一个新的裂缝单元（新添加的，或者被新分隔的，均被视为新的单元）
-            cell_new和face_new是seepage中cell和face的属性ID，用于表示这是否为新的cell或者face
-            注意：
-            1. 这里的seepage需要被这个裂缝系统所独占。即，这里建立的目标，是裂缝单元和seepage中的Cell一对一。但是，为了确保存储在
-            fracture中的Cell的id不发生变化，这里不允许删除seepage中的Cell。当裂缝变少的时候，多余的Cell将会被标记成为孤立的Cell，
-            不和其它的Cell产生流体的联通。
-            2. 在创建seepage的时候，会尽量保证Cell中的流体和pore不发生变化。如果有Cell被两个裂缝所共有，那么，将会把Cell中的数据按照
-            两条裂缝的长度的比例分配给两个fracture单元(所以，大部分的属性应该会得到保留).
-            3. 在此函数执行之后，对于每一个裂缝单元，都将有一个Cell来对应，且每一个Cell最多只和一个fracture对应。
-        """
-        assert isinstance(seepage, Seepage)
-        assert isinstance(network, FractureNetwork2)
-        core.hf2_alg_update_seepage_topology(seepage.handle, network.handle, fa_id,
-                                             fa_new if fa_new is not None else 99999999,
-                                             cell_new if cell_new is not None else 99999999,
-                                             face_new if face_new is not None else 99999999
-                                             )
-
-    core.use(c_bool, 'hf2_alg_seepage_topology_expired', c_void_p, c_size_t)
-
-    @staticmethod
-    def seepage_topology_expired(network, fa_id):
-        """
-        判断裂缝对应的渗流是否已经过期（1、两个fracture共用一个cell，2、存在尚未设置cell的fracture）
-        since 2023-9-24
-        """
-        assert isinstance(network, FractureNetwork2)
-        return core.hf2_alg_seepage_topology_expired(network.handle, fa_id)
-
-    core.use(None, 'hf2_alg_update_seepage_cell_pos', c_void_p, c_void_p, c_void_p, c_size_t)
-
-    @staticmethod
-    def update_seepage_cell_pos(seepage, network, coord, fa_id):
-        """
-        根据各个裂缝单元中心点的坐标来更新各个Cell的位置；
-        """
-        assert isinstance(seepage, Seepage)
-        assert isinstance(network, FractureNetwork2)
-        assert isinstance(coord, Coord3)
-        core.hf2_alg_update_seepage_cell_pos(seepage.handle, network.handle, coord.handle, fa_id)
-
-    core.use(None, 'hf2_alg_update_cond0', c_void_p, c_void_p, c_double, c_size_t, c_double)
-    core.use(None, 'hf2_alg_update_cond1', c_void_p, c_size_t, c_size_t, c_size_t, c_double)
-
-    @staticmethod
-    def update_cond(seepage, network=None, fa_id=None, fw_max=None, layer_dh=None,
-                    ca_g=None, ca_l=None, ca_h=None):
-        """
-        更新Seepage系统中各个Face的Cond属性(根据裂缝单元的长度、缝宽、高度来计算).
-            或者更新各个Cell的Cond属性(暂存到ca_g中)
-        """
-        assert isinstance(seepage, Seepage)
-        if fw_max is None:
-            fw_max = 0.005
-        if ca_g is not None and ca_l is not None and ca_h is not None:
-            core.hf2_alg_update_cond1(seepage.handle, ca_g, ca_l, ca_h, fw_max)
-        else:
-            assert isinstance(network, FractureNetwork2)
-            if layer_dh is None:
-                layer_dh = -1  # 此时，将采用fracture的高度属性
-            core.hf2_alg_update_cond0(seepage.handle, network.handle, fw_max, fa_id, layer_dh)
-
-    core.use(None, 'hf2_alg_update_pore0', c_void_p, c_void_p, c_size_t)
-    core.use(None, 'hf2_alg_update_pore1', c_void_p, c_size_t, c_size_t, c_double)
-    core.use(None, 'hf2_alg_update_pore2', c_void_p, c_size_t, c_size_t, c_size_t, c_size_t, c_size_t)
-    core.use(None, 'hf2_alg_update_pore3', c_void_p, c_size_t, c_size_t, c_double, c_double)
-
-    @staticmethod
-    def update_pore(seepage, manager=None, fa_id=None, ca_s=None, ca_ny=None, dw=None, ca_l=None,
-                    ca_h=None, ca_g=None, ca_mu=None, k1=None, k2=None, relax_factor=None):
-        """
-        更新渗流系统的pore.
-        其中：
-            manager: 二维裂缝管理 InfManager2
-            fa_id: 裂缝中存储对应Cell的ID的属性
-            ca_s：定义Cell对应的裂缝的面积
-            ca_ny: 定义垂直于裂缝面的应力（以拉张为正）
-            dw: 定义压力变化1Pa，裂缝的宽度改变的幅度(单位: m)
-            ca_l: 定义Cell对应裂缝的长度
-            ca_h：定义Cell对应裂缝的高度
-            ca_g: 定义Cell位置的剪切模量
-            ca_mu: 定义Cell位置的泊松比
-        注意：
-            当指定manager的时候，则使用manager来更新，否则，则使用seepage中定义的ca_s，ca_ny以及
-            给定的dw来更新.
-        """
-        assert isinstance(seepage, Seepage)
-        if ca_ny is not None and ca_s is not None and k1 is not None and k2 is not None:
-            # 此时建议的取值: k1=1.0e-10, k2=1.0e-8
-            core.hf2_alg_update_pore3(seepage.handle, ca_ny, ca_s, k1, k2)
-            return
-
-        if isinstance(manager, InfManager2):
-            assert fa_id is not None
-            core.hf2_alg_update_pore0(seepage.handle, manager.handle, fa_id)
-            return
-
-        if ca_s is not None and ca_ny is not None and dw is not None:
-            # will be removed in the future.
-            core.hf2_alg_update_pore1(seepage.handle, ca_s, ca_ny, dw)
-            return
-
-        if ca_l is not None and ca_h is not None and ca_ny is not None and ca_g is not None and ca_mu is not None:
-            core.hf2_alg_update_pore2(seepage.handle, ca_l, ca_h, ca_ny, ca_g, ca_mu)
-            return
-
-        assert False
-
-    core.use(None, 'hf2_alg_update_area', c_void_p, c_size_t, c_void_p, c_size_t, c_double)
-
-    @staticmethod
-    def update_area(seepage, ca_s, network, fa_id, fh=None):
-        """
-        更新存储在Seepage的各个Cell中的对应的裂缝的面积属性.
-        其中：
-            ca_s：   为需要更新的面积属性的ID
-            network：为裂缝网络
-            fa_id：  为存储在各个裂缝单元中的对应的Cell的ID
-            fh:     为裂缝的高度，当这个值为负值的时候，则使用定义在裂缝单元内的高度
-        """
-        assert isinstance(seepage, Seepage)
-        assert isinstance(network, FractureNetwork2)
-        if fh is None:
-            fh = -1.0  # Now, using the fracture height
-        core.hf2_alg_update_area(seepage.handle, ca_s, network.handle, fa_id, fh)
-
-    core.use(None, 'hf2_alg_update_length', c_void_p, c_size_t, c_void_p, c_size_t)
-
-    @staticmethod
-    def update_length(seepage, ca_l, network, fa_id):
-        """
-        更新各个Cell的裂缝长度属性
-        """
-        assert isinstance(seepage, Seepage)
-        assert isinstance(network, FractureNetwork2)
-        core.hf2_alg_update_length(seepage.handle, ca_l, network.handle, fa_id)
-
-    core.use(None, 'hf2_alg_update_normal_stress', c_void_p, c_size_t, c_void_p, c_size_t, c_bool, c_double)
-
-    @staticmethod
-    def update_normal_stress(seepage, ca_ny, manager, fa_id, except_self=True, relax_factor=1.0):
-        """
-        更新裂缝的法向应力(以拉应力为正)，并存储在裂缝对应Cell的ca_ny属性上.
-        注意:
-            这个函数会首先删除掉seepage中所有的Cell的ca_ny属性，然后在遍历所有的裂缝，计算应力，然后给定裂缝的fa_id属性
-            找到对应的Cell，然后在Cell上添加ca_ny属性. 因此，这个函数运行之后，只要某个Cell定义了ca_ny属性，那么ca_ny
-            对应的数值就一定是最新的.
-        注意：
-            当except_self为True的时候，则去除了当前单元的影响，即假设当前单元的开度为0.
-        """
-        assert isinstance(seepage, Seepage)
-        assert isinstance(manager, InfManager2)
-        core.hf2_alg_update_normal_stress(seepage.handle, ca_ny, manager.handle, fa_id, except_self, relax_factor)
-
-    core.use(None, 'hf2_alg_exchange_fluids', c_void_p, c_void_p, c_double, c_size_t, c_size_t)
-
-    @staticmethod
-    def exchange_fluids(layers, pipe, dt, ca_g, ca_fp=None):
-        """
-        在不同的层之间交换流体
-        """
-        if not isinstance(layers, PtrVector):
-            layers = PtrVector.from_objects(layers)
-        assert isinstance(pipe, Seepage)
-        if ca_fp is None:
-            ca_fp = 99999999  # Now, will not update fluid pressure
-        core.hf2_alg_exchange_fluids(layers.handle, pipe.handle, dt, ca_g, ca_fp)
-
-    core.use(c_bool, 'hf2_alg_rect_v3_intersected', c_double, c_double, c_double, c_double, c_double, c_double,
-             c_double, c_double, c_double, c_double, c_double, c_double)
-
-    @staticmethod
-    def rect_v3_intersected(a, b):
-        """
-        返回两个给定的竖直裂缝a和b是否相交
-        """
-        assert len(a) == 6 and len(b) == 6
-        return core.hf2_alg_rect_v3_intersected(*a, *b)
-
-    core.use(None, 'hf2_alg_create_links', c_void_p, c_void_p, c_size_t,
-             c_size_t, c_size_t, c_size_t,
-             c_size_t, c_size_t, c_size_t,
-             c_double, c_double, c_double, c_double, c_double, c_double)
-
-    @staticmethod
-    def create_links(seepage, cell_n, keys, v3, buf=None):
-        """
-        对于seepage模型，读取cell中定义的竖直的矩形的信息，返回和给定的矩形相交的所有的Cell的ID
-        """
-        if buf is None:
-            buf = UintVector()
-        assert isinstance(seepage, Seepage)
-        assert len(v3) == 6
-        core.hf2_alg_create_links(buf.handle, seepage.handle, cell_n,
-                                  keys.x1, keys.y1, keys.z1,
-                                  keys.x2, keys.y2, keys.z2, *v3)
-        return buf.to_list()
+    core.use(None, 'ip_write_pos', c_void_p, c_size_t, c_void_p)
+    core.use(None, 'ip_write_phase', c_void_p, c_void_p)
+
+    def nodes_write(self, index, pointer=None, buf=None):
+        """
+        导出属性:
+            index=-1, x坐标
+            index=-2, y坐标
+            index=-3, z坐标
+            index=-4, phase
+        """
+        if pointer is None:
+            if np is not None:
+                if buf is None:
+                    buf = np.zeros(shape=self.node_n, dtype=float)
+                else:
+                    assert len(buf) == self.node_n
+                if not buf.flags['C_CONTIGUOUS']:
+                    buf = np.ascontiguous(buf, dtype=buf.dtype)
+                pointer = buf.ctypes.data_as(POINTER(c_double))
+
+        if index == -1 or index == -2 or index == -3:
+            core.ip_write_pos(self.handle, -index - 1, ctypes.cast(pointer, c_void_p))
+            return buf
+
+        if index == -4:
+            core.ip_write_phase(self.handle, ctypes.cast(pointer, c_void_p))
+            return buf
 
 
 class Dfn2(HasHandle):
@@ -13708,703 +12361,23 @@ class Dfn2(HasHandle):
                 file.write(f'{p[0]}\t{p[1]}\t{p[2]}\t{p[3]}\n')
 
 
-class Disc3(HasHandle):
+class Lattice3(HasHandle):
     """
-    三维的圆盘
+    用以临时存放数据序号的格子
     """
-    core.use(c_void_p, 'new_disc3')
-    core.use(None, 'del_disc3', c_void_p)
-
-    def __init__(self, coord=None, radi=None, handle=None):
-        super(Disc3, self).__init__(handle, core.new_disc3, core.del_disc3)
-        if handle is None:
-            if coord is not None:
-                self.coord = coord
-            if radi is not None:
-                self.radi = radi
-
-    core.use(c_void_p, 'disc3_get_coord', c_void_p)
-    core.use(None, 'disc3_set_coord', c_void_p, c_void_p)
-
-    @property
-    def coord(self):
-        return Coord3(handle=core.disc3_get_coord(self.handle))
-
-    @coord.setter
-    def coord(self, value):
-        assert isinstance(value, Coord3)
-        core.disc3_set_coord(self.handle, value.handle)
-
-    core.use(None, 'disc3_set_radi', c_void_p, c_double)
-    core.use(c_double, 'disc3_get_radi', c_void_p)
-
-    @property
-    def radi(self):
-        return core.disc3_get_radi(self.handle)
-
-    @radi.setter
-    def radi(self, value):
-        core.disc3_set_radi(self.handle, value)
-
-    core.use(None, 'disc3_create', c_void_p, c_double, c_double, c_double, c_double, c_double, c_double)
-
-    @staticmethod
-    def create(x, y, z, dir, angle, r, buffer=None):
-        if not isinstance(buffer, Disc3):
-            buffer = Disc3()
-        core.disc3_create(buffer.handle, x, y, z, dir, angle, r)
-        return buffer
-
-    core.use(c_bool, 'disc3_get_intersection', c_void_p, c_void_p, c_void_p, c_void_p)
-    core.use(c_bool, 'disc3_get_intersection_with_segment', c_void_p, c_void_p, c_double, c_double, c_double,
-             c_double, c_double, c_double)
-    core.use(c_bool, 'disc3_get_intersection_with_xoy', c_void_p, c_void_p, c_void_p, c_void_p)
-
-    def get_intersection(self, other=None, p1=None, p2=None, buffer=None, coord=None):
-        if isinstance(coord, Coord3):
-            # 返回和给定坐标系的xoy平面的交线
-            if not isinstance(p1, Array3):
-                p1 = Array3()
-            if not isinstance(p2, Array3):
-                p2 = Array3()
-            if core.disc3_get_intersection_with_xoy(self.handle, coord.handle, p1.handle, p2.handle):
-                return p1, p2
-            else:
-                return
-        if isinstance(other, Disc3):
-            # 返回和另一个圆盘的交线
-            if not isinstance(p1, Array3):
-                p1 = Array3()
-            if not isinstance(p2, Array3):
-                p2 = Array3()
-            if core.disc3_get_intersection(self.handle, other.handle, p1.handle, p2.handle):
-                return p1, p2
-        else:
-            # 返回和线段的交点
-            if not isinstance(buffer, Array3):
-                buffer = Array3()
-            if core.disc3_get_intersection_with_segment(self.handle, buffer.handle, p1[0], p1[1], p1[2], p2[0], p2[1],
-                                                        p2[2]):
-                return buffer
-
-    core.use(None, 'disc3_get_lat_inds', c_void_p, c_void_p, c_void_p)
-
-    def get_lat_inds(self, lat, buffer=None):
-        """
-        将这个圆盘投射到给定的格子上，返回这个圆盘所占据的格子的序号
-        """
-        if not isinstance(buffer, UintVector):
-            buffer = UintVector()
-        assert isinstance(lat, Lattice)
-        core.disc3_get_lat_inds(self.handle, buffer.handle, lat.handle)
-        return buffer
-
-    core.use(None, 'disc3_create_mesh', c_void_p, c_void_p, c_size_t)
-
-    def create_mesh(self, count=20, buffer=None):
-        """
-        生成用于显示该圆盘的三角形网格
-        """
-        if not isinstance(buffer, Mesh3):
-            buffer = Mesh3()
-        core.disc3_create_mesh(self.handle, buffer.handle, count)
-        return buffer
-
-    core.use(c_void_p, 'disc3_get_cell_ids', c_void_p)
-
-    @property
-    def cell_ids(self):
-        return UintVector(handle=core.disc3_get_cell_ids(self.handle))
-
-    core.use(c_void_p, 'disc3_get_face_ids', c_void_p)
-
-    @property
-    def face_ids(self):
-        return UintVector(handle=core.disc3_get_face_ids(self.handle))
-
-    core.use(c_double, 'disc3_get_attr', c_void_p, c_size_t)
-    core.use(None, 'disc3_set_attr', c_void_p, c_size_t, c_double)
-
-    def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
-        """
-        第index个自定义属性。
-        当index个属性不存在时，默认为无穷大的一个值(1.0e100以上的浮点数)
-        """
-        if index is None:
-            return default_val
-        value = core.disc3_get_attr(self.handle, index)
-        if min <= value <= max:
-            return value
-        else:
-            return default_val
-
-    def set_attr(self, index, value):
-        """
-        第index个自定义属性。
-        当index个属性不存在时，默认为无穷大的一个值(1.0e100以上的浮点数)
-        """
-        if index is None:
-            return self
-        if value is None:
-            value = 1.0e200
-        core.disc3_set_attr(self.handle, index, value)
-        return self
-
-    core.use(None, 'disc3_add_scale', c_void_p, c_double)
-
-    def add_scale(self, value):
-        """
-        在空间的位置、大小都等比例放大一定的倍数
-        """
-        core.disc3_add_scale(self.handle, value)
-
-    core.use(None, 'disc3_copy', c_void_p, c_void_p)
-
-    def copy(self, other):
-        core.disc3_copy(self.handle, other.handle)
-
-    @staticmethod
-    def get_copy(disc3, buffer=None):
-        if not isinstance(buffer, Disc3):
-            buffer = Disc3()
-        buffer.copy(disc3)
-        return buffer
-
-
-class Disc3Vec(HasHandle):
-    """
-    一个由三维圆盘组成的数组
-    """
-    core.use(c_void_p, 'new_vdisc3')
-    core.use(None, 'del_vdisc3', c_void_p)
-
-    def __init__(self, path=None, handle=None):
-        super(Disc3Vec, self).__init__(handle, core.new_vdisc3, core.del_vdisc3)
-        if handle is None:
-            if path is not None:
-                self.load(path)
-
-    def __str__(self):
-        return f'zml.Disc3Vec(size={len(self)})'
-
-    core.use(None, 'vdisc3_save', c_void_p, c_char_p)
-
-    def save(self, path):
-        """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
-        """
-        if path is not None:
-            core.vdisc3_save(self.handle, make_c_char_p(path))
-
-    core.use(None, 'vdisc3_load', c_void_p, c_char_p)
-
-    def load(self, path):
-        """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
-        """
-        if path is not None:
-            core.vdisc3_load(self.handle, make_c_char_p(path))
-
-    core.use(None, 'vdisc3_push_back', c_void_p, c_void_p)
-
-    def append(self, disc):
-        """
-        添加一个圆盘
-        """
-        assert isinstance(disc, Disc3)
-        core.vdisc3_push_back(self.handle, disc.handle)
-
-    core.use(c_size_t, 'vdisc3_size', c_void_p)
-
-    def __len__(self):
-        """
-        返回数量
-        """
-        return core.vdisc3_size(self.handle)
-
-    core.use(c_void_p, 'vdisc3_get', c_void_p, c_size_t)
-
-    def __getitem__(self, index):
-        """
-        返回index位置的数据
-        """
-        if index < len(self):
-            return Disc3(handle=core.vdisc3_get(self.handle, index))
-
-    core.use(None, 'vdisc3_create_mesh', c_void_p, c_void_p, c_size_t, c_size_t, c_size_t, c_size_t)
-
-    def create_mesh(self, count=20, da=99999999, na=99999999, fa=99999999, buffer=None):
-        """
-        生成用于显示该圆盘的三角形网格
-        da:
-            对于各个disc，尝试输出的自定义属性
-
-        na:
-            对于各个node，添加自定义属性，用以标识这个node所在的圆盘的序号
-
-        fa:
-            对于各个face，添加自定义属性，用以标识这个face所在的圆盘的序号
-        """
-        if not isinstance(buffer, Mesh3):
-            buffer = Mesh3()
-        core.vdisc3_create_mesh(self.handle, buffer.handle, count, da, na, fa)
-        return buffer
-
-
-class Molecule(HasHandle):
-    """
-    模拟分子。模拟分子和真实的分子有很大的区别。为了降低计算规模，在DSMC计算时，一个模拟分子
-    会代表大量的真实分子，从而大大降低计算量，使得DSMC方法可以计算较大的计算区域。
-    """
-    core.use(c_void_p, 'new_molecule')
-    core.use(None, 'del_molecule', c_void_p)
-
-    def __init__(self, handle=None, **kwargs):
-        """
-        分子的初始化
-        """
-        super(Molecule, self).__init__(handle, core.new_molecule, core.del_molecule)
-        if handle is None:
-            self.set(**kwargs)
-
-    def __str__(self):
-        return f'zml.Molecule(mass={self.mass}, radi={self.radi}, pos={self.pos}, vel={self.vel})'
-
-    core.use(None, 'molecule_save', c_void_p, c_char_p)
-
-    def save(self, path):
-        """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
-        """
-        if path is not None:
-            core.molecule_save(self.handle, make_c_char_p(path))
-
-    core.use(None, 'molecule_load', c_void_p, c_char_p)
-
-    def load(self, path):
-        """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
-        """
-        if path is not None:
-            core.molecule_load(self.handle, make_c_char_p(path))
-
-    core.use(c_double, 'molecule_get_pos', c_void_p, c_size_t)
-    core.use(None, 'molecule_set_pos', c_void_p, c_size_t, c_double)
-
-    @property
-    def pos(self):
-        """
-        模拟分子的中心点在三维空间的位置
-        """
-        return [core.molecule_get_pos(self.handle, i) for i in range(3)]
-
-    @pos.setter
-    def pos(self, val):
-        """
-        模拟分子的中心点在三维空间的位置
-        """
-        assert len(val) == 3
-        for i in range(3):
-            core.molecule_set_pos(self.handle, i, val[i])
-
-    core.use(c_double, 'molecule_get_vel', c_void_p, c_size_t)
-    core.use(None, 'molecule_set_vel', c_void_p, c_size_t, c_double)
-
-    @property
-    def vel(self):
-        """
-        模拟分子在三维空间的速度
-        """
-        return [core.molecule_get_vel(self.handle, i) for i in range(3)]
-
-    @vel.setter
-    def vel(self, val):
-        """
-        模拟分子在三维空间的速度
-        """
-        assert len(val) == 3
-        for i in range(3):
-            core.molecule_set_vel(self.handle, i, val[i])
-
-    core.use(c_double, 'molecule_get_mass', c_void_p)
-    core.use(None, 'molecule_set_mass', c_void_p, c_double)
-
-    @property
-    def mass(self):
-        """
-        模拟分子的质量 [kg]
-        """
-        return core.molecule_get_mass(self.handle)
-
-    @mass.setter
-    def mass(self, val):
-        """
-        模拟分子的质量 [kg]
-        """
-        core.molecule_set_mass(self.handle, val)
-
-    core.use(c_double, 'molecule_get_radi', c_void_p)
-    core.use(None, 'molecule_set_radi', c_void_p, c_double)
-
-    @property
-    def radi(self):
-        """
-        模拟分子的半径。用以定义模拟分子的碰撞。只有当两个模拟分子之间的距离小于二者的半径之和的时候，
-        它们才会碰撞。因此，可以通过修改分子的半径来修改它与其它分子发生碰撞的可能。
-        """
-        return core.molecule_get_radi(self.handle)
-
-    @radi.setter
-    def radi(self, val):
-        core.molecule_set_radi(self.handle, val)
-
-    core.use(c_double, 'molecule_get_imass', c_void_p)
-    core.use(None, 'molecule_set_imass', c_void_p, c_double)
-
-    @property
-    def imass(self):
-        """
-        模拟分子的内部质量。除了定义的外在质量之外，假设模拟分子内部的分子还在做不规则的
-        热运动，这部分运动会存储一部分能量。这部分振动的动能会在模拟分子相互碰撞的过程中
-        积聚或者释放出来。内部质量越大，则储存能量的能力就越强。
-        """
-        return core.molecule_get_imass(self.handle)
-
-    @imass.setter
-    def imass(self, val):
-        core.molecule_set_imass(self.handle, val)
-
-    core.use(c_double, 'molecule_get_ivel', c_void_p)
-    core.use(None, 'molecule_set_ivel', c_void_p, c_double)
-
-    @property
-    def ivel(self):
-        """
-        模拟分子内部分子团做无规则运动的速度
-        """
-        return core.molecule_get_ivel(self.handle)
-
-    @ivel.setter
-    def ivel(self, val):
-        core.molecule_set_ivel(self.handle, val)
-
-    core.use(c_double, 'molecule_get_relax_dt', c_void_p)
-    core.use(None, 'molecule_set_relax_dt', c_void_p, c_double)
-
-    @property
-    def relax_dt(self):
-        """
-        模拟分子的内部能量和模拟分子动能相互转化的松弛时间
-        """
-        return core.molecule_get_relax_dt(self.handle)
-
-    @relax_dt.setter
-    def relax_dt(self, val):
-        core.molecule_set_relax_dt(self.handle, val)
-
-    core.use(c_int, 'molecule_get_tag', c_void_p)
-    core.use(None, 'molecule_set_tag', c_void_p, c_int)
-
-    @property
-    def tag(self):
-        """
-        分子的标签<大于等于0为正常的分子，小于0为沙子>
-        """
-        return core.molecule_get_tag(self.handle)
-
-    @tag.setter
-    def tag(self, value):
-        """
-        分子的标签<大于等于0为正常的分子，小于0为沙子>
-        """
-        core.molecule_set_tag(self.handle, value)
-
-
-class MoleVec(HasHandle):
-    """
-    一个由模拟分子组成的数组
-    """
-    core.use(c_void_p, 'new_vmole')
-    core.use(None, 'del_vmole', c_void_p)
-
-    def __init__(self, handle=None):
-        super(MoleVec, self).__init__(handle, core.new_vmole, core.del_vmole)
-
-    def __str__(self):
-        return f'zml.Moles(size={len(self)})'
-
-    core.use(None, 'vmole_save', c_void_p, c_char_p)
-
-    def save(self, path):
-        """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
-        """
-        if path is not None:
-            core.vmole_save(self.handle, make_c_char_p(path))
-
-    core.use(None, 'vmole_load', c_void_p, c_char_p)
-
-    def load(self, path):
-        """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
-        """
-        if path is not None:
-            core.vmole_load(self.handle, make_c_char_p(path))
-
-    core.use(None, 'vmole_clear', c_void_p)
-
-    def clear(self):
-        """
-        清除所有的分子
-        """
-        core.vmole_clear(self.handle)
-
-    core.use(None, 'vmole_push_back', c_void_p, c_void_p)
-    core.use(None, 'vmole_push_back_multi', c_void_p, c_void_p, c_void_p, c_void_p, c_void_p)
-    core.use(None, 'vmole_push_back_other', c_void_p, c_void_p)
-    core.use(None, 'vmole_push_back_other_with_tag', c_void_p, c_void_p, c_int)
-
-    def append(self, mole=None, vx=None, vy=None, vz=None, moles=None, tag=None):
-        """
-        添加一个分子<或者多个分子>；当给定的一系列坐标值给定的时候，则利用mole定义的数据，以及vx,vy,vz定义的位置来添加多个分析
-        """
-        if mole is not None:
-            assert isinstance(mole, Molecule)
-            if isinstance(vx, Vector) and isinstance(vy, Vector) and isinstance(vz, Vector):
-                core.vmole_push_back_multi(self.handle, mole.handle, vx.handle, vy.handle, vz.handle)
-            else:
-                core.vmole_push_back(self.handle, mole.handle)
-        if moles is not None:
-            if tag is not None:
-                core.vmole_push_back_other_with_tag(self.handle, moles.handle, tag)
-            else:
-                core.vmole_push_back_other(self.handle, moles.handle)
-
-    core.use(c_size_t, 'vmole_size', c_void_p)
-
-    def __len__(self):
-        """
-        返回分子的数量
-        """
-        return core.vmole_size(self.handle)
-
-    core.use(c_void_p, 'vmole_get', c_void_p, c_size_t)
-
-    def __getitem__(self, index):
-        """
-        返回index位置的分子数据
-        """
-        if index < len(self):
-            return Molecule(handle=core.vmole_get(self.handle, index))
-
-    core.use(None, 'vmole_update_pos', c_void_p,
-             c_double, c_double, c_double,
-             c_double)
-
-    def update_pos(self, gravity, dt):
-        """
-        更新各个粒子的位置(当重力不等于0的时候，将同时会修改粒子的速度)
-        """
-        assert len(gravity) == 3
-        core.vmole_update_pos(self.handle, *gravity, dt)
-
-    core.use(None, 'vmole_get_pos', c_void_p, c_void_p, c_void_p, c_void_p)
-
-    def get_pos(self, x=None, y=None, z=None):
-        """
-        获得所有粒子的x,y,z坐标
-        """
-        if x is None:
-            x = Vector()
-        if y is None:
-            y = Vector()
-        if z is None:
-            z = Vector()
-        core.vmole_get_pos(self.handle, x.handle, y.handle, z.handle)
-        return x, y, z
-
-    core.use(None, 'vmole_get_vel', c_void_p, c_void_p, c_void_p, c_void_p)
-
-    def get_vel(self, x=None, y=None, z=None):
-        """
-        获得所有粒子的x,y,z坐标
-        """
-        if x is None:
-            x = Vector()
-        if y is None:
-            y = Vector()
-        if z is None:
-            z = Vector()
-        core.vmole_get_vel(self.handle, x.handle, y.handle, z.handle)
-        return x, y, z
-
-    core.use(None, 'vmole_collision', c_void_p, c_void_p, c_void_p, c_void_p)
-
-    def collision(self, lat, vi0=None, vi1=None):
-        """
-        施加碰撞操作<需要提前将粒子放入到格子里，只有在格子里面的模拟分子才会参与碰撞>；
-        当给定vi0和vi1的时候，则记录碰撞对
-        """
-        assert isinstance(lat, Lattice)
-        if isinstance(vi0, UintVector) and isinstance(vi1, UintVector):
-            core.vmole_collision(self.handle, lat.handle, vi0.handle, vi1.handle)
-            return vi0, vi1
-        else:
-            core.vmole_collision(self.handle, lat.handle, 0, 0)
-
-    core.use(None, 'vmole_update_internal_energy', c_void_p, c_void_p, c_void_p, c_double)
-
-    def update_internal_energy(self, vi0, vi1, dt):
-        """
-        利用给定的碰撞对，在碰撞对之间，施加内能和动能之间的相互转化
-        """
-        core.vmole_update_internal_energy(self.handle, vi0.handle, vi1.handle, dt)
-
-    core.use(None, 'vmole_rand_add', c_void_p, c_void_p, c_size_t)
-
-    def rand_add(self, other, count):
-        """
-        从给定的分子源随机拷贝过来count数量的分子，用于分子的生成
-        """
-        assert isinstance(other, MoleVec)
-        core.vmole_rand_add(self.handle, other.handle, count)
-
-    core.use(c_double, 'vmole_get_vel_max', c_void_p)
-
-    def get_vmax(self):
-        """
-        返回所有分子速度的最大值，主要用于确定时间步长
-        """
-        return core.vmole_get_vel_max(self.handle)
-
-    core.use(None, 'vmole_add_offset', c_void_p, c_double, c_double, c_double)
-
-    def add_offset(self, dx, dy, dz):
-        """
-        所有分子的位置施加一个整体的移动
-        """
-        core.vmole_add_offset(self.handle, dx, dy, dz)
-
-    core.use(None, 'vmole_get_range', c_void_p, c_void_p)
-
-    def get_range(self):
-        """
-        获得所有分子位置的范围
-        """
-        if len(self) > 0:
-            v = Vector()
-            core.vmole_get_range(self.handle, v.handle)
-            assert len(v) == 6
-            return (v[0], v[1], v[2]), (v[3], v[4], v[5])
-
-    core.use(c_size_t, 'vmole_erase', c_void_p, c_void_p)
-
-    def erase(self, reg):
-        """
-        删除指定区域内的分子
-        """
-        assert isinstance(reg, Region3)
-        return core.vmole_erase(self.handle, reg.handle)
-
-    core.use(c_size_t, 'vmole_roll_back', c_void_p, c_void_p, c_double, c_bool)
-    core.use(c_size_t, 'vmole_roll_back_record', c_void_p, c_void_p, c_double, c_bool, c_void_p, c_double, c_double)
-
-    def roll_back(self, reg, forcemap=None, dt=None, time_span=None, parallel=True, diffuse_ratio=1.0):
-        """
-        从给定的区域内退出. 当给定forcemap的时候，将记录冲击固体的力.
-            parallel: 内核是否调用并行
-        """
-        assert isinstance(reg, Region3)
-        if forcemap is None:
-            return core.vmole_roll_back(self.handle, reg.handle, diffuse_ratio, parallel)
-        else:
-            assert dt is not None and time_span is not None
-            return core.vmole_roll_back_record(self.handle, reg.handle, diffuse_ratio, parallel,
-                                               forcemap.handle, dt, time_span)
-
-    core.use(None, 'vmole_get_mass', c_void_p, c_void_p)
-
-    def get_mass(self, vm=None):
-        """
-        获得所有模拟分子的质量(作为一个Vector返回)
-        """
-        if vm is None:
-            vm = Vector()
-        core.vmole_get_mass(self.handle, vm.handle)
-        return vm
-
-    core.use(None, 'vmole_update_radi', c_void_p, c_void_p)
-
-    def update_radi(self, v2r):
-        """
-        根据各个模拟分子的速度来更新它的碰撞半径
-        """
-        assert isinstance(v2r, Interp1)
-        core.vmole_update_radi(self.handle, v2r.handle)
-
-    core.use(None, 'vmole_get_radi', c_void_p, c_void_p)
-
-    def get_radi(self, vr=None):
-        """
-        备份分子的半径
-        """
-        if not isinstance(vr, Vector):
-            vr = Vector()
-        core.vmole_backup_radi(self.handle, vr.handle)
-        return vr
-
-    core.use(None, 'vmole_set_radi', c_void_p, c_void_p)
-
-    def set_radi(self, vr):
-        """
-        设置分子的半径
-        """
-        assert isinstance(vr, Vector)
-        core.vmole_set_radi(self.handle, vr.handle)
-
-    core.use(c_size_t, 'vmole_count_tag', c_void_p, c_int)
-
-    def count_tag(self, tag):
-        """
-        返回具有给定tag的分子的数量
-        """
-        return core.vmole_count_tag(self.handle, tag)
-
-    core.use(None, 'vmole_clamp_pos', c_void_p, c_size_t, c_double, c_double)
-
-    def clamp_pos(self, idim, left, right):
-        """
-        对分子在idim维度上的位置进行约束
-        """
-        core.vmole_clamp_pos(self.handle, idim, left, right)
-
-
-class Lattice(HasHandle):
-    """
-    用以临时存放模拟分子的格子。模拟分子只有被映射到格子上，才能够进行相互的碰撞（用于dsmc）
-    """
-    core.use(c_void_p, 'new_lattice')
-    core.use(None, 'del_lattice', c_void_p)
+    core.use(c_void_p, 'new_lat3')
+    core.use(None, 'del_lat3', c_void_p)
 
     def __init__(self, box=None, shape=None, handle=None):
-        super(Lattice, self).__init__(handle, core.new_lattice, core.del_lattice)
+        super(Lattice3, self).__init__(handle, core.new_lat3, core.del_lat3)
         if handle is None:
             if box is not None and shape is not None:
                 self.create(box, shape)
 
     def __str__(self):
-        return f'zml.Lattice(box={self.box}, shape={self.shape}, size={self.size})'
+        return f'zml.Lattice3(box={self.box}, shape={self.shape}, size={self.size})'
 
-    core.use(None, 'lattice_save', c_void_p, c_char_p)
+    core.use(None, 'lat3_save', c_void_p, c_char_p)
 
     def save(self, path):
         """
@@ -14414,18 +12387,18 @@ class Lattice(HasHandle):
             3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
         """
         if path is not None:
-            core.lattice_save(self.handle, make_c_char_p(path))
+            core.lat3_save(self.handle, make_c_char_p(path))
 
-    core.use(None, 'lattice_load', c_void_p, c_char_p)
+    core.use(None, 'lat3_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
         序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
         """
         if path is not None:
-            core.lattice_load(self.handle, make_c_char_p(path))
+            core.lat3_load(self.handle, make_c_char_p(path))
 
-    core.use(c_double, 'lattice_lrange', c_void_p, c_size_t)
+    core.use(c_double, 'lat3_lrange', c_void_p, c_size_t)
 
     @property
     def box(self):
@@ -14434,32 +12407,32 @@ class Lattice(HasHandle):
             x0, y0, z0, x1, y1, z1
         其中 x0为x的最小值，x1为x的最大值; y和z类似
         """
-        lr = [core.lattice_lrange(self.handle, i) for i in range(3)]
+        lr = [core.lat3_lrange(self.handle, i) for i in range(3)]
         sh = self.shape
         sz = self.size
         rr = [lr[i] + sh[i] * sz[i] for i in range(3)]
         return lr + rr
 
-    core.use(c_double, 'lattice_shape', c_void_p, c_size_t)
+    core.use(c_double, 'lat3_shape', c_void_p, c_size_t)
 
     @property
     def shape(self):
         """
         返回每个网格在三个维度上的大小
         """
-        return [core.lattice_shape(self.handle, i) for i in range(3)]
+        return [core.lat3_shape(self.handle, i) for i in range(3)]
 
-    core.use(c_size_t, 'lattice_size', c_void_p, c_size_t)
+    core.use(c_size_t, 'lat3_size', c_void_p, c_size_t)
 
     @property
     def size(self):
         """
         返回三维维度上网格的数量<至少为1>
         """
-        return [core.lattice_size(self.handle, i) for i in range(3)]
+        return [core.lat3_size(self.handle, i) for i in range(3)]
 
-    core.use(c_double, 'lattice_get_center', c_void_p, c_size_t, c_size_t)
-    core.use(None, 'lattice_get_centers', c_void_p, c_void_p, c_void_p, c_void_p)
+    core.use(c_double, 'lat3_get_center', c_void_p, c_size_t, c_size_t)
+    core.use(None, 'lat3_get_centers', c_void_p, c_void_p, c_void_p, c_void_p)
 
     def get_center(self, index=None, x=None, y=None, z=None):
         """
@@ -14467,7 +12440,7 @@ class Lattice(HasHandle):
         """
         if index is not None:
             assert len(index) == 3
-            return [core.lattice_get_center(self.handle, index[i], i) for i in range(3)]
+            return [core.lat3_get_center(self.handle, index[i], i) for i in range(3)]
         else:
             if not isinstance(x, Vector):
                 x = Vector()
@@ -14475,10 +12448,10 @@ class Lattice(HasHandle):
                 y = Vector()
             if not isinstance(z, Vector):
                 z = Vector()
-            core.lattice_get_centers(self.handle, x.handle, y.handle, z.handle)
+            core.lat3_get_centers(self.handle, x.handle, y.handle, z.handle)
             return x, y, z
 
-    core.use(None, 'lattice_create', c_void_p, c_double, c_double, c_double,
+    core.use(None, 'lat3_create', c_void_p, c_double, c_double, c_double,
              c_double, c_double, c_double,
              c_double, c_double, c_double)
 
@@ -14489,471 +12462,27 @@ class Lattice(HasHandle):
         """
         assert len(box) == 6
         if not is_array(shape):
-            core.lattice_create(self.handle, *box, shape, shape, shape)
+            core.lat3_create(self.handle, *box, shape, shape, shape)
         else:
             assert len(shape) == 3
-            core.lattice_create(self.handle, *box, *shape)
+            core.lat3_create(self.handle, *box, *shape)
 
-    core.use(c_size_t, 'lattice_update', c_void_p, c_void_p, c_double)
-    core.use(c_size_t, 'lattice_update_tag', c_void_p, c_void_p, c_double, c_int)
-    core.use(c_size_t, 'lattice_update_cylinder', c_void_p, c_void_p, c_double)
-
-    def update(self, moles, lat_ratio=1.0, cylinder=False, tag=None):
-        """
-        更新网格上的分子。
-        如果cylinder为True，则首先对分子的位置进行坐标变换：
-            x：代表距离z轴的距离
-            y：0
-            z：z
-        然后根据变换后的位置，将分子放入格子
-        """
-        assert isinstance(moles, MoleVec)
-        if tag is not None:
-            assert not cylinder
-            return core.lattice_update_tag(self.handle, moles.handle, lat_ratio, tag)
-        if cylinder:
-            return core.lattice_update_cylinder(self.handle, moles.handle, lat_ratio)
-        else:
-            return core.lattice_update(self.handle, moles.handle, lat_ratio)
-
-    core.use(None, 'lattice_random_shuffle', c_void_p)
+    core.use(None, 'lat3_random_shuffle', c_void_p)
 
     def random_shuffle(self):
         """
-        随机更新格子里面的分子的顺序<随机洗牌>
+        随机更新格子里面的数据的顺序<随机洗牌>
         """
-        core.lattice_random_shuffle(self.handle)
+        core.lat3_random_shuffle(self.handle)
 
-    core.use(None, 'lattice_add_point', c_void_p, c_double, c_double, c_double, c_size_t)
+    core.use(None, 'lat3_add_point', c_void_p, c_double, c_double, c_double, c_size_t)
 
     def add_point(self, pos, index):
         """
         将位置在pos，序号为index的对象放入到格子里面<不会去查重复>
         """
         assert len(pos) == 3, f'pos = {pos}'
-        core.lattice_add_point(self.handle, *pos, index)
-
-
-class Region3(HasHandle):
-    """
-    定义一个三维的区域。数据被放在格子里面，便于高效率地访问 （用于dsmc）
-    """
-    core.use(c_void_p, 'new_region3')
-    core.use(None, 'del_region3', c_void_p)
-
-    def __init__(self, box=None, shape=None, value=None, handle=None):
-        super(Region3, self).__init__(handle, core.new_region3, core.del_region3)
-        if handle is None:
-            if box is not None and shape is not None:
-                self.create(box, shape, value)
-
-    def __str__(self):
-        return f'zml.Region3(box={self.box}, shape={self.shape}, size={self.size})'
-
-    core.use(None, 'region3_save', c_void_p, c_char_p)
-
-    def save(self, path):
-        """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
-        """
-        if path is not None:
-            core.region3_save(self.handle, make_c_char_p(path))
-
-    core.use(None, 'region3_load', c_void_p, c_char_p)
-
-    def load(self, path):
-        """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
-        """
-        if path is not None:
-            core.region3_load(self.handle, make_c_char_p(path))
-
-    core.use(c_double, 'region3_lrange', c_void_p, c_size_t)
-
-    @property
-    def box(self):
-        """
-        数据在三维空间内的范围，格式为：
-            x0, y0, z0, x1, y1, z1
-        其中 x0为x的最小值，x1为x的最大值; y和z类似
-        """
-        lr = [core.region3_lrange(self.handle, i) for i in range(3)]
-        sh = self.shape
-        sz = self.size
-        rr = [lr[i] + sh[i] * sz[i] for i in range(3)]
-        return lr + rr
-
-    core.use(c_double, 'region3_shape', c_void_p, c_size_t)
-
-    @property
-    def shape(self):
-        """
-        返回每个网格在三个维度上的大小
-        """
-        return [core.region3_shape(self.handle, i) for i in range(3)]
-
-    core.use(c_size_t, 'region3_size', c_void_p, c_size_t)
-
-    @property
-    def size(self):
-        """
-        返回三维维度上网格的数量<至少为1>
-        """
-        return [core.region3_size(self.handle, i) for i in range(3)]
-
-    core.use(c_double, 'region3_get_center', c_void_p, c_size_t, c_size_t)
-    core.use(None, 'region3_get_centers', c_void_p, c_void_p, c_void_p, c_void_p)
-
-    def get_center(self, index=None, x=None, y=None, z=None):
-        """
-        给定格子的中心 <当index为None的时候，则返回所有的格子的中心，并作为Vector返回>
-        """
-        if index is not None:
-            assert len(index) == 3
-            return [core.region3_get_center(self.handle, index[i], i) for i in range(3)]
-        else:
-            if not isinstance(x, Vector):
-                x = Vector()
-            if not isinstance(y, Vector):
-                y = Vector()
-            if not isinstance(z, Vector):
-                z = Vector()
-            core.region3_get_centers(self.handle, x.handle, y.handle, z.handle)
-            return x, y, z
-
-    core.use(None, 'region3_create', c_void_p, c_double, c_double, c_double,
-             c_double, c_double, c_double,
-             c_double, c_double, c_double)
-
-    def create(self, box, shape, value=None):
-        """
-        创建网格. 其中box为即将划分网格的区域的范围，参考box属性的注释.
-        shape为单个网格的大小(可以分别设置在三个维度上的尺寸)
-        """
-        assert len(box) == 6
-        if not is_array(shape):
-            shape = shape, shape, shape
-        assert len(shape) == 3
-        assert shape[0] > 0 and shape[1] > 0 and shape[2] > 0
-        core.region3_create(self.handle, *box, *shape)
-        if value is not None:
-            self.fill(value)
-
-    core.use(c_bool, 'region3_get', c_void_p, c_size_t, c_size_t, c_size_t)
-
-    def get(self, index):
-        """
-        给定的格子是否是True
-        """
-        assert len(index) == 3
-        return core.region3_get(self.handle, *index)
-
-    core.use(None, 'region3_set', c_void_p, c_size_t, c_size_t, c_size_t, c_bool)
-
-    def set(self, index, value):
-        """
-        给定的格子是否是True
-        """
-        assert len(index) == 3
-        core.region3_set(self.handle, *index, value)
-
-    core.use(None, 'region3_fill', c_void_p, c_bool)
-
-    def fill(self, value):
-        """
-        设置所有的格子的数据
-        """
-        core.region3_fill(self.handle, value)
-
-    core.use(None, 'region3_set_cube', c_void_p, c_double, c_double, c_double, c_double, c_double, c_double, c_bool,
-             c_bool)
-
-    def set_cube(self, box, value, inner=True):
-        """
-        将给定的六面体区域设置[内部]设置为value
-        """
-        assert len(box) == 6
-        core.region3_set_cube(self.handle, *box, inner, value)
-
-    def add_cube(self, box, inner=True):
-        self.set_cube(box=box, value=True, inner=inner)
-
-    def del_cube(self, box, inner=True):
-        self.set_cube(box=box, value=False, inner=inner)
-
-    core.use(None, 'region3_set_around_z', c_void_p, c_void_p, c_bool, c_bool)
-
-    def set_around_z(self, z2r=None, z=None, r=None, value=True, inner=True):
-        """
-        设置环绕z的一个轴对称的区域
-        """
-        if not isinstance(z2r, Interp1):
-            z2r = Interp1(x=z, y=r)
-        core.region3_set_around_z(self.handle, z2r.handle, inner, value)
-
-    core.use(c_bool, 'region3_contains', c_void_p, c_double, c_double, c_double)
-
-    def contains(self, *args):
-        """
-        给定的点是否包含在此区域内<给定的参数为一个点在三维空间的坐标>
-        """
-        if len(args) == 3:
-            pos = args
-        else:
-            assert len(args) == 1
-            pos = args[0]
-            assert len(pos) == 3
-        return core.region3_contains(self.handle, *pos)
-
-    core.use(None, 'region3_add_offset', c_void_p, c_double, c_double, c_double)
-
-    def add_offset(self, dx, dy, dz):
-        """
-        添加一个平移
-        """
-        core.region3_add_offset(self.handle, dx, dy, dz)
-
-    core.use(None, 'region3_clone', c_void_p, c_void_p)
-
-    def clone(self, other):
-        assert isinstance(other, Region3)
-        core.region3_clone(self.handle, other.handle)
-
-    core.use(None, 'region3_erase', c_void_p, c_void_p)
-
-    def erase(self, other):
-        assert isinstance(other, Region3)
-        core.region3_erase(self.handle, other.handle)
-
-    core.use(None, 'region3_get_inds', c_void_p, c_void_p)
-
-    def get_inds(self, buffer=None):
-        if not isinstance(buffer, UintVector):
-            buffer = UintVector()
-        core.region3_get_inds(self.handle, buffer.handle)
-        return buffer
-
-    core.use(None, 'region3_print_top', c_void_p, c_char_p)
-
-    def print_top(self, path):
-        """
-        将顶部一层的坐标打印到文件
-        """
-        if path is not None:
-            core.region3_print_top(self.handle, make_c_char_p(path))
-
-
-class ForceMap(HasHandle):
-    """
-    记录格子的受力 (用于dsmc)
-    """
-    core.use(c_void_p, 'new_forcemap')
-    core.use(None, 'del_forcemap', c_void_p)
-
-    def __init__(self, handle=None):
-        super(ForceMap, self).__init__(handle, core.new_forcemap, core.del_forcemap)
-
-    core.use(None, 'forcemap_save', c_void_p, c_char_p)
-
-    def save(self, path):
-        """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
-        """
-        if path is not None:
-            core.forcemap_save(self.handle, make_c_char_p(path))
-
-    core.use(None, 'forcemap_load', c_void_p, c_char_p)
-
-    def load(self, path):
-        """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
-        """
-        if path is not None:
-            core.forcemap_load(self.handle, make_c_char_p(path))
-
-    core.use(None, 'forcemap_clear', c_void_p)
-
-    def clear(self):
-        core.forcemap_clear(self.handle)
-
-    core.use(None, 'forcemap_get_centers', c_void_p, c_void_p, c_void_p, c_void_p, c_void_p)
-
-    def get_pos(self, reg3, x=None, y=None, z=None):
-        """
-        返回受力的点的位置
-        """
-        assert isinstance(reg3, Region3)
-        if x is None:
-            x = Vector()
-        if y is None:
-            y = Vector()
-        if z is None:
-            z = Vector()
-        core.forcemap_get_centers(self.handle, reg3.handle, x.handle, y.handle, z.handle)
-        return x, y, z
-
-    core.use(None, 'forcemap_get_forces', c_void_p, c_void_p, c_void_p, c_void_p)
-
-    def get_force(self, reg3, shear=None, normal=None):
-        """
-        返回受力的点的剪切力和法向应力
-        """
-        assert isinstance(reg3, Region3)
-        if shear is None:
-            shear = Vector()
-        if normal is None:
-            normal = Vector()
-        core.forcemap_get_forces(self.handle, reg3.handle, shear.handle, normal.handle)
-        return shear, normal
-
-    core.use(None, 'forcemap_erode', c_void_p, c_void_p, c_void_p, c_double,
-             c_void_p, c_double, c_size_t,
-             c_double,
-             c_void_p, c_void_p, c_void_p)
-
-    def erode(self, reg3, strength, normal_weight=0, moles=None, dist=None, nmax=99999999,
-              strength_modify_factor=0.5,
-              vx=None, vy=None, vz=None):
-        """
-        土体侵蚀<并记录侵蚀发生的位置>
-        """
-        assert 0.0 <= strength_modify_factor <= 1.0
-        assert isinstance(reg3, Region3), f'reg3={reg3}'
-        assert isinstance(strength, Interp3), f'strength={strength}'
-        hx = vx.handle if isinstance(vx, Vector) else 0
-        hy = vy.handle if isinstance(vy, Vector) else 0
-        hz = vz.handle if isinstance(vz, Vector) else 0
-        if moles is not None and dist is not None:
-            assert isinstance(moles, MoleVec)
-            assert dist > 0
-            core.forcemap_erode(self.handle, reg3.handle, strength.handle, normal_weight,
-                                moles.handle, dist, nmax,
-                                strength_modify_factor,
-                                hx, hy, hz)
-        else:
-            core.forcemap_erode(self.handle, reg3.handle, strength.handle, normal_weight,
-                                0, 0, nmax,
-                                strength_modify_factor,
-                                hx, hy, hz)
-
-
-class Statistic(HasHandle):
-    """
-    分子数据统计.（用于dsmc）
-    """
-    core.use(c_void_p, 'new_stat')
-    core.use(None, 'del_stat', c_void_p)
-
-    def __init__(self, handle=None):
-        super(Statistic, self).__init__(handle, core.new_stat, core.del_stat)
-
-    core.use(None, 'stat_save', c_void_p, c_char_p)
-
-    def save(self, path):
-        """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
-        """
-        if path is not None:
-            core.stat_save(self.handle, make_c_char_p(path))
-
-    core.use(None, 'stat_load', c_void_p, c_char_p)
-
-    def load(self, path):
-        """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
-        """
-        if path is not None:
-            core.stat_load(self.handle, make_c_char_p(path))
-
-    core.use(None, 'stat_update_vel', c_void_p, c_void_p, c_void_p, c_double)
-    core.use(None, 'stat_update_vel_cylinder', c_void_p, c_void_p, c_void_p, c_double)
-
-    def update_vel(self, lat, moles, relax_factor, cylinder=False):
-        """
-        更新各个格子内的速度; 如果cylinder为True，则首先对分子的速度进行转换：
-            计算径向速度，并作为x分量；y分量设置为0；z分量维持不变
-        然后再更新到格子；
-        """
-        assert isinstance(lat, Lattice)
-        assert isinstance(moles, MoleVec)
-        if cylinder:
-            core.stat_update_vel_cylinder(self.handle, lat.handle, moles.handle, relax_factor)
-        else:
-            core.stat_update_vel(self.handle, lat.handle, moles.handle, relax_factor)
-
-    core.use(None, 'stat_get_vel', c_void_p, c_void_p, c_void_p, c_void_p)
-
-    def get_vel(self, x=None, y=None, z=None):
-        """
-        返回中心的速度
-        """
-        if not isinstance(x, Vector):
-            x = Vector()
-        if not isinstance(y, Vector):
-            y = Vector()
-        if not isinstance(z, Vector):
-            z = Vector()
-        core.stat_get_vel(self.handle, x.handle, y.handle, z.handle)
-        return x, y, z
-
-    core.use(None, 'stat_update_den', c_void_p, c_void_p, c_void_p, c_double)
-    core.use(None, 'stat_update_den_cylinder', c_void_p, c_void_p, c_void_p, c_double)
-
-    def update_den(self, lat, moles, relax_factor, cylinder=False):
-        """
-        更新各个格子内的密度
-        """
-        assert isinstance(lat, Lattice)
-        assert isinstance(moles, MoleVec)
-        if cylinder:
-            core.stat_update_den_cylinder(self.handle, lat.handle, moles.handle, relax_factor)
-        else:
-            core.stat_update_den(self.handle, lat.handle, moles.handle, relax_factor)
-
-    core.use(None, 'stat_get_den', c_void_p, c_void_p)
-
-    def get_den(self, buffer=None):
-        """
-        返回密度
-        """
-        if not isinstance(buffer, Vector):
-            buffer = Vector()
-        core.stat_get_den(self.handle, buffer.handle)
-        return buffer
-
-    core.use(None, 'stat_update_pre', c_void_p, c_void_p, c_void_p, c_double)
-    core.use(None, 'stat_update_pre_cylinder', c_void_p, c_void_p, c_void_p, c_double)
-
-    def update_pre(self, lat, moles, relax_factor, cylinder=False):
-        """
-        更新各个格子内的压力
-        """
-        assert isinstance(lat, Lattice)
-        assert isinstance(moles, MoleVec)
-        if cylinder:
-            core.stat_update_pre_cylinder(self.handle, lat.handle, moles.handle, relax_factor)
-        else:
-            core.stat_update_pre(self.handle, lat.handle, moles.handle, relax_factor)
-
-    core.use(None, 'stat_get_pre', c_void_p, c_void_p)
-
-    def get_pre(self, buffer=None):
-        """
-        返回压力
-        """
-        if not isinstance(buffer, Vector):
-            buffer = Vector()
-        core.stat_get_pre(self.handle, buffer.handle)
-        return buffer
+        core.lat3_add_point(self.handle, *pos, index)
 
 
 if __name__ == "__main__":

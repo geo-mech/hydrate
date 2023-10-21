@@ -1,7 +1,7 @@
 # ** desc = '测试：纵向二维。浮力作用下气体运移成藏过程模拟'
 
 from zmlx import *
-from zmlx.alg.make_fname import make_fname
+from zmlx.filesys.make_fname import make_fname
 
 
 def create():

@@ -1,5 +1,5 @@
-from zmlx.alg.linspace import linspace
 from zml import Interp1
+from zmlx.alg.linspace import linspace
 
 
 def create_krf(faic=0.2, n=2.0, as_interp=False):

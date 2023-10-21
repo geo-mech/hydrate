@@ -9,7 +9,7 @@ def fludata(pt):
     """
     assert isinstance(pt, PTree)
 
-    if isinstance(pt.data, str):    # 读取文件
+    if isinstance(pt.data, str):  # 读取文件
         fname = pt.find(pt.data)
         if isfile(fname):
             data = Seepage.FluData()
@@ -18,7 +18,7 @@ def fludata(pt):
         else:
             return  # 读取文件失败
 
-    if isinstance(pt.data, list):   # 各个组分
+    if isinstance(pt.data, list):  # 各个组分
         data = Seepage.FluData()
         for item in pt.data:
             comp = fludata(as_ptree(item, path=pt.path))
@@ -47,4 +47,3 @@ def fludata(pt):
             data.set_attr(i, attrs[i])
     # 返回数据
     return data
-

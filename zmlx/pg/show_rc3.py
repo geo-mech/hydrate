@@ -6,10 +6,9 @@
 from zml import *
 from zmlx.alg.clamp import clamp
 from zmlx.geometry import rect_3d as rect3
-from zmlx.pg.plot3 import *
-from zmlx.pg.get_color import get_color
 from zmlx.pg.colormap import coolwarm
-import warnings
+from zmlx.pg.get_color import get_color
+from zmlx.pg.plot3 import *
 
 
 def show_rc3(rc3, color=None, alpha=None, cmap=None, caption=None, on_top=None,
@@ -130,7 +129,7 @@ def show_rc3(rc3, color=None, alpha=None, cmap=None, caption=None, on_top=None,
 
 
 def test():
-    from zmlx.alg.dfn_v3 import to_rc3, create_demo
+    from zmlx.geometry.dfn_v3 import to_rc3, create_demo
     import random
     rc3 = to_rc3(create_demo())
     color = []

@@ -1,7 +1,7 @@
 import sys
 import warnings
 
-from zml import gui, lic, app_data
+from zml import gui, lic
 from zmlx.filesys.has_permission import has_permission
 from zmlx.filesys.samefile import samefile
 from zmlx.filesys.show_fileinfo import show_fileinfo
@@ -33,7 +33,9 @@ class MainWindow(QtWidgets.QMainWindow):
                                 '.seepage': [show_seepage, 'Seepage Model File'],
                                 '.txt': [show_txt, 'Text file'],
                                 '.json': [show_txt, 'Json file'],
-                                '.xml': [show_txt, 'Xml file']
+                                '.xml': [show_txt, 'Xml file'],
+                                '.png': [self.open_image, 'Png file'],
+                                '.jpg': [self.open_image, 'Jpg file']
                                 }
 
         widget = QtWidgets.QWidget(self)
@@ -75,6 +77,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self.init_later_timer.timeout.connect(self.__init_later)
         self.init_later_timer.start(2000)
         self.update_widget_actions()  # 更新一些和控件相关的action的显示
+
+        try:
+            from zmlx.ui.data.get_path import get_path
+            fname = get_path('zml_icons', 'welcome.jpg')
+            if os.path.isfile(fname):
+                self.open_image(fname, caption='Welcome')
+        except:
+            pass
 
     def __init_later(self):
         """
@@ -151,6 +161,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.gui_api.add_func('set_cwd', self.set_cwd)
         self.gui_api.add_func('set_cwd_by_dialog', self.set_cwd_by_dialog)
         self.gui_api.add_func('open_text', self.open_text)
+        self.gui_api.add_func('open_image', self.open_image)
         self.gui_api.add_func('kill_thread', self.console_widget.kill_thread)
         self.gui_api.add_func('cls', self.console_widget.output_widget.clear)
 
@@ -355,7 +366,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.propress_bar.setVisible(visible)
             self.propress_label.setVisible(visible)
 
-    def open_code(self, fname):
+    def open_code(self, fname, caption=None):
         if not isinstance(fname, str):
             return
 
@@ -374,7 +385,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.tab_widget.setCurrentWidget(widget)
                 return
             else:
-                self.get_widget(type=CodeEdit, caption=os.path.basename(fname),
+                self.get_widget(type=CodeEdit,
+                                caption=os.path.basename(fname) if caption is None else caption,
                                 on_top=True,
                                 oper=lambda x: x.open(fname), icon='python.png')
                 if not app_data.has_tag_today('tip_shown_when_edit_code'):
@@ -382,7 +394,7 @@ class MainWindow(QtWidgets.QMainWindow):
                                                 '文件已打开，请点击工具栏上的<执行>按钮以执行')
                     app_data.add_tag_today('tip_shown_when_edit_code')
 
-    def open_text(self, fname):
+    def open_text(self, fname, caption=None):
         if not isinstance(fname, str):
             return
         if len(fname) > 0:
@@ -392,9 +404,21 @@ class MainWindow(QtWidgets.QMainWindow):
                     if samefile(fname, w.get_fname()):
                         self.tab_widget.setCurrentWidget(w)
                         return
-            self.get_widget(type=TextEdit, caption=os.path.basename(fname),
+            self.get_widget(type=TextEdit,
+                            caption=os.path.basename(fname) if caption is None else caption,
                             on_top=True,
                             oper=lambda x: x.set_fname(fname))
+
+    def open_image(self, fname, caption=None):
+        """
+        打开一个图片
+        """
+        if isinstance(fname, str):
+            if os.path.isfile(fname):
+                from zmlx.ui.Widgets.Image import ImageViewer
+                self.get_widget(type=ImageViewer, caption=os.path.basename(fname) if caption is None else caption,
+                                on_top=True,
+                                oper=lambda x: x.setImage(fname))
 
     def exec_current(self):
         if isinstance(self.tab_widget.currentWidget(), CodeEdit):
@@ -447,7 +471,7 @@ class MainWindow(QtWidgets.QMainWindow):
             return fpath
 
         filepath = get_open_file_name('please choose the file to open',
-                                      folder, f'{temp}All File(*.*)')
+                                      folder, f'All File(*.*);;{temp}')
         if os.path.isfile(filepath):
             self.open_file(filepath)
 

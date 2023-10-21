@@ -4,15 +4,15 @@
 
 import warnings
 
-from zml import TherFlowConfig
+from zml import Seepage
 
 
-def create():
+def create(name=None):
     # print('Warning: Carbon dioxide hydrate parameters not found, replaced by methane hydrate')
     specific_heat = 2100.0
-    return TherFlowConfig.FluProperty(den=919.7,
-                                      vis=1.0e30,
-                                      specific_heat=specific_heat)
+    return Seepage.FluDef(den=919.7,
+                          vis=1.0e30,
+                          specific_heat=specific_heat, name=name)
 
 
 def create_flu(*args, **kwargs):

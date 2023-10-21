@@ -1,5 +1,6 @@
-from zml import make_parent
 import warnings
+
+from zml import make_parent
 
 
 def append_file(filename, text):

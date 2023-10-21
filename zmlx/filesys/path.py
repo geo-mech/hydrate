@@ -1,4 +1,5 @@
 import os
+from zmlx.alg.fsize2str import fsize2str
 
 __all__ = ['dirname', 'basename', 'abspath', 'exists', 'isdir', 'isfile', 'getsize', 'getatime', 'getmtime', 'getctime',
            'samefile', 'join', 'getsize_str']
@@ -36,18 +37,4 @@ def getsize_str(filename):
     """
     将文件的大小，显示为字符串
     """
-    size = getsize(filename)
-    size /= 1024
-    if size < 2000:
-        return '%0.2f kb' % size
-
-    size /= 1024
-    if size < 2000:
-        return '%0.2f Mb' % size
-
-    size /= 1024
-    if size < 2000:
-        return '%0.2f Gb' % size
-    else:
-        size /= 1024
-        return '%0.2f Tb' % size
+    return fsize2str(getsize(filename))

@@ -1,4 +1,6 @@
 from zml import *
+from zmlx.config import capillary
+from zmlx.config.attr_keys import *
 
 
 def set_dt(model, dt):
@@ -225,6 +227,9 @@ def iterate(model, dt=None, solver=None, fa_s=None, fa_q=None, fa_k=None, cond_u
         for update in diffusions:
             update(model, dt)
 
+    # 执行毛管力相关的操作
+    capillary.iterate(model, dt)
+
     if has_solid:
         # 恢复备份的固体物质
         model.push_fluids(solid_buffer)
@@ -271,3 +276,242 @@ def iterate(model, dt=None, solver=None, fa_s=None, fa_q=None, fa_k=None, cond_u
         set_dt(model, dt)  # 修改dt为下一步建议使用的值
 
     return r1, r2
+
+
+def create(mesh=None, disable_update_den=False, disable_update_vis=False, disable_ther=False,
+           disable_heat_exchange=False, has_solid=False,
+           fludefs=None, reactions=None, gravity=None,
+           dt_max=None, dt_min=None, dt_ini=None, dv_relative=None, gr=None, caps=None,
+           **kwargs):
+    """
+    利用给定的网格来创建一个模型
+    """
+    model = Seepage()
+
+    if disable_update_den:
+        model.add_tag('disable_update_den')
+
+    if disable_update_vis:
+        model.add_tag('disable_update_vis')
+
+    if disable_ther:
+        model.add_tag('disable_ther')
+
+    if disable_heat_exchange:
+        model.add_tag('disable_heat_exchange')
+
+    if has_solid:
+        model.add_tag('has_solid')
+
+    # 添加流体的定义和反应的定义 (since 2023-4-5)
+    model.clear_fludefs()  # 首先，要清空已经存在的流体定义.
+    if fludefs is not None:
+        for flu in fludefs:
+            model.add_fludef(Seepage.FluDef.create(flu))
+
+    model.clear_reactions()  # 清空已经存在的定义.
+    if reactions is not None:
+        for r in reactions:
+            model.add_reaction(r)
+
+    # 设置重力
+    if gravity is not None:
+        assert len(gravity) == 3
+        model.gravity = gravity
+
+    if dt_max is not None:
+        set_dt_max(model, dt_max)
+
+    if dt_min is not None:
+        set_dt_min(model, dt_min)
+
+    if dt_ini is not None:
+        set_dt(model, dt_ini)
+
+    if dv_relative is not None:
+        set_dv_relative(model, dv_relative)
+
+    if gr is not None:
+        igr = model.add_gr(gr, need_id=True)
+    else:
+        igr = None
+
+    if mesh is not None:
+        add_mesh(model, mesh)
+
+    set_model(model, igr=igr, **kwargs)
+
+    # 添加毛管效应.
+    if caps is not None:
+        for cap in caps:
+            capillary.add(model, **cap)
+
+    return model
+
+
+def add_mesh(model, mesh):
+    """
+    根据给定的mesh，添加Cell和Face. 并对Cell和Face设置基本的属性.
+        对于Cell，仅仅设置位置和体积这两个属性.
+        对于Face，仅仅设置面积和长度这两个属性.
+    """
+    if mesh is not None:
+        ca_vol = cell_keys(model).vol
+        fa_s = face_keys(model).area
+        fa_l = face_keys(model).length
+
+        cell_n0 = model.cell_number
+
+        for c in mesh.cells:
+            cell = model.add_cell()
+            cell.pos = c.pos
+            cell.set_attr(ca_vol, c.vol)
+
+        for f in mesh.faces:
+            face = model.add_face(model.get_cell(f.link[0] + cell_n0), model.get_cell(f.link[1] + cell_n0))
+            face.set_attr(fa_s, f.area)
+            face.set_attr(fa_l, f.length)
+
+
+def set_model(model, porosity=0.1, pore_modulus=1000e6, denc=1.0e6, dist=0.1,
+              temperature=280.0, p=None, s=None, perm=1e-14, heat_cond=1.0,
+              sample_dist=None, pore_modulus_range=None, igr=None):
+    """
+    设置模型的网格，并顺便设置其初始的状态.
+    --
+    注意各个参数的含义：
+        porosity: 孔隙度；
+        pore_modulus：空隙的刚度，单位Pa；正常取值在100MPa到1000MPa之间；
+        denc：土体的密度和比热的乘积；假设土体密度2000kg/m^3，比热1000，denc取值就是2.0e6；
+        dist：一个单元包含土体和流体两个部分，dist是土体和流体换热的距离。这个值越大，换热就越慢。如果希望土体和流体的温度非常接近，
+            就可以把dist设置得比较小。一般，可以设置为网格大小的几分之一；
+        temperature: 温度K
+        p：压力Pa
+        s：各个相的饱和度，tuple或者list；
+        perm：渗透率 m^2
+        heat_cond: 热传导系数
+    -
+    注意：
+        每一个参数，都可以是一个具体的数值，或者是一个和x，y，z坐标相关的一个分布
+        ( 判断是否定义了obj.__call__这样的成员函数，有这个定义，则视为一个分布，否则是一个全场一定的值)
+    --
+    注意:
+        在使用这个函数之前，请确保Cell需要已经正确设置了位置，并且具有网格体积vol这个自定义属性；
+        对于Face，需要设置面积s和长度length这两个自定义属性。否则，此函数的执行会出现错误.
+
+    """
+    porosity = Field(porosity)
+    pore_modulus = Field(pore_modulus)
+    denc = Field(denc)
+    dist = Field(dist)
+    temperature = Field(temperature)
+    p = Field(p)
+    s = Field(s)
+    perm = Field(perm)
+    heat_cond = Field(heat_cond)
+    igr = Field(igr)
+
+    for cell in model.cells:
+        assert isinstance(cell, Seepage.Cell)
+        pos = cell.pos
+        set_cell(cell, porosity=porosity(*pos), pore_modulus=pore_modulus(*pos), denc=denc(*pos),
+                 temperature=temperature(*pos), p=p(*pos), s=s(*pos),
+                 pore_modulus_range=pore_modulus_range, dist=dist(*pos))
+
+    for face in model.faces:
+        assert isinstance(face, Seepage.Face)
+        p0 = face.get_cell(0).pos
+        p1 = face.get_cell(1).pos
+        set_face(face, perm=get_average_perm(p0, p1, perm, sample_dist),
+                 heat_cond=get_average_perm(p0, p1, heat_cond, sample_dist), igr=igr(*face.pos))
+
+
+def set_cell(cell, pos=None, vol=None, porosity=0.1, pore_modulus=1000e6, denc=1.0e6, dist=0.1,
+             temperature=280.0, p=1.0, s=None, pore_modulus_range=None):
+    """
+    设置Cell的初始状态.
+    """
+    assert isinstance(cell, Seepage.Cell)
+    ca = cell_keys(cell.model)
+    fa = flu_keys(cell.model)
+
+    if pos is not None:
+        cell.pos = pos
+    else:
+        pos = cell.pos
+
+    if vol is not None:
+        cell.set_attr(ca['vol'], vol)
+    else:
+        vol = cell.get_attr(ca['vol'])
+        assert vol is not None
+
+    cell.set_ini(ca_mc=ca['mc'], ca_t=ca['temperature'],
+                 fa_t=fa['temperature'], fa_c=fa['specific_heat'],
+                 pos=pos, vol=vol, porosity=porosity,
+                 pore_modulus=pore_modulus,
+                 denc=denc,
+                 temperature=temperature, p=p, s=s,
+                 pore_modulus_range=pore_modulus_range
+                 )
+
+    cell.set_attr(ca['fv0'], cell.fluid_vol)
+    cell.set_attr(ca['g_heat'], vol / (dist ** 2))
+
+
+def set_face(face, area=None, length=None, perm=None, heat_cond=None, igr=None):
+    """
+    对一个Face进行配置
+    """
+    assert isinstance(face, Seepage.Face)
+    fa = face_keys(face.model)
+
+    if area is not None:
+        face.set_attr(fa['area'], area)
+    else:
+        area = face.get_attr(fa['area'])
+        assert area is not None
+
+    if length is not None:
+        face.set_attr(fa['length'], length)
+    else:
+        length = face.get_attr(fa['length'])
+        assert length is not None
+
+    assert area > 0 and length > 0
+
+    if perm is not None:
+        face.set_attr(fa['perm'], perm)
+    else:
+        perm = face.get_attr(fa['perm'])
+        assert perm is not None
+
+    g0 = area * perm / length
+    face.cond = g0
+
+    face.set_attr(fa['g0'], g0)
+
+    if heat_cond is not None:
+        face.set_attr(fa['g_heat'], area * heat_cond / length)
+
+    if igr is not None:
+        face.set_attr(fa['igr'], igr)
+
+
+def add_cell(model, *args, **kwargs):
+    """
+    添加一个新的Cell，并返回Cell对象
+    """
+    cell = model.add_cell()
+    set_cell(cell, *args, **kwargs)
+    return cell
+
+
+def add_face(model, cell0, cell1, *args, **kwargs):
+    """
+    添加一个Face，并且返回
+    """
+    face = model.add_face(cell0, cell1)
+    set_face(face, *args, **kwargs)
+    return face
+

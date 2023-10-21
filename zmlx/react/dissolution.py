@@ -1,11 +1,7 @@
+from zml import Seepage, create_dict
 
 
-
-from zmlx import *
-from zmlx.alg.make_index import make_index
-
-
-def create(igas, igas_in_liq, iliq, ca_sol, fa_t, fa_c, rate=1.0):
+def create(gas, gas_in_liq, liq, ca_sol, rate=1.0, fa_t=None, fa_c=None):
     """
     创建物质 <比如盐或者气体> 在液体中中的溶解反应 <可逆的过程>，溶解度由ca_sol指定，且和温度压力无关;
         igas：自由气的ID
@@ -16,31 +12,29 @@ def create(igas, igas_in_liq, iliq, ca_sol, fa_t, fa_c, rate=1.0):
 
     注：要求流体的温度在几百K的范围内；否则，可能会对定义的溶解度造成影响；
     """
+    assert 0 < rate
 
-    r = Reaction()
+    if fa_t is None:
+        fa_t = 'temperature'
 
-    assert 0 <= fa_t != fa_c and fa_c >= 0
+    if not isinstance(fa_t, str):
+        if fa_t > 9999:
+            fa_t = 'temperature'
 
-    r.add_component(index=make_index(igas), weight=-1.0, fa_t=fa_t, fa_c=fa_c)  # 左侧物质
-    r.add_component(index=make_index(igas_in_liq), weight=1.0, fa_t=fa_t, fa_c=fa_c)  # 右侧物质
+    if fa_c is None:
+        fa_c = 'specific_heat'
 
-    r.temp = 280
-    r.heat = 0
-
-    r.set_p2t(p=[0, 1e8], t=[280, 280])
+    if not isinstance(fa_c, str):
+        if fa_c > 9999:
+            fa_c = 'specific_heat'
 
     # 溶解量增大1，则teq增加1e8，则T-teq减小1e8，q减小，不利于溶解
-    r.add_inhibitor(sol=igas_in_liq, liq=iliq, c=[0, 1], t=[0, 1e8])
-
     # 溶解度增大1，则teq降低1e8，则T-teq升高1e8，q增大，促进溶解
-    r.idt = ca_sol
-    r.wdt = -1.0e8
-
     # 设置当<虚拟>温度升高的时候，促进溶解
-    assert 0 < rate
-    r.set_t2q(t=[-1e8, 1e8], q=[-rate, rate])
-
-    return r
+    return {'components': [create_dict(kind=gas, weight=-1.0, fa_t=fa_t, fa_c=fa_c),
+                           create_dict(kind=gas_in_liq, weight=1.0, fa_t=fa_t, fa_c=fa_c)], 'temp': 280, 'heat': 0,
+            'p2t': ([0, 1e8], [280, 280]), 'inhibitors': [create_dict(sol=gas_in_liq, liq=liq, c=[0, 1], t=[0, 1e8])],
+            'idt': ca_sol, 'wdt': -1.0e8, 't2q': ([-1e8, 1e8], [-rate, rate])}
 
 
 def test():
@@ -66,8 +60,7 @@ def test():
     c.set_attr(0, 0.1)
 
     print(c.get_fluid(0).mass, c.get_fluid(1).get_component(0).mass, c.get_fluid(1).get_component(1).mass)
-    r = create(igas=0, igas_in_liq=(1, 1), iliq=1, ca_sol=0, fa_c=fa_c, fa_t=fa_t)
-
+    r = model.add_reaction(create(gas=0, gas_in_liq=(1, 1), liq=1, ca_sol=0, fa_c=fa_c, fa_t=fa_t))
     for step in range(20):
         r.react(model, dt=0.1)
         print(c.get_fluid(0).mass, c.get_fluid(1).get_component(0).mass, c.get_fluid(1).get_component(1).mass)

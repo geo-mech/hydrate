@@ -1,6 +1,7 @@
 import timeit
 
 from zml import gui, time2str
+from zmlx.filesys.samefile import samefile
 from zmlx.ui.BreakPoint import BreakPoint
 from zmlx.ui.CodeEdit import CodeEdit
 from zmlx.ui.Config import *
@@ -8,7 +9,6 @@ from zmlx.ui.ConsoleOutput import ConsoleOutput
 from zmlx.ui.ConsoleThread import ConsoleThread
 from zmlx.ui.SharedValue import SharedValue
 from zmlx.ui.alg.add_code_history import add_code_history
-from zmlx.filesys.samefile import samefile
 
 
 class ConsoleWidget(QtWidgets.QWidget):

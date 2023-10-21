@@ -5,10 +5,10 @@
 import math
 import warnings
 
-from zml import Interp2, TherFlowConfig
+from zml import Interp2, Seepage
 
 
-def create(tmin=272.0, tmax=300.0, pmin=1e6, pmax=40e6):
+def create(t_min=272.0, t_max=300.0, p_min=1e6, p_max=40e6, name=None):
     """
     创建液体水的参数
 
@@ -24,29 +24,29 @@ def create(tmin=272.0, tmax=300.0, pmin=1e6, pmax=40e6):
     kg · K )]，即令1公斤的物质的温度上升1开尔文所需的能量。
     """
 
-    assert 269 < tmin < tmax < 350
-    assert 0.01e6 < pmin < pmax < 50e6
+    assert 269 < t_min < t_max < 350
+    assert 0.01e6 < p_min < p_max < 50e6
 
     def get_density(P, T):
-        T = max(tmin, min(tmax, T))
+        T = max(t_min, min(t_max, T))
         return 999.8 * (1.0 + (P / 2000.0E6)) * (1.0 - 0.0002 * math.pow((T - 277.0) / 5.6, 2))
 
     def get_viscosity(P, T):
-        T = max(tmin, min(tmax, T))
+        T = max(t_min, min(t_max, T))
         return 2.0E-6 * math.exp(1808.5 / T)
 
     def create_density():
         den = Interp2()
-        den.create(pmin, 0.1e6, pmax, tmin, 1, tmax, get_density)
+        den.create(p_min, 0.1e6, p_max, t_min, 1, t_max, get_density)
         return den
 
     def create_viscosity():
         vis = Interp2()
-        vis.create(pmin, 0.1e6, pmax, tmin, 1, tmax, get_viscosity)
+        vis.create(p_min, 0.1e6, p_max, t_min, 1, t_max, get_viscosity)
         return vis
 
     specific_heat = 4200.0
-    return TherFlowConfig.FluProperty(den=create_density(), vis=create_viscosity(), specific_heat=specific_heat)
+    return Seepage.FluDef(den=create_density(), vis=create_viscosity(), specific_heat=specific_heat, name=name)
 
 
 def create_flu(*args, **kwargs):

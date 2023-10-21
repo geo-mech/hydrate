@@ -1,9 +1,7 @@
-
-
-
 import os
-from zmlx.alg.make_fname import make_fname
 import warnings
+
+from zmlx.filesys.make_fname import make_fname
 
 
 class SaveManager:
