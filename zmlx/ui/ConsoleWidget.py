@@ -130,8 +130,11 @@ class ConsoleWidget(QtWidgets.QWidget):
                 return
         if os.path.isfile(fname):
             add_code_history(fname)
-            rel = os.path.relpath(fname)
-            self.text_when_beg = f"Start: {fname if len(fname) < len(rel) * 2 else rel}"
+            try:
+                rel = os.path.relpath(fname)    # 当工作路径和fname不再同一个磁盘的时候，会触发异常
+                self.text_when_beg = f"Start: {fname if len(fname) < len(rel) * 2 else rel}"
+            except:
+                self.text_when_beg = f"Start: {fname}"
             self.text_when_end = 'Done'
             self.workspace['__file__'] = fname
             app_data.log(f'execute file: {fname}')  # since 230923
