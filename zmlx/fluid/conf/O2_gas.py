@@ -6,8 +6,8 @@
 Specific Heat of Oxigen Gas  from:
 https://www.engineeringtoolbox.com/oxygen-d_978.html
 """
-from Fluids.O2_density import *
-from Fluids.O2_viscosity import *
+from zmlx.fluid.conf.gas_density.O2_density import *
+from zmlx.fluid.conf.gas_viscosity.O2_viscosity import *
 from zml import Interp2, TherFlowConfig, data_version
 
 def create_flu(tmin=280, tmax=700, pmin=1.0e6, pmax=20.0e6):
