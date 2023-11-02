@@ -5,8 +5,8 @@
 Specific Heat of Oxigen Gas  from:
 https://www.engineeringtoolbox.com/carbon-monoxide-d_1416.html
 """
-from Fluids.CO_density import *
-from Fluids.CO_viscosity import *
+from zmlx.fluid.conf.gas_density.CO_density import *
+from zmlx.fluid.conf.gas_viscosity.CO_viscosity import *
 from zml import Interp2, TherFlowConfig, data_version
 
 def create_flu(tmin=280, tmax=700, pmin=1.0e6, pmax=20.0e6):
