@@ -1262,8 +1262,8 @@ class Hf3Alg:
     core.use(None, 'hf3_alg_face_ini', c_void_p, c_size_t, c_size_t, c_size_t, c_size_t, c_size_t, c_double)
 
     @staticmethod
-    def face_ini(seepage, ibeg, count, fa_s, fa_l, fa_tag, hf_perm):
-        core.hf3_alg_face_ini(seepage.handle, ibeg, count, fa_s, fa_l, fa_tag, hf_perm)
+    def face_ini(seepage, i_beg, i_end, fa_s, fa_l, fa_tag, hf_perm):
+        core.hf3_alg_face_ini(seepage.handle, i_beg, i_end, fa_s, fa_l, fa_tag, hf_perm)
 
 
 class Sigma3:

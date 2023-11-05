@@ -187,6 +187,7 @@ def iterate(model, dt=None, solver=None, fa_s=None, fa_q=None, fa_k=None, cond_u
                          relax_factor=1.0, min=1.0e-7, max=1.0)
 
     if model.injector_number > 0:
+        # 实施流体的注入操作.
         model.apply_injectors(dt)
 
     has_solid = model.has_tag('has_solid')
@@ -196,14 +197,14 @@ def iterate(model, dt=None, solver=None, fa_s=None, fa_q=None, fa_k=None, cond_u
         model.pop_fluids(solid_buffer)
 
     if model.gr_number > 0:
-        # 此时，各个Face的导流系数是可变的.
+        # 此时，各个Face的导流系数是可变的 (并且，这里由于已经弹出了固体，因此计算体积使用的是流体的数值).
         # 注意：
-        #   在建模的时候，务必要设置Cell的v0属性，Face的g0属性和ikr属性，并且，在model中，应该有相应的kr和它对应。
-        #   为了不和真正流体的kr混淆，这个Face的ikr，应该大于流体的数量。
-        v0 = model.reg_cell_key('fv0')
-        g0 = model.reg_face_key('g0')
-        igr = model.reg_face_key('igr')
-        model.update_cond(v0=v0, g0=g0, krf=igr, relax_factor=0.3)
+        #     在建模的时候，务必要设置Cell的v0属性，Face的g0属性和igr属性，并且，在model中，应该有相应的gr和它对应。
+        ca_v0 = model.get_cell_key('fv0')
+        fa_g0 = model.get_face_key('g0')
+        fa_igr = model.get_face_key('igr')
+        if ca_v0 is not None and fa_g0 is not None and fa_igr is not None:
+            model.update_cond(ca_v0=ca_v0, fa_g0=fa_g0, fa_igr=fa_igr, relax_factor=0.3)
 
     # 施加cond的更新操作
     if cond_updaters is not None:
@@ -278,13 +279,16 @@ def iterate(model, dt=None, solver=None, fa_s=None, fa_q=None, fa_k=None, cond_u
     return r1, r2
 
 
-def create(mesh=None, disable_update_den=False, disable_update_vis=False, disable_ther=False,
-           disable_heat_exchange=False, has_solid=False,
-           fludefs=None, reactions=None, gravity=None,
-           dt_max=None, dt_min=None, dt_ini=None, dv_relative=None, gr=None, caps=None,
+def create(mesh=None,
+           disable_update_den=False, disable_update_vis=False, disable_ther=False, disable_heat_exchange=False,
+           fludefs=None, has_solid=False, reactions=None,
+           gravity=None,
+           dt_max=None, dt_min=None, dt_ini=None, dv_relative=None,
+           gr=None, bk_fv=None, bk_g=None, caps=None,
            **kwargs):
     """
-    利用给定的网格来创建一个模型
+    利用给定的网格来创建一个模型.
+        其中gr用来计算孔隙体积变化之后的渗透率的改变量.  gr的类型是一个Interp1.
     """
     model = Seepage()
 
@@ -339,7 +343,13 @@ def create(mesh=None, disable_update_den=False, disable_update_vis=False, disabl
     if mesh is not None:
         add_mesh(model, mesh)
 
-    set_model(model, igr=igr, **kwargs)
+    if bk_fv is None:   # 未给定数值，则自动设定
+        bk_fv = model.gr_number > 0
+
+    if bk_g is None:   # 未给定数值，则自动设定
+        bk_g = model.gr_number > 0
+
+    set_model(model, igr=igr, bk_fv=bk_fv, bk_g=bk_g, **kwargs)
 
     # 添加毛管效应.
     if caps is not None:
@@ -375,7 +385,7 @@ def add_mesh(model, mesh):
 
 def set_model(model, porosity=0.1, pore_modulus=1000e6, denc=1.0e6, dist=0.1,
               temperature=280.0, p=None, s=None, perm=1e-14, heat_cond=1.0,
-              sample_dist=None, pore_modulus_range=None, igr=None):
+              sample_dist=None, pore_modulus_range=None, igr=None, bk_fv=True, bk_g=True):
     """
     设置模型的网格，并顺便设置其初始的状态.
     --
@@ -410,24 +420,26 @@ def set_model(model, porosity=0.1, pore_modulus=1000e6, denc=1.0e6, dist=0.1,
     perm = Field(perm)
     heat_cond = Field(heat_cond)
     igr = Field(igr)
+    bk_fv = Field(bk_fv)
+    bk_g = Field(bk_g)
 
     for cell in model.cells:
         assert isinstance(cell, Seepage.Cell)
         pos = cell.pos
         set_cell(cell, porosity=porosity(*pos), pore_modulus=pore_modulus(*pos), denc=denc(*pos),
                  temperature=temperature(*pos), p=p(*pos), s=s(*pos),
-                 pore_modulus_range=pore_modulus_range, dist=dist(*pos))
+                 pore_modulus_range=pore_modulus_range, dist=dist(*pos), bk_fv=bk_fv(*pos))
 
     for face in model.faces:
         assert isinstance(face, Seepage.Face)
         p0 = face.get_cell(0).pos
         p1 = face.get_cell(1).pos
         set_face(face, perm=get_average_perm(p0, p1, perm, sample_dist),
-                 heat_cond=get_average_perm(p0, p1, heat_cond, sample_dist), igr=igr(*face.pos))
+                 heat_cond=get_average_perm(p0, p1, heat_cond, sample_dist), igr=igr(*face.pos), bk_g=bk_g(*face.pos))
 
 
 def set_cell(cell, pos=None, vol=None, porosity=0.1, pore_modulus=1000e6, denc=1.0e6, dist=0.1,
-             temperature=280.0, p=1.0, s=None, pore_modulus_range=None):
+             temperature=280.0, p=1.0, s=None, pore_modulus_range=None, bk_fv=True):
     """
     设置Cell的初始状态.
     """
@@ -455,11 +467,12 @@ def set_cell(cell, pos=None, vol=None, porosity=0.1, pore_modulus=1000e6, denc=1
                  pore_modulus_range=pore_modulus_range
                  )
 
-    cell.set_attr(ca['fv0'], cell.fluid_vol)
+    if bk_fv:   # 备份流体体积
+        cell.set_attr(ca['fv0'], cell.fluid_vol)
     cell.set_attr(ca['g_heat'], vol / (dist ** 2))
 
 
-def set_face(face, area=None, length=None, perm=None, heat_cond=None, igr=None):
+def set_face(face, area=None, length=None, perm=None, heat_cond=None, igr=None, bk_g=True):
     """
     对一个Face进行配置
     """
@@ -489,7 +502,8 @@ def set_face(face, area=None, length=None, perm=None, heat_cond=None, igr=None):
     g0 = area * perm / length
     face.cond = g0
 
-    face.set_attr(fa['g0'], g0)
+    if bk_g:
+        face.set_attr(fa['g0'], g0)
 
     if heat_cond is not None:
         face.set_attr(fa['g_heat'], area * heat_cond / length)

@@ -18,7 +18,11 @@ from zmlx.react.alpha.salinity import data as salinity_c2t
 class Config:
     def __init__(self, has_co2=False, has_steam=False, has_inh=False, has_ch4_in_liq=False, inh_diff_rate=None,
                  ch4_diff_rate=None,
-                 support_ch4_hyd_diss=True, support_ch4_hyd_form=True, krf=None):
+                 support_ch4_hyd_diss=True, support_ch4_hyd_form=True, gr=None):
+        """
+        创建.
+            注意，当gr为None的时候，将自动创建一个 (从0到1之间，且y不大于1).
+        """
         self.has_co2 = has_co2
         self.has_steam = has_steam
         self.has_inh = has_inh
@@ -27,7 +31,7 @@ class Config:
         self.ch4_diff_rate = ch4_diff_rate
         self.support_ch4_hyd_diss = support_ch4_hyd_diss
         self.support_ch4_hyd_form = support_ch4_hyd_form
-        self.krf = krf
+        self.gr = create_krf(as_interp=True) if gr is None else gr
 
     @property
     def fludefs(self):
@@ -99,13 +103,6 @@ class Config:
             result.append(dissolution.create(gas='ch4', gas_in_liq='ch4_in_liq', liq='liq', ca_sol='n_ch4_sol'))
 
         return result
-
-    @property
-    def gr(self):
-        if self.krf is None:
-            return create_krf(as_interp=True)
-        else:
-            return self.krf
 
     @property
     def caps(self):

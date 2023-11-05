@@ -514,9 +514,9 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
     app = QtWidgets.QApplication(sys.argv)
 
     splash_fig = load_pixmap('splash.jpg')
-    if splash_fig is not None:
+    if splash_fig is not None and app_data.getenv('disable_splash', default='False') != 'True':
         splash = MySplashScreen()
-        splash.setPixmap(load_pixmap('splash.jpg'))
+        splash.setPixmap(splash_fig)
         splash.show()
         app.processEvents()  # 处理主进程事件
     else:

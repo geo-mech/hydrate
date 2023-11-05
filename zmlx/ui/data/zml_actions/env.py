@@ -15,6 +15,7 @@ def init(widget):
                                                                   'InheritPriority', 'NormalPriority',
                                                                   'HighPriority', 'HighestPriority'])
     widget.add(label='禁用计时器', key='disable_timer', items=['False', 'True'])
+    widget.add(label='disable_splash', key='disable_splash', items=['False', 'True'])
 
 
 gui.get_widget(type=MultiLineEdit, caption='设置Env',

@@ -1,7 +1,12 @@
 from zmlx.alg.clamp import clamp
 
 
-def create(left, right, temp, heat, rate, fa_t=None, fa_c=None, l2r=True, r2l=True, p2t=None,
+# 231031: 将rate的默认值设置为None (在t2q为None的时候，必须设置rate)
+
+version = 231031
+
+
+def create(left, right, temp, heat, rate=None, fa_t=None, fa_c=None, l2r=True, r2l=True, p2t=None,
            t2q=None):
     """
     创建吸热的化学反应（以及其逆过程）。其中左侧的物质转化为右侧的物质会吸收热量。温度的升高会促使这种反应的发生.
@@ -55,9 +60,6 @@ def create(left, right, temp, heat, rate, fa_t=None, fa_c=None, l2r=True, r2l=Tr
     # 在参考温度下，反应吸收的热量
     assert heat > 0
 
-    # 反应的速率
-    assert rate > 0
-
     if p2t is not None:
         # 设置温度压力曲线 (如果给定的话)
         data['p2t'] = p2t
@@ -75,6 +77,8 @@ def create(left, right, temp, heat, rate, fa_t=None, fa_c=None, l2r=True, r2l=Tr
         assert len(t) == len(q)
         assert len(t) >= 3
     else:
+        # 反应的速率
+        assert rate > 0
         dt_max = 1.0e3
         t = [-dt_max, 0, dt_max]
         q = [-rate * dt_max, 0, rate * dt_max]

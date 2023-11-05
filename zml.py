@@ -1485,6 +1485,14 @@ def parse_fid3(fluid_id):
         return fluid_id, 99999999, 99999999
 
 
+def _check_ipath(path, obj=None):
+    """
+    在读取文件的时候，对输入的文件名进行检查. 其中obj是读取文件的对象
+    """
+    assert isinstance(path, str), f'The given path <{path}> is not string while load {type(obj)}'
+    assert os.path.isfile(path), f'The given path <{path}> is not file while load {type(obj)}'
+
+
 def get_average_perm(p0, p1, get_perm, sample_dist=None, depth=0):
     """
     返回两个点之间的平均的渗透率<或者平均的导热系数>
@@ -1809,6 +1817,7 @@ class Vector(HasHandle):
         序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
         """
         if path is not None:
+            _check_ipath(path, self)
             core.vf_load(self.handle, make_c_char_p(path))
 
     core.use(c_size_t, 'vf_size', c_void_p)
@@ -1959,6 +1968,7 @@ class IntVector(HasHandle):
         序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
         """
         if path is not None:
+            _check_ipath(path, self)
             core.vi_load(self.handle, make_c_char_p(path))
 
     core.use(c_size_t, 'vi_size', c_void_p)
@@ -2054,6 +2064,7 @@ class UintVector(HasHandle):
         序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
         """
         if path is not None:
+            _check_ipath(path, self)
             core.vui_load(self.handle, make_c_char_p(path))
 
     core.use(None, 'vui_print', c_void_p, c_char_p)
@@ -2348,6 +2359,7 @@ class Matrix2(HasHandle):
         序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
         """
         if path is not None:
+            _check_ipath(path, self)
             core.mat2_load(self.handle, make_c_char_p(path))
 
     core.use(c_size_t, 'mat2_size_0', c_void_p)
@@ -2443,6 +2455,7 @@ class Matrix3(HasHandle):
         序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
         """
         if path is not None:
+            _check_ipath(path, self)
             core.mat3_load(self.handle, make_c_char_p(path))
 
     core.use(c_size_t, 'mat3_size_0', c_void_p)
@@ -2559,6 +2572,7 @@ class Tensor3Matrix3(HasHandle):
         序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
         """
         if path is not None:
+            _check_ipath(path, self)
             core.ts3mat3_load(self.handle, make_c_char_p(path))
 
     core.use(c_size_t, 'ts3mat3_size_0', c_void_p)
@@ -2663,6 +2677,7 @@ class Interp1(HasHandle):
         序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
         """
         if path is not None:
+            _check_ipath(path, self)
             core.interp1_load(self.handle, make_c_char_p(path))
 
     core.use(None, 'interp1_write_fmap', c_void_p, c_void_p, c_char_p)
@@ -2816,6 +2831,7 @@ class Interp2(HasHandle):
         序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
         """
         if path is not None:
+            _check_ipath(path, self)
             core.interp2_load(self.handle, make_c_char_p(path))
 
     core.use(None, 'interp2_write_fmap', c_void_p, c_void_p, c_char_p)
@@ -2941,6 +2957,7 @@ class Interp3(HasHandle):
         序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
         """
         if path is not None:
+            _check_ipath(path, self)
             core.interp3_load(self.handle, make_c_char_p(path))
 
     core.use(None, 'interp3_write_fmap', c_void_p, c_void_p, c_char_p)
@@ -3140,6 +3157,7 @@ class FileMap(HasHandle):
         序列化读取
         """
         if path is not None:
+            _check_ipath(path, self)
             core.fmap_load(self.handle, make_c_char_p(path))
 
     core.use(None, 'fmap_get_data', c_void_p, c_void_p)
@@ -3201,6 +3219,7 @@ class Array2(HasHandle):
         序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
         """
         if path is not None:
+            _check_ipath(path, self)
             core.array2_load(self.handle, make_c_char_p(path))
 
     core.use(None, 'array2_write_fmap', c_void_p, c_void_p, c_char_p)
@@ -3309,6 +3328,7 @@ class Array3(HasHandle):
         序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
         """
         if path is not None:
+            _check_ipath(path, self)
             core.array3_load(self.handle, make_c_char_p(path))
 
     core.use(None, 'array3_write_fmap', c_void_p, c_void_p, c_char_p)
@@ -3423,6 +3443,7 @@ class Tensor2(HasHandle):
         序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
         """
         if path is not None:
+            _check_ipath(path, self)
             core.tensor2_load(self.handle, make_c_char_p(path))
 
     core.use(None, 'tensor2_write_fmap', c_void_p, c_void_p, c_char_p)
@@ -3593,6 +3614,7 @@ class Tensor3(HasHandle):
         序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
         """
         if path is not None:
+            _check_ipath(path, self)
             core.tensor3_load(self.handle, make_c_char_p(path))
 
     core.use(None, 'tensor3_write_fmap', c_void_p, c_void_p, c_char_p)
@@ -3744,6 +3766,7 @@ class Tensor2Interp2(HasHandle):
         序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
         """
         if path is not None:
+            _check_ipath(path, self)
             core.tensor2interp2_load(self.handle, make_c_char_p(path))
 
     core.use(None, 'tensor2interp2_write_fmap', c_void_p, c_void_p, c_char_p)
@@ -3851,6 +3874,7 @@ class Tensor3Interp3(HasHandle):
         序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
         """
         if path is not None:
+            _check_ipath(path, self)
             core.tensor3interp3_load(self.handle, make_c_char_p(path))
 
     core.use(None, 'tensor3interp3_write_fmap', c_void_p, c_void_p, c_char_p)
@@ -3974,6 +3998,7 @@ class Coord2(HasHandle):
         序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
         """
         if path is not None:
+            _check_ipath(path, self)
             core.coord2_load(self.handle, make_c_char_p(path))
 
     core.use(None, 'coord2_write_fmap', c_void_p, c_void_p, c_char_p)
@@ -4093,6 +4118,7 @@ class Coord3(HasHandle):
         序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
         """
         if path is not None:
+            _check_ipath(path, self)
             core.coord3_load(self.handle, make_c_char_p(path))
 
     core.use(None, 'coord3_write_fmap', c_void_p, c_void_p, c_char_p)
@@ -4635,6 +4661,7 @@ class Mesh3(HasHandle):
         序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
         """
         if path is not None:
+            _check_ipath(path, self)
             core.mesh3_load(self.handle, make_c_char_p(path))
 
     core.use(c_size_t, 'mesh3_get_node_number', c_void_p)
@@ -4964,13 +4991,13 @@ class Alg:
 
 
 class LinearExpr(HasHandle):
-    core.use(c_void_p, 'new_linear_expr')
-    core.use(None, 'del_linear_expr', c_void_p)
+    core.use(c_void_p, 'new_lexpr')
+    core.use(None, 'del_lexpr', c_void_p)
 
     def __init__(self, handle=None):
-        super(LinearExpr, self).__init__(handle, core.new_linear_expr, core.del_linear_expr)
+        super(LinearExpr, self).__init__(handle, core.new_lexpr, core.del_lexpr)
 
-    core.use(None, 'linear_expr_save', c_void_p, c_char_p)
+    core.use(None, 'lexpr_save', c_void_p, c_char_p)
 
     def save(self, path):
         """
@@ -4980,26 +5007,27 @@ class LinearExpr(HasHandle):
             3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
         """
         if path is not None:
-            core.linear_expr_save(self.handle, make_c_char_p(path))
+            core.lexpr_save(self.handle, make_c_char_p(path))
 
-    core.use(None, 'linear_expr_load', c_void_p, c_char_p)
+    core.use(None, 'lexpr_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
         序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
         """
         if path is not None:
-            core.linear_expr_load(self.handle, make_c_char_p(path))
+            _check_ipath(path, self)
+            core.lexpr_load(self.handle, make_c_char_p(path))
 
-    core.use(None, 'linear_expr_write_fmap', c_void_p, c_void_p, c_char_p)
-    core.use(None, 'linear_expr_read_fmap', c_void_p, c_void_p, c_char_p)
+    core.use(None, 'lexpr_write_fmap', c_void_p, c_void_p, c_char_p)
+    core.use(None, 'lexpr_read_fmap', c_void_p, c_void_p, c_char_p)
 
     def to_fmap(self, fmt='binary'):
         """
         将数据序列化到一个Filemap中. 其中fmt的取值可以为: text, xml和binary
         """
         fmap = FileMap()
-        core.linear_expr_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
+        core.lexpr_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
         return fmap
 
     def from_fmap(self, fmap, fmt='binary'):
@@ -5007,7 +5035,7 @@ class LinearExpr(HasHandle):
         从Filemap中读取序列化的数据. 其中fmt的取值可以为: text, xml和binary
         """
         assert isinstance(fmap, FileMap)
-        core.linear_expr_read_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
+        core.lexpr_read_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
 
     @property
     def fmap(self):
@@ -5024,61 +5052,93 @@ class LinearExpr(HasHandle):
         return not (self == rhs)
 
     def __str__(self):
-        s = ''.join([f' + get({self[i][0]}) * {self[i][1]}' for i in range(len(self))])
-        return f'zml.LinearExpr({self.c}{s})'
+        if self.length > 0:
+            s = ' + '.join([f'{self[i][1]}*x({self[i][0]})' for i in range(len(self))])
+            return f'zml.LinearExpr({self.c} + {s})'
+        else:
+            return f'zml.LinearExpr({self.c})'
 
-    core.use(c_double, 'linear_expr_get_c', c_void_p)
-    core.use(None, 'linear_expr_set_c', c_void_p, c_double)
+    core.use(c_double, 'lexpr_get_c', c_void_p)
+    core.use(None, 'lexpr_set_c', c_void_p, c_double)
 
     @property
     def c(self):
-        return core.linear_expr_get_c(self.handle)
+        """
+        线性表达式的常数
+        """
+        return core.lexpr_get_c(self.handle)
 
     @c.setter
     def c(self, value):
-        core.linear_expr_set_c(self.handle, value)
+        """
+        线性表达式的常数
+        """
+        core.lexpr_set_c(self.handle, value)
 
     def set_c(self, value):
         self.c = value
         return self
 
-    core.use(c_size_t, 'linear_expr_get_length', c_void_p)
+    core.use(c_size_t, 'lexpr_get_length', c_void_p)
 
     @property
     def length(self):
-        return core.linear_expr_get_length(self.handle)
+        """
+        线性表达式除了常数项之外的项数
+        """
+        return core.lexpr_get_length(self.handle)
 
     def __len__(self):
+        """
+        线性表达式除了常数项之外的项数
+        """
         return self.length
 
-    core.use(c_size_t, 'linear_expr_get_index', c_void_p, c_size_t)
-    core.use(c_double, 'linear_expr_get_weight', c_void_p, c_size_t)
+    core.use(c_size_t, 'lexpr_get_index', c_void_p, c_size_t)
+    core.use(c_double, 'lexpr_get_weight', c_void_p, c_size_t)
 
     def __getitem__(self, i):
+        """
+        返回第i项的序号和系数
+        """
         assert i < self.length
-        index = core.linear_expr_get_index(self.handle, i)
-        weight = core.linear_expr_get_weight(self.handle, i)
+        index = core.lexpr_get_index(self.handle, i)
+        weight = core.lexpr_get_weight(self.handle, i)
         return index, weight
 
-    core.use(None, 'linear_expr_add', c_void_p, c_size_t, c_double)
+    core.use(None, 'lexpr_add', c_void_p, c_size_t, c_double)
 
     def add(self, index, weight):
-        core.linear_expr_add(self.handle, index, weight)
+        """
+        添加一项
+        """
+        core.lexpr_add(self.handle, index, weight)
         return self
 
-    core.use(None, 'linear_expr_clear', c_void_p)
+    core.use(None, 'lexpr_clear', c_void_p)
 
     def clear(self):
-        core.linear_expr_clear(self.handle)
+        """
+        清除所有的项，并将常数项设置为0
+        """
+        core.lexpr_clear(self.handle)
         return self
 
-    core.use(None, 'linear_expr_plus', c_void_p, c_size_t, c_size_t)
-    core.use(None, 'linear_expr_multiply', c_void_p, c_size_t, c_double)
+    core.use(None, 'lexpr_merge', c_void_p)
+
+    def merge(self):
+        """
+        合并系数(并且删除系数为0的项)
+        """
+        core.lexpr_merge(self.handle)
+
+    core.use(None, 'lexpr_plus', c_void_p, c_size_t, c_size_t)
+    core.use(None, 'lexpr_multiply', c_void_p, c_size_t, c_double)
 
     def __add__(self, other):
         assert isinstance(other, LinearExpr)
         result = LinearExpr()
-        core.linear_expr_plus(result.handle, self.handle, other.handle)
+        core.lexpr_plus(result.handle, self.handle, other.handle)
         return result
 
     def __sub__(self, other):
@@ -5086,7 +5146,7 @@ class LinearExpr(HasHandle):
 
     def __mul__(self, scale):
         result = LinearExpr()
-        core.linear_expr_multiply(result.handle, self.handle, scale)
+        core.lexpr_multiply(result.handle, self.handle, scale)
         return result
 
     def __truediv__(self, scale):
@@ -5094,6 +5154,9 @@ class LinearExpr(HasHandle):
 
     @staticmethod
     def create(index):
+        """
+        创建仅包含一项的线性表达式
+        """
         lexpr = LinearExpr()
         lexpr.c = 0
         lexpr.add(index, 1.0)
@@ -5101,6 +5164,9 @@ class LinearExpr(HasHandle):
 
     @staticmethod
     def create_constant(c):
+        """
+        创建常量
+        """
         lexpr = LinearExpr()
         lexpr.c = c
         return lexpr
@@ -5160,6 +5226,7 @@ class DynSys(HasHandle):
         序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
         """
         if path is not None:
+            _check_ipath(path, self)
             core.dynsys_load(self.handle, make_c_char_p(path))
 
     core.use(None, 'dynsys_write_fmap', c_void_p, c_void_p, c_char_p)
@@ -5687,7 +5754,7 @@ class SpringSys(HasHandle):
         序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
         """
         if path is not None:
-            assert isinstance(path, str)
+            _check_ipath(path, self)
             core.springsys_load(self.handle, make_c_char_p(path))
 
     core.use(None, 'springsys_print_node_pos', c_void_p, c_char_p)
@@ -6335,6 +6402,7 @@ class SeepageMesh(HasHandle, HasCells):
         序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
         """
         if path is not None:
+            _check_ipath(path, self)
             core.seepage_mesh_load(self.handle, make_c_char_p(path))
 
     core.use(None, 'seepage_mesh_clear', c_void_p)
@@ -6726,6 +6794,7 @@ class ElementMap(HasHandle):
         序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
         """
         if path is not None:
+            _check_ipath(path, self)
             core.element_map_load(self.handle, make_c_char_p(path))
 
     core.use(None, 'element_map_to_str', c_void_p, c_size_t)
@@ -7117,6 +7186,7 @@ class Seepage(HasHandle, HasCells):
             序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
             """
             if path is not None:
+                _check_ipath(path, self)
                 core.reaction_load(self.handle, make_c_char_p(path))
 
         core.use(None, 'reaction_write_fmap', c_void_p, c_void_p, c_char_p)
@@ -7354,18 +7424,21 @@ class Seepage(HasHandle, HasCells):
 
         def __init__(self, den=1000.0, vis=1.0e-3, specific_heat=4200, name=None, path=None, handle=None):
             """
-            构造函数。当handle为None的时候，会进行必要的初始化(否则，给定的初始化参数不起作用).
+            构造函数。
+                当给定handle的时候，则创建当前数据的引用，此时忽略其它所有的参数。
+                当handle为None的时候:
+                    当给定path，则从文件载入，否则，将根据其它参数进行初始化.
+                    特别注意:
+                        当den或者vis为None的时候，将清除C++层面的默认数据
             """
             super(Seepage.FluDef, self).__init__(handle, core.new_fludef, core.del_fludef)
             if handle is None:
-                # 现在，这是一个新建数据
+                # 现在，这是一个新建数据，将进行必要的初始化
                 if path is not None:
                     self.load(path)
                 else:
-                    if vis is not None:
-                        self.vis = vis
-                    if den is not None:
-                        self.den = den
+                    self.den = den  # 即便给定的数据为None，也将使用(清除当前数据)
+                    self.vis = vis  # 即便给定的数据为None，也将使用(清除当前数据)
                     if specific_heat is not None:
                         self.specific_heat = specific_heat
                 # 只要给定name，无论是load，还是create，都修改name
@@ -7393,6 +7466,7 @@ class Seepage(HasHandle, HasCells):
             序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
             """
             if path is not None:
+                _check_ipath(path, self)
                 core.fludef_load(self.handle, make_c_char_p(path))
 
         core.use(None, 'fludef_write_fmap', c_void_p, c_void_p, c_char_p)
@@ -7644,6 +7718,7 @@ class Seepage(HasHandle, HasCells):
             序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
             """
             if path is not None:
+                _check_ipath(path, self)
                 core.fluid_load(self.handle, make_c_char_p(path))
 
         core.use(None, 'fluid_write_fmap', c_void_p, c_void_p, c_char_p)
@@ -7916,6 +7991,7 @@ class Seepage(HasHandle, HasCells):
             序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
             """
             if path is not None:
+                _check_ipath(path, self)
                 core.seepage_cell_load(self.handle, make_c_char_p(path))
 
         core.use(None, 'seepage_cell_write_fmap', c_void_p, c_void_p, c_char_p)
@@ -8439,6 +8515,7 @@ class Seepage(HasHandle, HasCells):
             序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
             """
             if path is not None:
+                _check_ipath(path, self)
                 core.seepage_face_load(self.handle, make_c_char_p(path))
 
         core.use(None, 'seepage_face_write_fmap', c_void_p, c_void_p, c_char_p)
@@ -8656,6 +8733,7 @@ class Seepage(HasHandle, HasCells):
             序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
             """
             if path is not None:
+                _check_ipath(path, self)
                 core.injector_load(self.handle, make_c_char_p(path))
 
         core.use(None, 'injector_write_fmap', c_void_p, c_void_p, c_char_p)
@@ -8828,13 +8906,23 @@ class Seepage(HasHandle, HasCells):
         def ca_no_inj(self, value):
             core.injector_set_ca_no_inj(self.handle, value)
 
-        core.use(None, 'injector_add_oper', c_void_p, c_double, c_double)
+        core.use(None, 'injector_add_oper', c_void_p, c_double, c_char_p)
 
-        def add_oper(self, time, qinj):
+        def add_oper(self, time, oper):
             """
-            添加对注入排量的一个修改。请无比按照时间顺序进行添加
+            添加在time时刻的一个操作. 注意，oper支持如下关键词
+                value
+                pos    x  y  z
+                radi   r
+                val    v
+                den    v
+                vis    v
+                mass   m
+                attr   id  val
+                fid    a  b  c
+            其它关键词将会被忽略(不抛出异常).
             """
-            core.injector_add_oper(self.handle, time, qinj)
+            core.injector_add_oper(self.handle, time, make_c_char_p(oper if isinstance(oper, str) else f'{oper}'))
             return self
 
         core.use(None, 'injector_work', c_void_p, c_void_p, c_double)
@@ -9001,6 +9089,7 @@ class Seepage(HasHandle, HasCells):
         序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
         """
         if path is not None:
+            _check_ipath(path, self)
             core.seepage_load(self.handle, make_c_char_p(path))
 
     core.use(None, 'seepage_write_fmap', c_void_p, c_void_p, c_char_p)
@@ -9029,16 +9118,26 @@ class Seepage(HasHandle, HasCells):
     def fmap(self, value):
         self.from_fmap(value, fmt='binary')
 
-    core.use(None, 'seepage_add_note', c_void_p, c_char_p)
+    core.use(c_char_p, 'seepage_get_text', c_void_p, c_char_p)
+    core.use(None, 'seepage_set_text', c_void_p, c_char_p, c_char_p)
 
-    def add_note(self, text: str):
-        assert isinstance(text, str)
-        core.seepage_add_note(self.handle, make_c_char_p(text))
+    def get_text(self, key):
+        """
+        返回模型内部存储的文本数据
+        """
+        return core.seepage_get_text(self.handle, make_c_char_p(key)).decode()
 
-    core.use(c_char_p, 'seepage_get_note', c_void_p)
+    def set_text(self, key, text):
+        """
+        设置模型中存储的文本数据
+        """
+        core.seepage_set_text(self.handle, make_c_char_p(key), make_c_char_p(text))
+
+    def add_note(self, text):
+        self.set_text('note', self.get_text('note') + text)
 
     def get_note(self):
-        return core.seepage_get_note(self.handle).decode()
+        return self.get_text('note')
 
     core.use(None, 'seepage_clear', c_void_p)
 
@@ -9173,6 +9272,9 @@ class Seepage(HasHandle, HasCells):
             inj.cell_id = cell
 
         if fluid_id is not None:
+            if isinstance(fluid_id, str):   # 给定组分名字，则从model中查找   since 231024
+                fluid_id = self.find_fludef(name=fluid_id)
+                assert fluid_id is not None
             inj.set_fid(fluid_id)
 
         if flu is not None:
@@ -9254,18 +9356,31 @@ class Seepage(HasHandle, HasCells):
 
     @property
     def gr_number(self):
+        """
+        返回model中gr的数量
+        """
         return core.seepage_get_gr_n(self.handle)
 
     core.use(c_void_p, 'seepage_get_gr', c_void_p, c_size_t)
 
     def get_gr(self, idx):
+        """
+        返回序号为idx的gr
+        """
         if idx < self.gr_number:
             return Interp1(handle=core.seepage_get_gr(self.handle, idx))
 
     core.use(c_size_t, 'seepage_add_gr', c_void_p, c_void_p)
 
     def add_gr(self, gr, need_id=False):
-        assert isinstance(gr, Interp1)
+        """
+        添加一个gr. 其中gr应该为Interp1类型.
+        """
+        if not isinstance(gr, Interp1):
+            assert len(gr) == 2
+            assert len(gr[0]) == len(gr[1])
+            assert len(gr[0]) >= 2
+            gr = Interp1(x=gr[0], y=gr[1])
         idx = core.seepage_add_gr(self.handle, gr.handle)
         if need_id:
             return idx
@@ -9275,6 +9390,9 @@ class Seepage(HasHandle, HasCells):
     core.use(None, 'seepage_clear_grs', c_void_p)
 
     def clear_grs(self):
+        """
+        删除模型中所有的gr
+        """
         core.seepage_clear_grs(self.handle)
 
     core.use(c_size_t, 'seepage_get_kr_n', c_void_p)
@@ -9538,14 +9656,18 @@ class Seepage(HasHandle, HasCells):
                         file.write(f'\t{prop(cell)}')
                 file.write('\n')
 
-    core.use(c_size_t, 'seepage_get_nearest_cell_id', c_void_p, c_double, c_double, c_double)
+    core.use(c_size_t, 'seepage_get_nearest_cell_id',
+             c_void_p, c_double, c_double, c_double, c_size_t, c_size_t)
 
-    def get_nearest_cell(self, pos):
+    def get_nearest_cell(self, pos, i_beg=None, i_end=None):
         """
-        返回与给定位置距离最近的cell
+        返回与给定位置距离最近的cell (在[i_beg, i_end)的范围内搜索)
         """
-        if self.cell_number > 0:
-            index = core.seepage_get_nearest_cell_id(self.handle, pos[0], pos[1], pos[2])
+        cell_n = self.cell_number
+        if cell_n > 0:
+            index = core.seepage_get_nearest_cell_id(self.handle, pos[0], pos[1], pos[2],
+                                                     i_beg if i_beg is not None else 0,
+                                                     i_end if i_end is not None else cell_n)
             return self.get_cell(index)
 
     core.use(None, 'seepage_clone', c_void_p, c_void_p)
@@ -9634,29 +9756,23 @@ class Seepage(HasHandle, HasCells):
         """
         return self.get_fluid_vol()
 
-    core.use(None, 'seepage_update_cond_a', c_void_p, c_void_p, c_void_p, c_void_p, c_double)
-    core.use(None, 'seepage_update_cond_b', c_void_p, c_size_t, c_size_t, c_void_p, c_double)
-    core.use(None, 'seepage_update_cond_c', c_void_p, c_size_t, c_size_t, c_size_t, c_double)
+    core.use(None, 'seepage_update_cond', c_void_p, c_size_t, c_size_t, c_size_t, c_double)
 
-    def update_cond(self, v0, g0, krf, relax_factor=1.0):
+    def update_cond(self, ca_v0, fa_g0, fa_igr, relax_factor=1.0):
         """
-        给定初始时刻各Cell流体体积vv0，各Face的导流vg0，v/v0到g/g0的映射krf，来更新此刻Face的g.
-            参数v0和g0可以是Vector，也可以是属性ID
+        给定初始时刻各Cell流体体积v0，各Face的导流g0，v/v0到g/g0的映射gr，来更新此刻Face的g.
+        ca_v0是cell的属性id，fa_g0是face的属性id的时候，fa_igr是face的属性id
+            (用以表示此face选用的gr的序号。注意此时必须提前将gr存储到model中).
         """
-        if isinstance(v0, Vector) and isinstance(g0, Vector):
-            assert isinstance(krf, Interp1)
-            core.seepage_update_cond_a(self.handle, v0.handle, g0.handle, krf.handle, relax_factor)
-        else:
-            # Now, v0 is ca_v0 and g0 is fa_g0
-            if isinstance(krf, Interp1):
-                core.seepage_update_cond_b(self.handle, v0, g0, krf.handle, relax_factor)
-            else:
-                # 利用model中定义的kr，并且每一个Face可以有不同的kr
-                core.seepage_update_cond_c(self.handle, v0, g0, krf, relax_factor)
+        core.seepage_update_cond(self.handle, ca_v0, fa_g0, fa_igr, relax_factor)
 
     core.use(None, 'seepage_update_g0', c_void_p, c_size_t, c_size_t, c_size_t, c_size_t)
 
     def update_g0(self, fa_g0, fa_k, fa_s, fa_l):
+        """
+        对于所有的face，根据它的渗透率，面积和长度来计算cond (流体饱和的时候的cond).
+        此函数非必须，可以基于numpy在Python层面实现同样的功能，后续可能会移除.
+        """
         core.seepage_update_g0(self.handle, fa_g0, fa_k, fa_s, fa_l)
 
     core.use(None, 'seepage_find_inner_face_ids', c_void_p, c_void_p, c_void_p)
@@ -9746,9 +9862,9 @@ class Seepage(HasHandle, HasCells):
 
     def heating(self, ca_mc, ca_t, ca_p, dt):
         """
-        按照各个Cell给定的功率来对各个Cell进行加热.
+        按照各个Cell给定的功率来对各个Cell进行加热 (此功能非必须，可以借助numpy实现).
         其中：
-            ca_p：定义Cell加热的功率
+            ca_p：定义Cell加热的功率.
         """
         core.seepage_heating(self.handle, ca_mc, ca_t, ca_p, dt)
 
@@ -10186,7 +10302,9 @@ class Seepage(HasHandle, HasCells):
         """
         返回键值：主要用于存储指定的属性ID
         """
-        return core.seepage_get_key(self.handle, make_c_char_p(key))
+        val = core.seepage_get_key(self.handle, make_c_char_p(key))
+        if val < 9999:
+            return val
 
     core.use(None, 'seepage_set_key', c_void_p, c_char_p, c_int64)
 
@@ -10194,7 +10312,14 @@ class Seepage(HasHandle, HasCells):
         """
         设置键值
         """
-        core.seepage_set_key(self.handle, make_c_char_p(key), value)
+        if value is None:
+            self.del_key(key)
+            return
+        if value >= 9999:
+            self.del_key(key)
+            return
+        else:
+            core.seepage_set_key(self.handle, make_c_char_p(key), value)
 
     core.use(None, 'seepage_del_key', c_void_p, c_char_p)
 
@@ -10233,6 +10358,30 @@ class Seepage(HasHandle, HasCells):
         """
         return self.reg_key('f_', key)
 
+    def get_model_key(self, key):
+        """
+        返回用于model的键值
+        """
+        return self.get_key('m_' + key)
+
+    def get_cell_key(self, key):
+        """
+        返回用于cell的键值
+        """
+        return self.get_key('n_' + key)
+
+    def get_face_key(self, key):
+        """
+        返回用于face的键值
+        """
+        return self.get_key('b_' + key)
+
+    def get_flu_key(self, key):
+        """
+        返回用于flu的键值
+        """
+        return self.get_key('f_' + key)
+
     core.use(None, 'seepage_get_keys', c_void_p, c_void_p)
 
     def get_keys(self):
@@ -10253,31 +10402,6 @@ class Seepage(HasHandle, HasCells):
         core.seepage_get_tags(self.handle, s.handle)
         return eval(s.to_str())
 
-    core.use(None, 'seepage_clamp_cell_attrs', c_void_p, c_size_t, c_double, c_double)
-
-    def clamp_cell_attrs(self, idx, lr, rr):
-        """
-        约束Cell的属性的取值
-        """
-        core.seepage_clamp_cell_attrs(self.handle, idx, lr, rr)
-
-    core.use(None, 'seepage_clamp_face_attrs', c_void_p, c_size_t, c_double, c_double)
-
-    def clamp_face_attrs(self, idx, lr, rr):
-        """
-        约束Face的属性的取值
-        """
-        core.seepage_clamp_face_attrs(self.handle, idx, lr, rr)
-
-    core.use(None, 'seepage_clamp_fluid_attrs', c_void_p, c_size_t, c_size_t, c_size_t,
-             c_size_t, c_double, c_double)
-
-    def clamp_fluid_attrs(self, fluid_id, idx, lr, rr):
-        """
-        约束流体的属性的取值
-        """
-        core.seepage_clamp_fluid_attrs(self.handle, *parse_fid3(fluid_id), idx, lr, rr)
-
     core.use(None, 'seepage_pop_cells', c_void_p, c_size_t)
 
     def pop_cells(self, count=1):
@@ -10285,71 +10409,6 @@ class Seepage(HasHandle, HasCells):
         删除最后count个Cell的所有的Face，然后移除最后count个Cell
         """
         core.seepage_pop_cells(self.handle, count)
-
-
-class CondUpdater:
-    """
-    用以更新Face的cond属性
-    """
-
-    def __init__(self, v0=None, g0=None, krf=None):
-        """
-        构造函数，后续必须添加必要的配置
-        """
-        self.v0 = v0
-        self.g0 = g0
-        self.krf = krf
-        self.fk = None
-        self.s1 = None
-
-    def __call__(self, model, relax_factor=1.0):
-        """
-        更新模型中各个Cell中流体的总体积和v0的体积的比值，更新各个Face的cond属性
-        """
-        assert isinstance(model, Seepage)
-        if self.v0 is not None and self.g0 is not None and self.krf is not None:
-            model.update_cond(v0=self.v0, g0=self.g0, krf=self.krf, relax_factor=relax_factor)
-
-    def set_v0(self, model):
-        """
-        将此刻的流体体积设置为v0. 注意：这里将所有的流体都视为可以流动的。如果流体组分中有固体，那么请首先移除固体组分之后再调用此函数
-        """
-        assert isinstance(model, Seepage)
-        self.v0 = Vector(value=[cell.fluid_vol for cell in model.cells])
-
-    def set_g0(self, model):
-        """
-        将此刻的face.cond设置为g0
-        """
-        assert isinstance(model, Seepage)
-        self.g0 = Vector(value=[face.cond for face in model.faces])
-
-    def set_s1(self, mesh):
-        """
-        当Face两侧距离为折减为1的时候，Face的面积
-        """
-        self.s1 = Vector(value=[face.area / face.length for face in mesh.faces])
-
-    def set_fk(self, model, mesh):
-        """
-        Face位置的渗透率（根据此刻的cond来计算）
-        """
-        vs1 = [face.area / face.length for face in mesh.faces]
-        count = min(len(vs1), model.face_number)
-        self.fk = Vector(value=[model.get_face(i).cond / vs1[i] for i in range(count)])
-
-    core.use(None, 'update_g0', c_void_p, c_void_p, c_void_p)
-
-    def update_g0(self, fk=None, s1=None):
-        """
-        更新g0. 其中fk为渗透率属性，s1为Face的面积除以流动的距离；
-        """
-        if fk is None:
-            fk = self.fk
-        if s1 is None:
-            s1 = self.s1
-        if isinstance(fk, Vector) and isinstance(s1, Vector) and isinstance(self.g0, Vector):
-            core.update_g0(self.g0.handle, fk.handle, s1.handle)
 
 
 Reaction = Seepage.Reaction
@@ -10537,6 +10596,7 @@ class Thermal(HasHandle):
         序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
         """
         if path is not None:
+            _check_ipath(path, self)
             core.thermal_load(self.handle, make_c_char_p(path))
 
     core.use(None, 'thermal_clear', c_void_p)
@@ -11210,7 +11270,7 @@ class TherFlowConfig(Object):
             # 注意：
             #   在建模的时候，务必要设置Cell的v0属性，Face的g0属性和ikr属性，并且，在model中，应该有相应的kr和它对应。
             #   为了不和真正流体的kr混淆，这个Face的ikr，应该大于流体的数量。
-            model.update_cond(v0=self.cell_keys['fv0'], g0=self.face_keys['g0'], krf=self.face_keys['igr'],
+            model.update_cond(ca_v0=self.cell_keys['fv0'], fa_g0=self.face_keys['g0'], fa_igr=self.face_keys['igr'],
                               relax_factor=0.3)
 
         # 施加cond的更新操作
@@ -11855,8 +11915,9 @@ class InvasionPercolation(HasHandle):
         """
         序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
         """
-        assert isinstance(path, str)
-        core.ip_load(self.handle, make_c_char_p(path))
+        if path is not None:
+            _check_ipath(path, self)
+            core.ip_load(self.handle, make_c_char_p(path))
 
     core.use(None, 'ip_print_nodes', c_void_p, c_char_p)
 
@@ -12278,6 +12339,7 @@ class Dfn2(HasHandle):
         序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
         """
         if path is not None:
+            _check_ipath(path, self)
             core.dfn2d_load(self.handle, make_c_char_p(path))
 
     core.use(None, 'dfn2d_set_range', c_void_p, c_double, c_double, c_double, c_double)
@@ -12396,6 +12458,7 @@ class Lattice3(HasHandle):
         序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
         """
         if path is not None:
+            _check_ipath(path, self)
             core.lat3_load(self.handle, make_c_char_p(path))
 
     core.use(c_double, 'lat3_lrange', c_void_p, c_size_t)

@@ -563,7 +563,7 @@ class TherFlowConfig(Object):
             # 注意：
             #   在建模的时候，务必要设置Cell的v0属性，Face的g0属性和ikr属性，并且，在model中，应该有相应的kr和它对应。
             #   为了不和真正流体的kr混淆，这个Face的ikr，应该大于流体的数量。
-            model.update_cond(v0=self.cell_keys['fv0'], g0=self.face_keys['g0'], krf=self.face_keys['igr'],
+            model.update_cond(ca_v0=self.cell_keys['fv0'], fa_g0=self.face_keys['g0'], fa_igr=self.face_keys['igr'],
                               relax_factor=0.3)
 
         # 施加cond的更新操作
