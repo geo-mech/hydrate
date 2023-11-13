@@ -1,6 +1,7 @@
 import timeit
 
-from zml import gui, time2str
+from zmlx.ui.GuiBuffer import gui
+from zml import time2str
 from zmlx.filesys.samefile import samefile
 from zmlx.ui.BreakPoint import BreakPoint
 from zmlx.ui.CodeEdit import CodeEdit

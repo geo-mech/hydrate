@@ -1,4 +1,5 @@
-from zml import gui, read_text, write_text, app_data
+from zml import read_text, write_text, app_data
+from zmlx.ui.GuiBuffer import gui
 from zmlx.ui.Config import code_in_editor
 from zmlx.ui.PythonHighlighter import PythonHighlighter
 from zmlx.ui.Qt import QtCore, QtWidgets

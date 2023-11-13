@@ -2,6 +2,6 @@
 # ** icon = 'kill.png'
 # ** text = '强制结束'
 
-from zml import gui
+from zmlx.ui.GuiBuffer import gui
 
 gui.kill_thread()

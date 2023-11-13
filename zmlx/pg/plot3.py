@@ -2,7 +2,7 @@ import numpy as np
 import pyqtgraph as pg
 import pyqtgraph.opengl as gl
 
-from zml import gui
+from zmlx.ui.GuiBuffer import gui
 
 __Captions = [None]
 

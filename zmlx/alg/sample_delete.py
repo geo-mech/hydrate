@@ -1,7 +1,7 @@
 import math
 import os
 
-from zml import gui
+from zmlx.ui.GuiBuffer import gui
 
 
 def sample_delete(folder, ratio_keep=None, count_keep=None):

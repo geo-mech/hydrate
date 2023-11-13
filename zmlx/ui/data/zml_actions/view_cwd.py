@@ -3,6 +3,6 @@
 # ** is_sys = True
 # ** icon = 'cwd.png'
 
-from zml import gui
+from zmlx.ui.GuiBuffer import gui
 
 gui.view_cwd()

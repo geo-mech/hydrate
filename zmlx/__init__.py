@@ -8,6 +8,11 @@ zmlx: zml模块的扩展，将首先引入zml的所有功能，并定义数据�
 """
 
 from zml import *
+try:
+    from zmlx.ui.GuiBuffer import gui, information, question, plot as do_plot, break_point, gui_exec
+except Exception as err:
+    warnings.warn(f'meet exception when import GuiBuffer. error = {err}')
+
 from zmlx.config.TherFlowConfig import TherFlowConfig, SeepageTher    # 覆盖zml中的定义
 from zmlx.filesys.join_paths import join_paths
 from zmlx.filesys.opath import opath
@@ -21,8 +26,6 @@ import warnings
 
 # 部分函数容易混淆，借助zml调用
 import zml
-
-do_plot = zml.plot
 
 setenv = app_data.setenv
 getenv = app_data.getenv

@@ -1,4 +1,4 @@
-from zml import gui
+from zmlx.ui.GuiBuffer import gui
 from zmlx.filesys.get_lines import get_lines
 from zmlx.filesys.list_code_files import list_code_files
 

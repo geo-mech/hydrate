@@ -2,7 +2,7 @@
 基于Matplotlib的二维绘图
 """
 
-from zml import gui, plot as do_plot
+from zmlx.ui.GuiBuffer import gui, plot as do_plot
 
 version = 221027
 

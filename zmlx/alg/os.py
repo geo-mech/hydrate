@@ -2,7 +2,7 @@ import os
 import time
 import timeit
 
-from zml import gui
+from zmlx.ui.GuiBuffer import gui
 
 
 def get_new_files(folder, mt=0):

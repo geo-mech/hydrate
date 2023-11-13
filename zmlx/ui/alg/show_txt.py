@@ -1,6 +1,7 @@
 import os
 
-from zml import gui, read_text
+from zmlx.ui.GuiBuffer import gui
+from zml import read_text
 from zmlx.filesys.show_fileinfo import show_fileinfo
 
 

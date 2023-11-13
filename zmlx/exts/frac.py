@@ -1097,10 +1097,10 @@ class Hf3Alg:
         core.hf3_alg_update_pc(model.handle, cell_ids.handle, insitu_stress.handle, strength.handle,
                                left[0], left[1], left[2], right[0], right[1], right[2])
 
-    core.use(None, 'hf3_alg_classify_cells', c_void_p)
+    core.use(None, 'hf3_alg_classify_cells', c_void_p, c_size_t, c_size_t)
 
     @staticmethod
-    def classify_cells(model):
+    def classify_cells(model, ca_tag=None, ca_pc=None):
         """
         将Cell分成4类(写入cell的tag属性)：
             1、天然裂缝(未打开的裂缝)
@@ -1109,12 +1109,16 @@ class Hf3Alg:
             4、水力裂缝(打开)
         """
         assert isinstance(model, Seepage)
-        core.hf3_alg_classify_cells(model.handle)
+        if ca_tag is None:
+            ca_tag = model.reg_cell_key('tag')
+        if ca_pc is None:
+            ca_pc = model.get_cell_key('pc')
+        core.hf3_alg_classify_cells(model.handle, ca_tag, ca_pc)
 
-    core.use(None, 'hf3_alg_classify_faces', c_void_p)
+    core.use(None, 'hf3_alg_classify_faces', c_void_p, c_size_t, c_size_t)
 
     @staticmethod
-    def classify_faces(model):
+    def classify_faces(model, fa_tag=None, ca_tag=None):
         """
         这样，也可以基于此将Face分为
             1、打开的水力裂缝内部以及周边的Face
@@ -1122,22 +1126,45 @@ class Hf3Alg:
             3、其它尚未被打开的裂缝内部的Face
         """
         assert isinstance(model, Seepage)
-        core.hf3_alg_classify_faces(model.handle)
+        if fa_tag is None:
+            fa_tag = model.reg_face_key('tag')
+        if ca_tag is None:
+            ca_tag = model.get_cell_key('tag')
+        core.hf3_alg_classify_faces(model.handle, fa_tag, ca_tag)
 
-    core.use(None, "hf3_alg_update_cell_len", c_void_p, c_void_p)
+    core.use(None, "hf3_alg_update_cell_len", c_void_p, c_void_p,
+             c_size_t, c_size_t, c_size_t, c_size_t)
 
     @staticmethod
-    def update_cell_len(model, network):
+    def update_cell_len(model, network, ca_len=None, fa_id=None, ma_layer_n=None, ma_fixed_n=None):
         assert isinstance(model, Seepage)
         assert isinstance(network, FractureNetwork2)
-        core.hf3_alg_update_cell_len(model.handle, network.handle)
+        if ca_len is None:
+            ca_len = model.reg_cell_key('len')
+        if fa_id is None:
+            fa_id = model.get_key('fr_id')
+        if ma_layer_n is None:
+            ma_layer_n = model.get_model_key('layer_n')
+        if ma_fixed_n is None:
+            ma_fixed_n = model.get_model_key('fixed_n')
 
-    core.use(None, 'hf3_alg_update_face_geometry', c_void_p)
+        core.hf3_alg_update_cell_len(model.handle, network.handle, ca_len, fa_id, ma_layer_n, ma_fixed_n)
+
+    core.use(None, 'hf3_alg_update_face_geometry', c_void_p,
+             c_size_t, c_size_t, c_size_t, c_size_t)
 
     @staticmethod
-    def update_face_geometry(model):
+    def update_face_geometry(model, fa_s=None, fa_l=None, ca_len=None, ma_pore_thick=None):
         assert isinstance(model, Seepage)
-        core.hf3_alg_update_face_geometry(model.handle)
+        if fa_s is None:
+            fa_s = model.reg_face_key('area')
+        if fa_l is None:
+            fa_l = model.reg_face_key('length')
+        if ca_len is None:
+            ca_len = model.get_cell_key('len')
+        if ma_pore_thick is None:
+            ma_pore_thick = model.get_model_key('pore_thick')
+        core.hf3_alg_update_face_geometry(model.handle, fa_s, fa_l, ca_len, ma_pore_thick)
 
     @staticmethod
     def update_seepage_topology(seepage, fixed_n, layer_n, network, fa_id, fa_new, z_range,

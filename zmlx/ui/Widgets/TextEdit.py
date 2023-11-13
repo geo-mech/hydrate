@@ -1,4 +1,5 @@
-from zml import gui, read_text, write_text
+from zml import read_text, write_text
+from zmlx.ui.GuiBuffer import gui
 from zmlx.ui.Qt import QtWidgets
 
 

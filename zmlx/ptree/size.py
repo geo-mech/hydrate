@@ -8,7 +8,7 @@ def size(pt, ndim):
     if data is None:
         return
     if len(data) >= ndim:
-        return [int(data[i]) for i in range(ndim)]
+        return [round(data[i]) for i in range(ndim)]
 
 
 def size2(pt):

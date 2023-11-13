@@ -1,7 +1,8 @@
 import sys
 import warnings
 
-from zml import gui, lic
+from zmlx.ui.GuiBuffer import gui
+from zml import lic
 from zmlx.filesys.has_permission import has_permission
 from zmlx.filesys.samefile import samefile
 from zmlx.filesys.show_fileinfo import show_fileinfo

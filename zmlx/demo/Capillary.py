@@ -1,7 +1,8 @@
-# ** desc = '流体在毛管力驱动下的流动'
+# ** desc = '流体在毛管力驱动下的流动 (基于zmlx.config.capillary)'
 
 from zmlx import *
-from zmlx.utility.CapillaryEffect import CapillaryEffect
+from zmlx.config import capillary
+from zmlx.config import seepage
 
 mud = """0.007698294	1930020.672
 0.0441305	4270730.329
@@ -104,23 +105,23 @@ def get_s(x, y, z):
 
 
 def create():
-    c = TherFlowConfig()
-    c.fluids = [TherFlowConfig.FluProperty(den=50, vis=1.0e-4),
-                TherFlowConfig.FluProperty(den=1000, vis=1.0e-3)]
-    model = c.create(mesh=SeepageMesh.create_cube(np.linspace(0, 100, 101), np.linspace(0, 100, 101), (-0.5, 0.5)),
-                     porosity=0.2, pore_modulus=100e6, p=1e6, temperature=280, perm=1e-14,
-                     s=get_s,
-                     )
+    fludefs = [TherFlowConfig.FluProperty(den=50, vis=1.0e-4),
+               TherFlowConfig.FluProperty(den=1000, vis=1.0e-3)]
+    model = seepage.create(
+        mesh=SeepageMesh.create_cube(np.linspace(0, 100, 101), np.linspace(0, 100, 101), (-0.5, 0.5)),
+        porosity=0.2, pore_modulus=100e6, p=1e6, temperature=280, perm=1e-14,
+        s=get_s, fludefs=fludefs
+        )
     model.set_kr(saturation=[0, 1], kr=[0, 1])
-    cap = CapillaryEffect.create(1, 0, model, get_idx, mud, sand_J, sand_K, sand_P, sand_T)
-    return model, cap
+    capillary.add(model, 1, 0, get_idx, [mud, sand_J, sand_K, sand_P, sand_T])
+    return model
 
 
 def show(x, y, z, caption=None):
     tricontourf(x, y, z, caption=caption, gui_only=True)
 
 
-def solve(model, cap):
+def solve(model):
     x = model.numpy.cells.get(-1)
     y = model.numpy.cells.get(-2)
 
@@ -129,18 +130,18 @@ def solve(model, cap):
 
     for step in range(2000):
         gui.break_point()
-        cap(model, 1e5)
+        capillary.iterate(model, 1e5)
         if step % 30 == 0:
             print(f'step = {step}')
             show(x, y, model.numpy.fluids(1).vol, caption='饱和度')
 
 
 def execute(gui_mode=True, close_after_done=False):
-    model, cap = create()
+    model = create()
     if gui_mode:
-        gui.execute(solve, args=(model, cap), close_after_done=close_after_done)
+        gui.execute(solve, args=(model, ), close_after_done=close_after_done)
     else:
-        solve(model, cap)
+        solve(model)
 
 
 if __name__ == '__main__':

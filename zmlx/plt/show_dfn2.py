@@ -1,4 +1,5 @@
-from zml import Dfn2, gui
+from zml import Dfn2
+from zmlx.ui.GuiBuffer import gui
 from zmlx.plt.plot2 import plot2
 
 

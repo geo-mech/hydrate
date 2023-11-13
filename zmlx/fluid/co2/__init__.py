@@ -1,7 +1,8 @@
 import os
 import warnings
 
-from zml import TherFlowConfig, Interp2
+from zml import Interp2
+from zmlx.config.TherFlowConfig import TherFlowConfig
 
 
 def create(name=None):

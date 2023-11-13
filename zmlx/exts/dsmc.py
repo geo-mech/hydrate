@@ -177,6 +177,15 @@ class Molecule(HasHandle):
         """
         core.molecule_set_tag(self.handle, value)
 
+    core.use(None, 'molecule_clone', c_void_p, c_void_p)
+
+    def clone(self, other):
+        """
+        从另外一个分子复制所有的数据
+        """
+        assert isinstance(other, Molecule)
+        core.molecule_clone(self.handle, other.handle)
+
 
 class MoleVec(HasHandle):
     """
@@ -370,18 +379,21 @@ class MoleVec(HasHandle):
     core.use(c_size_t, 'vmole_roll_back', c_void_p, c_void_p, c_double, c_bool)
     core.use(c_size_t, 'vmole_roll_back_record', c_void_p, c_void_p, c_double, c_bool, c_void_p, c_double, c_double)
 
-    def roll_back(self, reg, forcemap=None, dt=None, time_span=None, parallel=True, diffuse_ratio=1.0):
+    def roll_back(self, reg3, fmap=None, dt=None, time_span=None, parallel=True, diffuse_ratio=1.0):
         """
-        从给定的区域内退出. 当给定forcemap的时候，将记录冲击固体的力.
+        从给定的区域内退出. 当给定fmap的时候，将记录冲击固体的力.
+        其中：
             parallel: 内核是否调用并行
+            diffuse_ratio: 为(tag>=的普通分子)漫反射发生的比例(注意tag<0的分子必然发生镜面反射，不受此参数影响).
         """
-        assert isinstance(reg, Region3)
-        if forcemap is None:
-            return core.vmole_roll_back(self.handle, reg.handle, diffuse_ratio, parallel)
+        assert isinstance(reg3, Region3)
+        if fmap is None:
+            return core.vmole_roll_back(self.handle, reg3.handle, diffuse_ratio, parallel)
         else:
+            assert isinstance(fmap, ForceMap)
             assert dt is not None and time_span is not None
-            return core.vmole_roll_back_record(self.handle, reg.handle, diffuse_ratio, parallel,
-                                               forcemap.handle, dt, time_span)
+            return core.vmole_roll_back_record(self.handle, reg3.handle, diffuse_ratio, parallel,
+                                               fmap.handle, dt, time_span)
 
     core.use(None, 'vmole_get_mass', c_void_p, c_void_p)
 
@@ -636,7 +648,7 @@ class Region3(HasHandle):
 
     core.use(None, 'region3_get_inds', c_void_p, c_void_p)
 
-    def get_inds(self, buffer=None):
+    def get_indexes(self, buffer=None):
         if not isinstance(buffer, UintVector):
             buffer = UintVector()
         core.region3_get_inds(self.handle, buffer.handle)
@@ -654,13 +666,16 @@ class Region3(HasHandle):
 
 class ForceMap(HasHandle):
     """
-    记录格子的受力 (用于dsmc)
+    记录格子的受力 (用于dsmc). 必须依托于某一个格子才可以使用.
     """
     core.use(c_void_p, 'new_forcemap')
     core.use(None, 'del_forcemap', c_void_p)
 
-    def __init__(self, handle=None):
+    def __init__(self, handle=None, path=None):
         super(ForceMap, self).__init__(handle, core.new_forcemap, core.del_forcemap)
+        if handle is None:
+            if path is not None:
+                self.load(path)
 
     core.use(None, 'forcemap_save', c_void_p, c_char_p)
 
@@ -687,6 +702,23 @@ class ForceMap(HasHandle):
 
     def clear(self):
         core.forcemap_clear(self.handle)
+
+    core.use(None, 'forcemap_clone', c_void_p, c_void_p)
+
+    def clone(self, other):
+        """
+        从other中克隆数据，生成一个完全一样的拷贝
+        """
+        assert isinstance(other, ForceMap)
+        core.forcemap_clone(self.handle, other.handle)
+
+    def get_copy(self):
+        """
+        返回当前数据的拷贝
+        """
+        fmap = ForceMap()
+        fmap.clone(self)
+        return fmap
 
     core.use(None, 'forcemap_get_centers', c_void_p, c_void_p, c_void_p, c_void_p, c_void_p)
 
@@ -728,6 +760,8 @@ class ForceMap(HasHandle):
               vx=None, vy=None, vz=None):
         """
         土体侵蚀<并记录侵蚀发生的位置>
+        todo:
+            将erode函数修改为自由函数，而不再是这个类的成员函数
         """
         assert 0.0 <= strength_modify_factor <= 1.0
         assert isinstance(reg3, Region3), f'reg3={reg3}'
@@ -886,6 +920,76 @@ class Dsmc:
             return core.dsmc_update_lat_cylinder(lat3.handle, moles.handle, lat_ratio)
         else:
             return core.dsmc_update_lat(lat3.handle, moles.handle, lat_ratio)
+
+    core.use(None, 'dsmc_update_erosion_rate', c_void_p, c_void_p, c_void_p, c_void_p, c_double, c_double, c_double)
+
+    @staticmethod
+    @clock
+    def update_erosion_rate(rate, reg3, fmap, strength, normal_weight, relax_factor, rate_max):
+        """
+        根据受力，更新侵蚀速率. 不妨将这里的rate定义为侵蚀之后，每秒钟释放的粒子的数量.
+        """
+        assert isinstance(rate, Matrix3)
+        assert isinstance(reg3, Region3)
+        assert isinstance(fmap, ForceMap)
+        assert isinstance(strength, Interp3)
+        core.dsmc_update_erosion_rate(rate.handle, reg3.handle, fmap.handle, strength.handle,
+                                      normal_weight, relax_factor, rate_max)
+
+    core.use(c_double, 'dsmc_get_rate_template', c_void_p, c_void_p, c_void_p, c_void_p, c_double)
+
+    @staticmethod
+    @clock
+    def get_rate_template(reg3: Region3, fmap: ForceMap, strength: Interp3, normal_weight, buffer=None):
+        """
+        计算富裕出来的剪切力，并且存储到rate里面.
+        """
+        if not isinstance(buffer, Matrix3):
+            buffer = Matrix3()
+        q_sum = core.dsmc_get_rate_template(buffer.handle, reg3.handle, fmap.handle, strength.handle,
+                                            normal_weight)
+        return buffer, q_sum
+
+    core.use(c_double, 'dsmc_get_shear_sum', c_void_p, c_void_p, c_void_p)
+
+    @staticmethod
+    @clock
+    def get_shear_sum(rate: Matrix3, reg3: Region3, fmap: ForceMap):
+        """
+        返回fmap中所有的剪切力的累积值.
+        """
+        return core.dsmc_get_shear_sum(rate.handle, reg3.handle, fmap.handle)
+
+    core.use(None, 'dsmc_add_particles', c_void_p, c_void_p, c_void_p, c_void_p, c_double,
+             c_void_p, c_double)
+
+    @staticmethod
+    @clock
+    def add_particles(moles, rate, reg3, fmap, dt, par, times=1.0):
+        assert isinstance(moles, MoleVec)
+        assert isinstance(rate, Matrix3)
+        assert isinstance(reg3, Region3)
+        assert isinstance(fmap, ForceMap)
+        assert dt > 0
+        assert isinstance(par, Molecule)
+        assert par.tag < 0
+        core.dsmc_add_particles(moles.handle, rate.handle, reg3.handle, fmap.handle, dt, par.handle, times)
+
+    core.use(None, 'dsmc_get_erosion_rate', c_void_p, c_void_p, c_void_p, c_void_p)
+
+    @staticmethod
+    @clock
+    def get_erosion_rate(rate, fmap, reg3, buffer=None):
+        """
+        返回各个受力点的侵蚀速率
+        """
+        assert isinstance(rate, Matrix3)
+        assert isinstance(reg3, Region3)
+        assert isinstance(fmap, ForceMap)
+        if not isinstance(buffer, Vector):
+            buffer = Vector()
+        core.dsmc_get_erosion_rate(buffer.handle, rate.handle, fmap.handle, reg3.handle)
+        return buffer
 
 
 if __name__ == '__main__':

@@ -45,5 +45,6 @@ def fludata(pt):
     if isinstance(attrs, list):
         for i in range(len(attrs)):
             data.set_attr(i, attrs[i])
+
     # 返回数据
     return data

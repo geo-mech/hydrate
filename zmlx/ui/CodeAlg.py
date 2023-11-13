@@ -1,7 +1,7 @@
 import os
 
 from zml import app_data
-from zml import gui
+from zmlx.ui.GuiBuffer import gui
 
 
 def edit_code(fname):

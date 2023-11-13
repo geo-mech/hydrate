@@ -1,4 +1,4 @@
-from zml import plot, gui
+from zmlx.ui.GuiBuffer import gui, plot
 
 
 def tricontourf(x=None, y=None, z=None, ipath=None, ix=None, iy=None, iz=None, caption=None, gui_only=False,

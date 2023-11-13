@@ -61,7 +61,7 @@ def create3(mesh, ba_E=None, ba_mu=None, ba_den=None, b_E=1.0, b_mu=0.2, b_den=1
                 vm[node.index] += m
     for node_id in range(mesh.node_number):
         assert 0 < vm[node_id]
-        i0 = node_id * 2
+        i0 = node_id * ndim
         i1 = i0 + 1
         i2 = i1 + 1
         model.set_mas(i0, vm[node_id])

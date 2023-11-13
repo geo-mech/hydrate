@@ -1,11 +1,8 @@
 """
 导入numpy的array
 """
-import os
 from io import StringIO
-
 import numpy as np
-
 from zmlx.ptree.ptree import PTree
 
 
@@ -21,9 +18,10 @@ def _cast(data, pt):
 
     if isinstance(data, str):
         # 尝试文件
-        fname = pt.find(data)
-        if os.path.isfile(fname):
-            return np.loadtxt(fname)
+        try:
+            return np.loadtxt(pt.find(data))
+        except:
+            pass
         # 尝试脚本
         try:
             return eval(data, {'np': np})
@@ -41,7 +39,6 @@ def array(pt):
     将PTree节点转化为numpy的array.
         可能会返回None, 以及np的array (可能为空)
     """
-    assert isinstance(pt, PTree)
     return pt(cast=lambda data: _cast(data, pt))
 
 

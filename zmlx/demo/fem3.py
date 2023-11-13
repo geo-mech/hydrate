@@ -11,7 +11,7 @@ def create_mesh():
                              dx=1, dy=5, dz=5)
 
 
-def create_model(mesh):
+def create(mesh):
     """
     根据mesh创建模型
     """
@@ -69,15 +69,15 @@ def solve(model, mesh):
     show(model, mesh, caption='step1')
 
 
-def main(gui_mode=True, close_after_done=False):
+def execute(gui_mode=True, close_after_done=False):
     """
     主函数
     """
     mesh = create_mesh()
-    model = create_model(mesh=mesh)
+    model = create(mesh=mesh)
     gui.execute(func=solve, args=[model, mesh],
                 close_after_done=close_after_done, disable_gui=not gui_mode)
 
 
 if __name__ == '__main__':
-    main()
+    execute()

@@ -9,7 +9,7 @@ from zmlx.ptree.box import box2
 from zmlx.ptree.ptree import PTree, as_ptree
 
 
-def dfn2(pt):
+def dfn2(pt, box=None):
     """
     从ptree中读取数据，并创建二维的dfn
     """
@@ -23,7 +23,7 @@ def dfn2(pt):
     if isinstance(pt.data, list):
         fractures = []
         for item in pt.data:
-            fractures = fractures + dfn2(as_ptree(item, path=pt.path))
+            fractures = fractures + dfn2(as_ptree(item, path=pt.path), box=box)
         return fractures
 
     p21 = pt('p21', doc='The length of fracture in 1m^2')
@@ -33,7 +33,9 @@ def dfn2(pt):
 
     assert p21 >= 0
 
-    box = box2(pt['box'])
+    if box is None:
+        box = box2(pt['box'])
+
     assert len(box) == 4
     if abs(box[0] - box[2]) * abs(box[1] - box[3]) < 1.0e-10:
         print('area too small')
@@ -71,17 +73,15 @@ def test():
     pt.data = [
         {
             "p21": 1,
-            "box": "0 0 10 10",
             "angles": 0,
             "lengths": "np.linspace(5,10,100)"
         },
         {
             "p21": 1,
-            "box": "0 0 10 10",
             "angles": 1,
             "lengths": "np.linspace(5,10,100)"
         }]
-    for f in dfn2(pt):
+    for f in dfn2(pt, box=[0, 0, 10, 10]):
         print(f)
 
 

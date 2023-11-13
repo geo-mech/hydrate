@@ -13,7 +13,11 @@ def make_fname(time, folder=None, ext=None, unit=None):
     if unit is not None:
         name = name + unit
     if ext is not None:
-        name = name + ext
+        assert len(ext) >= 1
+        if ext[0] == '.':
+            name = name + ext
+        else:
+            name = name + '.' + ext
     if len(folder) > 0:
         if not os.path.exists(folder):
             os.makedirs(folder, exist_ok=True)
@@ -23,3 +27,4 @@ def make_fname(time, folder=None, ext=None, unit=None):
 
 if __name__ == '__main__':
     print(make_fname(1, '.', '.txt'))
+    print(make_fname(1, '.', 'txt'))

@@ -62,6 +62,6 @@ def show_all():
 
 
 if __name__ == '__main__':
-    from zml import gui
+    from zmlx.ui.GuiBuffer import gui
 
     gui.execute(show_all, close_after_done=False)

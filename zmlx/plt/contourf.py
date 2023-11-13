@@ -1,4 +1,4 @@
-from zml import plot, gui
+from zmlx.ui.GuiBuffer import gui, plot
 
 
 def contourf(x=None, y=None, z=None, caption=None, gui_only=False,

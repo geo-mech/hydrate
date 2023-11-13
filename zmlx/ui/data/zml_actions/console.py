@@ -4,7 +4,7 @@
 # ** dependency = """from pyqtgraph.console import ConsoleWidget"""
 # ** is_sys = True
 
-from zml import gui
+from zmlx.ui.GuiBuffer import gui
 from zmlx.ui.Widgets.PgConsole import PgConsole
 
 if PgConsole is not None:

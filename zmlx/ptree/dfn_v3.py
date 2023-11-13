@@ -9,7 +9,7 @@ from zmlx.ptree.dfn2 import dfn2
 from zmlx.ptree.ptree import PTree, as_ptree
 
 
-def dfn_v3(pt):
+def dfn_v3(pt, box=None):
     """
     创建一组dfn_v3
     """
@@ -25,17 +25,19 @@ def dfn_v3(pt):
     if isinstance(pt.data, list):
         fractures = []
         for item in pt.data:
-            fractures = fractures + dfn_v3(as_ptree(item, path=pt.path))
+            fractures = fractures + dfn_v3(as_ptree(item, path=pt.path), box=box)
         return fractures
 
-    box = box3(pt['box'])
+    if box is None:
+        box = box3(pt['box'])
+
     assert len(box) == 6
 
     if abs(box[0] - box[3]) * abs(box[1] - box[4]) * abs(box[2] - box[5]) < 1.0e-15:
         print('volume too small')
         return []
 
-    segs = dfn2(pt)
+    segs = dfn2(pt, box=[box[0], box[1], box[3], box[4]])
 
     if len(segs) == 0:
         print('no segments')
@@ -58,7 +60,6 @@ def test():
     pt = PTree()
     pt.data = [
         {
-            "box": [0, 0, 0, 30, 30, 30],
             "p21": 1.0,
             "angles": "np.linspace(0, 0.4, 10)",
             "lengths": "np.linspace(5, 10, 100)",
@@ -66,7 +67,6 @@ def test():
             "remove_small": True
         },
         {
-            "box": [0, 0, 0, 30, 30, 30],
             "p21": 1.0,
             "angles": "np.linspace(1, 1.4, 10)",
             "lengths": "np.linspace(5, 10, 100)",
@@ -74,7 +74,7 @@ def test():
             "remove_small": True
         }
     ]
-    fractures = dfn_v3(pt)
+    fractures = dfn_v3(pt, box=[0, 0, 0, 30, 30, 30])
     for f in fractures:
         print(f)
     print(len(fractures))

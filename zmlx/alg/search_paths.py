@@ -1,6 +1,7 @@
 import os
 
-from zml import app_data, gui
+from zmlx.ui.GuiBuffer import gui
+from zml import app_data
 
 
 def get_paths():

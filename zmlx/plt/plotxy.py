@@ -1,4 +1,4 @@
-from zml import gui, plot
+from zmlx.ui.GuiBuffer import gui, plot
 
 
 def plotxy(x=None, y=None, ipath=None, ix=None, iy=None, caption=None, gui_only=False,

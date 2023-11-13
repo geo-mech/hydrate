@@ -62,7 +62,7 @@ class FileViewer(QtWidgets.QTableWidget):
                 ext = os.path.splitext(path)[-1]
                 if ext is not None:
                     if ext.lower() == '.py' or ext.lower() == '.pyw':
-                        from zml import gui
+                        from zmlx.ui.GuiBuffer import gui
                         gui.open_code(path)
         except:
             pass
@@ -77,7 +77,7 @@ class FileViewer(QtWidgets.QTableWidget):
 
         try:
             name, path = self.__data[irow]
-            from zml import gui
+            from zmlx.ui.GuiBuffer import gui
             gui.open_file(path)
         except:
             pass

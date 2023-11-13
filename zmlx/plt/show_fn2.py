@@ -5,7 +5,8 @@
 
 import warnings
 
-from zml import is_array, gui
+from zmlx.ui.GuiBuffer import gui
+from zml import is_array
 from zmlx.plt.get_color import get_color
 from zmlx.plt.plot2 import plot2
 

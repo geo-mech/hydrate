@@ -4,7 +4,7 @@
 # ** on_toolbar = False
 # ** icon = 'clock.png'
 
-from zml import gui
+from zmlx.ui.GuiBuffer import gui
 from zmlx.ui.Widgets.TimerViewer import TimerViewer
 
 gui.get_widget(type=TimerViewer, caption='耗时', on_top=True, oper=lambda w: w.refresh, icon='clock.png')

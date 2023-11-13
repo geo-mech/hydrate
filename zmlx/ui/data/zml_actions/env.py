@@ -3,7 +3,7 @@
 # ** is_sys = True
 # ** icon = 'set.png'
 
-from zml import gui
+from zmlx.ui.GuiBuffer import gui
 from zmlx.ui.Widgets.EnvEdit import MultiLineEdit
 
 

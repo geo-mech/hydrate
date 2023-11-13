@@ -2,12 +2,15 @@ from zml import *
 from zmlx.pg.colormap import coolwarm
 from zmlx.pg.get_color import get_color
 from zmlx.pg.plot3 import *
+import warnings
 
 
 def show_scatter3(pos=None, size=None, color=None, alpha=None, pxMode=True, cmap=None, caption=None, on_top=None,
-                  reset_dist=True, reset_cent=True):
+                  reset_dist=True, reset_cent=True, box=None):
     """
-    显示三维的散点(仅仅在gui模式下执行)
+    显示三维的散点(仅仅在gui模式下执行).
+        注意，当color不是二维数组的时候，会将color视为数值，并且利用alpha和cmap来计算color，这个过程会比较慢，会显著影响此函数的执行效率
+        当box不给定的时候，会利用pos来计算.
     """
     if not gui.exists() or pos is None:
         return
@@ -22,50 +25,59 @@ def show_scatter3(pos=None, size=None, color=None, alpha=None, pxMode=True, cmap
     if count == 0:
         return
 
-    if color is None:
-        color = 1
-
-    if len(np.shape(color)) == 0:
-        color = np.ones(shape=count, dtype=float) * color
-
+    # 准备size数据
     if size is None:
         size = 1
 
     if len(np.shape(size)) == 0:
         size = np.ones(shape=count, dtype=float) * size
 
-    if alpha is None:
-        alpha = 1
+    # 准备color数据
+    if color is None:
+        color = 1
 
-    if len(np.shape(alpha)) == 0:
-        alpha = np.ones(shape=count, dtype=float) * alpha
+    assert color is not None
+    if len(np.shape(color)) != 2:  # 真正最终使用的color是一个N行4列的二位数组。当发现给定的数据不是二维的时候，则利用colormap来创建
+        warnings.warn('The given color is not 2d Array (n*4). Will compute color by colormap and this is Slow!')
+        if len(np.shape(color)) == 0:
+            color = np.ones(shape=count, dtype=float) * color
 
-    cl = np.min(color)
-    cr = np.max(color)
-    if cl + 1.0e-10 >= cr:
-        cl = cr - 1.0
+        if alpha is None:
+            alpha = 1
 
-    if cmap is None:
-        cmap = coolwarm()
+        if len(np.shape(alpha)) == 0:
+            alpha = np.ones(shape=count, dtype=float) * alpha
 
-    colors = []
-    for i in range(count):
-        c1 = get_color(cmap, cl, cr, color[i])
-        assert len(c1) >= 4
-        colors.append(c1)
+        cl = np.min(color)
+        cr = np.max(color)
+        if cl + 1.0e-10 >= cr:
+            cl = cr - 1.0
 
-    colors = np.array(colors)
-    colors[:, 3] = alpha
-    color = colors
+        if cmap is None:
+            cmap = coolwarm()
 
-    x_min = np.min(pos[:, 0])
-    x_max = np.max(pos[:, 0])
+        colors = []
+        for i in range(count):
+            c1 = get_color(cmap, cl, cr, color[i])
+            assert len(c1) >= 4
+            colors.append(c1)
 
-    y_min = np.min(pos[:, 1])
-    y_max = np.max(pos[:, 1])
+        colors = np.array(colors)
+        colors[:, 3] = alpha
+        color = colors
 
-    z_min = np.min(pos[:, 2])
-    z_max = np.max(pos[:, 2])
+    if box is None:
+        x_min = np.min(pos[:, 0])
+        x_max = np.max(pos[:, 0])
+
+        y_min = np.min(pos[:, 1])
+        y_max = np.max(pos[:, 1])
+
+        z_min = np.min(pos[:, 2])
+        z_max = np.max(pos[:, 2])
+    else:
+        assert len(box) == 6
+        x_min, y_min, z_min, x_max, y_max, z_max = box
 
     widget = get_widget(caption=caption, on_top=on_top)
     if widget is None:
@@ -85,9 +97,9 @@ def show_scatter3(pos=None, size=None, color=None, alpha=None, pxMode=True, cmap
         set_center([(x_min + x_max) / 2, (y_min + y_max) / 2, (z_min + z_max) / 2])
 
     if hasattr(widget, 'line_1'):
-        add_box([x_min, y_min, z_min], [x_max, y_max, z_max], line=widget.line_1)
+        add_box([x_min, y_min, z_min], [x_max, y_max, z_max], line=widget.line_1, antialias=True)
     else:
-        widget.line_1 = add_box([x_min, y_min, z_min], [x_max, y_max, z_max])
+        widget.line_1 = add_box([x_min, y_min, z_min], [x_max, y_max, z_max], antialias=True)
 
 
 def demo(count=1000):

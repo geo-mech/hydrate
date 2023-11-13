@@ -10,3 +10,6 @@ try:
 except Exception as err:
     warnings.warn(f'meet exception in {__file__}: {err}')
 """
+
+from zmlx.ui.GuiBuffer import gui
+
