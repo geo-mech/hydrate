@@ -31,7 +31,7 @@ def create(mesh):
 
     # 增大质量，以确保位置不变
     for idx in [0, 1, 3]:
-        model.set_mas(idx, model.get_mas(idx) * 1.0e4)
+        model.set_mas(idx, model.get_mas(idx) * 1.0e20)
 
     # 修改初始位置，打破平衡状态
     idx = 3 * 2  # 第3个node的x

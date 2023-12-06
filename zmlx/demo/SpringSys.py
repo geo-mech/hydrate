@@ -70,4 +70,4 @@ def main():
 
 
 if __name__ == '__main__':
-    gui(main, keep_cwd=True, close_after_done=False)
+    gui.execute(main, keep_cwd=True, close_after_done=False)

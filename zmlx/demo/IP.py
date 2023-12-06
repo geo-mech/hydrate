@@ -94,10 +94,7 @@ def solve(model):
 
 
 def execute(gui_mode=True, close_after_done=False):
-    if gui_mode:
-        gui(lambda: solve(create()), close_after_done=close_after_done)
-    else:
-        solve(create())
+    gui.execute(lambda: solve(create()), close_after_done=close_after_done, disable_gui=not gui_mode)
 
 
 if __name__ == '__main__':

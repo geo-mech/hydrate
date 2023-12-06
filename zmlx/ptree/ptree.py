@@ -5,7 +5,7 @@ from zmlx.filesys.path import *
 from zmlx.io.json_ex import read as read_json, write as write_json
 
 
-class Adaptor:
+class _Adaptor:
     def __init__(self, data=None, path=None, read=None, write=None):
         """
         关联数据/文件
@@ -31,12 +31,16 @@ class Adaptor:
 
     def get(self, *args):
         """
-        返回值
+        返回值(其中的arg应该为int或者str类型)
         """
         data = self.data
         for arg in args:
             if isinstance(data, dict):
                 data = data.get(arg)
+                continue
+            if isinstance(data, (list, tuple)) and isinstance(arg, int):
+                data = data[arg] if 0 <= arg < len(data) else None
+                continue
             else:
                 return
         return data
@@ -90,19 +94,19 @@ class PTree:
         """
         初始化
         """
-        assert ada is None or isinstance(ada, (PTree, Adaptor))
+        assert ada is None or isinstance(ada, (PTree, _Adaptor))
         if ada is None:
-            self.ada = Adaptor()
+            self.ada = _Adaptor()
             self.keys = [] if keys is None else list(keys)
         elif isinstance(ada, PTree):
-            assert isinstance(ada.ada, Adaptor)
+            assert isinstance(ada.ada, _Adaptor)
             self.ada = ada.ada
             self.keys = ada.keys + list(keys)
         else:
-            assert isinstance(ada, Adaptor)
+            assert isinstance(ada, _Adaptor)
             self.ada = ada
             self.keys = [] if keys is None else list(keys)
-        assert isinstance(self.ada, Adaptor)
+        assert isinstance(self.ada, _Adaptor)
 
     def get(self, *args):
         """
@@ -154,15 +158,17 @@ class PTree:
         """
         return PTree(self, keys)
 
-    def __call__(self, *keys, cast=None, doc=None):
+    def __call__(self, *keys, cast=None, doc=None, default=None):
         """
-        读取数据.
+        读取数据. 注意当给定cast的时候，将对原始的数据进行转化.
         """
-        if doc is not None:
+        if doc is not None and not self.ada.get('disable_doc'):
             if self.ada.fill('doc', *self.keys, *keys, doc):
                 self.ada.save()
 
         value = self.get(*keys)
+        if value is None:
+            value = default
         if value is None:
             return
         if cast is None:
@@ -223,7 +229,7 @@ def _open_json(filename):
     """
     将Json文件作为一个PTree来使用
     """
-    return PTree(ada=Adaptor(data=None, path=filename, read=read_json, write=write_json))
+    return PTree(ada=_Adaptor(data=None, path=filename, read=read_json, write=write_json))
 
 
 def _open_py(filename):
@@ -235,7 +241,7 @@ def _open_py(filename):
     def read(path):
         return read_py(path=path, data={}, encoding='utf-8', globals=None, text=None, key=None)
 
-    return PTree(ada=Adaptor(data=None, path=filename, read=read, write=write_py))
+    return PTree(ada=_Adaptor(data=None, path=filename, read=read, write=write_py))
 
 
 def open_pt(filename):
@@ -250,7 +256,7 @@ def open_pt(filename):
 
 
 def as_ptree(data, path=None):
-    ada = Adaptor(data=data, path=path)
+    ada = _Adaptor(data=data, path=path)
     return PTree(ada=ada)
 
 

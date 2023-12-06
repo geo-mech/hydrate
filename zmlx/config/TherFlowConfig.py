@@ -559,10 +559,9 @@ class TherFlowConfig(Object):
             model.pop_fluids(self.solid_buffer)
 
         if model.gr_number > 0:
-            # 此时，各个Face的导流系数是可变的.
+            # 此时，各个Face的导流系数是可变的(根据流体的体积来修改)
             # 注意：
-            #   在建模的时候，务必要设置Cell的v0属性，Face的g0属性和ikr属性，并且，在model中，应该有相应的kr和它对应。
-            #   为了不和真正流体的kr混淆，这个Face的ikr，应该大于流体的数量。
+            #   在建模的时候，务必要设置Cell的fv0属性，Face的g0属性和igr属性，并且，在model中，应该有相应的gr和igr对应
             model.update_cond(ca_v0=self.cell_keys['fv0'], fa_g0=self.face_keys['g0'], fa_igr=self.face_keys['igr'],
                               relax_factor=0.3)
 

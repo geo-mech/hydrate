@@ -1,12 +1,9 @@
-import os
-
-import numpy as np
-
 from zmlx.geometry.dfn_v3 import from_segs, remove_small
 from zmlx.ptree.array import array
 from zmlx.ptree.box import box3
 from zmlx.ptree.dfn2 import dfn2
 from zmlx.ptree.ptree import PTree, as_ptree
+import copy
 
 
 def dfn_v3(pt, box=None):
@@ -16,16 +13,14 @@ def dfn_v3(pt, box=None):
     assert isinstance(pt, PTree)
 
     if isinstance(pt.data, str):
-        fname = pt.find(pt.data)
-        if os.path.isfile(fname):  # 尝试读取文件
-            return np.loadtxt(fname, dtype=float).tolist()
-        else:
-            return []
+        data = array(pt)
+        if data is not None:
+            return data.tolist()
 
     if isinstance(pt.data, list):
         fractures = []
         for item in pt.data:
-            fractures = fractures + dfn_v3(as_ptree(item, path=pt.path), box=box)
+            fractures = fractures + dfn_v3(as_ptree(copy.deepcopy(item), path=pt.path), box=box)
         return fractures
 
     if box is None:

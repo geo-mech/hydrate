@@ -61,4 +61,4 @@ def main():
 
 
 if __name__ == '__main__':
-    gui_exec(main, close_after_done=False)
+    gui.execute(main, close_after_done=False)

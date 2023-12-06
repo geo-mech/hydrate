@@ -162,28 +162,3 @@ def test_1():
         alpha.append(random.uniform(0, 1) ** 3)
     show_rc3(rc3, color=color, alpha=alpha, caption='dfn_v3')
 
-
-def test_2():
-    def xxx(fractures):
-        """
-        寻找相互连通的裂缝组合
-        """
-        from zml import Hf2Alg
-        links = []
-        for i0 in range(len(fractures)):
-            a = fractures[i0]
-            for i1 in range(i0 + 1, len(fractures)):
-                b = fractures[i1]
-                if Hf2Alg.rect_v3_intersected(a, b):
-                    links.append([i0, i1])
-        return links
-
-    import timeit
-    fractures = create_demo()
-    t1 = timeit.default_timer()
-    links = create_links(fractures)
-    t2 = timeit.default_timer()
-    print(f'count links = {len(links)}. time = {t2 - t1}')
-    links = xxx(fractures)
-    t3 = timeit.default_timer()
-    print(f'count links = {len(links)}. time = {t3 - t2}')

@@ -137,11 +137,7 @@ def solve(model):
 
 
 def execute(gui_mode=True, close_after_done=False):
-    model = create()
-    if gui_mode:
-        gui.execute(solve, args=(model, ), close_after_done=close_after_done)
-    else:
-        solve(model)
+    gui.execute(solve, args=(create(), ), close_after_done=close_after_done, disable_gui=not gui_mode)
 
 
 if __name__ == '__main__':
