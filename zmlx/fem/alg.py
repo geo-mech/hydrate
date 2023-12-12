@@ -1,6 +1,7 @@
 from zml import *
 from zmlx.fem.create3 import create3
 import numpy as np
+import warnings
 
 
 def set_mas(dyn: DynSys, ids, mas):
@@ -145,8 +146,9 @@ def add_body_pressure(dyn: DynSys, mesh: Mesh3, body_id, pressure):
 
 
 def compute_disp(mesh: Mesh3, na_dx=None, na_dy=None, na_dz=None, ba_dd=None, ba_dp=None,
-                 ba_E0=None, ba_E1=None, ba_mu=None, gravity=-10.0, dt=1.0e3, top_pressure=None,
-                 tolerance=1.0e-15, show=print):
+                 ba_E0=None, ba_E1=None, ba_mu=None, gravity=-10.0, dt=1.0e3,
+                 top_stress=None, top_pressure=None,
+                 tolerance=1.0e-20, show=print, bound_mas=1.0e20):
     """
     计算各个Node的位移，并且存储在Node属性里面. 其中：
         na_dx, na_dy和na_dz为Node的属性，用来存储计算的结果（各个Node的位移）;
@@ -157,24 +159,24 @@ def compute_disp(mesh: Mesh3, na_dx=None, na_dy=None, na_dz=None, ba_dd=None, ba
         ba_mu: body的属性，泊松比;
         gravity: 重力加速度
         dt: 计算的时间步长.
-        top_pressure：模型计算区域顶部的压力(将作用在mesh顶部的一层face上面)
+        top_stress/top_pressure：模型计算区域顶部的应力(将作用在mesh顶部的一层face上面)
         tolerance: 求解器的残差.
         show: 用以显示计算的过程.
     计算的边界条件为:
         x的左右侧，均仅仅限制x位移；y的左右侧，都限制y位移；z的底部，限制z的位移.
     """
-    def set_bound(_dyn, mas=1.0e20):
+    def set_bound(_dyn):
         """
         设置边界条件
         """
         # x
-        set_mas(_dyn, find_boundary(_dyn, n_dim=3, i_dim=0, lower=1, i_dir=0, eps=1.0e-3), mas)
-        set_mas(_dyn, find_boundary(_dyn, n_dim=3, i_dim=0, lower=0, i_dir=0, eps=1.0e-3), mas)
+        set_mas(_dyn, find_boundary(_dyn, n_dim=3, i_dim=0, lower=1, i_dir=0, eps=1.0e-3), bound_mas)
+        set_mas(_dyn, find_boundary(_dyn, n_dim=3, i_dim=0, lower=0, i_dir=0, eps=1.0e-3), bound_mas)
         # y
-        set_mas(_dyn, find_boundary(_dyn, n_dim=3, i_dim=1, lower=1, i_dir=1, eps=1.0e-3), mas)
-        set_mas(_dyn, find_boundary(_dyn, n_dim=3, i_dim=1, lower=0, i_dir=1, eps=1.0e-3), mas)
+        set_mas(_dyn, find_boundary(_dyn, n_dim=3, i_dim=1, lower=1, i_dir=1, eps=1.0e-3), bound_mas)
+        set_mas(_dyn, find_boundary(_dyn, n_dim=3, i_dim=1, lower=0, i_dir=1, eps=1.0e-3), bound_mas)
         # z
-        set_mas(_dyn, find_boundary(_dyn, n_dim=3, i_dim=2, lower=1, i_dir=2, eps=1.0e-3), mas)
+        set_mas(_dyn, find_boundary(_dyn, n_dim=3, i_dim=2, lower=1, i_dir=2, eps=1.0e-3), bound_mas)
 
     assert na_dx is not None and na_dy is not None and na_dz is not None
     for node in mesh.nodes:
@@ -186,9 +188,14 @@ def compute_disp(mesh: Mesh3, na_dx=None, na_dy=None, na_dz=None, ba_dd=None, ba
     solver = ConjugateGradientSolver(tolerance=tolerance)
     show('solver created')
 
-    if top_pressure is not None and ba_E0 is not None and ba_E1 is not None:
+    if top_stress is None and top_pressure is not None:
+        top_stress = top_pressure
+        warnings.warn('The keyword <top_pressure> will not be used, use <top_stress> instead',
+                      DeprecationWarning)
+
+    if top_stress is not None and ba_E0 is not None and ba_E1 is not None:
         show('E0, E1 and top_pressure set, will computed disp by the changed of E')
-        assert top_pressure >= 0
+        assert top_stress >= 0
         # 计算z的最大值 (用以寻找顶面)
         z_max = -1.0e100
         for node in mesh.nodes:
@@ -212,8 +219,7 @@ def compute_disp(mesh: Mesh3, na_dx=None, na_dy=None, na_dz=None, ba_dd=None, ba
 
         def add_top_pressure(_dyn):
             for face in top_faces:
-                assert isinstance(face, Mesh3.Face)
-                add_face_force(_dyn, mesh, face.index, [0, 0, -top_pressure*face.area])
+                add_face_force(_dyn, mesh, face.index, [0, 0, -top_stress * face.area])
 
         # 计算在原始状态下的位移
         dyn = create3(mesh=mesh, ba_E=ba_E0, ba_mu=ba_mu, ba_den=None, b_E=200e6, b_mu=0.2, b_den=2000.0)
@@ -300,10 +306,10 @@ def _test2():
     # 设置属性
     for body in mesh.bodies:
         assert isinstance(body, Mesh3.Body)
-        body.set_attr(ba_dd, 0 if get_distance(body.pos, [0, 0, 0]) > 5 else 100)
+        body.set_attr(ba_dd, 100 if get_distance(body.pos, [0, 0, 0]) < 5 else 0)
         body.set_attr(ba_dp, 0)
         body.set_attr(ba_E0, 200e6)
-        body.set_attr(ba_E1, 180e6)
+        body.set_attr(ba_E1, 200e6)
         body.set_attr(ba_mu, 0.2)
     print('Attrs set')
 
@@ -311,7 +317,7 @@ def _test2():
     na_dy = 1
     na_dz = 2
     compute_disp(mesh, na_dx=na_dx, na_dy=na_dy, na_dz=na_dz, ba_dd=ba_dd, ba_dp=ba_dp,
-                 ba_E0=ba_E0, ba_E1=ba_E1, ba_mu=ba_mu, top_pressure=1e6, dt=10)
+                 ba_E0=ba_E0, ba_E1=ba_E1, ba_mu=ba_mu, top_stress=1e6)
 
     # 读取中间一个切面，并且绘图
     x = []
