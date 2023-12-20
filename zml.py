@@ -1012,7 +1012,7 @@ class License:
         if self.core.has_dll():
             self.core.use(c_int, 'lic_webtime')
             self.core.use(c_bool, 'lic_summary', c_void_p)
-            self.core.use(None, 'lic_get_serial', c_void_p, c_bool)
+            self.core.use(None, 'lic_get_serial', c_void_p, c_bool, c_bool)
             self.core.use(None, 'lic_create_permanent', c_void_p, c_void_p)
             self.core.use(None, 'lic_load', c_void_p)
 
@@ -1037,13 +1037,13 @@ class License:
             if self.core.lic_summary(s.handle):
                 return s.to_str()
 
-    def get_serial(self, base64=True):
+    def get_serial(self, base64=True, export_all=False):
         """
         Returns the usb serial number of this computer (one of them), used for registration
         """
         if self.core.has_dll():
             s = String()
-            self.core.lic_get_serial(s.handle, base64)
+            self.core.lic_get_serial(s.handle, base64, export_all)
             return s.to_str()
 
     @property
@@ -7878,6 +7878,11 @@ class Seepage(HasHandle, HasCells):
             """
             assert isinstance(other, Seepage.FluData)
             core.fluid_clone(self.handle, other.handle)
+
+        def get_copy(self):
+            data = Seepage.FluData()
+            data.clone(self)
+            return data
 
         core.use(None, 'fluid_add', c_void_p, c_void_p)
 

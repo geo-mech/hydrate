@@ -161,6 +161,7 @@ class PTree:
     def __call__(self, *keys, cast=None, doc=None, default=None):
         """
         读取数据. 注意当给定cast的时候，将对原始的数据进行转化.
+            其中default为*keys位置的默认值，当*keys位置没有数据的时候，将使用default. 此default仍然需要经过cast之后再返回.
         """
         if doc is not None and not self.ada.get('disable_doc'):
             if self.ada.fill('doc', *self.keys, *keys, doc):

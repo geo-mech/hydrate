@@ -12,7 +12,7 @@ from zmlx.pg.plot3 import *
 
 
 def show_rc3(rc3, color=None, alpha=None, cmap=None, caption=None, on_top=None,
-             reset_dist=True, reset_cent=True, gl_option=None):
+             reset_dist=True, reset_cent=True, gl_option=None, print_box=False):
     """
     显示一组三维的离散裂缝网络
         gl_option:  opaque, translucent, additive
@@ -120,12 +120,13 @@ def show_rc3(rc3, color=None, alpha=None, cmap=None, caption=None, on_top=None,
         set_distance(get_distance([x_min, y_min, z_min], [x_max, y_max, z_max]))
         set_center([(x_min + x_max) / 2, (y_min + y_max) / 2, (z_min + z_max) / 2])
 
+    box = [[x_min, y_min, z_min], [x_max, y_max, z_max]]
+    if print_box:
+        print(f'box = {box}')
     if hasattr(widget, 'line_1'):
-        add_box([x_min, y_min, z_min], [x_max, y_max, z_max],
-                line=widget.line_1)
+        add_box(*box, line=widget.line_1)
     else:
-        widget.line_1 = add_box([x_min, y_min, z_min],
-                                [x_max, y_max, z_max])
+        widget.line_1 = add_box(*box)
 
 
 def test():
