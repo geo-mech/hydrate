@@ -24,6 +24,7 @@ from zmlx.kr.create_kr import create_kr
 from zmlx.kr.create_krf import create_krf
 from zmlx.react.ch4_hydrate import get_p
 from zmlx.utility.LinearField import LinearField
+from zmlx.utility.SeepageCellMonitor import SeepageCellMonitor
 from zmlx.filesys.opath import opath
 import numpy as np
 
@@ -33,8 +34,8 @@ def create_mesh(width=100.0, height=400.0):
     创建网格. 模型高度height，宽度width. 单个网格的大小大约为2米. 模型在y方向的厚度为1m
     """
     assert 15.0 <= width <= 200.0 and 100.0 <= height <= 500.0
-    jx = round(width/2)
-    jz = round(height/2)
+    jx = round(width / 2.0)
+    jz = round(height / 2.0)
     x = np.linspace(0, width, jx)
     y = [-0.5, 0.5]
     z = np.linspace(-height, 0, jz)
@@ -108,7 +109,7 @@ def create_ini(mesh, under_h=100.0, hyd_h=60.0, t_top=274.0, p_top=10e6, grad_t=
 
 def create_model(width=100.0, height=400.0,
                  under_h=100.0, hyd_h=60.0, t_top=274.0, p_top=10e6, grad_t=0.035, perm=1.0e-14, porosity=0.3,
-                 kg_co2_day=10.0, x_inj=None, z_inj=None):
+                 kg_co2_day=10.0, x_inj=None, z_inj=None, p_prod=4e6):
     """
     创建模型
     """
@@ -117,7 +118,6 @@ def create_model(width=100.0, height=400.0,
                      t_top=t_top, p_top=p_top, grad_t=grad_t, perm=perm, porosity=porosity)
 
     x_min, x_max = mesh.get_pos_range(0)
-    y_min, y_max = mesh.get_pos_range(1)
     z_min, z_max = mesh.get_pos_range(2)
 
     gr = create_krf(0.1, 1.5, as_interp=True, k_max=1, s_max=1, count=200)
@@ -144,23 +144,27 @@ def create_model(width=100.0, height=400.0,
     seepage.set_dt_max(model, 24 * 3600)  # 时间步长的最大值
     seepage.set_dt_min(model, 10)
 
-    # 添加虚拟Cell用于生产 (最后一个cell为虚拟的).
+    # 添加虚拟cell用于生产
     z_prod = z_min + under_h + hyd_h * 0.5
     pos = (x_min, -1000.0, z_prod)
     virtual_cell = seepage.add_cell(model, pos=pos, porosity=1.0e7, pore_modulus=100e6, vol=1.0,
-                                    temperature=ini['temperature'](*pos), p=4e6,
+                                    temperature=ini['temperature'](*pos), p=p_prod,
                                     s=((0, 0), 1, (0, 0, 0)))
     cell = model.get_nearest_cell([x_min, 0, z_prod])
-    virtual_face = seepage.add_face(model, virtual_cell, cell,
-                                    heat_cond=0, perm=perm, area=1.0, length=1.0)
+    seepage.add_face(model, virtual_cell, cell,
+                     heat_cond=0, perm=perm, area=1.0, length=1.0)
 
     # 添加注入co2.
     assert 0 <= kg_co2_day <= 1.0e5
-    pos = [x_inj if x_inj is not None else x_max, 0.0, z_inj if z_inj is not None else z_max - 150.0]
+    pos = [x_inj if x_inj is not None else 0,
+           0.0,
+           z_inj if z_inj is not None else z_max - 150.0]
     cell = model.get_nearest_cell(pos)
-    flu = cell.get_fluid(0, 1).get_copy()  # co2
-    inj = model.add_injector(cell=cell, fluid_id=(0, 1), flu=flu, pos=pos, radi=3,
-                             value=(kg_co2_day / flu.den) / (3600 * 24))
+    ico2 = model.find_fludef('co2')
+    assert ico2 is not None
+    flu = cell.get_fluid(*ico2).get_copy()
+    model.add_injector(cell=cell, fluid_id=ico2, flu=flu, pos=pos, radi=3,
+                       value=(kg_co2_day / flu.den) / (3600 * 24))
 
     return model
 
@@ -202,6 +206,7 @@ def plot_cells(model, folder=None):
 
 def solve(model: Seepage, time_max=3600 * 24 * 365 * 30, folder=None):
     if folder is not None:
+        print_tag(folder)
         print(f'Solve. folder = {folder}')
         if gui.exists():
             gui.title(f'Data folder = {folder}')
@@ -209,13 +214,26 @@ def solve(model: Seepage, time_max=3600 * 24 * 365 * 30, folder=None):
     solver = ConjugateGradientSolver(tolerance=1.0e-14)
     iterate = GuiIterator(seepage.iterate, lambda: plot_cells(model, folder=path.join(folder, 'figures')))
 
+    monitor = SeepageCellMonitor(get_t=lambda: seepage.get_time(model),
+                                 cell=model.get_cell(model.cell_number-1))
+
     while seepage.get_time(model) < time_max:
         iterate(model, solver=solver)
+        monitor.update(dt=3600.0*24)
         step = seepage.get_step(model)
         if step % 10 == 0:
             time = time2str(seepage.get_time(model))
             dt = time2str(seepage.get_dt(model))
             print(f'step = {step}, dt = {dt}, time = {time}')
+        if step % 100 == 0:
+            monitor.plot_prod(index=0)
+            monitor.plot_rate(index=0)
+            if folder is not None:
+                monitor.save(path.join(folder, 'prod.txt'))
+
+    if folder is not None:  # 保存最终时刻
+        monitor.save(path.join(folder, 'prod.txt'))
+        model.save(path.join(folder, 'model.dat'))
 
 
 def execute(folder=None, time_max=3600 * 24 * 365 * 30, **kwargs):
@@ -228,7 +246,7 @@ def execute(folder=None, time_max=3600 * 24 * 365 * 30, **kwargs):
 
 
 def _test3():
-    execute(folder=opath('co2_disp'), p_top=6e6)
+    execute(folder=opath('co2_disp'), p_top=9e6, p_prod=3e6, perm=1.0e-13)
 
 
 if __name__ == '__main__':

@@ -50,7 +50,7 @@ class SeepageCellMonitor:
 
     def __init__(self, get_t, cell):
         """
-        初始化：给定的<get_t>应为一个函数，用以返回时间；cell为Seepage的一个Cell对象(或者多个Cell对象);
+        初始化：给定的<get_t>应为一个函数，用以返回时间(时间的单位应该是秒)；cell为Seepage的一个Cell对象(或者多个Cell对象);
         """
         self.get_t = get_t
         if is_array(cell):
