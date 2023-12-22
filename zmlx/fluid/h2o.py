@@ -8,7 +8,8 @@ import warnings
 from zml import Interp2, Seepage
 
 
-def create(t_min=272.0, t_max=300.0, p_min=1e6, p_max=40e6, name=None):
+def create(t_min=272.0, t_max=300.0, p_min=1e6, p_max=40e6, name=None, density=None, viscosity=None,
+           specific_heat=4200.0):
     """
     创建液体水的参数
 
@@ -45,8 +46,15 @@ def create(t_min=272.0, t_max=300.0, p_min=1e6, p_max=40e6, name=None):
         vis.create(p_min, 0.1e6, p_max, t_min, 1, t_max, get_viscosity)
         return vis
 
-    specific_heat = 4200.0
-    return Seepage.FluDef(den=create_density(), vis=create_viscosity(), specific_heat=specific_heat, name=name)
+    if density is not None:
+        assert 900.0 <= density <= 1100.0
+
+    if viscosity is not None:
+        assert 1.0e-5 <= viscosity <= 1.0e-2
+
+    return Seepage.FluDef(den=create_density() if density is None else density,
+                          vis=create_viscosity() if viscosity is None else viscosity,
+                          specific_heat=specific_heat, name=name)
 
 
 def create_flu(*args, **kwargs):

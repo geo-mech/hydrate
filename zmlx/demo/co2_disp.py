@@ -28,33 +28,48 @@ from zmlx.filesys.opath import opath
 import numpy as np
 
 
-def create_mesh():
+def create_mesh(width=100.0, height=400.0):
     """
-    创建网格. 模型高度400米，宽度100米, 分为200*50个网格.
+    创建网格. 模型高度height，宽度width. 单个网格的大小大约为2米. 模型在y方向的厚度为1m
     """
-    x = np.linspace(0, 100, 50)
+    assert 15.0 <= width <= 200.0 and 100.0 <= height <= 500.0
+    jx = round(width/2)
+    jz = round(height/2)
+    x = np.linspace(0, width, jx)
     y = [-0.5, 0.5]
-    z = np.linspace(-400, 0, 200)
+    z = np.linspace(-height, 0, jz)
     return SeepageMesh.create_cube(x, y, z)
 
 
-def create_ini(mesh, z0=-300, t0=287.0, p0=get_p(287.0)):
+def create_ini(mesh, under_h=100.0, hyd_h=60.0, t_top=274.0, p_top=10e6, grad_t=0.035, perm=1.0e-14, porosity=0.3):
     """
-    创建初始场。其中t0和p0为z0深度对应的温度和压力（作为参考点），从而来设置全场的温度和压力。
+    创建初始场. 其中：
+        under_h: 下伏层厚度
+        hyd_h: 水合物层厚度
+        t_top: 模型顶部温度
+        grad_t: 地温梯度(每下降1m，温度升高的幅度).
     """
+    assert 20.0 <= under_h <= 200.0
+    assert 0.0 <= hyd_h <= 200.0
+    assert 273.5 <= t_top <= 280.0
+    assert 5e6 <= p_top <= 20e6
+    assert 0.02 <= grad_t <= 0.06
+    assert 1.0e-16 <= perm <= 1.0e-12
+    assert 0.1 <= porosity <= 0.6
+
     z_min, z_max = mesh.get_pos_range(2)
 
     def get_k(x, y, z):
         """
         渗透率
         """
-        return 1.0e-14
+        return perm
 
     def get_s(x, y, z):
         """
         初始饱和度()
         """
-        if z0 <= z <= z0 + 60:
+        if z_min + under_h <= z <= z_min + under_h + hyd_h:
             return (0, 0), 0.5, (0.5, 0, 0)
         else:
             return (0, 0), 1, (0, 0, 0)
@@ -69,30 +84,44 @@ def create_ini(mesh, z0=-300, t0=287.0, p0=get_p(287.0)):
         """
         孔隙度（在顶部，将孔隙度设置为非常大，以固定压力）
         """
-        return 1.0e6 if z > z_max - 0.1 else 0.3
+        if z > z_max - 0.1:  # 顶部固定压力
+            return 1.0e7
 
-    t_ini = LinearField(v0=t0, z0=z0, dz=-0.035)
-    p_ini = LinearField(v0=p0, z0=z0, dz=-0.01e6)
+        if z < z_min + 0.1:  # 底部(假设底部有500m的底水供给)
+            return porosity * (500.0 / 2.0)
+
+        else:
+            return porosity
+
+    t_ini = LinearField(v0=t_top, z0=z_max, dz=-grad_t)
+    p_ini = LinearField(v0=p_top, z0=z_max, dz=-0.01e6)
     sample_dist = 1.0
+
+    t0 = t_ini(0, 0, z_min + under_h)
+    p0 = p_ini(0, 0, z_min + under_h)
+    print(f'At bottom of hydrate layer: t = {t0}, p = {p0}, peq = {get_p(t0)}')
 
     return {'porosity': get_fai, 'pore_modulus': 200e6, 'p': p_ini, 'temperature': t_ini,
             'denc': get_denc, 's': get_s, 'perm': get_k, 'heat_cond': 2,
             'sample_dist': sample_dist}
 
 
-def create_model():
+def create_model(width=100.0, height=400.0,
+                 under_h=100.0, hyd_h=60.0, t_top=274.0, p_top=10e6, grad_t=0.035, perm=1.0e-14, porosity=0.3,
+                 kg_co2_day=10.0, x_inj=None, z_inj=None):
     """
     创建模型
     """
-    mesh = create_mesh()
-    ini = create_ini(mesh=mesh)
+    mesh = create_mesh(width=width, height=height)
+    ini = create_ini(mesh=mesh, under_h=under_h, hyd_h=hyd_h,
+                     t_top=t_top, p_top=p_top, grad_t=grad_t, perm=perm, porosity=porosity)
 
     x_min, x_max = mesh.get_pos_range(0)
     y_min, y_max = mesh.get_pos_range(1)
     z_min, z_max = mesh.get_pos_range(2)
 
     gr = create_krf(0.1, 1.5, as_interp=True, k_max=1, s_max=1, count=200)
-    kw = hydrate_v2.Config(has_co2=True, gr=gr).kwargs
+    kw = hydrate_v2.Config(has_co2=True, gr=gr).get_kw(h2o_density=1.0e3)
     kw.update(ini)
     kw.update(create_dict(gravity=(0, 0, -10)))
 
@@ -115,21 +144,23 @@ def create_model():
     seepage.set_dt_max(model, 24 * 3600)  # 时间步长的最大值
     seepage.set_dt_min(model, 10)
 
-    # 添加虚拟Cell用于生产
-    pos = (x_min, -1000.0, -270)
+    # 添加虚拟Cell用于生产 (最后一个cell为虚拟的).
+    z_prod = z_min + under_h + hyd_h * 0.5
+    pos = (x_min, -1000.0, z_prod)
     virtual_cell = seepage.add_cell(model, pos=pos, porosity=1.0e7, pore_modulus=100e6, vol=1.0,
                                     temperature=ini['temperature'](*pos), p=4e6,
                                     s=((0, 0), 1, (0, 0, 0)))
-    cell = model.get_nearest_cell([x_min, 0, -270])
+    cell = model.get_nearest_cell([x_min, 0, z_prod])
     virtual_face = seepage.add_face(model, virtual_cell, cell,
-                                    heat_cond=0, perm=1.0e-14, area=1.0, length=1.0)
+                                    heat_cond=0, perm=perm, area=1.0, length=1.0)
 
-    # 添加注入co2
-    pos = [x_max, 0, -150]
+    # 添加注入co2.
+    assert 0 <= kg_co2_day <= 1.0e5
+    pos = [x_inj if x_inj is not None else x_max, 0.0, z_inj if z_inj is not None else z_max - 150.0]
     cell = model.get_nearest_cell(pos)
     flu = cell.get_fluid(0, 1).get_copy()  # co2
     inj = model.add_injector(cell=cell, fluid_id=(0, 1), flu=flu, pos=pos, radi=3,
-                             opers=[[0, (10 / flu.den) / (3600 * 24)]])
+                             value=(kg_co2_day / flu.den) / (3600 * 24))
 
     return model
 
@@ -148,35 +179,25 @@ def plot_cells(model, folder=None):
     x = x[: -1]
     z = z[: -1]
 
-    p = model.numpy.cells.get(-12)
-    p = p[: -1]
-    tricontourf(x, z, p, caption='pressure', title=f'time = {time}',
-                fname=make_fname(year, path.join(folder, 'pressure'), '.jpg', 'y'))
+    def show_ca(idx, name):
+        p = model.numpy.cells.get(idx)
+        p = p[: -1]
+        tricontourf(x, z, p, caption=name, title=f'time = {time}',
+                    fname=make_fname(year, path.join(folder, name), '.jpg', 'y'))
 
-    t = model.numpy.cells.get(model.get_cell_key('temperature'))
-    t = t[: -1]
-    tricontourf(x, z, t, caption='temperature', title=f'time = {time}',
-                fname=make_fname(year, path.join(folder, 'temperature'), '.jpg', 'y'))
+    show_ca(-12, 'pressure')
+    show_ca(model.get_cell_key('temperature'), 'temperature')
 
-    m = model.numpy.fluids(0, 0).mass
-    m = m[: -1]
-    tricontourf(x, z, m, caption='ch4', title=f'time = {time}',
-                fname=make_fname(year, path.join(folder, 'ch4'), '.jpg', 'y'))
+    def show_m(idx, name):
+        m = model.numpy.fluids(*idx).mass
+        m = m[: -1]
+        tricontourf(x, z, m, caption=name, title=f'time = {time}',
+                    fname=make_fname(year, path.join(folder, name), '.jpg', 'y'))
 
-    m = model.numpy.fluids(0, 1).mass
-    m = m[: -1]
-    tricontourf(x, z, m, caption='co2', title=f'time = {time}',
-                fname=make_fname(year, path.join(folder, 'co2'), '.jpg', 'y'))
-
-    m = model.numpy.fluids(2, 0).mass
-    m = m[: -1]
-    tricontourf(x, z, m, caption='ch4_hyd', title=f'time = {time}',
-                fname=make_fname(year, path.join(folder, 'ch4_hyd'), '.jpg', 'y'))
-
-    m = model.numpy.fluids(2, 2).mass
-    m = m[: -1]
-    tricontourf(x, z, m, caption='co2_hyd', title=f'time = {time}',
-                fname=make_fname(year, path.join(folder, 'co2_hyd'), '.jpg', 'y'))
+    show_m([0, 0], 'ch4')
+    show_m([0, 1], 'co2')
+    show_m([2, 0], 'ch4_hyd')
+    show_m([2, 2], 'co2_hyd')
 
 
 def solve(model: Seepage, time_max=3600 * 24 * 365 * 30, folder=None):
@@ -197,22 +218,17 @@ def solve(model: Seepage, time_max=3600 * 24 * 365 * 30, folder=None):
             print(f'step = {step}, dt = {dt}, time = {time}')
 
 
-def _test1():
-    mesh = create_mesh()
-    print(mesh)
-
-
-def _test2():
-    from zmlx.react.ch4_hydrate import get_t, get_p
-    t = 285.0
-    p = get_p(t)
-    print(f't = {t}, p = {p}, t2 = {get_t(p)}')
+def execute(folder=None, time_max=3600 * 24 * 365 * 30, **kwargs):
+    """
+    执行建模和计算的全过程
+    """
+    model = create_model(**kwargs)
+    print(model)
+    solve(model, folder=folder, time_max=time_max)
 
 
 def _test3():
-    model = create_model()
-    print(model)
-    solve(model, folder=opath('co2_disp'))
+    execute(folder=opath('co2_disp'), p_top=6e6)
 
 
 if __name__ == '__main__':

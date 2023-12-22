@@ -8808,6 +8808,7 @@ class Seepage(HasHandle, HasCells):
             core.injector_set_fid(self.handle, *parse_fid3(fluid_id))
 
         core.use(c_double, 'injector_get_value', c_void_p)
+        core.use(None, 'injector_set_value', c_void_p, c_double)
 
         @property
         def value(self):
@@ -8819,6 +8820,13 @@ class Seepage(HasHandle, HasCells):
                     若恒功率，则为功率
             """
             return core.injector_get_value(self.handle)
+
+        @value.setter
+        def value(self, val):
+            """
+            设置注入的数值。
+            """
+            core.injector_set_value(self.handle, val)
 
         core.use(c_double, 'injector_get_time', c_void_p)
         core.use(None, 'injector_set_time', c_void_p, c_double)
@@ -9253,7 +9261,7 @@ class Seepage(HasHandle, HasCells):
     core.use(c_size_t, 'seepage_add_inj', c_void_p)
 
     def add_injector(self, cell=None, fluid_id=None, flu=None, data=None, pos=None, radi=None, opers=None,
-                     ca_mc=None, ca_t=None, g_heat=None):
+                     ca_mc=None, ca_t=None, g_heat=None, value=None):
         """
         添加一个注入点. 首先尝试拷贝data；然后尝试利用给定cell、fluid_id和flu进行设置。返回新添加的Injector对象
 
@@ -9310,6 +9318,9 @@ class Seepage(HasHandle, HasCells):
         if opers is not None:
             for oper in opers:
                 inj.add_oper(*oper)
+
+        if value is not None:
+            inj.value = value
 
         return inj
 
