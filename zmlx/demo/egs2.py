@@ -1,20 +1,29 @@
 # ** desc = '水平二维EGS换热计算'
+"""
+水平方向二维的干热岩换热计算模型 (双竖直井注采计算)
+
+    注入点：计算区域的左下;
+    生产井：计算区域的右上;
+
+详细参数，参考create_model函数的注释; 外部执行时，直接 from zmlx.demo import egs2 并执行egs2.execute函数来运行.
+"""
 
 from zml import *
 from zmlx.config import seepage
 from zmlx.filesys import path
-from zmlx.utility.GuiIterator import GuiIterator
+from zmlx.filesys.make_fname import make_fname
 from zmlx.filesys.opath import opath
 from zmlx.fluid import h2o
-from zmlx.filesys.make_fname import make_fname
-from zmlx.plt.show_dfn2 import show_dfn2
 from zmlx.geometry.seg_point_distance import seg_point_distance
-import numpy as np
+from zmlx.plt.show_dfn2 import show_dfn2
+from zmlx.utility.GuiIterator import GuiIterator
+from zmlx.utility.PressureController import PressureController
+from zmlx.utility.SaveManager import SaveManager
 
 
 def create_model(dx=100.0, dy=100.0, dz=100.0, temp=500.0, pre=10.0e6, perm=1.0e-14, porosity=0.1, denc=3e6,
                  heat_cond=2.0, vol_day=100.0, p_prod=5e6, t_inj=300.0, fl_min=10.0, fl_max=40.0,
-                 angles=None, p21=0.2, f_perm=1.0e-12, has_hf=True, heating_dist=3.0):
+                 angles=None, p21=0.2, f_perm=1.0e-12, has_hf=True, heating_dist=1.0):
     """
     创建模型. 其中：
         dx, dy, dz为模型的大小. (x和y方向的网格大小为1m，在z方向仅用一个网格)
@@ -31,7 +40,7 @@ def create_model(dx=100.0, dy=100.0, dz=100.0, temp=500.0, pre=10.0e6, perm=1.0e
         angles：天然裂缝的方向角度（默认不设置，则方向完全随机）
         p21：天然裂缝的密度
         f_perm：裂缝的渗透率
-        has_hf: 是否在入口和出口添加人工裂缝
+        has_hf: 是否添加一条连接出口和入口的裂缝.
         heating_dist: 换热的距离（决定了流体和固体换热的效率）
     """
     assert 15.0 <= dx <= 200.0 and 15.0 <= dy <= 200.0 and 15.0 <= dz <= 200.0
@@ -66,7 +75,7 @@ def create_model(dx=100.0, dy=100.0, dz=100.0, temp=500.0, pre=10.0e6, perm=1.0e
     dfn.range = [x_min, y_min, x_max, y_max]
 
     # 添加随机裂缝
-    dfn.add_frac(angles=np.linspace(0.0, 3.1415*2, 100) if angles is None else angles,
+    dfn.add_frac(angles=np.linspace(0.0, 3.1415 * 2, 100) if angles is None else angles,
                  lengths=np.linspace(fl_min, fl_max, 100), p21=p21)
 
     # 添加两条人工裂缝
@@ -108,10 +117,10 @@ def create_model(dx=100.0, dy=100.0, dz=100.0, temp=500.0, pre=10.0e6, perm=1.0e
     model.add_injector(cell=cell, fluid_id=0, flu=flu, pos=pos, radi=2, value=vol_day / (3600 * 24))
 
     # 添加虚拟Cell用于产出
-    virtual_cell = seepage.add_cell(model, pos=[x_max, y_max, 1000.0], porosity=1.0, pore_modulus=100e6, vol=1.0e10,
+    virtual_cell = seepage.add_cell(model, pos=[x_max, y_max, 1000.0], porosity=1.0, pore_modulus=100e6, vol=1.0e6,
                                     temperature=temp, p=p_prod, s=1.0)
     cell = model.get_nearest_cell([x_max, y_max, 0])
-    seepage.add_face(model, virtual_cell, cell, heat_cond=0, perm=perm, area=1.0, length=1.0)
+    seepage.add_face(model, virtual_cell, cell, heat_cond=0, perm=max(perm, f_perm), area=1.0, length=1.0)
 
     # 返回模型
     return model
@@ -147,11 +156,18 @@ def plot_cells(model, folder=None):
     # 显示流体温度
     t = model.numpy.fluids(0).get(index=model.reg_flu_key('temperature'))
     t = t[: -1]
-    tricontourf(x, y, t, caption='流体温度', title=f'time = {time}',
+    tricontourf(x, y, t, caption='flu_temp', title=f'time = {time}',
                 fname=make_fname(year, path.join(folder, 'flu_temp'), '.jpg', 'y'))
 
 
-def solve(model: Seepage, time_max=3600 * 24 * 365 * 30, folder=None):
+def solve(model: Seepage, time_max=3600 * 24 * 365 * 30, folder=None, day_save=30.0):
+    """
+    求解给定的模型.
+        model: create_model()返回的计算模型;
+        time_max: 求解到的时间 [s]
+        folder：数据保存的目录
+        day_save：每隔多少天保存一次数据.
+    """
     if folder is not None:
         print_tag(folder)
         print(f'Solve. folder = {folder}')
@@ -161,29 +177,49 @@ def solve(model: Seepage, time_max=3600 * 24 * 365 * 30, folder=None):
     solver = ConjugateGradientSolver(tolerance=1.0e-14)
     iterate = GuiIterator(seepage.iterate, lambda: plot_cells(model, folder=path.join(folder, 'figures')))
 
+    # 创建压力的控制(维持最后一个Cell的压力);
+    virtual_cell = model.get_cell(model.cell_number - 1)
+    p = virtual_cell.pre
+    print(f'The production pressure is: {p / 1e6} MPa')
+    p_ctrl = PressureController(cell=virtual_cell, t=[-1e20, 1e20], p=[p, p], modify_pore=True)
+
+    # 执行模型的保存
+    if folder is not None:
+        save = SaveManager(folder=path.join(folder, 'models'), dtime=day_save,
+                           get_time=lambda: seepage.get_time(model) / (24 * 3600),
+                           save=model.save, ext='.seepage', time_unit='d')
+    else:
+        save = None
+
+    # 迭代到给定的时间
     while seepage.get_time(model) < time_max:
         iterate(model, solver=solver)
+        p_ctrl.update(t=seepage.get_time(model), modify_pore=True)  # 控制出口的压力
+        if save is not None:
+            save()
         step = seepage.get_step(model)
         if step % 10 == 0:
             time = time2str(seepage.get_time(model))
             dt = time2str(seepage.get_dt(model))
-            print(f'step = {step}, dt = {dt}, time = {time}')
+            print(f'step = {step}, dt = {dt}, time = {time}, p_out = {virtual_cell.pre / 1e6} MPa')
 
 
-def execute(folder=None, time_max=3600 * 24 * 365 * 10, **kwargs):
+def execute(folder=None, time_max=3600 * 24 * 365 * 10, day_save=30.0, **kwargs):
     """
-    执行建模和计算的全过程
+    执行建模和计算的全过程。 会将**kwargs全部传递给create_model函数来建模.
+        直接import此函数来执行即可/
     """
     model = create_model(**kwargs)
     print(model)
-    solve(model, folder=folder, time_max=time_max)
+    solve(model, folder=folder, time_max=time_max, day_save=day_save)
 
 
 def _test3():
+    """
+    执行一个默认的求解过程，并且保存数据.
+    """
     execute(folder=opath('egs2'))
 
 
 if __name__ == '__main__':
-    from zmlx.ui.GuiBuffer import gui
     gui.execute(_test3, close_after_done=False, disable_gui=False)
-
