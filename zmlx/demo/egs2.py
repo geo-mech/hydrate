@@ -163,9 +163,9 @@ def plot_cells(model, folder=None):
 def solve(model: Seepage, time_max=3600 * 24 * 365 * 30, folder=None, day_save=30.0):
     """
     求解给定的模型.
-        model: create_model()返回的计算模型;
+        model:    即将被求解的模型. create_model()返回的计算模型;
         time_max: 求解到的时间 [s]
-        folder：数据保存的目录
+        folder：  数据保存的目录
         day_save：每隔多少天保存一次数据.
     """
     if folder is not None:
@@ -207,7 +207,7 @@ def solve(model: Seepage, time_max=3600 * 24 * 365 * 30, folder=None, day_save=3
 def execute(folder=None, time_max=3600 * 24 * 365 * 10, day_save=30.0, **kwargs):
     """
     执行建模和计算的全过程。 会将**kwargs全部传递给create_model函数来建模.
-        直接import此函数来执行即可/
+        直接import此函数来执行即可
     """
     model = create_model(**kwargs)
     print(model)

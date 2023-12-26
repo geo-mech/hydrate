@@ -1,6 +1,8 @@
 from zml import *
 from zmlx.config import capillary
 from zmlx.config.attr_keys import *
+from zmlx.alg.join_cols import join_cols
+import numpy as np
 
 
 def set_dt(model, dt):
@@ -480,24 +482,31 @@ def set_face(face, area=None, length=None, perm=None, heat_cond=None, igr=None, 
     fa = face_keys(face.model)
 
     if area is not None:
+        assert 0 <= area <= 1.0e30
         face.set_attr(fa['area'], area)
     else:
         area = face.get_attr(fa['area'])
         assert area is not None
+        assert 0 <= area <= 1.0e30
 
     if length is not None:
+        assert 0 < length <= 1.0e30
         face.set_attr(fa['length'], length)
     else:
         length = face.get_attr(fa['length'])
         assert length is not None
+        assert 0 < length <= 1.0e30
 
-    assert area > 0 and length > 0
+    assert area >= 0
+    assert length > 0
 
     if perm is not None:
+        assert 0 <= perm <= 1.0e10
         face.set_attr(fa['perm'], perm)
     else:
         perm = face.get_attr(fa['perm'])
         assert perm is not None
+        assert 0 <= perm <= 1.0e10
 
     g0 = area * perm / length
     face.cond = g0
@@ -529,3 +538,47 @@ def add_face(model, cell0, cell1, *args, **kwargs):
     set_face(face, *args, **kwargs)
     return face
 
+
+def print_cells(path, model, ca_keys=None, fa_keys=None, fmt='%.18e'):
+    """
+    输出cell的属性（前三列固定为x y z坐标）. 默认第4列为pre，第5列温度，第6列为流体总体积，后面依次为各流体组分的体积饱和度.
+    最后是ca_keys所定义的额外的Cell属性.
+    """
+    assert isinstance(model, Seepage)
+    if path is None:
+        return
+
+    # 找到所有的流体的ID
+    fluid_ids = []
+    for i0 in range(model.fludef_number):
+        f0 = model.get_fludef(i0)
+        if f0.component_number == 0:
+            fluid_ids.append([i0, ])
+            continue
+        for i1 in range(f0.component_number):
+            assert f0.get_component(i1).component_number == 0
+            fluid_ids.append([i0, i1])
+
+    cells = model.numpy.cells
+    v = cells.fluid_vol
+
+    vs = []
+    for fluid_id in fluid_ids:
+        s = model.numpy.fluids(*fluid_id).vol / v
+        vs.append(s)
+
+    # 返回温度(未必有定义)
+    ca_t = model.get_cell_key('temperature')
+    if ca_t is not None:
+        t = cells.get(ca_t)
+    else:
+        t = np.zeros(shape=v.shape)
+
+    # 即将保存的数据
+    d = join_cols(cells.x, cells.y, cells.z, cells.pre, t, v, *vs,
+                  *([] if ca_keys is None else [cells.get(key) for key in ca_keys]),
+                  *([] if fa_keys is None else [model.numpy.fluids(*idx).get(key) for idx, key in fa_keys]),
+                  )
+
+    # 保存数据
+    np.savetxt(path, d, fmt=fmt)

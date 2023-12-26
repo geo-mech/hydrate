@@ -18,8 +18,14 @@
     "timer.py",
     "console.py"
   ],
+  "标签": [
+    "show_prev.py",
+    "show_next.py",
+    "close_all_tabs.py"
+  ],
   "操作": [
-    "print_tag.py"
+    "print_tag.py",
+    "play_images.py"
   ],
   "设置": [
     "search.py",

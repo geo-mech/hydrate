@@ -1,5 +1,5 @@
 from zml import app_data
-from zmlx.ui.Qt import QtWidgets
+from zmlx.ui.Qt import QtWidgets, QtCore, QtGui
 
 
 def setTabPosition(widget):
@@ -53,6 +53,34 @@ class TabWidget(QtWidgets.QTabWidget):
                 if text != self.tabText(i):
                     continue
             return widget
+
+    def show_next(self):
+        if self.count() > 1:
+            index = self.currentIndex()
+            if index + 1 < self.count():
+                self.setCurrentIndex(index + 1)
+
+    def show_prev(self):
+        if self.count() > 1:
+            index = self.currentIndex()
+            if index > 0:
+                self.setCurrentIndex(index - 1)
+                
+    def close_all_tabs(self):
+        while self.count() > 0:
+            self.close_tab(0)
+
+    # def keyPressEvent(self, event):
+    #     if event.key() == QtCore.Qt.Key.Key_PageDown:
+    #         self.show_next()
+    #     if event.key() == QtCore.Qt.Key.Key_PageUp:
+    #         self.show_prev()
+    #
+    # def wheelEvent(self, event: QtGui.QWheelEvent):
+    #     if event.angleDelta().y() < 0:
+    #         self.show_next()
+    #     else:
+    #         self.show_prev()
 
 
 if __name__ == '__main__':

@@ -6975,6 +6975,13 @@ class _SeepageNumpyAdaptor:
             """
             return self.get(-11)
 
+        @property
+        def pre(self):
+            """
+            流体的压力(根据总的体积和孔隙弹性来计算)
+            """
+            return self.get(-12)
+
     class _Faces:
         """
         用以批量读取或者设置Faces的属性
@@ -9695,8 +9702,19 @@ class Seepage(HasHandle, HasCells):
     core.use(None, 'seepage_clone', c_void_p, c_void_p)
 
     def clone(self, other):
+        """
+        从另外一个模型克隆数据.
+        """
         assert isinstance(other, Seepage)
         core.seepage_clone(self.handle, other.handle)
+
+    def get_copy(self):
+        """
+        返回一个拷贝.
+        """
+        temp = Seepage()
+        temp.clone(self)
+        return temp
 
     core.use(None, 'seepage_clone_cells', c_void_p, c_void_p, c_size_t, c_size_t, c_size_t)
 
@@ -10000,6 +10018,13 @@ class Seepage(HasHandle, HasCells):
         core.seepage_clear_pcs(self.handle)
 
     core.use(c_size_t, 'seepage_get_reaction_n', c_void_p)
+
+    @property
+    def reactions(self):
+        """
+        迭代所有的反应
+        """
+        return Iterator(model=self, count=self.reaction_number, get=lambda m, ind: m.get_reaction(ind))
 
     @property
     def reaction_number(self):
