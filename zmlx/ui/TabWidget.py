@@ -70,18 +70,6 @@ class TabWidget(QtWidgets.QTabWidget):
         while self.count() > 0:
             self.close_tab(0)
 
-    # def keyPressEvent(self, event):
-    #     if event.key() == QtCore.Qt.Key.Key_PageDown:
-    #         self.show_next()
-    #     if event.key() == QtCore.Qt.Key.Key_PageUp:
-    #         self.show_prev()
-    #
-    # def wheelEvent(self, event: QtGui.QWheelEvent):
-    #     if event.angleDelta().y() < 0:
-    #         self.show_next()
-    #     else:
-    #         self.show_prev()
-
 
 if __name__ == '__main__':
     from zmlx.ui.alg.show_widget import show_widget

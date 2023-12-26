@@ -233,10 +233,6 @@ class MainWindow(QtWidgets.QMainWindow):
                      ('action_exec_current', 'console_exec')]:
             f(a, b)
 
-        currentIndex = self.tab_widget.currentIndex()
-        set_visible('action_show_next',
-                    currentIndex >= 0 and currentIndex + 1 < self.tab_widget.count())
-        set_visible('action_show_prev', currentIndex > 0)
         set_visible('action_close_all_tabs', self.tab_widget.count() > 0)
 
     def refresh(self):
