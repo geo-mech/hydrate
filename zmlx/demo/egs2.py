@@ -184,19 +184,19 @@ def solve(model: Seepage, time_max=3600 * 24 * 365 * 30, folder=None, day_save=3
     p_ctrl = PressureController(cell=virtual_cell, t=[-1e20, 1e20], p=[p, p], modify_pore=True)
 
     # 执行模型的保存
-    if folder is not None:
-        save = SaveManager(folder=path.join(folder, 'models'), dtime=day_save,
-                           get_time=lambda: seepage.get_time(model) / (24 * 3600),
-                           save=model.save, ext='.seepage', time_unit='d')
-    else:
-        save = None
+    # if folder is not None:
+    #     save = SaveManager(folder=path.join(folder, 'models'), dtime=day_save,
+    #                        get_time=lambda: seepage.get_time(model) / (24 * 3600),
+    #                        save=model.save, ext='.seepage', time_unit='d')
+    # else:
+    #     save = None
 
     # 迭代到给定的时间
     while seepage.get_time(model) < time_max:
         iterate(model, solver=solver)
         p_ctrl.update(t=seepage.get_time(model), modify_pore=True)  # 控制出口的压力
-        if save is not None:
-            save()
+        # if save is not None:
+        #     save()
         step = seepage.get_step(model)
         if step % 10 == 0:
             time = time2str(seepage.get_time(model))
@@ -222,4 +222,4 @@ def _test3():
 
 
 if __name__ == '__main__':
-    gui.execute(_test3, close_after_done=False, disable_gui=False)
+    gui.execute(_test3, close_after_done=False, disable_gui=True)
