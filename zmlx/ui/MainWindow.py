@@ -15,6 +15,7 @@ from zmlx.ui.Script import Script
 from zmlx.ui.TabWidget import TabWidget
 from zmlx.ui.TaskProc import TaskProc
 from zmlx.ui.Widgets.TextEdit import TextEdit
+from zmlx.ui.VersionLabel import VersionLabel
 from zmlx.ui.alg.show_seepage import show_seepage
 from zmlx.ui.alg.show_txt import show_txt
 
@@ -42,7 +43,7 @@ class MainWindow(QtWidgets.QMainWindow):
         widget = QtWidgets.QWidget(self)
         h_layout = QtWidgets.QVBoxLayout(widget)
         self.splitter = QtWidgets.QSplitter(widget)
-        self.splitter.setOrientation(QtCore.Qt.Horizontal)
+        self.splitter.setOrientation(QtCore.Qt.Orientation.Horizontal)
         self.tab_widget = TabWidget(self.splitter)
         self.tab_widget.currentChanged.connect(self.update_widget_actions)
         self.console_widget = ConsoleWidget(self.splitter)
@@ -65,6 +66,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.sig_cwd_changed.connect(self.view_cwd)
         self.sig_cwd_changed.connect(self.console_widget.restore_code)
 
+        # 尝试关闭进度条，从而使得进度条总是临时显示一下.
+        self._timer_close_progress = QtCore.QTimer(self)
+        self._timer_close_progress.timeout.connect(lambda: self.progress(visible=False))
+        self._timer_close_progress.start(5000)
+
         self.status_bar = QtWidgets.QStatusBar(self)
         self.status_bar.showMessage('正在初始化 ..')  # 在__init_later中显示“就绪”
         self.setStatusBar(self.status_bar)
@@ -72,11 +78,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.propress_bar = QtWidgets.QProgressBar()
         self.status_bar.addPermanentWidget(self.propress_label)
         self.status_bar.addPermanentWidget(self.propress_bar)
+        self.status_bar.addPermanentWidget(VersionLabel())
         self.progress(visible=False)
 
-        self.init_later_timer = QtCore.QTimer(self)
-        self.init_later_timer.timeout.connect(self.__init_later)
-        self.init_later_timer.start(2000)
+        self._timer_init_later = QtCore.QTimer(self)
+        self._timer_init_later.timeout.connect(self.__init_later)
+        self._timer_init_later.start(2000)
+
         self.update_widget_actions()  # 更新一些和控件相关的action的显示
 
         try:
@@ -91,7 +99,7 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         执行一些可能会比较耗时（但是又不那么关键的）的初始化任务
         """
-        self.init_later_timer.stop()
+        self._timer_init_later.stop()
         # ----
         try:
             if lic.summary is None:
@@ -354,7 +362,7 @@ class MainWindow(QtWidgets.QMainWindow):
         from zmlx.ui.Widgets.CwdViewer import CwdViewer
         self.get_widget(type=CwdViewer, caption='文件', on_top=True, oper=lambda w: w.refresh(), icon='cwd.png')
 
-    def progress(self, label=None, range=None, value=None, visible=None):
+    def progress(self, label=None, range=None, value=None, visible=None, duration=5000):
         """
         显示进度
         """
@@ -371,6 +379,10 @@ class MainWindow(QtWidgets.QMainWindow):
         if visible is not None:
             self.propress_bar.setVisible(visible)
             self.propress_label.setVisible(visible)
+            if visible:
+                self._timer_close_progress.setInterval(duration)
+            else:
+                self._timer_close_progress.setInterval(5000000)  # 不再执行
 
     def open_code(self, fname, caption=None):
         if not isinstance(fname, str):

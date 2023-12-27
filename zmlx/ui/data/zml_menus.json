@@ -16,7 +16,8 @@
     "view_cwd.py",
     "memory.py",
     "timer.py",
-    "console.py"
+    "console.py",
+    "show_cwd.py"
   ],
   "操作": [
     "print_tag.py",

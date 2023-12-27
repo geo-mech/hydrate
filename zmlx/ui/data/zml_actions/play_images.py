@@ -7,7 +7,11 @@ from zmlx.ui.GuiBuffer import gui
 
 
 files = list_files(exts=['.jpg', '.png'])
-for file in files:
-    print(file)
-    gui.open_image(file, caption='播放图片', on_top=False)
+
+for idx in range(len(files)):
+    print(files[idx])
+    gui.open_image(files[idx], caption='播放图片', on_top=False)
     gui.break_point()
+    gui.progress(range=[0, len(files)], value=idx, visible=True, label="Playing Figures ")
+
+gui.progress(visible=False)

@@ -148,7 +148,7 @@ def add_body_pressure(dyn: DynSys, mesh: Mesh3, body_id, pressure):
 def compute_disp(mesh: Mesh3, na_dx=None, na_dy=None, na_dz=None, ba_dd=None, ba_dp=None,
                  ba_E0=None, ba_E1=None, ba_mu=None, gravity=-10.0, dt=1.0e3,
                  top_stress=None, top_pressure=None,
-                 tolerance=1.0e-20, show=print, bound_mas=1.0e20):
+                 tolerance=1.0e-20, show=print, bound_mas=1.0e20, bound_sym=True):
     """
     计算各个Node的位移，并且存储在Node属性里面. 其中：
         na_dx, na_dy和na_dz为Node的属性，用来存储计算的结果（各个Node的位移）;
@@ -163,7 +163,10 @@ def compute_disp(mesh: Mesh3, na_dx=None, na_dy=None, na_dz=None, ba_dd=None, ba
         tolerance: 求解器的残差.
         show: 用以显示计算的过程.
     计算的边界条件为:
-        x的左右侧，均仅仅限制x位移；y的左右侧，都限制y位移；z的底部，限制z的位移.
+        如果bound_sym：
+            x的左右侧，均仅仅限制x位移；y的左右侧，都限制y位移；z的底部，限制z的位移.
+        否则：
+            四周固定；z的底部，限制z的位移.
     """
     def set_bound(_dyn):
         """
@@ -172,9 +175,19 @@ def compute_disp(mesh: Mesh3, na_dx=None, na_dy=None, na_dz=None, ba_dd=None, ba
         # x
         set_mas(_dyn, find_boundary(_dyn, n_dim=3, i_dim=0, lower=1, i_dir=0, eps=1.0e-3), bound_mas)
         set_mas(_dyn, find_boundary(_dyn, n_dim=3, i_dim=0, lower=0, i_dir=0, eps=1.0e-3), bound_mas)
+        if not bound_sym:
+            set_mas(_dyn, find_boundary(_dyn, n_dim=3, i_dim=0, lower=1, i_dir=1, eps=1.0e-3), bound_mas)
+            set_mas(_dyn, find_boundary(_dyn, n_dim=3, i_dim=0, lower=0, i_dir=1, eps=1.0e-3), bound_mas)
+            set_mas(_dyn, find_boundary(_dyn, n_dim=3, i_dim=0, lower=1, i_dir=2, eps=1.0e-3), bound_mas)
+            set_mas(_dyn, find_boundary(_dyn, n_dim=3, i_dim=0, lower=0, i_dir=2, eps=1.0e-3), bound_mas)
         # y
         set_mas(_dyn, find_boundary(_dyn, n_dim=3, i_dim=1, lower=1, i_dir=1, eps=1.0e-3), bound_mas)
         set_mas(_dyn, find_boundary(_dyn, n_dim=3, i_dim=1, lower=0, i_dir=1, eps=1.0e-3), bound_mas)
+        if not bound_sym:
+            set_mas(_dyn, find_boundary(_dyn, n_dim=3, i_dim=1, lower=1, i_dir=0, eps=1.0e-3), bound_mas)
+            set_mas(_dyn, find_boundary(_dyn, n_dim=3, i_dim=1, lower=0, i_dir=0, eps=1.0e-3), bound_mas)
+            set_mas(_dyn, find_boundary(_dyn, n_dim=3, i_dim=1, lower=1, i_dir=2, eps=1.0e-3), bound_mas)
+            set_mas(_dyn, find_boundary(_dyn, n_dim=3, i_dim=1, lower=0, i_dir=2, eps=1.0e-3), bound_mas)
         # z
         set_mas(_dyn, find_boundary(_dyn, n_dim=3, i_dim=2, lower=1, i_dir=2, eps=1.0e-3), bound_mas)
 

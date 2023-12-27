@@ -8719,6 +8719,17 @@ class Seepage(HasHandle, HasCells):
             else:
                 return get_distance(self.pos, other)
 
+        def get_another(self, cell):
+            """
+            返回另外一侧的Cell
+            """
+            if isinstance(cell, Seepage.Cell):
+                cell = cell.index
+            if self.get_cell(0).index == cell:
+                return self.get_cell(1)
+            if self.get_cell(1).index == cell:
+                return self.get_cell(0)
+
     class Injector(HasHandle):
         """
         流体的注入点。可以按照一定的规律向特定的Cell注入特定的流体(或者能量).

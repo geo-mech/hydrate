@@ -45,12 +45,14 @@ def create():
     return seepage.create(**kw)
 
 
-def show(model, folder=None):
+def show(model: Seepage, folder=None):
     """
     绘图，且当folder给定的时候，将绘图结果保存到给定的文件夹
     """
+    if not gui.exists():
+        return
     time = seepage.get_time(model)
-    kwargs = {'gui_only': True, 'title': f'plot when model.time={time2str(time)}'}
+    kwargs = {'title': f'plot when model.time={time2str(time)}'}
     x = model.numpy.cells.x
     y = model.numpy.cells.y
 
@@ -58,22 +60,22 @@ def show(model, folder=None):
         return make_fname(time / (3600 * 24 * 365), folder=join_paths(folder, key), ext='.jpg', unit='y')
 
     cell_keys = seepage.cell_keys(model)
-    tricontourf(x, y, model.numpy.cells.get(cell_keys['pre']), caption='压力',
-                fname=fname('pressure'), **kwargs)
-    tricontourf(x, y, model.numpy.cells.get(cell_keys['temperature']), caption='温度',
-                fname=fname('temperature'), **kwargs)
 
-    igas = model.find_fludef('gas')
-    iliq = model.find_fludef('liq')
-    isol = model.find_fludef('sol')
-    vg = model.numpy.fluids(*igas).vol
-    vl = model.numpy.fluids(*iliq).vol
-    vs = model.numpy.fluids(*isol).vol
-    vv = vg + vl + vs
+    def show_key(key):
+        tricontourf(x, y, model.numpy.cells.get(cell_keys[key]), caption=key,
+                    fname=fname(key), **kwargs)
 
-    tricontourf(x, y, vg / vv, caption='气饱和度', fname=fname('gas'), **kwargs)
-    tricontourf(x, y, vl / vv, caption='水饱和度', fname=fname('wat'), **kwargs)
-    tricontourf(x, y, vs / vv, caption='水合物饱和度', fname=fname('hyd'), **kwargs)
+    show_key('pre')
+    show_key('temperature')
+
+    fv_all = model.numpy.cells.fluid_vol
+
+    def show_s(flu_name):
+        s = model.numpy.fluids(*model.find_fludef(flu_name)).vol / fv_all
+        tricontourf(x, y, s, caption=flu_name, fname=fname(flu_name), **kwargs)
+
+    for item in ['ch4', 'liq', 'ch4_hydrate']:
+        show_s(item)
 
 
 def solve(model, folder=None):
