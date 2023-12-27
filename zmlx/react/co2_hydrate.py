@@ -9,6 +9,7 @@ Zhou X, Fan S, Liang D, et al., 2008. . Energy Conversion and Management, 49(8):
 
 import zmlx.react.hydrate as hydrate
 from zml import Interp1
+from zmlx.alg.interp1 import interp1
 
 # 温度
 vt = [265, 273.25, 274.33, 275.6, 276.12, 276.63, 277.34, 278.09, 279.32, 280.02,
@@ -20,6 +21,20 @@ vp = [952740, 1152740, 1263150, 1479310, 1586770, 1694230, 1802670,
       2016120, 2546270, 2759470, 2972170, 3708620, 4549820, 6332280,
       8219490, 10001700, 12203200, 16394400, 21214300, 27291500, 30644500,
       34835700]
+
+
+def get_p(t):
+    """
+    返回给定的温度对应的压力
+    """
+    return interp1(vt, vp, t)
+
+
+def get_t(p):
+    """
+    返回给定压力对应的温度
+    """
+    return interp1(vp, vt, p)
 
 
 def create_t2p():

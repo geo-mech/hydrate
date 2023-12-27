@@ -165,6 +165,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.gui_api.add_func('open_image', self.open_image)
         self.gui_api.add_func('kill_thread', self.console_widget.kill_thread)
         self.gui_api.add_func('cls', self.console_widget.output_widget.clear)
+        self.gui_api.add_func('show_next', self.tab_widget.show_next)
+        self.gui_api.add_func('show_prev', self.tab_widget.show_prev)
+        self.gui_api.add_func('close_all_tabs', self.tab_widget.close_all_tabs)
 
     def __get_menu(self, name):
         assert name is not None, f'Error: name is None when get_menu'
@@ -229,6 +232,8 @@ class MainWindow(QtWidgets.QMainWindow):
         for a, b in [('action_export_data', 'export_data'),
                      ('action_exec_current', 'console_exec')]:
             f(a, b)
+
+        set_visible('action_close_all_tabs', self.tab_widget.count() > 0)
 
     def refresh(self):
         """
@@ -392,7 +397,7 @@ class MainWindow(QtWidgets.QMainWindow):
                                 oper=lambda x: x.open(fname), icon='python.png')
                 if not app_data.has_tag_today('tip_shown_when_edit_code'):
                     QtWidgets.QMessageBox.about(self, '成功',
-                                                '文件已打开，请点击工具栏上的<执行>按钮以执行')
+                                                '文件已打开，请点击工具栏上的<运行>按钮以运行')
                     app_data.add_tag_today('tip_shown_when_edit_code')
 
     def open_text(self, fname, caption=None):
@@ -410,7 +415,7 @@ class MainWindow(QtWidgets.QMainWindow):
                             on_top=True,
                             oper=lambda x: x.set_fname(fname))
 
-    def open_image(self, fname, caption=None):
+    def open_image(self, fname, caption=None, on_top=True):
         """
         打开一个图片
         """
@@ -418,7 +423,7 @@ class MainWindow(QtWidgets.QMainWindow):
             if os.path.isfile(fname):
                 from zmlx.ui.Widgets.Image import ImageViewer
                 self.get_widget(type=ImageViewer, caption=os.path.basename(fname) if caption is None else caption,
-                                on_top=True,
+                                on_top=on_top,
                                 oper=lambda x: x.setImage(fname))
 
     def exec_current(self):
