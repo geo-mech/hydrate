@@ -46,41 +46,28 @@ def create_mesh(width, grid):
     return mesh
 
 
-def _test1():
-    mesh = create_mesh(100, 1)
-    print(mesh)
-
-
 def create_model(mesh, t_ini=100.0):
     assert isinstance(mesh, SeepageMesh)
 
     model = Seepage()
 
     for c in mesh.cells:
-        assert isinstance(c, SeepageMesh.Cell)
         cell = model.add_cell()
-        assert isinstance(cell, Seepage.Cell)
-
         cell.pos = c.pos
-        cell.set_attr(CellKeys.mc, c.vol * 1.0e6)
-        cell.set_attr(CellKeys.temp, t_ini)  # 背景温度（如果没有加热，则最终冷却到这个温度）
-        cell.set_attr(CellKeys.power, 0.0)
-
         cell.fluid_number = 2
-        cell.get_fluid(FluIds.gas).set(mass=1).set_attr(FluKeys.temp, t_ini).set_attr(FluKeys.c, 1000.0)
-        cell.get_fluid(FluIds.sol).set(mass=1).set_attr(FluKeys.temp, t_ini).set_attr(FluKeys.c, 1000.0)
+        cell.get_fluid(FluIds.gas).set(mass=c.vol*1000).set_attr(FluKeys.temp, t_ini).set_attr(FluKeys.c, 1000.0)
+        cell.get_fluid(FluIds.sol).set(mass=c.vol*1000).set_attr(FluKeys.temp, t_ini).set_attr(FluKeys.c, 1000.0)
 
     for f in mesh.faces:
-        assert isinstance(f, SeepageMesh.Face)
         face = model.add_face(model.get_cell(f.link[0]), model.get_cell(f.link[1]))
-        assert isinstance(face, Seepage.Face)
         face.set_attr(FaceKeys.g_heat, f.area * 1.0 / f.length)
 
     # 在中心点，设置一个区域，让固体的质量等于0
     for cell in model.cells:
         if get_distance([0, 0, 0], cell.pos) < 2 or get_distance([15, 15, 0], cell.pos) < 2 or get_distance([-15, 15, 0], cell.pos) < 2:
-            cell.get_fluid(FluIds.gas).set(mass=2)
-            cell.get_fluid(FluIds.sol).set(mass=0)
+            if cell.z > 0:
+                cell.get_fluid(FluIds.gas).set(mass=cell.fluid_mass)
+                cell.get_fluid(FluIds.sol).set(mass=0)
 
     # 添加一个反应
     r = melt.create(
@@ -101,13 +88,6 @@ def create_model(mesh, t_ini=100.0):
     return model
 
 
-def _test2():
-    mesh = create_mesh(100, 1)
-    print(mesh)
-    model = create_model(mesh)
-    print(model)
-
-
 def show(model):
     assert isinstance(model, Seepage)
 
@@ -124,15 +104,7 @@ def show(model):
     tricontourf(x[mask], y[mask], s1[mask], caption='固体')
 
 
-def _test3():
-    mesh = create_mesh(100, 1)
-    print(mesh)
-    model = create_model(mesh)
-    print(model)
-    show(model)
-
-
-def solve(model: Seepage, dt):
+def solve(model: Seepage, dt, boundary_temp=100.0):
     """
     向前迭代一步
     """
@@ -141,19 +113,28 @@ def solve(model: Seepage, dt):
         gui.break_point()
         print(f'step = {step}')
 
+        # 将流体的mc赋予固体(确保能量守恒)
+        model.numpy.cells.set(CellKeys.mc,
+                              model.numpy.fluids(FluIds.sol).mass * model.numpy.fluids(FluIds.sol).get(FluKeys.c) +
+                              model.numpy.fluids(FluIds.gas).mass * model.numpy.fluids(FluIds.gas).get(FluKeys.c))
+
+        # 将流体的温度返回给固体
+        temp = model.numpy.fluids(FluIds.sol).get(FluKeys.temp)
+        model.numpy.cells.set(CellKeys.temp, temp)
+
         # 根据固体的饱和度，计算加热的功率
         m0 = model.numpy.fluids(FluIds.gas).mass
         m1 = model.numpy.fluids(FluIds.sol).mass
         s1 = m1 / (m0 + m1)  # 固体的比例
-        power = np.ones(shape=s1.shape) * 1
+        power = np.ones(shape=s1.shape) * 3
         power[s1 < 0.01] = 30
         model.numpy.cells.set(CellKeys.power, power)
 
         # 加热
         model.heating(ca_mc=CellKeys.mc, ca_t=CellKeys.temp, ca_p=CellKeys.power, dt=dt)
 
-        # 限定虚拟边界的温度
-        model.get_cell(model.cell_number-1).set_attr(CellKeys.temp, 100.0)
+        # 确保虚拟边界的温度不变
+        model.get_cell(model.cell_number-1).set_attr(CellKeys.temp, boundary_temp)
 
         # 传热
         model.iterate_thermal(dt=dt, ca_t=CellKeys.temp, ca_mc=CellKeys.mc, fa_g=FaceKeys.g_heat, solver=sol)
@@ -165,10 +146,6 @@ def solve(model: Seepage, dt):
 
         # 反应
         model.get_reaction(0).react(model, dt=dt)
-
-        # 将流体的温度再返回给固体
-        temp = model.numpy.fluids(FluIds.sol).get(FluKeys.temp)
-        model.numpy.cells.set(CellKeys.temp, temp)
 
         # 绘图
         if step % 50 == 0:
