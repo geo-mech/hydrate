@@ -6897,6 +6897,12 @@ class _SeepageNumpyAdaptor:
                     buf = np.ascontiguous(buf, dtype=buf.dtype)
                 self.model.cells_read(pointer=buf.ctypes.data_as(POINTER(c_double)), index=index)
 
+        def get_attr(self, *args, **kwargs):
+            return self.get(*args, **kwargs)
+
+        def set_attr(self, *args, **kwargs):
+            return self.set(*args, **kwargs)
+
         @property
         def x(self):
             """
@@ -7019,6 +7025,12 @@ class _SeepageNumpyAdaptor:
                     buf = np.ascontiguous(buf, dtype=buf.dtype)
                 self.model.faces_read(pointer=buf.ctypes.data_as(POINTER(c_double)), index=index)
 
+        def get_attr(self, *args, **kwargs):
+            return self.get(*args, **kwargs)
+
+        def set_attr(self, *args, **kwargs):
+            return self.set(*args, **kwargs)
+
         @property
         def cond(self):
             """
@@ -7090,6 +7102,12 @@ class _SeepageNumpyAdaptor:
                     buf = np.ascontiguous(buf, dtype=buf.dtype)
                 self.model.fluids_read(fluid_id=self.fluid_id, index=index,
                                        pointer=buf.ctypes.data_as(POINTER(c_double)))
+
+        def get_attr(self, *args, **kwargs):
+            return self.get(*args, **kwargs)
+
+        def set_attr(self, *args, **kwargs):
+            return self.set(*args, **kwargs)
 
         @property
         def mass(self):
@@ -9191,6 +9209,36 @@ class Seepage(HasHandle, HasCells):
         删除所有的Cell和Face。其它所有的数据保持不变。
         """
         core.seepage_clear_cells_and_faces(self.handle)
+
+    core.use(None, 'seepage_remove_cell', c_void_p, c_size_t)
+
+    def remove_cell(self, cell_id):
+        """
+        移除给定id的cell.
+        注意：
+            这是一个复杂的操作，会涉及到很多连接关系，以及Cell和Face的顺序的改变
+        """
+        core.seepage_remove_cell(self.handle, cell_id)
+
+    core.use(None, 'seepage_remove_face', c_void_p, c_size_t)
+
+    def remove_face(self, face_id):
+        """
+        移除给定id的face
+        注意：
+            这是一个复杂的操作，会涉及到很多连接关系，以及Cell和Face的顺序的改变
+        """
+        core.seepage_remove_face(self.handle, face_id)
+
+    core.use(None, 'seepage_remove_faces_of_cell', c_void_p, c_size_t)
+
+    def remove_faces_of_cell(self, cell_id):
+        """
+        移除给定id的cell的所有的face，使其成为一个孤立的cell
+        注意：
+            这是一个复杂的操作，会涉及到很多连接关系，以及Cell和Face的顺序的改变
+        """
+        core.seepage_remove_faces_of_cell(self.handle, cell_id)
 
     core.use(c_size_t, 'seepage_get_cell_n', c_void_p)
 

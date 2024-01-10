@@ -156,7 +156,7 @@ class PTree:
         """
         返回其中一个分支
         """
-        return PTree(self, keys)
+        return PTree(ada=self, keys=keys)
 
     def __call__(self, *keys, cast=None, doc=None, default=None):
         """

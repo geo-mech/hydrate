@@ -12,7 +12,8 @@ from zmlx.pg.plot3 import *
 
 
 def show_rc3(rc3, color=None, alpha=None, cmap=None, caption=None, on_top=None,
-             reset_dist=True, reset_cent=True, gl_option=None, print_box=False):
+             reset_dist=True, reset_cent=True, gl_option=None, print_box=False,
+             clim=None, alim=None):
     """
     显示一组三维的离散裂缝网络
         gl_option:  opaque, translucent, additive
@@ -65,14 +66,20 @@ def show_rc3(rc3, color=None, alpha=None, cmap=None, caption=None, on_top=None,
         return lr, rr
 
     # 颜色的范围
-    cl, cr = get_r(get_c, len(rc3))
-    if cl + 1.0e-10 >= cr:
-        cl = cr - 1.0
+    if clim is not None:
+        cl, cr = clim
+    else:
+        cl, cr = get_r(get_c, len(rc3))
+        if cl + 1.0e-10 >= cr:
+            cl = cr - 1.0
 
     # 透明度的范围
-    al, ar = get_r(get_a, len(rc3))
-    if al + 1.0e-10 >= ar:
-        al = ar - 1.0
+    if alim is not None:
+        al, ar = alim
+    else:
+        al, ar = get_r(get_a, len(rc3))
+        if al + 1.0e-10 >= ar:
+            al = ar - 1.0
 
     if cmap is None:
         cmap = coolwarm()

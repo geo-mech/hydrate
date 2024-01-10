@@ -693,6 +693,20 @@ class ExHistory(HasHandle):
 
 
 class Hf2Alg:
+    core.use(None, 'hf2_alg_leakoff', c_void_p, c_size_t, c_size_t, c_size_t,
+             c_double,
+             c_size_t, c_size_t,
+             c_size_t, c_size_t, c_size_t, c_size_t)
+
+    @staticmethod
+    def leak_off(seepage, fluid_id, dt, ca_vlk, ca_vis_lk, ca_s, ca_fai, ca_k, ca_pp):
+        """
+        计算流体的滤失. 其中fluid_id为即将滤失的流体的ID, dt为时间步长. ca_vlk为已经滤失的流体的体积； ca_vis_lk为已经滤失的流体的粘性；
+        ca_s为滤失面积；ca_fai为滤失孔隙度；ca_k为滤失渗透率；ca_pp为远端的孔隙压力；
+        """
+        assert isinstance(seepage, Seepage)
+        core.hf2_alg_leakoff(seepage.handle, *parse_fid3(fluid_id), dt, ca_vlk, ca_vis_lk, ca_s, ca_fai, ca_k, ca_pp)
+
     core.use(None, 'hf2_alg_update_seepage_topology', c_void_p, c_void_p, c_size_t,
              c_size_t, c_size_t, c_size_t)
 
@@ -1078,7 +1092,12 @@ class Hf3Alg:
              c_size_t, c_size_t, c_size_t, c_size_t, c_size_t, c_size_t)
 
     @staticmethod
-    def update_rc3(flow, network, fixed_n, layer_n, thick, ca_x1, ca_y1, ca_z1, ca_x2, ca_y2, ca_z2):
+    def update_rc3(flow, network, fixed_n, layer_n, thick,
+                   ca_x1, ca_y1, ca_z1, ca_x2, ca_y2, ca_z2):
+        """
+        根据network来更新model的rc3属性; 会修改node的x和y坐标为裂缝的中心点（z不变）；
+        之后，再在这个位置的基础上，修改x1、y1、z1和x2、y2、z2属性.
+        """
         assert isinstance(flow, Seepage)
         assert isinstance(network, FractureNetwork2)
         core.hf3_alg_update_rc3(flow.handle, network.handle, fixed_n, layer_n, thick,
@@ -1128,7 +1147,7 @@ class Hf3Alg:
     @staticmethod
     def classify_faces(model, fa_tag=None, ca_tag=None):
         """
-        这样，也可以基于此将Face分为
+        这样，将Face分为
             1、打开的水力裂缝内部以及周边的Face
             2、打开的天然裂缝内部以及周边的Face
             3、其它尚未被打开的裂缝内部的Face
@@ -1159,12 +1178,18 @@ class Hf3Alg:
         core.hf3_alg_update_cell_len(model.handle, network.handle, ca_len, fa_id, ma_layer_n, ma_fixed_n)
 
     core.use(None, 'hf3_alg_update_face_geometry', c_void_p,
-             c_size_t, c_size_t, c_size_t, c_size_t,
-             c_size_t, c_size_t, c_size_t, c_size_t, c_size_t)
+             c_size_t, c_size_t, c_size_t,
+             c_double,
+             c_size_t, c_size_t,
+             c_size_t,
+             c_double, c_double)
 
     @staticmethod
-    def update_face_geometry(model, fa_s=None, fa_l=None, ca_len=None, ma_pore_thick=None,
-                             ma_fixed_n=None, ma_fixed_face_n=None, ma_layer_n=None, ma_z0=None, ma_z1=None):
+    def update_face_geometry(model, fa_s=None, fa_l=None, ca_len=None,
+                             pore_thick=None, fixed_n=None, fixed_face_n=None, layer_n=None, z0=None, z1=None):
+        """
+        更新bond的几何（仅仅更新水力裂缝内部的已经连接水力裂缝和天然裂缝的）
+        """
         assert isinstance(model, Seepage)
         if fa_s is None:
             fa_s = model.reg_face_key('area')
@@ -1172,24 +1197,25 @@ class Hf3Alg:
             fa_l = model.reg_face_key('length')
         if ca_len is None:
             ca_len = model.get_cell_key('len')
-        if ma_pore_thick is None:
-            ma_pore_thick = model.get_model_key('pore_thick')
-        if ma_fixed_n is None:
-            ma_fixed_n = model.get_model_key('fixed_n')
-        if ma_fixed_face_n is None:
-            ma_fixed_face_n = model.get_model_key('fixed_face_n')
-        if ma_layer_n is None:
-            ma_layer_n = model.get_model_key('layer_n')
-        if ma_z0 is None:
-            ma_z0 = model.get_model_key('z0')
-        if ma_z1 is None:
-            ma_z1 = model.get_model_key('z1')
-        core.hf3_alg_update_face_geometry(model.handle, fa_s, fa_l, ca_len, ma_pore_thick,
-                                          ma_fixed_n, ma_fixed_face_n, ma_layer_n, ma_z0, ma_z1)
+        if pore_thick is None:
+            pore_thick = model.get_attr(model.get_model_key('pore_thick'))
+        if fixed_n is None:
+            fixed_n = round(model.get_attr(model.get_model_key('fixed_n')))
+        if fixed_face_n is None:
+            fixed_face_n = round(model.get_attr(model.get_model_key('fixed_face_n')))
+        if layer_n is None:
+            layer_n = round(model.get_attr(model.get_model_key('layer_n')))
+        if z0 is None:
+            z0 = model.get_attr(model.get_model_key('z0'))
+        if z1 is None:
+            z1 = model.get_attr(model.get_model_key('z1'))
+        core.hf3_alg_update_face_geometry(model.handle, fa_s, fa_l, ca_len, pore_thick,
+                                          fixed_n, fixed_face_n, layer_n, z0, z1)
 
     @staticmethod
     def update_seepage_topology(seepage, fixed_n, layer_n, network, fa_id, fa_new, z_range,
-                                cell_new=None, face_new=None, fixed_face_n=None):
+                                cell_new=None, face_new=None, fixed_face_n=None,
+                                pre_task=None):
         """
         根据二维裂缝网络的结构，来更新seepage的结构。
 
@@ -1208,6 +1234,14 @@ class Hf3Alg:
 
         返回：
             新的裂缝单元的数量.
+
+        参数：
+            cell_new: cell的属性ID，表示cell是否是新的；
+            face_new: face的属性ID，表示face是否是新的；
+            pre_task: 如果结构过期需要更新，则首先执行这个任务，否则，则不要执行
+
+        注意：
+            如果调整了结构(会首先判断结构是否过期)，那么对于活动的cell，其额外添加的那些face将会被删除掉.
         """
         assert isinstance(network, FractureNetwork2)
         assert isinstance(seepage, Seepage)
@@ -1219,6 +1253,9 @@ class Hf3Alg:
             for frac in network.get_fractures():
                 frac.set_attr(fa_new, value=0)
             return 0
+
+        if pre_task is not None:
+            pre_task()
 
         assert fixed_n <= seepage.cell_number
         assert layer_n >= 1
@@ -1244,6 +1281,7 @@ class Hf3Alg:
             lay.clone_inner_faces(**kwargs)
             layers.append(lay)
             ibeg += layer_cell_n
+        # 将所有活动的cell抛出（这会带来一个副作用，就是所有这些cell相关的face，也会被删除）;
         seepage.pop_cells(active_n)
         assert seepage.cell_number == fixed_n
         if fixed_face_n is not None:
@@ -1298,20 +1336,23 @@ class Hf3Alg:
         return new_n
 
     core.use(None, 'hf3_alg_cell_ini', c_void_p, c_void_p,
-             c_size_t, c_size_t, c_size_t, c_size_t, c_size_t)
+             c_size_t, c_size_t, c_size_t, c_size_t, c_size_t, c_double)
 
     @staticmethod
-    def cell_ini(seepage, cell_ids, ca_vol, ca_t, ca_mc, fa_t, fa_c):
+    def cell_ini(seepage, cell_ids, ca_vol, ca_t, ca_mc, fa_t, fa_c,
+                 temperature=280.0):
         """
         对给定序号的Cell进行初始化
         """
-        core.hf3_alg_cell_ini(seepage.handle, cell_ids.handle, ca_vol, ca_t, ca_mc, fa_t, fa_c)
+        core.hf3_alg_cell_ini(seepage.handle, cell_ids.handle, ca_vol,
+                              ca_t, ca_mc, fa_t, fa_c, temperature)
 
-    core.use(None, 'hf3_alg_face_ini', c_void_p, c_size_t, c_size_t, c_size_t, c_size_t, c_size_t, c_double)
+    core.use(None, 'hf3_alg_face_ini', c_void_p, c_size_t, c_size_t,
+             c_size_t, c_size_t, c_size_t, c_double, c_double)
 
     @staticmethod
-    def face_ini(seepage, i_beg, i_end, fa_s, fa_l, fa_tag, hf_perm):
-        core.hf3_alg_face_ini(seepage.handle, i_beg, i_end, fa_s, fa_l, fa_tag, hf_perm)
+    def face_ini(seepage, i_beg, i_end, fa_s, fa_l, fa_tag, hf_perm, ratio=10.0):
+        core.hf3_alg_face_ini(seepage.handle, i_beg, i_end, fa_s, fa_l, fa_tag, hf_perm, ratio)
 
     core.use(c_size_t, 'hf3_alg_count_cells', c_void_p, c_size_t, c_double, c_double)
 
@@ -1321,6 +1362,23 @@ class Hf3Alg:
         返回tag等于给定值的Cell的数量
         """
         return core.hf3_alg_count_cells(seepage.handle, ca_tag, tag, eps)
+
+    core.use(None, 'hf3_alg_update_area_by_rc3', c_void_p, c_size_t,
+             c_size_t, c_size_t, c_size_t, c_size_t, c_size_t, c_size_t, c_void_p)
+
+    @staticmethod
+    def update_area_by_rc3(seepage, ca_s, ca_x1, ca_y1, ca_z1, ca_x2, ca_y2, ca_z2, cell_ids=None):
+        """
+        根据rc3属性来计算面积
+        """
+        assert isinstance(seepage, Seepage)
+        if cell_ids is None:
+            core.hf3_alg_update_area_by_rc3(seepage.handle,
+                                            ca_s, ca_x1, ca_y1, ca_z1, ca_x2, ca_y2, ca_z2, 0)
+        else:
+            assert isinstance(cell_ids, UintVector)
+            core.hf3_alg_update_area_by_rc3(seepage.handle,
+                                            ca_s, ca_x1, ca_y1, ca_z1, ca_x2, ca_y2, ca_z2, cell_ids.handle)
 
 
 class Sigma3:
