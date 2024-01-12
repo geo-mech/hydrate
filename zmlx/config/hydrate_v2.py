@@ -33,14 +33,19 @@ class Config:
         self.support_ch4_hyd_form = support_ch4_hyd_form
         self.gr = create_krf(as_interp=True) if gr is None else gr
 
-    def get_fludefs(self, h2o_density=None):
+    def get_fludefs(self, h2o_density=None, co2=None):
         """
         创建流体的定义. 当给定h2o_density的时候，h2o采用固定的密度.
+
+            当给定co2的时候，将使用给定的定义.
         """
         gas = Seepage.FluDef(name='gas')
         gas.add_component(create_ch4(name='ch4'))
         if self.has_co2:
-            gas.add_component(create_co2(name='co2'))
+            if co2 is not None:   # 使用给定的co2定义
+                gas.add_component(co2.get_copy(name='co2'))
+            else:
+                gas.add_component(create_co2(name='co2'))
         if self.has_steam:
             gas.add_component(create_h2o_gas(name='h2o_gas'))
 
@@ -137,10 +142,11 @@ class Config:
         """
         return self.get_kw()
 
-    def get_kw(self, h2o_density=None):
+    def get_kw(self, h2o_density=None, co2=None):
         """
         返回用于seepage.create的参数列表
+            当给定co2的时候，将使用给定的定义. (since 2024-1-10)
         """
         return create_dict(dt_max=3600 * 24,
-                           fludefs=self.get_fludefs(h2o_density=h2o_density), reactions=self.reactions, caps=self.caps,
+                           fludefs=self.get_fludefs(h2o_density=h2o_density, co2=co2), reactions=self.reactions, caps=self.caps,
                            gr=self.gr, gravity=[0, -10, 0], has_solid=True)
