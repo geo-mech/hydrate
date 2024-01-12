@@ -501,6 +501,16 @@ def set_face(face, area=None, length=None, perm=None, heat_cond=None, igr=None, 
     assert length > 0
 
     if perm is not None:
+        if hasattr(perm, '__call__'):   # 当单独调用set_face的时候，可能会遇到这种情况
+            p0 = face.get_cell(0).pos
+            p1 = face.get_cell(1).pos
+            perm = get_average_perm(p0, p1, perm, get_distance(p0, p1))
+
+        if isinstance(perm, Tensor3):   # 当单独调用set_face的时候，可能会遇到这种情况
+            p0 = face.get_cell(0).pos
+            p1 = face.get_cell(1).pos
+            perm = perm.get_along([p1[i] - p0[i] for i in range(3)])
+            perm = max(perm, 0.0)
         assert 0 <= perm <= 1.0e10
         face.set_attr(fa['perm'], perm)
     else:
