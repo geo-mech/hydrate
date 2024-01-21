@@ -1,6 +1,12 @@
 # ** desc = '基于Seepage类的温度场计算'
 
-from zmlx import *
+import numpy as np
+
+from zml import Seepage, SeepageMesh
+from zmlx.geometry.point_distance import point_distance
+from zmlx.plt.tricontourf import tricontourf
+from zmlx.ui import gui
+from zmlx.utility.SeepageNumpy import as_numpy
 
 
 class CellAttrs:
@@ -19,7 +25,7 @@ def create():
     for c in mesh.cells:
         cell = model.add_cell()
         cell.pos = c.pos
-        cell.set_attr(CellAttrs.temperature, 380 if get_distance(c.pos, (0, 0, 0)) < 30 else 280)
+        cell.set_attr(CellAttrs.temperature, 380 if point_distance(c.pos, (0, 0, 0)) < 30 else 280)
         cell.set_attr(CellAttrs.mc, 1.0e6 * c.vol)
 
     for f in mesh.faces:
@@ -30,8 +36,9 @@ def create():
 
 
 def show(model):
-    tricontourf(model.numpy.cells.x, model.numpy.cells.y,
-                model.numpy.cells.get(CellAttrs.temperature), caption='temperature', gui_only=True)
+    numpy = as_numpy(model)
+    tricontourf(numpy.cells.x, numpy.cells.y,
+                numpy.cells.get(CellAttrs.temperature), caption='temperature', gui_only=True)
 
 
 def solve(model):

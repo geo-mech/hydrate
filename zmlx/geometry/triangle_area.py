@@ -1,5 +1,3 @@
-from math import sqrt
-
 
 def triangle_area(a, b, c):
     """
@@ -8,7 +6,7 @@ def triangle_area(a, b, c):
     """
     p = (a + b + c) / 2
     p = p * (p - a) * (p - b) * (p - c)
-    return sqrt(p) if p > 0 else 0
+    return p ** 0.5 if p > 0 else 0
 
 
 if __name__ == '__main__':

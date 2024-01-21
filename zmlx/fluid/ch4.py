@@ -55,12 +55,13 @@ def create_flu(*args, **kwargs):
     return create(*args, **kwargs)
 
 
-if __name__ == '__main__':
+def show_all():
+    from zmlx.plt.show_field2 import show_field2
     flu = create()
-    print(flu)
-    try:
-        from zmlx.plt.show_field2 import show_field2
+    show_field2(flu.den, [4e6, 15e6], [274, 290], caption='den')
+    show_field2(flu.vis, [4e6, 15e6], [274, 290], caption='vis')
 
-        show_field2(flu.den, [1e6, 20e6], [270, 290])
-    except:
-        pass
+
+if __name__ == '__main__':
+    from zmlx.ui import gui
+    gui.execute(show_all, close_after_done=False)

@@ -1,10 +1,10 @@
 import random
-
 from zml import Dfn2
 from zmlx.alg.clamp import clamp
 from zmlx.alg.linspace import linspace
 from zmlx.geometry.rect_3d import from_v3
 from zmlx.geometry.rect_v3 import intersected, get_area
+import numpy as np
 
 
 def from_segs(segs, z_min, z_max, heights):
@@ -161,4 +161,8 @@ def test_1():
         color.append(random.uniform(0, 1))
         alpha.append(random.uniform(0, 1) ** 3)
     show_rc3(rc3, color=color, alpha=alpha, caption='dfn_v3')
+
+
+if __name__ == '__main__':
+    np.savetxt('dfn_v3_demo.txt', to_rc3(create_demo()), fmt='%.3f')
 

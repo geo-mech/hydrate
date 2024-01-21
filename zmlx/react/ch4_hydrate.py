@@ -46,7 +46,10 @@ def create_p2t():
 
 def get_mg_vs_mh(Nh=6.0):
     """
-    返回1kg水合物分解之后产生的甲烷气体的质量(kg)
+    返回1kg水合物分解之后产生的甲烷气体的质量(kg);
+
+        When Nh=6, Return 0.129
+        When Nh=5, Return 0.151
     """
     return 16.0 / (18.0 * Nh + 16.0)
 
@@ -57,6 +60,9 @@ def get_dheat(Nh=6.0):
     ---
     2022-10-29
     分解1mol的水合物，所需要消耗的热量应该为54.2kJ，之前写成了62.8（也不知道是从哪里得到的数据）
+    ---
+        When Nh=6, Return 437096.77
+        When Nh=5, Return 511320.75
     """
     if data_version.ch4_hydrate >= 221029:
         return (54.2e3 / 16.0E-3) * get_mg_vs_mh(Nh)
@@ -74,3 +80,8 @@ def create(gas, wat, hyd, fa_t=None, fa_c=None, dissociation=True, formation=Tru
                           gas=gas, liq=wat, hyd=hyd,
                           fa_t=fa_t, fa_c=fa_c,
                           dissociation=dissociation, formation=formation)
+
+
+if __name__ == '__main__':
+    print(get_dheat(6.0))
+    print(get_dheat(5.0))

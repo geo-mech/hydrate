@@ -1,5 +1,3 @@
-from math import sqrt
-
 
 def seg_intersection(ax, ay, bx, by, cx, cy, dx, dy):
     """
@@ -26,7 +24,7 @@ def seg_intersection(ax, ay, bx, by, cx, cy, dx, dy):
     dy -= ay
 
     # Discover the length of segment A-B.
-    dst_ab = sqrt(bx * bx + by * by)
+    dst_ab = (bx * bx + by * by) ** 0.5
 
     #  (2) Rotate the system so that point B is on the positive X axis.
     cos_ = bx / dst_ab

@@ -2,11 +2,13 @@
 
 import os
 import sys
+
 import numpy as np
+
 from zml import make_parent
 from zmlx.alg.sbatch import sbatch
 
-# 进行因素分析的时候，可变变量的数量，应该等于函数run的参数的数量
+# 进行因素分析的时候，可变变量的数量，应该等于函数run的参数的数量(注意，这个变量的数量不能为0)
 n_vari = 2
 
 

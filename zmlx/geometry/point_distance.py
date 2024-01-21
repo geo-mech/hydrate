@@ -1,11 +1,11 @@
+import numpy as np
+
+
 def point_distance(p1, p2):
     """
     Returns the distance between two points
     """
-    dist = 0.0
-    for i in range(min(len(p1), len(p2))):
-        dist += (p1[i] - p2[i]) ** 2
-    return dist ** 0.5
+    return np.linalg.norm(np.asarray(p1) - np.asarray(p2))
 
 
 if __name__ == '__main__':
