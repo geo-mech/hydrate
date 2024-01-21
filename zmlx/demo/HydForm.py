@@ -4,6 +4,7 @@ from zmlx import *
 from zmlx.filesys.make_fname import make_fname
 from zmlx.config import hydrate_v2
 from zmlx.config import seepage
+from zmlx.utility.SeepageNumpy import as_numpy
 
 
 def create():
@@ -53,8 +54,8 @@ def show(model: Seepage, folder=None):
         return
     time = seepage.get_time(model)
     kwargs = {'title': f'plot when model.time={time2str(time)}'}
-    x = model.numpy.cells.x
-    y = model.numpy.cells.y
+    x = as_numpy(model).cells.x
+    y = as_numpy(model).cells.y
 
     def fname(key):
         return make_fname(time / (3600 * 24 * 365), folder=join_paths(folder, key), ext='.jpg', unit='y')
@@ -62,16 +63,16 @@ def show(model: Seepage, folder=None):
     cell_keys = seepage.cell_keys(model)
 
     def show_key(key):
-        tricontourf(x, y, model.numpy.cells.get(cell_keys[key]), caption=key,
+        tricontourf(x, y, as_numpy(model).cells.get(cell_keys[key]), caption=key,
                     fname=fname(key), **kwargs)
 
     show_key('pre')
     show_key('temperature')
 
-    fv_all = model.numpy.cells.fluid_vol
+    fv_all = as_numpy(model).cells.fluid_vol
 
     def show_s(flu_name):
-        s = model.numpy.fluids(*model.find_fludef(flu_name)).vol / fv_all
+        s = as_numpy(model).fluids(*model.find_fludef(flu_name)).vol / fv_all
         tricontourf(x, y, s, caption=flu_name, fname=fname(flu_name), **kwargs)
 
     for item in ['ch4', 'liq', 'ch4_hydrate']:

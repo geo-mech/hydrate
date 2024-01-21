@@ -2,6 +2,7 @@
 
 from zmlx import *
 from zmlx.config import seepage
+from zmlx.utility.SeepageNumpy import as_numpy
 
 
 def solve():
@@ -16,8 +17,8 @@ def solve():
         seepage.iterate(model)
         if step % 50 == 0:
             print(f'step = {step}')
-            tricontourf(model.numpy.cells.x, model.numpy.cells.y,
-                        model.numpy.cells.get(model.get_cell_key('temperature')),
+            tricontourf(as_numpy(model).cells.x, as_numpy(model).cells.y,
+                        as_numpy(model).cells.get(model.get_cell_key('temperature')),
                         caption='temperature', gui_only=True)
 
 

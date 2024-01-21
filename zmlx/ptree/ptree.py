@@ -237,7 +237,7 @@ def _open_py(filename):
     """
     将Python文件作为一个PTree来使用
     """
-    from zml import read_py, write_py
+    from zmlx.io.python import read_py, write_py
 
     def read(path):
         return read_py(path=path, data={}, encoding='utf-8', globals=None, text=None, key=None)

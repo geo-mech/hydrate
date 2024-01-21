@@ -4,7 +4,7 @@
 # ** is_sys = True
 
 import os
-
+from zmlx.ui.GuiBuffer import gui
 import zml
 from zmlx.ui.Qt import QtWidgets
 
@@ -18,5 +18,5 @@ def set_md(widget):
         widget.setMarkdown(zml.read_text(path=path, encoding='utf-8'))
 
 
-zml.gui.get_widget(type=QtWidgets.QTextBrowser, caption='ReadMe',
-                   on_top=True, oper=set_md, icon='info.png')
+gui.get_widget(type=QtWidgets.QTextBrowser, caption='ReadMe',
+               on_top=True, oper=set_md, icon='info.png')

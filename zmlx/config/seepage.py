@@ -1,52 +1,106 @@
+"""
+注意，此模块使用动态的属性ID.
+
+模型的属性关键词有：
+    dt: 时间步长
+    time: 时间
+    step: 迭代步
+    dv_relative：每一步走过的距离与网格尺寸的比值（用以控制时间步长），默认0.1
+    dt_min：时间步长的最小值，单位：秒；默认：1.0e-15
+    dt_max：时间步长的最大值，单位：秒；默认：1.0e10
+
+模型的tag：
+    disable_update_den：是否禁止更新密度
+    disable_update_vis：是否禁止更新粘性
+    has_solid：是否有固体；如果有，那么只能允许最后一个流体为固体
+    disable_flow：是否禁止流动计算
+    has_inertia：是否考虑流体的惯性，如果考虑，则需要额外的属性来存储（定义：fa_s, fa_q, fa_k）
+    disable_ther：是否禁止传热计算
+    disable_heat_exchange：禁止流体和固体之间的热交换
+    disable_update_dt：禁止更新时间不长dt
+
+流体的属性关键词:
+    temperature: 温度
+    specific_heat: 比热
+
+Cell的属性:
+    temperature: 温度
+    mc：质量和比热的乘积
+    pre：流体的压力：用来存储迭代计算的压力结果，可能和利用流体体积和孔隙弹性计算的压力略有不同
+    fv0：流体体积的初始值（和初始的g0对应的数值）
+    g_heat：流体和固体热交换的系数
+    vol：体积
+
+Face的属性：
+    area：横截面积
+    length：长度（流体经过这个face需要流过的距离）
+    g0：初始时刻的导流系数
+    igr：导流系数的相对曲线的id（用来修正孔隙空间大小改变所带来的渗透率的改变）
+    g_heat：用于传热计算的导流系数（注意，并非热传导系数。这个系数，已经考虑了face的横截面积和长度）
+"""
+
 from zml import *
 from zmlx.config import capillary
 from zmlx.config.attr_keys import *
 from zmlx.alg.join_cols import join_cols
+from zmlx.utility.Field import Field
 import numpy as np
+from zmlx.utility.SeepageNumpy import SeepageNumpy
+
+
+def get_attr(model, key, min=-1.0e100, max=1.0e100, default_val=None, cast=None):
+    """
+    返回模型的属性. 其中key可以是字符串，也可以是一个int
+    """
+    assert isinstance(key, (int, str))
+    if isinstance(key, str):
+        key = model.get_model_key(key)
+    if key is not None:
+        value = model.get_attr(index=key, min=min, max=max, default_val=default_val)
+    else:
+        value = default_val
+    if cast is None:
+        return value
+    else:
+        return cast(value)
+
+
+def set_attr(model, key, value):
+    """
+    设置模型的属性. 其中key可以是字符串，也可以是一个int
+    """
+    if isinstance(key, str):
+        key = model.reg_model_key(key)
+    assert key is not None
+    model.set_attr(key, value)
 
 
 def set_dt(model, dt):
     """
     设置模型的时间步长
     """
-    assert isinstance(model, Seepage)
-    key = model.reg_model_key('dt')
-    model.set_attr(key, dt)
+    set_attr(model, 'dt', dt)
 
 
 def get_dt(model):
     """
     返回模型内存储的时间步长
     """
-    assert isinstance(model, Seepage)
-    key = model.reg_model_key('dt')
-    value = model.get_attr(key)
-    if value is None:
-        return 1.0e-10
-    else:
-        return value
+    return get_attr(model, key='dt', default_val=1.0e-10)
 
 
 def get_time(model):
     """
     返回模型的时间
     """
-    assert isinstance(model, Seepage)
-    key = model.reg_model_key('time')
-    value = model.get_attr(key)
-    if value is None:
-        return 0
-    else:
-        return value
+    return get_attr(model, key='time', default_val=0.0)
 
 
 def set_time(model, value):
     """
     设置模型的时间
     """
-    assert isinstance(model, Seepage)
-    key = model.reg_model_key('time')
-    model.set_attr(key, value)
+    set_attr(model, 'time', value)
 
 
 def update_time(model, dt=None):
@@ -62,22 +116,14 @@ def get_step(model):
     """
     返回模型迭代的次数
     """
-    assert isinstance(model, Seepage)
-    key = model.reg_model_key('step')
-    value = model.get_attr(key)
-    if value is None:
-        return 0
-    else:
-        return int(value)
+    return get_attr(model, 'step', default_val=0, cast=round)
 
 
 def set_step(model, step):
     """
     设置模型迭代的步数
     """
-    assert isinstance(model, Seepage)
-    key = model.reg_model_key('step')
-    model.set_attr(key, step)
+    set_attr(model, 'step', step)
 
 
 def get_recommended_dt(model, previous_dt, dv_relative=0.1, using_flow=True, using_ther=True):
@@ -104,19 +150,11 @@ def get_dv_relative(model):
     """
     每一个时间步dt内流体流过的网格数. 用于控制时间步长. 正常取值应该在0到1之间.
     """
-    assert isinstance(model, Seepage)
-    key = model.reg_model_key('dv_relative')
-    value = model.get_attr(key)
-    if value is None:
-        return 0.1
-    else:
-        return value
+    return get_attr(model, 'dv_relative', default_val=0.1)
 
 
 def set_dv_relative(model, value):
-    assert isinstance(model, Seepage)
-    key = model.reg_model_key('dv_relative')
-    model.set_attr(key, value)
+    set_attr(model, 'dv_relative', value)
 
 
 def get_dt_min(model):
@@ -124,19 +162,11 @@ def get_dt_min(model):
     允许的最小的时间步长
         注意: 这是对时间步长的一个硬约束。当利用dv_relative计算的步长不在此范围内的时候，则将它强制拉回到这个范围.
     """
-    assert isinstance(model, Seepage)
-    key = model.reg_model_key('dt_min')
-    value = model.get_attr(key)
-    if value is None:
-        return 1.0e-15
-    else:
-        return value
+    return get_attr(model, key='dt_min', default_val=1.0e-15)
 
 
 def set_dt_min(model, value):
-    assert isinstance(model, Seepage)
-    key = model.reg_model_key('dt_min')
-    model.set_attr(key, value)
+    set_attr(model, 'dt_min', value)
 
 
 def get_dt_max(model):
@@ -144,19 +174,11 @@ def get_dt_max(model):
     允许的最大的时间步长
         注意: 这是对时间步长的一个硬约束。当利用dv_relative计算的步长不在此范围内的时候，则将它强制拉回到这个范围.
     """
-    assert isinstance(model, Seepage)
-    key = model.reg_model_key('dt_max')
-    value = model.get_attr(key)
-    if value is None:
-        return 1.0e10
-    else:
-        return value
+    return get_attr(model, 'dt_max', default_val=1.0e10)
 
 
 def set_dt_max(model, value):
-    assert isinstance(model, Seepage)
-    key = model.reg_model_key('dt_max')
-    model.set_attr(key, value)
+    set_attr(model, 'dt_max', value)
 
 
 solid_buffer = Seepage.CellData()
@@ -286,13 +308,16 @@ def create(mesh=None,
            fludefs=None, has_solid=False, reactions=None,
            gravity=None,
            dt_max=None, dt_min=None, dt_ini=None, dv_relative=None,
-           gr=None, bk_fv=None, bk_g=None, caps=None,
+           gr=None, bk_fv=None, bk_g=None, caps=None, keys=None,
            **kwargs):
     """
     利用给定的网格来创建一个模型.
         其中gr用来计算孔隙体积变化之后的渗透率的改变量.  gr的类型是一个Interp1.
     """
     model = Seepage()
+
+    if keys is not None:  # 预定义一些keys; 主要目的是为了保证两个Seepage的keys的一致，在两个Seepage需要交互的时候，很重要.
+        model.set_keys(**keys)
 
     if disable_update_den:
         model.add_tag('disable_update_den')
@@ -455,13 +480,13 @@ def set_cell(cell, pos=None, vol=None, porosity=0.1, pore_modulus=1000e6, denc=1
         pos = cell.pos
 
     if vol is not None:
-        cell.set_attr(ca['vol'], vol)
+        cell.set_attr(ca.vol, vol)
     else:
-        vol = cell.get_attr(ca['vol'])
+        vol = cell.get_attr(ca.vol)
         assert vol is not None
 
-    cell.set_ini(ca_mc=ca['mc'], ca_t=ca['temperature'],
-                 fa_t=fa['temperature'], fa_c=fa['specific_heat'],
+    cell.set_ini(ca_mc=ca.mc, ca_t=ca.temperature,
+                 fa_t=fa.temperature, fa_c=fa.specific_heat,
                  pos=pos, vol=vol, porosity=porosity,
                  pore_modulus=pore_modulus,
                  denc=denc,
@@ -470,8 +495,8 @@ def set_cell(cell, pos=None, vol=None, porosity=0.1, pore_modulus=1000e6, denc=1
                  )
 
     if bk_fv:   # 备份流体体积
-        cell.set_attr(ca['fv0'], cell.fluid_vol)
-    cell.set_attr(ca['g_heat'], vol / (dist ** 2))
+        cell.set_attr(ca.fv0, cell.fluid_vol)
+    cell.set_attr(ca.g_heat, vol / (dist ** 2))
 
 
 def set_face(face, area=None, length=None, perm=None, heat_cond=None, igr=None, bk_g=True):
@@ -483,17 +508,17 @@ def set_face(face, area=None, length=None, perm=None, heat_cond=None, igr=None, 
 
     if area is not None:
         assert 0 <= area <= 1.0e30
-        face.set_attr(fa['area'], area)
+        face.set_attr(fa.area, area)
     else:
-        area = face.get_attr(fa['area'])
+        area = face.get_attr(fa.area)
         assert area is not None
         assert 0 <= area <= 1.0e30
 
     if length is not None:
         assert 0 < length <= 1.0e30
-        face.set_attr(fa['length'], length)
+        face.set_attr(fa.length, length)
     else:
-        length = face.get_attr(fa['length'])
+        length = face.get_attr(fa.length)
         assert length is not None
         assert 0 < length <= 1.0e30
 
@@ -512,9 +537,9 @@ def set_face(face, area=None, length=None, perm=None, heat_cond=None, igr=None, 
             perm = perm.get_along([p1[i] - p0[i] for i in range(3)])
             perm = max(perm, 0.0)
         assert 0 <= perm <= 1.0e10
-        face.set_attr(fa['perm'], perm)
+        face.set_attr(fa.perm, perm)
     else:
-        perm = face.get_attr(fa['perm'])
+        perm = face.get_attr(fa.perm)
         assert perm is not None
         assert 0 <= perm <= 1.0e10
 
@@ -522,13 +547,13 @@ def set_face(face, area=None, length=None, perm=None, heat_cond=None, igr=None, 
     face.cond = g0
 
     if bk_g:
-        face.set_attr(fa['g0'], g0)
+        face.set_attr(fa.g0, g0)
 
     if heat_cond is not None:
-        face.set_attr(fa['g_heat'], area * heat_cond / length)
+        face.set_attr(fa.g_heat, area * heat_cond / length)
 
     if igr is not None:
-        face.set_attr(fa['igr'], igr)
+        face.set_attr(fa.igr, igr)
 
 
 def add_cell(model, *args, **kwargs):
@@ -569,12 +594,12 @@ def print_cells(path, model, ca_keys=None, fa_keys=None, fmt='%.18e'):
             assert f0.get_component(i1).component_number == 0
             fluid_ids.append([i0, i1])
 
-    cells = model.numpy.cells
+    cells = SeepageNumpy(model).cells
     v = cells.fluid_vol
 
     vs = []
     for fluid_id in fluid_ids:
-        s = model.numpy.fluids(*fluid_id).vol / v
+        s = SeepageNumpy(model).fluids(*fluid_id).vol / v
         vs.append(s)
 
     # 返回温度(未必有定义)
@@ -587,7 +612,7 @@ def print_cells(path, model, ca_keys=None, fa_keys=None, fmt='%.18e'):
     # 即将保存的数据
     d = join_cols(cells.x, cells.y, cells.z, cells.pre, t, v, *vs,
                   *([] if ca_keys is None else [cells.get(key) for key in ca_keys]),
-                  *([] if fa_keys is None else [model.numpy.fluids(*idx).get(key) for idx, key in fa_keys]),
+                  *([] if fa_keys is None else [SeepageNumpy(model).fluids(*idx).get(key) for idx, key in fa_keys]),
                   )
 
     # 保存数据

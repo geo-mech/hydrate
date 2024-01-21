@@ -1,6 +1,8 @@
 # ** desc = '单相流，两端固定压力，计算压力场'
 
 from zml import *
+from zmlx.ui.GuiBuffer import gui
+from zmlx.alg.time2str import time2str
 from zmlx.config import seepage
 from zmlx.fluid import h2o
 from zmlx.utility.GuiIterator import GuiIterator

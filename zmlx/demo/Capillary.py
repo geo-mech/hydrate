@@ -3,6 +3,7 @@
 from zmlx import *
 from zmlx.config import capillary
 from zmlx.config import seepage
+from zmlx.utility.SeepageNumpy import SeepageNumpy
 
 mud = """0.007698294	1930020.672
 0.0441305	4270730.329
@@ -122,8 +123,9 @@ def show(x, y, z, caption=None):
 
 
 def solve(model):
-    x = model.numpy.cells.get(-1)
-    y = model.numpy.cells.get(-2)
+    numpy = SeepageNumpy(model)
+    x = numpy.cells.get(-1)
+    y = numpy.cells.get(-2)
 
     show(x, y, [get_idx(x[i], y[i], 0) for i in range(len(x))], caption='岩石ID')
     show(x, y, [get_s(x[i], y[i], 0)[1] for i in range(len(x))], caption='初始饱和度')
@@ -133,7 +135,7 @@ def solve(model):
         capillary.iterate(model, 1e5)
         if step % 30 == 0:
             print(f'step = {step}')
-            show(x, y, model.numpy.fluids(1).vol, caption='饱和度')
+            show(x, y, numpy.fluids(1).vol, caption='饱和度')
 
 
 def execute(gui_mode=True, close_after_done=False):

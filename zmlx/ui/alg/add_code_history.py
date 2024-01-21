@@ -2,7 +2,7 @@ import os
 import shutil
 
 from zml import app_data
-from zml import time_string
+from zmlx.filesys.tag import time_string
 
 
 def add_code_history(fname):

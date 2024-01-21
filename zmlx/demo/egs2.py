@@ -9,6 +9,7 @@
 """
 
 from zml import *
+from zmlx.ui.GuiBuffer import gui
 from zmlx.config import seepage
 from zmlx.filesys import path
 from zmlx.filesys.make_fname import make_fname
@@ -19,6 +20,8 @@ from zmlx.plt.show_dfn2 import show_dfn2
 from zmlx.utility.GuiIterator import GuiIterator
 from zmlx.utility.PressureController import PressureController
 from zmlx.utility.SaveManager import SaveManager
+from zmlx.alg.time2str import time2str
+from zmlx.utility.SeepageNumpy import SeepageNumpy
 
 
 def create_model(dx=100.0, dy=100.0, dz=100.0, temp=500.0, pre=10.0e6, perm=1.0e-14, porosity=0.1, denc=3e6,
@@ -138,13 +141,13 @@ def plot_cells(model, folder=None):
     time = time2str(seepage.get_time(model))
     year = seepage.get_time(model) / (3600 * 24 * 365)
 
-    x = model.numpy.cells.x
-    y = model.numpy.cells.y
+    x = SeepageNumpy(model).cells.x
+    y = SeepageNumpy(model).cells.y
     x = x[: -1]
     y = y[: -1]
 
     def show_ca(idx, name):
-        p = model.numpy.cells.get(idx)
+        p = SeepageNumpy(model).cells.get(idx)
         p = p[: -1]
         tricontourf(x, y, p, caption=name, title=f'time = {time}',
                     fname=make_fname(year, path.join(folder, name), '.jpg', 'y'))
@@ -154,7 +157,7 @@ def plot_cells(model, folder=None):
     show_ca(model.get_cell_key('temperature'), 'rock_temp')
 
     # 显示流体温度
-    t = model.numpy.fluids(0).get(index=model.reg_flu_key('temperature'))
+    t = SeepageNumpy(model).fluids(0).get(index=model.reg_flu_key('temperature'))
     t = t[: -1]
     tricontourf(x, y, t, caption='flu_temp', title=f'time = {time}',
                 fname=make_fname(year, path.join(folder, 'flu_temp'), '.jpg', 'y'))

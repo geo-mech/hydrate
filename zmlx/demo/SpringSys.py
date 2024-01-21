@@ -1,32 +1,20 @@
 # ** desc = '基于弹簧系统计算应力的传播'
 
+import numpy as np
 from zmlx import *
-from zmlx.data.mesh_c10000 import x, y, tri
-import math
-
-
-def plot(z):
-    def f(fig):
-        ax = fig.subplots()
-        ax.set_aspect('equal')
-        cntr2 = ax.tricontourf(x, y, z, levels=20, cmap="coolwarm")
-        fig.colorbar(cntr2, ax=ax)
-
-    zml.plot(f, clear=True, caption='位移场')
-
-
-def get_norm(x, y):
-    return math.sqrt(x * x + y * y)
+from zmlx.data import mesh_c10000 as data
+from zmlx.plt.tricontourf import tricontourf
 
 
 def create_model(triangles, x, y):
     """
     创建一个模型
     """
-    model = zml.SpringSys()
+    model = SpringSys()
     virtual_nodes = []
     for i in range(len(x)):
-        node = model.add_node(pos=(x[i], y[i], 0), vel=(0, 0, 0), mass=1 if get_norm(x[i], y[i]) < 0.48 else 1.0e10,
+        node = model.add_node(pos=(x[i], y[i], 0), vel=(0, 0, 0),
+                              mass=1 if np.linalg.norm([x[i], y[i]]) < 0.48 else 1.0e10,
                               force=(0, 0, 0))
         virtual_nodes.append(model.add_virtual_node(node=node))
     for tri in triangles:
@@ -35,25 +23,18 @@ def create_model(triangles, x, y):
         links = ((tri[0], tri[1]), (tri[1], tri[2]), (tri[2], tri[0]))
         for link in links:
             x0, y0, x1, y1 = x[link[0]], y[link[0]], x[link[1]], y[link[1]]
-            dist = math.sqrt(math.pow(x0 - x1, 2) + math.pow(y0 - y1, 2))
+            dist = np.linalg.norm(np.array([x0, y0]) - np.array([x1, y1]))
             spr = model.add_spring(virtual_nodes=[virtual_nodes[inode] for inode in link], len0=dist, k=1)
-            if get_norm(tri_x, tri_y) < 0.2:
+            if np.linalg.norm([tri_x, tri_y]) < 0.2:
                 spr.len0 *= 1.01
     return model
 
 
-def get_node_pos(model):
-    disp = np.zeros(shape=(model.node_number, 3))
-    for i in range(model.node_number):
-        disp[i] = model.get_node(i).pos
-    return disp
-
-
 def main():
-    model = create_model(tri, x, y)
+    model = create_model(data.tri, data.x, data.y)
     print(model)
 
-    p0 = get_node_pos(model)
+    p0 = np.array([node.pos for node in model.nodes])
 
     solver = ConjugateGradientSolver(tolerance=1.0e-20)
     dynsys = DynSys()
@@ -65,8 +46,8 @@ def main():
         model.modify_vel(0.99)
         if i % 10 == 0:
             print(i)
-            dp = get_node_pos(model) - p0
-            plot(np.sqrt(dp[:, 0] * dp[:, 0] + dp[:, 1] * dp[:, 1]))
+            dp = np.array([node.pos for node in model.nodes]) - p0
+            tricontourf(x=data.x, y=data.y, z=(dp[:, 0] ** 2 + dp[:, 1] ** 2) ** 0.5, caption='位移场')
 
 
 if __name__ == '__main__':

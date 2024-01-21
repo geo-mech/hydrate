@@ -18,6 +18,7 @@ import os
 import sys
 import warnings
 import timeit
+import importlib
 
 warnings.simplefilter("default")  # 警告默认显示
 
@@ -34,6 +35,9 @@ except Exception as _err:
 
 # 指示当前是否为Windows系统(目前支持Windows和Linux两个系统)
 is_windows = os.name == 'nt'
+
+# zml模块的版本(用六位数字表示的日期)
+version = 240121
 
 
 class Object:
@@ -57,48 +61,41 @@ def create_dict(**kwargs):
 
 class _GuiAdaptor:
     def __getattr__(self, item):
+        warnings.warn('zml.gui will be removed after 2025-1-21. use zmlx.ui.GuiBuffer.gui instead',
+                      DeprecationWarning)
         from zmlx.ui.GuiBuffer import gui as _gui
         return getattr(_gui, item)
 
     def __call__(self, *args, **kwargs):
+        warnings.warn('zml.gui will be removed after 2025-1-21. use zmlx.ui.GuiBuffer.gui instead',
+                      DeprecationWarning)
         from zmlx.ui.GuiBuffer import gui as _gui
         return _gui(*args, **kwargs)
 
 
+# will be removed after 2025-1-21. use zmlx.ui.GuiBuffer.gui instead
 gui = _GuiAdaptor()
 
 
-def information(*args, **kwargs):
-    return gui.information(*args, **kwargs)
-
-
-def question(info):
-    return gui.question(info)
-
-
-def plot(*args, **kwargs):
+def _deprecation_func(pack_name, func, date=None):
     """
-    调用matplotlib执行绘图操作
+    定义一个在zmlx中有定义，在zml中被弃用的函数.
     """
-    gui.plot(*args, **kwargs)
+    def a_function(*args, **kwargs):
+        warnings.warn(f'zml.<{func}> will be removed after {date}, use {pack_name}.{func} instead. ',
+                      DeprecationWarning)
+        mod = importlib.import_module(pack_name)
+        f = getattr(mod, func)
+        return f(*args, **kwargs)
+    return a_function
 
 
-def break_point():
-    """
-    添加一个gui的断点，从而在gui执行的过程中，可以控制暂停和终止
-    """
-    gui.break_point()
-
-
-# 函数的别名<为了兼容之前的代码>
+information = _deprecation_func('zmlx.ui.GuiBuffer', 'information', '2025-1-21')
+question = _deprecation_func('zmlx.ui.GuiBuffer', 'question', '2025-1-21')
+plot = _deprecation_func('zmlx.ui.GuiBuffer', 'plot', '2025-1-21')
+break_point = _deprecation_func('zmlx.ui.GuiBuffer', 'break_point', '2025-1-21')
 breakpoint = break_point
-
-
-def gui_exec(*args, **kwargs):
-    """
-    调用gui来执行一个函数，并返回函数的执行结果
-    """
-    return gui.execute(*args, **kwargs)
+gui_exec = _deprecation_func('zmlx.ui.GuiBuffer', 'gui_exec', '2025-1-21')
 
 
 def is_array(o):
@@ -409,6 +406,7 @@ def load_cdll(name, first=None):
     path = app_data.find(name, first)
     if path is not None:
         try:
+            assert isinstance(path, str)
             return cdll.LoadLibrary(path)
         except Exception as e:
             print(f'Error load library from <{path}>. Message = {e}')
@@ -659,9 +657,6 @@ class DllCore:
 
 
 core = DllCore(dll=dll)
-
-# zml模块的版本(用六位数字表示的编译的日期)
-version = core.version
 
 
 class Timer:
@@ -937,54 +932,10 @@ def run(fn):
     return core.run(fn)
 
 
-def time_string():
-    """
-    生成一个时间字符串 (类似于 20201021T183800 这样的格式)
-    """
-    return datetime.datetime.now().strftime("%Y%m%dT%H%M%S")
-
-
-def is_time_string(s):
-    """
-    check if the given string is a time string such as 20201021T183800.
-    """
-    if len(s) != 15:
-        return False
-    else:
-        return s[0: 8].isdigit() and s[8] == 'T' and s[9: 15].isdigit()
-
-
-def has_tag(folder=None):
-    """
-    Check if a file like 20201021T183800 exists
-    """
-    if folder is None:
-        names = os.listdir(os.getcwd())
-    else:
-        if os.path.isdir(folder):
-            names = os.listdir(folder)
-        else:
-            names = []
-    for name in names:
-        if is_time_string(name):
-            return True
-    return False
-
-
-def print_tag(folder=None):
-    """
-    Print a file, the file name is similar to 20201021T183800, this file can be used as a label for the data,
-    and then search the file to locate the data
-    """
-    if has_tag(folder=folder):
-        return
-    if folder is None:
-        path = time_string()
-    else:
-        path = os.path.join(folder, time_string())
-    with open(make_parent(path), 'w') as file:
-        file.write("data_tag\n")
-        file.flush()
+time_string = _deprecation_func('zmlx.filesys.tag', 'time_string', '2025-1-21')
+is_time_string = _deprecation_func('zmlx.filesys.tag', 'is_time_string', '2025-1-21')
+has_tag = _deprecation_func('zmlx.filesys.tag', 'has_tag', '2025-1-21')
+print_tag = _deprecation_func('zmlx.filesys.tag', 'print_tag', '2025-1-21')
 
 
 core.use(None, 'fetch_m', c_char_p)
@@ -1110,8 +1061,6 @@ code to author (zhangzhaobin@mail.iggcas.ac.cn):
 Thanks for using.
     """
                 print(text)
-                if gui.exists():
-                    gui.information('Warning', text)
 
 
 lic = License(core=core)
@@ -1132,17 +1081,7 @@ def reg(code=None):
             lic.load(code)
 
 
-def first_only(path='please_delete_this_file_before_run'):
-    """
-    when it is executed for the second time, an exception is given to ensure that the result is not easily overwritten
-    """
-    if os.path.exists(path):
-        y = question('Warning: The existed data will be Over-Written. continue? ')
-        if not y:
-            assert False
-    else:
-        with open(path, 'w') as file:
-            file.write('\n')
+first_only = _deprecation_func('zmlx.filesys.first_only', 'first_only', '2025-1-21')
 
 
 core.use(c_double, 'test_loop', c_size_t, c_bool)
@@ -1159,7 +1098,7 @@ def about():
     """
     Return module information
     """
-    info = f'Welcome to zml ({version}; {core.time_compile}; {core.compiler})'
+    info = f'Welcome to zml (v{version}; {core.time_compile}; {core.compiler})'
     if not lic.exists():
         author = 'author (Email: zhangzhaobin@mail.iggcas.ac.cn, QQ: 542844710)'
         info = f"""{info}. 
@@ -1203,147 +1142,13 @@ def confuse_file(ipath, opath, password, is_encrypt=True):
     return core.confuse_file(make_c_char_p(ipath), make_c_char_p(opath), make_c_char_p(password), is_encrypt)
 
 
-def prepare_dir(folder, direct_del=False):
-    """
-    Prepare an empty folder for output calculation data
-    """
-    if folder is None:
-        return
-    if os.path.exists(folder):
-        if direct_del:
-            y = True
-        else:
-            y = question(f'Do you want to delete the existed folder <{folder}>?')
-        if y:
-            import shutil
-            shutil.rmtree(folder)
-    if not os.path.exists(folder):
-        make_dirs(folder)
-
-
-def time2str(s):
-    if abs(s) < 200:
-        if s > 2.0:
-            return '%.2fs' % s
-        s *= 1000
-        if s > 2.0:
-            return '%.2fms' % s
-        s *= 1000
-        if s > 2.0:
-            return '%.2fus' % s
-        s *= 1000
-        return '%.2fns' % s
-    m = s / 60
-    if abs(m) < 200:
-        return '%.2fm' % m
-    h = m / 60
-    if abs(h) < 60:
-        return '%.2fh' % h
-    d = h / 24
-    if abs(d) < 800:
-        return '%.2fd' % d
-    y = d / 365
-    return '%.2fy' % y
-
-
-def mass2str(kg):
-    ug = kg * 1.0e9
-    if abs(ug) < 2000:
-        return '%.2fug' % ug
-    mg = ug / 1000
-    if abs(mg) < 2000:
-        return '%.2fmg' % mg
-    g = mg / 1000
-    if abs(g) < 2000:
-        return '%.2fg' % g
-    kg = g / 1000
-    if abs(kg) < 2000:
-        return '%.2fkg' % kg
-    t = kg / 1000
-    return '%.2ft' % t
-
-
-def make_fpath(folder, step=None, ext='.txt', name=None):
-    """
-    Returns a filename to output data, and ensures that the folder exists
-    """
-    assert isinstance(folder, str)
-    if not os.path.exists(folder):
-        make_dirs(folder)
-    else:
-        assert os.path.isdir(folder)
-    assert step is not None or name is not None
-    if step is not None:
-        return os.path.join(folder, f'{step:010d}{ext}')
-    if name is not None:
-        return os.path.join(folder, name)
-
-
-def get_last_file(folder):
-    """
-    返回给定文件夹中的最后一个文件（按照文件名，利用字符串默认的对比，从小到大排序）
-    """
-    if not os.path.isdir(folder):
-        return
-    files = os.listdir(folder)
-    if len(files) == 0:
-        return
-    else:
-        return os.path.join(folder, max(files))
-
-
-def write_py(path, data=None, **kwargs):
-    """
-    Save the data to a file in .py format. Note that the data must be correctly converted to a string.
-    If data is a string, make sure it does not contain special characters such as ' and "
-    """
-    if path is None:
-        return
-    if data is None and len(kwargs) == 0:
-        return
-    if data is None:
-        data = {}
-    if isinstance(data, dict):
-        data.update(kwargs)
-    else:
-        assert len(kwargs) == 0
-    with open(path, 'w', encoding='UTF-8') as file:
-        if isinstance(data, str):
-            file.write(f'"""{data}"""')
-        else:
-            file.write(f'{data}')
-
-
-def read_py(path=None, data=None, encoding='utf-8', globals=None, text=None, key=None):
-    """
-    Read data from .py format. For specific format, refer to the description of the write_py function
-    """
-    assert key is None or isinstance(key, str)
-    if text is None and path is not None:
-        try:
-            with open(path, 'r', encoding=encoding) as file:
-                text = file.read()
-        except:
-            pass
-    if text is None:
-        if key is None:
-            return data
-        else:
-            return {} if key == '*' or key == '' else data
-    else:
-        assert isinstance(text, str)
-    if key is None:
-        try:
-            return eval(text, globals)
-        except:
-            return data
-    else:
-        space = {}
-        try:
-            exec(text, globals, space)
-            return space if key == '*' or key == '' else space.get(key, data)
-        except:
-            return space if key == '*' or key == '' else data
+prepare_dir = _deprecation_func('zmlx.filesys.prepare_dir', 'prepare_dir', '2025-1-21')
+time2str = _deprecation_func('zmlx.alg.time2str', 'time2str', '2025-1-21')
+mass2str = _deprecation_func('zmlx.alg.mass2str', 'mass2str', '2025-1-21')
+make_fpath = _deprecation_func('zmlx.filesys.make_fpath', 'make_fpath', '2025-1-21')
+get_last_file = _deprecation_func('zmlx.filesys.get_last_file', 'get_last_file', '2025-1-21')
+write_py = _deprecation_func('zmlx.io.python', 'write_py', '2025-1-21')
+read_py = _deprecation_func('zmlx.io.python', 'read_py', '2025-1-21')
 
 
 def parse_fid3(fluid_id):
@@ -1392,114 +1197,9 @@ def get_average_perm(p0, p1, get_perm, sample_dist=None, depth=0):
     return k1 * k2 * 2.0 / (k1 + k2)
 
 
-def add_keys(*args):
-    """
-    在字典中注册键值。将从0开始尝试，直到发现不存在的数值再使用. 返回添加了key之后的字典对象.
-    示例:
-        from zml import *
-        keys = add_keys('x', 'y')
-        print(keys)
-        add_keys(keys, 'a', 'b', 'c')
-        print(keys)
-    输出:
-        {'x': 0, 'y': 1}
-        {'x': 0, 'y': 1, 'a': 2, 'b': 3, 'c': 4}
-    """
-
-    # Check the input
-    n1 = 0
-    n2 = 0
-    for key in args:
-        if isinstance(key, AttrKeys):
-            key.add_keys(*args)
-            return key
-        if isinstance(key, dict):
-            n1 += 1
-            continue
-        if isinstance(key, str):
-            n2 += 1
-            continue
-    assert n1 <= 1
-    assert n1 + n2 == len(args)
-
-    # Find the dict
-    key_vals = None
-    for key in args:
-        if isinstance(key, dict):
-            key_vals = key
-            break
-    if key_vals is None:
-        key_vals = {}
-
-    # Add keys
-    for key in args:
-        if not isinstance(key, str):
-            continue
-        if key not in key_vals:
-            values = key_vals.values()
-            succeed = False
-            for val in range(len(key_vals) + 1):
-                if val not in values:
-                    key_vals[key] = val
-                    succeed = True
-                if succeed:
-                    break
-            assert succeed
-
-    # Return the dict.
-    return key_vals
-
-
-class AttrKeys:
-    """
-    用以管理属性. 自动从0开始编号.
-    """
-
-    def __init__(self, *args):
-        self.__keys = {}
-        self.add_keys(*args)
-
-    def __str__(self):
-        return f'{self.__keys}'
-
-    def __getattr__(self, item):
-        return self.__keys[item]
-
-    def __getitem__(self, item):
-        return self.__keys[item]
-
-    def values(self):
-        return self.__keys.values()
-
-    def add_keys(self, *args):
-        for key in args:
-            if isinstance(key, str):
-                if key not in self.__keys:
-                    values = self.values()
-                    for val in range(len(self.__keys) + 1):
-                        if val not in values:
-                            self.__keys[key] = val
-                            break
-
-
-def install(name='zml.pth', folder=None):
-    """
-    Add the current folder to python's search path
-    """
-    pth = os.path.join(os.path.dirname(sys.executable), name)
-    if folder is None:
-        folder = os.path.dirname(os.path.realpath(__file__))
-    if not os.path.isdir(folder):
-        return
-    if os.path.isfile(pth):
-        with open(pth, 'r') as file:
-            text = file.read()
-            if os.path.isdir(text):
-                if os.path.samefile(folder, text):
-                    return
-    with open(pth, 'w') as file:
-        file.write(folder)
-    print(f"Succeed Installed: '{folder}' \n       --> '{pth}'")
+add_keys = _deprecation_func('zmlx.utility.AttrKeys', 'add_keys', '2025-1-21')
+AttrKeys = _deprecation_func('zmlx.utility.AttrKeys', 'AttrKeys', '2025-1-21')
+install = _deprecation_func('zmlx.alg.install', 'install', '2025-1-21')
 
 
 def __feedback():
@@ -1569,89 +1269,21 @@ class Iterator:
             return self.__get(self.__model, ind)
 
 
-class Iterators:
-    class Cell(Iterator):
-        def __init__(self, model):
-            super(Iterators.Cell, self).__init__(model, model.cell_number, lambda m, ind: m.get_cell(ind))
-
-    class Face(Iterator):
-        def __init__(self, model):
-            super(Iterators.Face, self).__init__(model, model.face_number, lambda m, ind: m.get_face(ind))
-
-    class Node(Iterator):
-        def __init__(self, model):
-            super(Iterators.Node, self).__init__(model, model.node_number, lambda m, ind: m.get_node(ind))
-
-    class Link(Iterator):
-        def __init__(self, model):
-            super(Iterators.Link, self).__init__(model, model.link_number, lambda m, ind: m.get_link(ind))
-
-    class Body(Iterator):
-        def __init__(self, model):
-            super(Iterators.Body, self).__init__(model, model.body_number, lambda m, ind: m.get_body(ind))
-
-    class VirtualNode(Iterator):
-        def __init__(self, model):
-            super(Iterators.VirtualNode, self).__init__(model, model.virtual_node_number,
-                                                        lambda m, ind: m.get_virtual_node(ind))
-
-    class Element(Iterator):
-        def __init__(self, model):
-            super(Iterators.Element, self).__init__(model, model.element_number,
-                                                    lambda m, ind: m.get_element(ind))
-
-    class Spring(Iterator):
-        def __init__(self, model):
-            super(Iterators.Spring, self).__init__(model, model.spring_number, lambda m, ind: m.get_spring(ind))
-
-    class Damper(Iterator):
-        def __init__(self, model):
-            super(Iterators.Damper, self).__init__(model, model.damper_number, lambda m, ind: m.get_damper(ind))
-
-    class Fluid(Iterator):
-        def __init__(self, model):
-            super(Iterators.Fluid, self).__init__(model, model.fluid_number, lambda m, ind: m.get_fluid(ind))
-
-    class Injector(Iterator):
-        def __init__(self, model):
-            super(Iterators.Injector, self).__init__(model, model.injector_number,
-                                                     lambda m, ind: m.get_injector(ind))
-
-
-class Field:
-    """
-    Define a three-dimensional field. Make value = f(pos) return data at any position.
-    where pos is the coordinate and f is an instance of Field
-    """
-
-    class Constant:
-        """
-        A constant field
-        """
-
-        def __init__(self, value):
-            """
-            construct with the constant value
-            """
-            self.__value = value
-
-        def __call__(self, *args, **kwargs):
-            """
-            return the value when call
-            """
-            return self.__value
-
-    def __init__(self, value):
-        """
-        create the field. treat it as a constant field when it is not a function(__call__ not defined)
-        """
-        if hasattr(value, '__call__'):
-            self.__field = value
-        else:
-            self.__field = Field.Constant(value)
+class FieldAdaptor:
+    def __getattr__(self, item):
+        warnings.warn('zml.Field will be remove adter 2025-1-21. use zmlx.utility.Field.Field instead',
+                      DeprecationWarning)
+        from zmlx.utility.Field import Field
+        return getattr(Field, item)
 
     def __call__(self, *args, **kwargs):
-        return self.__field(*args, **kwargs)
+        warnings.warn('zml.Field will be remove adter 2025-1-21. use zmlx.utility.Field.Field instead',
+                      DeprecationWarning)
+        from zmlx.utility.Field import Field
+        return Field(*args, **kwargs)
+
+
+Field = FieldAdaptor()
 
 
 class Vector(HasHandle):
@@ -3296,6 +2928,11 @@ class Array2(HasHandle):
         for i in range(2):
             self.set(i, other[i])
 
+    core.use(c_double, 'array2_get_angle', c_void_p)
+
+    def get_angle(self):
+        return core.array2_get_angle(self.handle)
+
 
 class Array3(HasHandle):
     core.use(c_void_p, 'new_array3')
@@ -3372,13 +3009,13 @@ class Array3(HasHandle):
     core.use(c_double, 'array3_get', c_void_p, c_size_t)
 
     def get(self, dim):
-        assert 0 <= dim < 3
+        assert 0 <= dim < 3, f'dim = {dim}'
         return core.array3_get(self.handle, dim)
 
     core.use(None, 'array3_set', c_void_p, c_size_t, c_double)
 
     def set(self, dim, value):
-        assert 0 <= dim < 3
+        assert 0 <= dim < 3, f'dim = {dim}'
         core.array3_set(self.handle, dim, value)
 
     def __getitem__(self, key):
@@ -3575,6 +3212,17 @@ class Tensor2(HasHandle):
         """
         assert isinstance(other, Tensor2)
         core.tensor2_clone(self.handle, other.handle)
+
+    core.use(None, 'tensor2_rotate', c_void_p, c_void_p, c_double)
+
+    def get_rotate(self, angle, buffer=None):
+        """
+        将张量旋转给定的角度.
+        """
+        if not isinstance(buffer, Tensor2):
+            buffer = Tensor2()
+        core.tensor2_rotate(self.handle, buffer.handle, angle)
+        return buffer
 
 
 class Tensor3(HasHandle):
@@ -4085,6 +3733,9 @@ class Coord2(HasHandle):
 
 
 class Coord3(HasHandle):
+    """
+    三维笛卡尔坐标系. 用以point和tensor的转换.
+    """
     core.use(c_void_p, 'new_coord3')
     core.use(None, 'del_coord3', c_void_p)
 
@@ -4097,7 +3748,7 @@ class Coord3(HasHandle):
         :param handle: 句柄：当为None的时候，则创建新的对象，否则，会创建当前对象的引用(此时所有的初始化参数无效)
         """
         super(Coord3, self).__init__(handle, core.new_coord3, core.del_coord3)
-        if handle is None:
+        if handle is None:  # 此时为新建对象.
             if path is not None:
                 self.load(path)
             if origin is not None and xdir is not None and ydir is not None:
@@ -4305,15 +3956,15 @@ class Mesh3(HasHandle):
 
         @property
         def links(self):
-            return Iterators.Link(self)
+            return Iterator(self, self.link_number, lambda m, ind: m.get_link(ind))
 
         @property
         def faces(self):
-            return Iterators.Face(self)
+            return Iterator(self, self.face_number, lambda m, ind: m.get_face(ind))
 
         @property
         def bodies(self):
-            return Iterators.Body(self)
+            return Iterator(self, self.body_number, lambda m, ind: m.get_body(ind))
 
         core.use(c_double, 'mesh3_get_node_attr', c_void_p, c_size_t, c_size_t)
         core.use(None, 'mesh3_set_node_attr', c_void_p, c_size_t, c_size_t, c_double)
@@ -4383,15 +4034,15 @@ class Mesh3(HasHandle):
 
         @property
         def nodes(self):
-            return Iterators.Node(self)
+            return Iterator(self, self.node_number, lambda m, ind: m.get_node(ind))
 
         @property
         def faces(self):
-            return Iterators.Face(self)
+            return Iterator(self, self.face_number, lambda m, ind: m.get_face(ind))
 
         @property
         def bodies(self):
-            return Iterators.Body(self)
+            return Iterator(self, self.body_number, lambda m, ind: m.get_body(ind))
 
         @property
         def length(self):
@@ -4475,15 +4126,15 @@ class Mesh3(HasHandle):
 
         @property
         def nodes(self):
-            return Iterators.Node(self)
+            return Iterator(self, self.node_number, lambda m, ind: m.get_node(ind))
 
         @property
         def links(self):
-            return Iterators.Link(self)
+            return Iterator(self, self.link_number, lambda m, ind: m.get_link(ind))
 
         @property
         def bodies(self):
-            return Iterators.Body(self)
+            return Iterator(self, self.body_number, lambda m, ind: m.get_body(ind))
 
         core.use(c_double, 'mesh3_get_face_area', c_void_p, c_size_t)
 
@@ -4575,15 +4226,15 @@ class Mesh3(HasHandle):
 
         @property
         def nodes(self):
-            return Iterators.Node(self)
+            return Iterator(self, self.node_number, lambda m, ind: m.get_node(ind))
 
         @property
         def links(self):
-            return Iterators.Link(self)
+            return Iterator(self, self.link_number, lambda m, ind: m.get_link(ind))
 
         @property
         def faces(self):
-            return Iterators.Face(self)
+            return Iterator(self, self.face_number, lambda m, ind: m.get_face(ind))
 
         @property
         def pos(self):
@@ -4712,19 +4363,19 @@ class Mesh3(HasHandle):
 
     @property
     def nodes(self):
-        return Iterators.Node(self)
+        return Iterator(self, self.node_number, lambda m, ind: m.get_node(ind))
 
     @property
     def links(self):
-        return Iterators.Link(self)
+        return Iterator(self, self.link_number, lambda m, ind: m.get_link(ind))
 
     @property
     def faces(self):
-        return Iterators.Face(self)
+        return Iterator(self, self.face_number, lambda m, ind: m.get_face(ind))
 
     @property
     def bodies(self):
-        return Iterators.Body(self)
+        return Iterator(self, self.body_number, lambda m, ind: m.get_body(ind))
 
     core.use(c_size_t, 'mesh3_add_node', c_void_p, c_double, c_double, c_double)
 
@@ -4735,6 +4386,9 @@ class Mesh3(HasHandle):
     core.use(c_size_t, 'mesh3_add_link', c_void_p, c_size_t, c_size_t)
 
     def add_link(self, nodes):
+        """
+        注意，如果添加的link已经存在，则直接返回已有的link
+        """
         assert len(nodes) == 2
         for elem in nodes:
             assert isinstance(elem, Mesh3.Node)
@@ -5854,19 +5508,19 @@ class SpringSys(HasHandle):
 
     @property
     def nodes(self):
-        return Iterators.Node(self)
+        return Iterator(self, self.node_number, lambda m, ind: m.get_node(ind))
 
     @property
     def virtual_nodes(self):
-        return Iterators.VirtualNode(self)
+        return Iterator(self, self.virtual_node_number, lambda m, ind: m.get_virtual_node(ind))
 
     @property
     def springs(self):
-        return Iterators.Spring(self)
+        return Iterator(self, self.spring_number, lambda m, ind: m.get_spring(ind))
 
     @property
     def dampers(self):
-        return Iterators.Damper(self)
+        return Iterator(self, self.damper_number, lambda m, ind: m.get_damper(ind))
 
     core.use(c_size_t, 'springsys_add_node', c_void_p)
 
@@ -6137,11 +5791,6 @@ class HasCells(Object):
 
     def plot_tricontourf(self, get, caption=None, gui_only=False, title=None, triangulation=None, fname=None, dpi=300):
         def f(fig):
-            if triangulation is None:
-                pos = [cell.pos for cell in self.cells]
-                x = [p[0] for p in pos]
-                y = [p[1] for p in pos]
-            z = [get(cell) for cell in self.cells]
             ax = fig.subplots()
             ax.set_aspect('equal')
             ax.set_xlabel('x/m')
@@ -6149,8 +5798,13 @@ class HasCells(Object):
             if title is not None:
                 ax.set_title(title)
             if triangulation is None:
+                pos = [cell.pos for cell in self.cells]
+                x = [p[0] for p in pos]
+                y = [p[1] for p in pos]
+                z = [get(cell) for cell in self.cells]
                 contour = ax.tricontourf(x, y, z, levels=20, cmap='coolwarm', antialiased=True)
             else:
+                z = [get(cell) for cell in self.cells]
                 contour = ax.tricontourf(triangulation, z, levels=20, cmap='coolwarm', antialiased=True)
             fig.colorbar(contour, ax=ax)
 
@@ -6507,14 +6161,14 @@ class SeepageMesh(HasHandle, HasCells):
         """
         用以迭代所有的cell
         """
-        return Iterators.Cell(self)
+        return Iterator(self, self.cell_number, lambda m, ind: m.get_cell(ind))
 
     @property
     def faces(self):
         """
         用以迭代所有的face
         """
-        return Iterators.Face(self)
+        return Iterator(self, self.face_number, lambda m, ind: m.get_face(ind))
 
     @property
     def volume(self):
@@ -6625,7 +6279,6 @@ class SeepageMesh(HasHandle, HasCells):
                 dy = y[iy + 1] - y[iy]
                 cy = y[iy] + dy / 2
                 for iz in range(0, jz):
-                    gui.break_point()
                     dz = z[iz + 1] - z[iz]
                     cz = z[iz] + dz / 2
                     cell = mesh.add_cell()
@@ -6648,7 +6301,6 @@ class SeepageMesh(HasHandle, HasCells):
             for iy in range(0, jy):
                 dy = y[iy + 1] - y[iy]
                 for iz in range(0, jz):
-                    gui.break_point()
                     dz = z[iz + 1] - z[iz]
                     i0 = get_id(ix, iy, iz)
                     i1 = get_id(ix + 1, iy, iz)
@@ -6663,7 +6315,6 @@ class SeepageMesh(HasHandle, HasCells):
             for iy in range(0, jy - 1):
                 dy = (y[iy + 2] - y[iy]) / 2
                 for iz in range(0, jz):
-                    gui.break_point()
                     dz = z[iz + 1] - z[iz]
                     i0 = get_id(ix, iy, iz)
                     i1 = get_id(ix, iy + 1, iz)
@@ -6706,13 +6357,11 @@ class SeepageMesh(HasHandle, HasCells):
         mesh = SeepageMesh.create_cube(x, r, (-perimeter * 0.5, perimeter * 0.5))
 
         for cell in mesh.cells:
-            gui.break_point()
             (x, y, z) = cell.pos
             assert 0 < y < rmax
             cell.vol *= (y / rmax)
 
         for face in mesh.faces:
-            gui.break_point()
             (i0, i1) = face.link
             (x0, y0, _) = mesh.get_cell(i0).pos
             (x1, y1, _) = mesh.get_cell(i1).pos
@@ -6853,322 +6502,6 @@ class ElementMap(HasHandle):
             default = 0.0
         core.element_map_get(self.handle, buffer.handle, source.handle, default)
         return buffer
-
-
-class _SeepageNumpyAdaptor:
-    """
-    用以Seepage类和Numpy之间交换数据的适配器
-    """
-
-    class _Cells:
-        """
-        用以批量读取或者设置Cells的属性
-        """
-
-        def __init__(self, model):
-            assert isinstance(model, Seepage)
-            assert np is not None
-            self.model = model
-
-        def get(self, index, buf=None):
-            """
-            Cell属性。index的含义参考 Seepage.cells_write
-            """
-            if np is not None:
-                if buf is None:
-                    buf = np.zeros(shape=self.model.cell_number, dtype=float)
-                else:
-                    assert len(buf) == self.model.cell_number
-                if not buf.flags['C_CONTIGUOUS']:
-                    buf = np.ascontiguous(buf, dtype=buf.dtype)
-                self.model.cells_write(pointer=buf.ctypes.data_as(POINTER(c_double)), index=index)
-                return buf
-
-        def set(self, index, buf):
-            """
-            Cell属性。index的含义参考 Seepage.cells_write
-            """
-            if not is_array(buf):
-                self.model.cells_read(value=buf, index=index)
-                return
-            if np is not None:
-                assert len(buf) == self.model.cell_number
-                if not buf.flags['C_CONTIGUOUS']:
-                    buf = np.ascontiguous(buf, dtype=buf.dtype)
-                self.model.cells_read(pointer=buf.ctypes.data_as(POINTER(c_double)), index=index)
-
-        def get_attr(self, *args, **kwargs):
-            return self.get(*args, **kwargs)
-
-        def set_attr(self, *args, **kwargs):
-            return self.set(*args, **kwargs)
-
-        @property
-        def x(self):
-            """
-            各个Cell的x坐标
-            """
-            return self.get(-1)
-
-        @x.setter
-        def x(self, value):
-            """
-            各个Cell的x坐标
-            """
-            self.set(-1, value)
-
-        @property
-        def y(self):
-            """
-            各个Cell的y坐标
-            """
-            return self.get(-2)
-
-        @y.setter
-        def y(self, value):
-            """
-            各个Cell的y坐标
-            """
-            self.set(-2, value)
-
-        @property
-        def z(self):
-            """
-            各个Cell的z坐标
-            """
-            return self.get(-3)
-
-        @z.setter
-        def z(self, value):
-            """
-            各个Cell的z坐标
-            """
-            self.set(-3, value)
-
-        @property
-        def v0(self):
-            """
-            各个Cell的v0属性(孔隙的v0，参考Cell定义)
-            """
-            return self.get(-4)
-
-        @v0.setter
-        def v0(self, value):
-            self.set(-4, value)
-
-        @property
-        def k(self):
-            """
-            各个Cell的k属性(孔隙的k，参考Cell定义)
-            """
-            return self.get(-5)
-
-        @k.setter
-        def k(self, value):
-            self.set(-5, value)
-
-        @property
-        def fluid_mass(self):
-            """
-            所有流体的总的质量<只读>
-            """
-            return self.get(-10)
-
-        @property
-        def fluid_vol(self):
-            """
-            所有流体的总的体积<只读>
-            """
-            return self.get(-11)
-
-        @property
-        def pre(self):
-            """
-            流体的压力(根据总的体积和孔隙弹性来计算)
-            """
-            return self.get(-12)
-
-    class _Faces:
-        """
-        用以批量读取或者设置Faces的属性
-        """
-
-        def __init__(self, model):
-            assert isinstance(model, Seepage)
-            assert np is not None
-            self.model = model
-
-        def get(self, index, buf=None):
-            """
-            读取各个Face的属性
-            """
-            if np is not None:
-                if buf is None:
-                    buf = np.zeros(shape=self.model.face_number, dtype=float)
-                else:
-                    assert len(buf) == self.model.face_number
-                if not buf.flags['C_CONTIGUOUS']:
-                    buf = np.ascontiguous(buf, dtype=buf.dtype)
-                self.model.faces_write(pointer=buf.ctypes.data_as(POINTER(c_double)), index=index)
-                return buf
-
-        def set(self, index, buf):
-            """
-            设置各个Face的属性
-            """
-            if not is_array(buf):
-                self.model.faces_read(value=buf, index=index)
-                return
-            if np is not None:
-                assert len(buf) == self.model.face_number
-                if not buf.flags['C_CONTIGUOUS']:
-                    buf = np.ascontiguous(buf, dtype=buf.dtype)
-                self.model.faces_read(pointer=buf.ctypes.data_as(POINTER(c_double)), index=index)
-
-        def get_attr(self, *args, **kwargs):
-            return self.get(*args, **kwargs)
-
-        def set_attr(self, *args, **kwargs):
-            return self.set(*args, **kwargs)
-
-        @property
-        def cond(self):
-            """
-            各个Face位置的导流系数
-            """
-            return self.get(-1)
-
-        @cond.setter
-        def cond(self, value):
-            """
-            各个Face位置的导流系数
-            """
-            self.set(-1, value)
-
-        @property
-        def dr(self):
-            return self.get(-2)
-
-        @dr.setter
-        def dr(self, value):
-            self.set(-2, value)
-
-        def get_dv(self, index=None, buf=None):
-            """
-            上一次迭代经过Face流体的体积.
-            """
-            if index is None:
-                return self.get(-19, buf=buf)
-            else:
-                assert 0 <= index < 9, f'index = {index} is not permitted'
-                return self.get(-10 - index, buf=buf)
-
-    class _Fluids:
-        """
-        用以批量读取或者设置某一种流体的属性
-        """
-
-        def __init__(self, model, fluid_id):
-            assert isinstance(model, Seepage)
-            assert np is not None
-            self.model = model
-            self.fluid_id = fluid_id
-
-        def get(self, index, buf=None):
-            """
-            返回属性
-            """
-            if np is not None:
-                if buf is None:
-                    buf = np.zeros(shape=self.model.cell_number, dtype=float)
-                else:
-                    assert len(buf) == self.model.cell_number
-                if not buf.flags['C_CONTIGUOUS']:
-                    buf = np.ascontiguous(buf, dtype=buf.dtype)
-                self.model.fluids_write(fluid_id=self.fluid_id, index=index,
-                                        pointer=buf.ctypes.data_as(POINTER(c_double)))
-                return buf
-
-        def set(self, index, buf):
-            """
-            设置属性
-            """
-            if not is_array(buf):
-                self.model.fluids_read(fluid_id=self.fluid_id, value=buf, index=index)
-                return
-            if np is not None:
-                assert len(buf) == self.model.cell_number
-                if not buf.flags['C_CONTIGUOUS']:
-                    buf = np.ascontiguous(buf, dtype=buf.dtype)
-                self.model.fluids_read(fluid_id=self.fluid_id, index=index,
-                                       pointer=buf.ctypes.data_as(POINTER(c_double)))
-
-        def get_attr(self, *args, **kwargs):
-            return self.get(*args, **kwargs)
-
-        def set_attr(self, *args, **kwargs):
-            return self.set(*args, **kwargs)
-
-        @property
-        def mass(self):
-            """
-            流体质量
-            """
-            return self.get(-1)
-
-        @mass.setter
-        def mass(self, value):
-            self.set(-1, value)
-
-        @property
-        def den(self):
-            """
-            流体密度
-            """
-            return self.get(-2)
-
-        @den.setter
-        def den(self, value):
-            self.set(-2, value)
-
-        @property
-        def vol(self):
-            """
-            流体体积
-            """
-            return self.get(-3)
-
-        @vol.setter
-        def vol(self, value):
-            self.set(-3, value)
-
-        @property
-        def vis(self):
-            """
-            流体粘性系数
-            """
-            return self.get(-4)
-
-        @vis.setter
-        def vis(self, value):
-            self.set(-4, value)
-
-    def __init__(self, model):
-        self.model = model
-
-    @property
-    def cells(self):
-        return _SeepageNumpyAdaptor._Cells(model=self.model)
-
-    @property
-    def faces(self):
-        return _SeepageNumpyAdaptor._Faces(model=self.model)
-
-    def fluids(self, *fluid_id):
-        """
-        返回给定流体或者组分的属性适配器
-        """
-        return _SeepageNumpyAdaptor._Fluids(model=self.model, fluid_id=fluid_id)
 
 
 class Seepage(HasHandle, HasCells):
@@ -7379,7 +6712,7 @@ class Seepage(HasHandle, HasCells):
             """
             同adjust_weights
             """
-            warnings.warn('Use <adjust_weights>. this function will be removed after 2024-1-1',
+            warnings.warn('Use <adjust_weights>. <adjust_widghts> will be removed after 2024-1-1',
                           DeprecationWarning)
             self.adjust_weights()
 
@@ -8233,7 +7566,7 @@ class Seepage(HasHandle, HasCells):
             """
             All fluids in the cell
             """
-            return Iterators.Fluid(self)
+            return Iterator(self, self.fluid_number, lambda m, ind: m.get_fluid(ind))
 
         def get_component(self, indexes):
             """
@@ -8340,6 +7673,9 @@ class Seepage(HasHandle, HasCells):
         core.use(None, 'seepage_cell_clone', c_void_p, c_void_p)
 
         def clone(self, other):
+            """
+            从other克隆数据（所有的数据）
+            """
             assert isinstance(other, Seepage.CellData)
             core.seepage_cell_clone(self.handle, other.handle)
 
@@ -8438,14 +7774,14 @@ class Seepage(HasHandle, HasCells):
             """
             此Cell周围的所有Cell
             """
-            return Iterators.Cell(self)
+            return Iterator(self, self.cell_number, lambda m, ind: m.get_cell(ind))
 
         @property
         def faces(self):
             """
             此Cell周围的所有Face
             """
-            return Iterators.Face(self)
+            return Iterator(self, self.face_number, lambda m, ind: m.get_face(ind))
 
         def set_ini(self, ca_mc, ca_t, fa_t, fa_c, pos=None, vol=1.0, porosity=0.1, pore_modulus=1000e6, denc=1.0e6,
                     temperature=280.0, p=1.0, s=None, pore_modulus_range=None):
@@ -9357,7 +8693,7 @@ class Seepage(HasHandle, HasCells):
             inj.cell_id = cell
 
         if fluid_id is not None:
-            if isinstance(fluid_id, str):   # 给定组分名字，则从model中查找   since 231024
+            if isinstance(fluid_id, str):  # 给定组分名字，则从model中查找   since 231024
                 fluid_id = self.find_fludef(name=fluid_id)
                 assert fluid_id is not None
             inj.set_fid(fluid_id)
@@ -9395,21 +8731,21 @@ class Seepage(HasHandle, HasCells):
         """
         模型中所有的Cell
         """
-        return Iterators.Cell(self)
+        return Iterator(self, self.cell_number, lambda m, ind: m.get_cell(ind))
 
     @property
     def faces(self):
         """
         模型中所有的Face
         """
-        return Iterators.Face(self)
+        return Iterator(self, self.face_number, lambda m, ind: m.get_face(ind))
 
     @property
     def injectors(self):
         """
         模型中所有的Injector
         """
-        return Iterators.Injector(self)
+        return Iterator(self, self.injector_number, lambda m, ind: m.get_injector(ind))
 
     core.use(None, 'seepage_apply_injs', c_void_p, c_double)
 
@@ -9457,6 +8793,13 @@ class Seepage(HasHandle, HasCells):
         """
         if idx < self.gr_number:
             return Interp1(handle=core.seepage_get_gr(self.handle, idx))
+
+    @property
+    def grs(self):
+        """
+        迭代所有的gr
+        """
+        return Iterator(model=self, count=self.gr_number, get=lambda m, ind: m.get_gr(ind))
 
     core.use(c_size_t, 'seepage_add_gr', c_void_p, c_void_p)
 
@@ -10147,7 +9490,7 @@ class Seepage(HasHandle, HasCells):
                 kind = comp.get('kind')
                 if isinstance(kind, str):
                     kind = self.find_fludef(kind)
-                    
+
                 weight = comp.get('weight')
                 assert -1 <= weight <= 1
 
@@ -10169,7 +9512,7 @@ class Seepage(HasHandle, HasCells):
                 sol = inh.get('sol')
                 if isinstance(sol, str):
                     sol = self.find_fludef(sol)
-                    
+
                 liq = inh.get('liq')
                 if isinstance(liq, str):
                     liq = self.find_fludef(liq)
@@ -10308,8 +9651,10 @@ class Seepage(HasHandle, HasCells):
         """
         用以和numpy交互数据
         """
-        if np is not None:
-            return _SeepageNumpyAdaptor(model=self)
+        warnings.warn('Seepage.numpy will be removed after 2025-1-21. Use zmlx.utility.SeepageNumpy Instead. '
+                      , DeprecationWarning)
+        from zmlx.utility.SeepageNumpy import SeepageNumpy
+        return SeepageNumpy(model=self)
 
     core.use(None, 'seepage_append', c_void_p, c_void_p, c_bool, c_size_t)
 
@@ -10351,6 +9696,7 @@ class Seepage(HasHandle, HasCells):
         删除模型内的缓冲区(如果缓冲区不存在，则不执行操作)
         """
         core.seepage_del_buffer(self.handle, make_c_char_p(key))
+        return self
 
     core.use(c_bool, 'seepage_has_tag', c_void_p, c_char_p)
 
@@ -10370,6 +9716,7 @@ class Seepage(HasHandle, HasCells):
         在模型中添加给定的标签
         """
         core.seepage_add_tag(self.handle, make_c_char_p(tag))
+        return self
 
     core.use(None, 'seepage_del_tag', c_void_p, c_char_p)
 
@@ -10378,6 +9725,7 @@ class Seepage(HasHandle, HasCells):
         删除模型中的给定的标签
         """
         core.seepage_del_tag(self.handle, make_c_char_p(tag))
+        return self
 
     core.use(None, 'seepage_clear_tags', c_void_p)
 
@@ -10416,16 +9764,17 @@ class Seepage(HasHandle, HasCells):
 
     def set_key(self, key, value):
         """
-        设置键值
+        设置键值. 会直接覆盖现有的键值
         """
         if value is None:
             self.del_key(key)
-            return
+            return self
         if value >= 9999:
             self.del_key(key)
-            return
+            return self
         else:
             core.seepage_set_key(self.handle, make_c_char_p(key), value)
+            return self
 
     core.use(None, 'seepage_del_key', c_void_p, c_char_p)
 
@@ -10434,11 +9783,13 @@ class Seepage(HasHandle, HasCells):
         删除键值
         """
         core.seepage_del_key(self.handle, make_c_char_p(key))
+        return self
 
     core.use(None, 'seepage_clear_keys', c_void_p)
 
     def clear_keys(self):
         core.seepage_clear_keys(self.handle)
+        return self
 
     def reg_model_key(self, key):
         """
@@ -10498,6 +9849,14 @@ class Seepage(HasHandle, HasCells):
         core.seepage_get_keys(self.handle, s.handle)
         return eval(s.to_str())
 
+    def set_keys(self, **kwargs):
+        """
+        设置keys. 会覆盖现有的键值.
+        """
+        for key, value in kwargs.items():
+            self.set_key(key, value)
+        return self
+
     core.use(None, 'seepage_get_tags', c_void_p, c_void_p)
 
     def get_tags(self):
@@ -10515,6 +9874,7 @@ class Seepage(HasHandle, HasCells):
         删除最后count个Cell的所有的Face，然后移除最后count个Cell
         """
         core.seepage_pop_cells(self.handle, count)
+        return self
 
 
 Reaction = Seepage.Reaction
@@ -10577,14 +9937,14 @@ class Thermal(HasHandle):
             """
             所有相邻的Cell
             """
-            return Iterators.Cell(self)
+            return Iterator(self, self.cell_number, lambda m, ind: m.get_cell(ind))
 
         @property
         def faces(self):
             """
             所有相邻的Face
             """
-            return Iterators.Face(self)
+            return Iterator(self, self.face_number, lambda m, ind: m.get_face(ind))
 
         core.use(c_double, 'thermal_get_cell_mc', c_void_p, c_size_t)
         core.use(None, 'thermal_set_cell_mc', c_void_p, c_size_t, c_double)
@@ -10785,14 +10145,14 @@ class Thermal(HasHandle):
         """
         返回所有的Cell
         """
-        return Iterators.Cell(self)
+        return Iterator(self, self.cell_number, lambda m, ind: m.get_cell(ind))
 
     @property
     def faces(self):
         """
         返回所有的Face
         """
-        return Iterators.Face(self)
+        return Iterator(self, self.face_number, lambda m, ind: m.get_face(ind))
 
     def print_cells(self, path):
         """
@@ -10966,6 +10326,7 @@ class InvasionPercolation(HasHandle):
             """
             此Node在三维空间的位置
             """
+            assert len(value) >= 3
             for i in range(3):
                 core.ip_node_set_pos(self.handle, i, value[i])
 
@@ -11002,9 +10363,9 @@ class InvasionPercolation(HasHandle):
             """
             此Node连接的第idx个Node
             """
-            assert idx < self.node_n
-            i_node = core.ip_get_node_node_id(self.model.handle, self.index, idx)
-            return self.model.get_node(i_node)
+            if idx < self.node_n:
+                i_node = core.ip_get_node_node_id(self.model.handle, self.index, idx)
+                return self.model.get_node(i_node)
 
         core.use(c_size_t, 'ip_get_node_bond_id', c_void_p, c_size_t, c_size_t)
 
@@ -11012,9 +10373,9 @@ class InvasionPercolation(HasHandle):
             """
             此Node连接的第idx个Bond
             """
-            assert idx < self.bond_n
-            i_bond = core.ip_get_node_bond_id(self.model.handle, self.index, idx)
-            return self.model.get_bond(i_bond)
+            if idx < self.bond_n:
+                i_bond = core.ip_get_node_bond_id(self.model.handle, self.index, idx)
+                return self.model.get_bond(i_bond)
 
     class BondData(Object):
         """
@@ -11190,9 +10551,9 @@ class InvasionPercolation(HasHandle):
             """
             此Bond连接的第idx个Node
             """
-            assert idx < self.node_n
-            i_node = core.ip_get_bond_node_id(self.model.handle, self.index, idx)
-            return self.model.get_node(i_node)
+            if idx < self.node_n:
+                i_node = core.ip_get_bond_node_id(self.model.handle, self.index, idx)
+                return self.model.get_node(i_node)
 
     class InjectorData(Object):
         """
@@ -11402,8 +10763,7 @@ class InvasionPercolation(HasHandle):
         添加一个Node，并返回新添加的Node对象
         """
         index = core.ip_add_node(self.handle)
-        if 0 <= index < self.node_n:
-            return self.get_node(index)
+        return self.get_node(index)
 
     def get_node(self, index):
         """
@@ -11424,8 +10784,7 @@ class InvasionPercolation(HasHandle):
             node1 = node1.index
         assert self.node_n > node0 != node1 < self.node_n
         index = core.ip_add_bond(self.handle, node0, node1)
-        if 0 <= index < self.bond_n:
-            return self.get_bond(index)
+        return self.get_bond(index)
 
     def get_bond(self, index):
         """
@@ -11455,8 +10814,7 @@ class InvasionPercolation(HasHandle):
         if isinstance(node1, InvasionPercolation.Node):
             node1 = node1.index
         index = self.get_bond_id(node0, node1)
-        if 0 <= index < self.bond_n:
-            return self.get_bond(index)
+        return self.get_bond(index)
 
     core.use(c_size_t, 'ip_get_node_n', c_void_p)
 
@@ -11986,6 +11344,539 @@ class Lattice3(HasHandle):
         """
         assert len(pos) == 3, f'pos = {pos}'
         core.lat3_add_point(self.handle, *pos, index)
+
+
+class DDMSolution2(HasHandle):
+    """
+    二维DDM的基本解
+    """
+    core.use(c_void_p, 'new_ddm_sol2')
+    core.use(None, 'del_ddm_sol2', c_void_p)
+
+    def __init__(self, handle=None):
+        super(DDMSolution2, self).__init__(handle, core.new_ddm_sol2, core.del_ddm_sol2)
+
+    def __str__(self):
+        return (f'zml.DDMSolution2(handle={self.handle}, '
+                f'alpha={self.alpha}, beta={self.beta}, '
+                f'shear_modulus={self.shear_modulus/1.0e9}GPa, '
+                f'poisson_ratio={self.poisson_ratio}, '
+                f'adjust_coeff={self.adjust_coeff})')
+
+    core.use(None, 'ddm_sol2_save', c_void_p, c_char_p)
+    core.use(None, 'ddm_sol2_load', c_void_p, c_char_p)
+
+    def save(self, path):
+        """
+        序列化保存. 可选扩展名:
+            1: .txt  文本格式 (跨平台，基本不可读)
+            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
+            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        """
+        if path is not None:
+            core.ddm_sol2_save(self.handle, make_c_char_p(path))
+
+    def load(self, path):
+        """
+        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        """
+        if path is not None:
+            core.ddm_sol2_load(self.handle, make_c_char_p(path))
+
+    core.use(None, 'ddm_sol2_set_alpha', c_void_p, c_double)
+    core.use(c_double, 'ddm_sol2_get_alpha', c_void_p)
+
+    @property
+    def alpha(self):
+        return core.ddm_sol2_get_alpha(self.handle)
+
+    @alpha.setter
+    def alpha(self, value):
+        core.ddm_sol2_set_alpha(self.handle, value)
+
+    core.use(None, 'ddm_sol2_set_beta', c_void_p, c_double)
+    core.use(c_double, 'ddm_sol2_get_beta', c_void_p)
+
+    @property
+    def beta(self):
+        return core.ddm_sol2_get_beta(self.handle)
+
+    @beta.setter
+    def beta(self, value):
+        core.ddm_sol2_set_beta(self.handle, value)
+
+    core.use(None, 'ddm_sol2_set_shear_modulus', c_void_p, c_double)
+    core.use(c_double, 'ddm_sol2_get_shear_modulus', c_void_p)
+
+    @property
+    def shear_modulus(self):
+        return core.ddm_sol2_get_shear_modulus(self.handle)
+
+    @shear_modulus.setter
+    def shear_modulus(self, value):
+        core.ddm_sol2_set_shear_modulus(self.handle, value)
+
+    core.use(None, 'ddm_sol2_set_poisson_ratio', c_void_p, c_double)
+    core.use(c_double, 'ddm_sol2_get_poisson_ratio', c_void_p)
+
+    @property
+    def poisson_ratio(self):
+        return core.ddm_sol2_get_poisson_ratio(self.handle)
+
+    @poisson_ratio.setter
+    def poisson_ratio(self, value):
+        core.ddm_sol2_set_poisson_ratio(self.handle, value)
+
+    core.use(None, 'ddm_sol2_set_adjust_coeff', c_void_p, c_double)
+    core.use(c_double, 'ddm_sol2_get_adjust_coeff', c_void_p)
+
+    @property
+    def adjust_coeff(self):
+        return core.ddm_sol2_get_adjust_coeff(self.handle)
+
+    @adjust_coeff.setter
+    def adjust_coeff(self, value):
+        core.ddm_sol2_set_adjust_coeff(self.handle, value)
+
+    core.use(None, 'ddm_sol2_get_induced', c_void_p, c_void_p,
+             c_double, c_double, c_double, c_double,
+             c_double, c_double, c_double, c_double,
+             c_double, c_double, c_double)
+
+    def get_induced(self, pos, fracture, ds, dn, height):
+        """
+        返回一个裂缝单元的诱导应力
+        """
+        assert len(fracture) == 4
+        stress = Tensor2()
+        if len(pos) == 2:
+            core.ddm_sol2_get_induced(self.handle, stress.handle, *pos, *pos,
+                                      *fracture, ds, dn, height)
+        else:
+            assert len(pos) == 4
+            core.ddm_sol2_get_induced(self.handle, stress.handle, *pos,
+                                      *fracture, ds, dn, height)
+        return stress
+
+
+class FractureNetwork(HasHandle):
+    class VertexData(Object):
+        def __init__(self, handle):
+            self.handle = handle
+
+        core.use(c_double, 'frac_nd_get_pos', c_void_p, c_size_t)
+
+        @property
+        def x(self):
+            """
+            x坐标
+            """
+            return core.frac_nd_get_pos(self.handle, 0)
+
+        @property
+        def y(self):
+            """
+            y坐标
+            """
+            return core.frac_nd_get_pos(self.handle, 1)
+
+        @property
+        def pos(self):
+            """
+            位置
+            """
+            return self.x, self.y
+
+        core.use(c_double, 'frac_nd_get_attr', c_void_p, c_size_t)
+        core.use(None, 'frac_nd_set_attr', c_void_p, c_size_t, c_double)
+
+        def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
+            """
+            第index个自定义属性
+            """
+            if index is None:
+                return default_val
+            # 当index个属性不存在时，默认为无穷大的一个值(1.0e100以上的浮点数)
+            value = core.frac_nd_get_attr(self.handle, index)
+            if min <= value <= max:
+                return value
+            else:
+                return default_val
+
+        def set_attr(self, index, value):
+            """
+            参考get_attr函数
+            """
+            if index is None:
+                return self
+            if value is None:
+                value = 1.0e200
+            core.frac_nd_set_attr(self.handle, index, value)
+            return self
+
+    class FractureData(Object):
+        def __init__(self, handle):
+            self.handle = handle
+
+        core.use(c_double, 'frac_bd_get_attr', c_void_p, c_size_t)
+        core.use(None, 'frac_bd_set_attr', c_void_p, c_size_t, c_double)
+
+        def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
+            """
+            第index个自定义属性
+            """
+            if index is None:
+                return default_val
+            # 当index个属性不存在时，默认为无穷大的一个值(1.0e100以上的浮点数)
+            value = core.frac_bd_get_attr(self.handle, index)
+            if min <= value <= max:
+                return value
+            else:
+                return default_val
+
+        def set_attr(self, index, value):
+            """
+            参考get_attr函数
+            """
+            if index is None:
+                return self
+            if value is None:
+                value = 1.0e200
+            core.frac_bd_set_attr(self.handle, index, value)
+            return self
+
+        core.use(c_double, 'frac_bd_get_ds', c_void_p)
+        core.use(None, 'frac_bd_set_ds', c_void_p, c_double)
+
+        @property
+        def ds(self):
+            return core.frac_bd_get_ds(self.handle)
+
+        @ds.setter
+        def ds(self, value):
+            core.frac_bd_set_ds(self.handle, value)
+
+        core.use(c_double, 'frac_bd_get_dn', c_void_p)
+        core.use(None, 'frac_bd_set_dn', c_void_p, c_double)
+
+        @property
+        def dn(self):
+            return core.frac_bd_get_dn(self.handle)
+
+        @dn.setter
+        def dn(self, value):
+            core.frac_bd_set_dn(self.handle, value)
+
+        core.use(c_double, 'frac_bd_get_h', c_void_p)
+        core.use(None, 'frac_bd_set_h', c_void_p, c_double)
+
+        @property
+        def h(self):
+            return core.frac_bd_get_h(self.handle)
+
+        @h.setter
+        def h(self, value):
+            core.frac_bd_set_h(self.handle, value)
+
+        core.use(c_double, 'frac_bd_get_fric', c_void_p)
+        core.use(None, 'frac_bd_set_fric', c_void_p, c_double)
+
+        @property
+        def f(self):
+            return core.frac_bd_get_fric(self.handle)
+
+        @f.setter
+        def f(self, value):
+            core.frac_bd_set_fric(self.handle, value)
+
+        core.use(c_double, 'frac_bd_get_p0', c_void_p)
+        core.use(None, 'frac_bd_set_p0', c_void_p, c_double)
+
+        @property
+        def p0(self):
+            return core.frac_bd_get_p0(self.handle)
+
+        @p0.setter
+        def p0(self, value):
+            core.frac_bd_set_p0(self.handle, value)
+
+        core.use(c_double, 'frac_bd_get_k', c_void_p)
+        core.use(None, 'frac_bd_set_k', c_void_p, c_double)
+
+        @property
+        def k(self):
+            return core.frac_bd_get_k(self.handle)
+
+        @k.setter
+        def k(self, value):
+            core.frac_bd_set_k(self.handle, value)
+
+        core.use(c_double, 'frac_bd_get_fp', c_void_p)
+
+        @property
+        def fp(self):
+            return core.frac_bd_get_fp(self.handle)
+
+    class Vertex(VertexData):
+
+        core.use(c_void_p, 'frac_nt_get_nd', c_void_p, c_size_t)
+
+        def __init__(self, network, index):
+            assert isinstance(network, FractureNetwork)
+            assert isinstance(index, int)
+            assert index < network.vertex_number
+            self.network = network
+            self.index = index
+            super(FractureNetwork.Vertex, self).__init__(
+                handle=core.frac_nt_get_nd(network.handle, index))
+
+        def __str__(self):
+            return f'zml.FractureNetwork.Vertex(index={self.index}, pos=[{self.x}, {self.y}])'
+
+        core.use(c_size_t, 'frac_nt_nd_get_bd_n', c_void_p, c_size_t)
+
+        @property
+        def fracture_number(self):
+            return core.frac_nt_nd_get_bd_n(self.network.handle, self.index)
+
+        core.use(c_size_t, 'frac_nt_nd_get_bd_i', c_void_p, c_size_t, c_size_t)
+
+        def get_fracture(self, index):
+            return self.network.get_fracture(
+                core.frac_nt_nd_get_bd_i(self.network.handle, self.index, index))
+
+    class Fracture(FractureData):
+
+        core.use(c_void_p, 'frac_nt_get_bd', c_void_p, c_size_t)
+
+        def __init__(self, network, index):
+            assert isinstance(network, FractureNetwork)
+            assert isinstance(index, int)
+            assert index < network.fracture_number
+            self.network = network
+            self.index = index
+            super(FractureNetwork.Fracture, self).__init__(
+                handle=core.frac_nt_get_bd(network.handle, index))
+
+        def __str__(self):
+            return f'zml.FractureNetwork.Fracture(index={self.index}, pos={self.pos})'
+
+        @property
+        def vertex_number(self):
+            return 2
+
+        core.use(c_size_t, 'frac_nt_bd_get_nd_i', c_void_p, c_size_t, c_size_t)
+
+        def get_vertex(self, index):
+            return self.network.get_vertex(
+                core.frac_nt_bd_get_nd_i(self.network.handle, self.index, index))
+
+        @property
+        def pos(self):
+            """
+            裂缝的位置。格式: x0, y0, x1, y1
+            """
+            p0 = self.get_vertex(0).pos
+            p1 = self.get_vertex(1).pos
+            return p0[0], p0[1], p1[0], p1[1]
+
+        @property
+        def center(self):
+            """
+            裂缝的中心点坐标
+            """
+            p0 = self.get_vertex(0).pos
+            p1 = self.get_vertex(1).pos
+            return (p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2
+
+        core.use(c_double, 'frac_nt_get_bd_angle', c_void_p, c_size_t)
+
+        @property
+        def angle(self):
+            """
+            裂缝的方向角度.
+            """
+            return core.frac_nt_get_bd_angle(self.network.handle, self.index)
+
+    core.use(c_void_p, 'new_frac_nt')
+    core.use(None, 'del_frac_nt', c_void_p)
+
+    def __init__(self, path=None, handle=None):
+        super(FractureNetwork, self).__init__(handle, core.new_frac_nt, core.del_frac_nt)
+        if handle is None:
+            if path is not None:
+                self.load(path)
+
+    def __str__(self):
+        return (f'zml.FractureNetwork(handle={self.handle}, '
+                f'vertex_n={self.vertex_number}, fracture_n={self.fracture_number})')
+
+    core.use(None, 'frac_nt_save', c_void_p, c_char_p)
+
+    def save(self, path):
+        """
+        序列化保存. 可选扩展名:
+            1: .txt  文本格式 (跨平台，基本不可读)
+            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
+            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        """
+        if path is not None:
+            core.frac_nt_save(self.handle, make_c_char_p(path))
+
+    core.use(None, 'frac_nt_load', c_void_p, c_char_p)
+
+    def load(self, path):
+        """
+        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        """
+        if path is not None:
+            _check_ipath(path, self)
+            core.frac_nt_load(self.handle, make_c_char_p(path))
+
+    core.use(None, 'frac_nt_write_fmap', c_void_p, c_void_p, c_char_p)
+    core.use(None, 'frac_nt_read_fmap', c_void_p, c_void_p, c_char_p)
+
+    def to_fmap(self, fmt='binary'):
+        """
+        将数据序列化到一个Filemap中. 其中fmt的取值可以为: text, xml和binary
+        """
+        fmap = FileMap()
+        core.frac_nt_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
+        return fmap
+
+    def from_fmap(self, fmap, fmt='binary'):
+        """
+        从Filemap中读取序列化的数据. 其中fmt的取值可以为: text, xml和binary
+        """
+        assert isinstance(fmap, FileMap)
+        core.frac_nt_read_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
+
+    @property
+    def fmap(self):
+        return self.to_fmap(fmt='binary')
+
+    @fmap.setter
+    def fmap(self, value):
+        self.from_fmap(value, fmt='binary')
+
+    core.use(c_size_t, 'frac_nt_get_nd_n', c_void_p)
+
+    @property
+    def vertex_number(self):
+        return core.frac_nt_get_nd_n(self.handle)
+
+    def get_vertex(self, index):
+        if index < self.vertex_number:
+            return FractureNetwork.Vertex(self, index)
+
+    core.use(c_size_t, 'frac_nt_get_bd_n', c_void_p)
+
+    @property
+    def fracture_number(self):
+        return core.frac_nt_get_bd_n(self.handle)
+
+    def get_fracture(self, index):
+        if index < self.fracture_number:
+            return FractureNetwork.Fracture(self, index)
+
+    core.use(c_size_t, 'frac_nt_add_nd', c_void_p, c_double, c_double)
+
+    def add_vertex(self, x, y):
+        index = core.frac_nt_add_nd(self.handle, x, y)
+        return self.get_vertex(index)
+
+    core.use(c_size_t, 'frac_nt_add_bd', c_void_p, c_size_t, c_size_t)
+
+    def add_fracture(self, i0, i1):
+        index = core.frac_nt_add_bd(self.handle, i0, i1)
+        return self.get_fracture(index)
+
+    core.use(None, 'frac_nt_clear', c_void_p)
+
+    def clear(self):
+        core.frac_nt_clear(self.handle)
+
+    @property
+    def vertexes(self):
+        return Iterator(model=self,
+                        count=self.vertex_number, get=lambda m, ind: m.get_vertex(ind))
+
+    @property
+    def fractures(self):
+        return Iterator(model=self,
+                        count=self.fracture_number, get=lambda m, ind: m.get_fracture(ind))
+
+
+class InfMatrix(HasHandle):
+    core.use(c_void_p, 'new_frac_mat')
+    core.use(None, 'del_frac_mat', c_void_p)
+
+    def __init__(self, network=None, sol2=None, handle=None):
+        """
+        创建给定handle的引用
+        """
+        super(InfMatrix, self).__init__(handle, core.new_frac_mat, core.del_frac_mat)
+        if network is not None and sol2 is not None:
+            self.update(network=network, sol2=sol2)
+
+    core.use(c_size_t, 'frac_mat_size', c_void_p)
+
+    @property
+    def size(self):
+        return core.frac_mat_size(self.handle)
+
+    core.use(None, 'frac_mat_create', c_void_p, c_void_p, c_void_p)
+
+    def update(self, network, sol2):
+        assert isinstance(network, FractureNetwork)
+        assert isinstance(sol2, DDMSolution2)
+        core.frac_mat_create(self.handle, network.handle, sol2.handle)
+
+
+class FracAlg:
+    core.use(c_size_t, 'frac_alg_update_disp', c_void_p, c_void_p,
+             c_size_t, c_size_t,
+             c_double, c_double,
+             c_size_t, c_double, c_double)
+
+    @staticmethod
+    def update_disp(network, matrix, fa_yy=99999999, fa_xy=99999999, gradw_max=0, err_max=0.1, iter_max=10000,
+                    ratio_max=0.99, dist_max=1.0e6):
+        """
+        更新位移
+        """
+        assert isinstance(network, FractureNetwork)
+        assert isinstance(matrix, InfMatrix)
+        core.frac_alg_update_disp(network.handle, matrix.handle, fa_yy, fa_xy
+                                  , gradw_max, err_max, iter_max, ratio_max, dist_max)
+
+    core.use(None, 'frac_alg_extend_tip',
+             c_void_p, c_void_p, c_void_p, c_double, c_double, c_double)
+
+    @staticmethod
+    def extend_tip(network, kic, sol2, l_extend, va_wmin=99999999, angle_max=0.6):
+        assert isinstance(network, FractureNetwork)
+        assert isinstance(kic, Tensor2)
+        assert isinstance(sol2, DDMSolution2)
+        core.frac_alg_extend_tip(network.handle, kic.handle, sol2.handle, l_extend,
+                                 va_wmin, angle_max)
+
+    core.use(None, 'frac_alg_update_topology', c_void_p,
+             c_void_p, c_size_t, c_double, c_double,
+             c_size_t, c_size_t, c_size_t)
+
+    @staticmethod
+    def update_topology(seepage, network, layer_n=1, z_min=-1, z_max=1,
+                        ca_area=999999999, fa_width=999999999, fa_dist=999999999):
+        """
+        更新seepage的结构，
+            对于新添加的Cell，设置位置和面积属性
+            对于新添加的Face，设置宽度和长度属性
+        """
+        assert isinstance(seepage, Seepage)
+        assert isinstance(network, FractureNetwork)
+        core.frac_alg_update_topology(seepage.handle, network.handle, layer_n, z_min, z_max,
+                                      ca_area, fa_width, fa_dist)
 
 
 if __name__ == "__main__":

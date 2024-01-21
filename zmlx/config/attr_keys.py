@@ -59,6 +59,13 @@ def frac_keys(m):
     return DynKeys(m, 'fr_')
 
 
+def vtx_keys(m):
+    """
+    注册并返回用于frac的键值
+    """
+    return DynKeys(m, 've_')
+
+
 def test():
     m = Seepage()
     ck = cell_keys(m)

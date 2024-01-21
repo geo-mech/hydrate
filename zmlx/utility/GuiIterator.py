@@ -1,8 +1,7 @@
 import timeit
 import warnings
-
 from zmlx.ui.GuiBuffer import gui
-from zml import time2str
+from zmlx.alg.time2str import time2str
 
 
 class GuiIterator:

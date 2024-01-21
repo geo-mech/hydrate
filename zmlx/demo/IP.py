@@ -1,6 +1,6 @@
 # ** desc = '侵入逾渗(IP)模型计算油气运移成藏'
 
-from zml import *
+from zmlx import *
 import random
 import numpy as np
 
@@ -47,26 +47,29 @@ def create():
 
 
 def show(model):
-    def f(fig):
-        x = model.nodes_write(-1)
-        y = model.nodes_write(-2)
-        v = model.nodes_write(-4)
-        ax = fig.add_subplot()
-        ax.scatter(x[v < 0.5], y[v < 0.5], c='tab:blue', s=3, label='Water',
-                   alpha=0.2, edgecolors='none')
-        ax.scatter(x[v >= 0.5], y[v >= 0.5], c='tab:orange', s=8, label='Oil',
-                   alpha=0.7, edgecolors='none')
-        ax.legend()
-        ax.grid(True)
-        ax.axis('equal')
-    plot(f)
+    if gui.exists():
+        def f(fig):
+            x = model.nodes_write(-1)
+            y = model.nodes_write(-2)
+            v = model.nodes_write(-4)
+            ax = fig.add_subplot()
+            mask = v < 0.5
+            ax.scatter(x[mask], y[mask], c='tab:blue', s=3, label='Water',
+                       alpha=0.2, edgecolors='none')
+            mask = [not m for m in mask]
+            ax.scatter(x[mask], y[mask], c='tab:orange', s=8, label='Oil',
+                       alpha=0.7, edgecolors='none')
+            ax.legend()
+            ax.grid(True)
+            ax.axis('equal')
+        gui.plot(f, clear=True, caption='侵入过程')  # 加上clear，清除掉之前的绘图
 
 
 def solve(model):
     for step in range(4000):
         gui.break_point()
         model.iterate()
-        if step % 200 == 0:
+        if step % 50 == 0:
             print(f'step = {step}, time = {model.time}, ', end='')
             print('Invade operations: ', end='')
             for idx in range(model.oper_n):
@@ -77,6 +80,7 @@ def solve(model):
 
 
 def execute(gui_mode=True, close_after_done=False):
+
     gui.execute(lambda: solve(create()), close_after_done=close_after_done, disable_gui=not gui_mode)
 
 

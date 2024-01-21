@@ -13,14 +13,21 @@ try:
 except Exception as err:
     warnings.warn(f'meet exception when import GuiBuffer. error = {err}')
 
-from zmlx.config.TherFlowConfig import TherFlowConfig, SeepageTher    # 覆盖zml中的定义
+# 下面这几个，主要用来覆盖zml中的定义
+from zmlx.alg.time2str import time2str
+from zmlx.alg.mass2str import mass2str
+from zmlx.utility.Field import Field
+from zmlx.utility.AttrKeys import AttrKeys, add_keys
+from zmlx.config.TherFlowConfig import TherFlowConfig, SeepageTher
+from zmlx.filesys.first_only import first_only
+
 from zmlx.filesys.join_paths import join_paths
 from zmlx.filesys.opath import opath
+from zmlx.filesys.make_fname import make_fname
 from zmlx.alg.sys import get_latest_version
 from zmlx.alg.clamp import clamp
 from zmlx.alg.linspace import linspace
 from zmlx.alg.has_module import has_numpy, has_PyQt5, has_matplotlib
-from zmlx.filesys.make_fname import make_fname
 import os
 import warnings
 
@@ -117,6 +124,7 @@ def get_path(*args):
 def open_gui():
     def do_install():
         try:
+            from zmlx.alg.install import install
             install(name='zml.pth',
                     folder=os.path.dirname(os.path.dirname(__file__)))
         except Exception as e:

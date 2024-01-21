@@ -28,18 +28,30 @@ def create_krf(faic=0.2, n=2.0, as_interp=False, k_max=1.0, s_max=1.0, count=100
         return vs, kr
 
 
-if __name__ == '__main__':
+def _test1():
+    from zml import plot
     x, y = create_krf(0.05, 3)
     print(x)
     print(y)
-    try:
-        def f(fig):
-            ax = fig.subplots()
-            ax.plot(x, y)
+
+    def f(fig):
+        ax = fig.subplots()
+        ax.plot(x, y)
+    plot(f)
 
 
-        from zml import plot
+def _test2():
+    from zml import plot
+    x, y = create_krf(0.1, 2, count=300, s_max=10, k_max=100)
+    print(x)
+    print(y)
 
-        plot(f)
-    except:
-        pass
+    def f(fig):
+        ax = fig.subplots()
+        ax.plot(x, y)
+    plot(f)
+
+
+if __name__ == '__main__':
+    _test2()
+
