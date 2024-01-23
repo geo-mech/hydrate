@@ -48,7 +48,7 @@ def liq_den_co2(p, t):
     theta = a4 + b4 * p + c4 * p**2 + d4 * p**3
     density = alpha + betha * t + rho * t**2 + theta * t**3
     
-    return max(density, 1.95)  # Ajusta a cero si es negativo
+    return max(density, 1.95)  
 
 # # #Test
 # temperature = np.linspace(270, 330, 100)
