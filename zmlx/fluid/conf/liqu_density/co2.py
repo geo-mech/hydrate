@@ -1,65 +1,67 @@
 """
-Created on Thu Jan 26 19:09:14 2023
 
-Density of Compressed liquid base on:
-Thomson, G. H., Brobst, K. R., & Hankinson, R. W. (1982).
-An improved correlation for densities of compressed liquids and liquid mixtures. 
-AIChE Journal, 28(4), 671–676. doi:10.1002/aic.690280420
+New correlations predict aqueous solubility and density of carbon dioxide.
+https://doi.org/10.1016/j.ijggc.2009.01.003
 
-Vapor Pressure by: 
-Antoine, C. 1888. Tensions des Vapeurs: Nouvelle Relation Entre les Tensions et les Tempé. Compt.Rend. 107:681-684.
-Yaws, Carl L. The Yaws Handbook of Vapor Pressure: Antoine Coefficients. 1 edition. Houston, Tex: Gulf Publishing Company, 2007.
 
-Vs = Saturation liquid Volumen using the packages 
-chemicals: Chemical properties component of Chemical Engineering Design Library (ChEDL)
-https://chemicals.readthedocs.io/index.html
-https://github.com/CalebBell/chemicals
+the paper uses two tunned coefficients for different ranges of pressure, 
+for the project range P=(1 MPA - 50 MPA) and T=(270K - 330K), 
+only the second coefficients fit
 
-TEMP = (20-280)K
+For very low pressures the densities are negative, 
+it is due to the proximity of the gaseous phase of CO2,
+therefore, the values adjust to the general value of 
+the density of CO2 in the gaseous phase (1.975 kg/m^3).
 
 """
-import chemicals  # pip install chemicals (https://chemicals.readthedocs.io/index.html#installation)
+
 import numpy as np
+from matplotlib import pyplot as plt
 
+def liq_den_co2(p, t):
+ 
+    p = p / 0.1e6 #convert Pa to Bar
+    
+    a1 = 1.053293651041897e5
+    b1 = -9.396448507019846e2
+    c1 = 2.397414334181339
+    d1 = -1.819046028481314e-3
+    
+    a2 = -8.253383504614545e2
+    b2 = 7.618125848567747
+    c2 = -1.963563757655062e-2
+    d2 = 1.497658394413360e-5
+    
+    a3 = 2.135712083402950
+    b3 = -2.023128850373911e-2
+    c3 = 5.272125417813041e-5
+    d3 = -4.043564072108339e-8
+    
+    a4 = -1.827956524285481e-3
+    b4 = 1.768297712855951e-5
+    c4 = -4.653377143658811e-8
+    d4 = 3.586708189749551e-11
+        
+    alpha = a1 + b1 * p + c1 * p**2 + d1 * p**3
+    betha = a2 + b2 * p + c2 * p**2 + d2 * p**3
+    rho   = a3 + b3 * p + c3 * p**2 + d3 * p**3
+    theta = a4 + b4 * p + c4 * p**2 + d4 * p**3
+    density = alpha + betha * t + rho * t**2 + theta * t**3
+    
+    return max(density, 1.95)  # Ajusta a cero si es negativo
 
-def liq_den_co2(P, T):
-    # parameters COSTALD
-    a = -9.070217
-    b = 62.45326
-    d = -135.1102
-    f = 4.79594
-    g = 0.250047
-    h = 1.14188
-    j = 0.0861488
-    k = 0.0344483
-
-    # compound properties
-    PM = 0.04401  # Kg/mol
-    Tc = 304.12  # K
-    Pc = 7.3774E+6  # Pa
-    Vc = 9.407E-5  # m3/mol
-    omega = 0.225
-
-    # Vapor Pressure Antoine (Yaws Carl)
-    t = T - 273.15  # convert kelvin to celsius
-    A = 7.58828
-    B = 861.82
-    C = 271.883
-    LOGP = A - (B / (t + C))
-    Pv = 10 ** (LOGP) * 133.32  # convert mmHg to Pa
-    Psat = Pv
-
-    # Saturation liquid Volumen
-    Vs = chemicals.volume.COSTALD(T, Tc, Vc,
-                                  omega)  # https://chemicals.readthedocs.io/chemicals.volume.html#pure-high-pressure-liquid-correlations
-
-    # COSTALD EQUATION
-    e = np.exp(f + omega * (g + h * omega))
-    C = j + k * omega
-    tau = (1.0 - T / Tc)
-    tau13 = tau ** (1.0 / 3.0)
-    B = Pc * (-1.0 + a * tau13 + b * tau13 * tau13 + d * tau + e * tau * tau13)
-    l = (B + P) / (B + Psat)
-    V = Vs * (1.0 - C * np.log(l))  # m3/mol
-    den = (1 / V) * PM
-    return den
+# # #Test
+# temperature = np.linspace(270, 330, 100)
+# pressure = np.linspace(1.0e6, 50e6, 100)
+# den = []
+# for t in temperature:
+#     for p in pressure:
+#         den.append(liq_den_co2(p, t))
+        
+# print (den)
+# X, Y = np.meshgrid(temperature, pressure)
+# Y = Y / 1.0E6
+# den = np.array(den)
+# den = np.transpose(den.reshape(100, 100))
+# plt.contourf(den, 20, extent=[X.min(), X.max(), Y.min(), Y.max()], cmap='viridis')        
+# plt.colorbar()
