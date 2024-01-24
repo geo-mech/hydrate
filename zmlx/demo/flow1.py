@@ -1,13 +1,14 @@
 # ** desc = '单相流，两端固定压力，计算压力场'
 
-from zml import *
-from zmlx.ui.GuiBuffer import gui
+import numpy as np
+
+from zml import SeepageMesh, ConjugateGradientSolver, get_distance
 from zmlx.alg.time2str import time2str
 from zmlx.config import seepage
 from zmlx.fluid import h2o
-from zmlx.utility.GuiIterator import GuiIterator
 from zmlx.plt.tricontourf import tricontourf
-import numpy as np
+from zmlx.ui.GuiBuffer import gui
+from zmlx.utility.GuiIterator import GuiIterator
 
 
 def create():

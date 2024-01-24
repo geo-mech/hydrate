@@ -15,7 +15,7 @@ def create(gas, liq, hyd, mg, vp, vt, temp, heat, fa_t=None, fa_c=None, t2q=None
                               right=[(gas, mg),
                                      (liq, 1.0 - mg)],
                               temp=temp, heat=heat,
-                              rate=1.0,
+                              rate=10000.0,
                               fa_t=fa_t, fa_c=fa_c,
                               l2r=dissociation,  # 允许水合物分解
                               r2l=formation,  # 允许水合物生成

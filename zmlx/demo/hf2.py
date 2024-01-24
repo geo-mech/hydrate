@@ -1,8 +1,8 @@
 # ** desc = '页岩水力压裂 （拟三维）'
 
+from zmlx.config.attr_keys import *
 from zmlx.exts.frac import *
 from zmlx.plt.show_fn2 import show_fn2
-from zmlx.config.attr_keys import *
 from zmlx.ui.GuiBuffer import gui
 
 stress = Tensor2(xx=-10e6, yy=-11e6)

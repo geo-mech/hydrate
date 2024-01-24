@@ -2,7 +2,7 @@ import os
 
 from zml import *
 
-core = DllCore(dll=load_cdll(name='dsmc.dll' if is_windows else 'dsmc.so.1',
+core = DllCore(dll=load_cdll(name='dsmc.dll',
                              first=os.path.dirname(__file__)))
 
 

@@ -21,4 +21,3 @@ def time2str(s):
         return '%.2fd' % d
     y = d / 365
     return '%.2fy' % y
-

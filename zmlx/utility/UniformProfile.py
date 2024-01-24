@@ -8,7 +8,7 @@ class UniformProfile:
     """
     生成一个均匀的分布，并且利用文件来缓存数据
     """
-    def __init__(self, fname='uniform_profile.txt', xlim=None, ylim=None, count=100):
+    def __init__(self, fname, *, xlim=None, ylim=None, count=100):
         if os.path.isfile(fname):
             dat = np.loadtxt(fname)
             x, y = dat[:, 0], dat[:, 1]
@@ -33,7 +33,8 @@ class UniformProfile:
 
 
 def _test():
-    f = UniformProfile(xlim=[0, 10], ylim=[2, 3])
+    from zml import app_data
+    f = UniformProfile(xlim=[0, 10], ylim=[2, 3], fname=app_data.temp('uniform_profile.txt'))
     x = np.linspace(1, 3, 5)
     y = f(x)
     print(f'x = {x}')

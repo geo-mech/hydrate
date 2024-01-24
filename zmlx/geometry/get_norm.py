@@ -1,9 +1,4 @@
-def get_norm(p):
-    """
-    Returns the distance from the origin
-    """
-    assert len(p) > 0
-    dist = p[0] ** 2
-    for i in range(1, len(p)):
-        dist += p[i] ** 2
-    return dist ** 0.5
+from numpy.linalg import norm as get_norm
+
+if __name__ == '__main__':
+    print(get_norm([3, 4]))

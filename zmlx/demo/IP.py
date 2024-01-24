@@ -1,8 +1,8 @@
 # ** desc = '侵入逾渗(IP)模型计算油气运移成藏'
 
-from zmlx import *
 import random
-import numpy as np
+
+from zmlx import *
 
 
 def create():
@@ -62,6 +62,7 @@ def show(model):
             ax.legend()
             ax.grid(True)
             ax.axis('equal')
+
         gui.plot(f, clear=True, caption='侵入过程')  # 加上clear，清除掉之前的绘图
 
 
@@ -80,7 +81,6 @@ def solve(model):
 
 
 def execute(gui_mode=True, close_after_done=False):
-
     gui.execute(lambda: solve(create()), close_after_done=close_after_done, disable_gui=not gui_mode)
 
 

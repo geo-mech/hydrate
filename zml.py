@@ -82,7 +82,7 @@ def _deprecation_func(pack_name, func, date=None):
     定义一个在zmlx中有定义，在zml中被弃用的函数.
     """
     def a_function(*args, **kwargs):
-        warnings.warn(f'zml.<{func}> will be removed after {date}, use {pack_name}.{func} instead. ',
+        warnings.warn(f'zml.{func} will be removed after {date}, use {pack_name}.{func} instead. ',
                       DeprecationWarning)
         mod = importlib.import_module(pack_name)
         f = getattr(mod, func)
@@ -5740,76 +5740,24 @@ class SpringSys(HasHandle):
 
 class HasCells(Object):
     def get_pos_range(self, dim):
-        """
-        返回cells在某一个坐标维度上的范围
-        """
-        assert self.cell_number > 0
-        assert 0 <= dim <= 2
-        lrange, rrange = 1e100, -1e100
-        for c in self.cells:
-            p = c.pos[dim]
-            lrange = min(lrange, p)
-            rrange = max(rrange, p)
-        return lrange, rrange
+        from zmlx.alg import has_cells
+        return has_cells.get_pos_range(self, dim)
 
-    def get_cells_in_range(self, xr=None, yr=None, zr=None,
-                           center=None, radi=None):
-        """
-        返回在给定的坐标范围内的所有的cell. 其中xr为x坐标的范围，yr为y坐标的范围，zr为
-        z坐标的范围。当某个范围为None的时候，则不检测.
-        """
-        if xr is None and yr is None and zr is None and center is not None and radi is not None:
-            cells = []
-            for c in self.cells:
-                if get_distance(center, c.pos) <= radi:
-                    cells.append(c)
-            return cells
-        ranges = (xr, yr, zr)
-        cells = []
-        for c in self.cells:
-            out_of_range = False
-            for i in range(len(ranges)):
-                r = ranges[i]
-                if r is not None:
-                    p = c.pos[i]
-                    if p < r[0] or p > r[1]:
-                        out_of_range = True
-                        break
-            if not out_of_range:
-                cells.append(c)
-        return cells
+    def get_cells_in_range(self, *args, **kwargs):
+        from zmlx.alg import has_cells
+        return has_cells.get_cells_in_range(self, *args, **kwargs)
 
-    def get_cell_pos(self, index=(0, 1, 2)):
-        vpos = [cell.pos for cell in self.cells]
-        results = []
-        for i in index:
-            results.append([pos[i] for pos in vpos])
-        return tuple(results)
+    def get_cell_pos(self, *args, **kwargs):
+        from zmlx.alg import has_cells
+        return has_cells.get_cell_pos(self, *args, **kwargs)
 
-    def get_cell_property(self, get):
-        return [get(cell) for cell in self.cells]
+    def get_cell_property(self, *args, **kwargs):
+        from zmlx.alg import has_cells
+        return has_cells.get_cell_property(self, *args, **kwargs)
 
-    def plot_tricontourf(self, get, caption=None, gui_only=False, title=None, triangulation=None, fname=None, dpi=300):
-        def f(fig):
-            ax = fig.subplots()
-            ax.set_aspect('equal')
-            ax.set_xlabel('x/m')
-            ax.set_ylabel('y/m')
-            if title is not None:
-                ax.set_title(title)
-            if triangulation is None:
-                pos = [cell.pos for cell in self.cells]
-                x = [p[0] for p in pos]
-                y = [p[1] for p in pos]
-                z = [get(cell) for cell in self.cells]
-                contour = ax.tricontourf(x, y, z, levels=20, cmap='coolwarm', antialiased=True)
-            else:
-                z = [get(cell) for cell in self.cells]
-                contour = ax.tricontourf(triangulation, z, levels=20, cmap='coolwarm', antialiased=True)
-            fig.colorbar(contour, ax=ax)
-
-        if not gui_only or gui.exists():
-            plot(kernel=f, caption=caption, clear=True, fname=fname, dpi=dpi)
+    def plot_tricontourf(self, *args, **kwargs):
+        from zmlx.alg import has_cells
+        return has_cells.plot_tricontourf(self, *args, **kwargs)
 
 
 class SeepageMesh(HasHandle, HasCells):
@@ -6329,7 +6277,6 @@ class SeepageMesh(HasHandle, HasCells):
             for iy in range(0, jy):
                 dy = y[iy + 1] - y[iy]
                 for iz in range(0, jz - 1):
-                    gui.break_point()
                     dz = (z[iz + 2] - z[iz]) / 2
                     i0 = get_id(ix, iy, iz)
                     i1 = get_id(ix, iy, iz + 1)

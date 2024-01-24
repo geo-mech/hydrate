@@ -13,4 +13,3 @@ def mass2str(kg):
         return '%.2fkg' % kg
     t = kg / 1000
     return '%.2ft' % t
-

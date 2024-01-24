@@ -1,13 +1,13 @@
 from zmlx.alg.linspace import linspace
 
 
-def create_kr(srg=0.02, srw=0.2, ag=3.5, aw=4.5):
+def create_kr(srg=0.02, srw=0.2, ag=3.5, aw=4.5, count=100):
     """
     利用Stone模型创建气水两相的相对渗透率；
     """
     assert 1.0 <= ag <= 6.0
     assert 1.0 <= aw <= 6.0
-    vs = linspace(0.0, 1.0, 100)
+    vs = linspace(0.0, 1.0, count)
     kg = []
     kw = []
     for s in vs:
@@ -24,20 +24,22 @@ def create_kr(srg=0.02, srw=0.2, ag=3.5, aw=4.5):
     return vs, kg, kw
 
 
+def _test1():
+    # create_kr(srg=0.01, srw=0.4, ag=3.5, aw=4.5)
+    vs, kg, kw = create_kr(srg=0.01, srw=0.4, ag=3.5, aw=4.5, count=1000)
+    for i in range(len(vs)):
+        print(vs[i], kg[i], kw[len(vs)-1-i])
+
+    import numpy as np
+    from zmlx.ui.GuiBuffer import gui, plot
+
+    def f(fig):
+        ax = fig.subplots()
+        ax.plot(vs, kg)
+        ax.plot(1 - np.asarray(vs), kw)
+
+    plot(f)
+
+
 if __name__ == '__main__':
-    vs, kg, kw = create_kr(srg=0.01, srw=0.2, ag=3.5, aw=4.5)
-    print(vs)
-    print(kg)
-    print(kw)
-    try:
-        def f(fig):
-            ax = fig.subplots()
-            ax.plot(vs, kg)
-            ax.plot(vs, kw)
-
-
-        from zml import plot
-
-        plot(f)
-    except:
-        pass
+    _test1()

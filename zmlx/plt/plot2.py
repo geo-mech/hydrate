@@ -44,7 +44,7 @@ kernels = {'plot': plot, 'tricontourf': tricontourf}
 
 def plot2(caption=None, gui_only=False, title=None, fname=None, dpi=300,
           xlabel='x', ylabel='y', clear=True,
-          data=None, aspect=None, on_top=None):
+          data=None, aspect=None, on_top=None, xlim=None, ylim=None):
     """
     调用其它内核函数来做一个二维的绘图. 可以多个数据叠加绘图;
     其中plots为绘图的数据，其中的每一个item都是一个dict，在每一个dict中，必须包含三个元素：name, args和krargs
@@ -82,6 +82,10 @@ def plot2(caption=None, gui_only=False, title=None, fname=None, dpi=300,
                 except Exception as e:
                     print(f'Error: {e}')
                     pass
+        if xlim is not None:
+            ax.set_xlim(xlim)
+        if ylim is not None:
+            ax.set_ylim(ylim)
 
     # 在gui界面上绘图
     do_plot(kernel=f, caption=caption, clear=clear, fname=fname, dpi=dpi, on_top=on_top)

@@ -1,6 +1,6 @@
 from zml import *
 
-core = DllCore(dll=load_cdll(name='frac.dll' if is_windows else 'frac.so.1',
+core = DllCore(dll=load_cdll(name='frac.dll',
                              first=os.path.dirname(__file__)))
 
 

@@ -20,6 +20,7 @@ from zmlx.utility.Field import Field
 from zmlx.utility.AttrKeys import AttrKeys, add_keys
 from zmlx.config.TherFlowConfig import TherFlowConfig, SeepageTher
 from zmlx.filesys.first_only import first_only
+from zmlx.filesys.tag import print_tag
 
 from zmlx.filesys.join_paths import join_paths
 from zmlx.filesys.opath import opath

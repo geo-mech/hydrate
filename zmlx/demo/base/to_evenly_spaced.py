@@ -2,8 +2,9 @@
 此脚本展示Interp1的数据结构
 """
 
-from zml import Interp1
 import numpy as np
+
+from zml import Interp1
 
 
 def test():

@@ -1,4 +1,5 @@
 import os
+
 import numpy as np
 from PIL import Image
 from scipy.interpolate import NearestNDInterpolator
@@ -66,4 +67,5 @@ def test(img_name, map_name):
 
 if __name__ == '__main__':
     from zmlx.data.get_path import get_path
+
     test(get_path('cloud.png'), get_path('cm1.png'))

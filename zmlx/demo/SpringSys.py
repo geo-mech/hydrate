@@ -1,9 +1,11 @@
 # ** desc = '基于弹簧系统计算应力的传播'
 
 import numpy as np
-from zmlx import *
+
+from zml import SpringSys, ConjugateGradientSolver, DynSys
 from zmlx.data import mesh_c10000 as data
 from zmlx.plt.tricontourf import tricontourf
+from zmlx.ui import gui
 
 
 def create_model(triangles, x, y):

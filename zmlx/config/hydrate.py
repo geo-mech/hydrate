@@ -1,5 +1,5 @@
 from zml import *
-from zmlx.react.alpha.salinity import data as salinity_c2t
+from zmlx.config.TherFlowConfig import TherFlowConfig
 from zmlx.fluid.ch4 import create as create_ch4
 from zmlx.fluid.ch4_hydrate import create as create_ch4_hydrate
 from zmlx.fluid.co2 import create as create_co2
@@ -10,14 +10,18 @@ from zmlx.fluid.h2o_ice import create as create_h2o_ice
 from zmlx.kr.create_krf import create_krf
 from zmlx.react import ch4_hydrate as ch4_hydrate_react
 from zmlx.react import co2_hydrate as co2_hydrate_react
+from zmlx.react import dissolution
 from zmlx.react import h2o_ice as icing_react
 from zmlx.react import vapor as vapor_react
-from zmlx.react import dissolution
+from zmlx.react.alpha.salinity import data as salinity_c2t
 from zmlx.utility.CapillaryEffect import CapillaryEffect
-from zmlx.config.TherFlowConfig import TherFlowConfig
 
 
 class Config(TherFlowConfig):
+    """
+    水合物求解配置，弃用
+    """
+
     def __init__(self, has_co2=False, has_steam=False, has_inh=False, has_ch4_in_liq=False, inh_diff_rate=None,
                  ch4_diff_rate=None,
                  support_ch4_hyd_diss=True, support_ch4_hyd_form=True, krf=None):
@@ -40,6 +44,7 @@ class Config(TherFlowConfig):
             Ch4在水中的溶解反应 [当has_ch4_in_liq为True的时候]
         """
         super().__init__()
+        warnings.warn('use zmlx.config.hydrate_v2 instead.', DeprecationWarning)
 
         # 添加默认的重力
         # since 2023-4-19
@@ -165,15 +170,15 @@ class Config(TherFlowConfig):
                 fa_c=self.flu_keys['specific_heat'])
             # 抑制固体比例过高，增强计算稳定性 （非常必要）
             r['inhibitors'].append(create_dict(sol=self.components['sol'],
-                            liq=None,
-                            c=[0, 0.8, 1.0],
-                            t=[0, 0, -200.0],))
+                                               liq=None,
+                                               c=[0, 0.8, 1.0],
+                                               t=[0, 0, -200.0], ))
             if has_inh:
                 # 抑制剂修改平衡温度
                 r['inhibitors'].append(create_dict(sol=self.components['inh'],
-                                liq=self.components['liq'],
-                                c=salinity_c2t[0],
-                                t=salinity_c2t[1]))
+                                                   liq=self.components['liq'],
+                                                   c=salinity_c2t[0],
+                                                   t=salinity_c2t[1]))
             self.reactions.append(r)
 
         # -------------------------------------------------------------

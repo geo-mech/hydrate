@@ -1,12 +1,10 @@
 from scipy.interpolate import interp1d
-import warnings
 
 
 def create_interp1d(d=None, x=None, y=None, **kwargs):
     """
     利用一个包含了两列的numpy矩阵来创建一个一维的插值体
     """
-    warnings.warn('please use scipy.interpolate.interp1d instead')
     if x is None or y is None:
         x = d[:, 0]
         y = d[:, 1]

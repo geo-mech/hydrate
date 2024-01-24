@@ -1,7 +1,12 @@
 # ** desc = '基于Seepage类的温度场计算 （利用TherFlowConfig建模）'
 
-from zmlx import *
+import numpy as np
+
+from zml import SeepageMesh
 from zmlx.config import seepage
+from zmlx.geometry.point_distance import point_distance
+from zmlx.plt.tricontourf import tricontourf
+from zmlx.ui import gui
 from zmlx.utility.SeepageNumpy import as_numpy
 
 
@@ -9,7 +14,7 @@ def solve():
     model = seepage.create(mesh=SeepageMesh.create_cube(np.linspace(0, 100, 100),
                                                         np.linspace(0, 100, 100),
                                                         (-0.5, 0.5)),
-                           temperature=lambda *pos: 380 if get_distance(pos, (0, 0, 0)) < 30 else 280,
+                           temperature=lambda *pos: 380 if point_distance(pos, (0, 0, 0)) < 30 else 280,
                            denc=1.0e6, heat_cond=1.0, dt_max=1.0e6)
 
     for step in range(500):

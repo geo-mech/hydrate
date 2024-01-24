@@ -1,8 +1,13 @@
 # ** desc = '流体在毛管力驱动下的流动 (基于zmlx.config.capillary)'
 
-from zmlx import *
+import numpy as np
+
+from zml import Seepage, SeepageMesh
 from zmlx.config import capillary
 from zmlx.config import seepage
+from zmlx.geometry.point_distance import point_distance
+from zmlx.plt.tricontourf import tricontourf
+from zmlx.ui import gui
 from zmlx.utility.SeepageNumpy import SeepageNumpy
 
 mud = """0.007698294	1930020.672
@@ -87,7 +92,7 @@ def get_idx(x, y, z):
     """
     定义在不同的区域所使用的毛管压力曲线的ID (从0开始编号)
     """
-    if get_distance((x, y, z), (50, 50, 0)) < 20:
+    if point_distance((x, y, z), (50, 50, 0)) < 20:
         return 0
     if x < 50:
         if y < 50:
@@ -102,17 +107,17 @@ def get_idx(x, y, z):
 
 
 def get_s(x, y, z):
-    return (0, 1) if get_distance((x, y, z), (60, 50, 0)) < 20 else (1, 0)
+    return (0, 1) if point_distance((x, y, z), (60, 50, 0)) < 20 else (1, 0)
 
 
 def create():
-    fludefs = [TherFlowConfig.FluProperty(den=50, vis=1.0e-4),
-               TherFlowConfig.FluProperty(den=1000, vis=1.0e-3)]
+    fludefs = [Seepage.FluDef(den=50, vis=1.0e-4),
+               Seepage.FluDef(den=1000, vis=1.0e-3)]
     model = seepage.create(
         mesh=SeepageMesh.create_cube(np.linspace(0, 100, 101), np.linspace(0, 100, 101), (-0.5, 0.5)),
         porosity=0.2, pore_modulus=100e6, p=1e6, temperature=280, perm=1e-14,
         s=get_s, fludefs=fludefs
-        )
+    )
     model.set_kr(saturation=[0, 1], kr=[0, 1])
     capillary.add(model, 1, 0, get_idx, [mud, sand_J, sand_K, sand_P, sand_T])
     return model
@@ -139,7 +144,7 @@ def solve(model):
 
 
 def execute(gui_mode=True, close_after_done=False):
-    gui.execute(solve, args=(create(), ), close_after_done=close_after_done, disable_gui=not gui_mode)
+    gui.execute(solve, args=(create(),), close_after_done=close_after_done, disable_gui=not gui_mode)
 
 
 if __name__ == '__main__':

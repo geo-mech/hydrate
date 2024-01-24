@@ -3,7 +3,6 @@
 """
 from zml import *
 
-
 vs0 = Vector()
 vk = Vector()
 vg = Vector()
@@ -24,13 +23,13 @@ def iterate(model: Seepage, dt: float, fid0=None, fid1=None, ca_ipc=None, ds=0.0
         buf = model.get_buffer('cap_settings')
         ind = 0
         while ind + 6 < buf.size:
-            a0 = round(buf[ind+0])
-            b0 = round(buf[ind+1])
-            c0 = round(buf[ind+2])
-            a1 = round(buf[ind+3])
-            b1 = round(buf[ind+4])
-            c1 = round(buf[ind+5])
-            ca_ipc = round(buf[ind+6])
+            a0 = round(buf[ind + 0])
+            b0 = round(buf[ind + 1])
+            c0 = round(buf[ind + 2])
+            a1 = round(buf[ind + 3])
+            b1 = round(buf[ind + 4])
+            c1 = round(buf[ind + 5])
+            ca_ipc = round(buf[ind + 6])
             ind += 7
             iterate(model=model, dt=dt, fid0=(a0, b0, c0), fid1=(a1, b1, c1), ca_ipc=ca_ipc, ds=ds)
 

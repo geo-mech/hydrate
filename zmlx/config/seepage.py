@@ -39,12 +39,14 @@ Face的属性：
     g_heat：用于传热计算的导流系数（注意，并非热传导系数。这个系数，已经考虑了face的横截面积和长度）
 """
 
-from zml import *
+import numpy as np
+
+from zml import Seepage, get_average_perm, Tensor3
+from zmlx.alg.join_cols import join_cols
 from zmlx.config import capillary
 from zmlx.config.attr_keys import *
-from zmlx.alg.join_cols import join_cols
+from zmlx.geometry.point_distance import point_distance
 from zmlx.utility.Field import Field
-import numpy as np
 from zmlx.utility.SeepageNumpy import SeepageNumpy
 
 
@@ -283,7 +285,7 @@ def iterate(model, dt=None, solver=None, fa_s=None, fa_q=None, fa_k=None, cond_u
     # 优先使用模型中定义的反应
     for idx in range(model.reaction_number):
         reaction = model.get_reaction(idx)
-        assert isinstance(reaction, Reaction)
+        assert isinstance(reaction, Seepage.Reaction)
         reaction.react(model, dt)
 
     set_time(model, get_time(model) + dt)
@@ -349,6 +351,9 @@ def create(mesh=None,
     if gravity is not None:
         assert len(gravity) == 3
         model.gravity = gravity
+        if point_distance(gravity, [0, 0, -10]) > 1.0:
+            print(f'Warning: In general, gravity should be [0,0, -10], but here it is {gravity}, '
+                  f'please make sure this is the setting you need')
 
     if dt_max is not None:
         set_dt_max(model, dt_max)
@@ -370,10 +375,10 @@ def create(mesh=None,
     if mesh is not None:
         add_mesh(model, mesh)
 
-    if bk_fv is None:   # 未给定数值，则自动设定
+    if bk_fv is None:  # 未给定数值，则自动设定
         bk_fv = model.gr_number > 0
 
-    if bk_g is None:   # 未给定数值，则自动设定
+    if bk_g is None:  # 未给定数值，则自动设定
         bk_g = model.gr_number > 0
 
     set_model(model, igr=igr, bk_fv=bk_fv, bk_g=bk_g, **kwargs)
@@ -494,7 +499,7 @@ def set_cell(cell, pos=None, vol=None, porosity=0.1, pore_modulus=1000e6, denc=1
                  pore_modulus_range=pore_modulus_range
                  )
 
-    if bk_fv:   # 备份流体体积
+    if bk_fv:  # 备份流体体积
         cell.set_attr(ca.fv0, cell.fluid_vol)
     cell.set_attr(ca.g_heat, vol / (dist ** 2))
 
@@ -526,12 +531,12 @@ def set_face(face, area=None, length=None, perm=None, heat_cond=None, igr=None, 
     assert length > 0
 
     if perm is not None:
-        if hasattr(perm, '__call__'):   # 当单独调用set_face的时候，可能会遇到这种情况
+        if hasattr(perm, '__call__'):  # 当单独调用set_face的时候，可能会遇到这种情况
             p0 = face.get_cell(0).pos
             p1 = face.get_cell(1).pos
-            perm = get_average_perm(p0, p1, perm, get_distance(p0, p1))
+            perm = get_average_perm(p0, p1, perm, point_distance(p0, p1))
 
-        if isinstance(perm, Tensor3):   # 当单独调用set_face的时候，可能会遇到这种情况
+        if isinstance(perm, Tensor3):  # 当单独调用set_face的时候，可能会遇到这种情况
             p0 = face.get_cell(0).pos
             p1 = face.get_cell(1).pos
             perm = perm.get_along([p1[i] - p0[i] for i in range(3)])

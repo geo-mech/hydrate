@@ -1,6 +1,7 @@
 # ** desc = '用以展示timer的使用方法'
 
 from time import sleep
+
 from zml import timer, clock
 from zmlx.ui.GuiBuffer import gui
 

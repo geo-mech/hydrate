@@ -8,19 +8,23 @@
 详细参数，参考create_model函数的注释; 外部执行时，直接 from zmlx.demo import egs2 并执行egs2.execute函数来运行.
 """
 
-from zml import *
-from zmlx.ui.GuiBuffer import gui
+import numpy as np
+
+from zml import SeepageMesh, set_srand, Dfn2, Seepage, ConjugateGradientSolver
+from zmlx.alg.time2str import time2str
 from zmlx.config import seepage
 from zmlx.filesys import path
 from zmlx.filesys.make_fname import make_fname
 from zmlx.filesys.opath import opath
+from zmlx.filesys.tag import print_tag
 from zmlx.fluid import h2o
+from zmlx.geometry.point_distance import point_distance
 from zmlx.geometry.seg_point_distance import seg_point_distance
 from zmlx.plt.show_dfn2 import show_dfn2
+from zmlx.ui.GuiBuffer import gui
 from zmlx.utility.GuiIterator import GuiIterator
 from zmlx.utility.PressureController import PressureController
 from zmlx.utility.SaveManager import SaveManager
-from zmlx.alg.time2str import time2str
 from zmlx.utility.SeepageNumpy import SeepageNumpy
 
 
@@ -95,7 +99,7 @@ def create_model(dx=100.0, dy=100.0, dz=100.0, temp=500.0, pre=10.0e6, perm=1.0e
         cell_end = model.get_nearest_cell(pos=[x1, y1, 0])
 
         def get_dist(cell_pos):
-            return seg_point_distance([[x0, y0], [x1, y1]], cell_pos[0: 2]) + get_distance(cell_pos, cell_end.pos)
+            return seg_point_distance([[x0, y0], [x1, y1]], cell_pos[0: 2]) + point_distance(cell_pos, cell_end.pos)
 
         count = 0
         while cell_beg.index != cell_end.index:
