@@ -9,9 +9,9 @@ from zmlx.filesys.join_paths import join_paths
 
 def create(t_min=261, t_max=329, p_min=2.0e6, p_max=99.0e6, name=None):
     """
-    创建液态co2的定义.
+    创建液态ch4的定义.
     """
-    data = np.loadtxt(fname=join_paths(os.path.dirname(__file__), 'CO2.txt'))
+    data = np.loadtxt(fname=join_paths(os.path.dirname(__file__), 'ch4.txt'))
     den = LinearNDInterpolator(data[:, 0: 2], data[:, 2], rescale=True, fill_value=np.nan)
     vis = LinearNDInterpolator(data[:, 0: 2], data[:, 3], rescale=True, fill_value=np.nan)
 
