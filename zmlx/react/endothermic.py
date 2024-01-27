@@ -1,6 +1,5 @@
 from zmlx.alg.clamp import clamp
 
-
 # 231031: 将rate的默认值设置为None (在t2q为None的时候，必须设置rate)
 
 version = 231031
@@ -14,7 +13,7 @@ def create(left, right, temp, heat, rate=None, fa_t=None, fa_c=None, l2r=True, r
         right：定义右侧物质的序号和权重
         temp：定义反应发生的参考温度
         heat：定义在参考温度下反应发生的时候所消耗的热量 （1kg的左侧物质，转化为1kg的右侧的物质）
-        rate：反应的速率（当温度超过平衡温度1度的时候）
+        rate：反应的速率（当温度超过平衡温度1度的时候）. 只有当t2q未给定的时候，rate才会有作用.
         fa_t：流体的温度属性
         fa_c：流体的比热属性
         l2r：是否允许左侧的物质转化为右侧的物质
@@ -73,6 +72,7 @@ def create(left, right, temp, heat, rate=None, fa_t=None, fa_c=None, l2r=True, r
 
     # 定义反应的速率
     if t2q is not None:
+        # assert rate is None
         t, q = t2q
         assert len(t) == len(q)
         assert len(t) >= 3

@@ -1,6 +1,7 @@
+from zml import (DllCore, HasHandle, load_cdll, make_c_char_p, Vector, Lattice3, UintVector, Interp1, is_array,
+                 Interp3, clock, Matrix3)
+from ctypes import c_void_p, c_char_p, c_int, c_bool, c_double, c_size_t
 import os
-
-from zml import *
 
 core = DllCore(dll=load_cdll(name='dsmc.dll',
                              first=os.path.dirname(__file__)))

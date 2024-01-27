@@ -4,8 +4,9 @@
 # ** is_sys = True
 
 import os
-from zmlx.ui.GuiBuffer import gui
+
 import zml
+from zmlx.ui.GuiBuffer import gui
 from zmlx.ui.Qt import QtWidgets
 
 

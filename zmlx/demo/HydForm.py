@@ -1,9 +1,16 @@
 # ** desc = '测试：纵向二维。浮力作用下气体运移、水合物成藏过程模拟(基于 zmlx.config.seepage)'
 
-from zmlx import *
-from zmlx.config import hydrate_v2
-from zmlx.config import seepage
+import numpy as np
+
+from zml import SeepageMesh, get_distance, create_dict, Seepage
+from zmlx.alg.time2str import time2str
+from zmlx.config import hydrate, seepage
+from zmlx.filesys.join_paths import join_paths
 from zmlx.filesys.make_fname import make_fname
+from zmlx.plt.tricontourf import tricontourf
+from zmlx.ui.GuiBuffer import gui, information
+from zmlx.utility.GuiIterator import GuiIterator
+from zmlx.utility.SaveManager import SaveManager
 from zmlx.utility.SeepageNumpy import as_numpy
 
 
@@ -36,10 +43,9 @@ def create():
         else:
             return 1.0e-15
 
-    cfg = hydrate_v2.Config(has_inh=True,  # 存在抑制剂
-                            has_ch4_in_liq=True  # 存在溶解气
-                            )
-    kw = cfg.kwargs
+    kw = hydrate.create_kwargs(has_inh=True,  # 存在抑制剂
+                               has_ch4_in_liq=True  # 存在溶解气
+                               )
     kw.update(create_dict(mesh=mesh, porosity=0.1, pore_modulus=100e6, denc=get_denc, dist=0.1,
                           temperature=get_initial_t, p=get_initial_p, s=get_initial_s,
                           perm=get_perm, heat_cond=2.0))

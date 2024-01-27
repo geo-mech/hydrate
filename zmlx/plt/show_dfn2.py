@@ -1,6 +1,6 @@
 from zml import Dfn2
-from zmlx.ui.GuiBuffer import gui
 from zmlx.plt.plot2 import plot2
+from zmlx.ui.GuiBuffer import gui
 
 
 def show_dfn2(dfn2, **kwargs):

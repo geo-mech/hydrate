@@ -5,10 +5,10 @@
 
 import warnings
 
-from zmlx.ui.GuiBuffer import gui
 from zml import is_array
 from zmlx.plt.get_color import get_color
 from zmlx.plt.plot2 import plot2
+from zmlx.ui.GuiBuffer import gui
 
 try:
     import numpy as np

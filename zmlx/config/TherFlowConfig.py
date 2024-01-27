@@ -1,4 +1,6 @@
-from zml import *
+import warnings
+
+from zml import Object, Seepage, Field, get_average_perm, Reaction
 from zmlx.utility.AttrKeys import AttrKeys
 
 

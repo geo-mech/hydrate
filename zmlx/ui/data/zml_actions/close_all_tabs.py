@@ -6,4 +6,3 @@
 from zmlx.ui.GuiBuffer import gui
 
 gui.close_all_tabs()
-

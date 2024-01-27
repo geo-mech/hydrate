@@ -1,5 +1,5 @@
 """
-注意，此模块使用动态的属性ID.
+基于Seepage，定义热-流-化耦合的公共的函数.
 
 模型的属性关键词有：
     dt: 时间步长
@@ -41,10 +41,10 @@ Face的属性：
 
 import numpy as np
 
-from zml import Seepage, get_average_perm, Tensor3
+from zml import get_average_perm, Tensor3, Seepage
 from zmlx.alg.join_cols import join_cols
 from zmlx.config import capillary
-from zmlx.config.attr_keys import *
+from zmlx.config.attr_keys import cell_keys, face_keys, flu_keys
 from zmlx.geometry.point_distance import point_distance
 from zmlx.utility.Field import Field
 from zmlx.utility.SeepageNumpy import SeepageNumpy
@@ -310,7 +310,7 @@ def create(mesh=None,
            fludefs=None, has_solid=False, reactions=None,
            gravity=None,
            dt_max=None, dt_min=None, dt_ini=None, dv_relative=None,
-           gr=None, bk_fv=None, bk_g=None, caps=None, keys=None,
+           gr=None, bk_fv=None, bk_g=None, caps=None, keys=None, kr=None,
            **kwargs):
     """
     利用给定的网格来创建一个模型.
@@ -371,6 +371,17 @@ def create(mesh=None,
         igr = model.add_gr(gr, need_id=True)
     else:
         igr = None
+
+    if kr is not None:   # since 2024-1-26
+        # 设置相渗.
+        for item in kr:
+            if len(item) == 2:
+                idx, val = item
+                model.set_kr(index=idx, kr=val)
+            else:
+                assert len(item) == 3
+                idx, x, y = item
+                model.set_kr(index=idx, saturation=x, kr=y)
 
     if mesh is not None:
         add_mesh(model, mesh)

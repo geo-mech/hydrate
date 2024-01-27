@@ -1,4 +1,5 @@
 import os
+
 from zml import Seepage
 from zmlx.ptree.interp2 import interp2
 from zmlx.ptree.ptree import PTree, as_ptree
@@ -87,10 +88,10 @@ def fludef(pt):
 
     data = pt.data
 
-    if isinstance(data, str):   # 此时，使用预定义的流体
+    if isinstance(data, str):  # 此时，使用预定义的流体
         return _from_text(data, pt.find, name=None)
 
-    if isinstance(data, list):   # 此时，创建一个多组分的流体(无法定义name)
+    if isinstance(data, list):  # 此时，创建一个多组分的流体(无法定义name)
         return _from_list(data, pt.path, name=None)
 
     if isinstance(data, dict):  # 下面创建一个自定义的数据 (默认不包含密度和粘性数据)

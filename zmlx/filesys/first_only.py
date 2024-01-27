@@ -1,4 +1,5 @@
 import os
+
 from zmlx.ui.GuiBuffer import gui
 
 
@@ -13,4 +14,3 @@ def first_only(path='please_delete_this_file_before_run'):
     else:
         with open(path, 'w') as file:
             file.write('\n')
-

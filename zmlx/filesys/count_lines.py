@@ -1,6 +1,6 @@
-from zmlx.ui.GuiBuffer import gui
 from zmlx.filesys.get_lines import get_lines
 from zmlx.filesys.list_code_files import list_code_files
+from zmlx.ui.GuiBuffer import gui
 
 
 def count_lines(path=None, exts=None):
@@ -14,4 +14,6 @@ def count_lines(path=None, exts=None):
 
 
 if __name__ == '__main__':
-    count_lines()
+    from zml import get_dir
+
+    count_lines(path=get_dir())

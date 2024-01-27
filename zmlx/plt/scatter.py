@@ -1,4 +1,4 @@
-from zml import *
+from zmlx.ui.GuiBuffer import plot
 
 
 def scatter(items=None, get_val=None, x=None, y=None, z=None, c=None, get_pos=None, caption='scatter',

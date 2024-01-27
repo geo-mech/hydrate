@@ -1,4 +1,4 @@
-from zml import *
+from zml import Mesh3
 import numpy as np
 import math
 

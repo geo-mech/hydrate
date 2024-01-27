@@ -1,9 +1,10 @@
+import copy
+
 from zmlx.geometry.dfn_v3 import from_segs, remove_small
 from zmlx.ptree.array import array
 from zmlx.ptree.box import box3
 from zmlx.ptree.dfn2 import dfn2
 from zmlx.ptree.ptree import PTree, as_ptree
-import copy
 
 
 def dfn_v3(pt, box=None):

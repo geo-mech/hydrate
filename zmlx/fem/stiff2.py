@@ -1,4 +1,4 @@
-from zml import *
+from zml import Mesh3
 from zmlx.fem.stiffness_qua4 import stiffness as qua4_stiff
 from zmlx.fem.stiffness_triangle import stiffness as triangle_stiff
 

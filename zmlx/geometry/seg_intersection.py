@@ -1,4 +1,3 @@
-
 def seg_intersection(ax, ay, bx, by, cx, cy, dx, dy):
     """
     返回线段ab和线段cd的交点；如果没有交点，则返回None

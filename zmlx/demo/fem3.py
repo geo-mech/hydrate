@@ -1,8 +1,11 @@
 # ** desc = '三维有限元模型'
 
-from zmlx import *
+import numpy as np
+
+from zml import Mesh3, ConjugateGradientSolver
 from zmlx.fem.create3 import create3
 from zmlx.plt.contourf import contourf
+from zmlx.ui import gui
 
 
 def create_mesh():

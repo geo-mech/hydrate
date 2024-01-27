@@ -1,4 +1,3 @@
-
 class Field:
     """
     Define a three-dimensional field. Make value = f(pos) return data at any position.
@@ -33,4 +32,3 @@ class Field:
 
     def __call__(self, *args, **kwargs):
         return self.__field(*args, **kwargs)
-

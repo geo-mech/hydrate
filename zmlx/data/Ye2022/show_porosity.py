@@ -1,15 +1,13 @@
-import numpy as np
-
-from zmlx.data.Ye2022.load import load_
+from zmlx.data.Ye2022.load_txt import load_txt
 from zmlx.plt.plot2 import plot2
 
 # 产气速率
-d1 = load_('porosity.txt')
+d1 = load_txt('porosity.txt')
 
 # 产水速率
-d2 = load_('porosity_smooth.txt')
+d2 = load_txt('porosity_smooth.txt')
 
-d3 = load_('sat_hyd_smooth.txt')
+d3 = load_txt('sat_hyd.txt')
 
 x1 = d1[:, 0]
 y1 = d1[:, 1]

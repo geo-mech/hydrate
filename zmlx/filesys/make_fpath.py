@@ -1,5 +1,6 @@
-from zmlx.filesys.make_dirs import make_dirs
 import os
+
+from zmlx.filesys.make_dirs import make_dirs
 
 __all__ = ['make_fpath']
 
@@ -18,4 +19,3 @@ def make_fpath(folder, step=None, ext='.txt', name=None):
         return os.path.join(folder, f'{step:010d}{ext}')
     if name is not None:
         return os.path.join(folder, name)
-

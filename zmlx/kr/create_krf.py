@@ -37,6 +37,7 @@ def _test1():
     def f(fig):
         ax = fig.subplots()
         ax.plot(x, y)
+
     plot(f)
 
 
@@ -49,6 +50,7 @@ def _test2():
     def f(fig):
         ax = fig.subplots()
         ax.plot(x, y)
+
     plot(f)
 
 
@@ -67,4 +69,3 @@ def _test3():
 
 if __name__ == '__main__':
     _test3()
-

@@ -1,4 +1,3 @@
-
 def write_py(path, data=None, **kwargs):
     """
     Save the data to a file in .py format. Note that the data must be correctly converted to a string.
@@ -51,4 +50,3 @@ def read_py(path=None, data=None, encoding='utf-8', globals=None, text=None, key
             return space if key == '*' or key == '' else space.get(key, data)
         except:
             return space if key == '*' or key == '' else data
-

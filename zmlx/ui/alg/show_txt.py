@@ -1,8 +1,8 @@
 import os
 
-from zmlx.ui.GuiBuffer import gui
 from zml import read_text
 from zmlx.filesys.show_fileinfo import show_fileinfo
+from zmlx.ui.GuiBuffer import gui
 
 
 def show_txt(filepath):

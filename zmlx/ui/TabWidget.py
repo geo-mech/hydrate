@@ -1,5 +1,5 @@
 from zml import app_data
-from zmlx.ui.Qt import QtWidgets, QtCore, QtGui
+from zmlx.ui.Qt import QtWidgets
 
 
 def setTabPosition(widget):
@@ -65,7 +65,7 @@ class TabWidget(QtWidgets.QTabWidget):
             index = self.currentIndex()
             if index > 0:
                 self.setCurrentIndex(index - 1)
-                
+
     def close_all_tabs(self):
         while self.count() > 0:
             self.close_tab(0)

@@ -1,4 +1,4 @@
-from zml import *
+from zml import Seepage, Interp1
 
 
 class PressureController(Seepage.CellData):
@@ -6,6 +6,7 @@ class PressureController(Seepage.CellData):
     压力控制器。给定一个Cell，可以在每一步update的时候，动态调整该Cell内的流体(或者修改pore)，从而使得该Cell内的压力等于目标压力。
     用以辅助以给定的压力进行生产。
     """
+
     def __init__(self, cell, t, p, modify_pore=False):
         """
         设置检测的Cell并且拷贝其中的流体.
@@ -90,4 +91,3 @@ class PressureController(Seepage.CellData):
             self._update_by_modify_pore(t)
         else:
             self._update_by_modify_flu(t)
-

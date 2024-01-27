@@ -1,6 +1,7 @@
-from zmlx.filesys.make_dirs import make_dirs
-from zml import question
 import os
+
+from zml import question
+from zmlx.filesys.make_dirs import make_dirs
 
 
 def prepare_dir(folder, direct_del=False):
@@ -19,4 +20,3 @@ def prepare_dir(folder, direct_del=False):
             shutil.rmtree(folder)
     if not os.path.exists(folder):
         make_dirs(folder)
-

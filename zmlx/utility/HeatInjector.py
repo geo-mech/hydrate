@@ -1,4 +1,4 @@
-from zml import *
+from zml import Alg
 
 
 class HeatInjector:

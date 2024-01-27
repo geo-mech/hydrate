@@ -12,4 +12,3 @@ except Exception as err:
 """
 
 from zmlx.ui.GuiBuffer import gui
-

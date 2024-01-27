@@ -1,6 +1,6 @@
-from zml import SeepageMesh
 import numpy as np
 
+from zml import SeepageMesh
 
 # 创建立方体的渗流网格
 create = SeepageMesh.create_cube
@@ -25,5 +25,3 @@ def create_xz(*, x_min, dx, x_max, z_min, dz, z_max, y_min, y_max):
     """
     return create_xyz(x_min=x_min, dx=dx, x_max=x_max, y_min=y_min, dy=1e20, y_max=y_max,
                       z_min=z_min, dz=dz, z_max=z_max)
-
-

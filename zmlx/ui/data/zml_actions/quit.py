@@ -2,6 +2,6 @@
 # ** icon = 'quit.png'
 # ** text = '退出'
 
-from zml import *
+from zmlx.ui import gui
 
 gui.close()

@@ -1,8 +1,9 @@
-from zml import *
+import warnings
+
+from zmlx.geometry.point_distance import point_distance
 from zmlx.pg.colormap import coolwarm
 from zmlx.pg.get_color import get_color
 from zmlx.pg.plot3 import *
-import warnings
 
 
 def show_scatter3(pos=None, size=None, color=None, alpha=None, pxMode=True, cmap=None, caption=None, on_top=None,
@@ -87,13 +88,13 @@ def show_scatter3(pos=None, size=None, color=None, alpha=None, pxMode=True, cmap
     if hasattr(widget, 'scatter_1'):
         widget.scatter_1.setData(pos=pos, color=color, size=size, pxMode=pxMode)
         if reset_dist:
-            set_distance(get_distance([x_min, y_min, z_min], [x_max, y_max, z_max]) * 1.5)
+            set_distance(point_distance([x_min, y_min, z_min], [x_max, y_max, z_max]) * 1.5)
         if reset_cent:
             set_center([(x_min + x_max) / 2, (y_min + y_max) / 2, (z_min + z_max) / 2])
     else:
         widget.scatter_1 = Scatter(pos=pos, color=color, size=size, pxMode=pxMode)
         add_item(widget.scatter_1)
-        set_distance(get_distance([x_min, y_min, z_min], [x_max, y_max, z_max]) * 1.5)
+        set_distance(point_distance([x_min, y_min, z_min], [x_max, y_max, z_max]) * 1.5)
         set_center([(x_min + x_max) / 2, (y_min + y_max) / 2, (z_min + z_max) / 2])
 
     if hasattr(widget, 'line_1'):

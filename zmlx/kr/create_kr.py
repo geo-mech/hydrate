@@ -28,10 +28,10 @@ def _test1():
     # create_kr(srg=0.01, srw=0.4, ag=3.5, aw=4.5)
     vs, kg, kw = create_kr(srg=0.01, srw=0.4, ag=3.5, aw=4.5, count=1000)
     for i in range(len(vs)):
-        print(vs[i], kg[i], kw[len(vs)-1-i])
+        print(vs[i], kg[i], kw[len(vs) - 1 - i])
 
     import numpy as np
-    from zmlx.ui.GuiBuffer import gui, plot
+    from zmlx.ui.GuiBuffer import plot
 
     def f(fig):
         ax = fig.subplots()
