@@ -1,7 +1,7 @@
 """
 用于管理毛管压力驱动下的流动
 """
-from zml import *
+from zml import Vector, Seepage, Interp1, parse_fid3
 
 vs0 = Vector()
 vk = Vector()

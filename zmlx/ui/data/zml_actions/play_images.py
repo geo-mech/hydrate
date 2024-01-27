@@ -5,7 +5,6 @@
 from zmlx.filesys.list_files import list_files
 from zmlx.ui.GuiBuffer import gui
 
-
 files = list_files(exts=['.jpg', '.png'])
 
 for idx in range(len(files)):

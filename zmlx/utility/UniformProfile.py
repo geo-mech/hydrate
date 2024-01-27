@@ -1,13 +1,16 @@
 import os
+
 import numpy as np
-from zmlx.alg.join_cols import join_cols
 from scipy.interpolate import interp1d
+
+from zmlx.alg.join_cols import join_cols
 
 
 class UniformProfile:
     """
     生成一个均匀的分布，并且利用文件来缓存数据
     """
+
     def __init__(self, fname, *, xlim=None, ylim=None, count=100):
         if os.path.isfile(fname):
             dat = np.loadtxt(fname)
@@ -43,4 +46,3 @@ def _test():
 
 if __name__ == '__main__':
     _test()
-

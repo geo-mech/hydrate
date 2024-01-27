@@ -1,4 +1,3 @@
-
 def triangle_area(a, b, c):
     """
     get the area of a triangle by the length of its edge.

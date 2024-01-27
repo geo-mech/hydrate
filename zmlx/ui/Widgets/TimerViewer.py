@@ -1,5 +1,8 @@
-from zml import *
+import timeit
+
 from zmlx.alg.clamp import clamp
+from zmlx.alg.time2str import time2str
+from zmlx.filesys.make_parent import make_parent
 from zmlx.ui.Qt import QtWidgets, QtCore
 from zmlx.utility.Timer import timer
 

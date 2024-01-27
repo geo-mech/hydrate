@@ -1,4 +1,6 @@
-from zml import *
+import numpy as np
+
+from zml import Vector
 
 
 def join_cols(*args):

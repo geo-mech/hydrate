@@ -1,8 +1,11 @@
 """
 用以实现Seepage和numpy之间的数据交换
 """
-from zml import *
+from ctypes import c_double, POINTER
+
 import numpy as np
+
+from zml import Seepage, is_array
 
 
 class SeepageNumpy:

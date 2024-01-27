@@ -1,4 +1,6 @@
-from zml import *
+import numpy as np
+
+from zml import Vector, SpringSys, Seepage, ElementMap
 
 
 class Len0Updater:

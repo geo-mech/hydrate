@@ -3,9 +3,9 @@ import sys
 import time
 import timeit
 
-from zmlx.ui.GuiBuffer import gui
 from zmlx.alg.clamp import clamp
 from zmlx.alg.fsize2str import fsize2str
+from zmlx.ui.GuiBuffer import gui
 from zmlx.ui.Qt import QtWidgets, QtCore
 
 

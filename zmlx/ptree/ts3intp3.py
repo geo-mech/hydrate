@@ -1,7 +1,8 @@
 from scipy.interpolate import NearestNDInterpolator
+
+from zml import Tensor2, Tensor3
 from zmlx.ptree.array import array
 from zmlx.utility.Field import Field
-from zml import Tensor2, Tensor3
 
 
 class Ts3Interp3:

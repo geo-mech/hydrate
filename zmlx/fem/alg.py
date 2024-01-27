@@ -1,7 +1,10 @@
-from zml import *
-from zmlx.fem.create3 import create3
-import numpy as np
 import warnings
+
+import numpy as np
+
+from zml import DynSys, Mesh3, ConjugateGradientSolver
+from zmlx.fem.create3 import create3
+from zmlx.geometry.point_distance import point_distance as get_distance
 
 
 def set_mas(dyn: DynSys, ids, mas):
@@ -168,6 +171,7 @@ def compute_disp(mesh: Mesh3, na_dx=None, na_dy=None, na_dz=None, ba_dd=None, ba
         否则：
             四周固定；z的底部，限制z的位移.
     """
+
     def set_bound(_dyn):
         """
         设置边界条件
@@ -349,4 +353,3 @@ def _test2():
 
 if __name__ == '__main__':
     _test2()
-

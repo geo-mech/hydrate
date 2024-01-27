@@ -1,5 +1,6 @@
-from zml import create_dict
 import warnings
+
+from zml import create_dict
 
 try:
     import matplotlib.pyplot as plt

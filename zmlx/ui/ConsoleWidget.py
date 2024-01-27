@@ -1,6 +1,5 @@
 import timeit
 
-from zmlx.ui.GuiBuffer import gui
 from zmlx.alg.time2str import time2str
 from zmlx.filesys.samefile import samefile
 from zmlx.ui.BreakPoint import BreakPoint
@@ -8,6 +7,7 @@ from zmlx.ui.CodeEdit import CodeEdit
 from zmlx.ui.Config import *
 from zmlx.ui.ConsoleOutput import ConsoleOutput
 from zmlx.ui.ConsoleThread import ConsoleThread
+from zmlx.ui.GuiBuffer import gui
 from zmlx.ui.SharedValue import SharedValue
 from zmlx.ui.alg.add_code_history import add_code_history
 
@@ -132,7 +132,7 @@ class ConsoleWidget(QtWidgets.QWidget):
         if os.path.isfile(fname):
             add_code_history(fname)
             try:
-                rel = os.path.relpath(fname)    # 当工作路径和fname不再同一个磁盘的时候，会触发异常
+                rel = os.path.relpath(fname)  # 当工作路径和fname不再同一个磁盘的时候，会触发异常
                 self.text_when_beg = f"Start: {fname if len(fname) < len(rel) * 2 else rel}"
             except:
                 self.text_when_beg = f"Start: {fname}"

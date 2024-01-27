@@ -1,6 +1,8 @@
 # ** desc = '二维有限元模型(两个三角形有两个顶点固定，另外两个顶点振动过程)'
 
-from zmlx import *
+from zml import Mesh3, ConjugateGradientSolver
+from zmlx.ui import gui
+from zmlx.plt.tricontourf import tricontourf
 from zmlx.fem.create2 import create2
 
 

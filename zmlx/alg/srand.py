@@ -1,6 +1,6 @@
 import random
 
-from zml import *
+from zml import set_srand
 
 
 def srand(seed):
