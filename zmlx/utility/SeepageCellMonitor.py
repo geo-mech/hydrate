@@ -1,46 +1,35 @@
 import warnings
 
-from zml import is_array
+from zml import is_array, Seepage
 
 
-def get_mass_of_fluid(flu):
+def _get_mass(item):
     """
-    返回给定流体各个组分的质量<作为一个list>.
+    返回给定流体各个组分的质量<将所有的流体作为一个list>.
     """
-    if flu.component_number == 0:
-        return [flu.mass, ]
-    else:
+    if isinstance(item, Seepage.CellData):  # 返回单个cell
         result = []
-        for i in range(flu.component_number):
-            for m in get_mass_of_fluid(flu.get_component(i)):
-                result.append(m)
+        for flu in item.fluids:
+            result += _get_mass(flu)
         return result
-
-
-def get_mass_in_cell(cell):
-    """
-    返回一个Cell内各个流体的质量
-    """
-    result = []
-    for i in range(cell.fluid_number):
-        for m in get_mass_of_fluid(cell.get_fluid(i)):
-            result.append(m)
-    return result
-
-
-def get_mass_in_cells(cells):
-    """
-    返回多个Cell内所有的流体的质量和
-    """
-    if len(cells) == 0:
-        return 0
-    result = get_mass_in_cell(cells[0])
-    for i in range(1, len(cells)):
-        vm = get_mass_in_cell(cells[i])
-        assert len(vm) == len(result)
-        for j in range(len(vm)):
-            result[j] += vm[j]
-    return result
+    elif isinstance(item, Seepage.FluData):  # 返回单个流体的各个组分
+        if item.component_number == 0:
+            return [item.mass, ]
+        else:
+            result = []
+            for i in range(item.component_number):
+                result += _get_mass(item.get_component(i))
+            return result
+    else:  # 此时，获取多个cell内的流体之和
+        if len(item) == 0:
+            return 0
+        result = _get_mass(item[0])
+        for i in range(1, len(item)):
+            vm = _get_mass(item[i])
+            assert len(vm) == len(result)
+            for j in range(len(vm)):
+                result[j] += vm[j]
+        return result
 
 
 class SeepageCellMonitor:
@@ -59,10 +48,10 @@ class SeepageCellMonitor:
         else:
             self.cells = [cell]
         # 备份初始的质量
-        self.vm0 = get_mass_in_cells(self.cells)
+        self.vm0 = _get_mass(self.cells)
         # 初始化数组
         self.vt = [self.get_t()]
-        self.vm = [[0] for i in range(len(self.vm0))]
+        self.vm = [[0.0] for i in range(len(self.vm0))]
 
     def update(self, dt=1.0e-6):
         """
@@ -73,14 +62,35 @@ class SeepageCellMonitor:
             time = self.get_t()
             if time >= self.vt[-1] + dt:
                 self.vt.append(time)
-                vm = get_mass_in_cells(self.cells)
+                vm = _get_mass(self.cells)
                 assert len(vm) == len(self.vm0)
-                vm = [vm[i] - self.vm0[i] for i in range(len(vm))]
+                vm = [vm[i] - self.vm0[i] for i in range(len(vm))]  # 当前的质量和初始的差异
                 assert len(vm) == len(self.vm)
                 for i in range(len(self.vm)):
-                    self.vm[i].append(vm[i])
+                    self.vm[i].append(vm[i])  # 附加到list
         except Exception as err:
             warnings.warn(f'meet exception when update. err = {err}. function = {self.update}')
+
+    def get_current_rate(self):
+        """
+        返回当前时刻，各个组分的产出的速率(质量速率)
+        """
+        if len(self.vm) == 0:
+            return
+
+        count = len(self.vm[0])
+        if count < 2:
+            return
+
+        # 最后一步记录的产出量
+        dm = [max(self.vm[i][-1] - self.vm[i][-2], 0.0) for i in range(len(self.vm))]
+
+        # 时间步长
+        assert len(self.vt) == count
+        dt = max(self.vt[-1] - self.vt[-2], 1.0e-20)
+
+        # 返回质量rate
+        return [m / dt for m in dm]
 
     def get_prod(self, index=None, np=None):
         """

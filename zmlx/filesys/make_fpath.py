@@ -2,8 +2,6 @@ import os
 
 from zmlx.filesys.make_dirs import make_dirs
 
-__all__ = ['make_fpath']
-
 
 def make_fpath(folder, step=None, ext='.txt', name=None):
     """

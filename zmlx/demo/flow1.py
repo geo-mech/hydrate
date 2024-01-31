@@ -9,6 +9,7 @@ from zmlx.fluid import h2o
 from zmlx.plt.tricontourf import tricontourf
 from zmlx.ui.GuiBuffer import gui
 from zmlx.utility.GuiIterator import GuiIterator
+from zmlx.utility.SeepageNumpy import as_numpy
 
 
 def create():
@@ -40,12 +41,13 @@ def create():
 
 def show(model):
     if gui.exists():
-        tricontourf(model.numpy.cells.x, model.numpy.cells.y, model.numpy.cells.pre,
+        numpy = as_numpy(model)
+        tricontourf(numpy.cells.x, numpy.cells.y, numpy.cells.pre,
                     caption='pressure', title=f'time = {time2str(seepage.get_time(model))}')
 
 
 def solve(model):
-    solver = ConjugateGradientSolver(tolerance=1.0e-14)
+    solver = ConjugateGradientSolver(tolerance=1.0e-20)
     iterate = GuiIterator(seepage.iterate, lambda: show(model))
 
     while seepage.get_time(model) < 3600 * 24 * 30:

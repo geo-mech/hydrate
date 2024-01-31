@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-说明:     流动、传热、应力计算的核心模块；C++代码的Python接口(必须和zml.dll放在一起使用)。
+Description:    The core module of flow, heat transfer and stress calculation;
+                Python interface for C++ code (must be used with zml.dll).
 
-运行环境： Windows 7/10/11; Python 3.7及以上版本; 64位系统;
+Environment:    Windows 7/10/11; Python 3.7 or later; 64-bit system;
 
-依赖项:   无
+Dependency:     None
 
-网址:     https://gitee.com/geomech/hydrate
+Website:        https://gitee.com/geomech/hydrate
 
-作者：    张召彬 <zhangzhaobin@mail.iggcas.ac.cn>, 中国科学院地质与地球物理研究所
+Author:         ZHANG Zhaobin <zhangzhaobin@mail.iggcas.ac.cn>,
+                Institute of Geology and Geophysics, Chinese Academy of Sciences
 """
 
 import ctypes
@@ -20,24 +22,23 @@ import warnings
 import timeit
 import importlib
 
-warnings.simplefilter("default")  # 警告默认显示
+warnings.simplefilter("default")  # Default warning display
 
-from ctypes import cdll, c_void_p, c_char_p, c_int, c_int64, c_bool, c_double, c_size_t, c_uint, CFUNCTYPE, \
-    POINTER
+from ctypes import cdll, c_void_p, c_char_p, c_int, c_int64, c_bool, c_double, c_size_t, c_uint, CFUNCTYPE, POINTER
 from typing import Iterable
 
 try:
-    import numpy as np
+    import numpy as _np
 except Exception as _err:
-    # 当numpy没有安装的时候，部分功能将不可用
-    np = None
+    # Some features are not available when numpy is not installed
+    _np = None
     warnings.warn(f'cannot import numpy in zml. error = {_err}')
 
-# 指示当前是否为Windows系统(目前支持Windows和Linux两个系统)
+# Indicates whether the system is currently Windows (both Windows and Linux systems are currently supported)
 is_windows = os.name == 'nt'
 
-# zml模块的版本(用六位数字表示的日期)
-version = 240121
+# Version of the zml module (date represented by six digits)
+version = 240518
 
 
 class Object:
@@ -54,7 +55,7 @@ class Object:
 
 def create_dict(**kwargs):
     """
-    将给定的参数列表转化为一个字典
+    Converts the given parameter list into a dictionary
     """
     return kwargs
 
@@ -72,6 +73,9 @@ class _GuiAdaptor:
         from zmlx.ui.GuiBuffer import gui as _gui
         return _gui(*args, **kwargs)
 
+    def __bool__(self):
+        return self.exists()
+
 
 # will be removed after 2025-1-21. use zmlx.ui.GuiBuffer.gui instead
 gui = _GuiAdaptor()
@@ -79,14 +83,16 @@ gui = _GuiAdaptor()
 
 def _deprecation_func(pack_name, func, date=None):
     """
-    定义一个在zmlx中有定义，在zml中被弃用的函数.
+    Define a function that is defined in zmlx and deprecated in zml.
     """
+
     def a_function(*args, **kwargs):
         warnings.warn(f'zml.{func} will be removed after {date}, use {pack_name}.{func} instead. ',
                       DeprecationWarning)
         mod = importlib.import_module(pack_name)
         f = getattr(mod, func)
         return f(*args, **kwargs)
+
     return a_function
 
 
@@ -100,7 +106,7 @@ gui_exec = _deprecation_func('zmlx.ui.GuiBuffer', 'gui_exec', '2025-1-21')
 
 def is_array(o):
     """
-    检查一个对象是否定义了长度并可以利用[]来获取元素
+    Checks if an object has a defined length and can use [] to get elements
     """
     return hasattr(o, '__getitem__') and hasattr(o, '__len__')
 
@@ -115,7 +121,7 @@ def make_c_char_p(s):
 
 def sendmail(address, subject=None, text=None, name_from=None, name_to=None):
     """
-    发送一个邮件. 返回是否发送成功.
+    Send an email. Return whether the email was sent successfully.
     """
     try:
         import smtplib
@@ -177,19 +183,20 @@ def make_dirs(folder):
         pass
 
 
-# 函数的别名<为了兼容之前的代码>
+# Alias of the function < for compatibility with previous code >
 makedirs = make_dirs
 
 
 def make_parent(path):
     """
-    对于任意给定的文件路径，尝试为它创建一个上一级目录，从而尽可能确保在这个位置写入文件能够成功；
-    返回输入的文件路径
+    For any given file path, try to create an upper-level directory for it,
+    so as much as possible to ensure that writing files to this location will succeed;
+        Returns the entered file path
     """
     try:
-        dirname = os.path.dirname(path)
-        if not os.path.isdir(dirname):
-            make_dirs(dirname)
+        name = os.path.dirname(path)
+        if not os.path.isdir(name):
+            make_dirs(name)
         return path
     except:
         return path
@@ -197,7 +204,7 @@ def make_parent(path):
 
 def read_text(path, encoding=None, default=None):
     """
-    Read text from a file in text format
+    Read text from a file in .TXT format
     """
     try:
         if os.path.isfile(path):
@@ -224,18 +231,18 @@ def write_text(path, text, encoding=None):
 
 class _AppData(Object):
     """
-    数据和文件管理
+    Data and file management
     """
 
     def __init__(self):
-        # 缓存目录
+        # cache directory
         if is_windows:
             self.folder = os.path.join(os.getenv("APPDATA"), 'zml')
         else:
             self.folder = os.path.join('/var/tmp/zml')
 
         make_dirs(self.folder)
-        # 自定义的文件搜索路径
+        # Custom file search path
         self.paths = []
         try:
             for line in self.getenv(key='path', default='').splitlines():
@@ -245,12 +252,12 @@ class _AppData(Object):
         except:
             pass
 
-        # 内存变量
+        # memory variable
         self.space = {}
 
     def add_path(self, path):
         """
-        添加一个搜索路径<避免重复>
+        Add a search path < Avoid duplication >
         """
         if os.path.isdir(path):
             for existed in self.paths:
@@ -266,10 +273,10 @@ class _AppData(Object):
         return os.path.exists(path)
 
     def add_tag_today(self, tag):
-        folder = os.path.join(self.folder, 'tags')
-        make_dirs(folder)
-        path = os.path.join(folder, datetime.datetime.now().strftime(f"%Y-%m-%d.{tag}"))
         try:
+            folder = os.path.join(self.folder, 'tags')
+            make_dirs(folder)
+            path = os.path.join(folder, datetime.datetime.now().strftime(f"%Y-%m-%d.{tag}"))
             with open(path, 'w') as f:
                 f.write('\n')
         except:
@@ -279,12 +286,11 @@ class _AppData(Object):
         """
         Record program operation information
         """
-        folder = os.path.join(self.folder, 'logs')
-        make_dirs(folder)
         try:
+            folder = os.path.join(self.folder, 'logs')
+            make_dirs(folder)
             with open(os.path.join(folder, datetime.datetime.now().strftime("%Y-%m-%d.log")), 'a') as f:
-                f.write(f'-------{datetime.datetime.now()}----------\n')
-                f.write(f'{text}\n\n\n')
+                f.write(f'{datetime.datetime.now()}: \n{text}\n\n\n')
         except:
             pass
 
@@ -317,10 +323,10 @@ class _AppData(Object):
     @staticmethod
     def proj(*args):
         """
-        获得工程目录下的文件
+        Get the files in the project directory
         """
         if len(args) == 0:
-            # 此时，返回工程文件的根目录
+            # return to the root directory of the project file
             return os.path.join(os.getcwd(), '.zml')
         else:
             return make_parent(os.path.join(os.getcwd(), '.zml', *args))
@@ -342,15 +348,17 @@ class _AppData(Object):
 
     def get_paths(self, first=None):
         """
-        返回所有的搜索路径. 其中first为优先搜索的路径。在此之后是当前工作路径、缓存路径、自定义路径和Python的系统路径；
-        注意：这里返回的路径可能会有重复的
+        Returns all search paths. The first path is the preferred search path.
+        After that are the current working path, cache path, custom path, and Python system path;
+        Note:
+            The returned path may be duplicate
         """
         paths = [os.getcwd(), self.proj()] if first is None else [first, os.getcwd(), self.proj()]
         return paths + [self.folder, os.path.join(self.folder, 'temp')] + self.paths + sys.path
 
     def find(self, name, first=None):
         """
-        搜索指定的文件并返回路径。如果未找到，则返回None
+        Searches for the specified file and returns the path. If not found, None is returned
         """
         for folder in self.get_paths(first):
             try:
@@ -362,7 +370,7 @@ class _AppData(Object):
 
     def find_all(self, name, first=None):
         """
-        搜索文件并返回所有找到的<并且保证已经去除了重复元素>
+        Search the file and return all found < and ensure that duplicate elements have been removed >
         """
         results = []
         for folder in self.get_paths(first):
@@ -399,6 +407,19 @@ class _AppData(Object):
 app_data = _AppData()
 
 
+def log(text, tag=None):
+    """
+    Record a piece of information and, given the tag, make sure to record it only once a day.
+    When given a tag, make sure that tag is a valid variable name.
+    """
+    if tag is not None:
+        if app_data.has_tag_today(tag):
+            return
+        else:
+            app_data.add_tag_today(tag)
+    app_data.log(text)
+
+
 def load_cdll(name, first=None):
     """
     Load C-Style Dll by the given file name and the folder.
@@ -425,15 +446,15 @@ class _NullFunction:
         print(f'calling null function {self.name}(args={args}, kwargs={kwargs})')
 
 
-def get_func(dll, restype, name, *argtypes):
+def get_func(dll_obj, restype, name, *argtypes):
     """
-    配置一个dll的函数
+    Configure a dll function
     """
     assert isinstance(name, str)
-    fn = getattr(dll, name, None)
+    fn = getattr(dll_obj, name, None)
     if fn is None:
-        if dll is not None:
-            print(f'Warning: can not find function <{name}> in <{dll}>')
+        if dll_obj is not None:
+            print(f'Warning: can not find function <{name}> in <{dll_obj}>')
         return _NullFunction(name)
     if restype is not None:
         fn.restype = restype
@@ -444,14 +465,14 @@ def get_func(dll, restype, name, *argtypes):
 
 def get_file():
     """
-    返回当前文件路径
+    Returns the current file path
     """
     return os.path.realpath(__file__)
 
 
 def get_dir():
     """
-    返回当前文件所在的文件夹的路径
+    Returns the path to the folder where the current file is located
     """
     return os.path.dirname(os.path.realpath(__file__))
 
@@ -486,7 +507,7 @@ class DllCore:
 
     def has_dll(self):
         """
-        是否正确载入了dll
+        Whether the dll was loaded correctly
         """
         return self.dll is not None
 
@@ -596,7 +617,7 @@ class DllCore:
     @property
     def version(self):
         """
-        返回内核的版本 (编译的日期)
+        Return the version of the kernel (date of compilation)
         """
         if self.has_dll():
             return core.get_version()
@@ -606,7 +627,7 @@ class DllCore:
     @property
     def compiler(self):
         """
-        返回内核所采用的编译器及其版本
+        Returns the compiler used by the kernel and its version
         """
         if self.has_dll():
             return self.get_compiler().decode()
@@ -639,7 +660,7 @@ class DllCore:
 
     def use(self, restype, name, *argtypes):
         """
-        声明接下来将使用内核dll中的某一个函数
+        Declares that a function in the kernel dll will be used next
         """
         if self.has_dll():
             if self._dll_funcs.get(name) is not None:
@@ -651,7 +672,7 @@ class DllCore:
 
     def __getattr__(self, name):
         """
-        尝试返回给定name的dll函数
+        Attempts to return a dll function with a given name
         """
         return self._dll_funcs.get(name)
 
@@ -661,14 +682,16 @@ core = DllCore(dll=dll)
 
 class Timer:
     """
-    用以辅助统计函数的执行耗时。对于每一个函数，都应该有一个key，来表示这个函数在内存存储的名字.
-    -
-        张召彬  2023-7-7
+    Used to assist in the execution time of statistical functions.
+    For every function, there should be a key that represents the name of the function stored in memory.
+
+    2023-7-7
     """
 
     def __init__(self, co):
         """
-        用一个空表（字典）来进行初始化. 字典的key是待统计的函数的名字，值为运行的次数和总耗时.
+        Initialize with an empty table (dictionary). The key of the dictionary is the name of
+        the function to be counted, and the value is the number of runs and the total time.
         """
         assert isinstance(co, DllCore), f'the type of <co> should be {type(DllCore)}'
         co.use(c_char_p, 'timer_summary', c_void_p)
@@ -681,9 +704,10 @@ class Timer:
 
     def __call__(self, key, func, *args, **kwargs):
         """
-        调用一个函数，并且记录调用的cpu耗时，以及调用的次数. 返回函数的执行结果.
-            注意，这个函数将抛出func运行的异常.
-            func后面的参数将传递给func.
+        Call a function, and record the cpu time of the call, as well as the number of calls.
+        Returns the result of the function.
+        Note that this function will throw an exception for func to run.
+        The argument after func is passed to func.
         """
         self.beg(key)
         r = func(*args, **kwargs)
@@ -692,7 +716,7 @@ class Timer:
 
     def __str__(self):
         """
-        将数据转化为字符串输出.
+        Converts data to string output.
         """
         return self.summary()
 
@@ -713,19 +737,19 @@ class Timer:
 
     def log(self, name, seconds):
         """
-        记录一个过程的耗时
+        Keep track of how long a process takes
         """
         self.co.timer_log(make_c_char_p(name), seconds)
 
     def clear(self):
         """
-        重置
+        reset
         """
         self.co.timer_reset()
 
     def enabled(self, value=None):
         """
-        cpu计时器是否处于打开的状态
+        Whether the cpu timer is on
         """
         if value is not None:
             self.co.timer_enable(value)
@@ -733,13 +757,13 @@ class Timer:
 
     def beg(self, key):
         """
-        开始一段测试
+        Start a test
         """
         self.__key2t[key] = timeit.default_timer()
 
     def end(self, key):
         """
-        结束一段测试(并且记录)
+        End a test run (and record it)
         """
         t0 = self.__key2t.get(key, None)
         if t0 is not None:
@@ -782,12 +806,13 @@ if __name__ == '__main__':
 
 class _DataVersion:
     """
-    定义数据的版本. 数据的版本号为6位的int类型(yymmdd)，是数据的日期
+    Define the version of the data.
+    The version number of the data is a 6-digit int (yymmdd), which is the date of the data
     """
 
     def __init__(self, value=version):
         """
-        初始化，设置默认的数据版本
+        Initialize to set the default data version
         """
         assert isinstance(value, int)
         assert 100000 <= value <= 999999
@@ -796,7 +821,7 @@ class _DataVersion:
 
     def set(self, value=None, key=None):
         """
-        设置版本. 6位的int
+        Set version. 6-bit int
         """
         assert isinstance(value, int)
         assert 100000 <= value <= 999999
@@ -807,19 +832,19 @@ class _DataVersion:
 
     def __getattr__(self, key):
         """
-        返回数据的版本. 6位的int
+        Returns the version of the data. 6-bit int
         """
         return self.__versions.get(key, self.__default)
 
     def __getitem__(self, key):
         """
-        返回数据的版本. 6位的int
+        Returns the version of the data. 6-bit int
         """
         return self.__versions.get(key, self.__default)
 
     def __setitem__(self, key, value):
         """
-        设置数据的版本. 6位的int
+        Set the version of the data. 6-bit int
         """
         self.set(key=key, value=value)
 
@@ -937,7 +962,6 @@ is_time_string = _deprecation_func('zmlx.filesys.tag', 'is_time_string', '2025-1
 has_tag = _deprecation_func('zmlx.filesys.tag', 'has_tag', '2025-1-21')
 print_tag = _deprecation_func('zmlx.filesys.tag', 'print_tag', '2025-1-21')
 
-
 core.use(None, 'fetch_m', c_char_p)
 
 
@@ -1006,7 +1030,8 @@ class License:
 
     def create_permanent(self, serial):
         """
-        给定序列号(usb_serial)，返回一个针对这个serial的永久授权。仅供测试
+        Given a serial number (usb_serial), return a permanent authorization for the serial number.
+        For testing only
         """
         if self.core.has_dll():
             code = String()
@@ -1020,7 +1045,7 @@ class License:
 
     def load(self, code):
         """
-        将给定的licdata存储到默认位置
+        Stores the given licence data to the default location
         """
         if self.core.has_dll():
             temp = String()
@@ -1068,8 +1093,10 @@ lic = License(core=core)
 
 def reg(code=None):
     """
-    注册。当code为None的时候，返回本机序列号。当code长度小于80，则将code视为序列号，则创建licdata；否则，将code视为licdata，并
-    将它保存到本地。
+    reg.
+    When code is None, return the native serial number.
+    If the length of code is less than 80, code is regarded as the serial number and licence data is created.
+    Otherwise, code is treated as licence data, and save it locally.
     """
     if code is None:
         return lic.usb_serial
@@ -1083,13 +1110,12 @@ def reg(code=None):
 
 first_only = _deprecation_func('zmlx.filesys.first_only', 'first_only', '2025-1-21')
 
-
 core.use(c_double, 'test_loop', c_size_t, c_bool)
 
 
 def test_loop(count, parallel=True):
     """
-    测试内核中给定长度的循环，并返回耗时
+    Tests loops of a given length in the kernel and returns the time taken
     """
     return core.test_loop(count, parallel)
 
@@ -1153,24 +1179,27 @@ read_py = _deprecation_func('zmlx.io.python', 'read_py', '2025-1-21')
 
 def parse_fid3(fluid_id):
     """
-    自动将给定的流体ID识别为某种流体的某种组分的ID
+    Automatically identifies a given fluid ID as the ID of a certain component of a fluid
     """
     if fluid_id is None:
         return 99999999, 99999999, 99999999
     if is_array(fluid_id):
         count = len(fluid_id)
         assert 0 < count <= 3
-        i0 = fluid_id[0] if 0 < count else 99999999
-        i1 = fluid_id[1] if 1 < count else 99999999
-        i2 = fluid_id[2] if 2 < count else 99999999
-        return i0, i1, i2
+        if count == 1:  # 此时，它仍然可能是一个array
+            return parse_fid3(fluid_id[0])
+        else:
+            i0 = fluid_id[0] if 0 < count else 99999999
+            i1 = fluid_id[1] if 1 < count else 99999999
+            i2 = fluid_id[2] if 2 < count else 99999999
+            return i0, i1, i2
     else:
         return fluid_id, 99999999, 99999999
 
 
 def _check_ipath(path, obj=None):
     """
-    在读取文件的时候，对输入的文件名进行检查. 其中obj是读取文件的对象
+    When reading a file, the input file name is checked. Where obj is the object that reads the file
     """
     assert isinstance(path, str), f'The given path <{path}> is not string while load {type(obj)}'
     assert os.path.isfile(path), f'The given path <{path}> is not file while load {type(obj)}'
@@ -1178,9 +1207,10 @@ def _check_ipath(path, obj=None):
 
 def get_average_perm(p0, p1, get_perm, sample_dist=None, depth=0):
     """
-    返回两个点之间的平均的渗透率<或者平均的导热系数>
-    注意：
-        此函数仅仅用于计算渗透率的平均值<在求平均的时候，考虑到了串联效应>
+    Return the average permeability < or average thermal conductivity > between two points
+    NOTE:
+        This function is only used to calculate the average permeability
+            < series effect is taken into account when averaging >
     """
     pos = [(p0[i] + p1[i]) / 2 for i in range(len(p0))]
     dist = get_distance(p0, p1)
@@ -1200,6 +1230,27 @@ def get_average_perm(p0, p1, get_perm, sample_dist=None, depth=0):
 add_keys = _deprecation_func('zmlx.utility.AttrKeys', 'add_keys', '2025-1-21')
 AttrKeys = _deprecation_func('zmlx.utility.AttrKeys', 'AttrKeys', '2025-1-21')
 install = _deprecation_func('zmlx.alg.install', 'install', '2025-1-21')
+
+
+def get_index(index, count=None):
+    """
+    Returns the corrected sequence number. Make sure that 0 <= index < count is returned
+    """
+    if index is None:
+        return
+    if count is None:  # 此时，无法判断index是否越界
+        if index >= 0:
+            return index
+    else:
+        assert count >= 0
+        if index >= 0:
+            if index < count:
+                return index  # 0 <= index < count
+        else:
+            assert index < 0
+            index += count  # index < count
+            if index >= 0:
+                return index  # 0 <= index < count
 
 
 def __feedback():
@@ -1237,7 +1288,7 @@ except:
     pass
 
 try:
-    app_data.log(f'import zml <zml: {get_time_compile()}, Python: {sys.version}>')
+    app_data.log(f'import zml <zml: v{version}, Python: {sys.version}>')
 except:
     pass
 
@@ -1271,13 +1322,13 @@ class Iterator:
 
 class FieldAdaptor:
     def __getattr__(self, item):
-        warnings.warn('zml.Field will be remove adter 2025-1-21. use zmlx.utility.Field.Field instead',
+        warnings.warn('zml.Field will be remove after 2025-1-21. use zmlx.utility.Field.Field instead',
                       DeprecationWarning)
         from zmlx.utility.Field import Field
         return getattr(Field, item)
 
     def __call__(self, *args, **kwargs):
-        warnings.warn('zml.Field will be remove adter 2025-1-21. use zmlx.utility.Field.Field instead',
+        warnings.warn('zml.Field will be remove after 2025-1-21. use zmlx.utility.Field.Field instead',
                       DeprecationWarning)
         from zmlx.utility.Field import Field
         return Field(*args, **kwargs)
@@ -1293,17 +1344,23 @@ class Vector(HasHandle):
     core.use(c_void_p, 'new_vf')
     core.use(None, 'del_vf', c_void_p)
 
-    def __init__(self, value=None, path=None, handle=None):
+    def __init__(self, value=None, path=None, size=None, handle=None):
         """
         Create this Vector object, and possibly initialize it
         """
         super(Vector, self).__init__(handle, core.new_vf, core.del_vf)
         if handle is None:
-            self.set(value)
+            if value is not None:
+                self.set(value)
+                return
             if path is not None:
                 self.load(path)
+                return
+            if size is not None:
+                self.size = size
+                return
         else:
-            assert value is None and path is None
+            assert value is None and path is None and size is None
 
     def __str__(self):
         return f'zml.Vector({self.to_list()})'
@@ -1312,10 +1369,16 @@ class Vector(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            .TXT format
+            (cross-platform, basically unreadable)
+        2:.xml
+            .XML format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.vf_save(self.handle, make_c_char_p(path))
@@ -1324,7 +1387,8 @@ class Vector(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -1348,14 +1412,16 @@ class Vector(HasHandle):
     core.use(c_double, 'vf_get', c_void_p, c_size_t)
 
     def __getitem__(self, idx):
-        if idx < self.size:
+        idx = get_index(idx, self.size)
+        if idx is not None:
             return core.vf_get(self.handle, idx)
 
     core.use(None, 'vf_set', c_void_p, c_size_t, c_double)
 
     def __setitem__(self, idx, value):
-        assert idx < self.size
-        core.vf_set(self.handle, idx, value)
+        idx = get_index(idx, self.size)
+        if idx is not None:
+            core.vf_set(self.handle, idx, value)
 
     def append(self, value):
         """
@@ -1377,6 +1443,15 @@ class Vector(HasHandle):
                 assert p is not None
                 for i in range(len(value)):
                     p[i] = value[i]
+
+    def fill(self, value=0.0):
+        """
+        填充一个数值. 默认为0
+        """
+        p = self.pointer
+        assert p is not None
+        for i in range(self.size):
+            p[i] = value
 
     def to_list(self):
         """
@@ -1410,9 +1485,9 @@ class Vector(HasHandle):
         """
         读取给定的numpy数组的数据
         """
-        if np is not None:
+        if _np is not None:
             if not data.flags['C_CONTIGUOUS']:
-                data = np.ascontiguous(data, dtype=data.dtype)  # 如果不是C连续的内存，必须强制转换
+                data = _np.ascontiguous(data, dtype=data.dtype)  # 如果不是C连续的内存，必须强制转换
             self.size = len(data)
             self.read_memory(data.ctypes.data_as(POINTER(c_double)))
 
@@ -1420,9 +1495,9 @@ class Vector(HasHandle):
         """
         将数据写入到numpy数组，必须保证给定的numpy数组的长度和self一致
         """
-        if np is not None:
+        if _np is not None:
             if not data.flags['C_CONTIGUOUS']:
-                data = np.ascontiguous(data, dtype=data.dtype)  # 如果不是C连续的内存，必须强制转换
+                data = _np.ascontiguous(data, dtype=data.dtype)  # 如果不是C连续的内存，必须强制转换
             self.write_memory(data.ctypes.data_as(POINTER(c_double)))
             return data
 
@@ -1430,8 +1505,8 @@ class Vector(HasHandle):
         """
         将这个Vector转化为一个numpy的数组
         """
-        if np is not None:
-            a = np.zeros(shape=self.size, dtype=float)
+        if _np is not None:
+            a = _np.zeros(shape=self.size, dtype=float)
             return self.write_numpy(a)
 
     core.use(c_void_p, 'vf_pointer', c_void_p)
@@ -1463,10 +1538,16 @@ class IntVector(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            .TXT format
+            (cross-platform, basically unreadable)
+        2:.xml
+            .XML format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.vi_save(self.handle, make_c_char_p(path))
@@ -1475,7 +1556,8 @@ class IntVector(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -1499,14 +1581,16 @@ class IntVector(HasHandle):
     core.use(c_int64, 'vi_get', c_void_p, c_size_t)
 
     def __getitem__(self, idx):
-        assert idx < self.size
-        return core.vi_get(self.handle, idx)
+        idx = get_index(idx, self.size)
+        if idx is not None:
+            return core.vi_get(self.handle, idx)
 
     core.use(None, 'vi_set', c_void_p, c_size_t, c_int64)
 
     def __setitem__(self, idx, value):
-        assert idx < self.size
-        core.vi_set(self.handle, idx, value)
+        idx = get_index(idx, self.size)
+        if idx is not None:
+            core.vi_set(self.handle, idx, value)
 
     def append(self, value):
         """
@@ -1559,10 +1643,16 @@ class UintVector(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            .TXT format
+            (cross-platform, basically unreadable)
+        2:.xml
+            .XML format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.vui_save(self.handle, make_c_char_p(path))
@@ -1571,7 +1661,8 @@ class UintVector(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -1601,14 +1692,16 @@ class UintVector(HasHandle):
     core.use(c_size_t, 'vui_get', c_void_p, c_size_t)
 
     def __getitem__(self, idx):
-        assert idx < self.size
-        return core.vui_get(self.handle, idx)
+        idx = get_index(idx, self.size)
+        if idx is not None:
+            return core.vui_get(self.handle, idx)
 
     core.use(None, 'vui_set', c_void_p, c_size_t, c_size_t)
 
     def __setitem__(self, idx, value):
-        assert idx < self.size
-        core.vui_set(self.handle, idx, value)
+        idx = get_index(idx, self.size)
+        if idx is not None:
+            core.vui_set(self.handle, idx, value)
 
     def append(self, value):
         """
@@ -1666,17 +1759,19 @@ class StrVector(HasHandle):
     core.use(None, 'vs_get', c_void_p, c_size_t, c_void_p)
 
     def __getitem__(self, idx):
-        assert idx < self.size
-        s = String()
-        core.vs_get(self.handle, idx, s.handle)
-        return s.to_str()
+        idx = get_index(idx, self.size)
+        if idx is not None:
+            s = String()
+            core.vs_get(self.handle, idx, s.handle)
+            return s.to_str()
 
     core.use(None, 'vs_set', c_void_p, c_size_t, c_void_p)
 
     def __setitem__(self, idx, value):
-        assert idx < self.size
-        s = String(value=value)
-        core.vs_set(self.handle, idx, s.handle)
+        idx = get_index(idx, self.size)
+        if idx is not None:
+            s = String(value=value)
+            core.vs_set(self.handle, idx, s.handle)
 
     def set(self, value):
         self.size = len(value)
@@ -1738,8 +1833,9 @@ class PtrVector(HasHandle):
         """
         返回地址
         """
-        assert idx < self.size
-        return core.vp_get(self.handle, idx)
+        idx = get_index(idx, self.size)
+        if idx is not None:
+            return core.vp_get(self.handle, idx)
 
     core.use(None, 'vp_set', c_void_p, c_size_t, c_void_p)
 
@@ -1747,8 +1843,9 @@ class PtrVector(HasHandle):
         """
         设置地址
         """
-        assert idx < self.size
-        core.vp_set(self.handle, idx, value)
+        idx = get_index(idx, self.size)
+        if idx is not None:
+            core.vp_set(self.handle, idx, value)
 
     def set(self, value):
         """
@@ -1861,10 +1958,16 @@ class Matrix2(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            .TXT format
+            (cross-platform, basically unreadable)
+        2:.xml
+            .XML format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.mat2_save(self.handle, make_c_char_p(path))
@@ -1873,7 +1976,8 @@ class Matrix2(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -1933,16 +2037,22 @@ class Matrix2(HasHandle):
     core.use(c_double, 'mat2_get', c_void_p, c_size_t, c_size_t)
 
     def get(self, key0, key1):
-        assert key0 < self.size_0
-        assert key1 < self.size_1
-        return core.mat2_get(self.handle, key0, key1)
+        key0 = get_index(key0, self.size_0)
+        key1 = get_index(key1, self.size_1)
+        if key0 is not None and key1 is not None:
+            assert key0 < self.size_0
+            assert key1 < self.size_1
+            return core.mat2_get(self.handle, key0, key1)
 
     core.use(None, 'mat2_set', c_void_p, c_size_t, c_size_t, c_double)
 
     def set(self, key0, key1, value):
-        assert key0 < self.size_0
-        assert key1 < self.size_1
-        core.mat2_set(self.handle, key0, key1, value)
+        key0 = get_index(key0, self.size_0)
+        key1 = get_index(key1, self.size_1)
+        if key0 is not None and key1 is not None:
+            assert key0 < self.size_0
+            assert key1 < self.size_1
+            core.mat2_set(self.handle, key0, key1, value)
 
     def __getitem__(self, key):
         assert len(key) == 2
@@ -2001,10 +2111,16 @@ class Matrix3(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            .TXT format
+            (cross-platform, basically unreadable)
+        2:.xml
+            .XML format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.mat3_save(self.handle, make_c_char_p(path))
@@ -2013,7 +2129,8 @@ class Matrix3(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -2099,10 +2216,11 @@ class Matrix3(HasHandle):
         """
         读取元素
         """
-        assert key0 < self.size_0
-        assert key1 < self.size_1
-        assert key2 < self.size_2
-        return core.mat3_get(self.handle, key0, key1, key2)
+        key0 = get_index(key0, self.size_0)
+        key1 = get_index(key1, self.size_1)
+        key2 = get_index(key2, self.size_2)
+        if key0 is not None and key1 is not None and key2 is not None:
+            return core.mat3_get(self.handle, key0, key1, key2)
 
     core.use(None, 'mat3_set', c_void_p, c_size_t, c_size_t, c_size_t, c_double)
 
@@ -2110,10 +2228,11 @@ class Matrix3(HasHandle):
         """
         设置元素
         """
-        assert key0 < self.size_0
-        assert key1 < self.size_1
-        assert key2 < self.size_2
-        core.mat3_set(self.handle, key0, key1, key2, value)
+        key0 = get_index(key0, self.size_0)
+        key1 = get_index(key1, self.size_1)
+        key2 = get_index(key2, self.size_2)
+        if key0 is not None and key1 is not None and key2 is not None:
+            core.mat3_set(self.handle, key0, key1, key2, value)
 
     def __getitem__(self, key):
         """
@@ -2164,10 +2283,16 @@ class Tensor3Matrix3(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            .TXT format
+            (cross-platform, basically unreadable)
+        2:.xml
+            .XML format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.ts3mat3_save(self.handle, make_c_char_p(path))
@@ -2176,7 +2301,8 @@ class Tensor3Matrix3(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -2244,10 +2370,11 @@ class Tensor3Matrix3(HasHandle):
         """
         返回某个元素的引用.
         """
-        assert key0 < self.size_0
-        assert key1 < self.size_1
-        assert key2 < self.size_2
-        return Tensor3(handle=core.ts3mat3_get(self.handle, key0, key1, key2))
+        key0 = get_index(key0, self.size_0)
+        key1 = get_index(key1, self.size_1)
+        key2 = get_index(key2, self.size_2)
+        if key0 is not None and key1 is not None and key2 is not None:
+            return Tensor3(handle=core.ts3mat3_get(self.handle, key0, key1, key2))
 
     def __getitem__(self, key):
         """
@@ -2295,10 +2422,16 @@ class Interp1(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            .TXT format
+            (cross-platform, basically unreadable)
+        2:.xml
+            .XML format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.interp1_save(self.handle, make_c_char_p(path))
@@ -2307,7 +2440,8 @@ class Interp1(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -2387,12 +2521,14 @@ class Interp1(HasHandle):
     core.use(None, 'interp1_get_vx', c_void_p, c_void_p)
     core.use(None, 'interp1_get_vy', c_void_p, c_void_p)
 
-    def get_data(self):
+    def get_data(self, x=None, y=None):
         """
         返回内核数据的拷贝
         """
-        x = Vector()
-        y = Vector()
+        if not isinstance(x, Vector):
+            x = Vector()
+        if not isinstance(y, Vector):
+            y = Vector()
         core.interp1_get_vx(self.handle, x.handle)
         core.interp1_get_vy(self.handle, y.handle)
         return x, y
@@ -2449,10 +2585,16 @@ class Interp2(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            .TXT format
+            (cross-platform, basically unreadable)
+        2:.xml
+            .XML format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.interp2_save(self.handle, make_c_char_p(path))
@@ -2461,7 +2603,8 @@ class Interp2(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -2533,14 +2676,23 @@ class Interp2(HasHandle):
     core.use(c_double, 'interp2_get', c_void_p, c_double, c_double, c_bool)
 
     def get(self, x, y, no_external=True):
+        """
+        返回给定坐标x, y下的数值
+        """
         return core.interp2_get(self.handle, x, y, no_external)
 
     def __call__(self, *args, **kwargs):
+        """
+        返回给定坐标x, y下的数值
+        """
         return self.get(*args, **kwargs)
 
     core.use(c_bool, 'interp2_is_inner', c_void_p, c_double, c_double)
 
     def is_inner(self, x, y):
+        """
+        判断给定的坐标是否为内部的点(不需要外插)
+        """
         return core.interp2_is_inner(self.handle, x, y)
 
     core.use(c_double, 'interp2_get_xmin', c_void_p)
@@ -2575,10 +2727,16 @@ class Interp3(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            .TXT format
+            (cross-platform, basically unreadable)
+        2:.xml
+            .XML format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.interp3_save(self.handle, make_c_char_p(path))
@@ -2587,7 +2745,8 @@ class Interp3(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -2793,24 +2952,25 @@ class FileMap(HasHandle):
             _check_ipath(path, self)
             core.fmap_load(self.handle, make_c_char_p(path))
 
-    core.use(c_void_p, 'fmap_get_data', c_void_p)
+    core.use(c_char_p, 'fmap_get_char_p', c_void_p)
 
     @property
     def data(self):
-        return String(handle=core.fmap_get_data(self.handle)).to_str()
+        return core.fmap_get_char_p(self.handle).decode()
+
+    core.use(None, 'fmap_set_char_p', c_void_p, c_char_p)
 
     @data.setter
     def data(self, value):
-        buffer = String(handle=core.fmap_get_data(self.handle))
-        if isinstance(value, String):
-            buffer.clone(value)
-            return
-        if isinstance(value, str):
-            buffer.assign(value)
-            return
-        else:
-            buffer.assign(f'{value}')
-            return
+        if not isinstance(value, str):
+            value = f'{value}'
+        core.fmap_set_char_p(self.handle, make_c_char_p(value))
+
+    core.use(c_void_p, 'fmap_get_data', c_void_p)
+
+    @property
+    def buffer(self):
+        return String(handle=core.fmap_get_data(self.handle))
 
     core.use(None, 'fmap_clone', c_void_p, c_void_p)
 
@@ -2842,10 +3002,16 @@ class Array2(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            .TXT format
+            (cross-platform, basically unreadable)
+        2:.xml
+            .XML format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.array2_save(self.handle, make_c_char_p(path))
@@ -2854,7 +3020,8 @@ class Array2(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -2895,14 +3062,16 @@ class Array2(HasHandle):
     core.use(c_double, 'array2_get', c_void_p, c_size_t)
 
     def get(self, dim):
-        assert dim == 0 or dim == 1
-        return core.array2_get(self.handle, dim)
+        dim = get_index(dim, 2)
+        if dim is not None:
+            return core.array2_get(self.handle, dim)
 
     core.use(None, 'array2_set', c_void_p, c_size_t, c_double)
 
     def set(self, dim, value):
-        assert dim == 0 or dim == 1
-        core.array2_set(self.handle, dim, value)
+        dim = get_index(dim, 2)
+        if dim is not None:
+            core.array2_set(self.handle, dim, value)
 
     def __getitem__(self, key):
         return self.get(key)
@@ -2956,10 +3125,16 @@ class Array3(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            .TXT format
+            (cross-platform, basically unreadable)
+        2:.xml
+            .XML format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.array3_save(self.handle, make_c_char_p(path))
@@ -2968,7 +3143,8 @@ class Array3(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -3009,14 +3185,16 @@ class Array3(HasHandle):
     core.use(c_double, 'array3_get', c_void_p, c_size_t)
 
     def get(self, dim):
-        assert 0 <= dim < 3, f'dim = {dim}'
-        return core.array3_get(self.handle, dim)
+        dim = get_index(dim, 3)
+        if dim is not None:
+            return core.array3_get(self.handle, dim)
 
     core.use(None, 'array3_set', c_void_p, c_size_t, c_double)
 
     def set(self, dim, value):
-        assert 0 <= dim < 3, f'dim = {dim}'
-        core.array3_set(self.handle, dim, value)
+        dim = get_index(dim, 3)
+        if dim is not None:
+            core.array3_set(self.handle, dim, value)
 
     def __getitem__(self, key):
         return self.get(key)
@@ -3071,10 +3249,16 @@ class Tensor2(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            .TXT format
+            (cross-platform, basically unreadable)
+        2:.xml
+            .XML format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.tensor2_save(self.handle, make_c_char_p(path))
@@ -3083,7 +3267,8 @@ class Tensor2(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -3122,21 +3307,19 @@ class Tensor2(HasHandle):
 
     def __getitem__(self, key):
         assert len(key) == 2
-        i = key[0]
-        j = key[1]
-        assert i == 0 or i == 1
-        assert j == 0 or j == 1
-        return core.tensor2_get(self.handle, i, j)
+        i = get_index(key[0], 2)
+        j = get_index(key[1], 2)
+        if i is not None and j is not None:
+            return core.tensor2_get(self.handle, i, j)
 
     core.use(None, 'tensor2_set', c_void_p, c_size_t, c_size_t, c_double)
 
     def __setitem__(self, key, value):
         assert len(key) == 2
-        i = key[0]
-        j = key[1]
-        assert i == 0 or i == 1
-        assert j == 0 or j == 1
-        core.tensor2_set(self.handle, i, j, value)
+        i = get_index(key[0], 2)
+        j = get_index(key[1], 2)
+        if i is not None and j is not None:
+            core.tensor2_set(self.handle, i, j, value)
 
     core.use(None, 'tensor2_set_max_min_angle', c_void_p, c_double, c_double, c_double)
 
@@ -3224,6 +3407,24 @@ class Tensor2(HasHandle):
         core.tensor2_rotate(self.handle, buffer.handle, angle)
         return buffer
 
+    core.use(c_double, 'tensor2_get_max_principle_value', c_void_p)
+
+    @property
+    def max_principle_value(self):
+        return core.tensor2_get_max_principle_value(self.handle)
+
+    core.use(c_double, 'tensor2_get_min_principle_value', c_void_p)
+
+    @property
+    def min_principle_value(self):
+        return core.tensor2_get_min_principle_value(self.handle)
+
+    core.use(c_double, 'tensor2_get_principle_angle', c_void_p)
+
+    @property
+    def principle_angle(self):
+        return core.tensor2_get_principle_angle(self.handle)
+
 
 class Tensor3(HasHandle):
     core.use(c_void_p, 'new_tensor3')
@@ -3253,10 +3454,16 @@ class Tensor3(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            .TXT format
+            (cross-platform, basically unreadable)
+        2:.xml
+            .XML format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.tensor3_save(self.handle, make_c_char_p(path))
@@ -3265,7 +3472,8 @@ class Tensor3(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -3304,21 +3512,19 @@ class Tensor3(HasHandle):
 
     def __getitem__(self, key):
         assert len(key) == 2
-        i = key[0]
-        j = key[1]
-        assert 0 <= i < 3
-        assert 0 <= j < 3
-        return core.tensor3_get(self.handle, i, j)
+        i = get_index(key[0], 3)
+        j = get_index(key[1], 3)
+        if i is not None and j is not None:
+            return core.tensor3_get(self.handle, i, j)
 
     core.use(None, 'tensor3_set', c_void_p, c_size_t, c_size_t, c_double)
 
     def __setitem__(self, key, value):
         assert len(key) == 2
-        i = key[0]
-        j = key[1]
-        assert 0 <= i < 3
-        assert 0 <= j < 3
-        core.tensor3_set(self.handle, i, j, value)
+        i = get_index(key[0], 3)
+        j = get_index(key[1], 3)
+        if i is not None and j is not None:
+            core.tensor3_set(self.handle, i, j, value)
 
     @property
     def xx(self):
@@ -3368,6 +3574,42 @@ class Tensor3(HasHandle):
     def zx(self, value):
         self[(2, 0)] = value
 
+    def __add__(self, other):
+        return Tensor3(xx=self.xx + other.xx,
+                       yy=self.yy + other.yy,
+                       zz=self.zz + other.zz,
+                       xy=self.xy + other.xy,
+                       yz=self.yz + other.yz,
+                       zx=self.zx + other.zx,
+                       )
+
+    def __sub__(self, other):
+        return Tensor3(xx=self.xx - other.xx,
+                       yy=self.yy - other.yy,
+                       zz=self.zz - other.zz,
+                       xy=self.xy - other.xy,
+                       yz=self.yz - other.yz,
+                       zx=self.zx - other.zx,
+                       )
+
+    def __mul__(self, value):
+        return Tensor3(xx=self.xx * value,
+                       yy=self.yy * value,
+                       zz=self.zz * value,
+                       xy=self.xy * value,
+                       yz=self.yz * value,
+                       zx=self.zx * value,
+                       )
+
+    def __truediv__(self, value):
+        return Tensor3(xx=self.xx / value,
+                       yy=self.yy / value,
+                       zz=self.zz / value,
+                       xy=self.xy / value,
+                       yz=self.yz / value,
+                       zx=self.zx / value,
+                       )
+
     core.use(c_double, 'tensor3_get_along', c_void_p, c_double, c_double, c_double)
 
     def get_along(self, *args):
@@ -3405,10 +3647,16 @@ class Tensor2Interp2(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            .TXT format
+            (cross-platform, basically unreadable)
+        2:.xml
+            .XML format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.tensor2interp2_save(self.handle, make_c_char_p(path))
@@ -3417,7 +3665,8 @@ class Tensor2Interp2(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -3513,10 +3762,16 @@ class Tensor3Interp3(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            .TXT format
+            (cross-platform, basically unreadable)
+        2:.xml
+            .XML format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.tensor3interp3_save(self.handle, make_c_char_p(path))
@@ -3525,7 +3780,8 @@ class Tensor3Interp3(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -3637,10 +3893,16 @@ class Coord2(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            .TXT format
+            (cross-platform, basically unreadable)
+        2:.xml
+            .XML format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.coord2_save(self.handle, make_c_char_p(path))
@@ -3649,7 +3911,8 @@ class Coord2(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -3760,10 +4023,16 @@ class Coord3(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            .TXT format
+            (cross-platform, basically unreadable)
+        2:.xml
+            .XML format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.coord3_save(self.handle, make_c_char_p(path))
@@ -3772,7 +4041,8 @@ class Coord3(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -3883,6 +4153,31 @@ class Coord3(HasHandle):
             return buffer
 
 
+def _attr_in_range(value, *, left=None, right=None, min=None, max=None):
+    """
+    判断属性值是否在给定的范围内
+    """
+    if min is not None:
+        warnings.warn('The argument <min> of <_attr_in_range> will be removed after 2025-4-5, use <left> instead',
+                      DeprecationWarning)
+        assert left is None
+        left = min
+
+    if max is not None:
+        warnings.warn('The argument <max> of <_attr_in_range> will be removed after 2025-4-5, use <right> instead',
+                      DeprecationWarning)
+        assert right is None
+        right = max
+
+    if left is None:
+        left = -1.0e100
+
+    if right is None:
+        right = 1.0e100
+
+    return left <= value <= right
+
+
 class Mesh3(HasHandle):
     """
     三维网格类，有点(Node)、线(Link)、面(Face)、体(Body)所组成的网络.
@@ -3936,21 +4231,24 @@ class Mesh3(HasHandle):
         core.use(c_size_t, 'mesh3_get_node_link_id', c_void_p, c_size_t, c_size_t)
 
         def get_link(self, index):
-            if 0 <= index < self.link_number:
+            index = get_index(index, self.link_number)
+            if index is not None:
                 i = core.mesh3_get_node_link_id(self.model.handle, self.index, index)
                 return self.model.get_link(i)
 
         core.use(c_size_t, 'mesh3_get_node_face_id', c_void_p, c_size_t, c_size_t)
 
         def get_face(self, index):
-            if 0 <= index < self.face_number:
+            index = get_index(index, self.face_number)
+            if index is not None:
                 i = core.mesh3_get_node_face_id(self.model.handle, self.index, index)
                 return self.model.get_face(i)
 
         core.use(c_size_t, 'mesh3_get_node_body_id', c_void_p, c_size_t, c_size_t)
 
         def get_body(self, index):
-            if 0 <= index < self.body_number:
+            index = get_index(index, self.body_number)
+            if index is not None:
                 i = core.mesh3_get_node_body_id(self.model.handle, self.index, index)
                 return self.model.get_body(i)
 
@@ -3969,11 +4267,11 @@ class Mesh3(HasHandle):
         core.use(c_double, 'mesh3_get_node_attr', c_void_p, c_size_t, c_size_t)
         core.use(None, 'mesh3_set_node_attr', c_void_p, c_size_t, c_size_t, c_double)
 
-        def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
+        def get_attr(self, index, default_val=None, **valid_range):
             if index is None:
                 return default_val
             value = core.mesh3_get_node_attr(self.model.handle, self.index, index)
-            if min <= value <= max:
+            if _attr_in_range(value, **valid_range):
                 return value
             else:
                 return default_val
@@ -4014,21 +4312,24 @@ class Mesh3(HasHandle):
         core.use(c_size_t, 'mesh3_get_link_node_id', c_void_p, c_size_t, c_size_t)
 
         def get_node(self, index):
-            if 0 <= index < self.node_number:
+            index = get_index(index, self.node_number)
+            if index is not None:
                 i = core.mesh3_get_link_node_id(self.model.handle, self.index, index)
                 return self.model.get_node(i)
 
         core.use(c_size_t, 'mesh3_get_link_face_id', c_void_p, c_size_t, c_size_t)
 
         def get_face(self, index):
-            if 0 <= index < self.face_number:
+            index = get_index(index, self.face_number)
+            if index is not None:
                 i = core.mesh3_get_link_face_id(self.model.handle, self.index, index)
                 return self.model.get_face(i)
 
         core.use(c_size_t, 'mesh3_get_link_body_id', c_void_p, c_size_t, c_size_t)
 
         def get_body(self, index):
-            if 0 <= index < self.body_number:
+            index = get_index(index, self.body_number)
+            if index is not None:
                 i = core.mesh3_get_link_body_id(self.model.handle, self.index, index)
                 return self.model.get_body(i)
 
@@ -4061,11 +4362,11 @@ class Mesh3(HasHandle):
         core.use(c_double, 'mesh3_get_link_attr', c_void_p, c_size_t, c_size_t)
         core.use(None, 'mesh3_set_link_attr', c_void_p, c_size_t, c_size_t, c_double)
 
-        def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
+        def get_attr(self, index, default_val=None, **valid_range):
             if index is None:
                 return default_val
             value = core.mesh3_get_link_attr(self.model.handle, self.index, index)
-            if min <= value <= max:
+            if _attr_in_range(value, **valid_range):
                 return value
             else:
                 return default_val
@@ -4106,21 +4407,24 @@ class Mesh3(HasHandle):
         core.use(c_size_t, 'mesh3_get_face_node_id', c_void_p, c_size_t, c_size_t)
 
         def get_node(self, index):
-            if 0 <= index < self.node_number:
+            index = get_index(index, self.node_number)
+            if index is not None:
                 i = core.mesh3_get_face_node_id(self.model.handle, self.index, index)
                 return self.model.get_node(i)
 
         core.use(c_size_t, 'mesh3_get_face_link_id', c_void_p, c_size_t, c_size_t)
 
         def get_link(self, index):
-            if 0 <= index < self.link_number:
+            index = get_index(index, self.link_number)
+            if index is not None:
                 i = core.mesh3_get_face_link_id(self.model.handle, self.index, index)
                 return self.model.get_link(i)
 
         core.use(c_size_t, 'mesh3_get_face_body_id', c_void_p, c_size_t, c_size_t)
 
         def get_body(self, index):
-            if 0 <= index < self.body_number:
+            index = get_index(index, self.body_number)
+            if index is not None:
                 i = core.mesh3_get_face_body_id(self.model.handle, self.index, index)
                 return self.model.get_body(i)
 
@@ -4161,11 +4465,11 @@ class Mesh3(HasHandle):
         core.use(c_double, 'mesh3_get_face_attr', c_void_p, c_size_t, c_size_t)
         core.use(None, 'mesh3_set_face_attr', c_void_p, c_size_t, c_size_t, c_double)
 
-        def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
+        def get_attr(self, index, default_val=None, **valid_range):
             if index is None:
                 return default_val
             value = core.mesh3_get_face_attr(self.model.handle, self.index, index)
-            if min <= value <= max:
+            if _attr_in_range(value, **valid_range):
                 return value
             else:
                 return default_val
@@ -4206,21 +4510,24 @@ class Mesh3(HasHandle):
         core.use(c_size_t, 'mesh3_get_body_node_id', c_void_p, c_size_t, c_size_t)
 
         def get_node(self, index):
-            if 0 <= index < self.node_number:
+            index = get_index(index, self.node_number)
+            if index is not None:
                 i = core.mesh3_get_body_node_id(self.model.handle, self.index, index)
                 return self.model.get_node(i)
 
         core.use(c_size_t, 'mesh3_get_body_link_id', c_void_p, c_size_t, c_size_t)
 
         def get_link(self, index):
-            if 0 <= index < self.link_number:
+            index = get_index(index, self.link_number)
+            if index is not None:
                 i = core.mesh3_get_body_link_id(self.model.handle, self.index, index)
                 return self.model.get_link(i)
 
         core.use(c_size_t, 'mesh3_get_body_face_id', c_void_p, c_size_t, c_size_t)
 
         def get_face(self, index):
-            if 0 <= index < self.face_number:
+            index = get_index(index, self.face_number)
+            if index is not None:
                 i = core.mesh3_get_body_face_id(self.model.handle, self.index, index)
                 return self.model.get_face(i)
 
@@ -4261,11 +4568,11 @@ class Mesh3(HasHandle):
         core.use(c_double, 'mesh3_get_body_attr', c_void_p, c_size_t, c_size_t)
         core.use(None, 'mesh3_set_body_attr', c_void_p, c_size_t, c_size_t, c_double)
 
-        def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
+        def get_attr(self, index, default_val=None, **valid_range):
             if index is None:
                 return default_val
             value = core.mesh3_get_body_attr(self.model.handle, self.index, index)
-            if min <= value <= max:
+            if _attr_in_range(value, **valid_range):
                 return value
             else:
                 return default_val
@@ -4297,16 +4604,23 @@ class Mesh3(HasHandle):
                 self.load(path)
 
     def __str__(self):
-        return f'zml.Mesh3(handle = {self.handle}, node_n = {self.node_number}, link_n = {self.link_number}, face_n = {self.face_number}, body_n = {self.body_number})'
+        return (f'zml.Mesh3(handle = {self.handle}, node_n = {self.node_number}, link_n = {self.link_number}, '
+                f'face_n = {self.face_number}, body_n = {self.body_number})')
 
     core.use(None, 'mesh3_save', c_void_p, c_char_p)
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            .TXT format
+            (cross-platform, basically unreadable)
+        2:.xml
+            .XML format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.mesh3_save(self.handle, make_c_char_p(path))
@@ -4315,7 +4629,8 @@ class Mesh3(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -4346,19 +4661,23 @@ class Mesh3(HasHandle):
         return core.mesh3_get_body_number(self.handle)
 
     def get_node(self, index):
-        if 0 <= index < self.node_number:
+        index = get_index(index, self.node_number)
+        if index is not None:
             return Mesh3.Node(self, index)
 
     def get_link(self, index):
-        if 0 <= index < self.link_number:
+        index = get_index(index, self.link_number)
+        if index is not None:
             return Mesh3.Link(self, index)
 
     def get_face(self, index):
-        if 0 <= index < self.face_number:
+        index = get_index(index, self.face_number)
+        if index is not None:
             return Mesh3.Face(self, index)
 
     def get_body(self, index):
-        if 0 <= index < self.body_number:
+        index = get_index(index, self.body_number)
+        if index is not None:
             return Mesh3.Body(self, index)
 
     @property
@@ -4519,7 +4838,7 @@ class Mesh3(HasHandle):
 
         -测试----------------------
         使用如下脚本生成测试数据：
-from zml import *
+from zml import Mesh3
 mesh = Mesh3.create_tri(0, 0, 100, 50, 3.0)
 print(mesh)
 Mesh3.print_trimesh('mesh.ver', 'mesh.tri', mesh, 1)
@@ -4661,10 +4980,16 @@ class LinearExpr(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            .TXT format
+            (cross-platform, basically unreadable)
+        2:.xml
+            .XML format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.lexpr_save(self.handle, make_c_char_p(path))
@@ -4673,7 +4998,8 @@ class LinearExpr(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -4761,10 +5087,11 @@ class LinearExpr(HasHandle):
         """
         返回第i项的序号和系数
         """
-        assert i < self.length
-        index = core.lexpr_get_index(self.handle, i)
-        weight = core.lexpr_get_weight(self.handle, i)
-        return index, weight
+        i = get_index(i, self.length)
+        if i is not None:
+            index = core.lexpr_get_index(self.handle, i)
+            weight = core.lexpr_get_weight(self.handle, i)
+            return index, weight
 
     core.use(None, 'lexpr_add', c_void_p, c_size_t, c_double)
 
@@ -4871,10 +5198,16 @@ class DynSys(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            .TXT format
+            (cross-platform, basically unreadable)
+        2:.xml
+            .XML format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.dynsys_save(self.handle, make_c_char_p(path))
@@ -4883,7 +5216,8 @@ class DynSys(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -4952,7 +5286,9 @@ class DynSys(HasHandle):
         例如:
             对于一个三角形，有6个自由度，如果分别表示为 x1 y1 x2 y2 x3 y3, 那么 get_pos(0)返回x1, get_pos(1)为y1，以此类推.
         """
-        return core.dynsys_get_pos(self.handle, idx)
+        idx = get_index(idx, self.size)
+        if idx is not None:
+            return core.dynsys_get_pos(self.handle, idx)
 
     core.use(None, 'dynsys_set_pos', c_void_p, c_size_t, c_double)
 
@@ -4960,7 +5296,9 @@ class DynSys(HasHandle):
         """
         自由度的当前值.
         """
-        core.dynsys_set_pos(self.handle, idx, value)
+        idx = get_index(idx, self.size)
+        if idx is not None:
+            core.dynsys_set_pos(self.handle, idx, value)
 
     core.use(c_double, 'dynsys_get_vel', c_void_p, c_size_t)
 
@@ -4969,7 +5307,9 @@ class DynSys(HasHandle):
         自由度的速度.
             参考对 get_pos的注释. 返回对应自由度运动的速度.
         """
-        return core.dynsys_get_vel(self.handle, idx)
+        idx = get_index(idx, self.size)
+        if idx is not None:
+            return core.dynsys_get_vel(self.handle, idx)
 
     core.use(None, 'dynsys_set_vel', c_void_p, c_size_t, c_double)
 
@@ -4977,7 +5317,9 @@ class DynSys(HasHandle):
         """
         自由度的速度
         """
-        core.dynsys_set_vel(self.handle, idx, value)
+        idx = get_index(idx, self.size)
+        if idx is not None:
+            core.dynsys_set_vel(self.handle, idx, value)
 
     core.use(c_double, 'dynsys_get_mas', c_void_p, c_size_t)
 
@@ -4986,7 +5328,9 @@ class DynSys(HasHandle):
         自由度的质量.
             用以刻画该自由度的惯性.
         """
-        return core.dynsys_get_mas(self.handle, idx)
+        idx = get_index(idx, self.size)
+        if idx is not None:
+            return core.dynsys_get_mas(self.handle, idx)
 
     core.use(None, 'dynsys_set_mas', c_void_p, c_size_t, c_double)
 
@@ -4995,7 +5339,9 @@ class DynSys(HasHandle):
         自由度的质量.
             用以刻画该自由度的惯性.
         """
-        core.dynsys_set_mas(self.handle, idx, value)
+        idx = get_index(idx, self.size)
+        if idx is not None:
+            core.dynsys_set_mas(self.handle, idx, value)
 
     core.use(c_void_p, 'dynsys_get_p2f', c_void_p, c_size_t)
 
@@ -5004,9 +5350,21 @@ class DynSys(HasHandle):
         根据位置计算自由度的受力. 这个受力是一个线性表达式，即建立这个自由度的受力与自由度位置(以及其它多个自由度的位置)之间的线性关系.
             这里所谓的受力，即自由度的质量乘以自由度的加速度.
         """
-        handle = core.dynsys_get_p2f(self.handle, idx)
-        if handle > 0:
-            return LinearExpr(handle=handle)
+        idx = get_index(idx, self.size)
+        if idx is not None:
+            handle = core.dynsys_get_p2f(self.handle, idx)
+            if handle > 0:
+                return LinearExpr(handle=handle)
+
+    core.use(c_double, 'dynsys_get_lexpr_value', c_void_p, c_void_p)
+
+    def get_lexpr_value(self, lexpr):
+        """
+        返回一个关于此系数各个自由度的线性表达式的取值. 有些内容，比如单元的应力、应变等，都可以书写成为自由度的线性表达式。
+        有了这个表达式之后，后续就可以比较快速方便地计算出这些值.
+        """
+        assert isinstance(lexpr, LinearExpr)
+        return core.dynsys_get_lexpr_value(self.handle, lexpr.handle)
 
 
 class SpringSys(HasHandle):
@@ -5273,14 +5631,14 @@ class SpringSys(HasHandle):
 
         core.use(c_double, 'springsys_get_spring_attr', c_void_p, c_size_t, c_size_t)
 
-        def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
+        def get_attr(self, index, default_val=None, **valid_range):
             """
             该Spring的第index个自定义属性值。当不存在时，默认为一个无穷大的值(大于1.0e100)
             """
             if index is None:
                 return default_val
             value = core.springsys_get_spring_attr(self.model.handle, self.index, index)
-            if min <= value <= max:
+            if _attr_in_range(value, **valid_range):
                 return value
             else:
                 return default_val
@@ -5368,7 +5726,8 @@ class SpringSys(HasHandle):
                 self.load(path)
 
     def __str__(self):
-        return f'zml.SpringSys(handle = {self.handle}, node_n = {self.node_number}, virtual_node_n = {self.virtual_node_number}, spring_n = {self.spring_number})'
+        return (f'zml.SpringSys(handle = {self.handle}, node_n = {self.node_number}, '
+                f'virtual_node_n = {self.virtual_node_number}, spring_n = {self.spring_number})')
 
     @staticmethod
     def virtual_x(node):
@@ -5398,10 +5757,16 @@ class SpringSys(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            .TXT format
+            (cross-platform, basically unreadable)
+        2:.xml
+            .XML format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             assert isinstance(path, str)
@@ -5411,7 +5776,8 @@ class SpringSys(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -5482,28 +5848,32 @@ class SpringSys(HasHandle):
         """
         返回节点对象
         """
-        if 0 <= index < self.node_number:
+        index = get_index(index, self.node_number)
+        if index is not None:
             return SpringSys.Node(self, index)
 
     def get_virtual_node(self, index):
         """
         返回虚拟节点对象
         """
-        if 0 <= index < self.virtual_node_number:
+        index = get_index(index, self.virtual_node_number)
+        if index is not None:
             return SpringSys.VirtualNode(self, index)
 
     def get_spring(self, index):
         """
         返回弹簧对象
         """
-        if 0 <= index < self.spring_number:
+        index = get_index(index, self.spring_number)
+        if index is not None:
             return SpringSys.Spring(self, index)
 
     def get_damper(self, index):
         """
         返回阻尼器对象
         """
-        if 0 <= index < self.damper_number:
+        index = get_index(index, self.damper_number)
+        if index is not None:
             return SpringSys.Damper(self, index)
 
     @property
@@ -5615,7 +5985,7 @@ class SpringSys(HasHandle):
 
     def get_pos(self, x=None, y=None, z=None):
         """
-        获得所有node的x,y,z坐标
+        获得所有node的x, y, z坐标
         """
         if not isinstance(x, Vector):
             x = Vector()
@@ -5738,6 +6108,29 @@ class SpringSys(HasHandle):
         core.springsys_modify_pos(self.handle, idim, left, right)
 
 
+class FemAlg:
+    core.use(None, 'fem_alg_create2', c_void_p, c_void_p, c_void_p, c_size_t, c_size_t, c_size_t)
+
+    @staticmethod
+    def create2(mesh, fa_den, fa_h, face_stiffs):
+        assert isinstance(mesh, Mesh3)
+        assert isinstance(face_stiffs, Vector)
+        dyn = DynSys()
+        core.fem_alg_create2(dyn.handle, mesh.handle, ctypes.cast(face_stiffs.pointer, c_void_p), face_stiffs.size,
+                             fa_den, fa_h)
+        return dyn
+
+    core.use(None, 'fem_alg_add_strain2', c_void_p, c_void_p, c_void_p, c_size_t, c_size_t)
+
+    @staticmethod
+    def add_strain2(dyn, mesh, fa_strain, face_stiffs):
+        assert isinstance(dyn, DynSys)
+        assert isinstance(mesh, Mesh3)
+        assert isinstance(face_stiffs, Vector)
+        core.fem_alg_add_strain2(dyn.handle, mesh.handle, ctypes.cast(face_stiffs.pointer, c_void_p),
+                                 face_stiffs.size, fa_strain)
+
+
 class HasCells(Object):
     def get_pos_range(self, dim):
         from zmlx.alg import has_cells
@@ -5779,7 +6172,8 @@ class SeepageMesh(HasHandle, HasCells):
             self.index = index
 
         def __str__(self):
-            return f'zml.SeepageMesh.Cell(handle = {self.model.handle}, index = {self.index}, pos = {self.pos}, volume={self.vol})'
+            return (f'zml.SeepageMesh.Cell(handle = {self.model.handle}, index = {self.index}, '
+                    f'pos = {self.pos}, volume={self.vol})')
 
         core.use(c_double, 'seepage_mesh_get_cell_pos', c_void_p,
                  c_size_t,
@@ -5827,14 +6221,14 @@ class SeepageMesh(HasHandle, HasCells):
 
         core.use(c_double, 'seepage_mesh_get_cell_attr', c_void_p, c_size_t, c_size_t)
 
-        def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
+        def get_attr(self, index, default_val=None, **valid_range):
             """
             第index个自定义属性
             """
             if index is None:
                 return default_val
             value = core.seepage_mesh_get_cell_attr(self.model.handle, self.index, index)
-            if min <= value <= max:
+            if _attr_in_range(value, **valid_range):
                 return value
             else:
                 return default_val
@@ -5852,6 +6246,42 @@ class SeepageMesh(HasHandle, HasCells):
             core.seepage_mesh_set_cell_attr(self.model.handle, self.index, index, value)
             return self
 
+        core.use(c_size_t, 'seepage_mesh_cell_get_face_n', c_void_p, c_size_t)
+
+        @property
+        def face_number(self):
+            return core.seepage_mesh_cell_get_face_n(self.model.handle, self.index)
+
+        @property
+        def cell_number(self):
+            return self.face_number
+
+        core.use(c_size_t, 'seepage_mesh_cell_get_face_id', c_void_p, c_size_t, c_size_t)
+
+        def get_face(self, index):
+            index = get_index(index, self.face_number)
+            return self.model.get_face(core.seepage_mesh_cell_get_face_id(self.model.handle, self.index, index))
+
+        core.use(c_size_t, 'seepage_mesh_cell_get_cell_id', c_void_p, c_size_t, c_size_t)
+
+        def get_cell(self, index):
+            index = get_index(index, self.cell_number)
+            return self.model.get_cell(core.seepage_mesh_cell_get_cell_id(self.model.handle, self.index, index))
+
+        @property
+        def cells(self):
+            """
+            此Cell周围的所有Cell
+            """
+            return Iterator(self, self.cell_number, lambda m, ind: m.get_cell(ind))
+
+        @property
+        def faces(self):
+            """
+            此Cell周围的所有Face
+            """
+            return Iterator(self, self.face_number, lambda m, ind: m.get_face(ind))
+
     class Face(Object):
         """
         定义cell之间的流动通道
@@ -5865,7 +6295,8 @@ class SeepageMesh(HasHandle, HasCells):
             self.index = index
 
         def __str__(self):
-            return f'zml.SeepageMesh.Face(handle = {self.model.handle}, index = {self.index}, area = {self.area}, length = {self.length}) '
+            return (f'zml.SeepageMesh.Face(handle = {self.model.handle}, index = {self.index}, '
+                    f'area = {self.area}, length = {self.length}) ')
 
         core.use(None, 'seepage_mesh_set_face_area', c_void_p,
                  c_size_t,
@@ -5941,24 +6372,26 @@ class SeepageMesh(HasHandle, HasCells):
             """
             返回与face相连的第i个cell
             """
-            if i > 0:
-                return self.model.get_cell(self.cell_i1)
-            else:
-                return self.model.get_cell(self.cell_i0)
+            i = get_index(i, 2)
+            if i is not None:
+                if i > 0:
+                    return self.model.get_cell(self.cell_i1)
+                else:
+                    return self.model.get_cell(self.cell_i0)
 
         def cells(self):
             return self.get_cell(0), self.get_cell(1)
 
         core.use(c_double, 'seepage_mesh_get_face_attr', c_void_p, c_size_t, c_size_t)
 
-        def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
+        def get_attr(self, index, default_val=None, **valid_range):
             """
             第index个自定义属性
             """
             if index is None:
                 return default_val
             value = core.seepage_mesh_get_face_attr(self.model.handle, self.index, index)
-            if min <= value <= max:
+            if _attr_in_range(value, **valid_range):
                 return value
             else:
                 return default_val
@@ -5995,10 +6428,16 @@ class SeepageMesh(HasHandle, HasCells):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            .TXT format
+            (cross-platform, basically unreadable)
+        2:.xml
+            .XML format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.seepage_mesh_save(self.handle, make_c_char_p(path))
@@ -6007,7 +6446,8 @@ class SeepageMesh(HasHandle, HasCells):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -6034,7 +6474,8 @@ class SeepageMesh(HasHandle, HasCells):
         """
         返回第ind个cell
         """
-        if ind < self.cell_number:
+        ind = get_index(ind, self.cell_number)
+        if ind is not None:
             return SeepageMesh.Cell(self, ind)
 
     core.use(c_size_t, 'seepage_mesh_get_nearest_cell_id', c_void_p,
@@ -6064,10 +6505,9 @@ class SeepageMesh(HasHandle, HasCells):
         """
         if ind is not None:
             assert cell_0 is None and cell_1 is None
-            if ind < self.face_number:
+            ind = get_index(ind, self.face_number)
+            if ind is not None:
                 return SeepageMesh.Face(self, ind)
-            else:
-                return
         else:
             assert cell_0 is not None and cell_1 is not None
             assert isinstance(cell_0, SeepageMesh.Cell)
@@ -6361,9 +6801,11 @@ class ElementMap(HasHandle):
         core.use(c_double, 'element_map_related_weight', c_void_p, c_size_t, c_size_t)
 
         def get_iw(self, i):
-            ind = core.element_map_related_id(self.model.handle, self.index, i)
-            w = core.element_map_related_weight(self.model.handle, self.index, i)
-            return ind, w
+            i = get_index(i, self.size)
+            if i is not None:
+                ind = core.element_map_related_id(self.model.handle, self.index, i)
+                w = core.element_map_related_weight(self.model.handle, self.index, i)
+                return ind, w
 
     core.use(c_void_p, 'new_element_map')
     core.use(None, 'del_element_map', c_void_p)
@@ -6381,10 +6823,16 @@ class ElementMap(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            .TXT format
+            (cross-platform, basically unreadable)
+        2:.xml
+            .XML format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.element_map_save(self.handle, make_c_char_p(path))
@@ -6393,7 +6841,8 @@ class ElementMap(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -6451,6 +6900,55 @@ class ElementMap(HasHandle):
         return buffer
 
 
+class Groups(HasHandle):
+    core.use(c_void_p, 'new_groups')
+    core.use(None, 'del_groups', c_void_p)
+
+    def __init__(self, handle=None):
+        super(Groups, self).__init__(handle, core.new_groups, core.del_groups)
+
+    core.use(None, 'groups_save', c_void_p, c_char_p)
+
+    def save(self, path):
+        """
+        Serialized save. Optional extension:
+        1:.txt
+            .TXT format
+            (cross-platform, basically unreadable)
+        2:.xml
+            .XML format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+        """
+        if path is not None:
+            core.groups_save(self.handle, make_c_char_p(path))
+
+    core.use(None, 'groups_load', c_void_p, c_char_p)
+
+    def load(self, path):
+        """
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+        """
+        if path is not None:
+            _check_ipath(path, self)
+            core.groups_load(self.handle, make_c_char_p(path))
+
+    core.use(c_size_t, 'groups_size', c_void_p)
+
+    @property
+    def size(self):
+        return core.groups_size(self.handle)
+
+    core.use(c_void_p, 'groups_get', c_void_p, c_size_t)
+
+    def get(self, idx):
+        handle = core.groups_get(self.handle, idx)
+        return UintVector(handle=handle)
+
+
 class Seepage(HasHandle, HasCells):
     """
     多相多组分渗流模型。Seepage类是进行热流耦合模拟的基础。Seepage类主要涉及单元Cell，界面Face，流体Fluid，反应Reaction，流体定义FluDef
@@ -6482,10 +6980,16 @@ class Seepage(HasHandle, HasCells):
 
         def save(self, path):
             """
-            序列化保存. 可选扩展名:
-                1: .txt  文本格式 (跨平台，基本不可读)
-                2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-                3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+            Serialized save. Optional extension:
+            1:.txt
+                .TXT format
+                (cross-platform, basically unreadable)
+            2:.xml
+                .XML format
+                (specific readability, largest volume, slowest read and write, cross-platform)
+            3:. Other
+                binary formats
+                (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
             """
             if path is not None:
                 core.reaction_save(self.handle, make_c_char_p(path))
@@ -6494,7 +6998,8 @@ class Seepage(HasHandle, HasCells):
 
         def load(self, path):
             """
-            序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+            Read the serialization archive.
+            To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
             """
             if path is not None:
                 _check_ipath(path, self)
@@ -6638,14 +7143,21 @@ class Seepage(HasHandle, HasCells):
             """
             core.reaction_clear_inhibitors(self.handle)
 
-        core.use(None, 'reaction_react', c_void_p, c_void_p, c_double)
+        core.use(None, 'reaction_react', c_void_p, c_void_p, c_double, c_void_p)
 
-        def react(self, model, dt):
+        def react(self, model, dt, buf=None):
             """
             将该反应作用到Seepage的所有的Cell上dt时间。这个过程会修改model中各个Cell中相应组分的质量和温度，但是会保证总的质量不会发生改变。
+            其中:
+                buf为一个缓冲区(double*)，记录各个Cell上发生的反应的质量;
+                    务必确保此缓冲区的大小足够，否则会出现致命的错误!!!
+
+            返回
+                反应发生的总的质量.
             """
             self.adjust_weights()  # 确保权重正确，保证质量守恒
-            core.reaction_react(self.handle, model.handle, dt)
+            core.reaction_react(self.handle, model.handle, dt,
+                                0 if buf is None else ctypes.cast(buf, c_void_p))
 
         core.use(None, 'reaction_adjust_weights', c_void_p)
 
@@ -6762,10 +7274,16 @@ class Seepage(HasHandle, HasCells):
 
         def save(self, path):
             """
-            序列化保存. 可选扩展名:
-                1: .txt  文本格式 (跨平台，基本不可读)
-                2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-                3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+            Serialized save. Optional extension:
+            1:.txt
+                .TXT format
+                (cross-platform, basically unreadable)
+            2:.xml
+                .XML format
+                (specific readability, largest volume, slowest read and write, cross-platform)
+            3:. Other
+                binary formats
+                (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
             """
             if path is not None:
                 core.fludef_save(self.handle, make_c_char_p(path))
@@ -6774,7 +7292,8 @@ class Seepage(HasHandle, HasCells):
 
         def load(self, path):
             """
-            序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+            Read the serialization archive.
+            To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
             """
             if path is not None:
                 _check_ipath(path, self)
@@ -6860,6 +7379,18 @@ class Seepage(HasHandle, HasCells):
                     itp = Interp2.create_const(value)
                     self.vis.clone(itp)
 
+        def get_den(self, pressure, temp):
+            """
+            返回给定压力和温度下的密度
+            """
+            return self.den(pressure, temp)
+
+        def get_vis(self, pressure, temp):
+            """
+            返回给定压力和温度下的粘性
+            """
+            return self.vis(pressure, temp)
+
         core.use(c_double, 'fludef_get_specific_heat', c_void_p)
         core.use(None, 'fludef_set_specific_heat', c_void_p, c_double)
 
@@ -6897,8 +7428,8 @@ class Seepage(HasHandle, HasCells):
             """
             返回流体的组分
             """
-            assert idx >= 0
-            if idx < self.component_number:
+            idx = get_index(idx, self.component_number)
+            if idx is not None:
                 return Seepage.FluDef(handle=core.fludef_get_component(self.handle, idx))
 
         core.use(None, 'fludef_clear_components', c_void_p)
@@ -6930,11 +7461,7 @@ class Seepage(HasHandle, HasCells):
                 此函数将返回给定数据的拷贝，因此，原始的数据并不会被引用和修改.
             """
             if isinstance(defs, Seepage.FluDef):
-                result = Seepage.FluDef()
-                result.clone(defs)
-                if name is not None:
-                    result.name = name
-                return result
+                return defs.get_copy(name=name)
             else:
                 result = Seepage.FluDef(name=name)
                 for x in defs:
@@ -6969,7 +7496,7 @@ class Seepage(HasHandle, HasCells):
 
         def get_copy(self, name=None):
             """
-            返回当前数据的一个拷贝(修改返回数据的name)
+            返回当前数据的一个拷贝(当给定name的时候，则修改返回数据的name)
             """
             data = Seepage.FluDef()
             data.clone(self)
@@ -7014,10 +7541,16 @@ class Seepage(HasHandle, HasCells):
 
         def save(self, path):
             """
-            序列化保存. 可选扩展名:
-                1: .txt  文本格式 (跨平台，基本不可读)
-                2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-                3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+            Serialized save. Optional extension:
+            1:.txt
+                .TXT format
+                (cross-platform, basically unreadable)
+            2:.xml
+                .XML format
+                (specific readability, largest volume, slowest read and write, cross-platform)
+            3:. Other
+                binary formats
+                (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
             """
             if path is not None:
                 core.fluid_save(self.handle, make_c_char_p(path))
@@ -7026,7 +7559,8 @@ class Seepage(HasHandle, HasCells):
 
         def load(self, path):
             """
-            序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+            Read the serialization archive.
+            To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
             """
             if path is not None:
                 _check_ipath(path, self)
@@ -7151,7 +7685,7 @@ class Seepage(HasHandle, HasCells):
         core.use(c_double, 'fluid_get_attr', c_void_p, c_size_t)
         core.use(None, 'fluid_set_attr', c_void_p, c_size_t, c_double)
 
-        def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
+        def get_attr(self, index, default_val=None, **valid_range):
             """
             第index个流体自定义属性。当两个流体数据相加时，自定义属性将根据质量进行加权平均。
             """
@@ -7159,7 +7693,7 @@ class Seepage(HasHandle, HasCells):
                 return default_val
             # 当index个属性不存在时，默认为无穷大的一个值(1.0e100以上的浮点数)
             value = core.fluid_get_attr(self.handle, index)
-            if min <= value <= max:
+            if _attr_in_range(value, **valid_range):
                 return value
             else:
                 return default_val
@@ -7220,8 +7754,8 @@ class Seepage(HasHandle, HasCells):
             """
             返回给定的组分
             """
-            assert 0 <= idx
-            if idx < self.component_number:
+            idx = get_index(idx, self.component_number)
+            if idx is not None:
                 return Seepage.FluData(handle=core.fluid_get_component(self.handle, idx))
 
         core.use(None, 'fluid_clear_components', c_void_p)
@@ -7292,10 +7826,16 @@ class Seepage(HasHandle, HasCells):
 
         def save(self, path):
             """
-            序列化保存. 可选扩展名:
-                1: .txt  文本格式 (跨平台，基本不可读)
-                2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-                3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+            Serialized save. Optional extension:
+            1:.txt
+                .TXT format
+                (cross-platform, basically unreadable)
+            2:.xml
+                .XML format
+                (specific readability, largest volume, slowest read and write, cross-platform)
+            3:. Other
+                binary formats
+                (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
             """
             if path is not None:
                 core.seepage_cell_save(self.handle, make_c_char_p(path))
@@ -7304,7 +7844,8 @@ class Seepage(HasHandle, HasCells):
 
         def load(self, path):
             """
-            序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+            Read the serialization archive.
+            To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
             """
             if path is not None:
                 _check_ipath(path, self)
@@ -7408,7 +7949,7 @@ class Seepage(HasHandle, HasCells):
 
         @v0.setter
         def v0(self, value):
-            assert value >= 1.0e-10
+            assert value >= 1.0e-10, f'value = {value}'
             core.seepage_cell_set_v0(self.handle, value)
 
         core.use(c_double, 'seepage_cell_get_k', c_void_p)
@@ -7433,9 +7974,9 @@ class Seepage(HasHandle, HasCells):
             k = max(1.0e-30, abs(dv)) / max(1.0e-30, abs(dp))
             self.k = k
             v0 = v - p * k
-            self.v0 = v0
             if v0 <= 0:
-                print(f'Warning: v0 (= {v0}) <= 0 at {self.pos}')
+                warnings.warn(f'v0 (= {v0}) <= 0 at {self.pos}. p={p}, v={v}, dp={dp}, dv={dv}')
+            self.v0 = v0
             return self
 
         def v2p(self, v):
@@ -7501,12 +8042,15 @@ class Seepage(HasHandle, HasCells):
             返回给定序号的流体.(当参数数量为1的时候，返回Seepage.Fluid对象; 当参数数量大于1的时候，返回Seepage.FluData对象)
             """
             if len(args) > 0:
-                assert 0 <= args[0] < self.fluid_number
-                flu = Seepage.Fluid(self, args[0])
-                if len(args) > 1:
-                    for i in range(1, len(args)):
-                        flu = flu.get_component(args[i])
-                return flu
+                idx = get_index(args[0], self.fluid_number)
+                if idx is not None:
+                    flu = Seepage.Fluid(self, idx)
+                    if len(args) > 1:
+                        for i in range(1, len(args)):
+                            flu = flu.get_component(args[i])
+                            if flu is None:
+                                return
+                    return flu
 
         @property
         def fluids(self):
@@ -7550,8 +8094,9 @@ class Seepage(HasHandle, HasCells):
             """
             返回index给定流体的体积饱和度
             """
-            assert 0 <= index < self.fluid_number
-            return core.seepage_cell_get_fluid_vol_fraction(self.handle, index)
+            index = get_index(index, self.fluid_number)
+            if index is not None:
+                return core.seepage_cell_get_fluid_vol_fraction(self.handle, index)
 
         core.use(c_double, 'seepage_cell_get_attr', c_void_p, c_size_t)
         core.use(None, 'seepage_cell_set_attr', c_void_p, c_size_t, c_double)
@@ -7564,7 +8109,7 @@ class Seepage(HasHandle, HasCells):
             """
             return core.seepage_cell_get_attr_n(self.handle)
 
-        def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
+        def get_attr(self, index, default_val=None, **valid_range):
             """
             该Cell的第 attr_id个自定义属性值。当不存在时，默认为一个无穷大的值(大于1.0e100)
             """
@@ -7583,7 +8128,7 @@ class Seepage(HasHandle, HasCells):
                     return self.k
                 return default_val
             value = core.seepage_cell_get_attr(self.handle, index)
-            if min <= value <= max:
+            if _attr_in_range(value, **valid_range):
                 return value
             else:
                 return default_val
@@ -7703,18 +8248,20 @@ class Seepage(HasHandle, HasCells):
             """
             与该Cell相邻的第index个Cell。当index个Cell不存在时，返回None
             """
-            assert 0 <= index < self.cell_number
-            cell_id = core.seepage_get_cell_cell_id(self.model.handle, self.index, index)
-            return self.model.get_cell(cell_id)
+            index = get_index(index, self.cell_number)
+            if index is not None:
+                cell_id = core.seepage_get_cell_cell_id(self.model.handle, self.index, index)
+                return self.model.get_cell(cell_id)
 
         def get_face(self, index):
             """
             与该Cell连接的第index个Face。当index个Face不存在时，返回None
             注：改Face的另一侧，即为get_cell返回的Cell
             """
-            assert 0 <= index < self.face_number
-            face_id = core.seepage_get_cell_face_id(self.model.handle, self.index, index)
-            return self.model.get_face(face_id)
+            index = get_index(index, self.face_number)
+            if index is not None:
+                face_id = core.seepage_get_cell_face_id(self.model.handle, self.index, index)
+                return self.model.get_face(face_id)
 
         @property
         def cells(self):
@@ -7819,10 +8366,16 @@ class Seepage(HasHandle, HasCells):
 
         def save(self, path):
             """
-            序列化保存. 可选扩展名:
-                1: .txt  文本格式 (跨平台，基本不可读)
-                2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-                3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+            Serialized save. Optional extension:
+            1:.txt
+                .TXT format
+                (cross-platform, basically unreadable)
+            2:.xml
+                .XML format
+                (specific readability, largest volume, slowest read and write, cross-platform)
+            3:. Other
+                binary formats
+                (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
             """
             if path is not None:
                 core.seepage_face_save(self.handle, make_c_char_p(path))
@@ -7831,7 +8384,8 @@ class Seepage(HasHandle, HasCells):
 
         def load(self, path):
             """
-            序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+            Read the serialization archive.
+            To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
             """
             if path is not None:
                 _check_ipath(path, self)
@@ -7866,14 +8420,14 @@ class Seepage(HasHandle, HasCells):
         core.use(c_double, 'seepage_face_get_attr', c_void_p, c_size_t)
         core.use(None, 'seepage_face_set_attr', c_void_p, c_size_t, c_double)
 
-        def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
+        def get_attr(self, index, default_val=None, **valid_range):
             """
             该Face的第 attr_id个自定义属性值。当不存在时，默认为一个无穷大的值(大于1.0e100)
             """
             if index is None:
                 return default_val
             value = core.seepage_face_get_attr(self.handle, index)
-            if min <= value <= max:
+            if _attr_in_range(value, **valid_range):
                 return value
             else:
                 return default_val
@@ -7991,9 +8545,10 @@ class Seepage(HasHandle, HasCells):
             """
             和Face连接的第index个Cell
             """
-            assert index == 0 or index == 1
-            cell_id = core.seepage_get_face_cell_id(self.model.handle, self.index, index)
-            return self.model.get_cell(cell_id)
+            index = get_index(index, self.cell_number)
+            if index is not None:
+                cell_id = core.seepage_get_face_cell_id(self.model.handle, self.index, index)
+                return self.model.get_cell(cell_id)
 
         @property
         def cells(self):
@@ -8033,7 +8588,9 @@ class Seepage(HasHandle, HasCells):
 
     class Injector(HasHandle):
         """
-        流体的注入点。可以按照一定的规律向特定的Cell注入特定的流体(或者能量).
+        流体的注入点。可以按照一定的规律向特定的Cell注入特定的流体(或者能量). 注意Injector工作的逻辑：
+            1. 如果设置了注入的流体的ID，则实施流体注入操作 (此时value代表注入的体积速率: m^3/s);
+            2. 如果没有设置流体ID，并且设置了 ca_mc和ca_t属性，则实施热量注入操作;
         """
         core.use(c_void_p, 'new_injector')
         core.use(None, 'del_injector', c_void_p)
@@ -8048,10 +8605,16 @@ class Seepage(HasHandle, HasCells):
 
         def save(self, path):
             """
-            序列化保存. 可选扩展名:
-                1: .txt  文本格式 (跨平台，基本不可读)
-                2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-                3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+            Serialized save. Optional extension:
+            1:.txt
+                .TXT format
+                (cross-platform, basically unreadable)
+            2:.xml
+                .XML format
+                (specific readability, largest volume, slowest read and write, cross-platform)
+            3:. Other
+                binary formats
+                (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
             """
             if path is not None:
                 core.injector_save(self.handle, make_c_char_p(path))
@@ -8060,7 +8623,8 @@ class Seepage(HasHandle, HasCells):
 
         def load(self, path):
             """
-            序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+            Read the serialization archive.
+            To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
             """
             if path is not None:
                 _check_ipath(path, self)
@@ -8114,7 +8678,7 @@ class Seepage(HasHandle, HasCells):
         @property
         def flu(self):
             """
-            即将注入到Cell中的流体的数据
+            即将注入到Cell中的流体的数据. 这里返回的是一个引用 (从而可以直接修改内部的数据)
             """
             return Seepage.FluData(handle=core.injector_get_flu(self.handle))
 
@@ -8122,9 +8686,33 @@ class Seepage(HasHandle, HasCells):
 
         def set_fid(self, fluid_id):
             """
-            设置注入的流体的ID
+            设置注入的流体的ID. 注意：如果需要注热的是热量，则将fluid_id设置为None.
             """
             core.injector_set_fid(self.handle, *parse_fid3(fluid_id))
+
+        core.use(c_size_t, 'injector_get_fid_length', c_void_p)
+        core.use(c_size_t, 'injector_get_fid_of', c_void_p, c_size_t)
+
+        def get_fid(self):
+            """
+            返回注入流体的ID
+            """
+            count = core.injector_get_fid_length(self.handle)
+            return [core.injector_get_fid_of(self.handle, idx) for idx in range(count)]
+
+        @property
+        def fid(self):
+            """
+            注入的流体的ID. 注意：如果需要注热的是热量，则将fluid_id设置为None.
+            """
+            return self.get_fid()
+
+        @fid.setter
+        def fid(self, value):
+            """
+            注入的流体的ID. 注意：如果需要注热的是热量，则将fluid_id设置为None.
+            """
+            self.set_fid(value)
 
         core.use(c_double, 'injector_get_value', c_void_p)
         core.use(None, 'injector_set_value', c_void_p, c_double)
@@ -8205,6 +8793,9 @@ class Seepage(HasHandle, HasCells):
 
         @property
         def g_heat(self):
+            """
+            热边界和cell之间换热的系数 (当大于0的时候，则实施固定温度的加热,否则为固定功率的加热);
+            """
             return core.injector_get_g_heat(self.handle)
 
         @g_heat.setter
@@ -8216,10 +8807,16 @@ class Seepage(HasHandle, HasCells):
 
         @property
         def ca_mc(self):
+            """
+            cell的mc属性的ID
+            """
             return core.injector_get_ca_mc(self.handle)
 
         @ca_mc.setter
         def ca_mc(self, value):
+            """
+            cell的mc属性的ID
+            """
             core.injector_set_ca_mc(self.handle, value)
 
         core.use(c_size_t, 'injector_get_ca_t', c_void_p)
@@ -8227,10 +8824,16 @@ class Seepage(HasHandle, HasCells):
 
         @property
         def ca_t(self):
+            """
+            cell的温度属性的id
+            """
             return core.injector_get_ca_t(self.handle)
 
         @ca_t.setter
         def ca_t(self, value):
+            """
+            cell的温度属性的id
+            """
             core.injector_set_ca_t(self.handle, value)
 
         core.use(c_size_t, 'injector_get_ca_no_inj', c_void_p)
@@ -8238,6 +8841,9 @@ class Seepage(HasHandle, HasCells):
 
         @property
         def ca_no_inj(self):
+            """
+            在根据位置来寻找注入的cell的时候，凡是设置了ca_no_inj的cell，将会被忽略（从而避免被Injector操作）
+            """
             return core.injector_get_ca_no_inj(self.handle)
 
         @ca_no_inj.setter
@@ -8258,6 +8864,7 @@ class Seepage(HasHandle, HasCells):
                 mass   m
                 attr   id  val
                 fid    a  b  c
+                g_heat v            (since 2024-02-27)
             其它关键词将会被忽略(不抛出异常).
             """
             core.injector_add_oper(self.handle, time, make_c_char_p(oper if isinstance(oper, str) else f'{oper}'))
@@ -8370,28 +8977,6 @@ class Seepage(HasHandle, HasCells):
                 dt *= min(2.0, math.sqrt(dv_relative / dv_max))
             return dt
 
-        core.use(None, 'seepage_updater_diffusion', c_void_p, c_void_p, c_double,
-                 c_size_t, c_size_t, c_size_t,
-                 c_size_t, c_size_t, c_size_t,
-                 c_void_p, c_void_p, c_void_p, c_void_p, c_double)
-
-        def diffusion(self, model, dt, fid0, fid1, vs0, vk, vg, vpg=None, ds_max=0.05):
-            """
-            流体扩散。其中fid0和fid1定义两种流体。在扩散的时候，相邻Cell的这两种流体会进行交换，但会保证每个Cell的流体体积不变；
-            其中vs0定义两种流体压力相等的时候fid0的饱和度；vk当饱和度变化1的时候，压力的变化幅度；
-            vg定义face的导流能力(针对fid0和fid1作为一个整体);
-            vpg定义流体fid0受到的重力减去fid1的重力在face上的投影;
-            ds_max为允许的饱和度最大的改变量
-            """
-            assert isinstance(vs0, Vector)
-            assert isinstance(vk, Vector)
-            assert isinstance(vg, Vector)
-            if not isinstance(vpg, Vector):
-                vpg = Vector()
-
-            core.seepage_updater_diffusion(self.handle, model.handle, dt, *parse_fid3(fid0), *parse_fid3(fid1),
-                                           vs0.handle, vk.handle, vg.handle, vpg.handle, ds_max)
-
     core.use(c_void_p, 'new_seepage')
     core.use(None, 'del_seepage', c_void_p)
 
@@ -8405,17 +8990,22 @@ class Seepage(HasHandle, HasCells):
     def __str__(self):
         cell_n = self.cell_number
         face_n = self.face_number
-        note = self.get_note()
-        return f'zml.Seepage(handle={self.handle}, cell_n={cell_n}, face_n={face_n}, note={note})'
+        return f"zml.Seepage(handle={self.handle}, cell_n={cell_n}, face_n={face_n}, note='{self.get_note()}')"
 
     core.use(None, 'seepage_save', c_void_p, c_char_p)
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            .TXT format
+            (cross-platform, basically unreadable)
+        2:.xml
+            .XML format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.seepage_save(self.handle, make_c_char_p(path))
@@ -8424,7 +9014,8 @@ class Seepage(HasHandle, HasCells):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -8497,9 +9088,10 @@ class Seepage(HasHandle, HasCells):
 
     def remove_cell(self, cell_id):
         """
-        移除给定id的cell.
+        移除给定id的(孤立的)cell
         注意：
-            这是一个复杂的操作，会涉及到很多连接关系，以及Cell和Face的顺序的改变
+            1. 这是一个复杂的操作，会涉及到很多连接关系，以及Cell和Face的顺序的改变
+            2. 必须确保给定的cell为孤立的，即没有face和此cell连接，否则，此函数不执行操作.
         """
         core.seepage_remove_cell(self.handle, cell_id)
 
@@ -8542,6 +9134,7 @@ class Seepage(HasHandle, HasCells):
         return core.seepage_get_face_n(self.handle)
 
     core.use(c_size_t, 'seepage_get_inj_n', c_void_p)
+    core.use(None, 'seepage_set_inj_n', c_void_p, c_size_t)
 
     @property
     def injector_number(self):
@@ -8550,24 +9143,36 @@ class Seepage(HasHandle, HasCells):
         """
         return core.seepage_get_inj_n(self.handle)
 
+    @injector_number.setter
+    def injector_number(self, count):
+        """
+        设置注入点的数量. 注意，对于新的injector，所有的参数都将使用默认值，后续必须进行配置.
+            请谨慎使用此接口来添加注入点.
+            重设injector_number主要用来清空已有的注入点.
+        """
+        core.seepage_set_inj_n(self.handle, count)
+
     def get_cell(self, index):
         """
         返回第index个Cell对象
         """
-        if 0 <= index < self.cell_number:
+        index = get_index(index, self.cell_number)
+        if index is not None:
             return Seepage.Cell(self, index)
 
     def get_face(self, index):
         """
         返回第index个Face对象
         """
-        if 0 <= index < self.face_number:
+        index = get_index(index, self.face_number)
+        if index is not None:
             return Seepage.Face(self, index)
 
     core.use(c_void_p, 'seepage_get_inj', c_void_p, c_size_t)
 
     def get_injector(self, index):
-        if 0 <= index < self.injector_number:
+        index = get_index(index, self.injector_number)
+        if index is not None:
             return Seepage.Injector(handle=core.seepage_get_inj(self.handle, index))
 
     core.use(c_size_t, 'seepage_add_cell', c_void_p)
@@ -8665,8 +9270,8 @@ class Seepage(HasHandle, HasCells):
             inj.g_heat = g_heat
 
         if opers is not None:
-            for oper in opers:
-                inj.add_oper(*oper)
+            for item in opers:
+                inj.add_oper(*item)
 
         if value is not None:
             inj.value = value
@@ -8738,7 +9343,8 @@ class Seepage(HasHandle, HasCells):
         """
         返回序号为idx的gr
         """
-        if idx < self.gr_number:
+        idx = get_index(idx, self.gr_number)
+        if idx is not None:
             return Interp1(handle=core.seepage_get_gr(self.handle, idx))
 
     @property
@@ -8809,6 +9415,8 @@ class Seepage(HasHandle, HasCells):
         通过这里Seepage.set_kr和Face.set_ikr配合，可以在模型的不同区域来配置不同的相渗.
         """
         assert kr is not None
+
+        # 获得相对渗透率曲线数据，并且存储在tmp中
         if isinstance(kr, Interp1):
             assert saturation is None
             tmp = kr
@@ -8819,9 +9427,31 @@ class Seepage(HasHandle, HasCells):
                 kr = Vector(kr)
             assert len(saturation) > 0 and len(kr) > 0
             tmp = Interp1(x=saturation, y=kr)
+
+        # 检查流体的id
         if index is None:
             index = 9999999999  # Now, modify the default kr
+        else:
+            if isinstance(index, str):  # 此时，通过查表来获得流体的id. since 2024-5-8
+                idx = self.find_fludef(name=index)
+                assert len(idx) == 1, f'You can not set the kr of {index} while its id is: {idx}'
+                index = idx[0]
+
+        # 最终，设置相渗数据
         core.seepage_set_kr(self.handle, index, tmp.handle)
+
+    def set_default_kr(self, value):
+        """
+        set the default kr. since 2024-5-8
+        """
+        if isinstance(value, Interp1):
+            self.set_kr(kr=value)
+            return
+        else:
+            x = value[0]
+            y = value[1]
+            self.set_kr(saturation=x, kr=y)
+            return
 
     core.use(c_double, 'seepage_get_kr', c_void_p, c_size_t)
 
@@ -8839,14 +9469,14 @@ class Seepage(HasHandle, HasCells):
     core.use(None, 'seepage_set_attr',
              c_void_p, c_size_t, c_double)
 
-    def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
+    def get_attr(self, index, default_val=None, **valid_range):
         """
         模型的第index个自定义属性
         """
         if index is None:
             return default_val
         value = core.seepage_get_attr(self.handle, index)
-        if min <= value <= max:
+        if _attr_in_range(value, **valid_range):
             return value
         else:
             return default_val
@@ -9108,10 +9738,105 @@ class Seepage(HasHandle, HasCells):
             self.__updater = Seepage.Updater()
         return self.__updater.get_recommended_dt(self, *args, **kwargs)
 
-    def diffusion(self, *args, **kwargs):
-        if self.__updater is None:
-            self.__updater = Seepage.Updater()
-        return self.__updater.diffusion(self, *args, **kwargs)
+    core.use(None, 'seepage_diffusion', c_void_p, c_double,
+             c_size_t, c_size_t, c_size_t,
+             c_size_t, c_size_t, c_size_t,
+             c_void_p, c_size_t, c_void_p, c_size_t, c_void_p, c_size_t, c_void_p, c_size_t,
+             c_double, c_void_p)
+
+    def diffusion(self, dt, fid0, fid1, *,
+                  ps0=None, ls0=None, pk=None, lk=None, pg=None, lg=None, ppg=None, lpg=None,
+                  vs0=None, vk=None, vg=None, vpg=None, ds_max=0.05, face_groups=None):
+        """
+        扩散.
+        其中fid0和fid1定义两种流体。在扩散的时候，相邻Cell的这两种流体会进行交换，但会保证每个Cell的流体体积不变；
+            其中vs0定义两种流体压力相等的时候fid0的饱和度；vk当饱和度变化1的时候，压力的变化幅度；
+            vg定义face的导流能力(针对fid0和fid1作为一个整体);
+            vpg定义流体fid0受到的重力减去fid1的重力在face上的投影;
+            ds_max为允许的饱和度最大的改变量
+        """
+        if ps0 is None:
+            if isinstance(vs0, Vector):
+                warnings.warn('parameter <vs0> of Seepage.diffusion will be removed after 2025-4-6',
+                              DeprecationWarning)
+                if vs0.size > 0:
+                    ps0 = vs0.pointer
+                    ls0 = vs0.size
+
+        if pk is None:
+            if isinstance(vk, Vector):
+                warnings.warn('parameter <vk> of Seepage.diffusion will be removed after 2025-4-6',
+                              DeprecationWarning)
+                if vk.size > 0:
+                    pk = vk.pointer
+                    lk = vk.size
+
+        if pg is None:
+            if isinstance(vg, Vector):
+                warnings.warn('parameter <vg> of Seepage.diffusion will be removed after 2025-4-6',
+                              DeprecationWarning)
+                if vg.size > 0:
+                    pg = vg.pointer
+                    lg = vg.size
+
+        if ppg is None:
+            if isinstance(vpg, Vector):
+                warnings.warn('parameter <vpg> of Seepage.diffusion will be removed after 2025-4-6',
+                              DeprecationWarning)
+                if vpg.size > 0:
+                    ppg = vpg.pointer
+                    lpg = vpg.size
+
+        if pg is None:
+            return  # 没有g，则无法交换
+
+        if pk is None and ppg is None:
+            return  # 既没有定义毛管力，也没有定义重力，没有执行的必要了
+
+        # 下面，解析指针和长度
+        if ps0 is None:
+            ps0 = 0
+            ls0 = 0
+        else:
+            ps0 = ctypes.cast(ps0, c_void_p)
+            if ls0 is None:
+                ls0 = self.cell_number
+
+        if pk is None:
+            pk = 0
+            lk = 0
+        else:
+            pk = ctypes.cast(pk, c_void_p)
+            if lk is None:
+                lk = self.cell_number
+
+        if pg is None:
+            pg = 0
+            lg = 0
+        else:
+            pg = ctypes.cast(pg, c_void_p)
+            if lg is None:
+                lg = self.face_number
+
+        if ppg is None:
+            ppg = 0
+            lpg = 0
+        else:
+            ppg = ctypes.cast(ppg, c_void_p)
+            if lpg is None:
+                lpg = self.face_number
+
+        if face_groups is not None:
+            assert isinstance(face_groups, Groups)  # 分组
+
+        # 执行扩散操作.
+        core.seepage_diffusion(self.handle, dt, *parse_fid3(fid0), *parse_fid3(fid1),
+                               ps0, ls0,
+                               pk, lk,
+                               pg, lg,
+                               ppg, lpg,
+                               ds_max,
+                               0 if face_groups is None else face_groups.handle)
 
     core.use(c_double, 'seepage_get_fluid_mass', c_void_p, c_size_t, c_size_t, c_size_t)
 
@@ -9160,7 +9885,8 @@ class Seepage(HasHandle, HasCells):
     def update_g0(self, fa_g0, fa_k, fa_s, fa_l):
         """
         对于所有的face，根据它的渗透率，面积和长度来计算cond (流体饱和的时候的cond).
-        此函数非必须，可以基于numpy在Python层面实现同样的功能，后续可能会移除.
+            ---
+            此函数非必须，可以基于numpy在Python层面实现同样的功能，后续可能会移除.
         """
         core.seepage_update_g0(self.handle, fa_g0, fa_k, fa_s, fa_l)
 
@@ -9225,27 +9951,89 @@ class Seepage(HasHandle, HasCells):
 
     core.use(None, 'seepage_get_face_gradient', c_void_p, c_void_p, c_void_p)
 
-    def get_face_gradient(self, va, buffer=None):
+    def get_face_gradient(self, fa, ca):
         """
-        根据Cell中心位置的属性的值来计算各个Face位置的梯度
+        根据cell中心位置的属性的值来计算各个face位置的梯度.
+            (c1 - c0) / dist
+        其中:
+            fa为face的属性(指针，用于输出)
+            ca为各个cell的属性(指针，用于输入)
+        建议：
+            这里的参数都是指针。建议使用zmlx.config.seepage.get_face_gradient来替代此函数
         """
-        assert isinstance(va, Vector)
-        if not isinstance(buffer, Vector):
-            buffer = Vector()
-        core.seepage_get_face_gradient(self.handle, buffer.handle, va.handle)
-        return buffer
+        core.seepage_get_face_gradient(self.handle, ctypes.cast(fa, c_void_p), ctypes.cast(ca, c_void_p))
 
-    core.use(None, 'seepage_get_face_average', c_void_p, c_void_p, c_void_p)
+    core.use(None, 'seepage_get_face_diff', c_void_p, c_void_p, c_void_p)
 
-    def get_face_average(self, face_vals, buffer=None):
+    def get_face_diff(self, fa, ca):
         """
-        计算Cell周围Face的平均值，并作为Vector返回
+        计算face两侧的cell的属性的值的差异。
+            c1 - c0
+        其中:
+            fa为face的属性(指针，用于输出)
+            ca为各个cell的属性(指针，用于输入)
+        建议：
+            这里的参数都是指针。建议使用zmlx.config.seepage.get_face_diff来替代此函数
         """
-        assert isinstance(face_vals, Vector)
-        if not isinstance(buffer, Vector):
-            buffer = Vector()
-        core.seepage_get_face_average(self.handle, buffer.handle, face_vals.handle)
-        return buffer
+        core.seepage_get_face_diff(self.handle, ctypes.cast(fa, c_void_p), ctypes.cast(ca, c_void_p))
+
+    core.use(None, 'seepage_get_face_sum', c_void_p, c_void_p, c_void_p)
+
+    def get_face_sum(self, fa, ca):
+        """
+        计算face两侧的cell的属性的值的和。
+            c1 + c0
+        其中:
+            fa为face的属性(指针，用于输出)
+            ca为各个cell的属性(指针，用于输入)
+        建议：
+            这里的参数都是指针。建议使用zmlx.config.seepage.get_face_sum来替代此函数
+        """
+        core.seepage_get_face_sum(self.handle, ctypes.cast(fa, c_void_p), ctypes.cast(ca, c_void_p))
+
+    core.use(None, 'seepage_get_face_left', c_void_p, c_void_p, c_void_p)
+
+    def get_face_left(self, fa, ca):
+        """
+        计算face左侧的cell属性
+        其中:
+            fa为face的属性(指针，用于输出)
+            ca为各个cell的属性(指针，用于输入)
+        建议：
+            这里的参数都是指针。建议使用zmlx.config.seepage.get_face_left来替代此函数
+        """
+        core.seepage_get_face_left(self.handle, ctypes.cast(fa, c_void_p), ctypes.cast(ca, c_void_p))
+
+    core.use(None, 'seepage_get_face_right', c_void_p, c_void_p, c_void_p)
+
+    def get_face_right(self, fa, ca):
+        """
+        计算face右侧的cell属性
+        其中:
+            fa为face的属性(指针，用于输出)
+            ca为各个cell的属性(指针，用于输入)
+        建议：
+            这里的参数都是指针。建议使用zmlx.config.seepage.get_face_right来替代此函数
+        """
+        core.seepage_get_face_right(self.handle, ctypes.cast(fa, c_void_p), ctypes.cast(ca, c_void_p))
+
+    core.use(None, 'seepage_get_cell_average', c_void_p, c_void_p, c_void_p)
+
+    def get_cell_average(self, ca, fa):
+        """
+        计算cell周围face的平均值
+        其中:
+            ca为各个cell的属性(指针，用于输出)
+            fa为face的属性(指针，用于输如)
+        建议：
+            这里的参数都是指针。建议使用zmlx.config.seepage.get_cell_average来替代此函数
+        """
+        core.seepage_get_cell_average(self.handle, ctypes.cast(ca, c_void_p), ctypes.cast(fa, c_void_p))
+
+    def get_face_average(self, *args, **kwargs):
+        warnings.warn('This function will be removed after 2025-4-6, use get_cell_average instead',
+                      DeprecationWarning)
+        return self.get_cell_average(*args, **kwargs)
 
     core.use(None, 'seepage_heating', c_void_p, c_size_t, c_size_t, c_size_t, c_double)
 
@@ -9324,8 +10112,8 @@ class Seepage(HasHandle, HasCells):
         清除并设置所有的流体定义
         """
         self.clear_fludefs()
-        for fdef in args:
-            self.add_fludef(fdef)
+        for item in args:
+            self.add_fludef(item)
 
     core.use(c_size_t, 'seepage_get_pc_n', c_void_p)
 
@@ -9382,7 +10170,8 @@ class Seepage(HasHandle, HasCells):
     core.use(c_void_p, 'seepage_get_reaction', c_void_p, c_size_t)
 
     def get_reaction(self, idx):
-        if idx < self.reaction_number:
+        idx = get_index(idx, self.reaction_number)
+        if idx is not None:
             return Seepage.Reaction(handle=core.seepage_get_reaction(self.handle, idx))
 
     core.use(c_size_t, 'seepage_add_reaction', c_void_p, c_void_p)
@@ -9456,6 +10245,7 @@ class Seepage(HasHandle, HasCells):
         inhibitors = kwargs.get('inhibitors', None)
         if inhibitors is not None:
             for inh in inhibitors:
+                # 这里要注意的是，这里的浓度指的是质量浓度.
                 sol = inh.get('sol')
                 if isinstance(sol, str):
                     sol = self.find_fludef(sol)
@@ -9515,6 +10305,7 @@ class Seepage(HasHandle, HasCells):
             index=-3, z坐标
             index=-4, v0 of pore
             index=-5, k  of pore
+            index=-6, inner_prod(pos, gravity)
         --- (以下为只读属性):
             index=-10, 所有流体的总的质量 (只读)
             index=-11, 所有流体的总的体积 (只读)
@@ -9546,6 +10337,7 @@ class Seepage(HasHandle, HasCells):
         导出属性: 当 index >= 0 的时候，为属性ID；如果index < 0，则：
             index=-1, cond
             index=-2, dr
+            index=-3, distance between two cells
 
             index=-10, dv of fluid 0
             index=-11, dv of fluid 1
@@ -9658,20 +10450,28 @@ class Seepage(HasHandle, HasCells):
 
     core.use(None, 'seepage_add_tag', c_void_p, c_char_p)
 
-    def add_tag(self, tag):
+    def add_tag(self, tag, *tags):
         """
-        在模型中添加给定的标签
+        在模型中添加给定的标签.
+            支持添加多个(since 2024-2-23)
         """
         core.seepage_add_tag(self.handle, make_c_char_p(tag))
+        # 再添加多个.
+        if len(tags) > 0:
+            for tag in tags:
+                self.add_tag(tag=tag)
         return self
 
     core.use(None, 'seepage_del_tag', c_void_p, c_char_p)
 
-    def del_tag(self, tag):
+    def del_tag(self, tag, *tags):
         """
         删除模型中的给定的标签
         """
         core.seepage_del_tag(self.handle, make_c_char_p(tag))
+        if len(tags) > 0:
+            for tag in tags:
+                self.del_tag(tag=tag)
         return self
 
     core.use(None, 'seepage_clear_tags', c_void_p)
@@ -9725,11 +10525,14 @@ class Seepage(HasHandle, HasCells):
 
     core.use(None, 'seepage_del_key', c_void_p, c_char_p)
 
-    def del_key(self, key):
+    def del_key(self, key, *keys):
         """
         删除键值
         """
         core.seepage_del_key(self.handle, make_c_char_p(key))
+        if len(keys) > 0:
+            for key in keys:
+                self.del_key(key=key)
         return self
 
     core.use(None, 'seepage_clear_keys', c_void_p)
@@ -9823,6 +10626,23 @@ class Seepage(HasHandle, HasCells):
         core.seepage_pop_cells(self.handle, count)
         return self
 
+    core.use(None, 'seepage_group_cells', c_void_p, c_void_p)
+
+    def get_cell_groups(self):
+        """
+        对所有的cell进行分区，使得对于任意一个cell，都不会和与它相关的cell分在一组 (用于并行)
+        """
+        g = Groups()
+        core.seepage_group_cells(self.handle, g.handle)
+        return g
+
+    core.use(None, 'seepage_group_faces', c_void_p, c_void_p)
+
+    def get_face_groups(self):
+        g = Groups()
+        core.seepage_group_faces(self.handle, g.handle)
+        return g
+
 
 Reaction = Seepage.Reaction
 
@@ -9869,15 +10689,19 @@ class Thermal(HasHandle):
             """
             连接的第index个Cell
             """
-            cell_id = core.thermal_get_cell_cell_id(self.model.handle, self.index, index)
-            return self.model.get_cell(cell_id)
+            index = get_index(index, self.cell_number)
+            if index is not None:
+                cell_id = core.thermal_get_cell_cell_id(self.model.handle, self.index, index)
+                return self.model.get_cell(cell_id)
 
         def get_face(self, index):
             """
             连接的第index个Face
             """
-            face_id = core.thermal_get_cell_face_id(self.model.handle, self.index, index)
-            return self.model.get_face(face_id)
+            index = get_index(index, self.face_number)
+            if index is not None:
+                face_id = core.thermal_get_cell_face_id(self.model.handle, self.index, index)
+                return self.model.get_face(face_id)
 
         @property
         def cells(self):
@@ -9951,8 +10775,10 @@ class Thermal(HasHandle):
             """
             连接的第index个Cell
             """
-            cell_id = core.thermal_get_face_cell_id(self.model.handle, self.index, index)
-            return self.model.get_cell(cell_id)
+            index = get_index(index, self.cell_number)
+            if index is not None:
+                cell_id = core.thermal_get_face_cell_id(self.model.handle, self.index, index)
+                return self.model.get_cell(cell_id)
 
         @property
         def cells(self):
@@ -9994,10 +10820,16 @@ class Thermal(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            .TXT format
+            (cross-platform, basically unreadable)
+        2:.xml
+            .XML format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.thermal_save(self.handle, make_c_char_p(path))
@@ -10006,7 +10838,8 @@ class Thermal(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -10042,14 +10875,16 @@ class Thermal(HasHandle):
         """
         模型中第index个Cell
         """
-        if index < core.thermal_get_cell_n(self.handle):
+        index = get_index(index, self.cell_number)
+        if index is not None:
             return Thermal.Cell(self, index)
 
     def get_face(self, index):
         """
         模型中第index个Face
         """
-        if index < core.thermal_get_face_n(self.handle):
+        index = get_index(index, self.face_number)
+        if index is not None:
             return Thermal.Face(self, index)
 
     core.use(c_size_t, 'thermal_add_cell', c_void_p)
@@ -10161,6 +10996,14 @@ class ConjugateGradientSolver(HasHandle):
         """
         core.cg_sol_set_tolerance(self.handle, tolerance)
 
+    core.use(c_double, 'cg_sol_get_tolerance', c_void_p)
+
+    def get_tolerance(self):
+        """
+        the tolerance of the solver
+        """
+        return core.cg_sol_get_tolerance(self.handle)
+
 
 class InvasionPercolation(HasHandle):
     """
@@ -10203,7 +11046,13 @@ class InvasionPercolation(HasHandle):
             assert value >= 0
             core.ip_node_set_phase(self.handle, value)
 
-        phase = property(get_phase, set_phase)
+        @property
+        def phase(self):
+            return self.get_phase()
+
+        @phase.setter
+        def phase(self, value):
+            self.set_phase(value)
 
         core.use(c_size_t, 'ip_node_get_cid', c_void_p)
         core.use(None, 'ip_node_set_cid', c_void_p, c_size_t)
@@ -10221,7 +11070,13 @@ class InvasionPercolation(HasHandle):
             """
             core.ip_node_set_cid(self.handle, value)
 
-        cid = property(get_cid, set_cid)
+        @property
+        def cid(self):
+            return self.get_cid()
+
+        @cid.setter
+        def cid(self, value):
+            self.set_cid(value)
 
         core.use(c_double, 'ip_node_get_radi', c_void_p)
         core.use(None, 'ip_node_set_radi', c_void_p, c_double)
@@ -10239,7 +11094,13 @@ class InvasionPercolation(HasHandle):
             assert value > 0
             core.ip_node_set_radi(self.handle, value)
 
-        radi = property(get_radi, set_radi)
+        @property
+        def radi(self):
+            return self.get_radi()
+
+        @radi.setter
+        def radi(self, value):
+            self.set_radi(value)
 
         core.use(c_double, 'ip_node_get_time_invaded', c_void_p)
 
@@ -10277,7 +11138,13 @@ class InvasionPercolation(HasHandle):
             for i in range(3):
                 core.ip_node_set_pos(self.handle, i, value[i])
 
-        pos = property(get_pos, set_pos)
+        @property
+        def pos(self):
+            return self.get_pos()
+
+        @pos.setter
+        def pos(self, value):
+            self.set_pos(value)
 
     class Node(NodeData):
 
@@ -10310,7 +11177,8 @@ class InvasionPercolation(HasHandle):
             """
             此Node连接的第idx个Node
             """
-            if idx < self.node_n:
+            idx = get_index(idx, self.node_n)
+            if idx is not None:
                 i_node = core.ip_get_node_node_id(self.model.handle, self.index, idx)
                 return self.model.get_node(i_node)
 
@@ -10320,7 +11188,8 @@ class InvasionPercolation(HasHandle):
             """
             此Node连接的第idx个Bond
             """
-            if idx < self.bond_n:
+            idx = get_index(idx, self.bond_n)
+            if idx is not None:
                 i_bond = core.ip_get_node_bond_id(self.model.handle, self.index, idx)
                 return self.model.get_bond(i_bond)
 
@@ -10360,7 +11229,13 @@ class InvasionPercolation(HasHandle):
             assert value > 0
             core.ip_bond_set_radi(self.handle, value)
 
-        radi = property(get_radi, set_radi)
+        @property
+        def radi(self):
+            return self.get_radi()
+
+        @radi.setter
+        def radi(self, value):
+            self.set_radi(value)
 
         core.use(c_double, 'ip_bond_get_dp0', c_void_p)
         core.use(None, 'ip_bond_set_dp0', c_void_p, c_double)
@@ -10377,7 +11252,13 @@ class InvasionPercolation(HasHandle):
             """
             core.ip_bond_set_dp0(self.handle, value)
 
-        dp0 = property(get_dp0, set_dp0)
+        @property
+        def dp0(self):
+            return self.get_dp0()
+
+        @dp0.setter
+        def dp0(self, value):
+            self.set_dp0(value)
 
         core.use(c_double, 'ip_bond_get_dp1', c_void_p)
         core.use(None, 'ip_bond_set_dp1', c_void_p, c_double)
@@ -10394,7 +11275,13 @@ class InvasionPercolation(HasHandle):
             """
             core.ip_bond_set_dp1(self.handle, value)
 
-        dp1 = property(get_dp1, set_dp1)
+        @property
+        def dp1(self):
+            return self.get_dp1()
+
+        @dp1.setter
+        def dp1(self, value):
+            self.set_dp1(value)
 
         core.use(c_double, 'ip_bond_get_contact_angle', c_void_p, c_size_t, c_size_t)
 
@@ -10498,7 +11385,8 @@ class InvasionPercolation(HasHandle):
             """
             此Bond连接的第idx个Node
             """
-            if idx < self.node_n:
+            idx = get_index(idx, self.node_n)
+            if idx is not None:
                 i_node = core.ip_get_bond_node_id(self.model.handle, self.index, idx)
                 return self.model.get_node(i_node)
 
@@ -10534,7 +11422,13 @@ class InvasionPercolation(HasHandle):
             """
             core.ip_inj_set_node_id(self.handle, value)
 
-        node_id = property(get_node_id, set_node_id)
+        @property
+        def node_id(self):
+            return self.get_node_id()
+
+        @node_id.setter
+        def node_id(self, value):
+            self.set_node_id(value)
 
         core.use(c_size_t, 'ip_inj_get_phase', c_void_p)
 
@@ -10553,7 +11447,13 @@ class InvasionPercolation(HasHandle):
             assert value >= 0
             core.ip_inj_set_phase(self.handle, value)
 
-        phase = property(get_phase, set_phase)
+        @property
+        def phase(self):
+            return self.get_phase()
+
+        @phase.setter
+        def phase(self, value):
+            self.set_phase(value)
 
         core.use(c_double, 'ip_inj_get_q', c_void_p)
 
@@ -10572,7 +11472,13 @@ class InvasionPercolation(HasHandle):
             assert value > 0
             core.ip_inj_set_q(self.handle, value)
 
-        qinj = property(get_qinj, set_qinj)
+        @property
+        def qinj(self):
+            return self.get_qinj()
+
+        @qinj.setter
+        def qinj(self, value):
+            self.set_qinj(value)
 
     class Injector(InjectorData):
         core.use(c_void_p, 'ip_get_inj', c_void_p, c_size_t)
@@ -10649,10 +11555,16 @@ class InvasionPercolation(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            .TXT format
+            (cross-platform, basically unreadable)
+        2:.xml
+            .XML format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         assert isinstance(path, str)
         core.ip_save(self.handle, make_c_char_p(path))
@@ -10661,7 +11573,8 @@ class InvasionPercolation(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -10701,7 +11614,13 @@ class InvasionPercolation(HasHandle):
         assert value >= 0
         core.ip_set_time(self.handle, value)
 
-    time = property(get_time, set_time)
+    @property
+    def time(self):
+        return self.get_time()
+
+    @time.setter
+    def time(self, value):
+        self.set_time(value)
 
     core.use(c_size_t, 'ip_add_node', c_void_p)
 
@@ -10716,7 +11635,8 @@ class InvasionPercolation(HasHandle):
         """
         返回序号为index的Node对象
         """
-        if 0 <= index < self.node_n:
+        index = get_index(index, self.node_n)
+        if index is not None:
             return InvasionPercolation.Node(self, index)
 
     core.use(c_size_t, 'ip_add_bond', c_void_p, c_size_t, c_size_t)
@@ -10737,7 +11657,8 @@ class InvasionPercolation(HasHandle):
         """
         返回给定序号的Bond
         """
-        if 0 <= index < self.bond_n:
+        index = get_index(index, self.bond_n)
+        if index is not None:
             return InvasionPercolation.Bond(self, index)
 
     core.use(c_size_t, 'ip_get_bond_id', c_void_p, c_size_t, c_size_t)
@@ -10768,14 +11689,18 @@ class InvasionPercolation(HasHandle):
     def get_node_n(self):
         return core.ip_get_node_n(self.handle)
 
-    node_n = property(get_node_n)
+    @property
+    def node_n(self):
+        return self.get_node_n()
 
     core.use(c_size_t, 'ip_get_bond_n', c_void_p)
 
     def get_bond_n(self):
         return core.ip_get_bond_n(self.handle)
 
-    bond_n = property(get_bond_n)
+    @property
+    def bond_n(self):
+        return self.get_bond_n()
 
     core.use(c_size_t, 'ip_get_outlet_n', c_void_p)
     core.use(None, 'ip_set_outlet_n', c_void_p, c_size_t)
@@ -10793,7 +11718,13 @@ class InvasionPercolation(HasHandle):
         assert value >= 0
         core.ip_set_outlet_n(self.handle, value)
 
-    outlet_n = property(get_outlet_n, set_outlet_n)
+    @property
+    def outlet_n(self):
+        return self.get_outlet_n()
+
+    @outlet_n.setter
+    def outlet_n(self, value):
+        self.set_outlet_n(value)
 
     core.use(None, 'ip_set_outlet', c_void_p, c_size_t, c_size_t)
 
@@ -10801,9 +11732,11 @@ class InvasionPercolation(HasHandle):
         """
         第index个出口对应的Node的序号
         """
-        assert 0 <= index < self.outlet_n
-        assert value < self.node_n
-        core.ip_set_outlet(self.handle, index, value)
+        index = get_index(index, self.outlet_n)
+        if index is not None:
+            value = get_index(value, self.node_n)
+            if value is not None:
+                core.ip_set_outlet(self.handle, index, value)
 
     core.use(c_size_t, 'ip_get_outlet', c_void_p, c_size_t)
 
@@ -10811,8 +11744,9 @@ class InvasionPercolation(HasHandle):
         """
         第index个出口对应的Node的序号
         """
-        assert 0 <= index < self.outlet_n
-        return core.ip_get_outlet(self.handle, index)
+        index = get_index(index, self.outlet_n)
+        if index is not None:
+            return core.ip_get_outlet(self.handle, index)
 
     def add_outlet(self, node_id):
         """
@@ -10898,7 +11832,13 @@ class InvasionPercolation(HasHandle):
             core.ip_set_gravity(self.handle, i, value[i])
         return self
 
-    gravity = property(get_gravity, set_gravity)
+    @property
+    def gravity(self):
+        return self.get_gravity()
+
+    @gravity.setter
+    def gravity(self, value):
+        self.set_gravity(value)
 
     core.use(c_size_t, 'ip_get_inj_n', c_void_p)
     core.use(None, 'ip_set_inj_n', c_void_p, c_size_t)
@@ -10917,13 +11857,20 @@ class InvasionPercolation(HasHandle):
         core.ip_set_inj_n(self.handle, value)
         return self
 
-    inj_n = property(get_inj_n, set_inj_n)
+    @property
+    def inj_n(self):
+        return self.get_inj_n()
+
+    @inj_n.setter
+    def inj_n(self, value):
+        self.set_inj_n(value)
 
     def get_inj(self, index):
         """
         返回第index个注入点
         """
-        if 0 <= index < self.inj_n:
+        index = get_index(index, self.inj_n)
+        if index is not None:
             return InvasionPercolation.Injector(self, index)
 
     def add_inj(self, node_id=None, phase=None, qinj=None):
@@ -10964,10 +11911,13 @@ class InvasionPercolation(HasHandle):
     def get_oper_n(self):
         return core.ip_get_oper_n(self.handle)
 
-    oper_n = property(get_oper_n)
+    @property
+    def oper_n(self):
+        return self.get_oper_n()
 
     def get_oper(self, idx):
-        if idx < self.oper_n:
+        idx = get_index(idx, self.oper_n)
+        if idx is not None:
             return InvasionPercolation.InvadeOperation(self, idx)
 
     core.use(None, 'ip_remove_node', c_void_p, c_size_t)
@@ -11034,13 +11984,13 @@ class InvasionPercolation(HasHandle):
             index=-4, phase
         """
         if pointer is None:
-            if np is not None:
+            if _np is not None:
                 if buf is None:
-                    buf = np.zeros(shape=self.node_n, dtype=float)
+                    buf = _np.zeros(shape=self.node_n, dtype=float)
                 else:
                     assert len(buf) == self.node_n
                 if not buf.flags['C_CONTIGUOUS']:
-                    buf = np.ascontiguous(buf, dtype=buf.dtype)
+                    buf = _np.ascontiguous(buf, dtype=buf.dtype)
                 pointer = buf.ctypes.data_as(POINTER(c_double))
 
         if index == -1 or index == -2 or index == -3:
@@ -11069,10 +12019,16 @@ class Dfn2(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            .TXT format
+            (cross-platform, basically unreadable)
+        2:.xml
+            .XML format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.dfn2d_save(self.handle, make_c_char_p(path))
@@ -11081,7 +12037,8 @@ class Dfn2(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -11141,7 +12098,9 @@ class Dfn2(HasHandle):
         """
         返回第idx个裂缝的位置
         """
-        return [core.dfn2d_get_fracture_pos(self.handle, idx, i) for i in range(4)]
+        idx = get_index(idx, self.fracture_n)
+        if idx is not None:
+            return [core.dfn2d_get_fracture_pos(self.handle, idx, i) for i in range(4)]
 
     def get_fractures(self):
         """
@@ -11188,10 +12147,16 @@ class Lattice3(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            .TXT format
+            (cross-platform, basically unreadable)
+        2:.xml
+            .XML format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.lat3_save(self.handle, make_c_char_p(path))
@@ -11200,7 +12165,8 @@ class Lattice3(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -11306,7 +12272,7 @@ class DDMSolution2(HasHandle):
     def __str__(self):
         return (f'zml.DDMSolution2(handle={self.handle}, '
                 f'alpha={self.alpha}, beta={self.beta}, '
-                f'shear_modulus={self.shear_modulus/1.0e9}GPa, '
+                f'shear_modulus={self.shear_modulus / 1.0e9}GPa, '
                 f'poisson_ratio={self.poisson_ratio}, '
                 f'adjust_coeff={self.adjust_coeff})')
 
@@ -11315,17 +12281,24 @@ class DDMSolution2(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            .TXT format
+            (cross-platform, basically unreadable)
+        2:.xml
+            .XML format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.ddm_sol2_save(self.handle, make_c_char_p(path))
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             core.ddm_sol2_load(self.handle, make_c_char_p(path))
@@ -11437,7 +12410,7 @@ class FractureNetwork(HasHandle):
         core.use(c_double, 'frac_nd_get_attr', c_void_p, c_size_t)
         core.use(None, 'frac_nd_set_attr', c_void_p, c_size_t, c_double)
 
-        def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
+        def get_attr(self, index, default_val=None, **valid_range):
             """
             第index个自定义属性
             """
@@ -11445,7 +12418,7 @@ class FractureNetwork(HasHandle):
                 return default_val
             # 当index个属性不存在时，默认为无穷大的一个值(1.0e100以上的浮点数)
             value = core.frac_nd_get_attr(self.handle, index)
-            if min <= value <= max:
+            if _attr_in_range(value, **valid_range):
                 return value
             else:
                 return default_val
@@ -11461,14 +12434,18 @@ class FractureNetwork(HasHandle):
             core.frac_nd_set_attr(self.handle, index, value)
             return self
 
-    class FractureData(Object):
-        def __init__(self, handle):
-            self.handle = handle
+    class FractureData(HasHandle):
+
+        core.use(c_void_p, 'new_frac_bd')
+        core.use(None, 'del_frac_bd', c_void_p)
+
+        def __init__(self, handle=None):
+            super(FractureNetwork.FractureData, self).__init__(handle, core.new_frac_bd, core.del_frac_bd)
 
         core.use(c_double, 'frac_bd_get_attr', c_void_p, c_size_t)
         core.use(None, 'frac_bd_set_attr', c_void_p, c_size_t, c_double)
 
-        def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
+        def get_attr(self, index, default_val=None, **valid_range):
             """
             第index个自定义属性
             """
@@ -11476,7 +12453,7 @@ class FractureNetwork(HasHandle):
                 return default_val
             # 当index个属性不存在时，默认为无穷大的一个值(1.0e100以上的浮点数)
             value = core.frac_bd_get_attr(self.handle, index)
-            if min <= value <= max:
+            if _attr_in_range(value, **valid_range):
                 return value
             else:
                 return default_val
@@ -11530,10 +12507,16 @@ class FractureNetwork(HasHandle):
 
         @property
         def f(self):
+            """
+            摩擦系数
+            """
             return core.frac_bd_get_fric(self.handle)
 
         @f.setter
         def f(self, value):
+            """
+            摩擦系数
+            """
             core.frac_bd_set_fric(self.handle, value)
 
         core.use(c_double, 'frac_bd_get_p0', c_void_p)
@@ -11541,10 +12524,16 @@ class FractureNetwork(HasHandle):
 
         @property
         def p0(self):
+            """
+            p = max(0, p0 + k * dn)
+            """
             return core.frac_bd_get_p0(self.handle)
 
         @p0.setter
         def p0(self, value):
+            """
+            p = max(0, p0 + k * dn)
+            """
             core.frac_bd_set_p0(self.handle, value)
 
         core.use(c_double, 'frac_bd_get_k', c_void_p)
@@ -11552,17 +12541,46 @@ class FractureNetwork(HasHandle):
 
         @property
         def k(self):
+            """
+            p = max(0, p0 + k * dn)
+            """
             return core.frac_bd_get_k(self.handle)
 
         @k.setter
         def k(self, value):
+            """
+            p = max(0, p0 + k * dn)
+            """
             core.frac_bd_set_k(self.handle, value)
 
         core.use(c_double, 'frac_bd_get_fp', c_void_p)
 
         @property
         def fp(self):
+            """
+            根据此时的dn, p0和k计算得到的fp
+            """
             return core.frac_bd_get_fp(self.handle)
+
+        @staticmethod
+        def create(ds=None, dn=None, h=None, f=None, p0=None, k=None):
+            """
+            创建裂缝数据. Since 2024-2-19
+            """
+            data = FractureNetwork.FractureData()
+            if ds is not None:
+                data.ds = ds
+            if dn is not None:
+                data.dn = dn
+            if h is not None:
+                data.h = h
+            if k is not None:
+                data.k = k
+            if p0 is not None:
+                data.p0 = p0
+            if f is not None:
+                data.f = f
+            return data
 
     class Vertex(VertexData):
 
@@ -11589,8 +12607,10 @@ class FractureNetwork(HasHandle):
         core.use(c_size_t, 'frac_nt_nd_get_bd_i', c_void_p, c_size_t, c_size_t)
 
         def get_fracture(self, index):
-            return self.network.get_fracture(
-                core.frac_nt_nd_get_bd_i(self.network.handle, self.index, index))
+            index = get_index(index, self.fracture_number)
+            if index is not None:
+                return self.network.get_fracture(
+                    core.frac_nt_nd_get_bd_i(self.network.handle, self.index, index))
 
     class Fracture(FractureData):
 
@@ -11600,13 +12620,13 @@ class FractureNetwork(HasHandle):
             assert isinstance(network, FractureNetwork)
             assert isinstance(index, int)
             assert index < network.fracture_number
-            self.network = network
-            self.index = index
             super(FractureNetwork.Fracture, self).__init__(
                 handle=core.frac_nt_get_bd(network.handle, index))
+            self.network = network
+            self.index = index
 
         def __str__(self):
-            return f'zml.FractureNetwork.Fracture(index={self.index}, pos={self.pos})'
+            return f'zml.FractureNetwork.Fracture(index={self.index}, pos={self.pos}, ds={self.ds}, dn={self.dn})'
 
         @property
         def vertex_number(self):
@@ -11615,8 +12635,10 @@ class FractureNetwork(HasHandle):
         core.use(c_size_t, 'frac_nt_bd_get_nd_i', c_void_p, c_size_t, c_size_t)
 
         def get_vertex(self, index):
-            return self.network.get_vertex(
-                core.frac_nt_bd_get_nd_i(self.network.handle, self.index, index))
+            index = get_index(index, self.vertex_number)
+            if index is not None:
+                return self.network.get_vertex(
+                    core.frac_nt_bd_get_nd_i(self.network.handle, self.index, index))
 
         @property
         def pos(self):
@@ -11662,10 +12684,16 @@ class FractureNetwork(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            .TXT format
+            (cross-platform, basically unreadable)
+        2:.xml
+            .XML format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.frac_nt_save(self.handle, make_c_char_p(path))
@@ -11674,7 +12702,8 @@ class FractureNetwork(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -11713,7 +12742,8 @@ class FractureNetwork(HasHandle):
         return core.frac_nt_get_nd_n(self.handle)
 
     def get_vertex(self, index):
-        if index < self.vertex_number:
+        index = get_index(index, self.vertex_number)
+        if index is not None:
             return FractureNetwork.Vertex(self, index)
 
     core.use(c_size_t, 'frac_nt_get_bd_n', c_void_p)
@@ -11723,7 +12753,8 @@ class FractureNetwork(HasHandle):
         return core.frac_nt_get_bd_n(self.handle)
 
     def get_fracture(self, index):
-        if index < self.fracture_number:
+        index = get_index(index, self.fracture_number)
+        if index is not None:
             return FractureNetwork.Fracture(self, index)
 
     core.use(c_size_t, 'frac_nt_add_nd', c_void_p, c_double, c_double)
@@ -11784,18 +12815,20 @@ class FracAlg:
     core.use(c_size_t, 'frac_alg_update_disp', c_void_p, c_void_p,
              c_size_t, c_size_t,
              c_double, c_double,
-             c_size_t, c_double, c_double)
+             c_size_t, c_size_t, c_double, c_double)
 
     @staticmethod
-    def update_disp(network, matrix, fa_yy=99999999, fa_xy=99999999, gradw_max=0, err_max=0.1, iter_max=10000,
+    def update_disp(network, matrix, fa_yy=99999999, fa_xy=99999999,
+                    gradw_max=0, err_max=0.1, iter_min=10, iter_max=10000,
                     ratio_max=0.99, dist_max=1.0e6):
         """
         更新位移
         """
         assert isinstance(network, FractureNetwork)
         assert isinstance(matrix, InfMatrix)
-        core.frac_alg_update_disp(network.handle, matrix.handle, fa_yy, fa_xy
-                                  , gradw_max, err_max, iter_max, ratio_max, dist_max)
+        return core.frac_alg_update_disp(network.handle, matrix.handle, fa_yy, fa_xy,
+                                         gradw_max, err_max, iter_min, iter_max,
+                                         ratio_max, dist_max)
 
     core.use(None, 'frac_alg_extend_tip',
              c_void_p, c_void_p, c_void_p, c_double, c_double, c_double)
@@ -11813,17 +12846,47 @@ class FracAlg:
              c_size_t, c_size_t, c_size_t)
 
     @staticmethod
-    def update_topology(seepage, network, layer_n=1, z_min=-1, z_max=1,
+    def update_topology(seepage: Seepage, network: FractureNetwork, *,
+                        layer_n=1, z_min=-1, z_max=1,
                         ca_area=999999999, fa_width=999999999, fa_dist=999999999):
         """
         更新seepage的结构，
-            对于新添加的Cell，设置位置和面积属性
-            对于新添加的Face，设置宽度和长度属性
+            对于新添加的Cell，设置位置(cell.pos)和面积(ca_area)属性
+            对于新添加的Face，设置宽度(fa_width)和长度(fa_dist)属性
+        注意：
+            这里假设network有layer_n层的cell组成，并基于此来更新seepage的结构.
         """
         assert isinstance(seepage, Seepage)
         assert isinstance(network, FractureNetwork)
         core.frac_alg_update_topology(seepage.handle, network.handle, layer_n, z_min, z_max,
                                       ca_area, fa_width, fa_dist)
+
+    core.use(None, 'frac_alg_add_frac', c_void_p, c_double, c_double, c_double, c_double,
+             c_double, c_void_p)
+
+    @staticmethod
+    def add_frac(network: FractureNetwork, p0, p1, lave, *, data=None):
+        """
+        添加裂缝单元.
+        注意：
+            将根据给定的lave来分割单元，并自动处理和已有裂缝之间的位置关系.
+        """
+        assert isinstance(network, FractureNetwork)
+        if data is not None:
+            assert isinstance(data, FractureNetwork.FractureData)
+        core.frac_alg_add_frac(network.handle, p0[0], p0[1], p1[0], p1[1], lave, 0 if data is None else data.handle)
+
+    core.use(None, 'frac_alg_get_induced', c_void_p, c_size_t, c_size_t, c_void_p)
+
+    @staticmethod
+    def get_induced(network, fa_xy, fa_yy, matrix):
+        """
+        计算诱导应力，并且存储到给定的属性中
+        """
+        assert isinstance(network, FractureNetwork)
+        assert isinstance(matrix, InfMatrix)
+        assert network.fracture_number == matrix.size
+        core.frac_alg_get_induced(network.handle, fa_xy, fa_yy, matrix.handle)
 
 
 if __name__ == "__main__":

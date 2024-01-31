@@ -172,7 +172,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.gui_api.add_func('open_text', self.open_text)
         self.gui_api.add_func('open_image', self.open_image)
         self.gui_api.add_func('kill_thread', self.console_widget.kill_thread)
-        self.gui_api.add_func('cls', self.console_widget.output_widget.clear)
         self.gui_api.add_func('show_next', self.tab_widget.show_next)
         self.gui_api.add_func('show_prev', self.tab_widget.show_prev)
         self.gui_api.add_func('close_all_tabs', self.tab_widget.close_all_tabs)
@@ -407,10 +406,7 @@ class MainWindow(QtWidgets.QMainWindow):
                                 caption=os.path.basename(fname) if caption is None else caption,
                                 on_top=True,
                                 oper=lambda x: x.open(fname), icon='python.png')
-                if not app_data.has_tag_today('tip_shown_when_edit_code'):
-                    QtWidgets.QMessageBox.about(self, '成功',
-                                                '文件已打开，请点击工具栏上的<运行>按钮以运行')
-                    app_data.add_tag_today('tip_shown_when_edit_code')
+                print(f'文件已打开: \n\t{fname}\n\n请点击工具栏上的<运行>按钮以运行!\n\n')
 
     def open_text(self, fname, caption=None):
         if not isinstance(fname, str):
@@ -534,6 +530,12 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
     splash_fig = load_pixmap('splash.jpg')
     if splash_fig is not None and app_data.getenv('disable_splash', default='False') != 'True':
         splash = MySplashScreen()
+        try:
+            rect = QtWidgets.QDesktopWidget().availableGeometry()
+            splash_fig = splash_fig.scaled(round(rect.width() * 0.3), round(rect.height() * 0.3),
+                                           QtCore.Qt.KeepAspectRatio)
+        except:
+            pass
         splash.setPixmap(splash_fig)
         splash.show()
         app.processEvents()  # 处理主进程事件

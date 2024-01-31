@@ -1,8 +1,9 @@
 import timeit
 import warnings
 
+from zmlx.alg.clamp import clamp
 from zmlx.alg.time2str import time2str
-from zmlx.ui.GuiBuffer import gui
+from zmlx.ui import gui
 
 
 class GuiIterator:
@@ -10,7 +11,7 @@ class GuiIterator:
     基于GUI界面的求解过程控制。自动调用模型的迭代和绘图，并确保绘图函数不会过于频繁地调用，保证计算效率；
     """
 
-    def __init__(self, iterate, plot=None, info=None):
+    def __init__(self, iterate, plot=None, info=None, ratio=None):
         """
         初始化：其中：
             iterate：程序内核进行计算迭代 (将接受__call__的所有参数)
@@ -29,13 +30,15 @@ class GuiIterator:
         self.time_iter = 0
         self.time_plot = 0
         self.step = 0
-        self.ratio = 0.2
+        self.ratio = 0.2 if ratio is None else clamp(ratio, 1.0e-3, 0.3)
 
     def time_info(self):
         """
         返回程序的耗时情况
         """
-        return f'总耗时{time2str(self.time_iter + self.time_plot)}. 其中内核耗时{time2str(self.time_iter)}, 界面绘图耗时{time2str(self.time_plot)}'
+        return (f'Time. All = {time2str(self.time_iter + self.time_plot)}. '
+                f'Iter = {time2str(self.time_iter)}, '
+                f'Plot = {time2str(self.time_plot)}')
 
     @staticmethod
     def timing(f):

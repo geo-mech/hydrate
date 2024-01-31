@@ -32,9 +32,10 @@ def get_latest_version():
                 app_data.setenv('latest_version', version)
                 app_data.add_tag_today('latest_version_checked')
             return int(version)
+        return 100101  # default
     except Exception as err:
         warnings.warn(f'meet exception <{err}> when run <{get_latest_version}>')
-        return
+        return 100101  # default
 
 
 if __name__ == '__main__':

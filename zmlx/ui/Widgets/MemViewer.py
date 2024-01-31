@@ -19,8 +19,8 @@ class MemViewer(QtWidgets.QTableWidget):
         except:
             self.names_ignore = set()
 
-        self.names_ignore.add('MemViewer')
-        self.names_ignore.add('PgConsole')
+        for item in ['MemViewer', 'PgConsole', 'main_window', 'QtWidgets', 'set_md', 'widget', 'DemoWidget']:
+            self.names_ignore.add(item)
 
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.refresh)
