@@ -1,9 +1,16 @@
 # ** desc = '二维有限元模型(两个三角形有两个顶点固定，另外两个顶点振动过程)'
 
-from zml import Mesh3, ConjugateGradientSolver
+from zml import Mesh3, ConjugateGradientSolver, FemAlg
 from zmlx.ui import gui
 from zmlx.plt.tricontourf import tricontourf
-from zmlx.fem.create2 import create2
+from zmlx.fem.compute_face_stiff2 import compute_face_stiff2
+
+
+class FaceKeys:
+    ym = 0
+    mu = 1
+    den = 2
+    h = 3
 
 
 def create_mesh():
@@ -22,6 +29,13 @@ def create_mesh():
         n2 = nodes[triangle[2]]
         mesh.add_face([mesh.add_link([n0, n1]), mesh.add_link([n1, n2]), mesh.add_link([n2, n0])])
 
+    # 设置属性
+    for face in mesh.faces:
+        face.set_attr(FaceKeys.ym, 1.0)
+        face.set_attr(FaceKeys.mu, 0.2)
+        face.set_attr(FaceKeys.den, 1.0)
+        face.set_attr(FaceKeys.h, 1.0)
+
     return mesh
 
 
@@ -29,7 +43,10 @@ def create(mesh):
     """
     根据mesh创建模型
     """
-    model = create2(mesh)
+    face_stiffs = compute_face_stiff2(mesh, fa_E=FaceKeys.ym, fa_mu=FaceKeys.mu, fa_h=FaceKeys.h)
+    print(face_stiffs)
+
+    model = FemAlg.create2(mesh=mesh, fa_den=FaceKeys.den, fa_h=FaceKeys.h, face_stiffs=face_stiffs)
 
     # 增大质量，以确保位置不变
     for idx in [0, 1, 3]:

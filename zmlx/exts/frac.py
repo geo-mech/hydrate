@@ -1314,5 +1314,35 @@ class Sigma3:
             return buffer
 
 
+def get_fn2(network=None, seepage=None, ca_c=None, fa_id=None, fa_c=None):
+    """
+    对于颜色:
+        将首先从裂缝的fa_c属性中获得，如果获得失败，则从seepage的Cell的ca_c属性获得.
+    返回：
+        裂缝的位置，缝宽，颜色
+    """
+    pos = []
+    w = []
+    c = []
+    if network is not None:
+        for fracture in network.get_fractures():
+            pos.append(fracture.pos)
+            w.append(-fracture.dn)
+            if fa_c is not None:
+                tmp = fracture.get_attr(index=fa_c)
+                if tmp is not None:
+                    c.append(tmp)
+                    continue
+            if ca_c is not None and seepage is not None and fa_id is not None:
+                cell_id = round(fracture.get_attr(fa_id))
+                if cell_id < seepage.cell_number:
+                    tmp = seepage.get_cell(cell_id).get_attr(ca_c)
+                    if tmp is not None:
+                        c.append(tmp)
+                        continue
+            c.append(-fracture.dn)
+    return pos, w, c
+
+
 if __name__ == '__main__':
     print(core.time_compile)

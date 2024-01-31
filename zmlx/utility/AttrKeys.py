@@ -1,3 +1,6 @@
+from zmlx.io import json_ex
+
+
 def add_keys(*args):
     """
     在字典中注册键值。将从0开始尝试，直到发现不存在的数值再使用. 返回添加了key之后的字典对象.
@@ -61,23 +64,61 @@ class AttrKeys:
     用以管理属性. 自动从0开始编号.
     """
 
-    def __init__(self, *args):
+    def __init__(self, *args, path=None):
+        """
+        初始化，并且添加必要的键值 (或者从文件读取)
+        """
         self.__keys = {}
-        self.add_keys(*args)
+        if path is not None:
+            assert len(args) == 0
+            self.load(path)
+        else:
+            self.add_keys(*args)
 
     def __str__(self):
+        """
+        转化为字符串
+        """
         return f'{self.__keys}'
 
-    def __getattr__(self, item):
-        return self.__keys[item]
+    def save(self, path):
+        """
+        保存文件
+        """
+        if path is not None:
+            json_ex.write(path, self.__keys)
 
-    def __getitem__(self, item):
-        return self.__keys[item]
+    def load(self, path):
+        """
+        导入文件
+        """
+        if path is not None:
+            data = json_ex.read(path)
+            if isinstance(data, dict):
+                self.__keys = data
+
+    def __getattr__(self, name):
+        """
+        注册并返回id
+        """
+        return self.reg_key(name)
+
+    def __getitem__(self, name):
+        """
+        注册并返回id
+        """
+        return self.reg_key(name)
 
     def values(self):
+        """
+        返回所有的值
+        """
         return self.__keys.values()
 
     def add_keys(self, *args):
+        """
+        添加多个属性id
+        """
         for key in args:
             if isinstance(key, str):
                 if key not in self.__keys:
@@ -86,3 +127,40 @@ class AttrKeys:
                         if val not in values:
                             self.__keys[key] = val
                             break
+
+    def get_key(self, name):
+        """
+        返回属性id [不添加，如果找不到，则返回None]
+        """
+        return self.__keys.get(name)
+
+    def add_key(self, name):
+        """
+        添加属性ID
+        """
+        self.add_keys(name)
+
+    def reg_key(self, name):
+        """
+        注册并返回. 如果不存在，则创建.
+        """
+        value = self.get_key(name)
+        if value is None:
+            self.add_key(name)
+            return self.get_key(name)
+        else:
+            return value
+
+
+def test():
+    key = AttrKeys()
+    print(key.reg_key('x'))
+    print(key.reg_key('y'))
+    print(key.x)
+    print(key.y)
+    print(key.z)
+    print(key)
+
+
+if __name__ == '__main__':
+    test()

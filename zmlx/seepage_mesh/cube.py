@@ -19,6 +19,14 @@ def create_xyz(*, x_min, dx, x_max, y_min, dy, y_max, z_min, dz, z_max):
     return SeepageMesh.create_cube(x, y, z)
 
 
+def create_xy(*, x_min, dx, x_max, y_min, dy, y_max, z_min, z_max):
+    """
+    创建xy平面内的二维的网格
+    """
+    return create_xyz(x_min=x_min, dx=dx, x_max=x_max, y_min=y_min, dy=dy, y_max=y_max,
+                      z_min=z_min, dz=1e20, z_max=z_max)
+
+
 def create_xz(*, x_min, dx, x_max, z_min, dz, z_max, y_min, y_max):
     """
     创建xz平面内的二维的网格

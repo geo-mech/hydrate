@@ -57,8 +57,9 @@ def main():
         fn = network.frac_n
         print(f'step = {step}. frac_n = {fn}')
         if step % 20 == 0:
-            show_fn2(network=network, seepage=seepage, ca_c=cell_keys(seepage).pre, w_max=6,
-                     caption='裂缝', fa_id=frac_keys(seepage).id)
+            pos, w, c = get_fn2(network=network, seepage=seepage, ca_c=cell_keys(seepage).pre,
+                                fa_id=frac_keys(seepage).id)
+            show_fn2(pos=pos, w=w, c=c, w_max=6, caption='裂缝')
 
 
 if __name__ == '__main__':
