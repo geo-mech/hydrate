@@ -111,14 +111,14 @@ def load_window_size(win, name):
         words = app_data.getenv(name, encoding='utf-8', default='').split()
         rect = QtWidgets.QDesktopWidget().availableGeometry()
         if len(words) == 2:
-            w = clamp(int(words[0]), rect.width() * 0.4, rect.width() * 0.8)
-            h = clamp(int(words[1]), rect.height() * 0.4, rect.height() * 0.8)
+            w = clamp(int(words[0]), rect.width() * 0.2, rect.width() * 0.8)
+            h = clamp(int(words[1]), rect.height() * 0.2, rect.height() * 0.8)
             win.resize(int(w), int(h))
         else:
-            win.resize(int(rect.width() * 0.8), int(rect.height() * 0.8))
+            win.resize(int(rect.width() * 0.7), int(rect.height() * 0.7))
     except:
         rect = QtWidgets.QDesktopWidget().availableGeometry()
-        win.resize(int(rect.width() * 0.8), int(rect.height() * 0.8))
+        win.resize(int(rect.width() * 0.7), int(rect.height() * 0.7))
 
 
 def save_window_size(win, name):

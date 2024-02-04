@@ -1,5 +1,6 @@
-from zml import create_dict
 import warnings
+
+from zml import create_dict
 
 try:
     import matplotlib.pyplot as plt
@@ -71,21 +72,42 @@ class GuiBuffer:
         self.__gui = []
 
     def command(self, *args, **kwargs):
+        """
+        执行命令
+        """
         if len(self.__gui) > 0:
             return self.__gui[-1].command(*args, **kwargs)
 
     def push(self, gui):
+        """
+        压入gui的实例
+        """
         assert hasattr(gui, 'command')
         self.__gui.append(gui)
 
     def pop(self):
+        """
+        弹出最后一个gui的实例
+        """
         if len(self.__gui) > 0:
             return self.__gui.pop()
 
     def exists(self):
+        """
+        是否存在gui的实例
+        """
         return len(self.__gui) > 0
 
+    def __bool__(self):
+        """
+        是否存在gui的实例
+        """
+        return self.exists()
+
     def get(self):
+        """
+        返回最后一个gui实例
+        """
         if len(self.__gui) > 0:
             return self.__gui[-1]
 

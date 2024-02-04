@@ -2,6 +2,6 @@
 # ** text = '刷新'
 # ** is_sys = True
 
-from zml import *
+from zmlx.ui import gui
 
 gui.refresh()

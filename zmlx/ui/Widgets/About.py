@@ -1,4 +1,6 @@
-from zml import *
+import sys
+
+from zml import core, lic, get_dir, version
 from zmlx.alg.sys import get_latest_version
 from zmlx.ui.Qt import QtWidgets, QtCore
 

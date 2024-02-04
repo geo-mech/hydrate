@@ -1,10 +1,10 @@
 ### 介绍
 
-[IGG-Hydrate](https://gitee.com/geomech/hydrate): 储层*热/流/固/化耦合*(THMC)计算模块@[IGG](http://www.igg.cas.cn/)
+[Hydrate](https://gitee.com/geomech/hydrate): 储层*热/流/固/化耦合*(THMC)计算模块.
  
 ### 版本
 
-ZmlVersion=240121
+ZmlVersion=240128
 
 ### 用途
 

@@ -4,9 +4,14 @@ todo:
     @20230726
 """
 
-from zml import *
+import os
+
+from zml import app_data
 from zmlx.alg.is_chinese import is_chinese
 from zmlx.filesys.join_paths import join_paths
+from zmlx.filesys.make_dirs import make_dirs
+from zmlx.filesys.make_parent import make_parent
+from zmlx.filesys.tag import print_tag
 
 
 def opath(*args):

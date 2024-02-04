@@ -1,7 +1,13 @@
 # ** desc = '两相流，流体注入驱替'
 
-from zmlx import *
+import numpy as np
+
+from zml import SeepageMesh, Seepage
+from zmlx.alg.time2str import time2str
 from zmlx.config import seepage
+from zmlx.plt.tricontourf import tricontourf
+from zmlx.ui import gui
+from zmlx.utility.GuiIterator import GuiIterator
 
 
 def create():
@@ -20,8 +26,8 @@ def create():
                            s=(1, 0), perm=1e-14, disable_update_den=True,
                            disable_update_vis=True, disable_ther=True,
                            disable_heat_exchange=True,
-                           fludefs=[TherFlowConfig.FluProperty(den=50, vis=1.0e-4),
-                                    TherFlowConfig.FluProperty(den=1000, vis=1.0e-3)])
+                           fludefs=[Seepage.FluDef(den=50, vis=1.0e-4),
+                                    Seepage.FluDef(den=1000, vis=1.0e-3)])
 
     cell = model.get_nearest_cell((50, 50, 0))
     model.add_injector(fluid_id=1, flu=cell.get_fluid(1), pos=cell.pos, radi=0.1, opers=[(0, 1.0e-5)])

@@ -3,13 +3,10 @@
 """
 
 import zmlx.react.hydrate as hydrate
+from zml import Interp1
 from zmlx.alg.interp1 import interp1
-from zml import Interp1, data_version
 
-"""
-温度压力曲线：取自Tough+Hydrate的手册
-"""
-
+# 温度压力曲线：取自Tough+Hydrate的手册
 vt = [148.714, 154.578, 159.889, 166.418, 174.827, 183.458, 192.199, 200.277, 207.026, 213.887, 222.739, 231.259,
       236.017, 241.438, 247.746, 253.278, 258.257, 261.134, 265.007, 267.663, 270.207, 272.752, 275.408, 278.728,
       281.494, 284.703, 287.69, 289.461, 291.784, 293.776, 295.325, 297.095, 299.198, 302.185, 304.066, 305.726,
@@ -64,19 +61,16 @@ def get_dheat(Nh=6.0):
         When Nh=6, Return 437096.77
         When Nh=5, Return 511320.75
     """
-    if data_version.ch4_hydrate >= 221029:
-        return (54.2e3 / 16.0E-3) * get_mg_vs_mh(Nh)
-    else:
-        return (62.8e3 / 16.0E-3) * get_mg_vs_mh(Nh)
+    return (54.2e3 / 16.0E-3) * get_mg_vs_mh(Nh)
 
 
-def create(gas, wat, hyd, fa_t=None, fa_c=None, dissociation=True, formation=True):
+def create(gas, wat, hyd, fa_t=None, fa_c=None, dissociation=True, formation=True, Nh=6.0):
     """
-    创建一个水合物反应(平衡态的反应，反应的速率给的非常大)
+    创建一个ch4水合物反应(平衡态的反应，反应的速率给的非常大)
     by 张召彬
     """
-    return hydrate.create(vp=vp, vt=vt, temp=273.15, heat=get_dheat(6),
-                          mg=get_mg_vs_mh(6),
+    return hydrate.create(vp=vp, vt=vt, temp=273.15, heat=get_dheat(Nh=Nh),
+                          mg=get_mg_vs_mh(Nh=Nh),
                           gas=gas, liq=wat, hyd=hyd,
                           fa_t=fa_t, fa_c=fa_c,
                           dissociation=dissociation, formation=formation)

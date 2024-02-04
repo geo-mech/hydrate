@@ -1,7 +1,16 @@
 # ** desc = '测试：纵向二维。浮力作用下气体运移成藏过程模拟'
 
-from zmlx import *
+
+import numpy as np
+
+from zml import SeepageMesh, get_distance
+from zmlx.alg.time2str import time2str
 from zmlx.config import seepage
+from zmlx.fluid.ch4 import create as create_ch4
+from zmlx.fluid.h2o import create as create_h2o
+from zmlx.plt.tricontourf import tricontourf
+from zmlx.ui.GuiBuffer import gui, information
+from zmlx.utility.GuiIterator import GuiIterator
 
 
 def create():

@@ -1,12 +1,12 @@
 """
-用于管理动态的属性
+用于管理Seepage的动态属性
 """
 from zml import Seepage
 
 
 class DynKeys:
     """
-    用以管理动态的属性
+    用于管理Seepage的动态属性
     """
 
     def __init__(self, model, ty):

@@ -3,71 +3,27 @@
 1列数据，用于定义裂缝的颜色（如压力）
 """
 
-import warnings
-
-from zmlx.ui.GuiBuffer import gui
 from zml import is_array
 from zmlx.plt.get_color import get_color
 from zmlx.plt.plot2 import plot2
-
-try:
-    import numpy as np
-except Exception as err:
-    np = None
-    warnings.warn(f'warning. file: {__file__}. msg: {err}')
+from zmlx.ui.GuiBuffer import gui
 
 
-def from_network2(network=None, seepage=None, ca_c=None, fa_id=None, fa_c=None):
-    """
-    对于颜色:
-        将首先从裂缝的fa_c属性中获得，如果获得失败，则从seepage的Cell的ca_c属性获得.
-    返回：
-        裂缝的位置，缝宽，颜色
-    """
-    pos = []
-    w = []
-    c = []
-    if network is not None:
-        for fracture in network.get_fractures():
-            pos.append(fracture.pos)
-            w.append(-fracture.dn)
-            if fa_c is not None:
-                tmp = fracture.get_attr(index=fa_c)
-                if tmp is not None:
-                    c.append(tmp)
-                    continue
-            if ca_c is not None and seepage is not None and fa_id is not None:
-                cell_id = round(fracture.get_attr(fa_id))
-                if cell_id < seepage.cell_number:
-                    tmp = seepage.get_cell(cell_id).get_attr(ca_c)
-                    if tmp is not None:
-                        c.append(tmp)
-                        continue
-            c.append(-fracture.dn)
-    return pos, w, c
-
-
-def show_fn2(pos=None, w=None, c=None, w_max=4, network=None, seepage=None,
-             ca_c=None, fa_id=None, fa_c=None, ipath=None, **kwargs):
+def show_fn2(pos=None, w=None, c=None, w_max=4, ipath=None, iw=4, ic=6, **kwargs):
     """
     显示二维裂缝网络数据。其中：
         pos包含4列，为各个线段的位置
         w为各个线条的宽度（原始数据）
         c为各个线条的颜色（原始数据）
-        wmax为画图的时候线条的最大宽度
-    对于颜色:
-        将首先从裂缝的fa_c属性中获得，如果获得失败，则从seepage的Cell的ca_c属性获得.
+        w_max为画图的时候线条的最大宽度
     """
     if pos is None or w is None or c is None:
-        if network is not None:
-            pos, w, c = from_network2(network=network, seepage=seepage, ca_c=ca_c, fa_id=fa_id, fa_c=fa_c)
-
-    if pos is None or w is None or c is None:
-        if ipath is not None and np is not None:
+        if ipath is not None:
+            import numpy as np
             d = np.loadtxt(ipath)
-            pos = d[:, 0:4]
-            w = d[:, 4]
-            c = d[:, 6]
+            pos = d[:, 0: 4]
+            w = d[:, iw]
+            c = d[:, ic]
 
     count = len(pos)
     if count == 0:
@@ -130,7 +86,7 @@ def show_fn2(pos=None, w=None, c=None, w_max=4, network=None, seepage=None,
         'x': [xc, xc + xw / 1e6, xc],
         'y': [yc, yc, yc + yw / 1e6],
         'z': [cl, (cl + cr) / 2, cr],
-        'levels': 10}})
+        'levels': 20}})
 
     kwargs['aspect'] = 'equal'
     plot2(data=data, **kwargs)

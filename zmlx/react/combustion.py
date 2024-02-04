@@ -15,8 +15,8 @@ def create(left, right, temp, heat, rate, fa_t=None, fa_c=None):
     # 创建一个映射
     #    其中的t为实际温度偏离平衡温度的数值，q为在该温度下反应的速率.
     #    这里要做的，是在实际温度低于燃点的时候，让反应的速率等于0，从而确保只有温度大于燃点，反应才可以启动.
-    t = [-1e4, temp-teq,  temp-teq+1,  -1,    0,  1e4]
-    q = [0,    0,         -rate,       -rate, 0,  0]
+    t = [-1e4, temp - teq, temp - teq + 1, -1, 0, 1e4]
+    q = [0, 0, -rate, -rate, 0, 0]
     return endothermic.create(left=right, right=left,  # 交换左右两侧
                               temp=teq,  # 用于定义能量的参考温度
                               heat=heat,  # 在参考温度下，1kg物质产生的热量
@@ -50,11 +50,10 @@ def test(t_ini=510):
 
     for step in range(20):
         model.get_reaction(0).react(model, 1.0)
-        print(f'{cell.get_fluid(0).mass}  {cell.get_fluid(1).mass}  {cell.get_fluid(2).mass}  {cell.get_fluid(0).get_attr(fa_t)}  {cell.get_fluid(1).get_attr(fa_t)}  {cell.get_fluid(2).get_attr(fa_t)}')
+        print(
+            f'{cell.get_fluid(0).mass}  {cell.get_fluid(1).mass}  {cell.get_fluid(2).mass}  {cell.get_fluid(0).get_attr(fa_t)}  {cell.get_fluid(1).get_attr(fa_t)}  {cell.get_fluid(2).get_attr(fa_t)}')
 
 
 if __name__ == '__main__':
     test(510)
     test(490)
-
-

@@ -1,7 +1,6 @@
 import sys
 import warnings
 
-from zmlx.ui.GuiBuffer import gui
 from zml import lic
 from zmlx.filesys.has_permission import has_permission
 from zmlx.filesys.samefile import samefile
@@ -10,12 +9,13 @@ from zmlx.ui.CodeEdit import CodeEdit
 from zmlx.ui.Config import *
 from zmlx.ui.ConsoleWidget import ConsoleWidget
 from zmlx.ui.GuiApi import GuiApi
+from zmlx.ui.GuiBuffer import gui
 from zmlx.ui.Qt import QtCore
 from zmlx.ui.Script import Script
 from zmlx.ui.TabWidget import TabWidget
 from zmlx.ui.TaskProc import TaskProc
-from zmlx.ui.Widgets.TextEdit import TextEdit
 from zmlx.ui.VersionLabel import VersionLabel
+from zmlx.ui.Widgets.TextEdit import TextEdit
 from zmlx.ui.alg.show_seepage import show_seepage
 from zmlx.ui.alg.show_txt import show_txt
 

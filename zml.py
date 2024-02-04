@@ -37,7 +37,7 @@ except Exception as _err:
 is_windows = os.name == 'nt'
 
 # zml模块的版本(用六位数字表示的日期)
-version = 240121
+version = 240128
 
 
 class Object:
@@ -72,6 +72,9 @@ class _GuiAdaptor:
         from zmlx.ui.GuiBuffer import gui as _gui
         return _gui(*args, **kwargs)
 
+    def __bool__(self):
+        return self.exists()
+
 
 # will be removed after 2025-1-21. use zmlx.ui.GuiBuffer.gui instead
 gui = _GuiAdaptor()
@@ -81,12 +84,14 @@ def _deprecation_func(pack_name, func, date=None):
     """
     定义一个在zmlx中有定义，在zml中被弃用的函数.
     """
+
     def a_function(*args, **kwargs):
         warnings.warn(f'zml.{func} will be removed after {date}, use {pack_name}.{func} instead. ',
                       DeprecationWarning)
         mod = importlib.import_module(pack_name)
         f = getattr(mod, func)
         return f(*args, **kwargs)
+
     return a_function
 
 
@@ -283,8 +288,7 @@ class _AppData(Object):
         make_dirs(folder)
         try:
             with open(os.path.join(folder, datetime.datetime.now().strftime("%Y-%m-%d.log")), 'a') as f:
-                f.write(f'-------{datetime.datetime.now()}----------\n')
-                f.write(f'{text}\n\n\n')
+                f.write(f'{datetime.datetime.now()}: \n{text}\n\n\n')
         except:
             pass
 
@@ -937,7 +941,6 @@ is_time_string = _deprecation_func('zmlx.filesys.tag', 'is_time_string', '2025-1
 has_tag = _deprecation_func('zmlx.filesys.tag', 'has_tag', '2025-1-21')
 print_tag = _deprecation_func('zmlx.filesys.tag', 'print_tag', '2025-1-21')
 
-
 core.use(None, 'fetch_m', c_char_p)
 
 
@@ -1082,7 +1085,6 @@ def reg(code=None):
 
 
 first_only = _deprecation_func('zmlx.filesys.first_only', 'first_only', '2025-1-21')
-
 
 core.use(c_double, 'test_loop', c_size_t, c_bool)
 
@@ -1237,7 +1239,7 @@ except:
     pass
 
 try:
-    app_data.log(f'import zml <zml: {get_time_compile()}, Python: {sys.version}>')
+    app_data.log(f'import zml <zml: v{version}, Python: {sys.version}>')
 except:
     pass
 
@@ -1293,17 +1295,23 @@ class Vector(HasHandle):
     core.use(c_void_p, 'new_vf')
     core.use(None, 'del_vf', c_void_p)
 
-    def __init__(self, value=None, path=None, handle=None):
+    def __init__(self, value=None, path=None, size=None, handle=None):
         """
         Create this Vector object, and possibly initialize it
         """
         super(Vector, self).__init__(handle, core.new_vf, core.del_vf)
         if handle is None:
-            self.set(value)
+            if value is not None:
+                self.set(value)
+                return
             if path is not None:
                 self.load(path)
+                return
+            if size is not None:
+                self.size = size
+                return
         else:
-            assert value is None and path is None
+            assert value is None and path is None and size is None
 
     def __str__(self):
         return f'zml.Vector({self.to_list()})'
@@ -1377,6 +1385,15 @@ class Vector(HasHandle):
                 assert p is not None
                 for i in range(len(value)):
                     p[i] = value[i]
+
+    def fill(self, value=0.0):
+        """
+        填充一个数值. 默认为0
+        """
+        p = self.pointer
+        assert p is not None
+        for i in range(self.size):
+            p[i] = value
 
     def to_list(self):
         """
@@ -3224,6 +3241,24 @@ class Tensor2(HasHandle):
         core.tensor2_rotate(self.handle, buffer.handle, angle)
         return buffer
 
+    core.use(c_double, 'tensor2_get_max_principle_value', c_void_p)
+
+    @property
+    def max_principle_value(self):
+        return core.tensor2_get_max_principle_value(self.handle)
+
+    core.use(c_double, 'tensor2_get_min_principle_value', c_void_p)
+
+    @property
+    def min_principle_value(self):
+        return core.tensor2_get_min_principle_value(self.handle)
+
+    core.use(c_double, 'tensor2_get_principle_angle', c_void_p)
+
+    @property
+    def principle_angle(self):
+        return core.tensor2_get_principle_angle(self.handle)
+
 
 class Tensor3(HasHandle):
     core.use(c_void_p, 'new_tensor3')
@@ -4519,7 +4554,7 @@ class Mesh3(HasHandle):
 
         -测试----------------------
         使用如下脚本生成测试数据：
-from zml import *
+from zml import Mesh3
 mesh = Mesh3.create_tri(0, 0, 100, 50, 3.0)
 print(mesh)
 Mesh3.print_trimesh('mesh.ver', 'mesh.tri', mesh, 1)
@@ -5007,6 +5042,16 @@ class DynSys(HasHandle):
         handle = core.dynsys_get_p2f(self.handle, idx)
         if handle > 0:
             return LinearExpr(handle=handle)
+
+    core.use(c_double, 'dynsys_get_lexpr_value', c_void_p, c_void_p)
+
+    def get_lexpr_value(self, lexpr):
+        """
+        返回一个关于此系数各个自由度的线性表达式的取值. 有些内容，比如单元的应力、应变等，都可以书写成为自由度的线性表达式。
+        有了这个表达式之后，后续就可以比较快速方便地计算出这些值.
+        """
+        assert isinstance(lexpr, LinearExpr)
+        return core.dynsys_get_lexpr_value(self.handle, lexpr.handle)
 
 
 class SpringSys(HasHandle):
@@ -5736,6 +5781,29 @@ class SpringSys(HasHandle):
         if right is None:
             right = 1e100
         core.springsys_modify_pos(self.handle, idim, left, right)
+
+
+class FemAlg:
+    core.use(None, 'fem_alg_create2', c_void_p, c_void_p, c_void_p, c_size_t, c_size_t, c_size_t)
+
+    @staticmethod
+    def create2(mesh, fa_den, fa_h, face_stiffs):
+        assert isinstance(mesh, Mesh3)
+        assert isinstance(face_stiffs, Vector)
+        dyn = DynSys()
+        core.fem_alg_create2(dyn.handle, mesh.handle, ctypes.cast(face_stiffs.pointer, c_void_p), face_stiffs.size,
+                             fa_den, fa_h)
+        return dyn
+
+    core.use(None, 'fem_alg_add_strain2', c_void_p, c_void_p, c_void_p, c_size_t, c_size_t)
+
+    @staticmethod
+    def add_strain2(dyn, mesh, fa_strain, face_stiffs):
+        assert isinstance(dyn, DynSys)
+        assert isinstance(mesh, Mesh3)
+        assert isinstance(face_stiffs, Vector)
+        core.fem_alg_add_strain2(dyn.handle, mesh.handle, ctypes.cast(face_stiffs.pointer, c_void_p),
+                                 face_stiffs.size, fa_strain)
 
 
 class HasCells(Object):
@@ -11306,7 +11374,7 @@ class DDMSolution2(HasHandle):
     def __str__(self):
         return (f'zml.DDMSolution2(handle={self.handle}, '
                 f'alpha={self.alpha}, beta={self.beta}, '
-                f'shear_modulus={self.shear_modulus/1.0e9}GPa, '
+                f'shear_modulus={self.shear_modulus / 1.0e9}GPa, '
                 f'poisson_ratio={self.poisson_ratio}, '
                 f'adjust_coeff={self.adjust_coeff})')
 
@@ -11461,9 +11529,13 @@ class FractureNetwork(HasHandle):
             core.frac_nd_set_attr(self.handle, index, value)
             return self
 
-    class FractureData(Object):
-        def __init__(self, handle):
-            self.handle = handle
+    class FractureData(HasHandle):
+
+        core.use(c_void_p, 'new_frac_bd')
+        core.use(None, 'del_frac_bd', c_void_p)
+
+        def __init__(self, handle=None):
+            super(FractureNetwork.FractureData, self).__init__(handle, core.new_frac_bd, core.del_frac_bd)
 
         core.use(c_double, 'frac_bd_get_attr', c_void_p, c_size_t)
         core.use(None, 'frac_bd_set_attr', c_void_p, c_size_t, c_double)
@@ -11530,10 +11602,16 @@ class FractureNetwork(HasHandle):
 
         @property
         def f(self):
+            """
+            摩擦系数
+            """
             return core.frac_bd_get_fric(self.handle)
 
         @f.setter
         def f(self, value):
+            """
+            摩擦系数
+            """
             core.frac_bd_set_fric(self.handle, value)
 
         core.use(c_double, 'frac_bd_get_p0', c_void_p)
@@ -11541,10 +11619,16 @@ class FractureNetwork(HasHandle):
 
         @property
         def p0(self):
+            """
+            p = max(0, p0 + k * dn)
+            """
             return core.frac_bd_get_p0(self.handle)
 
         @p0.setter
         def p0(self, value):
+            """
+            p = max(0, p0 + k * dn)
+            """
             core.frac_bd_set_p0(self.handle, value)
 
         core.use(c_double, 'frac_bd_get_k', c_void_p)
@@ -11552,16 +11636,25 @@ class FractureNetwork(HasHandle):
 
         @property
         def k(self):
+            """
+            p = max(0, p0 + k * dn)
+            """
             return core.frac_bd_get_k(self.handle)
 
         @k.setter
         def k(self, value):
+            """
+            p = max(0, p0 + k * dn)
+            """
             core.frac_bd_set_k(self.handle, value)
 
         core.use(c_double, 'frac_bd_get_fp', c_void_p)
 
         @property
         def fp(self):
+            """
+            根据此时的dn, p0和k计算得到的fp
+            """
             return core.frac_bd_get_fp(self.handle)
 
     class Vertex(VertexData):
@@ -11600,13 +11693,13 @@ class FractureNetwork(HasHandle):
             assert isinstance(network, FractureNetwork)
             assert isinstance(index, int)
             assert index < network.fracture_number
-            self.network = network
-            self.index = index
             super(FractureNetwork.Fracture, self).__init__(
                 handle=core.frac_nt_get_bd(network.handle, index))
+            self.network = network
+            self.index = index
 
         def __str__(self):
-            return f'zml.FractureNetwork.Fracture(index={self.index}, pos={self.pos})'
+            return f'zml.FractureNetwork.Fracture(index={self.index}, pos={self.pos}, ds={self.ds}, dn={self.dn})'
 
         @property
         def vertex_number(self):
@@ -11824,6 +11917,31 @@ class FracAlg:
         assert isinstance(network, FractureNetwork)
         core.frac_alg_update_topology(seepage.handle, network.handle, layer_n, z_min, z_max,
                                       ca_area, fa_width, fa_dist)
+
+    core.use(None, 'frac_alg_add_frac', c_void_p, c_double, c_double, c_double, c_double,
+             c_double, c_void_p)
+
+    @staticmethod
+    def add_frac(network, pA, pB, lave, data=None):
+        """
+        添加裂缝单元
+        """
+        assert isinstance(network, FractureNetwork)
+        if data is not None:
+            assert isinstance(data, FractureNetwork.FractureData)
+        core.frac_alg_add_frac(network.handle, pA[0], pA[1], pB[0], pB[1], lave, 0 if data is None else data.handle)
+
+    core.use(None, 'frac_alg_get_induced', c_void_p, c_size_t, c_size_t, c_void_p)
+
+    @staticmethod
+    def get_induced(network, fa_xy, fa_yy, matrix):
+        """
+        计算诱导应力，并且存储到给定的属性中
+        """
+        assert isinstance(network, FractureNetwork)
+        assert isinstance(matrix, InfMatrix)
+        assert network.fracture_number == matrix.size
+        core.frac_alg_get_induced(network.handle, fa_xy, fa_yy, matrix.handle)
 
 
 if __name__ == "__main__":

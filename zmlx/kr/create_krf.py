@@ -37,6 +37,7 @@ def _test1():
     def f(fig):
         ax = fig.subplots()
         ax.plot(x, y)
+
     plot(f)
 
 
@@ -49,12 +50,13 @@ def _test2():
     def f(fig):
         ax = fig.subplots()
         ax.plot(x, y)
+
     plot(f)
 
 
 def _test3():
     from zmlx.ui.GuiBuffer import plot
-    x, y = create_krf(0.1, 8, k_max=100, s_max=1, count=100)
+    x, y = create_krf(0.3, 2, k_max=1, s_max=1, count=100)
     print(x)
     print(y)
 
@@ -67,4 +69,3 @@ def _test3():
 
 if __name__ == '__main__':
     _test3()
-
