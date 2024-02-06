@@ -4,7 +4,7 @@
  
 ### 版本
 
-ZmlVersion=240128
+ZmlVersion=240203
 
 ### 用途
 
@@ -27,13 +27,13 @@ zhangzhaobin@mail.iggcas.ac.cn;
 ### 安装
 
 1. Windows 10/11, x64, 安装[VC_redist.x64.exe](https://gitee.com/geomech/hydrate/attach_files);
-2. 安装[Python](https://www.python.org/) 3.7+，并配置`numpy`, `scipy`, `PyQt5`, `matplotlib`;
+2. 安装[Python](https://www.python.org/) 3.7+，并配置`numpy`, `scipy`, `PyQt5`, `matplotlib`; 建议安装 [WinPython](https://pan.baidu.com/s/1PnqdA28GdUKhA9A_7x20zQ) 集成环境 (链接：[https://pan.baidu.com/s/1PnqdA28GdUKhA9A_7x20zQ](https://pan.baidu.com/s/1PnqdA28GdUKhA9A_7x20zQ), 提取码：mba8);
 3. 将`zml.py`所在文件夹添加到Python[搜索路径](https://zhuanlan.zhihu.com/p/530589364);
 
 ### 使用
 
 1. 参考[zmlx/demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo);
-2. 运行`UI.pyw`启动界面;
+2. 运行`UI.pyw`启动界面 (会同时尝试将`zml`和`zmlx`添加到[搜索路径](https://zhuanlan.zhihu.com/p/530589364));
 
 ### 开发
 

@@ -44,7 +44,7 @@ def add(model: Seepage, fid0, fid1, get_idx, data):
     buf = model.get_buffer('cap_settings')
     assert buf.size % 7 == 0
     count = buf.size // 7
-    ca_ipc = model.reg_cell_key(f'ipc_{count}')
+    ca_ipc = model.reg_cell_key(f'ipc_{count}')   # 在cell中注册一个key，用来存储pc的id
 
     ipcs = []
     for curve_id in range(len(data)):
@@ -57,6 +57,7 @@ def add(model: Seepage, fid0, fid1, get_idx, data):
             ipcs.append(idx)
             continue
         else:
+            # 从饱和度到压力的插值.
             s, p = data[curve_id]
             assert len(s) == len(p) and len(s) >= 2
             for i in range(1, len(s)):
@@ -70,7 +71,7 @@ def add(model: Seepage, fid0, fid1, get_idx, data):
         idx = round(get_idx(*model.get_cell(cell_id).pos))
         assert 0 <= idx < len(data)
         ipc = ipcs[idx]
-        model.get_cell(cell_id).set_attr(ca_ipc, ipc)
+        model.get_cell(cell_id).set_attr(ca_ipc, ipc)   # 设置pc的id
 
     if isinstance(fid0, str):
         fid0 = model.find_fludef(fid0)

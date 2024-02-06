@@ -37,7 +37,7 @@ except Exception as _err:
 is_windows = os.name == 'nt'
 
 # zml模块的版本(用六位数字表示的日期)
-version = 240128
+version = 240203
 
 
 class Object:
@@ -11887,7 +11887,7 @@ class FracAlg:
         """
         assert isinstance(network, FractureNetwork)
         assert isinstance(matrix, InfMatrix)
-        core.frac_alg_update_disp(network.handle, matrix.handle, fa_yy, fa_xy
+        return core.frac_alg_update_disp(network.handle, matrix.handle, fa_yy, fa_xy
                                   , gradw_max, err_max, iter_max, ratio_max, dist_max)
 
     core.use(None, 'frac_alg_extend_tip',

@@ -590,10 +590,13 @@ def add_face(model, cell0, cell1, *args, **kwargs):
     return face
 
 
-def print_cells(path, model, ca_keys=None, fa_keys=None, fmt='%.18e'):
+def print_cells(path, model, ca_keys=None, fa_keys=None, fmt='%.18e', export_mass=False):
     """
     输出cell的属性（前三列固定为x y z坐标）. 默认第4列为pre，第5列温度，第6列为流体总体积，后面依次为各流体组分的体积饱和度.
     最后是ca_keys所定义的额外的Cell属性.
+
+    注意：
+        当export_mass为True的时候，则输出质量（第6列为总质量），后面的饱和度为质量的比例 （否则为体积）.
     """
     assert isinstance(model, Seepage)
     if path is None:
@@ -611,11 +614,12 @@ def print_cells(path, model, ca_keys=None, fa_keys=None, fmt='%.18e'):
             fluid_ids.append([i0, i1])
 
     cells = SeepageNumpy(model).cells
-    v = cells.fluid_vol
+    v = cells.fluid_mass if export_mass else cells.fluid_vol
 
     vs = []
     for fluid_id in fluid_ids:
-        s = SeepageNumpy(model).fluids(*fluid_id).vol / v
+        f = SeepageNumpy(model).fluids(*fluid_id)
+        s = (f.mass if export_mass else f.vol) / v
         vs.append(s)
 
     # 返回温度(未必有定义)

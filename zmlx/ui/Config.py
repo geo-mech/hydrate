@@ -31,14 +31,20 @@ def find_all(name):
     return app_data.find_all(name)
 
 
-def load_pixmap(name):
+def find_icon_file(name):
     try:
         for folder in reversed(find_all('zml_icons')):
             filepath = os.path.join(folder, name)
             if os.path.isfile(filepath):
-                return QtGui.QPixmap(filepath)
+                return filepath
     except:
         pass
+
+
+def load_pixmap(name):
+    filepath = find_icon_file(name)
+    if filepath is not None:
+        return QtGui.QPixmap(filepath)
 
 
 def load_icon(name):
