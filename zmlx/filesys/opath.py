@@ -6,7 +6,7 @@ todo:
 
 import os
 
-from zml import app_data
+from zml import app_data, get_dir
 from zmlx.alg.is_chinese import is_chinese
 from zmlx.filesys.join_paths import join_paths
 from zmlx.filesys.make_dirs import make_dirs
@@ -19,7 +19,16 @@ def opath(*args):
     返回一个用于输出的文件路径. 如果给定的args为空，则返回root路径（由 current_work_directory 定义的环境变量或者当前工作路径）
     等同于UI界面设置的工作目录
     """
-    root = app_data.getenv('current_work_directory', encoding='utf-8', default=os.getcwd())
+
+    # 当data文件夹存在的时候，则会优先使用 (有的时候，可能没有创建环境变量的权限)
+    data_folder = os.path.join(get_dir(), 'data')
+    if not os.path.isdir(data_folder):
+        data_folder = os.getcwd()
+
+    # 读取环境变量
+    root = app_data.getenv('current_work_directory',
+                           encoding='utf-8',
+                           default=data_folder)
     assert not is_chinese(root), f'String contains Chinese. root: {root}'
 
     if len(args) > 0:
@@ -29,6 +38,7 @@ def opath(*args):
     else:
         path = root
 
+    # 因为是输出目录，因此创建必要的文件夹.
     return make_parent(path)
 
 
