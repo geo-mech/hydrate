@@ -8,31 +8,33 @@ from zmlx.config import hydrate, seepage
 from zmlx.filesys.join_paths import join_paths
 from zmlx.filesys.make_fname import make_fname
 from zmlx.plt.tricontourf import tricontourf
-from zmlx.ui.GuiBuffer import gui, information
+from zmlx.ui.GuiBuffer import gui
 from zmlx.utility.GuiIterator import GuiIterator
 from zmlx.utility.SaveManager import SaveManager
 from zmlx.utility.SeepageNumpy import as_numpy
 
 
 def create():
-    mesh = SeepageMesh.create_cube(np.linspace(0, 300, 150), np.linspace(0, 500, 250), (-0.5, 0.5))
+    mesh = SeepageMesh.create_cube(x=np.linspace(0, 300, 150),
+                                   y=(-0.5, 0.5),
+                                   z=np.linspace(0, 500, 250))
 
     def get_initial_t(x, y, z):
-        return 278 + 22.15 - 0.0443 * y
+        return 278 + 22.15 - 0.0443 * z
 
     def get_initial_p(x, y, z):
-        return 10e6 + 5e6 - 1e4 * y
+        return 10e6 + 5e6 - 1e4 * z
 
     def get_initial_s(x, y, z):
-        if get_distance((x, y, z), (150, 100, 0)) < 50:
+        if get_distance((x, z), (150, 100)) < 50:
             return (1,), (0,), (0, 0)
         else:
             return (0,), (1,), (0, 0)
 
-    y0, y1 = mesh.get_pos_range(1)
+    z0, z1 = mesh.get_pos_range(2)
 
     def get_denc(x, y, z):
-        if abs(y - y0) < 0.1 or abs(y - y1) < 0.1:
+        if abs(z - z0) < 0.1 or abs(z - z1) < 0.1:
             return 1.0e20
         else:
             return 1.0e6
@@ -44,7 +46,8 @@ def create():
             return 1.0e-15
 
     kw = hydrate.create_kwargs(has_inh=True,  # 存在抑制剂
-                               has_ch4_in_liq=True  # 存在溶解气
+                               has_ch4_in_liq=True,  # 存在溶解气
+                               gravity=[0, 0, -10],
                                )
     kw.update(create_dict(mesh=mesh, porosity=0.1, pore_modulus=100e6, denc=get_denc, dist=0.1,
                           temperature=get_initial_t, p=get_initial_p, s=get_initial_s,
@@ -59,9 +62,9 @@ def show(model: Seepage, folder=None):
     if not gui.exists():
         return
     time = seepage.get_time(model)
-    kwargs = {'title': f'plot when model.time={time2str(time)}'}
+    kwargs = {'title': f'plot when time={time2str(time)}'}
     x = as_numpy(model).cells.x
-    y = as_numpy(model).cells.y
+    z = as_numpy(model).cells.z
 
     def fname(key):
         return make_fname(time / (3600 * 24 * 365), folder=join_paths(folder, key), ext='.jpg', unit='y')
@@ -69,7 +72,7 @@ def show(model: Seepage, folder=None):
     cell_keys = seepage.cell_keys(model)
 
     def show_key(key):
-        tricontourf(x, y, as_numpy(model).cells.get(cell_keys[key]), caption=key,
+        tricontourf(x, z, as_numpy(model).cells.get(cell_keys[key]), caption=key,
                     fname=fname(key), **kwargs)
 
     show_key('pre')
@@ -79,7 +82,7 @@ def show(model: Seepage, folder=None):
 
     def show_s(flu_name):
         s = as_numpy(model).fluids(*model.find_fludef(flu_name)).vol / fv_all
-        tricontourf(x, y, s, caption=flu_name, fname=fname(flu_name), **kwargs)
+        tricontourf(x, z, s, caption=flu_name, fname=fname(flu_name), **kwargs)
 
     for item in ['ch4', 'liq', 'ch4_hydrate']:
         show_s(item)
@@ -102,17 +105,16 @@ def solve(model, folder=None):
         iterate(model)
         save()
         if step % 10 == 0:
-            dt = time2str(seepage.get_dt(model))
-            time = time2str(seepage.get_time(model))
-            print(f'step = {step}, dt = {dt}, time = {time}')
+            print(f'step = {step}, dt = {seepage.get_dt(model, as_str=True)}, '
+                  f'time = {seepage.get_time(model, as_str=True)}')
     show(model, folder=join_paths(folder, 'figures'))
     save(check_dt=False)  # 保存最终状态
-    information('计算结束', iterate.time_info())
+    print(iterate.time_info())
 
 
 def execute(gui_mode=True, close_after_done=False):
     gui.execute(solve, close_after_done=close_after_done,
-                args=(create(), 'HydForm'), disable_gui=not gui_mode)
+                args=(create(), ), disable_gui=not gui_mode)
 
 
 if __name__ == '__main__':

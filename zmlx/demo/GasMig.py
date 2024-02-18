@@ -9,31 +9,33 @@ from zmlx.config import seepage
 from zmlx.fluid.ch4 import create as create_ch4
 from zmlx.fluid.h2o import create as create_h2o
 from zmlx.plt.tricontourf import tricontourf
-from zmlx.ui.GuiBuffer import gui, information
+from zmlx.ui.GuiBuffer import gui
 from zmlx.utility.GuiIterator import GuiIterator
+from zmlx.utility.SeepageNumpy import as_numpy
 
 
 def create():
-    mesh = SeepageMesh.create_cube(np.linspace(0, 300, 150),
-                                   np.linspace(0, 500, 250),
-                                   (-0.5, 0.5))
+    mesh = SeepageMesh.create_cube(x=np.linspace(0, 300, 150),
+                                   y=(-0.5, 0.5),
+                                   z=np.linspace(-500, 0, 250)
+                                   )
 
     def get_initial_t(x, y, z):
-        return 278 + 22.15 - 0.0443 * y
+        return 278 + 22.15 - 0.0443 * z
 
     def get_initial_p(x, y, z):
-        return 10e6 + 5e6 - 1e4 * y
+        return 10e6 + 5e6 - 1e4 * z
 
     def get_initial_s(x, y, z):
-        if get_distance((x, y, z), (150, 100, 0)) < 50:
+        if get_distance((x, y, z), (150, 0, -400)) < 50:
             return 1, 0
         else:
             return 0, 1
 
-    y0, y1 = mesh.get_pos_range(1)
+    z0, z1 = mesh.get_pos_range(2)
 
     def get_denc(x, y, z):
-        if abs(y - y0) < 0.1 or abs(y - y1) < 0.1:
+        if abs(z - z0) < 0.1 or abs(z - z1) < 0.1:
             return 1.0e20
         else:
             return 1.0e6
@@ -48,7 +50,7 @@ def create():
                            temperature=get_initial_t, p=get_initial_p, s=get_initial_s,
                            perm=get_perm, heat_cond=2.0,
                            fludefs=[create_ch4(), create_h2o()],
-                           dt_max=3600 * 24, gravity=(0, -10, 0))
+                           dt_max=3600 * 24, gravity=(0, 0, -10))
 
     return model
 
@@ -58,12 +60,13 @@ def show(model):
     绘图，且当folder给定的时候，将绘图结果保存到给定的文件夹
     """
     if gui.exists():
-        x, y = [cell.pos[0] for cell in model.cells], [cell.pos[1] for cell in model.cells]
         title = f'plot when model.time={time2str(seepage.get_time(model))}'
-        tricontourf(x, y, [c.get_attr(model.get_cell_key('pre')) for c in model.cells],
-                    caption='压力', title=title)
-        tricontourf(x, y, [c.get_fluid(0).vol_fraction for c in model.cells],
-                    caption='气饱和度', title=title)
+        numpy = as_numpy(model)
+        x, z = numpy.cells.x, numpy.cells.z
+        p = numpy.cells.get(model.get_cell_key('pre'))
+        tricontourf(x, z, p, caption='压力', title=title, xlabel='x / m', ylabel='z / m')
+        s = numpy.fluids(0).vol / numpy.cells.fluid_vol
+        tricontourf(x, z, s, caption='气饱和度', title=title, xlabel='x / m', ylabel='z / m')
 
 
 def solve(model):
@@ -74,12 +77,11 @@ def solve(model):
     for step in range(10000):
         iterate(model)
         if step % 10 == 0:
-            dt = time2str(seepage.get_dt(model))
-            time = time2str(seepage.get_time(model))
-            print(f'step = {step}, dt = {dt}, time = {time}')
+            print(f'step = {step}, dt = {seepage.get_dt(model, as_str=True)}, '
+                  f'time = {seepage.get_time(model, as_str=True)}')
 
     show(model)
-    information('计算结束', iterate.time_info())
+    print(iterate.time_info())
 
 
 def execute(gui_mode=True, close_after_done=False):

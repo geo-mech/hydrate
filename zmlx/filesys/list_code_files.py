@@ -9,5 +9,5 @@ def list_code_files(path=None, exts=None):
 
 
 if __name__ == '__main__':
-    for file in list_code_files():
+    for file in list_code_files(path='..'):
         print(file)

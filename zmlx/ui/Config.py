@@ -93,7 +93,7 @@ def play_ding():
 
 
 def play_error():
-    play_sound('Windows Error.wav')
+    play_sound('error.wav')
 
 
 def save(key, value, encoding=None):
@@ -106,7 +106,7 @@ def load(key, default='', encoding=None):
 
 def load_window_style(win, name, extra=''):
     try:
-        value = load(name, default='', encoding='UTF-8')
+        value = load(name, default='', encoding='utf-8')
         win.setStyleSheet(f'{value};{extra}')
     except:
         pass
@@ -148,13 +148,13 @@ def load_cwd():
         save_cwd()
 
 
-Priorities = {'HighestPriority': QtCore.QThread.HighestPriority,
-              'HighPriority': QtCore.QThread.HighPriority,
-              'IdlePriority': QtCore.QThread.IdlePriority,
-              'InheritPriority': QtCore.QThread.InheritPriority,
-              'LowestPriority': QtCore.QThread.LowestPriority,
-              'LowPriority': QtCore.QThread.LowPriority,
-              'NormalPriority': QtCore.QThread.NormalPriority,
+Priorities = {'HighestPriority': QtCore.QThread.Priority.HighestPriority,
+              'HighPriority': QtCore.QThread.Priority.HighPriority,
+              'IdlePriority': QtCore.QThread.Priority.IdlePriority,
+              'InheritPriority': QtCore.QThread.Priority.InheritPriority,
+              'LowestPriority': QtCore.QThread.Priority.LowestPriority,
+              'LowPriority': QtCore.QThread.Priority.LowPriority,
+              'NormalPriority': QtCore.QThread.Priority.NormalPriority,
               }
 
 
@@ -162,7 +162,7 @@ def priority_value(text):
     """
     根据文本来获得优先级
     """
-    return Priorities.get(text, QtCore.QThread.LowPriority)
+    return Priorities.get(text, QtCore.QThread.Priority.LowPriority)
 
 
 def load_priority():

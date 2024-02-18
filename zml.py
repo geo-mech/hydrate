@@ -8473,8 +8473,7 @@ class Seepage(HasHandle, HasCells):
     def __str__(self):
         cell_n = self.cell_number
         face_n = self.face_number
-        note = self.get_note()
-        return f'zml.Seepage(handle={self.handle}, cell_n={cell_n}, face_n={face_n}, note={note})'
+        return f"zml.Seepage(handle={self.handle}, cell_n={cell_n}, face_n={face_n}, note='{self.get_note()}')"
 
     core.use(None, 'seepage_save', c_void_p, c_char_p)
 
@@ -9524,6 +9523,7 @@ class Seepage(HasHandle, HasCells):
         inhibitors = kwargs.get('inhibitors', None)
         if inhibitors is not None:
             for inh in inhibitors:
+                # 这里要注意的是，这里的浓度指的是质量浓度.
                 sol = inh.get('sol')
                 if isinstance(sol, str):
                     sol = self.find_fludef(sol)

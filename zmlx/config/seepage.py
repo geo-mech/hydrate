@@ -43,6 +43,7 @@ import numpy as np
 
 from zml import get_average_perm, Tensor3, Seepage
 from zmlx.alg.join_cols import join_cols
+from zmlx.alg.time2str import time2str
 from zmlx.config import capillary
 from zmlx.config.attr_keys import cell_keys, face_keys, flu_keys
 from zmlx.geometry.point_distance import point_distance
@@ -84,18 +85,20 @@ def set_dt(model, dt):
     set_attr(model, 'dt', dt)
 
 
-def get_dt(model):
+def get_dt(model, as_str=False):
     """
-    返回模型内存储的时间步长
+    返回模型内存储的时间步长. 当as_str的时候，返回一个字符串用以显示
     """
-    return get_attr(model, key='dt', default_val=1.0e-10)
+    result = get_attr(model, key='dt', default_val=1.0e-10)
+    return time2str(result) if as_str else result
 
 
-def get_time(model):
+def get_time(model, as_str=False):
     """
-    返回模型的时间
+    返回模型的时间. 当as_str的时候，返回一个字符串用以显示
     """
-    return get_attr(model, key='time', default_val=0.0)
+    result = get_attr(model, key='time', default_val=0.0)
+    return time2str(result) if as_str else result
 
 
 def set_time(model, value):

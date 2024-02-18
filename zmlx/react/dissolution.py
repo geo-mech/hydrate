@@ -33,8 +33,12 @@ def create(gas, gas_in_liq, liq, ca_sol, rate=1.0, fa_t=None, fa_c=None):
     # 设置当<虚拟>温度升高的时候，促进溶解
     return {'components': [create_dict(kind=gas, weight=-1.0, fa_t=fa_t, fa_c=fa_c),
                            create_dict(kind=gas_in_liq, weight=1.0, fa_t=fa_t, fa_c=fa_c)], 'temp': 280, 'heat': 0,
-            'p2t': ([0, 1e8], [280, 280]), 'inhibitors': [create_dict(sol=gas_in_liq, liq=liq, c=[0, 1], t=[0, 1e8])],
-            'idt': ca_sol, 'wdt': -1.0e8, 't2q': ([-1e8, 1e8], [-rate, rate])}
+            'p2t': ([0, 1e8], [280, 280]),
+            'inhibitors': [create_dict(sol=gas_in_liq, liq=liq, c=[0, 1], t=[0, 1e8])],
+            'idt': ca_sol,
+            'wdt': -1.0e8,
+            't2q': ([-1e8, 1e8], [-rate, rate])
+            }
 
 
 def test():

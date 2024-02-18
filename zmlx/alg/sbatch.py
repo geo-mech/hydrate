@@ -30,3 +30,24 @@ srun     -n 1  -c {sbatchc}  python3 {script} """
     os.system(f"sbatch -p {sbatchp} {fname}")
     if sbatcht is not None:
         time.sleep(sbatcht)
+
+
+if __name__ == '__main__':  # 尝试提交任务.
+    from zml import is_windows
+    import sys
+
+    if len(sys.argv) >= 2:
+        script = sys.argv[1]
+        args = sys.argv[2: ]
+    else:
+        script = None
+        args = None
+
+    print(f'script = {script}, args = {args}')
+    if is_windows:
+        print('The current system is Windows (do not support)')
+    else:
+        if script is not None:  # 此时，提交这个任务.
+            sbatch(script, *args)
+
+
