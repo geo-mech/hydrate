@@ -11657,6 +11657,26 @@ class FractureNetwork(HasHandle):
             """
             return core.frac_bd_get_fp(self.handle)
 
+        @staticmethod
+        def create(ds=None, dn=None, h=None, f=None, p0=None, k=None):
+            """
+            创建裂缝数据. Since 2024-2-19
+            """
+            data = FractureNetwork.FractureData()
+            if ds is not None:
+                data.ds = ds
+            if dn is not None:
+                data.dn = dn
+            if h is not None:
+                data.h = h
+            if k is not None:
+                data.k = k
+            if p0 is not None:
+                data.p0 = p0
+            if f is not None:
+                data.f = f
+            return data
+
     class Vertex(VertexData):
 
         core.use(c_void_p, 'frac_nt_get_nd', c_void_p, c_size_t)
@@ -11906,12 +11926,15 @@ class FracAlg:
              c_size_t, c_size_t, c_size_t)
 
     @staticmethod
-    def update_topology(seepage, network, layer_n=1, z_min=-1, z_max=1,
+    def update_topology(seepage: Seepage, network: FractureNetwork, *,
+                        layer_n=1, z_min=-1, z_max=1,
                         ca_area=999999999, fa_width=999999999, fa_dist=999999999):
         """
         更新seepage的结构，
             对于新添加的Cell，设置位置和面积属性
             对于新添加的Face，设置宽度和长度属性
+        注意：
+            这里假设network有layer_n层的cell组成，并基于此来更新seepage的结构.
         """
         assert isinstance(seepage, Seepage)
         assert isinstance(network, FractureNetwork)
@@ -11922,14 +11945,16 @@ class FracAlg:
              c_double, c_void_p)
 
     @staticmethod
-    def add_frac(network, pA, pB, lave, data=None):
+    def add_frac(network: FractureNetwork, p0, p1, lave, *, data=None):
         """
-        添加裂缝单元
+        添加裂缝单元.
+        注意：
+            将根据给定的lave来分割单元，并自动处理和已有裂缝之间的位置关系.
         """
         assert isinstance(network, FractureNetwork)
         if data is not None:
             assert isinstance(data, FractureNetwork.FractureData)
-        core.frac_alg_add_frac(network.handle, pA[0], pA[1], pB[0], pB[1], lave, 0 if data is None else data.handle)
+        core.frac_alg_add_frac(network.handle, p0[0], p0[1], p1[0], p1[1], lave, 0 if data is None else data.handle)
 
     core.use(None, 'frac_alg_get_induced', c_void_p, c_size_t, c_size_t, c_void_p)
 

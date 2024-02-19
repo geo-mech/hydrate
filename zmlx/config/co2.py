@@ -13,6 +13,7 @@ import numpy as np
 
 from zml import Seepage, create_dict, SeepageMesh, Interp1, is_array, ConjugateGradientSolver
 from zml import Tensor3, is_windows
+from zmlx.alg.apply_async import apply_async, create_async
 from zmlx.alg.clamp import clamp
 from zmlx.alg.interp1 import interp1
 from zmlx.alg.join_cols import join_cols
@@ -633,11 +634,13 @@ def solve(model, time_forward=3600.0 * 24.0 * 365.0 * 10.0, folder=None, day_sav
             if folder is not None and save_prod:
                 monitor.save(path.join(folder, 'prod.txt'))
 
+    # 保存最后一帧
+    save_model(check_dt=False)
+    save_cells(check_dt=False)
+
     if folder is not None:  # 保存最终时刻
         if save_prod:
             monitor.save(path.join(folder, 'prod.txt'))  # 覆盖的原有的曲线
-        model.save(path.join(folder, 'final.seepage'))
-        seepage.print_cells(path.join(folder, 'final.txt'), model)
 
     # 计算之后，再返回model (后续可能用到)
     return model
@@ -763,7 +766,9 @@ def export_co2(folder):
 
 
 def co2_seq(folder=None, co2_d=100, co2_h=80, inj_depth=200.0, salinity=None, mesh=None,
-            inh_diff=1.0e6 / 400, co2_diff=None):
+            inh_diff=1.0e6 / 400, co2_diff=None,
+            gui_mode=is_windows, close_after_done=True
+            ):
     """
     执行co2水合物封存计算模型 (建模和求解)。 since 2024-2-7
     """
@@ -822,19 +827,31 @@ def co2_seq(folder=None, co2_d=100, co2_h=80, inj_depth=200.0, salinity=None, me
         """
         在不同的时刻，采用不同的保存间隔.
         """
-        return max(100, day / 50)
+        return max(365, day / 25)
 
-    solve_post_exploit(model=model, folder=folder,
-                       time_forward=3600.0 * 24.0 * 365.0 * 100000.0,
-                       dt_max=dt_max, day_save=day_save)
-    export_co2(folder=folder)
+    def func():
+        solve_post_exploit(model=model, folder=folder,
+                           time_forward=3600.0 * 24.0 * 365.0 * 100000.0,
+                           dt_max=dt_max, day_save=day_save)
+        export_co2(folder=folder)
+
+    # 执行
+    gui.execute(func, close_after_done=close_after_done,
+                disable_gui=not gui_mode)
 
 
-def test_base():
-    folder = opath('co2', 'base')
-    gui.execute(lambda: co2_seq(folder=folder),
-                close_after_done=False, disable_gui=not is_windows)
+def co2_seq_base():
+    co2_seq(folder=opath('co2_seq', 'base'))
+
+
+def co2_seq_test_depth():
+    tasks = []
+    for depth in [150, 175, 200, 225, 250, 275, 300]:
+        folder = opath('co2_seq', 'test_depth', '%.1f' % depth)
+        tasks.append(create_async(func=co2_seq,
+                                  kwds={'folder': folder, 'inj_depth': depth}))
+    apply_async(tasks=tasks, sleep=1.0)
 
 
 if __name__ == '__main__':
-    test_base()
+    co2_seq_test_depth()

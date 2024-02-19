@@ -48,10 +48,10 @@ from zmlx.config import capillary
 from zmlx.config.attr_keys import cell_keys, face_keys, flu_keys
 from zmlx.geometry.point_distance import point_distance
 from zmlx.utility.Field import Field
-from zmlx.utility.SeepageNumpy import SeepageNumpy
+from zmlx.utility.SeepageNumpy import as_numpy
 
 
-def get_attr(model, key, min=-1.0e100, max=1.0e100, default_val=None, cast=None):
+def get_attr(model: Seepage, key, min=-1.0e100, max=1.0e100, default_val=None, cast=None):
     """
     返回模型的属性. 其中key可以是字符串，也可以是一个int
     """
@@ -68,7 +68,7 @@ def get_attr(model, key, min=-1.0e100, max=1.0e100, default_val=None, cast=None)
         return cast(value)
 
 
-def set_attr(model, key, value):
+def set_attr(model: Seepage, key, value):
     """
     设置模型的属性. 其中key可以是字符串，也可以是一个int
     """
@@ -616,12 +616,12 @@ def print_cells(path, model, ca_keys=None, fa_keys=None, fmt='%.18e', export_mas
             assert f0.get_component(i1).component_number == 0
             fluid_ids.append([i0, i1])
 
-    cells = SeepageNumpy(model).cells
+    cells = as_numpy(model).cells
     v = cells.fluid_mass if export_mass else cells.fluid_vol
 
     vs = []
     for fluid_id in fluid_ids:
-        f = SeepageNumpy(model).fluids(*fluid_id)
+        f = as_numpy(model).fluids(*fluid_id)
         s = (f.mass if export_mass else f.vol) / v
         vs.append(s)
 
@@ -635,7 +635,7 @@ def print_cells(path, model, ca_keys=None, fa_keys=None, fmt='%.18e', export_mas
     # 即将保存的数据
     d = join_cols(cells.x, cells.y, cells.z, cells.pre, t, v, *vs,
                   *([] if ca_keys is None else [cells.get(key) for key in ca_keys]),
-                  *([] if fa_keys is None else [SeepageNumpy(model).fluids(*idx).get(key) for idx, key in fa_keys]),
+                  *([] if fa_keys is None else [as_numpy(model).fluids(*idx).get(key) for idx, key in fa_keys]),
                   )
 
     # 保存数据

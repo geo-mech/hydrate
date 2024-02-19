@@ -2,6 +2,7 @@
 用于管理Seepage的动态属性
 """
 from zml import Seepage
+import warnings
 
 
 class DynKeys:
@@ -10,18 +11,26 @@ class DynKeys:
     """
 
     def __init__(self, model, ty):
+        """
+        初始化.
+        """
         assert isinstance(model, Seepage)
         assert isinstance(ty, str)
         self.model = model
         self.ty = ty
 
-    def __getattr__(self, item):
+    def reg_key(self, item):
+        """
+        注册并且返回属性id
+        """
         assert isinstance(item, str)
         return self.model.reg_key(self.ty, item)
 
+    def __getattr__(self, item):
+        return self.reg_key(item)
+
     def __getitem__(self, item):
-        assert isinstance(item, str)
-        return self.model.reg_key(self.ty, item)
+        return self.reg_key(item)
 
 
 def model_keys(m):
@@ -54,15 +63,21 @@ def flu_keys(m):
 
 def frac_keys(m):
     """
-    注册并返回用于frac的键值
+    注册并返回用于Fracture的键值.
+    注意：
+        将裂缝的属性保存到seepage中并不是好的选项.
     """
+    warnings.warn('please use zmlx.utility.AttrKeys instead', DeprecationWarning)
     return DynKeys(m, 'fr_')
 
 
 def vtx_keys(m):
     """
-    注册并返回用于frac的键值
+    注册并返回用于Vertex的键值
+    注意：
+        将裂缝的属性保存到seepage中并不是好的选项.
     """
+    warnings.warn('please use zmlx.utility.AttrKeys instead', DeprecationWarning)
     return DynKeys(m, 've_')
 
 
