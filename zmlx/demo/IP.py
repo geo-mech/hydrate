@@ -1,9 +1,11 @@
 # ** desc = '侵入逾渗(IP)模型计算油气运移成藏'
 
 
-from zml import SeepageMesh, InvasionPercolation
-import numpy as np
 import random
+
+import numpy as np
+
+from zml import SeepageMesh, InvasionPercolation
 from zmlx.ui import gui
 
 

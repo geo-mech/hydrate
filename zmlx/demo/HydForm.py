@@ -1,4 +1,4 @@
-# ** desc = '测试：纵向二维。浮力作用下气体运移、水合物成藏过程模拟(基于 zmlx.config.seepage)'
+# ** desc = '测试：纵向二维。浮力作用下气体运移、水合物成藏过程模拟'
 
 import numpy as np
 
@@ -114,7 +114,7 @@ def solve(model, folder=None):
 
 def execute(gui_mode=True, close_after_done=False):
     gui.execute(solve, close_after_done=close_after_done,
-                args=(create(), ), disable_gui=not gui_mode)
+                args=(create(),), disable_gui=not gui_mode)
 
 
 if __name__ == '__main__':

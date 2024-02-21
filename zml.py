@@ -37,7 +37,7 @@ except Exception as _err:
 is_windows = os.name == 'nt'
 
 # zml模块的版本(用六位数字表示的日期)
-version = 240203
+version = 240224
 
 
 class Object:
@@ -6998,11 +6998,7 @@ class Seepage(HasHandle, HasCells):
                 此函数将返回给定数据的拷贝，因此，原始的数据并不会被引用和修改.
             """
             if isinstance(defs, Seepage.FluDef):
-                result = Seepage.FluDef()
-                result.clone(defs)
-                if name is not None:
-                    result.name = name
-                return result
+                return defs.get_copy(name=name)
             else:
                 result = Seepage.FluDef(name=name)
                 for x in defs:
@@ -7037,7 +7033,7 @@ class Seepage(HasHandle, HasCells):
 
         def get_copy(self, name=None):
             """
-            返回当前数据的一个拷贝(修改返回数据的name)
+            返回当前数据的一个拷贝(当给定name的时候，则修改返回数据的name)
             """
             data = Seepage.FluDef()
             data.clone(self)
@@ -9726,20 +9722,28 @@ class Seepage(HasHandle, HasCells):
 
     core.use(None, 'seepage_add_tag', c_void_p, c_char_p)
 
-    def add_tag(self, tag):
+    def add_tag(self, tag, *tags):
         """
-        在模型中添加给定的标签
+        在模型中添加给定的标签.
+            支持添加多个(since 2024-2-23)
         """
         core.seepage_add_tag(self.handle, make_c_char_p(tag))
+        # 再添加多个.
+        if len(tags) > 0:
+            for tag in tags:
+                self.add_tag(tag=tag)
         return self
 
     core.use(None, 'seepage_del_tag', c_void_p, c_char_p)
 
-    def del_tag(self, tag):
+    def del_tag(self, tag, *tags):
         """
         删除模型中的给定的标签
         """
         core.seepage_del_tag(self.handle, make_c_char_p(tag))
+        if len(tags) > 0:
+            for tag in tags:
+                self.del_tag(tag=tag)
         return self
 
     core.use(None, 'seepage_clear_tags', c_void_p)
@@ -9793,11 +9797,14 @@ class Seepage(HasHandle, HasCells):
 
     core.use(None, 'seepage_del_key', c_void_p, c_char_p)
 
-    def del_key(self, key):
+    def del_key(self, key, *keys):
         """
         删除键值
         """
         core.seepage_del_key(self.handle, make_c_char_p(key))
+        if len(keys) > 0:
+            for key in keys:
+                self.del_key(key=key)
         return self
 
     core.use(None, 'seepage_clear_keys', c_void_p)

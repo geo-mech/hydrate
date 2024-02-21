@@ -1,4 +1,4 @@
-# ** desc = '基于Seepage类的温度场计算 （利用TherFlowConfig建模）'
+# ** desc = '基于Seepage类的温度场计算'
 
 import numpy as np
 

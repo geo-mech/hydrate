@@ -1,4 +1,4 @@
-# ** desc = '流体在毛管力驱动下的流动 (基于zmlx.config.capillary)'
+# ** desc = '流体在毛管力驱动下的流动'
 
 import numpy as np
 

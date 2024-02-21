@@ -52,24 +52,26 @@ def dfn_v3(pt, box=None):
         return fractures
 
 
-def test():
-    pt = PTree()
-    pt.data = [
+def create_option(p21=0.0, a0=-0.5, a1=0.5, l0=10.0, l1=20.0, h0=5.0, h1=10.0, remove_small=True, l_min=0.2):
+    """
+    生成一个创建创建dfn的参数选项
+    """
+    return [
         {
-            "p21": 1.0,
-            "angles": "np.linspace(0, 0.4, 10)",
-            "lengths": "np.linspace(5, 10, 100)",
-            "heights": "np.linspace(5,10,100)",
-            "remove_small": True
-        },
-        {
-            "p21": 1.0,
-            "angles": "np.linspace(1, 1.4, 10)",
-            "lengths": "np.linspace(5, 10, 100)",
-            "heights": "np.linspace(5,10,100)",
-            "remove_small": True
+            'p21': p21 / 2,
+            'angles': f'np.linspace({a0}, {a1}, 50)',
+            'lengths': f'np.linspace({l0}, {l1}, 50)',
+            'l_min': l_min,
+            'heights': f'np.linspace({h0}, {h1}, 50)',
+            'remove_small': remove_small
         }
     ]
+
+
+def test():
+    pt = PTree()
+    pt.data = create_option(p21=1.0, a0=0, a1=0.4, l0=5, l1=10, h0=5, h1=10, remove_small=True) + create_option(
+        p21=1.0, a0=1, a1=1.4, l0=5, l1=10, h0=5, h1=10, remove_small=True)
     fractures = dfn_v3(pt, box=[0, 0, 0, 30, 30, 30])
     for f in fractures:
         print(f)

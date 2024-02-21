@@ -38,7 +38,7 @@ if __name__ == '__main__':  # 尝试提交任务.
 
     if len(sys.argv) >= 2:
         script = sys.argv[1]
-        args = sys.argv[2: ]
+        args = sys.argv[2:]
     else:
         script = None
         args = None
@@ -49,5 +49,3 @@ if __name__ == '__main__':  # 尝试提交任务.
     else:
         if script is not None:  # 此时，提交这个任务.
             sbatch(script, *args)
-
-

@@ -68,14 +68,18 @@ def get_attr(model: Seepage, key, min=-1.0e100, max=1.0e100, default_val=None, c
         return cast(value)
 
 
-def set_attr(model: Seepage, key, value):
+def set_attr(model: Seepage, key=None, value=None, **kwargs):
     """
     设置模型的属性. 其中key可以是字符串，也可以是一个int
     """
-    if isinstance(key, str):
-        key = model.reg_model_key(key)
-    assert key is not None
-    model.set_attr(key, value)
+    if key is not None and value is not None:
+        if isinstance(key, str):
+            key = model.reg_model_key(key)
+        assert key is not None
+        model.set_attr(key, value)
+    if len(kwargs) > 0:  # 如果给定了关键词列表，那么就设置多个属性.
+        for key, value in kwargs.items():
+            set_attr(model, key=key, value=value)
 
 
 def set_dt(model, dt):
