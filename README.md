@@ -4,7 +4,7 @@
  
 ### 版本
 
-ZmlVersion=240224
+ZmlVersion=240227
 
 ### 用途
 
@@ -33,7 +33,7 @@ zhangzhaobin@mail.iggcas.ac.cn;
 ### 使用
 
 1. 参考[zmlx/demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo);
-2. 运行`UI.pyw`启动界面 (会同时尝试将`zml`和`zmlx`添加到[搜索路径](https://zhuanlan.zhihu.com/p/530589364));
+2. 运行`UI.pyw`启动界面 (会尝试将`zml`添加到[搜索路径](https://zhuanlan.zhihu.com/p/530589364));
 
 ### 开发
 

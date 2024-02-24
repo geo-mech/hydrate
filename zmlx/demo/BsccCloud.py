@@ -32,7 +32,7 @@ def main(argv):
         for x in np.linspace(0, 1, 10):
             for y in np.linspace(3, 4, 5):
                 print(f'x = {x}, y={y}')
-                sbatch(argv[0], x, y, sbatchc=2, sbatcht=1)
+                sbatch(argv[0], x, y, c=2, t=1)
 
     if len(argv) == n_vari + 1:
         run_case(float(argv[1]), float(argv[2]))

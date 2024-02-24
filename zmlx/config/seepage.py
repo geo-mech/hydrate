@@ -82,14 +82,14 @@ def set_attr(model: Seepage, key=None, value=None, **kwargs):
             set_attr(model, key=key, value=value)
 
 
-def set_dt(model, dt):
+def set_dt(model: Seepage, dt):
     """
     设置模型的时间步长
     """
     set_attr(model, 'dt', dt)
 
 
-def get_dt(model, as_str=False):
+def get_dt(model: Seepage, as_str=False):
     """
     返回模型内存储的时间步长. 当as_str的时候，返回一个字符串用以显示
     """
@@ -97,7 +97,7 @@ def get_dt(model, as_str=False):
     return time2str(result) if as_str else result
 
 
-def get_time(model, as_str=False):
+def get_time(model: Seepage, as_str=False):
     """
     返回模型的时间. 当as_str的时候，返回一个字符串用以显示
     """
@@ -105,14 +105,14 @@ def get_time(model, as_str=False):
     return time2str(result) if as_str else result
 
 
-def set_time(model, value):
+def set_time(model: Seepage, value):
     """
     设置模型的时间
     """
     set_attr(model, 'time', value)
 
 
-def update_time(model, dt=None):
+def update_time(model: Seepage, dt=None):
     """
     更新模型的时间
     """
@@ -121,21 +121,21 @@ def update_time(model, dt=None):
     set_time(model, get_time(model) + dt)
 
 
-def get_step(model):
+def get_step(model: Seepage):
     """
     返回模型迭代的次数
     """
     return get_attr(model, 'step', default_val=0, cast=round)
 
 
-def set_step(model, step):
+def set_step(model: Seepage, step):
     """
     设置模型迭代的步数
     """
     set_attr(model, 'step', step)
 
 
-def get_recommended_dt(model, previous_dt, dv_relative=0.1, using_flow=True, using_ther=True):
+def get_recommended_dt(model: Seepage, previous_dt, dv_relative=0.1, using_flow=True, using_ther=True):
     """
     在调用了iterate函数之后，调用此函数，来获取更优的时间步长.
     """
@@ -155,18 +155,18 @@ def get_recommended_dt(model, previous_dt, dv_relative=0.1, using_flow=True, usi
     return min(dt1, dt2)
 
 
-def get_dv_relative(model):
+def get_dv_relative(model: Seepage):
     """
     每一个时间步dt内流体流过的网格数. 用于控制时间步长. 正常取值应该在0到1之间.
     """
     return get_attr(model, 'dv_relative', default_val=0.1)
 
 
-def set_dv_relative(model, value):
+def set_dv_relative(model: Seepage, value):
     set_attr(model, 'dv_relative', value)
 
 
-def get_dt_min(model):
+def get_dt_min(model: Seepage):
     """
     允许的最小的时间步长
         注意: 这是对时间步长的一个硬约束。当利用dv_relative计算的步长不在此范围内的时候，则将它强制拉回到这个范围.
@@ -174,11 +174,11 @@ def get_dt_min(model):
     return get_attr(model, key='dt_min', default_val=1.0e-15)
 
 
-def set_dt_min(model, value):
+def set_dt_min(model: Seepage, value):
     set_attr(model, 'dt_min', value)
 
 
-def get_dt_max(model):
+def get_dt_max(model: Seepage):
     """
     允许的最大的时间步长
         注意: 这是对时间步长的一个硬约束。当利用dv_relative计算的步长不在此范围内的时候，则将它强制拉回到这个范围.
@@ -186,14 +186,14 @@ def get_dt_max(model):
     return get_attr(model, 'dt_max', default_val=1.0e10)
 
 
-def set_dt_max(model, value):
+def set_dt_max(model: Seepage, value):
     set_attr(model, 'dt_max', value)
 
 
 solid_buffer = Seepage.CellData()
 
 
-def iterate(model, dt=None, solver=None, fa_s=None, fa_q=None, fa_k=None, cond_updaters=None, diffusions=None):
+def iterate(model: Seepage, dt=None, solver=None, fa_s=None, fa_q=None, fa_k=None, cond_updaters=None, diffusions=None):
     """
     在时间上向前迭代。其中
         dt:     时间步长,若为None，则使用自动步长
@@ -202,7 +202,6 @@ def iterate(model, dt=None, solver=None, fa_s=None, fa_q=None, fa_k=None, cond_u
         fa_q：   Face自定义属性的ID，代表Face内流体在通量(也将在iterate中更新)
         fa_k:   Face内流体的惯性系数的属性ID (若fa_k属性不为None，则所有Face的该属性需要提前给定).
     """
-    assert isinstance(model, Seepage)
     if dt is not None:
         set_dt(model, dt)
 
@@ -409,7 +408,7 @@ def create(mesh=None,
     return model
 
 
-def add_mesh(model, mesh):
+def add_mesh(model: Seepage, mesh):
     """
     根据给定的mesh，添加Cell和Face. 并对Cell和Face设置基本的属性.
         对于Cell，仅仅设置位置和体积这两个属性.
@@ -433,7 +432,7 @@ def add_mesh(model, mesh):
             face.set_attr(fa_l, f.length)
 
 
-def set_model(model, porosity=0.1, pore_modulus=1000e6, denc=1.0e6, dist=0.1,
+def set_model(model: Seepage, porosity=0.1, pore_modulus=1000e6, denc=1.0e6, dist=0.1,
               temperature=280.0, p=None, s=None, perm=1e-14, heat_cond=1.0,
               sample_dist=None, pore_modulus_range=None, igr=None, bk_fv=True, bk_g=True):
     """
@@ -495,7 +494,7 @@ def set_cell(cell, pos=None, vol=None, porosity=0.1, pore_modulus=1000e6, denc=1
     """
     assert isinstance(cell, Seepage.Cell)
     ca = cell_keys(cell.model)
-    fa = flu_keys(cell.model)
+    fa = flu_keys(cell.model)  # 流体的属性id
 
     if pos is not None:
         cell.pos = pos
@@ -579,7 +578,7 @@ def set_face(face, area=None, length=None, perm=None, heat_cond=None, igr=None, 
         face.set_attr(fa.igr, igr)
 
 
-def add_cell(model, *args, **kwargs):
+def add_cell(model: Seepage, *args, **kwargs):
     """
     添加一个新的Cell，并返回Cell对象
     """
@@ -588,7 +587,7 @@ def add_cell(model, *args, **kwargs):
     return cell
 
 
-def add_face(model, cell0, cell1, *args, **kwargs):
+def add_face(model: Seepage, cell0, cell1, *args, **kwargs):
     """
     添加一个Face，并且返回
     """

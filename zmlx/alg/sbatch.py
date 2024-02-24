@@ -2,50 +2,47 @@ import os
 import time
 
 
-def sbatch(script, *args, sbatchc=1, sbatcht=None, sbatchp='G1Part_sce'):
+def sbatch(*args, c=1, t=None, p='G1Part_sce'):
     """
     在超算上面创建一个任务. 其中:
-        script  为脚本文件的名称
-        sbatchc 为调用的核心的数量
-        sbatcht 为休眠的时间
+        args: 跟在python后面的参数.
+        c: 调用的核心的数量
+        t: 休眠时间(当启动多个的时候，加上休眠，确保多个任务不要同时启动)
     """
+    if len(args) == 0:
+        return
     text = f"""#!/bin/bash
 #SBATCH  -n 1
-#SBATCH  -c {sbatchc}
-srun     -n 1  -c {sbatchc}  python3 {script} """
+#SBATCH  -c {c}
+srun     -n 1  -c {c}  python3 """
     for arg in args:
         text = text + f' {arg}'
-    fname = None
+    name = None
     for i in range(100000):
         x = f'jb{i}.sh'
         if not os.path.exists(x):
-            fname = x
+            name = x
             break
-    assert fname is not None
-    with open(fname, 'w') as file:
+    assert name is not None
+    with open(name, 'w') as file:
         file.write(text)
         file.write('\n')
         file.flush()
-    print(f'file created: {fname}')
-    os.system(f"sbatch -p {sbatchp} {fname}")
-    if sbatcht is not None:
-        time.sleep(sbatcht)
+    os.system(f"sbatch -p {p} {name}")
+    print(f'task submitted: {args}')
+    if t is not None:
+        time.sleep(t)
 
 
-if __name__ == '__main__':  # 尝试提交任务.
+def main():
     from zml import is_windows
     import sys
 
-    if len(sys.argv) >= 2:
-        script = sys.argv[1]
-        args = sys.argv[2:]
-    else:
-        script = None
-        args = None
-
-    print(f'script = {script}, args = {args}')
     if is_windows:
         print('The current system is Windows (do not support)')
     else:
-        if script is not None:  # 此时，提交这个任务.
-            sbatch(script, *args)
+        sbatch(*sys.argv[1:])
+
+
+if __name__ == '__main__':  # 尝试提交任务.
+    main()

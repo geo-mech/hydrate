@@ -58,7 +58,7 @@ def create_option(p21=0.0, a0=-0.5, a1=0.5, l0=10.0, l1=20.0, h0=5.0, h1=10.0, r
     """
     return [
         {
-            'p21': p21 / 2,
+            'p21': p21,
             'angles': f'np.linspace({a0}, {a1}, 50)',
             'lengths': f'np.linspace({l0}, {l1}, 50)',
             'l_min': l_min,

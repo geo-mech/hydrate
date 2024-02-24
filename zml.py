@@ -37,7 +37,7 @@ except Exception as _err:
 is_windows = os.name == 'nt'
 
 # zml模块的版本(用六位数字表示的日期)
-version = 240224
+version = 240227
 
 
 class Object:
@@ -8097,7 +8097,9 @@ class Seepage(HasHandle, HasCells):
 
     class Injector(HasHandle):
         """
-        流体的注入点。可以按照一定的规律向特定的Cell注入特定的流体(或者能量).
+        流体的注入点。可以按照一定的规律向特定的Cell注入特定的流体(或者能量). 注意Injector工作的逻辑：
+            1. 如果设置了注入的流体的ID，则实施流体注入操作 (此时value代表注入的体积速率: m^3/s);
+            2. 如果没有设置流体ID，并且设置了 ca_mc和ca_t属性，则实施热量注入操作;
         """
         core.use(c_void_p, 'new_injector')
         core.use(None, 'del_injector', c_void_p)
@@ -8178,7 +8180,7 @@ class Seepage(HasHandle, HasCells):
         @property
         def flu(self):
             """
-            即将注入到Cell中的流体的数据
+            即将注入到Cell中的流体的数据. 这里返回的是一个引用 (从而可以直接修改内部的数据)
             """
             return Seepage.FluData(handle=core.injector_get_flu(self.handle))
 
@@ -8186,7 +8188,7 @@ class Seepage(HasHandle, HasCells):
 
         def set_fid(self, fluid_id):
             """
-            设置注入的流体的ID
+            设置注入的流体的ID. 注意：如果需要注热的是热量，则将fluid_id设置为None.
             """
             core.injector_set_fid(self.handle, *parse_fid3(fluid_id))
 
@@ -8269,6 +8271,9 @@ class Seepage(HasHandle, HasCells):
 
         @property
         def g_heat(self):
+            """
+            热边界和cell之间换热的系数 (当大于0的时候，则实施固定温度的加热,否则为固定功率的加热);
+            """
             return core.injector_get_g_heat(self.handle)
 
         @g_heat.setter
@@ -8280,10 +8285,16 @@ class Seepage(HasHandle, HasCells):
 
         @property
         def ca_mc(self):
+            """
+            cell的mc属性的ID
+            """
             return core.injector_get_ca_mc(self.handle)
 
         @ca_mc.setter
         def ca_mc(self, value):
+            """
+            cell的mc属性的ID
+            """
             core.injector_set_ca_mc(self.handle, value)
 
         core.use(c_size_t, 'injector_get_ca_t', c_void_p)
@@ -8291,10 +8302,16 @@ class Seepage(HasHandle, HasCells):
 
         @property
         def ca_t(self):
+            """
+            cell的温度属性的id
+            """
             return core.injector_get_ca_t(self.handle)
 
         @ca_t.setter
         def ca_t(self, value):
+            """
+            cell的温度属性的id
+            """
             core.injector_set_ca_t(self.handle, value)
 
         core.use(c_size_t, 'injector_get_ca_no_inj', c_void_p)
@@ -8302,6 +8319,9 @@ class Seepage(HasHandle, HasCells):
 
         @property
         def ca_no_inj(self):
+            """
+            在根据位置来寻找注入的cell的时候，凡是设置了ca_no_inj的cell，将会被忽略（从而避免被Injector操作）
+            """
             return core.injector_get_ca_no_inj(self.handle)
 
         @ca_no_inj.setter
@@ -8322,6 +8342,7 @@ class Seepage(HasHandle, HasCells):
                 mass   m
                 attr   id  val
                 fid    a  b  c
+                g_heat v            (since 2024-02-27)
             其它关键词将会被忽略(不抛出异常).
             """
             core.injector_add_oper(self.handle, time, make_c_char_p(oper if isinstance(oper, str) else f'{oper}'))
@@ -8728,8 +8749,8 @@ class Seepage(HasHandle, HasCells):
             inj.g_heat = g_heat
 
         if opers is not None:
-            for oper in opers:
-                inj.add_oper(*oper)
+            for item in opers:
+                inj.add_oper(*item)
 
         if value is not None:
             inj.value = value

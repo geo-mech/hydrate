@@ -1,5 +1,4 @@
 import os
-import sys
 
 from zmlx.filesys.list_files import list_files
 
@@ -39,75 +38,21 @@ def change_fmt(convert=None, ext=None, path=None, keywords=None, keep_file=True,
             print('Succeed!')
 
 
-def main(argv):
+def seepage2txt(path=None):
     """
-    处理预定义的一些命令
+    将seepage文件转化为txt （注意，文件必须存储在models中）
     """
-    if len(argv) <= 1:
-        return
-    key = argv[1]
-    print(f'process data format change. key = {key}')
-
-    if key == 'disc2txt':
-        from zml import Disc3Vec
-        change_fmt(convert=None, ext='.txt',
-                   path=os.getcwd(),
-                   keywords=['discs', '.dat'],
-                   keep_file=False, create_data=Disc3Vec)
-        return
-
-    if key == 'seep2txt':
-        from zml import Seepage
-        change_fmt(convert=None, ext='.txt',
-                   path=os.getcwd(),
-                   keywords=['seepage', '.dat'],
-                   keep_file=False, create_data=Seepage)
-        return
-
-    if key == 'txt2disc':
-        from zml import Disc3Vec
-        change_fmt(convert=None, ext='.dat',
-                   path=os.getcwd(),
-                   keywords=['discs', '.txt'],
-                   keep_file=False, create_data=Disc3Vec)
-        return
-
-    if key == 'txt2seep':
-        from zml import Seepage
-        change_fmt(convert=None, ext='.dat',
-                   path=os.getcwd(),
-                   keywords=['seepage', '.txt'],
-                   keep_file=False, create_data=Seepage)
-        return
-
-    if key == 'to_bin':
-        from zml import Disc3Vec, Seepage
-
-        change_fmt(convert=None, ext='.dat',
-                   path=os.getcwd(),
-                   keywords=['discs', '.txt'],
-                   keep_file=False, create_data=Disc3Vec)
-
-        change_fmt(convert=None, ext='.dat',
-                   path=os.getcwd(),
-                   keywords=['seepage', '.txt'],
-                   keep_file=False, create_data=Seepage)
-        return
-
-    if key == 'to_txt':
-        from zml import Disc3Vec, Seepage
-
-        change_fmt(convert=None, ext='.txt',
-                   path=os.getcwd(),
-                   keywords=['discs', '.dat'],
-                   keep_file=False, create_data=Disc3Vec)
-
-        change_fmt(convert=None, ext='.txt',
-                   path=os.getcwd(),
-                   keywords=['seepage', '.dat'],
-                   keep_file=False, create_data=Seepage)
-        return
+    from zml import Seepage
+    if path is None:
+        path = os.getcwd()
+    change_fmt(path=path, ext='.txt', keywords=['.seepage', 'models'], keep_file=False, create_data=Seepage)
 
 
-if __name__ == '__main__':
-    main(sys.argv)
+def txt2seepage(path=None):
+    """
+    将txt文件转化为seepage （注意，文件必须存储在models中）
+    """
+    from zml import Seepage
+    if path is None:
+        path = os.getcwd()
+    change_fmt(path=path, ext='.seepage', keywords=['.txt', 'models'], keep_file=False, create_data=Seepage)

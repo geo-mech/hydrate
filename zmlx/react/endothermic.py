@@ -6,7 +6,7 @@ version = 231031
 
 
 def create(left, right, temp, heat, rate=None, fa_t=None, fa_c=None, l2r=True, r2l=True, p2t=None,
-           t2q=None):
+           t2q=None, inhibitors=None):
     """
     创建吸热的化学反应（以及其逆过程）。其中左侧的物质转化为右侧的物质会吸收热量。温度的升高会促使这种反应的发生.
         left：定义左侧物质的序号和权重
@@ -100,7 +100,8 @@ def create(left, right, temp, heat, rate=None, fa_t=None, fa_c=None, l2r=True, r
     data['t2q'] = (t, q)
 
     # 其它数据
-    data['inhibitors'] = []
+    assert inhibitors is None or isinstance(inhibitors, list)
+    data['inhibitors'] = inhibitors if inhibitors is not None else []
 
     # 完成，返回数据
     return data
