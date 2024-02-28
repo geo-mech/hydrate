@@ -37,7 +37,7 @@ except Exception as _err:
 is_windows = os.name == 'nt'
 
 # zml模块的版本(用六位数字表示的日期)
-version = 240227
+version = 240228
 
 
 class Object:
