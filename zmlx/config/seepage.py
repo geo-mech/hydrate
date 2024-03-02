@@ -51,6 +51,58 @@ from zmlx.utility.Field import Field
 from zmlx.utility.SeepageNumpy import as_numpy
 
 
+def _get_names(f_def: Seepage.FluDef):
+    """
+    返回给定流体定义的所有的组分的名字
+    :param f_def: 流体定义
+    :return: 如果f_def没有组分，则返回f_def的名字；否则，将所有组分的名字作为list返回
+    """
+    if f_def.component_number == 0:
+        return f_def.name
+    else:
+        names = []
+        for idx in range(f_def.component_number):
+            names.append(_get_names(f_def.get_component(idx)))
+        return names
+
+
+def list_comp(model: Seepage):
+    """
+    列出所有组分的名字
+    :param model: 需要列出组分的模型
+    :return: 所有组分的名字作为list返回
+    """
+    names = []
+    for idx in range(model.fludef_number):
+        names.append(_get_names(model.get_fludef(idx)))
+    return names
+
+
+def _pop_sat(name, table: dict):
+    if isinstance(name, str):
+        assert len(name) > 0, 'fluid name not set'
+        return table.pop(name, 0.0)
+    else:
+        values = []
+        for item in name:
+            values.append(_pop_sat(item, table))
+        return values
+
+
+def get_sat(names, table: dict):
+    """
+    返回各个组分的饱和度数值
+    :param names: 组分的名字列表
+    :param table: 饱和度表
+    :return: 各个组分的饱和度（维持和name相同的结构，默认为0）
+    """
+    the_copy = table.copy()
+    values = _pop_sat(names, the_copy)
+    if len(the_copy) > 0:
+        assert False, f'names not used: {list(the_copy.keys())}. The required names: {names}'
+    return values
+
+
 def get_attr(model: Seepage, key, min=-1.0e100, max=1.0e100, default_val=None, cast=None):
     """
     返回模型的属性. 其中key可以是字符串，也可以是一个int
@@ -446,7 +498,7 @@ def set_model(model: Seepage, porosity=0.1, pore_modulus=1000e6, denc=1.0e6, dis
             就可以把dist设置得比较小。一般，可以设置为网格大小的几分之一；
         temperature: 温度K
         p：压力Pa
-        s：各个相的饱和度，tuple或者list；
+        s：各个相的饱和度，tuple/list/dict；
         perm：渗透率 m^2
         heat_cond: 热传导系数
     -
@@ -472,11 +524,18 @@ def set_model(model: Seepage, porosity=0.1, pore_modulus=1000e6, denc=1.0e6, dis
     bk_fv = Field(bk_fv)
     bk_g = Field(bk_g)
 
+    comp_names = list_comp(model)
+
     for cell in model.cells:
         assert isinstance(cell, Seepage.Cell)
         pos = cell.pos
+
+        sat = s(*pos)
+        if isinstance(sat, dict):
+            sat = get_sat(comp_names, sat)
+
         set_cell(cell, porosity=porosity(*pos), pore_modulus=pore_modulus(*pos), denc=denc(*pos),
-                 temperature=temperature(*pos), p=p(*pos), s=s(*pos),
+                 temperature=temperature(*pos), p=p(*pos), s=sat,
                  pore_modulus_range=pore_modulus_range, dist=dist(*pos), bk_fv=bk_fv(*pos))
 
     for face in model.faces:
@@ -506,6 +565,9 @@ def set_cell(cell, pos=None, vol=None, porosity=0.1, pore_modulus=1000e6, denc=1
     else:
         vol = cell.get_attr(ca.vol)
         assert vol is not None
+
+    if isinstance(s, dict):  # 查表：应该尽量避免此语句执行，效率较低
+        s = get_sat(list_comp(cell.model), s)
 
     cell.set_ini(ca_mc=ca.mc, ca_t=ca.temperature,
                  fa_t=fa.temperature, fa_c=fa.specific_heat,

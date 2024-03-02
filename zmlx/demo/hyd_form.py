@@ -27,9 +27,9 @@ def create():
 
     def get_initial_s(x, y, z):
         if get_distance((x, z), (150, 100)) < 50:
-            return (1,), (0,), (0, 0)
+            return {'ch4': 1}
         else:
-            return (0,), (1,), (0, 0)
+            return {'h2o': 1}
 
     z0, z1 = mesh.get_pos_range(2)
 

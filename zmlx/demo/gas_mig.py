@@ -28,9 +28,9 @@ def create():
 
     def get_initial_s(x, y, z):
         if get_distance((x, y, z), (150, 0, -400)) < 50:
-            return 1, 0
+            return {'ch4': 1}
         else:
-            return 0, 1
+            return {'h2o': 1}
 
     z0, z1 = mesh.get_pos_range(2)
 
@@ -49,7 +49,7 @@ def create():
     model = seepage.create(mesh, porosity=0.1, pore_modulus=100e6, denc=get_denc, dist=0.1,
                            temperature=get_initial_t, p=get_initial_p, s=get_initial_s,
                            perm=get_perm, heat_cond=2.0,
-                           fludefs=[create_ch4(), create_h2o()],
+                           fludefs=[create_ch4(name='ch4'), create_h2o(name='h2o')],
                            dt_max=3600 * 24, gravity=(0, 0, -10))
 
     return model
