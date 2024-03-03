@@ -1,5 +1,3 @@
-import warnings
-
 from zml import Seepage, create_dict
 from zmlx.alg.time2str import time2str
 from zmlx.config import seepage
@@ -30,7 +28,7 @@ from zmlx.utility.SeepageNumpy import as_numpy
 
 def create_fludefs(has_co2=False, has_steam=False, has_inh=False,
                    has_ch4_in_liq=False, has_co2_in_liq=False,
-                   h2o_density=None, co2=None, inh=None, ch4=None, h2o=None,
+                   h2o_density=None, co2_def=None, inh_def=None, ch4_def=None, h2o_def=None,
                    other_gas=None, other_liq=None, other_sol=None):
     """
     创建水合物计算的时候的流体的定义.
@@ -43,36 +41,36 @@ def create_fludefs(has_co2=False, has_steam=False, has_inh=False,
     """
 
     # ch4
-    if ch4 is None:
-        ch4 = create_ch4()
+    if ch4_def is None:
+        ch4_def = create_ch4()
 
     # co2
     if has_co2_in_liq:  # 此时必然要求co2存在
         has_co2 = True
-    if co2 is not None:
+    if co2_def is not None:
         has_co2 = True
     else:
-        assert co2 is None
+        assert co2_def is None
         if has_co2:
-            co2 = create_co2()
+            co2_def = create_co2()
 
     # h2o
-    if h2o is None:
-        h2o = create_h2o(density=h2o_density)
+    if h2o_def is None:
+        h2o_def = create_h2o(density=h2o_density)
 
     # inh
-    if inh is not None:
+    if inh_def is not None:
         has_inh = True
     else:
-        assert inh is None
+        assert inh_def is None
         if has_inh:
-            inh = Seepage.FluDef(den=2165.0, vis=0.001, specific_heat=4030.0)
+            inh_def = Seepage.FluDef(den=2165.0, vis=0.001, specific_heat=4030.0)
 
     # 1  气体：
     gas = Seepage.FluDef(name='gas')
-    gas.add_component(ch4, name='ch4')
+    gas.add_component(ch4_def, name='ch4')
     if has_co2:
-        gas.add_component(co2, name='co2')
+        gas.add_component(co2_def, name='co2')
     if has_steam:
         gas.add_component(create_h2o_gas(), name='h2o_gas')
     if other_gas is not None:
@@ -81,14 +79,14 @@ def create_fludefs(has_co2=False, has_steam=False, has_inh=False,
 
     # 2  液体:
     liq = Seepage.FluDef(name='liq')
-    liq.add_component(h2o, name='h2o')
+    liq.add_component(h2o_def, name='h2o')
     if has_inh:
-        liq.add_component(inh, name='inh')
+        liq.add_component(inh_def, name='inh')
     if has_ch4_in_liq:
-        liq.add_component(ch4, name='ch4_in_liq')
+        liq.add_component(ch4_def, name='ch4_in_liq')
     if has_co2_in_liq:
         assert has_co2
-        liq.add_component(co2, name='co2_in_liq')
+        liq.add_component(co2_def, name='co2_in_liq')
     if other_liq is not None:
         for item in other_liq:
             liq.add_component(item)
@@ -277,12 +275,12 @@ def show_2d(model: Seepage, folder=None, xdim=0, ydim=1):
 
 def create_kwargs(has_co2=False, has_steam=False, has_inh=False, has_ch4_in_liq=False, inh_diff=None,
                   ch4_diff=None, support_ch4_hyd_diss=True, support_ch4_hyd_form=True, gr=None, h2o_density=None,
-                  co2=None, gravity=None, **kwargs):
+                  co2_def=None, gravity=None, **kwargs):
     """
     返回用于seepage.create的参数列表
         当给定co2的时候，将使用给定的定义. (since 2024-1-10)
     """
-    fludefs = create_fludefs(h2o_density=h2o_density, co2=co2, has_co2=has_co2,
+    fludefs = create_fludefs(h2o_density=h2o_density, co2_def=co2_def, has_co2=has_co2,
                              has_steam=has_steam, has_inh=has_inh,
                              has_ch4_in_liq=has_ch4_in_liq)
     reactions = create_reactions(support_ch4_hyd_diss=support_ch4_hyd_diss,
@@ -302,6 +300,7 @@ def create_kwargs(has_co2=False, has_steam=False, has_inh=False, has_ch4_in_liq=
 class ConfigV2:
     """
     水合物计算的配置
+        deprecated!!!
     """
 
     def __init__(self, has_co2=False, has_steam=False, has_inh=False, has_ch4_in_liq=False, inh_diff=None,
@@ -325,7 +324,7 @@ class ConfigV2:
         """
         创建流体的定义.
         """
-        return create_fludefs(h2o_density=h2o_density, co2=co2, has_co2=self.has_co2,
+        return create_fludefs(h2o_density=h2o_density, co2_def=co2, has_co2=self.has_co2,
                               has_steam=self.has_steam, has_inh=self.has_inh,
                               has_ch4_in_liq=self.has_ch4_in_liq)
 
@@ -374,7 +373,8 @@ class ConfigV2:
 
 class Config(TherFlowConfig):
     """
-    水合物求解配置，弃用
+    水合物求解配置
+        deprecated!!!
     """
 
     def __init__(self, has_co2=False, has_steam=False, has_inh=False, has_ch4_in_liq=False, inh_diff_rate=None,
@@ -583,4 +583,7 @@ class Config(TherFlowConfig):
 
 
 def create(*args, **kwargs):
+    """
+        deprecated!!!
+    """
     return Config(*args, **kwargs)

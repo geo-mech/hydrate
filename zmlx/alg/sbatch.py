@@ -1,8 +1,17 @@
+"""
+在北龙超算上创建任务。
+
+其它常用的命令:
+
+    显示用户sce4885的磁盘占用以及剩余的容量.
+        lfs quota -uh sce4885 ~
+
+"""
 import os
 import time
 
 
-def sbatch(*args, c=1, t=None, p='G1Part_sce'):
+def sbatch(*args, c=1, t=None, p='G1Part_sce', job=None):
     """
     在超算上面创建一个任务. 其中:
         args: 跟在python后面的参数.
@@ -17,9 +26,11 @@ def sbatch(*args, c=1, t=None, p='G1Part_sce'):
 srun     -n 1  -c {c}  python3 """
     for arg in args:
         text = text + f' {arg}'
+    if job is None:
+        job = 'jb'
     name = None
     for i in range(100000):
-        x = f'jb{i}.sh'
+        x = f'{job}{i}.sh'
         if not os.path.exists(x):
             name = x
             break
