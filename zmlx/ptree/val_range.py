@@ -9,10 +9,10 @@ def val_range(pt, doc=None, default=None):
         assert default[0] <= default[1]
 
     a = pt('min',
-           doc=f'The minimum value. ({doc})',
+           doc=f'The minimum value. ({doc})' if doc is not None else None,
            default=default[0])
     b = pt('max',
-           doc=f'The maximum value. ({doc})',
+           doc=f'The maximum value. ({doc})' if doc is not None else None,
            default=default[1])
 
     # 返回范围.

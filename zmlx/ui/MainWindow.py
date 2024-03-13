@@ -530,6 +530,12 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
     splash_fig = load_pixmap('splash.jpg')
     if splash_fig is not None and app_data.getenv('disable_splash', default='False') != 'True':
         splash = MySplashScreen()
+        try:
+            rect = QtWidgets.QDesktopWidget().availableGeometry()
+            splash_fig = splash_fig.scaled(round(rect.width() * 0.3), round(rect.height() * 0.3),
+                                           QtCore.Qt.KeepAspectRatio)
+        except:
+            pass
         splash.setPixmap(splash_fig)
         splash.show()
         app.processEvents()  # 处理主进程事件

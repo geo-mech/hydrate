@@ -1,4 +1,4 @@
-from zml import Seepage, create_dict
+from zml import Seepage, create_dict, log
 from zmlx.alg.time2str import time2str
 from zmlx.config import seepage
 from zmlx.config.TherFlowConfig import TherFlowConfig
@@ -107,19 +107,31 @@ def create_fludefs(has_co2=False, has_steam=False, has_inh=False,
 
 def create_reactions(support_ch4_hyd_diss=True, support_ch4_hyd_form=True, has_inh=False,
                      has_co2=False, has_steam=False,
-                     has_ch4_in_liq=False, has_co2_in_liq=False, others=None):
+                     has_ch4_in_liq=False, has_co2_in_liq=False, others=None, sol_dt=None):
     """
-    创建反应
+    创建反应.
+        sol_dt: 由于固体的存在，对平衡温度的修改的幅度。从而使得，固体的比例越高，则水合物的形成
+                相对更加困难。(一个测试属性; 应给定小于等于0的数值)
+                初步测试表明，使用sol_dt对于最终饱和度场的稳定有一定效果。测试sol_dt=-1
+                since 2024-3-13
     """
+    if sol_dt is None:
+        sol_dt = 0.0
+
     result = []
 
     # 添加甲烷水合物的相变
     r = ch4_hydrate_react.create(gas='ch4', wat='h2o', hyd='ch4_hydrate',
                                  dissociation=support_ch4_hyd_diss, formation=support_ch4_hyd_form)
     # 抑制固体比例过高，增强计算稳定性 （非常必要）
-    add_inh(r, sol='sol', liq=None, c=[0, 0.8, 1.0], t=[0, 0, -200.0])
+    assert -5.0 <= sol_dt <= 0.0
+    add_inh(r, sol='sol', liq=None,
+            c=[0, 0.8, 1.0],
+            t=[0, sol_dt, -200.0])
     if has_inh:
-        add_inh(r, sol='inh', liq='liq', c=salinity_c2t[0], t=salinity_c2t[1])
+        add_inh(r, sol='inh', liq='liq',
+                c=salinity_c2t[0],
+                t=salinity_c2t[1])
     result.append(r)
 
     # 添加冰的相变
@@ -129,9 +141,13 @@ def create_reactions(support_ch4_hyd_diss=True, support_ch4_hyd_form=True, has_i
         # 添加co2和co2水合物之间的相变
         r = co2_hydrate_react.create(gas='co2', wat='h2o', hyd='co2_hydrate')
         # 抑制固体比例过高，增强计算稳定性 （非常必要）
-        add_inh(r, sol='sol', liq=None, c=[0, 0.8, 1.0], t=[0, 0, -200.0])
+        add_inh(r, sol='sol', liq=None,
+                c=[0, 0.8, 1.0],
+                t=[0, sol_dt, -200.0])
         if has_inh:
-            add_inh(r, sol='inh', liq='liq', c=salinity_c2t[0], t=salinity_c2t[1])
+            add_inh(r, sol='inh', liq='liq',
+                    c=salinity_c2t[0],
+                    t=salinity_c2t[1])
         result.append(r)
 
     if has_steam:
@@ -310,6 +326,7 @@ class ConfigV2:
         创建.
             注意，当gr为None的时候，将自动创建一个 (从0到1之间，且y不大于1).
         """
+        log(text='deprecated: hydrate ConfigV2 used', tag='tag_240305')
         self.has_co2 = has_co2
         self.has_steam = has_steam
         self.has_inh = has_inh
@@ -399,6 +416,7 @@ class Config(TherFlowConfig):
             Ch4在水中的溶解反应 [当has_ch4_in_liq为True的时候]
         """
         super().__init__()
+        log(text='deprecated: hydrate Config used', tag='tag_240304')
 
         # 添加默认的重力
         # since 2023-4-19

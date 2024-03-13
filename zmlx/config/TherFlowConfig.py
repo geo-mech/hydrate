@@ -1,6 +1,6 @@
 import warnings
 
-from zml import Object, Seepage, get_average_perm, Reaction
+from zml import Object, Seepage, get_average_perm, Reaction, log
 from zmlx.utility.Field import Field
 from zmlx.utility.AttrKeys import AttrKeys
 
@@ -17,6 +17,8 @@ class TherFlowConfig(Object):
         给定流体属性进行初始化. 给定的参数应该为流体属性定义(或者多个流体组成的混合物)、或者是化学反应的定义
         """
         warnings.warn('please use zmlx.config.seepage instead', DeprecationWarning)
+        log('DeprecationWarning: TherFlowConfig', tag='tag_240306')
+
         self.fluids = []
         self.reactions = []  # 组分之间的反应
         for arg in args:

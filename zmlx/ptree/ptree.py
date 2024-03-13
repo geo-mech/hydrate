@@ -150,6 +150,9 @@ class PTree:
 
     @property
     def path(self):
+        """
+        文件路径
+        """
         return self.ada.path
 
     def __getitem__(self, *keys):

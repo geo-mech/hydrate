@@ -24,8 +24,8 @@ from math import log, exp
 from zml import Interp2, Seepage
 
 
-def create(t_min=270, t_max=1000, p_min=1e6, p_max=40e6, name=None):
-    def oil_den(pressure, temp):
+def create(t_min=270, t_max=1000, p_min=1e6, p_max=40e6, name=None, specific_heat=None):
+    def get_density(pressure, temp):
         """
         Nourozieh, H., et al. (2015). "Density and Viscosity of Athabasca Bitumen Samples at Temperatures up to 200° C and Pressures up to 10 MPa." SPE Reservoir Evaluation & Engineering 18(03): 375-386.
         """
@@ -38,10 +38,7 @@ def create(t_min=270, t_max=1000, p_min=1e6, p_max=40e6, name=None):
         den = den_o + alpha * (pressure * 0.000001)  # Pressure Mpa
         return den
 
-    def get_density(P, T):
-        return oil_den(P, T)
-
-    def oil_vis(pressure, temp):  # Mehrotra and Svrcek, 1986
+    def get_viscosity(pressure, temp):  # Mehrotra and Svrcek, 1986
         """
         Mehrotra, A. K. and W. Y. Svrcek (1986).
         "Viscosity of compressed athabasca bitumen." The Canadian Journal of Chemical Engineering 64(5): 844-847.
@@ -53,9 +50,6 @@ def create(t_min=270, t_max=1000, p_min=1e6, p_max=40e6, name=None):
         vis_oil = 0.001 * (exp(exp(A)))
         return vis_oil
 
-    def get_viscosity(P, T):
-        return oil_vis(P, T)
-
     def create_density():
         den = Interp2()
         den.create(p_min, 1e6, p_max, t_min, 10, t_max, get_density)
@@ -66,7 +60,9 @@ def create(t_min=270, t_max=1000, p_min=1e6, p_max=40e6, name=None):
         vis.create(p_min, 1e6, p_max, t_min, 10, t_max, get_viscosity)
         return vis
 
-    specific_heat = 1800
+    if specific_heat is None:
+        specific_heat = 1800
+
     return Seepage.FluDef(den=create_density(), vis=create_viscosity(), specific_heat=specific_heat, name=name)
 
 

@@ -37,7 +37,7 @@ except Exception as _err:
 is_windows = os.name == 'nt'
 
 # zml模块的版本(用六位数字表示的日期)
-version = 240228
+version = 240317
 
 
 class Object:
@@ -271,10 +271,10 @@ class _AppData(Object):
         return os.path.exists(path)
 
     def add_tag_today(self, tag):
-        folder = os.path.join(self.folder, 'tags')
-        make_dirs(folder)
-        path = os.path.join(folder, datetime.datetime.now().strftime(f"%Y-%m-%d.{tag}"))
         try:
+            folder = os.path.join(self.folder, 'tags')
+            make_dirs(folder)
+            path = os.path.join(folder, datetime.datetime.now().strftime(f"%Y-%m-%d.{tag}"))
             with open(path, 'w') as f:
                 f.write('\n')
         except:
@@ -284,9 +284,9 @@ class _AppData(Object):
         """
         Record program operation information
         """
-        folder = os.path.join(self.folder, 'logs')
-        make_dirs(folder)
         try:
+            folder = os.path.join(self.folder, 'logs')
+            make_dirs(folder)
             with open(os.path.join(folder, datetime.datetime.now().strftime("%Y-%m-%d.log")), 'a') as f:
                 f.write(f'{datetime.datetime.now()}: \n{text}\n\n\n')
         except:
@@ -401,6 +401,18 @@ class _AppData(Object):
 
 
 app_data = _AppData()
+
+
+def log(text, tag=None):
+    """
+    记录一个信息，并且在给定tag的时候，确保每天仅仅记录一次. 当给定tag的时候，确保tag是一个合法的变量名称.
+    """
+    if tag is not None:
+        if app_data.has_tag_today(tag):
+            return
+        else:
+            app_data.add_tag_today(tag)
+    app_data.log(text)
 
 
 def load_cdll(name, first=None):
@@ -1204,6 +1216,27 @@ AttrKeys = _deprecation_func('zmlx.utility.AttrKeys', 'AttrKeys', '2025-1-21')
 install = _deprecation_func('zmlx.alg.install', 'install', '2025-1-21')
 
 
+def get_index(index, count=None):
+    """
+    返回经过校正之后的序号. 确保返回的 0 <= index < count
+    """
+    if index is None:
+        return
+    if count is None:  # 此时，无法判断index是否越界
+        if index >= 0:
+            return index
+    else:
+        assert count >= 0
+        if index >= 0:
+            if index < count:
+                return index   # 0 <= index < count
+        else:
+            assert index < 0
+            index += count   # index < count
+            if index >= 0:
+                return index   # 0 <= index < count
+
+
 def __feedback():
     try:
         folder_logs = os.path.join(app_data.folder, 'logs')
@@ -1356,14 +1389,16 @@ class Vector(HasHandle):
     core.use(c_double, 'vf_get', c_void_p, c_size_t)
 
     def __getitem__(self, idx):
-        if idx < self.size:
+        idx = get_index(idx, self.size)
+        if idx is not None:
             return core.vf_get(self.handle, idx)
 
     core.use(None, 'vf_set', c_void_p, c_size_t, c_double)
 
     def __setitem__(self, idx, value):
-        assert idx < self.size
-        core.vf_set(self.handle, idx, value)
+        idx = get_index(idx, self.size)
+        if idx is not None:
+            core.vf_set(self.handle, idx, value)
 
     def append(self, value):
         """
@@ -1516,14 +1551,16 @@ class IntVector(HasHandle):
     core.use(c_int64, 'vi_get', c_void_p, c_size_t)
 
     def __getitem__(self, idx):
-        assert idx < self.size
-        return core.vi_get(self.handle, idx)
+        idx = get_index(idx, self.size)
+        if idx is not None:
+            return core.vi_get(self.handle, idx)
 
     core.use(None, 'vi_set', c_void_p, c_size_t, c_int64)
 
     def __setitem__(self, idx, value):
-        assert idx < self.size
-        core.vi_set(self.handle, idx, value)
+        idx = get_index(idx, self.size)
+        if idx is not None:
+            core.vi_set(self.handle, idx, value)
 
     def append(self, value):
         """
@@ -1618,14 +1655,16 @@ class UintVector(HasHandle):
     core.use(c_size_t, 'vui_get', c_void_p, c_size_t)
 
     def __getitem__(self, idx):
-        assert idx < self.size
-        return core.vui_get(self.handle, idx)
+        idx = get_index(idx, self.size)
+        if idx is not None:
+            return core.vui_get(self.handle, idx)
 
     core.use(None, 'vui_set', c_void_p, c_size_t, c_size_t)
 
     def __setitem__(self, idx, value):
-        assert idx < self.size
-        core.vui_set(self.handle, idx, value)
+        idx = get_index(idx, self.size)
+        if idx is not None:
+            core.vui_set(self.handle, idx, value)
 
     def append(self, value):
         """
@@ -1683,17 +1722,19 @@ class StrVector(HasHandle):
     core.use(None, 'vs_get', c_void_p, c_size_t, c_void_p)
 
     def __getitem__(self, idx):
-        assert idx < self.size
-        s = String()
-        core.vs_get(self.handle, idx, s.handle)
-        return s.to_str()
+        idx = get_index(idx, self.size)
+        if idx is not None:
+            s = String()
+            core.vs_get(self.handle, idx, s.handle)
+            return s.to_str()
 
     core.use(None, 'vs_set', c_void_p, c_size_t, c_void_p)
 
     def __setitem__(self, idx, value):
-        assert idx < self.size
-        s = String(value=value)
-        core.vs_set(self.handle, idx, s.handle)
+        idx = get_index(idx, self.size)
+        if idx is not None:
+            s = String(value=value)
+            core.vs_set(self.handle, idx, s.handle)
 
     def set(self, value):
         self.size = len(value)
@@ -1755,8 +1796,9 @@ class PtrVector(HasHandle):
         """
         返回地址
         """
-        assert idx < self.size
-        return core.vp_get(self.handle, idx)
+        idx = get_index(idx, self.size)
+        if idx is not None:
+            return core.vp_get(self.handle, idx)
 
     core.use(None, 'vp_set', c_void_p, c_size_t, c_void_p)
 
@@ -1764,8 +1806,9 @@ class PtrVector(HasHandle):
         """
         设置地址
         """
-        assert idx < self.size
-        core.vp_set(self.handle, idx, value)
+        idx = get_index(idx, self.size)
+        if idx is not None:
+            core.vp_set(self.handle, idx, value)
 
     def set(self, value):
         """
@@ -1950,16 +1993,22 @@ class Matrix2(HasHandle):
     core.use(c_double, 'mat2_get', c_void_p, c_size_t, c_size_t)
 
     def get(self, key0, key1):
-        assert key0 < self.size_0
-        assert key1 < self.size_1
-        return core.mat2_get(self.handle, key0, key1)
+        key0 = get_index(key0, self.size_0)
+        key1 = get_index(key1, self.size_1)
+        if key0 is not None and key1 is not None:
+            assert key0 < self.size_0
+            assert key1 < self.size_1
+            return core.mat2_get(self.handle, key0, key1)
 
     core.use(None, 'mat2_set', c_void_p, c_size_t, c_size_t, c_double)
 
     def set(self, key0, key1, value):
-        assert key0 < self.size_0
-        assert key1 < self.size_1
-        core.mat2_set(self.handle, key0, key1, value)
+        key0 = get_index(key0, self.size_0)
+        key1 = get_index(key1, self.size_1)
+        if key0 is not None and key1 is not None:
+            assert key0 < self.size_0
+            assert key1 < self.size_1
+            core.mat2_set(self.handle, key0, key1, value)
 
     def __getitem__(self, key):
         assert len(key) == 2
@@ -2116,10 +2165,11 @@ class Matrix3(HasHandle):
         """
         读取元素
         """
-        assert key0 < self.size_0
-        assert key1 < self.size_1
-        assert key2 < self.size_2
-        return core.mat3_get(self.handle, key0, key1, key2)
+        key0 = get_index(key0, self.size_0)
+        key1 = get_index(key1, self.size_1)
+        key2 = get_index(key2, self.size_2)
+        if key0 is not None and key1 is not None and key2 is not None:
+            return core.mat3_get(self.handle, key0, key1, key2)
 
     core.use(None, 'mat3_set', c_void_p, c_size_t, c_size_t, c_size_t, c_double)
 
@@ -2127,10 +2177,11 @@ class Matrix3(HasHandle):
         """
         设置元素
         """
-        assert key0 < self.size_0
-        assert key1 < self.size_1
-        assert key2 < self.size_2
-        core.mat3_set(self.handle, key0, key1, key2, value)
+        key0 = get_index(key0, self.size_0)
+        key1 = get_index(key1, self.size_1)
+        key2 = get_index(key2, self.size_2)
+        if key0 is not None and key1 is not None and key2 is not None:
+            core.mat3_set(self.handle, key0, key1, key2, value)
 
     def __getitem__(self, key):
         """
@@ -2261,10 +2312,11 @@ class Tensor3Matrix3(HasHandle):
         """
         返回某个元素的引用.
         """
-        assert key0 < self.size_0
-        assert key1 < self.size_1
-        assert key2 < self.size_2
-        return Tensor3(handle=core.ts3mat3_get(self.handle, key0, key1, key2))
+        key0 = get_index(key0, self.size_0)
+        key1 = get_index(key1, self.size_1)
+        key2 = get_index(key2, self.size_2)
+        if key0 is not None and key1 is not None and key2 is not None:
+            return Tensor3(handle=core.ts3mat3_get(self.handle, key0, key1, key2))
 
     def __getitem__(self, key):
         """
@@ -2912,14 +2964,16 @@ class Array2(HasHandle):
     core.use(c_double, 'array2_get', c_void_p, c_size_t)
 
     def get(self, dim):
-        assert dim == 0 or dim == 1
-        return core.array2_get(self.handle, dim)
+        dim = get_index(dim, 2)
+        if dim is not None:
+            return core.array2_get(self.handle, dim)
 
     core.use(None, 'array2_set', c_void_p, c_size_t, c_double)
 
     def set(self, dim, value):
-        assert dim == 0 or dim == 1
-        core.array2_set(self.handle, dim, value)
+        dim = get_index(dim, 2)
+        if dim is not None:
+            core.array2_set(self.handle, dim, value)
 
     def __getitem__(self, key):
         return self.get(key)
@@ -3026,14 +3080,16 @@ class Array3(HasHandle):
     core.use(c_double, 'array3_get', c_void_p, c_size_t)
 
     def get(self, dim):
-        assert 0 <= dim < 3, f'dim = {dim}'
-        return core.array3_get(self.handle, dim)
+        dim = get_index(dim, 3)
+        if dim is not None:
+            return core.array3_get(self.handle, dim)
 
     core.use(None, 'array3_set', c_void_p, c_size_t, c_double)
 
     def set(self, dim, value):
-        assert 0 <= dim < 3, f'dim = {dim}'
-        core.array3_set(self.handle, dim, value)
+        dim = get_index(dim, 3)
+        if dim is not None:
+            core.array3_set(self.handle, dim, value)
 
     def __getitem__(self, key):
         return self.get(key)
@@ -3139,21 +3195,19 @@ class Tensor2(HasHandle):
 
     def __getitem__(self, key):
         assert len(key) == 2
-        i = key[0]
-        j = key[1]
-        assert i == 0 or i == 1
-        assert j == 0 or j == 1
-        return core.tensor2_get(self.handle, i, j)
+        i = get_index(key[0], 2)
+        j = get_index(key[1], 2)
+        if i is not None and j is not None:
+            return core.tensor2_get(self.handle, i, j)
 
     core.use(None, 'tensor2_set', c_void_p, c_size_t, c_size_t, c_double)
 
     def __setitem__(self, key, value):
         assert len(key) == 2
-        i = key[0]
-        j = key[1]
-        assert i == 0 or i == 1
-        assert j == 0 or j == 1
-        core.tensor2_set(self.handle, i, j, value)
+        i = get_index(key[0], 2)
+        j = get_index(key[1], 2)
+        if i is not None and j is not None:
+            core.tensor2_set(self.handle, i, j, value)
 
     core.use(None, 'tensor2_set_max_min_angle', c_void_p, c_double, c_double, c_double)
 
@@ -3339,21 +3393,19 @@ class Tensor3(HasHandle):
 
     def __getitem__(self, key):
         assert len(key) == 2
-        i = key[0]
-        j = key[1]
-        assert 0 <= i < 3
-        assert 0 <= j < 3
-        return core.tensor3_get(self.handle, i, j)
+        i = get_index(key[0], 3)
+        j = get_index(key[1], 3)
+        if i is not None and j is not None:
+            return core.tensor3_get(self.handle, i, j)
 
     core.use(None, 'tensor3_set', c_void_p, c_size_t, c_size_t, c_double)
 
     def __setitem__(self, key, value):
         assert len(key) == 2
-        i = key[0]
-        j = key[1]
-        assert 0 <= i < 3
-        assert 0 <= j < 3
-        core.tensor3_set(self.handle, i, j, value)
+        i = get_index(key[0], 3)
+        j = get_index(key[1], 3)
+        if i is not None and j is not None:
+            core.tensor3_set(self.handle, i, j, value)
 
     @property
     def xx(self):
@@ -3971,21 +4023,24 @@ class Mesh3(HasHandle):
         core.use(c_size_t, 'mesh3_get_node_link_id', c_void_p, c_size_t, c_size_t)
 
         def get_link(self, index):
-            if 0 <= index < self.link_number:
+            index = get_index(index, self.link_number)
+            if index is not None:
                 i = core.mesh3_get_node_link_id(self.model.handle, self.index, index)
                 return self.model.get_link(i)
 
         core.use(c_size_t, 'mesh3_get_node_face_id', c_void_p, c_size_t, c_size_t)
 
         def get_face(self, index):
-            if 0 <= index < self.face_number:
+            index = get_index(index, self.face_number)
+            if index is not None:
                 i = core.mesh3_get_node_face_id(self.model.handle, self.index, index)
                 return self.model.get_face(i)
 
         core.use(c_size_t, 'mesh3_get_node_body_id', c_void_p, c_size_t, c_size_t)
 
         def get_body(self, index):
-            if 0 <= index < self.body_number:
+            index = get_index(index, self.body_number)
+            if index is not None:
                 i = core.mesh3_get_node_body_id(self.model.handle, self.index, index)
                 return self.model.get_body(i)
 
@@ -4049,21 +4104,24 @@ class Mesh3(HasHandle):
         core.use(c_size_t, 'mesh3_get_link_node_id', c_void_p, c_size_t, c_size_t)
 
         def get_node(self, index):
-            if 0 <= index < self.node_number:
+            index = get_index(index, self.node_number)
+            if index is not None:
                 i = core.mesh3_get_link_node_id(self.model.handle, self.index, index)
                 return self.model.get_node(i)
 
         core.use(c_size_t, 'mesh3_get_link_face_id', c_void_p, c_size_t, c_size_t)
 
         def get_face(self, index):
-            if 0 <= index < self.face_number:
+            index = get_index(index, self.face_number)
+            if index is not None:
                 i = core.mesh3_get_link_face_id(self.model.handle, self.index, index)
                 return self.model.get_face(i)
 
         core.use(c_size_t, 'mesh3_get_link_body_id', c_void_p, c_size_t, c_size_t)
 
         def get_body(self, index):
-            if 0 <= index < self.body_number:
+            index = get_index(index, self.body_number)
+            if index is not None:
                 i = core.mesh3_get_link_body_id(self.model.handle, self.index, index)
                 return self.model.get_body(i)
 
@@ -4141,21 +4199,24 @@ class Mesh3(HasHandle):
         core.use(c_size_t, 'mesh3_get_face_node_id', c_void_p, c_size_t, c_size_t)
 
         def get_node(self, index):
-            if 0 <= index < self.node_number:
+            index = get_index(index, self.node_number)
+            if index is not None:
                 i = core.mesh3_get_face_node_id(self.model.handle, self.index, index)
                 return self.model.get_node(i)
 
         core.use(c_size_t, 'mesh3_get_face_link_id', c_void_p, c_size_t, c_size_t)
 
         def get_link(self, index):
-            if 0 <= index < self.link_number:
+            index = get_index(index, self.link_number)
+            if index is not None:
                 i = core.mesh3_get_face_link_id(self.model.handle, self.index, index)
                 return self.model.get_link(i)
 
         core.use(c_size_t, 'mesh3_get_face_body_id', c_void_p, c_size_t, c_size_t)
 
         def get_body(self, index):
-            if 0 <= index < self.body_number:
+            index = get_index(index, self.body_number)
+            if index is not None:
                 i = core.mesh3_get_face_body_id(self.model.handle, self.index, index)
                 return self.model.get_body(i)
 
@@ -4241,21 +4302,24 @@ class Mesh3(HasHandle):
         core.use(c_size_t, 'mesh3_get_body_node_id', c_void_p, c_size_t, c_size_t)
 
         def get_node(self, index):
-            if 0 <= index < self.node_number:
+            index = get_index(index, self.node_number)
+            if index is not None:
                 i = core.mesh3_get_body_node_id(self.model.handle, self.index, index)
                 return self.model.get_node(i)
 
         core.use(c_size_t, 'mesh3_get_body_link_id', c_void_p, c_size_t, c_size_t)
 
         def get_link(self, index):
-            if 0 <= index < self.link_number:
+            index = get_index(index, self.link_number)
+            if index is not None:
                 i = core.mesh3_get_body_link_id(self.model.handle, self.index, index)
                 return self.model.get_link(i)
 
         core.use(c_size_t, 'mesh3_get_body_face_id', c_void_p, c_size_t, c_size_t)
 
         def get_face(self, index):
-            if 0 <= index < self.face_number:
+            index = get_index(index, self.face_number)
+            if index is not None:
                 i = core.mesh3_get_body_face_id(self.model.handle, self.index, index)
                 return self.model.get_face(i)
 
@@ -4381,19 +4445,23 @@ class Mesh3(HasHandle):
         return core.mesh3_get_body_number(self.handle)
 
     def get_node(self, index):
-        if 0 <= index < self.node_number:
+        index = get_index(index, self.node_number)
+        if index is not None:
             return Mesh3.Node(self, index)
 
     def get_link(self, index):
-        if 0 <= index < self.link_number:
+        index = get_index(index, self.link_number)
+        if index is not None:
             return Mesh3.Link(self, index)
 
     def get_face(self, index):
-        if 0 <= index < self.face_number:
+        index = get_index(index, self.face_number)
+        if index is not None:
             return Mesh3.Face(self, index)
 
     def get_body(self, index):
-        if 0 <= index < self.body_number:
+        index = get_index(index, self.body_number)
+        if index is not None:
             return Mesh3.Body(self, index)
 
     @property
@@ -4796,10 +4864,11 @@ class LinearExpr(HasHandle):
         """
         返回第i项的序号和系数
         """
-        assert i < self.length
-        index = core.lexpr_get_index(self.handle, i)
-        weight = core.lexpr_get_weight(self.handle, i)
-        return index, weight
+        i = get_index(i, self.length)
+        if i is not None:
+            index = core.lexpr_get_index(self.handle, i)
+            weight = core.lexpr_get_weight(self.handle, i)
+            return index, weight
 
     core.use(None, 'lexpr_add', c_void_p, c_size_t, c_double)
 
@@ -4987,7 +5056,9 @@ class DynSys(HasHandle):
         例如:
             对于一个三角形，有6个自由度，如果分别表示为 x1 y1 x2 y2 x3 y3, 那么 get_pos(0)返回x1, get_pos(1)为y1，以此类推.
         """
-        return core.dynsys_get_pos(self.handle, idx)
+        idx = get_index(idx, self.size)
+        if idx is not None:
+            return core.dynsys_get_pos(self.handle, idx)
 
     core.use(None, 'dynsys_set_pos', c_void_p, c_size_t, c_double)
 
@@ -4995,7 +5066,9 @@ class DynSys(HasHandle):
         """
         自由度的当前值.
         """
-        core.dynsys_set_pos(self.handle, idx, value)
+        idx = get_index(idx, self.size)
+        if idx is not None:
+            core.dynsys_set_pos(self.handle, idx, value)
 
     core.use(c_double, 'dynsys_get_vel', c_void_p, c_size_t)
 
@@ -5004,7 +5077,9 @@ class DynSys(HasHandle):
         自由度的速度.
             参考对 get_pos的注释. 返回对应自由度运动的速度.
         """
-        return core.dynsys_get_vel(self.handle, idx)
+        idx = get_index(idx, self.size)
+        if idx is not None:
+            return core.dynsys_get_vel(self.handle, idx)
 
     core.use(None, 'dynsys_set_vel', c_void_p, c_size_t, c_double)
 
@@ -5012,7 +5087,9 @@ class DynSys(HasHandle):
         """
         自由度的速度
         """
-        core.dynsys_set_vel(self.handle, idx, value)
+        idx = get_index(idx, self.size)
+        if idx is not None:
+            core.dynsys_set_vel(self.handle, idx, value)
 
     core.use(c_double, 'dynsys_get_mas', c_void_p, c_size_t)
 
@@ -5021,7 +5098,9 @@ class DynSys(HasHandle):
         自由度的质量.
             用以刻画该自由度的惯性.
         """
-        return core.dynsys_get_mas(self.handle, idx)
+        idx = get_index(idx, self.size)
+        if idx is not None:
+            return core.dynsys_get_mas(self.handle, idx)
 
     core.use(None, 'dynsys_set_mas', c_void_p, c_size_t, c_double)
 
@@ -5030,7 +5109,9 @@ class DynSys(HasHandle):
         自由度的质量.
             用以刻画该自由度的惯性.
         """
-        core.dynsys_set_mas(self.handle, idx, value)
+        idx = get_index(idx, self.size)
+        if idx is not None:
+            core.dynsys_set_mas(self.handle, idx, value)
 
     core.use(c_void_p, 'dynsys_get_p2f', c_void_p, c_size_t)
 
@@ -5039,9 +5120,11 @@ class DynSys(HasHandle):
         根据位置计算自由度的受力. 这个受力是一个线性表达式，即建立这个自由度的受力与自由度位置(以及其它多个自由度的位置)之间的线性关系.
             这里所谓的受力，即自由度的质量乘以自由度的加速度.
         """
-        handle = core.dynsys_get_p2f(self.handle, idx)
-        if handle > 0:
-            return LinearExpr(handle=handle)
+        idx = get_index(idx, self.size)
+        if idx is not None:
+            handle = core.dynsys_get_p2f(self.handle, idx)
+            if handle > 0:
+                return LinearExpr(handle=handle)
 
     core.use(c_double, 'dynsys_get_lexpr_value', c_void_p, c_void_p)
 
@@ -5527,28 +5610,32 @@ class SpringSys(HasHandle):
         """
         返回节点对象
         """
-        if 0 <= index < self.node_number:
+        index = get_index(index, self.node_number)
+        if index is not None:
             return SpringSys.Node(self, index)
 
     def get_virtual_node(self, index):
         """
         返回虚拟节点对象
         """
-        if 0 <= index < self.virtual_node_number:
+        index = get_index(index, self.virtual_node_number)
+        if index is not None:
             return SpringSys.VirtualNode(self, index)
 
     def get_spring(self, index):
         """
         返回弹簧对象
         """
-        if 0 <= index < self.spring_number:
+        index = get_index(index, self.spring_number)
+        if index is not None:
             return SpringSys.Spring(self, index)
 
     def get_damper(self, index):
         """
         返回阻尼器对象
         """
-        if 0 <= index < self.damper_number:
+        index = get_index(index, self.damper_number)
+        if index is not None:
             return SpringSys.Damper(self, index)
 
     @property
@@ -6009,10 +6096,12 @@ class SeepageMesh(HasHandle, HasCells):
             """
             返回与face相连的第i个cell
             """
-            if i > 0:
-                return self.model.get_cell(self.cell_i1)
-            else:
-                return self.model.get_cell(self.cell_i0)
+            i = get_index(i, 2)
+            if i is not None:
+                if i > 0:
+                    return self.model.get_cell(self.cell_i1)
+                else:
+                    return self.model.get_cell(self.cell_i0)
 
         def cells(self):
             return self.get_cell(0), self.get_cell(1)
@@ -6102,7 +6191,8 @@ class SeepageMesh(HasHandle, HasCells):
         """
         返回第ind个cell
         """
-        if ind < self.cell_number:
+        ind = get_index(ind, self.cell_number)
+        if ind is not None:
             return SeepageMesh.Cell(self, ind)
 
     core.use(c_size_t, 'seepage_mesh_get_nearest_cell_id', c_void_p,
@@ -6132,10 +6222,9 @@ class SeepageMesh(HasHandle, HasCells):
         """
         if ind is not None:
             assert cell_0 is None and cell_1 is None
-            if ind < self.face_number:
+            ind = get_index(ind, self.face_number)
+            if ind is not None:
                 return SeepageMesh.Face(self, ind)
-            else:
-                return
         else:
             assert cell_0 is not None and cell_1 is not None
             assert isinstance(cell_0, SeepageMesh.Cell)
@@ -6429,9 +6518,11 @@ class ElementMap(HasHandle):
         core.use(c_double, 'element_map_related_weight', c_void_p, c_size_t, c_size_t)
 
         def get_iw(self, i):
-            ind = core.element_map_related_id(self.model.handle, self.index, i)
-            w = core.element_map_related_weight(self.model.handle, self.index, i)
-            return ind, w
+            i = get_index(i, self.size)
+            if i is not None:
+                ind = core.element_map_related_id(self.model.handle, self.index, i)
+                w = core.element_map_related_weight(self.model.handle, self.index, i)
+                return ind, w
 
     core.use(c_void_p, 'new_element_map')
     core.use(None, 'del_element_map', c_void_p)
@@ -6965,8 +7056,8 @@ class Seepage(HasHandle, HasCells):
             """
             返回流体的组分
             """
-            assert idx >= 0
-            if idx < self.component_number:
+            idx = get_index(idx, self.component_number)
+            if idx is not None:
                 return Seepage.FluDef(handle=core.fludef_get_component(self.handle, idx))
 
         core.use(None, 'fludef_clear_components', c_void_p)
@@ -7284,8 +7375,8 @@ class Seepage(HasHandle, HasCells):
             """
             返回给定的组分
             """
-            assert 0 <= idx
-            if idx < self.component_number:
+            idx = get_index(idx, self.component_number)
+            if idx is not None:
                 return Seepage.FluData(handle=core.fluid_get_component(self.handle, idx))
 
         core.use(None, 'fluid_clear_components', c_void_p)
@@ -7565,12 +7656,15 @@ class Seepage(HasHandle, HasCells):
             返回给定序号的流体.(当参数数量为1的时候，返回Seepage.Fluid对象; 当参数数量大于1的时候，返回Seepage.FluData对象)
             """
             if len(args) > 0:
-                assert 0 <= args[0] < self.fluid_number
-                flu = Seepage.Fluid(self, args[0])
-                if len(args) > 1:
-                    for i in range(1, len(args)):
-                        flu = flu.get_component(args[i])
-                return flu
+                idx = get_index(args[0], self.fluid_number)
+                if idx is not None:
+                    flu = Seepage.Fluid(self, idx)
+                    if len(args) > 1:
+                        for i in range(1, len(args)):
+                            flu = flu.get_component(args[i])
+                            if flu is None:
+                                return
+                    return flu
 
         @property
         def fluids(self):
@@ -7614,8 +7708,9 @@ class Seepage(HasHandle, HasCells):
             """
             返回index给定流体的体积饱和度
             """
-            assert 0 <= index < self.fluid_number
-            return core.seepage_cell_get_fluid_vol_fraction(self.handle, index)
+            index = get_index(index, self.fluid_number)
+            if index is not None:
+                return core.seepage_cell_get_fluid_vol_fraction(self.handle, index)
 
         core.use(c_double, 'seepage_cell_get_attr', c_void_p, c_size_t)
         core.use(None, 'seepage_cell_set_attr', c_void_p, c_size_t, c_double)
@@ -7767,18 +7862,20 @@ class Seepage(HasHandle, HasCells):
             """
             与该Cell相邻的第index个Cell。当index个Cell不存在时，返回None
             """
-            assert 0 <= index < self.cell_number
-            cell_id = core.seepage_get_cell_cell_id(self.model.handle, self.index, index)
-            return self.model.get_cell(cell_id)
+            index = get_index(index, self.cell_number)
+            if index is not None:
+                cell_id = core.seepage_get_cell_cell_id(self.model.handle, self.index, index)
+                return self.model.get_cell(cell_id)
 
         def get_face(self, index):
             """
             与该Cell连接的第index个Face。当index个Face不存在时，返回None
             注：改Face的另一侧，即为get_cell返回的Cell
             """
-            assert 0 <= index < self.face_number
-            face_id = core.seepage_get_cell_face_id(self.model.handle, self.index, index)
-            return self.model.get_face(face_id)
+            index = get_index(index, self.face_number)
+            if index is not None:
+                face_id = core.seepage_get_cell_face_id(self.model.handle, self.index, index)
+                return self.model.get_face(face_id)
 
         @property
         def cells(self):
@@ -8055,9 +8152,10 @@ class Seepage(HasHandle, HasCells):
             """
             和Face连接的第index个Cell
             """
-            assert index == 0 or index == 1
-            cell_id = core.seepage_get_face_cell_id(self.model.handle, self.index, index)
-            return self.model.get_cell(cell_id)
+            index = get_index(index, self.cell_number)
+            if index is not None:
+                cell_id = core.seepage_get_face_cell_id(self.model.handle, self.index, index)
+                return self.model.get_cell(cell_id)
 
         @property
         def cells(self):
@@ -8191,6 +8289,30 @@ class Seepage(HasHandle, HasCells):
             设置注入的流体的ID. 注意：如果需要注热的是热量，则将fluid_id设置为None.
             """
             core.injector_set_fid(self.handle, *parse_fid3(fluid_id))
+
+        core.use(c_size_t, 'injector_get_fid_length', c_void_p)
+        core.use(c_size_t, 'injector_get_fid_of', c_void_p, c_size_t)
+
+        def get_fid(self):
+            """
+            返回注入流体的ID
+            """
+            count = core.injector_get_fid_length(self.handle)
+            return [core.injector_get_fid_of(self.handle, idx) for idx in range(count)]
+
+        @property
+        def fid(self):
+            """
+            注入的流体的ID. 注意：如果需要注热的是热量，则将fluid_id设置为None.
+            """
+            return self.get_fid()
+
+        @fid.setter
+        def fid(self, value):
+            """
+            注入的流体的ID. 注意：如果需要注热的是热量，则将fluid_id设置为None.
+            """
+            self.set_fid(value)
 
         core.use(c_double, 'injector_get_value', c_void_p)
         core.use(None, 'injector_set_value', c_void_p, c_double)
@@ -8638,20 +8760,23 @@ class Seepage(HasHandle, HasCells):
         """
         返回第index个Cell对象
         """
-        if 0 <= index < self.cell_number:
+        index = get_index(index, self.cell_number)
+        if index is not None:
             return Seepage.Cell(self, index)
 
     def get_face(self, index):
         """
         返回第index个Face对象
         """
-        if 0 <= index < self.face_number:
+        index = get_index(index, self.face_number)
+        if index is not None:
             return Seepage.Face(self, index)
 
     core.use(c_void_p, 'seepage_get_inj', c_void_p, c_size_t)
 
     def get_injector(self, index):
-        if 0 <= index < self.injector_number:
+        index = get_index(index, self.injector_number)
+        if index is not None:
             return Seepage.Injector(handle=core.seepage_get_inj(self.handle, index))
 
     core.use(c_size_t, 'seepage_add_cell', c_void_p)
@@ -8822,7 +8947,8 @@ class Seepage(HasHandle, HasCells):
         """
         返回序号为idx的gr
         """
-        if idx < self.gr_number:
+        idx = get_index(idx, self.gr_number)
+        if idx is not None:
             return Interp1(handle=core.seepage_get_gr(self.handle, idx))
 
     @property
@@ -9466,7 +9592,8 @@ class Seepage(HasHandle, HasCells):
     core.use(c_void_p, 'seepage_get_reaction', c_void_p, c_size_t)
 
     def get_reaction(self, idx):
-        if idx < self.reaction_number:
+        idx = get_index(idx, self.reaction_number)
+        if idx is not None:
             return Seepage.Reaction(handle=core.seepage_get_reaction(self.handle, idx))
 
     core.use(c_size_t, 'seepage_add_reaction', c_void_p, c_void_p)
@@ -9965,15 +10092,19 @@ class Thermal(HasHandle):
             """
             连接的第index个Cell
             """
-            cell_id = core.thermal_get_cell_cell_id(self.model.handle, self.index, index)
-            return self.model.get_cell(cell_id)
+            index = get_index(index, self.cell_number)
+            if index is not None:
+                cell_id = core.thermal_get_cell_cell_id(self.model.handle, self.index, index)
+                return self.model.get_cell(cell_id)
 
         def get_face(self, index):
             """
             连接的第index个Face
             """
-            face_id = core.thermal_get_cell_face_id(self.model.handle, self.index, index)
-            return self.model.get_face(face_id)
+            index = get_index(index, self.face_number)
+            if index is not None:
+                face_id = core.thermal_get_cell_face_id(self.model.handle, self.index, index)
+                return self.model.get_face(face_id)
 
         @property
         def cells(self):
@@ -10047,8 +10178,10 @@ class Thermal(HasHandle):
             """
             连接的第index个Cell
             """
-            cell_id = core.thermal_get_face_cell_id(self.model.handle, self.index, index)
-            return self.model.get_cell(cell_id)
+            index = get_index(index, self.cell_number)
+            if index is not None:
+                cell_id = core.thermal_get_face_cell_id(self.model.handle, self.index, index)
+                return self.model.get_cell(cell_id)
 
         @property
         def cells(self):
@@ -10138,14 +10271,16 @@ class Thermal(HasHandle):
         """
         模型中第index个Cell
         """
-        if index < core.thermal_get_cell_n(self.handle):
+        index = get_index(index, self.cell_number)
+        if index is not None:
             return Thermal.Cell(self, index)
 
     def get_face(self, index):
         """
         模型中第index个Face
         """
-        if index < core.thermal_get_face_n(self.handle):
+        index = get_index(index, self.face_number)
+        if index is not None:
             return Thermal.Face(self, index)
 
     core.use(c_size_t, 'thermal_add_cell', c_void_p)
@@ -10299,7 +10434,13 @@ class InvasionPercolation(HasHandle):
             assert value >= 0
             core.ip_node_set_phase(self.handle, value)
 
-        phase = property(get_phase, set_phase)
+        @property
+        def phase(self):
+            return self.get_phase()
+
+        @phase.setter
+        def phase(self, value):
+            self.set_phase(value)
 
         core.use(c_size_t, 'ip_node_get_cid', c_void_p)
         core.use(None, 'ip_node_set_cid', c_void_p, c_size_t)
@@ -10317,7 +10458,13 @@ class InvasionPercolation(HasHandle):
             """
             core.ip_node_set_cid(self.handle, value)
 
-        cid = property(get_cid, set_cid)
+        @property
+        def cid(self):
+            return self.get_cid()
+
+        @cid.setter
+        def cid(self, value):
+            self.set_cid(value)
 
         core.use(c_double, 'ip_node_get_radi', c_void_p)
         core.use(None, 'ip_node_set_radi', c_void_p, c_double)
@@ -10335,7 +10482,13 @@ class InvasionPercolation(HasHandle):
             assert value > 0
             core.ip_node_set_radi(self.handle, value)
 
-        radi = property(get_radi, set_radi)
+        @property
+        def radi(self):
+            return self.get_radi()
+
+        @radi.setter
+        def radi(self, value):
+            self.set_radi(value)
 
         core.use(c_double, 'ip_node_get_time_invaded', c_void_p)
 
@@ -10373,7 +10526,13 @@ class InvasionPercolation(HasHandle):
             for i in range(3):
                 core.ip_node_set_pos(self.handle, i, value[i])
 
-        pos = property(get_pos, set_pos)
+        @property
+        def pos(self):
+            return self.get_pos()
+
+        @pos.setter
+        def pos(self, value):
+            self.set_pos(value)
 
     class Node(NodeData):
 
@@ -10406,7 +10565,8 @@ class InvasionPercolation(HasHandle):
             """
             此Node连接的第idx个Node
             """
-            if idx < self.node_n:
+            idx = get_index(idx, self.node_n)
+            if idx is not None:
                 i_node = core.ip_get_node_node_id(self.model.handle, self.index, idx)
                 return self.model.get_node(i_node)
 
@@ -10416,7 +10576,8 @@ class InvasionPercolation(HasHandle):
             """
             此Node连接的第idx个Bond
             """
-            if idx < self.bond_n:
+            idx = get_index(idx, self.bond_n)
+            if idx is not None:
                 i_bond = core.ip_get_node_bond_id(self.model.handle, self.index, idx)
                 return self.model.get_bond(i_bond)
 
@@ -10456,7 +10617,13 @@ class InvasionPercolation(HasHandle):
             assert value > 0
             core.ip_bond_set_radi(self.handle, value)
 
-        radi = property(get_radi, set_radi)
+        @property
+        def radi(self):
+            return self.get_radi()
+
+        @radi.setter
+        def radi(self, value):
+            self.set_radi(value)
 
         core.use(c_double, 'ip_bond_get_dp0', c_void_p)
         core.use(None, 'ip_bond_set_dp0', c_void_p, c_double)
@@ -10473,7 +10640,13 @@ class InvasionPercolation(HasHandle):
             """
             core.ip_bond_set_dp0(self.handle, value)
 
-        dp0 = property(get_dp0, set_dp0)
+        @property
+        def dp0(self):
+            return self.get_dp0()
+
+        @dp0.setter
+        def dp0(self, value):
+            self.set_dp0(value)
 
         core.use(c_double, 'ip_bond_get_dp1', c_void_p)
         core.use(None, 'ip_bond_set_dp1', c_void_p, c_double)
@@ -10490,7 +10663,13 @@ class InvasionPercolation(HasHandle):
             """
             core.ip_bond_set_dp1(self.handle, value)
 
-        dp1 = property(get_dp1, set_dp1)
+        @property
+        def dp1(self):
+            return self.get_dp1()
+
+        @dp1.setter
+        def dp1(self, value):
+            self.set_dp1(value)
 
         core.use(c_double, 'ip_bond_get_contact_angle', c_void_p, c_size_t, c_size_t)
 
@@ -10594,7 +10773,8 @@ class InvasionPercolation(HasHandle):
             """
             此Bond连接的第idx个Node
             """
-            if idx < self.node_n:
+            idx = get_index(idx, self.node_n)
+            if idx is not None:
                 i_node = core.ip_get_bond_node_id(self.model.handle, self.index, idx)
                 return self.model.get_node(i_node)
 
@@ -10630,7 +10810,13 @@ class InvasionPercolation(HasHandle):
             """
             core.ip_inj_set_node_id(self.handle, value)
 
-        node_id = property(get_node_id, set_node_id)
+        @property
+        def node_id(self):
+            return self.get_node_id()
+
+        @node_id.setter
+        def node_id(self, value):
+            self.set_node_id(value)
 
         core.use(c_size_t, 'ip_inj_get_phase', c_void_p)
 
@@ -10649,7 +10835,13 @@ class InvasionPercolation(HasHandle):
             assert value >= 0
             core.ip_inj_set_phase(self.handle, value)
 
-        phase = property(get_phase, set_phase)
+        @property
+        def phase(self):
+            return self.get_phase()
+
+        @phase.setter
+        def phase(self, value):
+            self.set_phase(value)
 
         core.use(c_double, 'ip_inj_get_q', c_void_p)
 
@@ -10668,7 +10860,13 @@ class InvasionPercolation(HasHandle):
             assert value > 0
             core.ip_inj_set_q(self.handle, value)
 
-        qinj = property(get_qinj, set_qinj)
+        @property
+        def qinj(self):
+            return self.get_qinj()
+
+        @qinj.setter
+        def qinj(self, value):
+            self.set_qinj(value)
 
     class Injector(InjectorData):
         core.use(c_void_p, 'ip_get_inj', c_void_p, c_size_t)
@@ -10797,7 +10995,13 @@ class InvasionPercolation(HasHandle):
         assert value >= 0
         core.ip_set_time(self.handle, value)
 
-    time = property(get_time, set_time)
+    @property
+    def time(self):
+        return self.get_time()
+
+    @time.setter
+    def time(self, value):
+        self.set_time(value)
 
     core.use(c_size_t, 'ip_add_node', c_void_p)
 
@@ -10812,7 +11016,8 @@ class InvasionPercolation(HasHandle):
         """
         返回序号为index的Node对象
         """
-        if 0 <= index < self.node_n:
+        index = get_index(index, self.node_n)
+        if index is not None:
             return InvasionPercolation.Node(self, index)
 
     core.use(c_size_t, 'ip_add_bond', c_void_p, c_size_t, c_size_t)
@@ -10833,7 +11038,8 @@ class InvasionPercolation(HasHandle):
         """
         返回给定序号的Bond
         """
-        if 0 <= index < self.bond_n:
+        index = get_index(index, self.bond_n)
+        if index is not None:
             return InvasionPercolation.Bond(self, index)
 
     core.use(c_size_t, 'ip_get_bond_id', c_void_p, c_size_t, c_size_t)
@@ -10864,14 +11070,18 @@ class InvasionPercolation(HasHandle):
     def get_node_n(self):
         return core.ip_get_node_n(self.handle)
 
-    node_n = property(get_node_n)
+    @property
+    def node_n(self):
+        return self.get_node_n()
 
     core.use(c_size_t, 'ip_get_bond_n', c_void_p)
 
     def get_bond_n(self):
         return core.ip_get_bond_n(self.handle)
 
-    bond_n = property(get_bond_n)
+    @property
+    def bond_n(self):
+        return self.get_bond_n()
 
     core.use(c_size_t, 'ip_get_outlet_n', c_void_p)
     core.use(None, 'ip_set_outlet_n', c_void_p, c_size_t)
@@ -10889,7 +11099,13 @@ class InvasionPercolation(HasHandle):
         assert value >= 0
         core.ip_set_outlet_n(self.handle, value)
 
-    outlet_n = property(get_outlet_n, set_outlet_n)
+    @property
+    def outlet_n(self):
+        return self.get_outlet_n()
+
+    @outlet_n.setter
+    def outlet_n(self, value):
+        self.set_outlet_n(value)
 
     core.use(None, 'ip_set_outlet', c_void_p, c_size_t, c_size_t)
 
@@ -10897,9 +11113,11 @@ class InvasionPercolation(HasHandle):
         """
         第index个出口对应的Node的序号
         """
-        assert 0 <= index < self.outlet_n
-        assert value < self.node_n
-        core.ip_set_outlet(self.handle, index, value)
+        index = get_index(index, self.outlet_n)
+        if index is not None:
+            value = get_index(value, self.node_n)
+            if value is not None:
+                core.ip_set_outlet(self.handle, index, value)
 
     core.use(c_size_t, 'ip_get_outlet', c_void_p, c_size_t)
 
@@ -10907,8 +11125,9 @@ class InvasionPercolation(HasHandle):
         """
         第index个出口对应的Node的序号
         """
-        assert 0 <= index < self.outlet_n
-        return core.ip_get_outlet(self.handle, index)
+        index = get_index(index, self.outlet_n)
+        if index is not None:
+            return core.ip_get_outlet(self.handle, index)
 
     def add_outlet(self, node_id):
         """
@@ -10994,7 +11213,13 @@ class InvasionPercolation(HasHandle):
             core.ip_set_gravity(self.handle, i, value[i])
         return self
 
-    gravity = property(get_gravity, set_gravity)
+    @property
+    def gravity(self):
+        return self.get_gravity()
+
+    @gravity.setter
+    def gravity(self, value):
+        self.set_gravity(value)
 
     core.use(c_size_t, 'ip_get_inj_n', c_void_p)
     core.use(None, 'ip_set_inj_n', c_void_p, c_size_t)
@@ -11013,13 +11238,20 @@ class InvasionPercolation(HasHandle):
         core.ip_set_inj_n(self.handle, value)
         return self
 
-    inj_n = property(get_inj_n, set_inj_n)
+    @property
+    def inj_n(self):
+        return self.get_inj_n()
+
+    @inj_n.setter
+    def inj_n(self, value):
+        self.set_inj_n(value)
 
     def get_inj(self, index):
         """
         返回第index个注入点
         """
-        if 0 <= index < self.inj_n:
+        index = get_index(index, self.inj_n)
+        if index is not None:
             return InvasionPercolation.Injector(self, index)
 
     def add_inj(self, node_id=None, phase=None, qinj=None):
@@ -11060,10 +11292,13 @@ class InvasionPercolation(HasHandle):
     def get_oper_n(self):
         return core.ip_get_oper_n(self.handle)
 
-    oper_n = property(get_oper_n)
+    @property
+    def oper_n(self):
+        return self.get_oper_n()
 
     def get_oper(self, idx):
-        if idx < self.oper_n:
+        idx = get_index(idx, self.oper_n)
+        if idx is not None:
             return InvasionPercolation.InvadeOperation(self, idx)
 
     core.use(None, 'ip_remove_node', c_void_p, c_size_t)
@@ -11237,7 +11472,9 @@ class Dfn2(HasHandle):
         """
         返回第idx个裂缝的位置
         """
-        return [core.dfn2d_get_fracture_pos(self.handle, idx, i) for i in range(4)]
+        idx = get_index(idx, self.fracture_n)
+        if idx is not None:
+            return [core.dfn2d_get_fracture_pos(self.handle, idx, i) for i in range(4)]
 
     def get_fractures(self):
         """
@@ -11730,8 +11967,10 @@ class FractureNetwork(HasHandle):
         core.use(c_size_t, 'frac_nt_nd_get_bd_i', c_void_p, c_size_t, c_size_t)
 
         def get_fracture(self, index):
-            return self.network.get_fracture(
-                core.frac_nt_nd_get_bd_i(self.network.handle, self.index, index))
+            index = get_index(index, self.fracture_number)
+            if index is not None:
+                return self.network.get_fracture(
+                    core.frac_nt_nd_get_bd_i(self.network.handle, self.index, index))
 
     class Fracture(FractureData):
 
@@ -11756,8 +11995,10 @@ class FractureNetwork(HasHandle):
         core.use(c_size_t, 'frac_nt_bd_get_nd_i', c_void_p, c_size_t, c_size_t)
 
         def get_vertex(self, index):
-            return self.network.get_vertex(
-                core.frac_nt_bd_get_nd_i(self.network.handle, self.index, index))
+            index = get_index(index, self.vertex_number)
+            if index is not None:
+                return self.network.get_vertex(
+                    core.frac_nt_bd_get_nd_i(self.network.handle, self.index, index))
 
         @property
         def pos(self):
@@ -11854,7 +12095,8 @@ class FractureNetwork(HasHandle):
         return core.frac_nt_get_nd_n(self.handle)
 
     def get_vertex(self, index):
-        if index < self.vertex_number:
+        index = get_index(index, self.vertex_number)
+        if index is not None:
             return FractureNetwork.Vertex(self, index)
 
     core.use(c_size_t, 'frac_nt_get_bd_n', c_void_p)
@@ -11864,7 +12106,8 @@ class FractureNetwork(HasHandle):
         return core.frac_nt_get_bd_n(self.handle)
 
     def get_fracture(self, index):
-        if index < self.fracture_number:
+        index = get_index(index, self.fracture_number)
+        if index is not None:
             return FractureNetwork.Fracture(self, index)
 
     core.use(c_size_t, 'frac_nt_add_nd', c_void_p, c_double, c_double)
