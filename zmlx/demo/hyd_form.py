@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from zml import SeepageMesh, get_distance, create_dict, Seepage
+from zml import SeepageMesh, get_distance, create_dict, Seepage, core
 from zmlx.alg.time2str import time2str
 from zmlx.config import hydrate, seepage
 from zmlx.filesys.join_paths import join_paths
@@ -88,7 +88,7 @@ def show(model: Seepage, folder=None):
         show_s(item)
 
 
-def solve(model, folder=None):
+def solve(model, folder=None, step_max=None):
     """
     执行求解，并将结果保存到指定的文件夹
     """
@@ -101,7 +101,10 @@ def solve(model, folder=None):
                        get_time=lambda: seepage.get_time(model) / (3600 * 24 * 365),
                        )
 
-    for step in range(10000):
+    if step_max is None:
+        step_max = 10000
+
+    for step in range(step_max):
         iterate(model)
         save()
         if step % 10 == 0:
@@ -112,10 +115,15 @@ def solve(model, folder=None):
     print(iterate.time_info())
 
 
-def execute(gui_mode=True, close_after_done=False):
-    gui.execute(solve, close_after_done=close_after_done,
-                args=(create(),), disable_gui=not gui_mode)
+def execute(folder=None, step_max=None, gui_mode=False, close_after_done=False, parallel_enabled=True):
+    core.parallel_enabled = parallel_enabled
+
+    def f():
+        model = create()
+        solve(model, folder=folder, step_max=step_max)
+
+    gui.execute(f, close_after_done=close_after_done, disable_gui=not gui_mode)
 
 
 if __name__ == '__main__':
-    execute()
+    execute(gui_mode=True)

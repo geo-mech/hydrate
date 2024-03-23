@@ -245,7 +245,8 @@ def set_dt_max(model: Seepage, value):
 solid_buffer = Seepage.CellData()
 
 
-def iterate(model: Seepage, dt=None, solver=None, fa_s=None, fa_q=None, fa_k=None, cond_updaters=None, diffusions=None):
+def iterate(model: Seepage, dt=None, solver=None, fa_s=None, fa_q=None, fa_k=None, cond_updaters=None, diffusions=None,
+            react_bufs=None):
     """
     在时间上向前迭代。其中
         dt:     时间步长,若为None，则使用自动步长
@@ -253,6 +254,7 @@ def iterate(model: Seepage, dt=None, solver=None, fa_s=None, fa_q=None, fa_k=Non
         fa_s:   Face自定义属性的ID，代表Face的横截面积（用于计算Face内流体的受力）;
         fa_q：   Face自定义属性的ID，代表Face内流体在通量(也将在iterate中更新)
         fa_k:   Face内流体的惯性系数的属性ID (若fa_k属性不为None，则所有Face的该属性需要提前给定).
+        react_bufs:  反应的缓冲区，用来记录各个cell发生的反应的质量，其中的每一个buf都应该是一个pointer，且长度等于cell的数量;
     """
     if dt is not None:
         set_dt(model, dt)
@@ -340,11 +342,15 @@ def iterate(model: Seepage, dt=None, solver=None, fa_s=None, fa_q=None, fa_k=Non
         fa_c = model.reg_flu_key('specific_heat')
         model.exchange_heat(dt=dt, ca_g=ca_g, ca_t=ca_t, ca_mc=ca_mc, fa_t=fa_t, fa_c=fa_c)
 
-    # 优先使用模型中定义的反应
+    # 反应
     for idx in range(model.reaction_number):
         reaction = model.get_reaction(idx)
         assert isinstance(reaction, Seepage.Reaction)
-        reaction.react(model, dt)
+        buf = None
+        if react_bufs is not None:
+            if idx < len(react_bufs):
+                buf = react_bufs[idx]  # 使用这个buf(必须确保这个buf是一个double类型的指针，并且长度等于cell_number)
+        reaction.react(model, dt, buf=buf)
 
     set_time(model, get_time(model) + dt)
     set_step(model, get_step(model) + 1)

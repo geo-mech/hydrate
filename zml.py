@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-说明:     流动、传热、应力计算的核心模块；C++代码的Python接口(必须和zml.dll放在一起使用)。
+Description:    The core module of flow, heat transfer and stress calculation;
+                Python interface for C++ code (must be used with zml.dll).
 
-运行环境： Windows 7/10/11; Python 3.7及以上版本; 64位系统;
+Environment:    Windows 7/10/11; Python 3.7 or later; 64-bit system;
 
-依赖项:   无
+Dependency:     None
 
-网址:     https://gitee.com/geomech/hydrate
+Website:        https://gitee.com/geomech/hydrate
 
-作者：    张召彬 <zhangzhaobin@mail.iggcas.ac.cn>, 中国科学院地质与地球物理研究所
+Author:         ZHANG Zhaobin <zhangzhaobin@mail.iggcas.ac.cn>,
+                Institute of Geology and Geophysics, Chinese Academy of Sciences
 """
 
 import ctypes
@@ -20,24 +22,23 @@ import warnings
 import timeit
 import importlib
 
-warnings.simplefilter("default")  # 警告默认显示
+warnings.simplefilter("default")  # Default warning display
 
-from ctypes import cdll, c_void_p, c_char_p, c_int, c_int64, c_bool, c_double, c_size_t, c_uint, CFUNCTYPE, \
-    POINTER
+from ctypes import cdll, c_void_p, c_char_p, c_int, c_int64, c_bool, c_double, c_size_t, c_uint, CFUNCTYPE, POINTER
 from typing import Iterable
 
 try:
     import numpy as np
 except Exception as _err:
-    # 当numpy没有安装的时候，部分功能将不可用
+    # Some features are not available when numpy is not installed
     np = None
     warnings.warn(f'cannot import numpy in zml. error = {_err}')
 
-# 指示当前是否为Windows系统(目前支持Windows和Linux两个系统)
+# Indicates whether the system is currently Windows (both Windows and Linux systems are currently supported)
 is_windows = os.name == 'nt'
 
-# zml模块的版本(用六位数字表示的日期)
-version = 240317
+# Version of the zml module (date represented by six digits)
+version = 240402
 
 
 class Object:
@@ -54,7 +55,7 @@ class Object:
 
 def create_dict(**kwargs):
     """
-    将给定的参数列表转化为一个字典
+    Converts the given parameter list into a dictionary
     """
     return kwargs
 
@@ -82,7 +83,7 @@ gui = _GuiAdaptor()
 
 def _deprecation_func(pack_name, func, date=None):
     """
-    定义一个在zmlx中有定义，在zml中被弃用的函数.
+    Define a function that is defined in zmlx and deprecated in zml.
     """
 
     def a_function(*args, **kwargs):
@@ -105,7 +106,7 @@ gui_exec = _deprecation_func('zmlx.ui.GuiBuffer', 'gui_exec', '2025-1-21')
 
 def is_array(o):
     """
-    检查一个对象是否定义了长度并可以利用[]来获取元素
+    Checks if an object has a defined length and can use [] to get elements
     """
     return hasattr(o, '__getitem__') and hasattr(o, '__len__')
 
@@ -120,7 +121,7 @@ def make_c_char_p(s):
 
 def sendmail(address, subject=None, text=None, name_from=None, name_to=None):
     """
-    发送一个邮件. 返回是否发送成功.
+    Send an email. Return whether the email was sent successfully.
     """
     try:
         import smtplib
@@ -182,14 +183,15 @@ def make_dirs(folder):
         pass
 
 
-# 函数的别名<为了兼容之前的代码>
+# Alias of the function < for compatibility with previous code >
 makedirs = make_dirs
 
 
 def make_parent(path):
     """
-    对于任意给定的文件路径，尝试为它创建一个上一级目录，从而尽可能确保在这个位置写入文件能够成功；
-    返回输入的文件路径
+    For any given file path, try to create an upper-level directory for it,
+    so as much as possible to ensure that writing files to this location will succeed;
+        Returns the entered file path
     """
     try:
         dirname = os.path.dirname(path)
@@ -229,18 +231,18 @@ def write_text(path, text, encoding=None):
 
 class _AppData(Object):
     """
-    数据和文件管理
+    Data and file management
     """
 
     def __init__(self):
-        # 缓存目录
+        # cache directory
         if is_windows:
             self.folder = os.path.join(os.getenv("APPDATA"), 'zml')
         else:
             self.folder = os.path.join('/var/tmp/zml')
 
         make_dirs(self.folder)
-        # 自定义的文件搜索路径
+        # Custom file search path
         self.paths = []
         try:
             for line in self.getenv(key='path', default='').splitlines():
@@ -250,12 +252,12 @@ class _AppData(Object):
         except:
             pass
 
-        # 内存变量
+        # memory variable
         self.space = {}
 
     def add_path(self, path):
         """
-        添加一个搜索路径<避免重复>
+        Add a search path < Avoid duplication >
         """
         if os.path.isdir(path):
             for existed in self.paths:
@@ -321,10 +323,10 @@ class _AppData(Object):
     @staticmethod
     def proj(*args):
         """
-        获得工程目录下的文件
+        Get the files in the project directory
         """
         if len(args) == 0:
-            # 此时，返回工程文件的根目录
+            # return to the root directory of the project file
             return os.path.join(os.getcwd(), '.zml')
         else:
             return make_parent(os.path.join(os.getcwd(), '.zml', *args))
@@ -346,15 +348,17 @@ class _AppData(Object):
 
     def get_paths(self, first=None):
         """
-        返回所有的搜索路径. 其中first为优先搜索的路径。在此之后是当前工作路径、缓存路径、自定义路径和Python的系统路径；
-        注意：这里返回的路径可能会有重复的
+        Returns all search paths. The first path is the preferred search path.
+        After that are the current working path, cache path, custom path, and Python system path;
+        Note:
+            The returned path may be duplicate
         """
         paths = [os.getcwd(), self.proj()] if first is None else [first, os.getcwd(), self.proj()]
         return paths + [self.folder, os.path.join(self.folder, 'temp')] + self.paths + sys.path
 
     def find(self, name, first=None):
         """
-        搜索指定的文件并返回路径。如果未找到，则返回None
+        Searches for the specified file and returns the path. If not found, None is returned
         """
         for folder in self.get_paths(first):
             try:
@@ -366,7 +370,7 @@ class _AppData(Object):
 
     def find_all(self, name, first=None):
         """
-        搜索文件并返回所有找到的<并且保证已经去除了重复元素>
+        Search the file and return all found < and ensure that duplicate elements have been removed >
         """
         results = []
         for folder in self.get_paths(first):
@@ -405,7 +409,8 @@ app_data = _AppData()
 
 def log(text, tag=None):
     """
-    记录一个信息，并且在给定tag的时候，确保每天仅仅记录一次. 当给定tag的时候，确保tag是一个合法的变量名称.
+    Record a piece of information and, given the tag, make sure to record it only once a day.
+    When given a tag, make sure that tag is a valid variable name.
     """
     if tag is not None:
         if app_data.has_tag_today(tag):
@@ -443,7 +448,7 @@ class _NullFunction:
 
 def get_func(dll, restype, name, *argtypes):
     """
-    配置一个dll的函数
+    Configure a dll function
     """
     assert isinstance(name, str)
     fn = getattr(dll, name, None)
@@ -460,14 +465,14 @@ def get_func(dll, restype, name, *argtypes):
 
 def get_file():
     """
-    返回当前文件路径
+    Returns the current file path
     """
     return os.path.realpath(__file__)
 
 
 def get_dir():
     """
-    返回当前文件所在的文件夹的路径
+    Returns the path to the folder where the current file is located
     """
     return os.path.dirname(os.path.realpath(__file__))
 
@@ -502,7 +507,7 @@ class DllCore:
 
     def has_dll(self):
         """
-        是否正确载入了dll
+        Whether the dll was loaded correctly
         """
         return self.dll is not None
 
@@ -612,7 +617,7 @@ class DllCore:
     @property
     def version(self):
         """
-        返回内核的版本 (编译的日期)
+        Return the version of the kernel (date of compilation)
         """
         if self.has_dll():
             return core.get_version()
@@ -622,7 +627,7 @@ class DllCore:
     @property
     def compiler(self):
         """
-        返回内核所采用的编译器及其版本
+        Returns the compiler used by the kernel and its version
         """
         if self.has_dll():
             return self.get_compiler().decode()
@@ -655,7 +660,7 @@ class DllCore:
 
     def use(self, restype, name, *argtypes):
         """
-        声明接下来将使用内核dll中的某一个函数
+        Declares that a function in the kernel dll will be used next
         """
         if self.has_dll():
             if self._dll_funcs.get(name) is not None:
@@ -667,7 +672,7 @@ class DllCore:
 
     def __getattr__(self, name):
         """
-        尝试返回给定name的dll函数
+        Attempts to return a dll function with a given name
         """
         return self._dll_funcs.get(name)
 
@@ -677,14 +682,16 @@ core = DllCore(dll=dll)
 
 class Timer:
     """
-    用以辅助统计函数的执行耗时。对于每一个函数，都应该有一个key，来表示这个函数在内存存储的名字.
-    -
-        张召彬  2023-7-7
+    Used to assist in the execution time of statistical functions.
+    For every function, there should be a key that represents the name of the function stored in memory.
+
+    2023-7-7
     """
 
     def __init__(self, co):
         """
-        用一个空表（字典）来进行初始化. 字典的key是待统计的函数的名字，值为运行的次数和总耗时.
+        Initialize with an empty table (dictionary). The key of the dictionary is the name of
+        the function to be counted, and the value is the number of runs and the total time.
         """
         assert isinstance(co, DllCore), f'the type of <co> should be {type(DllCore)}'
         co.use(c_char_p, 'timer_summary', c_void_p)
@@ -697,9 +704,10 @@ class Timer:
 
     def __call__(self, key, func, *args, **kwargs):
         """
-        调用一个函数，并且记录调用的cpu耗时，以及调用的次数. 返回函数的执行结果.
-            注意，这个函数将抛出func运行的异常.
-            func后面的参数将传递给func.
+        Call a function, and record the cpu time of the call, as well as the number of calls.
+        Returns the result of the function.
+        Note that this function will throw an exception for func to run.
+        The argument after func is passed to func.
         """
         self.beg(key)
         r = func(*args, **kwargs)
@@ -708,7 +716,7 @@ class Timer:
 
     def __str__(self):
         """
-        将数据转化为字符串输出.
+        Converts data to string output.
         """
         return self.summary()
 
@@ -729,19 +737,19 @@ class Timer:
 
     def log(self, name, seconds):
         """
-        记录一个过程的耗时
+        Keep track of how long a process takes
         """
         self.co.timer_log(make_c_char_p(name), seconds)
 
     def clear(self):
         """
-        重置
+        reset
         """
         self.co.timer_reset()
 
     def enabled(self, value=None):
         """
-        cpu计时器是否处于打开的状态
+        Whether the cpu timer is on
         """
         if value is not None:
             self.co.timer_enable(value)
@@ -749,13 +757,13 @@ class Timer:
 
     def beg(self, key):
         """
-        开始一段测试
+        Start a test
         """
         self.__key2t[key] = timeit.default_timer()
 
     def end(self, key):
         """
-        结束一段测试(并且记录)
+        End a test run (and record it)
         """
         t0 = self.__key2t.get(key, None)
         if t0 is not None:
@@ -798,12 +806,13 @@ if __name__ == '__main__':
 
 class _DataVersion:
     """
-    定义数据的版本. 数据的版本号为6位的int类型(yymmdd)，是数据的日期
+    Define the version of the data.
+    The version number of the data is a 6-digit int (yymmdd), which is the date of the data
     """
 
     def __init__(self, value=version):
         """
-        初始化，设置默认的数据版本
+        Initialize to set the default data version
         """
         assert isinstance(value, int)
         assert 100000 <= value <= 999999
@@ -812,7 +821,7 @@ class _DataVersion:
 
     def set(self, value=None, key=None):
         """
-        设置版本. 6位的int
+        Set version. 6-bit int
         """
         assert isinstance(value, int)
         assert 100000 <= value <= 999999
@@ -823,19 +832,19 @@ class _DataVersion:
 
     def __getattr__(self, key):
         """
-        返回数据的版本. 6位的int
+        Returns the version of the data. 6-bit int
         """
         return self.__versions.get(key, self.__default)
 
     def __getitem__(self, key):
         """
-        返回数据的版本. 6位的int
+        Returns the version of the data. 6-bit int
         """
         return self.__versions.get(key, self.__default)
 
     def __setitem__(self, key, value):
         """
-        设置数据的版本. 6位的int
+        Set the version of the data. 6-bit int
         """
         self.set(key=key, value=value)
 
@@ -1021,7 +1030,8 @@ class License:
 
     def create_permanent(self, serial):
         """
-        给定序列号(usb_serial)，返回一个针对这个serial的永久授权。仅供测试
+        Given a serial number (usb_serial), return a permanent authorization for the serial number.
+        For testing only
         """
         if self.core.has_dll():
             code = String()
@@ -1035,7 +1045,7 @@ class License:
 
     def load(self, code):
         """
-        将给定的licdata存储到默认位置
+        Stores the given licdata to the default location
         """
         if self.core.has_dll():
             temp = String()
@@ -1083,8 +1093,10 @@ lic = License(core=core)
 
 def reg(code=None):
     """
-    注册。当code为None的时候，返回本机序列号。当code长度小于80，则将code视为序列号，则创建licdata；否则，将code视为licdata，并
-    将它保存到本地。
+    reg.
+    When code is None, return the native serial number.
+    If the length of code is less than 80, code is regarded as the serial number and licdata is created.
+    Otherwise, code is treated as licdata, and save it locally.
     """
     if code is None:
         return lic.usb_serial
@@ -1103,7 +1115,7 @@ core.use(c_double, 'test_loop', c_size_t, c_bool)
 
 def test_loop(count, parallel=True):
     """
-    测试内核中给定长度的循环，并返回耗时
+    Tests loops of a given length in the kernel and returns the time taken
     """
     return core.test_loop(count, parallel)
 
@@ -1167,7 +1179,7 @@ read_py = _deprecation_func('zmlx.io.python', 'read_py', '2025-1-21')
 
 def parse_fid3(fluid_id):
     """
-    自动将给定的流体ID识别为某种流体的某种组分的ID
+    Automatically identifies a given fluid ID as the ID of a certain component of a fluid
     """
     if fluid_id is None:
         return 99999999, 99999999, 99999999
@@ -1184,7 +1196,7 @@ def parse_fid3(fluid_id):
 
 def _check_ipath(path, obj=None):
     """
-    在读取文件的时候，对输入的文件名进行检查. 其中obj是读取文件的对象
+    When reading a file, the input file name is checked. Where obj is the object that reads the file
     """
     assert isinstance(path, str), f'The given path <{path}> is not string while load {type(obj)}'
     assert os.path.isfile(path), f'The given path <{path}> is not file while load {type(obj)}'
@@ -1192,9 +1204,10 @@ def _check_ipath(path, obj=None):
 
 def get_average_perm(p0, p1, get_perm, sample_dist=None, depth=0):
     """
-    返回两个点之间的平均的渗透率<或者平均的导热系数>
-    注意：
-        此函数仅仅用于计算渗透率的平均值<在求平均的时候，考虑到了串联效应>
+    Return the average permeability < or average thermal conductivity > between two points
+    NOTE:
+        This function is only used to calculate the average permeability
+            < series effect is taken into account when averaging >
     """
     pos = [(p0[i] + p1[i]) / 2 for i in range(len(p0))]
     dist = get_distance(p0, p1)
@@ -1218,7 +1231,7 @@ install = _deprecation_func('zmlx.alg.install', 'install', '2025-1-21')
 
 def get_index(index, count=None):
     """
-    返回经过校正之后的序号. 确保返回的 0 <= index < count
+    Returns the corrected sequence number. Make sure that 0 <= index < count is returned
     """
     if index is None:
         return
@@ -1229,12 +1242,12 @@ def get_index(index, count=None):
         assert count >= 0
         if index >= 0:
             if index < count:
-                return index   # 0 <= index < count
+                return index  # 0 <= index < count
         else:
             assert index < 0
-            index += count   # index < count
+            index += count  # index < count
             if index >= 0:
-                return index   # 0 <= index < count
+                return index  # 0 <= index < count
 
 
 def __feedback():
@@ -1353,10 +1366,16 @@ class Vector(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            text format
+            (cross-platform, basically unreadable)
+        2:.xml
+            xml format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.vf_save(self.handle, make_c_char_p(path))
@@ -1365,7 +1384,8 @@ class Vector(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -1515,10 +1535,16 @@ class IntVector(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            text format
+            (cross-platform, basically unreadable)
+        2:.xml
+            xml format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.vi_save(self.handle, make_c_char_p(path))
@@ -1527,7 +1553,8 @@ class IntVector(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -1613,10 +1640,16 @@ class UintVector(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            text format
+            (cross-platform, basically unreadable)
+        2:.xml
+            xml format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.vui_save(self.handle, make_c_char_p(path))
@@ -1625,7 +1658,8 @@ class UintVector(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -1921,10 +1955,16 @@ class Matrix2(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            text format
+            (cross-platform, basically unreadable)
+        2:.xml
+            xml format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.mat2_save(self.handle, make_c_char_p(path))
@@ -1933,7 +1973,8 @@ class Matrix2(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -2067,10 +2108,16 @@ class Matrix3(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            text format
+            (cross-platform, basically unreadable)
+        2:.xml
+            xml format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.mat3_save(self.handle, make_c_char_p(path))
@@ -2079,7 +2126,8 @@ class Matrix3(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -2232,10 +2280,16 @@ class Tensor3Matrix3(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            text format
+            (cross-platform, basically unreadable)
+        2:.xml
+            xml format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.ts3mat3_save(self.handle, make_c_char_p(path))
@@ -2244,7 +2298,8 @@ class Tensor3Matrix3(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -2364,10 +2419,16 @@ class Interp1(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            text format
+            (cross-platform, basically unreadable)
+        2:.xml
+            xml format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.interp1_save(self.handle, make_c_char_p(path))
@@ -2376,7 +2437,8 @@ class Interp1(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -2518,10 +2580,16 @@ class Interp2(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            text format
+            (cross-platform, basically unreadable)
+        2:.xml
+            xml format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.interp2_save(self.handle, make_c_char_p(path))
@@ -2530,7 +2598,8 @@ class Interp2(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -2644,10 +2713,16 @@ class Interp3(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            text format
+            (cross-platform, basically unreadable)
+        2:.xml
+            xml format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.interp3_save(self.handle, make_c_char_p(path))
@@ -2656,7 +2731,8 @@ class Interp3(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -2911,10 +2987,16 @@ class Array2(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            text format
+            (cross-platform, basically unreadable)
+        2:.xml
+            xml format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.array2_save(self.handle, make_c_char_p(path))
@@ -2923,7 +3005,8 @@ class Array2(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -3027,10 +3110,16 @@ class Array3(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            text format
+            (cross-platform, basically unreadable)
+        2:.xml
+            xml format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.array3_save(self.handle, make_c_char_p(path))
@@ -3039,7 +3128,8 @@ class Array3(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -3144,10 +3234,16 @@ class Tensor2(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            text format
+            (cross-platform, basically unreadable)
+        2:.xml
+            xml format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.tensor2_save(self.handle, make_c_char_p(path))
@@ -3156,7 +3252,8 @@ class Tensor2(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -3342,10 +3439,16 @@ class Tensor3(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            text format
+            (cross-platform, basically unreadable)
+        2:.xml
+            xml format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.tensor3_save(self.handle, make_c_char_p(path))
@@ -3354,7 +3457,8 @@ class Tensor3(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -3492,10 +3596,16 @@ class Tensor2Interp2(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            text format
+            (cross-platform, basically unreadable)
+        2:.xml
+            xml format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.tensor2interp2_save(self.handle, make_c_char_p(path))
@@ -3504,7 +3614,8 @@ class Tensor2Interp2(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -3600,10 +3711,16 @@ class Tensor3Interp3(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            text format
+            (cross-platform, basically unreadable)
+        2:.xml
+            xml format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.tensor3interp3_save(self.handle, make_c_char_p(path))
@@ -3612,7 +3729,8 @@ class Tensor3Interp3(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -3724,10 +3842,16 @@ class Coord2(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            text format
+            (cross-platform, basically unreadable)
+        2:.xml
+            xml format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.coord2_save(self.handle, make_c_char_p(path))
@@ -3736,7 +3860,8 @@ class Coord2(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -3847,10 +3972,16 @@ class Coord3(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            text format
+            (cross-platform, basically unreadable)
+        2:.xml
+            xml format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.coord3_save(self.handle, make_c_char_p(path))
@@ -3859,7 +3990,8 @@ class Coord3(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -4402,10 +4534,16 @@ class Mesh3(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            text format
+            (cross-platform, basically unreadable)
+        2:.xml
+            xml format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.mesh3_save(self.handle, make_c_char_p(path))
@@ -4414,7 +4552,8 @@ class Mesh3(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -4764,10 +4903,16 @@ class LinearExpr(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            text format
+            (cross-platform, basically unreadable)
+        2:.xml
+            xml format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.lexpr_save(self.handle, make_c_char_p(path))
@@ -4776,7 +4921,8 @@ class LinearExpr(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -4975,10 +5121,16 @@ class DynSys(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            text format
+            (cross-platform, basically unreadable)
+        2:.xml
+            xml format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.dynsys_save(self.handle, make_c_char_p(path))
@@ -4987,7 +5139,8 @@ class DynSys(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -5526,10 +5679,16 @@ class SpringSys(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            text format
+            (cross-platform, basically unreadable)
+        2:.xml
+            xml format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             assert isinstance(path, str)
@@ -5539,7 +5698,8 @@ class SpringSys(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -6152,10 +6312,16 @@ class SeepageMesh(HasHandle, HasCells):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            text format
+            (cross-platform, basically unreadable)
+        2:.xml
+            xml format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.seepage_mesh_save(self.handle, make_c_char_p(path))
@@ -6164,7 +6330,8 @@ class SeepageMesh(HasHandle, HasCells):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -6540,10 +6707,16 @@ class ElementMap(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            text format
+            (cross-platform, basically unreadable)
+        2:.xml
+            xml format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.element_map_save(self.handle, make_c_char_p(path))
@@ -6552,7 +6725,8 @@ class ElementMap(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -6641,10 +6815,16 @@ class Seepage(HasHandle, HasCells):
 
         def save(self, path):
             """
-            序列化保存. 可选扩展名:
-                1: .txt  文本格式 (跨平台，基本不可读)
-                2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-                3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+            Serialized save. Optional extension:
+            1:.txt
+                text format
+                (cross-platform, basically unreadable)
+            2:.xml
+                xml format
+                (specific readability, largest volume, slowest read and write, cross-platform)
+            3:. Other
+                binary formats
+                (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
             """
             if path is not None:
                 core.reaction_save(self.handle, make_c_char_p(path))
@@ -6653,7 +6833,8 @@ class Seepage(HasHandle, HasCells):
 
         def load(self, path):
             """
-            序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+            Read the serialization archive.
+            To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
             """
             if path is not None:
                 _check_ipath(path, self)
@@ -6797,14 +6978,21 @@ class Seepage(HasHandle, HasCells):
             """
             core.reaction_clear_inhibitors(self.handle)
 
-        core.use(None, 'reaction_react', c_void_p, c_void_p, c_double)
+        core.use(None, 'reaction_react', c_void_p, c_void_p, c_double, c_void_p)
 
-        def react(self, model, dt):
+        def react(self, model, dt, buf=None):
             """
             将该反应作用到Seepage的所有的Cell上dt时间。这个过程会修改model中各个Cell中相应组分的质量和温度，但是会保证总的质量不会发生改变。
+            其中:
+                buf为一个缓冲区(double*)，记录各个Cell上发生的反应的质量;
+                    务必确保此缓冲区的大小足够，否则会出现致命的错误!!!
+
+            返回
+                反应发生的总的质量.
             """
             self.adjust_weights()  # 确保权重正确，保证质量守恒
-            core.reaction_react(self.handle, model.handle, dt)
+            core.reaction_react(self.handle, model.handle, dt,
+                                0 if buf is None else ctypes.cast(buf, c_void_p))
 
         core.use(None, 'reaction_adjust_weights', c_void_p)
 
@@ -6921,10 +7109,16 @@ class Seepage(HasHandle, HasCells):
 
         def save(self, path):
             """
-            序列化保存. 可选扩展名:
-                1: .txt  文本格式 (跨平台，基本不可读)
-                2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-                3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+            Serialized save. Optional extension:
+            1:.txt
+                text format
+                (cross-platform, basically unreadable)
+            2:.xml
+                xml format
+                (specific readability, largest volume, slowest read and write, cross-platform)
+            3:. Other
+                binary formats
+                (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
             """
             if path is not None:
                 core.fludef_save(self.handle, make_c_char_p(path))
@@ -6933,7 +7127,8 @@ class Seepage(HasHandle, HasCells):
 
         def load(self, path):
             """
-            序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+            Read the serialization archive.
+            To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
             """
             if path is not None:
                 _check_ipath(path, self)
@@ -7169,10 +7364,16 @@ class Seepage(HasHandle, HasCells):
 
         def save(self, path):
             """
-            序列化保存. 可选扩展名:
-                1: .txt  文本格式 (跨平台，基本不可读)
-                2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-                3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+            Serialized save. Optional extension:
+            1:.txt
+                text format
+                (cross-platform, basically unreadable)
+            2:.xml
+                xml format
+                (specific readability, largest volume, slowest read and write, cross-platform)
+            3:. Other
+                binary formats
+                (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
             """
             if path is not None:
                 core.fluid_save(self.handle, make_c_char_p(path))
@@ -7181,7 +7382,8 @@ class Seepage(HasHandle, HasCells):
 
         def load(self, path):
             """
-            序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+            Read the serialization archive.
+            To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
             """
             if path is not None:
                 _check_ipath(path, self)
@@ -7447,10 +7649,16 @@ class Seepage(HasHandle, HasCells):
 
         def save(self, path):
             """
-            序列化保存. 可选扩展名:
-                1: .txt  文本格式 (跨平台，基本不可读)
-                2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-                3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+            Serialized save. Optional extension:
+            1:.txt
+                text format
+                (cross-platform, basically unreadable)
+            2:.xml
+                xml format
+                (specific readability, largest volume, slowest read and write, cross-platform)
+            3:. Other
+                binary formats
+                (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
             """
             if path is not None:
                 core.seepage_cell_save(self.handle, make_c_char_p(path))
@@ -7459,7 +7667,8 @@ class Seepage(HasHandle, HasCells):
 
         def load(self, path):
             """
-            序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+            Read the serialization archive.
+            To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
             """
             if path is not None:
                 _check_ipath(path, self)
@@ -7980,10 +8189,16 @@ class Seepage(HasHandle, HasCells):
 
         def save(self, path):
             """
-            序列化保存. 可选扩展名:
-                1: .txt  文本格式 (跨平台，基本不可读)
-                2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-                3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+            Serialized save. Optional extension:
+            1:.txt
+                text format
+                (cross-platform, basically unreadable)
+            2:.xml
+                xml format
+                (specific readability, largest volume, slowest read and write, cross-platform)
+            3:. Other
+                binary formats
+                (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
             """
             if path is not None:
                 core.seepage_face_save(self.handle, make_c_char_p(path))
@@ -7992,7 +8207,8 @@ class Seepage(HasHandle, HasCells):
 
         def load(self, path):
             """
-            序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+            Read the serialization archive.
+            To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
             """
             if path is not None:
                 _check_ipath(path, self)
@@ -8212,10 +8428,16 @@ class Seepage(HasHandle, HasCells):
 
         def save(self, path):
             """
-            序列化保存. 可选扩展名:
-                1: .txt  文本格式 (跨平台，基本不可读)
-                2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-                3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+            Serialized save. Optional extension:
+            1:.txt
+                text format
+                (cross-platform, basically unreadable)
+            2:.xml
+                xml format
+                (specific readability, largest volume, slowest read and write, cross-platform)
+            3:. Other
+                binary formats
+                (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
             """
             if path is not None:
                 core.injector_save(self.handle, make_c_char_p(path))
@@ -8224,7 +8446,8 @@ class Seepage(HasHandle, HasCells):
 
         def load(self, path):
             """
-            序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+            Read the serialization archive.
+            To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
             """
             if path is not None:
                 _check_ipath(path, self)
@@ -8618,10 +8841,16 @@ class Seepage(HasHandle, HasCells):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            text format
+            (cross-platform, basically unreadable)
+        2:.xml
+            xml format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.seepage_save(self.handle, make_c_char_p(path))
@@ -8630,7 +8859,8 @@ class Seepage(HasHandle, HasCells):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -10223,10 +10453,16 @@ class Thermal(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            text format
+            (cross-platform, basically unreadable)
+        2:.xml
+            xml format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.thermal_save(self.handle, make_c_char_p(path))
@@ -10235,7 +10471,8 @@ class Thermal(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -10943,10 +11180,16 @@ class InvasionPercolation(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            text format
+            (cross-platform, basically unreadable)
+        2:.xml
+            xml format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         assert isinstance(path, str)
         core.ip_save(self.handle, make_c_char_p(path))
@@ -10955,7 +11198,8 @@ class InvasionPercolation(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -11400,10 +11644,16 @@ class Dfn2(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            text format
+            (cross-platform, basically unreadable)
+        2:.xml
+            xml format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.dfn2d_save(self.handle, make_c_char_p(path))
@@ -11412,7 +11662,8 @@ class Dfn2(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -11521,10 +11772,16 @@ class Lattice3(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            text format
+            (cross-platform, basically unreadable)
+        2:.xml
+            xml format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.lat3_save(self.handle, make_c_char_p(path))
@@ -11533,7 +11790,8 @@ class Lattice3(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -11648,17 +11906,24 @@ class DDMSolution2(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            text format
+            (cross-platform, basically unreadable)
+        2:.xml
+            xml format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.ddm_sol2_save(self.handle, make_c_char_p(path))
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             core.ddm_sol2_load(self.handle, make_c_char_p(path))
@@ -12044,10 +12309,16 @@ class FractureNetwork(HasHandle):
 
     def save(self, path):
         """
-        序列化保存. 可选扩展名:
-            1: .txt  文本格式 (跨平台，基本不可读)
-            2: .xml  xml格式 (具体一定可读性，体积最大，读写最慢，跨平台)
-            3: .其它  二进制格式 (速度最快，体积最小，但Windows和Linux下生成的文件不能互相读取)
+        Serialized save. Optional extension:
+        1:.txt
+            text format
+            (cross-platform, basically unreadable)
+        2:.xml
+            xml format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
             core.frac_nt_save(self.handle, make_c_char_p(path))
@@ -12056,7 +12327,8 @@ class FractureNetwork(HasHandle):
 
     def load(self, path):
         """
-        序列化读取. 根据扩展名确定文件格式(txt, xml和二进制), 参考save函数
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
             _check_ipath(path, self)
@@ -12179,7 +12451,7 @@ class FracAlg:
         assert isinstance(network, FractureNetwork)
         assert isinstance(matrix, InfMatrix)
         return core.frac_alg_update_disp(network.handle, matrix.handle, fa_yy, fa_xy
-                                  , gradw_max, err_max, iter_max, ratio_max, dist_max)
+                                         , gradw_max, err_max, iter_max, ratio_max, dist_max)
 
     core.use(None, 'frac_alg_extend_tip',
              c_void_p, c_void_p, c_void_p, c_double, c_double, c_double)

@@ -1,51 +1,22 @@
 import os
 
-import numpy as np
-from scipy.interpolate import LinearNDInterpolator
-
-from zml import Interp2, Seepage
 from zmlx.filesys.join_paths import join_paths
+from zmlx.fluid.nist.from_file import from_file
 
 
 def create(t_min=274, t_max=329, p_min=2.0e6, p_max=99.0e6, name=None):
     """
     创建液态h2o的定义.
     """
-    data = np.loadtxt(fname=join_paths(os.path.dirname(__file__), 'h2o.txt'))
-    den = LinearNDInterpolator(data[:, 0: 2], data[:, 2], rescale=True, fill_value=np.nan)
-    vis = LinearNDInterpolator(data[:, 0: 2], data[:, 3], rescale=True, fill_value=np.nan)
-
-    def gas_den(P, T):
-        assert 273.16 <= T <= 330
-        assert 1e6 <= P <= 100E6
-        return den(T, P)
-
-    def gas_vis(P, T):
-        assert 273.16 <= T <= 330
-        assert 1e6 <= P <= 100E6
-        return vis(T, P)
-
-    def create_density():
-        den = Interp2()
-        den.create(p_min, 1e6, p_max, t_min, 1, t_max, gas_den)
-        return den
-
-    def create_viscosity():
-        vis = Interp2()
-        vis.create(p_min, 1e6, p_max, t_min, 1, t_max, gas_vis)
-        return vis
-
-    specific_heat = 4200
-
-    return Seepage.FluDef(den=create_density(), vis=create_viscosity(), specific_heat=specific_heat,
-                          name=name)
+    return from_file(fname=join_paths(os.path.dirname(__file__), 'data.txt'),
+                     t_min=t_min, t_max=t_max, p_min=p_min, p_max=p_max, name=name, specific_heat=4200)
 
 
 def test():
     t_min = 274
-    t_max = 294
-    p_min = 10.0e6
-    p_max = 30.0e6
+    t_max = 329
+    p_min = 1.0e6
+    p_max = 80.0e6
     flu = create(t_min=t_min, t_max=t_max, p_min=p_min, p_max=p_max)
     print(flu)
     try:
