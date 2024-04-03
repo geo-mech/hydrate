@@ -45,3 +45,9 @@ ZmlVersion=240402
 欢迎并感谢您成为开发者并推送代码：
 1. 使用[Fork + Pull 模式](https://help.gitee.com/base/pullrequest/Fork+Pull)参与开发;
 2. 只修改自己创建的文件(如果在其它文件里发现bug，请[新建Issue](https://gitee.com/geomech/hydrate/issues/new)来反馈).
+
+### 项目资助
+
+1. 中国科学院地质地球所重点部署项目(IGGCAS-201903);
+2. 国家自然科学基金地质联合基金(U2244223);
+
