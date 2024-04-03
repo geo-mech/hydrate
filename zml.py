@@ -6784,6 +6784,55 @@ class ElementMap(HasHandle):
         return buffer
 
 
+class GroupIds(HasHandle):
+    core.use(c_void_p, 'new_group_ids')
+    core.use(None, 'del_group_ids', c_void_p)
+
+    def __init__(self, handle=None):
+        super(GroupIds, self).__init__(handle, core.new_group_ids, core.del_group_ids)
+
+    core.use(None, 'group_ids_save', c_void_p, c_char_p)
+
+    def save(self, path):
+        """
+        Serialized save. Optional extension:
+        1:.txt
+            text format
+            (cross-platform, basically unreadable)
+        2:.xml
+            xml format
+            (specific readability, largest volume, slowest read and write, cross-platform)
+        3:. Other
+            binary formats
+            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+        """
+        if path is not None:
+            core.group_ids_save(self.handle, make_c_char_p(path))
+
+    core.use(None, 'group_ids_load', c_void_p, c_char_p)
+
+    def load(self, path):
+        """
+        Read the serialization archive.
+        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+        """
+        if path is not None:
+            _check_ipath(path, self)
+            core.group_ids_load(self.handle, make_c_char_p(path))
+
+    core.use(c_size_t, 'group_ids_size', c_void_p)
+
+    @property
+    def size(self):
+        return core.group_ids_size(self.handle)
+
+    core.use(c_void_p, 'group_ids_get', c_void_p, c_size_t)
+
+    def get(self, idx):
+        handle = core.group_ids_get(self.handle, idx)
+        return UintVector(handle=handle)
+
+
 class Seepage(HasHandle, HasCells):
     """
     多相多组分渗流模型。Seepage类是进行热流耦合模拟的基础。Seepage类主要涉及单元Cell，界面Face，流体Fluid，反应Reaction，流体定义FluDef
@@ -10275,6 +10324,23 @@ class Seepage(HasHandle, HasCells):
         """
         core.seepage_pop_cells(self.handle, count)
         return self
+
+    core.use(None, 'seepage_group_cells',  c_void_p, c_void_p)
+
+    def group_cells(self):
+        """
+        对所有的cell进行分区，使得对于任意一个cell，都不会和与它相关的cell分在一组 (用于并行)
+        """
+        ids = GroupIds()
+        core.seepage_group_cells(self.handle, ids.handle)
+        return ids
+
+    core.use(None, 'seepage_group_faces', c_void_p, c_void_p)
+
+    def group_faces(self):
+        ids = GroupIds()
+        core.seepage_group_faces(self.handle, ids.handle)
+        return ids
 
 
 Reaction = Seepage.Reaction

@@ -8,15 +8,21 @@ ZmlVersion=240402
 
 ### 作者
 
-[张召彬](http://sourcedb.igg.cas.cn/cn/zjrck/201703/t20170306_4755492.html)、[李守定](http://sourcedb.igg.cas.cn/cn/zjrck/201412/t20141218_4278784.html)、[李晓](http://sourcedb.igg.cas.cn/cn/zjrck/200907/t20090713_2065538.html)、[赫建明](http://sourcedb.igg.cas.cn/cn/zjrck/201203/t20120302_3448658.html)、李关访、[郑博](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/202303/t20230322_6706946.html)、毛天桥、徐涛、李宇轩、Maryelin、谢卓然
+[张召彬](http://sourcedb.igg.cas.cn/cn/zjrck/201703/t20170306_4755492.html)<sup>1,2,3,*</sup>, [李守定](http://sourcedb.igg.cas.cn/cn/zjrck/201412/t20141218_4278784.html)<sup>1,2,3</sup>, [李晓](http://sourcedb.igg.cas.cn/cn/zjrck/200907/t20090713_2065538.html)<sup>1,2,3</sup>, [赫建明](http://sourcedb.igg.cas.cn/cn/zjrck/201203/t20120302_3448658.html)<sup>1,2,3</sup>, 李关访<sup>1,2,3</sup>, [郑博](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/202303/t20230322_6706946.html)<sup>1,2,3</sup>, 毛天桥<sup>1,2,3</sup>, 徐涛<sup>1,2,3</sup>, 李宇轩<sup>1,2,3</sup>, Maryelin<sup>1,2,3</sup>, 谢卓然<sup>1,2,3</sup>
 
-***
+---
 
-@[中国科学院地质与地球物理研究所](https://igg.cas.cn/);
+<sup>1</sup>[中国科学院地质与地球物理研究所](https://igg.cas.cn/)(北京, 100029);
+
+<sup>2</sup>中国科学院地球科学研究院(北京, 100029);
+
+<sup>3</sup>中国科学院大学(北京, 100029).
+
+<sup>*</sup>联系: [zhangzhaobin@mail.iggcas.ac.cn](zhangzhaobin@mail.iggcas.ac.cn)
 
 ### 授权
 
-使用前请[联系作者](http://sourcedb.igg.cas.cn/cn/zjrck/201703/t20170306_4755492.html).  邮箱：[zhangzhaobin@mail.iggcas.ac.cn](zhangzhaobin@mail.iggcas.ac.cn); 
+使用前请[联系作者](http://sourcedb.igg.cas.cn/cn/zjrck/201703/t20170306_4755492.html).
 
 ### 功能
 1. 多相多组分流动，支持: 水/蒸气/水冰，ch4/ch4水合物，co2/co2水合物，盐度/砂，油/重油/干酪根;  
