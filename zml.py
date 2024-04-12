@@ -28,17 +28,17 @@ from ctypes import cdll, c_void_p, c_char_p, c_int, c_int64, c_bool, c_double, c
 from typing import Iterable
 
 try:
-    import numpy as np
+    import numpy as _np
 except Exception as _err:
     # Some features are not available when numpy is not installed
-    np = None
+    _np = None
     warnings.warn(f'cannot import numpy in zml. error = {_err}')
 
 # Indicates whether the system is currently Windows (both Windows and Linux systems are currently supported)
 is_windows = os.name == 'nt'
 
 # Version of the zml module (date represented by six digits)
-version = 240402
+version = 240406
 
 
 class Object:
@@ -1186,10 +1186,13 @@ def parse_fid3(fluid_id):
     if is_array(fluid_id):
         count = len(fluid_id)
         assert 0 < count <= 3
-        i0 = fluid_id[0] if 0 < count else 99999999
-        i1 = fluid_id[1] if 1 < count else 99999999
-        i2 = fluid_id[2] if 2 < count else 99999999
-        return i0, i1, i2
+        if count == 1:  # 此时，它仍然可能是一个array
+            return parse_fid3(fluid_id[0])
+        else:
+            i0 = fluid_id[0] if 0 < count else 99999999
+            i1 = fluid_id[1] if 1 < count else 99999999
+            i2 = fluid_id[2] if 2 < count else 99999999
+            return i0, i1, i2
     else:
         return fluid_id, 99999999, 99999999
 
@@ -1319,13 +1322,13 @@ class Iterator:
 
 class FieldAdaptor:
     def __getattr__(self, item):
-        warnings.warn('zml.Field will be remove adter 2025-1-21. use zmlx.utility.Field.Field instead',
+        warnings.warn('zml.Field will be remove after 2025-1-21. use zmlx.utility.Field.Field instead',
                       DeprecationWarning)
         from zmlx.utility.Field import Field
         return getattr(Field, item)
 
     def __call__(self, *args, **kwargs):
-        warnings.warn('zml.Field will be remove adter 2025-1-21. use zmlx.utility.Field.Field instead',
+        warnings.warn('zml.Field will be remove after 2025-1-21. use zmlx.utility.Field.Field instead',
                       DeprecationWarning)
         from zmlx.utility.Field import Field
         return Field(*args, **kwargs)
@@ -1482,9 +1485,9 @@ class Vector(HasHandle):
         """
         读取给定的numpy数组的数据
         """
-        if np is not None:
+        if _np is not None:
             if not data.flags['C_CONTIGUOUS']:
-                data = np.ascontiguous(data, dtype=data.dtype)  # 如果不是C连续的内存，必须强制转换
+                data = _np.ascontiguous(data, dtype=data.dtype)  # 如果不是C连续的内存，必须强制转换
             self.size = len(data)
             self.read_memory(data.ctypes.data_as(POINTER(c_double)))
 
@@ -1492,9 +1495,9 @@ class Vector(HasHandle):
         """
         将数据写入到numpy数组，必须保证给定的numpy数组的长度和self一致
         """
-        if np is not None:
+        if _np is not None:
             if not data.flags['C_CONTIGUOUS']:
-                data = np.ascontiguous(data, dtype=data.dtype)  # 如果不是C连续的内存，必须强制转换
+                data = _np.ascontiguous(data, dtype=data.dtype)  # 如果不是C连续的内存，必须强制转换
             self.write_memory(data.ctypes.data_as(POINTER(c_double)))
             return data
 
@@ -1502,8 +1505,8 @@ class Vector(HasHandle):
         """
         将这个Vector转化为一个numpy的数组
         """
-        if np is not None:
-            a = np.zeros(shape=self.size, dtype=float)
+        if _np is not None:
+            a = _np.zeros(shape=self.size, dtype=float)
             return self.write_numpy(a)
 
     core.use(c_void_p, 'vf_pointer', c_void_p)
@@ -2518,12 +2521,14 @@ class Interp1(HasHandle):
     core.use(None, 'interp1_get_vx', c_void_p, c_void_p)
     core.use(None, 'interp1_get_vy', c_void_p, c_void_p)
 
-    def get_data(self):
+    def get_data(self, x=None, y=None):
         """
         返回内核数据的拷贝
         """
-        x = Vector()
-        y = Vector()
+        if not isinstance(x, Vector):
+            x = Vector()
+        if not isinstance(y, Vector):
+            y = Vector()
         core.interp1_get_vx(self.handle, x.handle)
         core.interp1_get_vy(self.handle, y.handle)
         return x, y
@@ -4102,6 +4107,31 @@ class Coord3(HasHandle):
             return buffer
 
 
+def _attr_in_range(value, *, left=None, right=None, min=None, max=None):
+    """
+    判断属性值是否在给定的范围内
+    """
+    if min is not None:
+        warnings.warn('The argument <min> of <_attr_in_range> will be removed after 2025-4-5, use <left> instead',
+                      DeprecationWarning)
+        assert left is None
+        left = min
+
+    if max is not None:
+        warnings.warn('The argument <max> of <_attr_in_range> will be removed after 2025-4-5, use <right> instead',
+                      DeprecationWarning)
+        assert right is None
+        right = max
+
+    if left is None:
+        left = -1.0e100
+
+    if right is None:
+        right = 1.0e100
+
+    return left <= value <= right
+
+
 class Mesh3(HasHandle):
     """
     三维网格类，有点(Node)、线(Link)、面(Face)、体(Body)所组成的网络.
@@ -4191,11 +4221,11 @@ class Mesh3(HasHandle):
         core.use(c_double, 'mesh3_get_node_attr', c_void_p, c_size_t, c_size_t)
         core.use(None, 'mesh3_set_node_attr', c_void_p, c_size_t, c_size_t, c_double)
 
-        def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
+        def get_attr(self, index, default_val=None, **kwargs):
             if index is None:
                 return default_val
             value = core.mesh3_get_node_attr(self.model.handle, self.index, index)
-            if min <= value <= max:
+            if _attr_in_range(value, **kwargs):
                 return value
             else:
                 return default_val
@@ -4286,11 +4316,11 @@ class Mesh3(HasHandle):
         core.use(c_double, 'mesh3_get_link_attr', c_void_p, c_size_t, c_size_t)
         core.use(None, 'mesh3_set_link_attr', c_void_p, c_size_t, c_size_t, c_double)
 
-        def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
+        def get_attr(self, index, default_val=None, **kwargs):
             if index is None:
                 return default_val
             value = core.mesh3_get_link_attr(self.model.handle, self.index, index)
-            if min <= value <= max:
+            if _attr_in_range(value, **kwargs):
                 return value
             else:
                 return default_val
@@ -4389,11 +4419,11 @@ class Mesh3(HasHandle):
         core.use(c_double, 'mesh3_get_face_attr', c_void_p, c_size_t, c_size_t)
         core.use(None, 'mesh3_set_face_attr', c_void_p, c_size_t, c_size_t, c_double)
 
-        def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
+        def get_attr(self, index, default_val=None, **kwargs):
             if index is None:
                 return default_val
             value = core.mesh3_get_face_attr(self.model.handle, self.index, index)
-            if min <= value <= max:
+            if _attr_in_range(value, **kwargs):
                 return value
             else:
                 return default_val
@@ -4492,11 +4522,11 @@ class Mesh3(HasHandle):
         core.use(c_double, 'mesh3_get_body_attr', c_void_p, c_size_t, c_size_t)
         core.use(None, 'mesh3_set_body_attr', c_void_p, c_size_t, c_size_t, c_double)
 
-        def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
+        def get_attr(self, index, default_val=None, **kwargs):
             if index is None:
                 return default_val
             value = core.mesh3_get_body_attr(self.model.handle, self.index, index)
-            if min <= value <= max:
+            if _attr_in_range(value, **kwargs):
                 return value
             else:
                 return default_val
@@ -4528,7 +4558,8 @@ class Mesh3(HasHandle):
                 self.load(path)
 
     def __str__(self):
-        return f'zml.Mesh3(handle = {self.handle}, node_n = {self.node_number}, link_n = {self.link_number}, face_n = {self.face_number}, body_n = {self.body_number})'
+        return (f'zml.Mesh3(handle = {self.handle}, node_n = {self.node_number}, link_n = {self.link_number}, '
+                f'face_n = {self.face_number}, body_n = {self.body_number})')
 
     core.use(None, 'mesh3_save', c_void_p, c_char_p)
 
@@ -5554,14 +5585,14 @@ class SpringSys(HasHandle):
 
         core.use(c_double, 'springsys_get_spring_attr', c_void_p, c_size_t, c_size_t)
 
-        def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
+        def get_attr(self, index, default_val=None, **kwargs):
             """
             该Spring的第index个自定义属性值。当不存在时，默认为一个无穷大的值(大于1.0e100)
             """
             if index is None:
                 return default_val
             value = core.springsys_get_spring_attr(self.model.handle, self.index, index)
-            if min <= value <= max:
+            if _attr_in_range(value, **kwargs):
                 return value
             else:
                 return default_val
@@ -5649,7 +5680,8 @@ class SpringSys(HasHandle):
                 self.load(path)
 
     def __str__(self):
-        return f'zml.SpringSys(handle = {self.handle}, node_n = {self.node_number}, virtual_node_n = {self.virtual_node_number}, spring_n = {self.spring_number})'
+        return (f'zml.SpringSys(handle = {self.handle}, node_n = {self.node_number}, '
+                f'virtual_node_n = {self.virtual_node_number}, spring_n = {self.spring_number})')
 
     @staticmethod
     def virtual_x(node):
@@ -5907,7 +5939,7 @@ class SpringSys(HasHandle):
 
     def get_pos(self, x=None, y=None, z=None):
         """
-        获得所有node的x,y,z坐标
+        获得所有node的x, y, z坐标
         """
         if not isinstance(x, Vector):
             x = Vector()
@@ -6094,7 +6126,8 @@ class SeepageMesh(HasHandle, HasCells):
             self.index = index
 
         def __str__(self):
-            return f'zml.SeepageMesh.Cell(handle = {self.model.handle}, index = {self.index}, pos = {self.pos}, volume={self.vol})'
+            return (f'zml.SeepageMesh.Cell(handle = {self.model.handle}, index = {self.index}, '
+                    f'pos = {self.pos}, volume={self.vol})')
 
         core.use(c_double, 'seepage_mesh_get_cell_pos', c_void_p,
                  c_size_t,
@@ -6142,14 +6175,14 @@ class SeepageMesh(HasHandle, HasCells):
 
         core.use(c_double, 'seepage_mesh_get_cell_attr', c_void_p, c_size_t, c_size_t)
 
-        def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
+        def get_attr(self, index, default_val=None, **kwargs):
             """
             第index个自定义属性
             """
             if index is None:
                 return default_val
             value = core.seepage_mesh_get_cell_attr(self.model.handle, self.index, index)
-            if min <= value <= max:
+            if _attr_in_range(value, **kwargs):
                 return value
             else:
                 return default_val
@@ -6180,7 +6213,8 @@ class SeepageMesh(HasHandle, HasCells):
             self.index = index
 
         def __str__(self):
-            return f'zml.SeepageMesh.Face(handle = {self.model.handle}, index = {self.index}, area = {self.area}, length = {self.length}) '
+            return (f'zml.SeepageMesh.Face(handle = {self.model.handle}, index = {self.index}, '
+                    f'area = {self.area}, length = {self.length}) ')
 
         core.use(None, 'seepage_mesh_set_face_area', c_void_p,
                  c_size_t,
@@ -6268,14 +6302,14 @@ class SeepageMesh(HasHandle, HasCells):
 
         core.use(c_double, 'seepage_mesh_get_face_attr', c_void_p, c_size_t, c_size_t)
 
-        def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
+        def get_attr(self, index, default_val=None, **kwargs):
             """
             第index个自定义属性
             """
             if index is None:
                 return default_val
             value = core.seepage_mesh_get_face_attr(self.model.handle, self.index, index)
-            if min <= value <= max:
+            if _attr_in_range(value, **kwargs):
                 return value
             else:
                 return default_val
@@ -6784,14 +6818,14 @@ class ElementMap(HasHandle):
         return buffer
 
 
-class GroupIds(HasHandle):
-    core.use(c_void_p, 'new_group_ids')
-    core.use(None, 'del_group_ids', c_void_p)
+class Groups(HasHandle):
+    core.use(c_void_p, 'new_groups')
+    core.use(None, 'del_groups', c_void_p)
 
     def __init__(self, handle=None):
-        super(GroupIds, self).__init__(handle, core.new_group_ids, core.del_group_ids)
+        super(Groups, self).__init__(handle, core.new_groups, core.del_groups)
 
-    core.use(None, 'group_ids_save', c_void_p, c_char_p)
+    core.use(None, 'groups_save', c_void_p, c_char_p)
 
     def save(self, path):
         """
@@ -6807,9 +6841,9 @@ class GroupIds(HasHandle):
             (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
-            core.group_ids_save(self.handle, make_c_char_p(path))
+            core.groups_save(self.handle, make_c_char_p(path))
 
-    core.use(None, 'group_ids_load', c_void_p, c_char_p)
+    core.use(None, 'groups_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
@@ -6818,18 +6852,18 @@ class GroupIds(HasHandle):
         """
         if path is not None:
             _check_ipath(path, self)
-            core.group_ids_load(self.handle, make_c_char_p(path))
+            core.groups_load(self.handle, make_c_char_p(path))
 
-    core.use(c_size_t, 'group_ids_size', c_void_p)
+    core.use(c_size_t, 'groups_size', c_void_p)
 
     @property
     def size(self):
-        return core.group_ids_size(self.handle)
+        return core.groups_size(self.handle)
 
-    core.use(c_void_p, 'group_ids_get', c_void_p, c_size_t)
+    core.use(c_void_p, 'groups_get', c_void_p, c_size_t)
 
     def get(self, idx):
-        handle = core.group_ids_get(self.handle, idx)
+        handle = core.groups_get(self.handle, idx)
         return UintVector(handle=handle)
 
 
@@ -7557,7 +7591,7 @@ class Seepage(HasHandle, HasCells):
         core.use(c_double, 'fluid_get_attr', c_void_p, c_size_t)
         core.use(None, 'fluid_set_attr', c_void_p, c_size_t, c_double)
 
-        def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
+        def get_attr(self, index, default_val=None, **kwargs):
             """
             第index个流体自定义属性。当两个流体数据相加时，自定义属性将根据质量进行加权平均。
             """
@@ -7565,7 +7599,7 @@ class Seepage(HasHandle, HasCells):
                 return default_val
             # 当index个属性不存在时，默认为无穷大的一个值(1.0e100以上的浮点数)
             value = core.fluid_get_attr(self.handle, index)
-            if min <= value <= max:
+            if _attr_in_range(value, **kwargs):
                 return value
             else:
                 return default_val
@@ -7981,7 +8015,7 @@ class Seepage(HasHandle, HasCells):
             """
             return core.seepage_cell_get_attr_n(self.handle)
 
-        def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
+        def get_attr(self, index, default_val=None, **kwargs):
             """
             该Cell的第 attr_id个自定义属性值。当不存在时，默认为一个无穷大的值(大于1.0e100)
             """
@@ -8000,7 +8034,7 @@ class Seepage(HasHandle, HasCells):
                     return self.k
                 return default_val
             value = core.seepage_cell_get_attr(self.handle, index)
-            if min <= value <= max:
+            if _attr_in_range(value, **kwargs):
                 return value
             else:
                 return default_val
@@ -8292,14 +8326,14 @@ class Seepage(HasHandle, HasCells):
         core.use(c_double, 'seepage_face_get_attr', c_void_p, c_size_t)
         core.use(None, 'seepage_face_set_attr', c_void_p, c_size_t, c_double)
 
-        def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
+        def get_attr(self, index, default_val=None, **kwargs):
             """
             该Face的第 attr_id个自定义属性值。当不存在时，默认为一个无穷大的值(大于1.0e100)
             """
             if index is None:
                 return default_val
             value = core.seepage_face_get_attr(self.handle, index)
-            if min <= value <= max:
+            if _attr_in_range(value, **kwargs):
                 return value
             else:
                 return default_val
@@ -8849,28 +8883,6 @@ class Seepage(HasHandle, HasCells):
                 dt *= min(2.0, math.sqrt(dv_relative / dv_max))
             return dt
 
-        core.use(None, 'seepage_updater_diffusion', c_void_p, c_void_p, c_double,
-                 c_size_t, c_size_t, c_size_t,
-                 c_size_t, c_size_t, c_size_t,
-                 c_void_p, c_void_p, c_void_p, c_void_p, c_double)
-
-        def diffusion(self, model, dt, fid0, fid1, vs0, vk, vg, vpg=None, ds_max=0.05):
-            """
-            流体扩散。其中fid0和fid1定义两种流体。在扩散的时候，相邻Cell的这两种流体会进行交换，但会保证每个Cell的流体体积不变；
-            其中vs0定义两种流体压力相等的时候fid0的饱和度；vk当饱和度变化1的时候，压力的变化幅度；
-            vg定义face的导流能力(针对fid0和fid1作为一个整体);
-            vpg定义流体fid0受到的重力减去fid1的重力在face上的投影;
-            ds_max为允许的饱和度最大的改变量
-            """
-            assert isinstance(vs0, Vector)
-            assert isinstance(vk, Vector)
-            assert isinstance(vg, Vector)
-            if not isinstance(vpg, Vector):
-                vpg = Vector()
-
-            core.seepage_updater_diffusion(self.handle, model.handle, dt, *parse_fid3(fid0), *parse_fid3(fid1),
-                                           vs0.handle, vk.handle, vg.handle, vpg.handle, ds_max)
-
     core.use(c_void_p, 'new_seepage')
     core.use(None, 'del_seepage', c_void_p)
 
@@ -9328,14 +9340,14 @@ class Seepage(HasHandle, HasCells):
     core.use(None, 'seepage_set_attr',
              c_void_p, c_size_t, c_double)
 
-    def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
+    def get_attr(self, index, default_val=None, **kwargs):
         """
         模型的第index个自定义属性
         """
         if index is None:
             return default_val
         value = core.seepage_get_attr(self.handle, index)
-        if min <= value <= max:
+        if _attr_in_range(value, **kwargs):
             return value
         else:
             return default_val
@@ -9597,10 +9609,105 @@ class Seepage(HasHandle, HasCells):
             self.__updater = Seepage.Updater()
         return self.__updater.get_recommended_dt(self, *args, **kwargs)
 
-    def diffusion(self, *args, **kwargs):
-        if self.__updater is None:
-            self.__updater = Seepage.Updater()
-        return self.__updater.diffusion(self, *args, **kwargs)
+    core.use(None, 'seepage_diffusion', c_void_p, c_double,
+             c_size_t, c_size_t, c_size_t,
+             c_size_t, c_size_t, c_size_t,
+             c_void_p, c_size_t, c_void_p, c_size_t, c_void_p, c_size_t, c_void_p, c_size_t,
+             c_double, c_void_p)
+
+    def diffusion(self, dt, fid0, fid1, *,
+                  ps0=None, ls0=None, pk=None, lk=None, pg=None, lg=None, ppg=None, lpg=None,
+                  vs0=None, vk=None, vg=None, vpg=None, ds_max=0.05, face_groups=None):
+        """
+        扩散.
+        其中fid0和fid1定义两种流体。在扩散的时候，相邻Cell的这两种流体会进行交换，但会保证每个Cell的流体体积不变；
+            其中vs0定义两种流体压力相等的时候fid0的饱和度；vk当饱和度变化1的时候，压力的变化幅度；
+            vg定义face的导流能力(针对fid0和fid1作为一个整体);
+            vpg定义流体fid0受到的重力减去fid1的重力在face上的投影;
+            ds_max为允许的饱和度最大的改变量
+        """
+        if ps0 is None:
+            if isinstance(vs0, Vector):
+                warnings.warn('parameter <vs0> of Seepage.diffusion will be removed after 2025-4-6',
+                              DeprecationWarning)
+                if vs0.size > 0:
+                    ps0 = vs0.pointer
+                    ls0 = vs0.size
+
+        if pk is None:
+            if isinstance(vk, Vector):
+                warnings.warn('parameter <vk> of Seepage.diffusion will be removed after 2025-4-6',
+                              DeprecationWarning)
+                if vk.size > 0:
+                    pk = vk.pointer
+                    lk = vk.size
+
+        if pg is None:
+            if isinstance(vg, Vector):
+                warnings.warn('parameter <vg> of Seepage.diffusion will be removed after 2025-4-6',
+                              DeprecationWarning)
+                if vg.size > 0:
+                    pg = vg.pointer
+                    lg = vg.size
+
+        if ppg is None:
+            if isinstance(vpg, Vector):
+                warnings.warn('parameter <vpg> of Seepage.diffusion will be removed after 2025-4-6',
+                              DeprecationWarning)
+                if vpg.size > 0:
+                    ppg = vpg.pointer
+                    lpg = vpg.size
+
+        if pg is None:
+            return  # 没有g，则无法交换
+
+        if pk is None and ppg is None:
+            return  # 既没有定义毛管力，也没有定义重力，没有执行的必要了
+
+        # 下面，解析指针和长度
+        if ps0 is None:
+            ps0 = 0
+            ls0 = 0
+        else:
+            ps0 = ctypes.cast(ps0, c_void_p)
+            if ls0 is None:
+                ls0 = self.cell_number
+
+        if pk is None:
+            pk = 0
+            lk = 0
+        else:
+            pk = ctypes.cast(pk, c_void_p)
+            if lk is None:
+                lk = self.cell_number
+
+        if pg is None:
+            pg = 0
+            lg = 0
+        else:
+            pg = ctypes.cast(pg, c_void_p)
+            if lg is None:
+                lg = self.face_number
+
+        if ppg is None:
+            ppg = 0
+            lpg = 0
+        else:
+            ppg = ctypes.cast(ppg, c_void_p)
+            if lpg is None:
+                lpg = self.face_number
+
+        if face_groups is not None:
+            assert isinstance(face_groups, Groups)  # 分组
+
+        # 执行扩散操作.
+        core.seepage_diffusion(self.handle, dt, *parse_fid3(fid0), *parse_fid3(fid1),
+                               ps0, ls0,
+                               pk, lk,
+                               pg, lg,
+                               ppg, lpg,
+                               ds_max,
+                               0 if face_groups is None else face_groups.handle)
 
     core.use(c_double, 'seepage_get_fluid_mass', c_void_p, c_size_t, c_size_t, c_size_t)
 
@@ -9649,7 +9756,8 @@ class Seepage(HasHandle, HasCells):
     def update_g0(self, fa_g0, fa_k, fa_s, fa_l):
         """
         对于所有的face，根据它的渗透率，面积和长度来计算cond (流体饱和的时候的cond).
-        此函数非必须，可以基于numpy在Python层面实现同样的功能，后续可能会移除.
+            ---
+            此函数非必须，可以基于numpy在Python层面实现同样的功能，后续可能会移除.
         """
         core.seepage_update_g0(self.handle, fa_g0, fa_k, fa_s, fa_l)
 
@@ -9714,27 +9822,89 @@ class Seepage(HasHandle, HasCells):
 
     core.use(None, 'seepage_get_face_gradient', c_void_p, c_void_p, c_void_p)
 
-    def get_face_gradient(self, va, buffer=None):
+    def get_face_gradient(self, fa, ca):
         """
-        根据Cell中心位置的属性的值来计算各个Face位置的梯度
+        根据cell中心位置的属性的值来计算各个face位置的梯度.
+            (c1 - c0) / dist
+        其中:
+            fa为face的属性(指针，用于输出)
+            ca为各个cell的属性(指针，用于输入)
+        建议：
+            这里的参数都是指针。建议使用zmlx.config.seepage.get_face_gradient来替代此函数
         """
-        assert isinstance(va, Vector)
-        if not isinstance(buffer, Vector):
-            buffer = Vector()
-        core.seepage_get_face_gradient(self.handle, buffer.handle, va.handle)
-        return buffer
+        core.seepage_get_face_gradient(self.handle, ctypes.cast(fa, c_void_p), ctypes.cast(ca, c_void_p))
 
-    core.use(None, 'seepage_get_face_average', c_void_p, c_void_p, c_void_p)
+    core.use(None, 'seepage_get_face_diff', c_void_p, c_void_p, c_void_p)
 
-    def get_face_average(self, face_vals, buffer=None):
+    def get_face_diff(self, fa, ca):
         """
-        计算Cell周围Face的平均值，并作为Vector返回
+        计算face两侧的cell的属性的值的差异。
+            c1 - c0
+        其中:
+            fa为face的属性(指针，用于输出)
+            ca为各个cell的属性(指针，用于输入)
+        建议：
+            这里的参数都是指针。建议使用zmlx.config.seepage.get_face_diff来替代此函数
         """
-        assert isinstance(face_vals, Vector)
-        if not isinstance(buffer, Vector):
-            buffer = Vector()
-        core.seepage_get_face_average(self.handle, buffer.handle, face_vals.handle)
-        return buffer
+        core.seepage_get_face_diff(self.handle, ctypes.cast(fa, c_void_p), ctypes.cast(ca, c_void_p))
+
+    core.use(None, 'seepage_get_face_sum', c_void_p, c_void_p, c_void_p)
+
+    def get_face_sum(self, fa, ca):
+        """
+        计算face两侧的cell的属性的值的和。
+            c1 + c0
+        其中:
+            fa为face的属性(指针，用于输出)
+            ca为各个cell的属性(指针，用于输入)
+        建议：
+            这里的参数都是指针。建议使用zmlx.config.seepage.get_face_sum来替代此函数
+        """
+        core.seepage_get_face_sum(self.handle, ctypes.cast(fa, c_void_p), ctypes.cast(ca, c_void_p))
+
+    core.use(None, 'seepage_get_face_left', c_void_p, c_void_p, c_void_p)
+
+    def get_face_left(self, fa, ca):
+        """
+        计算face左侧的cell属性
+        其中:
+            fa为face的属性(指针，用于输出)
+            ca为各个cell的属性(指针，用于输入)
+        建议：
+            这里的参数都是指针。建议使用zmlx.config.seepage.get_face_left来替代此函数
+        """
+        core.seepage_get_face_left(self.handle, ctypes.cast(fa, c_void_p), ctypes.cast(ca, c_void_p))
+
+    core.use(None, 'seepage_get_face_right', c_void_p, c_void_p, c_void_p)
+
+    def get_face_right(self, fa, ca):
+        """
+        计算face右侧的cell属性
+        其中:
+            fa为face的属性(指针，用于输出)
+            ca为各个cell的属性(指针，用于输入)
+        建议：
+            这里的参数都是指针。建议使用zmlx.config.seepage.get_face_right来替代此函数
+        """
+        core.seepage_get_face_right(self.handle, ctypes.cast(fa, c_void_p), ctypes.cast(ca, c_void_p))
+
+    core.use(None, 'seepage_get_cell_average', c_void_p, c_void_p, c_void_p)
+
+    def get_cell_average(self, ca, fa):
+        """
+        计算cell周围face的平均值
+        其中:
+            ca为各个cell的属性(指针，用于输出)
+            fa为face的属性(指针，用于输如)
+        建议：
+            这里的参数都是指针。建议使用zmlx.config.seepage.get_cell_average来替代此函数
+        """
+        core.seepage_get_cell_average(self.handle, ctypes.cast(ca, c_void_p), ctypes.cast(fa, c_void_p))
+
+    def get_face_average(self, *args, **kwargs):
+        warnings.warn('This function will be removed after 2025-4-6, use get_cell_average instead',
+                      DeprecationWarning)
+        return self.get_cell_average(*args, **kwargs)
 
     core.use(None, 'seepage_heating', c_void_p, c_size_t, c_size_t, c_size_t, c_double)
 
@@ -10006,6 +10176,7 @@ class Seepage(HasHandle, HasCells):
             index=-3, z坐标
             index=-4, v0 of pore
             index=-5, k  of pore
+            index=-6, inner_prod(pos, gravity)
         --- (以下为只读属性):
             index=-10, 所有流体的总的质量 (只读)
             index=-11, 所有流体的总的体积 (只读)
@@ -10037,6 +10208,7 @@ class Seepage(HasHandle, HasCells):
         导出属性: 当 index >= 0 的时候，为属性ID；如果index < 0，则：
             index=-1, cond
             index=-2, dr
+            index=-3, distance between two cells
 
             index=-10, dv of fluid 0
             index=-11, dv of fluid 1
@@ -10327,20 +10499,20 @@ class Seepage(HasHandle, HasCells):
 
     core.use(None, 'seepage_group_cells',  c_void_p, c_void_p)
 
-    def group_cells(self):
+    def get_cell_groups(self):
         """
         对所有的cell进行分区，使得对于任意一个cell，都不会和与它相关的cell分在一组 (用于并行)
         """
-        ids = GroupIds()
-        core.seepage_group_cells(self.handle, ids.handle)
-        return ids
+        g = Groups()
+        core.seepage_group_cells(self.handle, g.handle)
+        return g
 
     core.use(None, 'seepage_group_faces', c_void_p, c_void_p)
 
-    def group_faces(self):
-        ids = GroupIds()
-        core.seepage_group_faces(self.handle, ids.handle)
-        return ids
+    def get_face_groups(self):
+        g = Groups()
+        core.seepage_group_faces(self.handle, g.handle)
+        return g
 
 
 Reaction = Seepage.Reaction
@@ -10694,6 +10866,14 @@ class ConjugateGradientSolver(HasHandle):
         Set the tolerance of the solver
         """
         core.cg_sol_set_tolerance(self.handle, tolerance)
+
+    core.use(c_double, 'cg_sol_get_tolerance', c_void_p)
+
+    def get_tolerance(self):
+        """
+        the tolerance of the solver
+        """
+        return core.cg_sol_get_tolerance(self.handle)
 
 
 class InvasionPercolation(HasHandle):
@@ -11675,13 +11855,13 @@ class InvasionPercolation(HasHandle):
             index=-4, phase
         """
         if pointer is None:
-            if np is not None:
+            if _np is not None:
                 if buf is None:
-                    buf = np.zeros(shape=self.node_n, dtype=float)
+                    buf = _np.zeros(shape=self.node_n, dtype=float)
                 else:
                     assert len(buf) == self.node_n
                 if not buf.flags['C_CONTIGUOUS']:
-                    buf = np.ascontiguous(buf, dtype=buf.dtype)
+                    buf = _np.ascontiguous(buf, dtype=buf.dtype)
                 pointer = buf.ctypes.data_as(POINTER(c_double))
 
         if index == -1 or index == -2 or index == -3:
@@ -12101,7 +12281,7 @@ class FractureNetwork(HasHandle):
         core.use(c_double, 'frac_nd_get_attr', c_void_p, c_size_t)
         core.use(None, 'frac_nd_set_attr', c_void_p, c_size_t, c_double)
 
-        def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
+        def get_attr(self, index, default_val=None, **kwargs):
             """
             第index个自定义属性
             """
@@ -12109,7 +12289,7 @@ class FractureNetwork(HasHandle):
                 return default_val
             # 当index个属性不存在时，默认为无穷大的一个值(1.0e100以上的浮点数)
             value = core.frac_nd_get_attr(self.handle, index)
-            if min <= value <= max:
+            if _attr_in_range(value, **kwargs):
                 return value
             else:
                 return default_val
@@ -12136,7 +12316,7 @@ class FractureNetwork(HasHandle):
         core.use(c_double, 'frac_bd_get_attr', c_void_p, c_size_t)
         core.use(None, 'frac_bd_set_attr', c_void_p, c_size_t, c_double)
 
-        def get_attr(self, index, min=-1.0e100, max=1.0e100, default_val=None):
+        def get_attr(self, index, default_val=None, **kwargs):
             """
             第index个自定义属性
             """
@@ -12144,7 +12324,7 @@ class FractureNetwork(HasHandle):
                 return default_val
             # 当index个属性不存在时，默认为无穷大的一个值(1.0e100以上的浮点数)
             value = core.frac_bd_get_attr(self.handle, index)
-            if min <= value <= max:
+            if _attr_in_range(value, **kwargs):
                 return value
             else:
                 return default_val

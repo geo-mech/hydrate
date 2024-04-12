@@ -8,7 +8,7 @@ from zmlx.config import seepage
 from zmlx.geometry.point_distance import point_distance
 from zmlx.plt.tricontourf import tricontourf
 from zmlx.ui import gui
-from zmlx.utility.SeepageNumpy import SeepageNumpy
+from zmlx.utility.SeepageNumpy import as_numpy
 
 mud = """0.007698294	1930020.672
 0.0441305	4270730.329
@@ -111,15 +111,20 @@ def get_s(x, y, z):
 
 
 def create():
-    fludefs = [Seepage.FluDef(den=50, vis=1.0e-4),
-               Seepage.FluDef(den=1000, vis=1.0e-3)]
+    fludefs = [Seepage.FluDef(den=50, vis=1.0e-4, name='gas'),
+               Seepage.FluDef(den=1000, vis=1.0e-3, name='water')
+               ]
     model = seepage.create(
-        mesh=SeepageMesh.create_cube(np.linspace(0, 100, 101), np.linspace(0, 100, 101), (-0.5, 0.5)),
+        mesh=SeepageMesh.create_cube(np.linspace(0, 100, 101),
+                                     np.linspace(0, 100, 101),
+                                     (-0.5, 0.5)),
         porosity=0.2, pore_modulus=100e6, p=1e6, temperature=280, perm=1e-14,
         s=get_s, fludefs=fludefs
     )
-    model.set_kr(saturation=[0, 1], kr=[0, 1])
-    capillary.add(model, 1, 0, get_idx, [mud, sand_J, sand_K, sand_P, sand_T])
+    model.set_kr(saturation=[0, 1],
+                 kr=[0, 1])
+    capillary.add(model, fid0='water', fid1='gas', get_idx=get_idx,
+                  data=[mud, sand_J, sand_K, sand_P, sand_T])
     return model
 
 
@@ -127,10 +132,10 @@ def show(x, y, z, caption=None):
     tricontourf(x, y, z, caption=caption, gui_only=True)
 
 
-def solve(model):
-    numpy = SeepageNumpy(model)
-    x = numpy.cells.get(-1)
-    y = numpy.cells.get(-2)
+def solve(model: Seepage):
+    md = as_numpy(model)
+    x = md.cells.get(-1)
+    y = md.cells.get(-2)
 
     show(x, y, [get_idx(x[i], y[i], 0) for i in range(len(x))], caption='岩石ID')
     show(x, y, [get_s(x[i], y[i], 0)[1] for i in range(len(x))], caption='初始饱和度')
@@ -140,11 +145,12 @@ def solve(model):
         capillary.iterate(model, 1e5)
         if step % 30 == 0:
             print(f'step = {step}')
-            show(x, y, numpy.fluids(1).vol, caption='饱和度')
+            show(x, y, md.fluids(1).vol, caption='饱和度')
 
 
 def execute(gui_mode=True, close_after_done=False):
-    gui.execute(solve, args=(create(),), close_after_done=close_after_done, disable_gui=not gui_mode)
+    gui.execute(solve, args=(create(),), close_after_done=close_after_done,
+                disable_gui=not gui_mode)
 
 
 if __name__ == '__main__':

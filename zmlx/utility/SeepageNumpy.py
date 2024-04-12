@@ -6,6 +6,7 @@ from ctypes import c_double, POINTER
 import numpy as np
 
 from zml import Seepage, is_array
+from zmlx.alg.numpy import get_pointer
 
 
 class SeepageNumpy:
@@ -32,9 +33,7 @@ class SeepageNumpy:
                     buf = np.zeros(shape=self.model.cell_number, dtype=float)
                 else:
                     assert len(buf) == self.model.cell_number
-                if not buf.flags['C_CONTIGUOUS']:
-                    buf = np.ascontiguous(buf, dtype=buf.dtype)
-                self.model.cells_write(pointer=buf.ctypes.data_as(POINTER(c_double)), index=index)
+                self.model.cells_write(pointer=get_pointer(buf, c_double), index=index)
                 return buf
 
         def set(self, index, buf):
@@ -46,9 +45,7 @@ class SeepageNumpy:
                 return
             if np is not None:
                 assert len(buf) == self.model.cell_number
-                if not buf.flags['C_CONTIGUOUS']:
-                    buf = np.ascontiguous(buf, dtype=buf.dtype)
-                self.model.cells_read(pointer=buf.ctypes.data_as(POINTER(c_double)), index=index)
+                self.model.cells_read(pointer=get_pointer(buf, c_double), index=index)
 
         def get_attr(self, *args, **kwargs):
             return self.get(*args, **kwargs)
@@ -121,6 +118,13 @@ class SeepageNumpy:
             self.set(-5, value)
 
         @property
+        def g_pos(self):
+            """
+            inner_prod(gravity, pos)
+            """
+            return self.get(-6)
+
+        @property
         def fluid_mass(self):
             """
             所有流体的总的质量<只读>
@@ -160,9 +164,7 @@ class SeepageNumpy:
                     buf = np.zeros(shape=self.model.face_number, dtype=float)
                 else:
                     assert len(buf) == self.model.face_number
-                if not buf.flags['C_CONTIGUOUS']:
-                    buf = np.ascontiguous(buf, dtype=buf.dtype)
-                self.model.faces_write(pointer=buf.ctypes.data_as(POINTER(c_double)), index=index)
+                self.model.faces_write(pointer=get_pointer(buf, c_double), index=index)
                 return buf
 
         def set(self, index, buf):
@@ -174,9 +176,7 @@ class SeepageNumpy:
                 return
             if np is not None:
                 assert len(buf) == self.model.face_number
-                if not buf.flags['C_CONTIGUOUS']:
-                    buf = np.ascontiguous(buf, dtype=buf.dtype)
-                self.model.faces_read(pointer=buf.ctypes.data_as(POINTER(c_double)), index=index)
+                self.model.faces_read(pointer=get_pointer(buf, c_double), index=index)
 
         def get_attr(self, *args, **kwargs):
             return self.get(*args, **kwargs)
@@ -216,6 +216,13 @@ class SeepageNumpy:
                 assert 0 <= index < 9, f'index = {index} is not permitted'
                 return self.get(-10 - index, buf=buf)
 
+        @property
+        def dist(self):
+            """
+            face两侧的cell的距离
+            """
+            return self.get(-3)
+
     class Fluids:
         """
         用以批量读取或者设置某一种流体的属性
@@ -236,10 +243,8 @@ class SeepageNumpy:
                     buf = np.zeros(shape=self.model.cell_number, dtype=float)
                 else:
                     assert len(buf) == self.model.cell_number
-                if not buf.flags['C_CONTIGUOUS']:
-                    buf = np.ascontiguous(buf, dtype=buf.dtype)
                 self.model.fluids_write(fluid_id=self.fluid_id, index=index,
-                                        pointer=buf.ctypes.data_as(POINTER(c_double)))
+                                        pointer=get_pointer(buf, c_double))
                 return buf
 
         def set(self, index, buf):
@@ -251,10 +256,8 @@ class SeepageNumpy:
                 return
             if np is not None:
                 assert len(buf) == self.model.cell_number
-                if not buf.flags['C_CONTIGUOUS']:
-                    buf = np.ascontiguous(buf, dtype=buf.dtype)
                 self.model.fluids_read(fluid_id=self.fluid_id, index=index,
-                                       pointer=buf.ctypes.data_as(POINTER(c_double)))
+                                       pointer=get_pointer(buf, c_double))
 
         def get_attr(self, *args, **kwargs):
             return self.get(*args, **kwargs)
@@ -325,4 +328,7 @@ class SeepageNumpy:
 
 
 def as_numpy(model):
+    """
+    返回利用numpy来读写属性的接口
+    """
     return SeepageNumpy(model)

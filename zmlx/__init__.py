@@ -127,7 +127,12 @@ def open_gui():
         try:
             from zmlx.alg.install import install
             install(name='zml.pth',
-                    folder=os.path.dirname(os.path.dirname(__file__)))
+                    folder=os.path.dirname(os.path.dirname(__file__))
+                    )
+        except Exception as e:
+            print(f'Error: {e}')
+
+        try:
             gui.trigger('readme.py')
         except Exception as e:
             print(f'Error: {e}')

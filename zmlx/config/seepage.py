@@ -40,7 +40,6 @@ Face的属性：
 """
 
 import numpy as np
-
 from zml import get_average_perm, Tensor3, Seepage
 from zmlx.alg.join_cols import join_cols
 from zmlx.alg.time2str import time2str
@@ -49,6 +48,11 @@ from zmlx.config.attr_keys import cell_keys, face_keys, flu_keys
 from zmlx.geometry.point_distance import point_distance
 from zmlx.utility.Field import Field
 from zmlx.utility.SeepageNumpy import as_numpy
+from zmlx.config.seepage_face import (get_face_gradient, get_face_diff, get_face_sum, get_face_left,
+                                      get_face_right, get_cell_average)
+
+_unused = [get_face_gradient, get_face_diff, get_face_sum, get_face_left,
+           get_face_right, get_cell_average]
 
 
 def _get_names(f_def: Seepage.FluDef):
@@ -111,7 +115,7 @@ def get_attr(model: Seepage, key, min=-1.0e100, max=1.0e100, default_val=None, c
     if isinstance(key, str):
         key = model.get_model_key(key)
     if key is not None:
-        value = model.get_attr(index=key, min=min, max=max, default_val=default_val)
+        value = model.get_attr(index=key, left=min, right=max, default_val=default_val)
     else:
         value = default_val
     if cast is None:
@@ -436,7 +440,7 @@ def create(mesh=None,
     else:
         igr = None
 
-    if kr is not None:   # since 2024-1-26
+    if kr is not None:  # since 2024-1-26
         # 设置相渗.
         for item in kr:
             if len(item) == 2:
