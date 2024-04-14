@@ -5,7 +5,7 @@ from zml import Vector, Seepage, Interp1
 from zmlx.utility.SeepageNumpy import as_numpy
 import numpy as np
 from zmlx.config.seepage_face import get_face_sum, get_face_diff
-from zmlx.alg.numpy import get_pointer
+from zmlx.alg.np import get_pointer
 
 vs0 = Vector()
 vk = Vector()

@@ -10,7 +10,7 @@ from ctypes import c_double
 import numpy as np
 
 from zml import Seepage
-from zmlx.alg.numpy import get_pointer
+from zmlx.alg.np import get_pointer
 from zmlx.config.seepage import get_face_sum, get_face_diff, get_face_left, get_face_right
 from zmlx.utility.SeepageNumpy import as_numpy
 

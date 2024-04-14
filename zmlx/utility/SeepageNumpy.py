@@ -6,7 +6,7 @@ from ctypes import c_double, POINTER
 import numpy as np
 
 from zml import Seepage, is_array
-from zmlx.alg.numpy import get_pointer
+from zmlx.alg.np import get_pointer
 
 
 class SeepageNumpy:

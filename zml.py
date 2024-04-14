@@ -38,7 +38,7 @@ except Exception as _err:
 is_windows = os.name == 'nt'
 
 # Version of the zml module (date represented by six digits)
-version = 240406
+version = 240414
 
 
 class Object:
@@ -6200,6 +6200,42 @@ class SeepageMesh(HasHandle, HasCells):
             core.seepage_mesh_set_cell_attr(self.model.handle, self.index, index, value)
             return self
 
+        core.use(c_size_t, 'seepage_mesh_cell_get_face_n', c_void_p, c_size_t)
+
+        @property
+        def face_number(self):
+            return core.seepage_mesh_cell_get_face_n(self.model.handle, self.index)
+
+        @property
+        def cell_number(self):
+            return self.face_number
+
+        core.use(c_size_t, 'seepage_mesh_cell_get_face_id', c_void_p, c_size_t, c_size_t)
+
+        def get_face(self, index):
+            index = get_index(index, self.face_number)
+            return self.model.get_face(core.seepage_mesh_cell_get_face_id(self.model.handle, self.index, index))
+
+        core.use(c_size_t, 'seepage_mesh_cell_get_cell_id', c_void_p, c_size_t, c_size_t)
+
+        def get_cell(self, index):
+            index = get_index(index, self.cell_number)
+            return self.model.get_cell(core.seepage_mesh_cell_get_cell_id(self.model.handle, self.index, index))
+
+        @property
+        def cells(self):
+            """
+            此Cell周围的所有Cell
+            """
+            return Iterator(self, self.cell_number, lambda m, ind: m.get_cell(ind))
+
+        @property
+        def faces(self):
+            """
+            此Cell周围的所有Face
+            """
+            return Iterator(self, self.face_number, lambda m, ind: m.get_face(ind))
+
     class Face(Object):
         """
         定义cell之间的流动通道
@@ -10497,7 +10533,7 @@ class Seepage(HasHandle, HasCells):
         core.seepage_pop_cells(self.handle, count)
         return self
 
-    core.use(None, 'seepage_group_cells',  c_void_p, c_void_p)
+    core.use(None, 'seepage_group_cells', c_void_p, c_void_p)
 
     def get_cell_groups(self):
         """

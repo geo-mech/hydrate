@@ -32,7 +32,7 @@ def test(t_ini=510):
     """
     测试
     """
-    import zmlx.alg.numpy as np
+    from zmlx.alg import np
     print(f'\n\nTest when initial temperature is {t_ini}')
     from zml import Seepage
 
