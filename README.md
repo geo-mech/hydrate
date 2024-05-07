@@ -4,13 +4,12 @@
  
 ### 版本
 
-ZmlVersion=240414
+ZmlVersion=240507
 
-### 团队
+### 作者
 
 [张召彬](http://sourcedb.igg.cas.cn/cn/zjrck/201703/t20170306_4755492.html)<sup>1,2,3,*</sup>, [李守定](http://sourcedb.igg.cas.cn/cn/zjrck/201412/t20141218_4278784.html)<sup>1,2,3</sup>, [李晓](http://sourcedb.igg.cas.cn/cn/zjrck/200907/t20090713_2065538.html)<sup>1,2,3</sup>, [赫建明](http://sourcedb.igg.cas.cn/cn/zjrck/201203/t20120302_3448658.html)<sup>1,2,3</sup>, 李关访<sup>1,2,3</sup>, [郑博](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/202303/t20230322_6706946.html)<sup>1,2,3</sup>, 毛天桥<sup>1,2,3</sup>, 徐涛<sup>1,2,3</sup>, 李宇轩<sup>1,2,3</sup>, Maryelin<sup>1,2,3</sup>, 谢卓然<sup>1,2,3</sup>
 
----
 
 <sup>1</sup>[中国科学院地质与地球物理研究所](https://igg.cas.cn/)(北京, 100029);
 

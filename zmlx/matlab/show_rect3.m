@@ -13,6 +13,7 @@ color = 0;
 alpha = 1;
 FaceColor = 'flat';
 edge = 'none';
+linewidth = 0.2;
 
 % 解析 varargin
 for i = 1:2:length(varargin)
@@ -25,6 +26,8 @@ for i = 1:2:length(varargin)
             FaceColor = varargin{i + 1};
         case 'edge'
             edge = varargin{i + 1};
+        case 'linewidth'
+            linewidth = varargin{i + 1};
         otherwise
             error(['Unknown option: ', varargin{i}]);
     end
@@ -81,7 +84,7 @@ for ind =1: alphaLevels
     if ind < alphaLevels
         surf(xx{ind}, yy{ind}, zz{ind}, cc{ind}, 'FaceColor', FaceColor, 'EdgeColor', edge, 'FaceAlpha', ind/alphaLevels)
     else
-        surf(xx{ind}, yy{ind}, zz{ind}, cc{ind}, 'FaceColor', FaceColor, 'EdgeColor', 'red', 'FaceAlpha', ind/alphaLevels)
+        surf(xx{ind}, yy{ind}, zz{ind}, cc{ind}, 'FaceColor', FaceColor, 'EdgeColor', 'red', 'FaceAlpha', ind/alphaLevels, 'linewidth', linewidth)
     end
     hold on 
 end
@@ -93,5 +96,3 @@ xlabel('x [m]')
 ylabel('y [m]')
 zlabel('z [m]')
 colormap('jet')
-
-

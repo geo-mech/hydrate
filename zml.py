@@ -38,7 +38,7 @@ except Exception as _err:
 is_windows = os.name == 'nt'
 
 # Version of the zml module (date represented by six digits)
-version = 240414
+version = 240507
 
 
 class Object:
@@ -9030,9 +9030,10 @@ class Seepage(HasHandle, HasCells):
 
     def remove_cell(self, cell_id):
         """
-        移除给定id的cell.
+        移除给定id的(孤立的)cell
         注意：
-            这是一个复杂的操作，会涉及到很多连接关系，以及Cell和Face的顺序的改变
+            1. 这是一个复杂的操作，会涉及到很多连接关系，以及Cell和Face的顺序的改变
+            2. 必须确保给定的cell为孤立的，即没有face和此cell连接，否则，此函数不执行操作.
         """
         core.seepage_remove_cell(self.handle, cell_id)
 
@@ -9075,6 +9076,7 @@ class Seepage(HasHandle, HasCells):
         return core.seepage_get_face_n(self.handle)
 
     core.use(c_size_t, 'seepage_get_inj_n', c_void_p)
+    core.use(None, 'seepage_set_inj_n', c_void_p, c_size_t)
 
     @property
     def injector_number(self):
@@ -9082,6 +9084,15 @@ class Seepage(HasHandle, HasCells):
         Injector的数量
         """
         return core.seepage_get_inj_n(self.handle)
+
+    @injector_number.setter
+    def injector_number(self, count):
+        """
+        设置注入点的数量. 注意，对于新的injector，所有的参数都将使用默认值，后续必须进行配置.
+            请谨慎使用此接口来添加注入点.
+            重设injector_number主要用来清空已有的注入点.
+        """
+        core.seepage_set_inj_n(self.handle, count)
 
     def get_cell(self, index):
         """
@@ -12756,8 +12767,8 @@ class FracAlg:
                         ca_area=999999999, fa_width=999999999, fa_dist=999999999):
         """
         更新seepage的结构，
-            对于新添加的Cell，设置位置和面积属性
-            对于新添加的Face，设置宽度和长度属性
+            对于新添加的Cell，设置位置(cell.pos)和面积(ca_area)属性
+            对于新添加的Face，设置宽度(fa_width)和长度(fa_dist)属性
         注意：
             这里假设network有layer_n层的cell组成，并基于此来更新seepage的结构.
         """

@@ -1,4 +1,3 @@
-
 def get_center(p1, p2):
     return [(p1[i] + p2[i]) * 0.5 for i in range(min(len(p1), len(p2)))]
 

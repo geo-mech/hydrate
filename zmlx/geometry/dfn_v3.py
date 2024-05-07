@@ -2,9 +2,9 @@ import random
 
 import numpy as np
 
-from zml import Dfn2
 from zmlx.alg.clamp import clamp
 from zmlx.alg.linspace import linspace
+from zmlx.geometry.dfn2 import dfn2
 from zmlx.geometry.rect_3d import from_v3
 from zmlx.geometry.rect_v3 import intersected, get_area
 
@@ -29,6 +29,36 @@ def from_segs(segs, z_min, z_max, heights):
         fractures.append([x0, y0, z0, x1, y1, z1])
 
     return fractures
+
+
+def dfn_v3(data=None, **opt):
+    """
+    创建一个拟三维的DFN: 裂缝面都垂直于x-y平面.  返回的裂缝数据的格式为： x0, y0, z0, x1, y1, z1.
+
+    since 24-05-05
+    """
+    if data is not None:
+        fractures = []
+        for item in data:
+            kw = opt.copy()
+            kw.update(item)
+            fractures = fractures + dfn_v3(**kw)
+        return fractures
+
+    # z方向的范围和裂缝的高度分布
+    zr, heights = opt.get('zr'), opt.get('heights')
+    if zr is None or heights is None:
+        return []
+
+    assert len(zr) == 2
+    if zr[0] >= zr[1]:
+        return []
+
+    if len(heights) <= 0:
+        return []
+
+    # 返回结果
+    return from_segs(dfn2(**opt), z_min=zr[0], z_max=zr[1], heights=heights)
 
 
 def create_fractures(box=None, p21=None, angles=None, lengths=None, heights=None, l_min=None):
@@ -62,12 +92,8 @@ def create_fractures(box=None, p21=None, angles=None, lengths=None, heights=None
     assert len(box) == 6
     x_min, y_min, z_min, x_max, y_max, z_max = box
 
-    dfn2 = Dfn2()
-    dfn2.range = (x_min, y_min, x_max, y_max)
-    dfn2.add_frac(angles=angles, lengths=lengths,
-                  p21=p21, l_min=l_min)
-
-    return from_segs(dfn2.get_fractures(), z_min=z_min, z_max=z_max, heights=heights)
+    return dfn_v3(xr=[x_min, x_max], yr=[y_min, y_max], zr=[z_min, z_max], p21=p21, angles=angles,
+                  lengths=lengths, heights=heights, l_min=l_min)
 
 
 def remove_small(fractures):

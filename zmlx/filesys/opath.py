@@ -14,10 +14,12 @@ from zmlx.filesys.make_parent import make_parent
 from zmlx.filesys.tag import print_tag
 
 
-def opath(*args):
+def opath(*args, tag=None):
     """
     返回一个用于输出的文件路径. 如果给定的args为空，则返回root路径（由 current_work_directory 定义的环境变量或者当前工作路径）
-    等同于UI界面设置的工作目录
+    等同于UI界面设置的工作目录.
+
+    当tag给定的时候，将检查主目录下是否存在给定tag的文件 (从而确保对文件夹进行误操作).
     """
 
     # 当data文件夹存在的时候，则会优先使用 (有的时候，可能没有创建环境变量的权限)
@@ -31,6 +33,12 @@ def opath(*args):
                            default=data_folder)
     assert not is_chinese(root), f'String contains Chinese. root: {root}'
 
+    # 检查根目录是否存在需要的tag
+    if tag is not None:
+        fname = os.path.join(root, tag)
+        assert os.path.isfile(fname), f'The required tag file not exists: {fname}'
+
+    # 找到所需要的路径
     if len(args) > 0:
         for arg in args:
             assert not is_chinese(arg), f'String contains Chinese. args = {args}'
@@ -42,11 +50,11 @@ def opath(*args):
     return make_parent(path)
 
 
-def get(*args):
+def get(*args, **kwargs):
     """
     获得输出目录＜等同于UI界面设置的工作目录＞
     """
-    return opath(*args)
+    return opath(*args, **kwargs)
 
 
 def set(folder=None):
@@ -69,9 +77,9 @@ class TaskFolder:
     当前任务的文件夹
     """
 
-    def __init__(self, *names):
+    def __init__(self, *names, **kwargs):
         # 找到数据目录
-        self.folder = opath(*names)
+        self.folder = opath(*names, **kwargs)
 
         # 创建目录
         if not os.path.isdir(self.folder):
