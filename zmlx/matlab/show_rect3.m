@@ -13,7 +13,7 @@ color = 0;
 alpha = 1;
 FaceColor = 'flat';
 edge = 'none';
-linewidth = 0.2;
+linewidth = 0.1;
 
 % 解析 varargin
 for i = 1:2:length(varargin)
@@ -84,7 +84,7 @@ for ind =1: alphaLevels
     if ind < alphaLevels
         surf(xx{ind}, yy{ind}, zz{ind}, cc{ind}, 'FaceColor', FaceColor, 'EdgeColor', edge, 'FaceAlpha', ind/alphaLevels)
     else
-        surf(xx{ind}, yy{ind}, zz{ind}, cc{ind}, 'FaceColor', FaceColor, 'EdgeColor', 'red', 'FaceAlpha', ind/alphaLevels, 'linewidth', linewidth)
+        surf(xx{ind}, yy{ind}, zz{ind}, cc{ind}, 'FaceColor', FaceColor, 'EdgeColor', 'none', 'FaceAlpha', ind/alphaLevels, 'linewidth', linewidth)
     end
     hold on 
 end

@@ -18,7 +18,8 @@ def create_fludefs():
         4. solid: kg = kerogen, char
     """
     gas = Seepage.FluDef.create(name='gas',
-                                defs=[create_ch4(name='ch4'), create_steam(name='steam')])
+                                defs=[create_ch4(name='ch4'),
+                                      create_steam(name='steam')])
     h2o = create_h2o(name='h2o')
     lo = c11h24.create(name='lo')
     ho = oil.create(name='ho')

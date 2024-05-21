@@ -26,6 +26,13 @@ class DynKeys:
         assert isinstance(item, str)
         return self.model.reg_key(self.ty, item)
 
+    def reg_keys(self, *keys):
+        """
+        注册多个key，并且不返回任何的id (仅仅注册)
+        """
+        for key in keys:
+            self.reg_key(key)
+
     def __getattr__(self, item):
         return self.reg_key(item)
 

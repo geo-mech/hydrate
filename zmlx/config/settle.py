@@ -14,7 +14,8 @@ from zmlx.alg.np import get_pointer
 from zmlx.config.seepage import get_face_sum, get_face_diff, get_face_left, get_face_right
 from zmlx.utility.SeepageNumpy import as_numpy
 
-warnings.warn(f'<{__file__}> will be removed after 2025-4-13', DeprecationWarning)
+warnings.warn(f'<{__file__}> will be removed after 2025-4-13',
+              DeprecationWarning)
 
 
 def get_face_density_diff(model: Seepage, fid0, fid1):

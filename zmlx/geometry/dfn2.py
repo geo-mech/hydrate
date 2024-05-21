@@ -1,10 +1,11 @@
 from zml import Dfn2
 from zmlx.geometry.point_distance import point_distance
+from zmlx.alg.linspace import linspace
 
 
 def dfn2(data=None, **opt):
     """
-    创建二维的dfn
+    创建二维的dfn. 返回一个list，此list的每一个元素都是长度为4的list
 
     since 24-05-05
     """
@@ -19,6 +20,16 @@ def dfn2(data=None, **opt):
     xr, yr, p21 = opt.get('xr'), opt.get('yr'), opt.get('p21')
     l_min = opt.get('l_min')
     angles, lengths = opt.get('angles'), opt.get('lengths')
+
+    if angles is None:
+        ar = opt.get('ar')  # 角度的范围
+        if ar is not None:
+            angles = linspace(ar[0], ar[1], 100)
+
+    if lengths is None:
+        lr = opt.get('lr')
+        if lr is not None:
+            lengths = linspace(lr[0], lr[1], 100)
 
     if p21 is None or xr is None or yr is None or angles is None or lengths is None:
         return []

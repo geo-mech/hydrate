@@ -34,7 +34,9 @@ def get_cap_settings(model: Seepage):
         ca_ipc = round(buf[ind + 6])
         ind += 7
         #
-        settings.append({'fid0': [a0, b0, c0], 'fid1': [a1, b1, c1], 'ca_ipc': ca_ipc})
+        settings.append({'fid0': [a0, b0, c0],
+                         'fid1': [a1, b1, c1],
+                         'ca_ipc': ca_ipc})
 
     # from text
     text = model.get_text('cap_settings')
@@ -52,7 +54,8 @@ def set_cap_settings(model: Seepage, settings):
     将cap设置存储到model
     """
     assert isinstance(settings, list)
-    model.set_text('cap_settings', f'{settings}')
+    model.set_text('cap_settings',
+                   f'{settings}')
 
 
 def get_face_density_diff(model: Seepage, fid0, fid1):
@@ -75,7 +78,8 @@ def get_face_gra(model: Seepage):
     return fa
 
 
-def iterate(model: Seepage, dt: float, fid0=None, fid1=None, ca_ipc=None, ds=0.05, gravity=None):
+def iterate(model: Seepage, dt: float, fid0=None, fid1=None,
+            ca_ipc=None, ds=0.05, gravity=None):
     """
     在毛管力驱动下的流动。
     其中：
@@ -89,7 +93,9 @@ def iterate(model: Seepage, dt: float, fid0=None, fid1=None, ca_ipc=None, ds=0.0
     if fid0 is not None and fid1 is not None:
         # 毛管压力
         if ca_ipc is not None:
-            model.get_linear_dpre(fid0=fid0, fid1=fid1, ca_ipc=ca_ipc, vs0=vs0, vk=vk, ds=ds, cell_ids=None)
+            model.get_linear_dpre(fid0=fid0, fid1=fid1,
+                                  ca_ipc=ca_ipc, vs0=vs0,
+                                  vk=vk, ds=ds, cell_ids=None)
         else:
             vs0.size = 0
             vk.size = 0
@@ -109,8 +115,10 @@ def iterate(model: Seepage, dt: float, fid0=None, fid1=None, ca_ipc=None, ds=0.0
 
         if ca_ipc is not None:
             # 定义了毛管力
-            model.get_linear_dpre(fid0=fid0, fid1=fid1, ca_ipc=ca_ipc, vs0=vs0, vk=vk, ds=ds, cell_ids=None)
-            model.get_cond_for_exchange(fid0=fid0, fid1=fid1, buffer=vg)
+            model.get_linear_dpre(fid0=fid0, fid1=fid1, ca_ipc=ca_ipc,
+                                  vs0=vs0, vk=vk, ds=ds, cell_ids=None)
+            model.get_cond_for_exchange(fid0=fid0, fid1=fid1,
+                                        buffer=vg)
             model.diffusion(dt, fid0=fid0, fid1=fid1,
                             ps0=vs0.pointer, ls0=vs0.size,
                             pk=vk.pointer, lk=vk.size,
@@ -128,15 +136,19 @@ def iterate(model: Seepage, dt: float, fid0=None, fid1=None, ca_ipc=None, ds=0.0
             if isinstance(fid1, str):
                 fid1 = model.find_fludef(fid1)
             gravity = setting.get('gravity')
-            iterate(model=model, dt=dt, fid0=fid0, fid1=fid1, ca_ipc=setting.get('ca_ipc'),
+            iterate(model=model, dt=dt, fid0=fid0, fid1=fid1,
+                    ca_ipc=setting.get('ca_ipc'),
                     ds=ds, gravity=gravity)
 
 
-def add(model: Seepage, fid0, fid1, get_idx, data, gravity=None):
+def add(model: Seepage, fid0, fid1, get_idx, data,
+        gravity=None):
     """
-    创建一个毛管压力计算模型，其中fid0和fid1为涉及的两种流体。毛管压力定义为fid0的压力减去fid1的压力。model为创建好的渗流模型（或者Mesh）.
+    创建一个毛管压力计算模型，其中fid0和fid1为涉及的两种流体。
+    毛管压力定义为fid0的压力减去fid1的压力。model为创建好的渗流模型（或者Mesh）.
         idx = get_idx(x, y, z)
-    是一个函数，该函数返回给定位置所需要采用的毛管压力曲线的ID，注意这个ID从0开始编号.
+    是一个函数，该函数返回给定位置所需要采用的毛管压力曲线的ID，
+        注意这个ID从0开始编号.
     后续的所有参数为毛管压力曲线，可以是Interp1类型，也可以给定两个list.
     """
     settings = get_cap_settings(model)
@@ -165,7 +177,8 @@ def add(model: Seepage, fid0, fid1, get_idx, data, gravity=None):
         model.get_cell(cell_id).set_attr(ca_ipc, ipc)   # 设置pc的id
 
     # 将设置添加到model
-    settings.append({'ca_ipc': ca_ipc, 'fid0': fid0, 'fid1': fid1, 'gravity': gravity})
+    settings.append({'ca_ipc': ca_ipc, 'fid0': fid0, 'fid1': fid1,
+                     'gravity': gravity})
     set_cap_settings(model, settings)
 
 

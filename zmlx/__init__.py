@@ -8,6 +8,7 @@ zmlx: zml模块的扩展，将首先引入zml的所有功能，并定义数据�
 """
 
 from zml import *
+
 try:
     from zmlx.ui.GuiBuffer import gui, information, question, plot as do_plot, break_point, gui_exec
 except Exception as err:
@@ -29,51 +30,32 @@ from zmlx.alg.sys import get_latest_version
 from zmlx.alg.clamp import clamp
 from zmlx.alg.linspace import linspace
 from zmlx.alg.has_module import has_numpy, has_PyQt5, has_matplotlib
+
+# 使得import的时候，尽可能不去执行复杂的操作
+from zmlx.utility.RuntimeFunc import RuntimeFunc
 import os
 import warnings
-
-# 部分函数容易混淆，借助zml调用
 import zml
 
 setenv = app_data.setenv
 getenv = app_data.getenv
 
-try:
-    from zmlx.fluid.ch4 import create as create_ch4
-    from zmlx.fluid.ch4_hydrate import create as create_ch4_hydrate
-    from zmlx.fluid.co2 import create as create_co2
-    from zmlx.fluid.co2_hydrate import create as create_co2_hydrate
-    from zmlx.fluid.h2o import create as create_h2o
-    from zmlx.fluid.h2o_gas import create as create_h2o_gas
-    from zmlx.fluid.h2o_ice import create as create_h2o_ice
-except Exception as err:
-    warnings.warn(f'meet exception when import fluid. error = {err}')
+create_ch4 = RuntimeFunc(pack_name='zmlx.fluid.ch4', func_name='create')
+create_ch4_hydrate = RuntimeFunc(pack_name='zmlx.fluid.ch4_hydrate', func_name='create')
+create_co2 = RuntimeFunc(pack_name='zmlx.fluid.co2', func_name='create')
+create_co2_hydrate = RuntimeFunc(pack_name='zmlx.fluid.co2_hydrate', func_name='create')
+create_h2o = RuntimeFunc(pack_name='zmlx.fluid.h2o', func_name='create')
+create_h2o_gas = RuntimeFunc(pack_name='zmlx.fluid.h2o_gas', func_name='create')
+create_h2o_ice = RuntimeFunc(pack_name='zmlx.fluid.h2o_ice', func_name='create')
 
+create_hydconfig = RuntimeFunc(pack_name='zmlx.config.hydrate', func_name='create',
+                               deprecated_name='zmlx.create_hydconfig', deprecated_date='2025-5-7')
 
-try:
-    from zmlx.config.hydrate import create as create_hydconfig
-except Exception as err:
-    warnings.warn(f'meet exception when import create_hydconfig. error = {err}')
-
-try:
-    from zmlx.plt.plot2 import plot2
-except Exception as err:
-    warnings.warn(f'meet exception when import plot2. error = {err}')
-
-try:
-    from zmlx.plt.tricontourf import tricontourf
-except Exception as err:
-    warnings.warn(f'meet exception when import tricontourf. error = {err}')
-
-try:
-    from zmlx.plt.plotxy import plotxy
-except Exception as err:
-    warnings.warn(f'meet exception when import plotxy. error = {err}')
-
-try:
-    from zmlx.ui.Config import find, find_all
-except Exception as err:
-    warnings.warn(f'meet exception when import find, find_all. error = {err}')
+plot2 = RuntimeFunc(pack_name='zmlx.plt.plot2', func_name='plot2')
+tricontourf = RuntimeFunc(pack_name='zmlx.plt.tricontourf', func_name='tricontourf')
+plotxy = RuntimeFunc(pack_name='zmlx.plt.plotxy', func_name='plotxy')
+find = RuntimeFunc(pack_name='zmlx.ui.Config', func_name='find')
+find_all = RuntimeFunc(pack_name='zmlx.ui.Config', func_name='find_all')
 
 try:
     from zmlx.utility.GuiIterator import GuiIterator

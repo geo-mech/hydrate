@@ -18,18 +18,26 @@ def create_reactions():
 
     # kerogen分解
     r = decomposition.create(left='kg',
-                             right=[('ho', 0.6), ('lo', 0.1), ('h2o', 0.1), ('ch4', 0.1), ('char', 0.1)],
+                             right=[('ho', 0.6),
+                                    ('lo', 0.1),
+                                    ('h2o', 0.1),
+                                    ('ch4', 0.1),
+                                    ('char', 0.1)],
                              temp=565.0, heat=161600.0,  # From Maryelin 2023-02-23
                              rate=1.0e-8)
     result.append(r)
 
     # 重油分解
     r = decomposition.create(left='ho',
-                             right=[('lo', 0.5), ('ch4', 0.2), ('char', 0.3)],
+                             right=[('lo', 0.5),
+                                    ('ch4', 0.2),
+                                    ('char', 0.3)],
                              temp=603.0, heat=206034.0,  # From Maryelin 2023-02-23
                              rate=1.0e-8)
     # 当固体占据的比重达到80%之后，增加裂解温度，从而限制继续分解 (避免所有的孔隙被固体占据)
-    add_inh(r, sol='sol', liq=None, c=[0, 0.8, 1.0], t=[0, 0, 1.0e4])
+    add_inh(r, sol='sol', liq=None,
+            c=[0, 0.8, 1.0],
+            t=[0, 0, 1.0e4])
     result.append(r)
 
     # 返回所有的反应

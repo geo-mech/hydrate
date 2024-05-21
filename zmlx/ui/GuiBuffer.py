@@ -4,9 +4,8 @@ from zml import create_dict
 
 try:
     import matplotlib.pyplot as plt
-except Exception as _err:
+except:
     plt = None
-    warnings.warn(f'cannot import matplotlib in zml. error = {_err}')
 
 
 class ConsoleApi:

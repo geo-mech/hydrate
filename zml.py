@@ -38,7 +38,7 @@ except Exception as _err:
 is_windows = os.name == 'nt'
 
 # Version of the zml module (date represented by six digits)
-version = 240507
+version = 240518
 
 
 class Object:
@@ -194,9 +194,9 @@ def make_parent(path):
         Returns the entered file path
     """
     try:
-        dirname = os.path.dirname(path)
-        if not os.path.isdir(dirname):
-            make_dirs(dirname)
+        name = os.path.dirname(path)
+        if not os.path.isdir(name):
+            make_dirs(name)
         return path
     except:
         return path
@@ -204,7 +204,7 @@ def make_parent(path):
 
 def read_text(path, encoding=None, default=None):
     """
-    Read text from a file in text format
+    Read text from a file in .TXT format
     """
     try:
         if os.path.isfile(path):
@@ -446,15 +446,15 @@ class _NullFunction:
         print(f'calling null function {self.name}(args={args}, kwargs={kwargs})')
 
 
-def get_func(dll, restype, name, *argtypes):
+def get_func(dll_obj, restype, name, *argtypes):
     """
     Configure a dll function
     """
     assert isinstance(name, str)
-    fn = getattr(dll, name, None)
+    fn = getattr(dll_obj, name, None)
     if fn is None:
-        if dll is not None:
-            print(f'Warning: can not find function <{name}> in <{dll}>')
+        if dll_obj is not None:
+            print(f'Warning: can not find function <{name}> in <{dll_obj}>')
         return _NullFunction(name)
     if restype is not None:
         fn.restype = restype
@@ -1045,7 +1045,7 @@ class License:
 
     def load(self, code):
         """
-        Stores the given licdata to the default location
+        Stores the given licence data to the default location
         """
         if self.core.has_dll():
             temp = String()
@@ -1095,8 +1095,8 @@ def reg(code=None):
     """
     reg.
     When code is None, return the native serial number.
-    If the length of code is less than 80, code is regarded as the serial number and licdata is created.
-    Otherwise, code is treated as licdata, and save it locally.
+    If the length of code is less than 80, code is regarded as the serial number and licence data is created.
+    Otherwise, code is treated as licence data, and save it locally.
     """
     if code is None:
         return lic.usb_serial
@@ -1371,10 +1371,10 @@ class Vector(HasHandle):
         """
         Serialized save. Optional extension:
         1:.txt
-            text format
+            .TXT format
             (cross-platform, basically unreadable)
         2:.xml
-            xml format
+            .XML format
             (specific readability, largest volume, slowest read and write, cross-platform)
         3:. Other
             binary formats
@@ -1540,10 +1540,10 @@ class IntVector(HasHandle):
         """
         Serialized save. Optional extension:
         1:.txt
-            text format
+            .TXT format
             (cross-platform, basically unreadable)
         2:.xml
-            xml format
+            .XML format
             (specific readability, largest volume, slowest read and write, cross-platform)
         3:. Other
             binary formats
@@ -1645,10 +1645,10 @@ class UintVector(HasHandle):
         """
         Serialized save. Optional extension:
         1:.txt
-            text format
+            .TXT format
             (cross-platform, basically unreadable)
         2:.xml
-            xml format
+            .XML format
             (specific readability, largest volume, slowest read and write, cross-platform)
         3:. Other
             binary formats
@@ -1960,10 +1960,10 @@ class Matrix2(HasHandle):
         """
         Serialized save. Optional extension:
         1:.txt
-            text format
+            .TXT format
             (cross-platform, basically unreadable)
         2:.xml
-            xml format
+            .XML format
             (specific readability, largest volume, slowest read and write, cross-platform)
         3:. Other
             binary formats
@@ -2113,10 +2113,10 @@ class Matrix3(HasHandle):
         """
         Serialized save. Optional extension:
         1:.txt
-            text format
+            .TXT format
             (cross-platform, basically unreadable)
         2:.xml
-            xml format
+            .XML format
             (specific readability, largest volume, slowest read and write, cross-platform)
         3:. Other
             binary formats
@@ -2285,10 +2285,10 @@ class Tensor3Matrix3(HasHandle):
         """
         Serialized save. Optional extension:
         1:.txt
-            text format
+            .TXT format
             (cross-platform, basically unreadable)
         2:.xml
-            xml format
+            .XML format
             (specific readability, largest volume, slowest read and write, cross-platform)
         3:. Other
             binary formats
@@ -2424,10 +2424,10 @@ class Interp1(HasHandle):
         """
         Serialized save. Optional extension:
         1:.txt
-            text format
+            .TXT format
             (cross-platform, basically unreadable)
         2:.xml
-            xml format
+            .XML format
             (specific readability, largest volume, slowest read and write, cross-platform)
         3:. Other
             binary formats
@@ -2587,10 +2587,10 @@ class Interp2(HasHandle):
         """
         Serialized save. Optional extension:
         1:.txt
-            text format
+            .TXT format
             (cross-platform, basically unreadable)
         2:.xml
-            xml format
+            .XML format
             (specific readability, largest volume, slowest read and write, cross-platform)
         3:. Other
             binary formats
@@ -2676,14 +2676,23 @@ class Interp2(HasHandle):
     core.use(c_double, 'interp2_get', c_void_p, c_double, c_double, c_bool)
 
     def get(self, x, y, no_external=True):
+        """
+        返回给定坐标x, y下的数值
+        """
         return core.interp2_get(self.handle, x, y, no_external)
 
     def __call__(self, *args, **kwargs):
+        """
+        返回给定坐标x, y下的数值
+        """
         return self.get(*args, **kwargs)
 
     core.use(c_bool, 'interp2_is_inner', c_void_p, c_double, c_double)
 
     def is_inner(self, x, y):
+        """
+        判断给定的坐标是否为内部的点(不需要外插)
+        """
         return core.interp2_is_inner(self.handle, x, y)
 
     core.use(c_double, 'interp2_get_xmin', c_void_p)
@@ -2720,10 +2729,10 @@ class Interp3(HasHandle):
         """
         Serialized save. Optional extension:
         1:.txt
-            text format
+            .TXT format
             (cross-platform, basically unreadable)
         2:.xml
-            xml format
+            .XML format
             (specific readability, largest volume, slowest read and write, cross-platform)
         3:. Other
             binary formats
@@ -2943,24 +2952,25 @@ class FileMap(HasHandle):
             _check_ipath(path, self)
             core.fmap_load(self.handle, make_c_char_p(path))
 
-    core.use(c_void_p, 'fmap_get_data', c_void_p)
+    core.use(c_char_p, 'fmap_get_char_p', c_void_p)
 
     @property
     def data(self):
-        return String(handle=core.fmap_get_data(self.handle)).to_str()
+        return core.fmap_get_char_p(self.handle).decode()
+
+    core.use(None, 'fmap_set_char_p', c_void_p, c_char_p)
 
     @data.setter
     def data(self, value):
-        buffer = String(handle=core.fmap_get_data(self.handle))
-        if isinstance(value, String):
-            buffer.clone(value)
-            return
-        if isinstance(value, str):
-            buffer.assign(value)
-            return
-        else:
-            buffer.assign(f'{value}')
-            return
+        if not isinstance(value, str):
+            value = f'{value}'
+        core.fmap_set_char_p(self.handle, make_c_char_p(value))
+
+    core.use(c_void_p, 'fmap_get_data', c_void_p)
+
+    @property
+    def buffer(self):
+        return String(handle=core.fmap_get_data(self.handle))
 
     core.use(None, 'fmap_clone', c_void_p, c_void_p)
 
@@ -2994,10 +3004,10 @@ class Array2(HasHandle):
         """
         Serialized save. Optional extension:
         1:.txt
-            text format
+            .TXT format
             (cross-platform, basically unreadable)
         2:.xml
-            xml format
+            .XML format
             (specific readability, largest volume, slowest read and write, cross-platform)
         3:. Other
             binary formats
@@ -3117,10 +3127,10 @@ class Array3(HasHandle):
         """
         Serialized save. Optional extension:
         1:.txt
-            text format
+            .TXT format
             (cross-platform, basically unreadable)
         2:.xml
-            xml format
+            .XML format
             (specific readability, largest volume, slowest read and write, cross-platform)
         3:. Other
             binary formats
@@ -3241,10 +3251,10 @@ class Tensor2(HasHandle):
         """
         Serialized save. Optional extension:
         1:.txt
-            text format
+            .TXT format
             (cross-platform, basically unreadable)
         2:.xml
-            xml format
+            .XML format
             (specific readability, largest volume, slowest read and write, cross-platform)
         3:. Other
             binary formats
@@ -3446,10 +3456,10 @@ class Tensor3(HasHandle):
         """
         Serialized save. Optional extension:
         1:.txt
-            text format
+            .TXT format
             (cross-platform, basically unreadable)
         2:.xml
-            xml format
+            .XML format
             (specific readability, largest volume, slowest read and write, cross-platform)
         3:. Other
             binary formats
@@ -3564,6 +3574,42 @@ class Tensor3(HasHandle):
     def zx(self, value):
         self[(2, 0)] = value
 
+    def __add__(self, other):
+        return Tensor3(xx=self.xx + other.xx,
+                       yy=self.yy + other.yy,
+                       zz=self.zz + other.zz,
+                       xy=self.xy + other.xy,
+                       yz=self.yz + other.yz,
+                       zx=self.zx + other.zx,
+                       )
+
+    def __sub__(self, other):
+        return Tensor3(xx=self.xx - other.xx,
+                       yy=self.yy - other.yy,
+                       zz=self.zz - other.zz,
+                       xy=self.xy - other.xy,
+                       yz=self.yz - other.yz,
+                       zx=self.zx - other.zx,
+                       )
+
+    def __mul__(self, value):
+        return Tensor3(xx=self.xx * value,
+                       yy=self.yy * value,
+                       zz=self.zz * value,
+                       xy=self.xy * value,
+                       yz=self.yz * value,
+                       zx=self.zx * value,
+                       )
+
+    def __truediv__(self, value):
+        return Tensor3(xx=self.xx / value,
+                       yy=self.yy / value,
+                       zz=self.zz / value,
+                       xy=self.xy / value,
+                       yz=self.yz / value,
+                       zx=self.zx / value,
+                       )
+
     core.use(c_double, 'tensor3_get_along', c_void_p, c_double, c_double, c_double)
 
     def get_along(self, *args):
@@ -3603,10 +3649,10 @@ class Tensor2Interp2(HasHandle):
         """
         Serialized save. Optional extension:
         1:.txt
-            text format
+            .TXT format
             (cross-platform, basically unreadable)
         2:.xml
-            xml format
+            .XML format
             (specific readability, largest volume, slowest read and write, cross-platform)
         3:. Other
             binary formats
@@ -3718,10 +3764,10 @@ class Tensor3Interp3(HasHandle):
         """
         Serialized save. Optional extension:
         1:.txt
-            text format
+            .TXT format
             (cross-platform, basically unreadable)
         2:.xml
-            xml format
+            .XML format
             (specific readability, largest volume, slowest read and write, cross-platform)
         3:. Other
             binary formats
@@ -3849,10 +3895,10 @@ class Coord2(HasHandle):
         """
         Serialized save. Optional extension:
         1:.txt
-            text format
+            .TXT format
             (cross-platform, basically unreadable)
         2:.xml
-            xml format
+            .XML format
             (specific readability, largest volume, slowest read and write, cross-platform)
         3:. Other
             binary formats
@@ -3979,10 +4025,10 @@ class Coord3(HasHandle):
         """
         Serialized save. Optional extension:
         1:.txt
-            text format
+            .TXT format
             (cross-platform, basically unreadable)
         2:.xml
-            xml format
+            .XML format
             (specific readability, largest volume, slowest read and write, cross-platform)
         3:. Other
             binary formats
@@ -4221,11 +4267,11 @@ class Mesh3(HasHandle):
         core.use(c_double, 'mesh3_get_node_attr', c_void_p, c_size_t, c_size_t)
         core.use(None, 'mesh3_set_node_attr', c_void_p, c_size_t, c_size_t, c_double)
 
-        def get_attr(self, index, default_val=None, **kwargs):
+        def get_attr(self, index, default_val=None, **valid_range):
             if index is None:
                 return default_val
             value = core.mesh3_get_node_attr(self.model.handle, self.index, index)
-            if _attr_in_range(value, **kwargs):
+            if _attr_in_range(value, **valid_range):
                 return value
             else:
                 return default_val
@@ -4316,11 +4362,11 @@ class Mesh3(HasHandle):
         core.use(c_double, 'mesh3_get_link_attr', c_void_p, c_size_t, c_size_t)
         core.use(None, 'mesh3_set_link_attr', c_void_p, c_size_t, c_size_t, c_double)
 
-        def get_attr(self, index, default_val=None, **kwargs):
+        def get_attr(self, index, default_val=None, **valid_range):
             if index is None:
                 return default_val
             value = core.mesh3_get_link_attr(self.model.handle, self.index, index)
-            if _attr_in_range(value, **kwargs):
+            if _attr_in_range(value, **valid_range):
                 return value
             else:
                 return default_val
@@ -4419,11 +4465,11 @@ class Mesh3(HasHandle):
         core.use(c_double, 'mesh3_get_face_attr', c_void_p, c_size_t, c_size_t)
         core.use(None, 'mesh3_set_face_attr', c_void_p, c_size_t, c_size_t, c_double)
 
-        def get_attr(self, index, default_val=None, **kwargs):
+        def get_attr(self, index, default_val=None, **valid_range):
             if index is None:
                 return default_val
             value = core.mesh3_get_face_attr(self.model.handle, self.index, index)
-            if _attr_in_range(value, **kwargs):
+            if _attr_in_range(value, **valid_range):
                 return value
             else:
                 return default_val
@@ -4522,11 +4568,11 @@ class Mesh3(HasHandle):
         core.use(c_double, 'mesh3_get_body_attr', c_void_p, c_size_t, c_size_t)
         core.use(None, 'mesh3_set_body_attr', c_void_p, c_size_t, c_size_t, c_double)
 
-        def get_attr(self, index, default_val=None, **kwargs):
+        def get_attr(self, index, default_val=None, **valid_range):
             if index is None:
                 return default_val
             value = core.mesh3_get_body_attr(self.model.handle, self.index, index)
-            if _attr_in_range(value, **kwargs):
+            if _attr_in_range(value, **valid_range):
                 return value
             else:
                 return default_val
@@ -4567,10 +4613,10 @@ class Mesh3(HasHandle):
         """
         Serialized save. Optional extension:
         1:.txt
-            text format
+            .TXT format
             (cross-platform, basically unreadable)
         2:.xml
-            xml format
+            .XML format
             (specific readability, largest volume, slowest read and write, cross-platform)
         3:. Other
             binary formats
@@ -4936,10 +4982,10 @@ class LinearExpr(HasHandle):
         """
         Serialized save. Optional extension:
         1:.txt
-            text format
+            .TXT format
             (cross-platform, basically unreadable)
         2:.xml
-            xml format
+            .XML format
             (specific readability, largest volume, slowest read and write, cross-platform)
         3:. Other
             binary formats
@@ -5154,10 +5200,10 @@ class DynSys(HasHandle):
         """
         Serialized save. Optional extension:
         1:.txt
-            text format
+            .TXT format
             (cross-platform, basically unreadable)
         2:.xml
-            xml format
+            .XML format
             (specific readability, largest volume, slowest read and write, cross-platform)
         3:. Other
             binary formats
@@ -5585,14 +5631,14 @@ class SpringSys(HasHandle):
 
         core.use(c_double, 'springsys_get_spring_attr', c_void_p, c_size_t, c_size_t)
 
-        def get_attr(self, index, default_val=None, **kwargs):
+        def get_attr(self, index, default_val=None, **valid_range):
             """
             该Spring的第index个自定义属性值。当不存在时，默认为一个无穷大的值(大于1.0e100)
             """
             if index is None:
                 return default_val
             value = core.springsys_get_spring_attr(self.model.handle, self.index, index)
-            if _attr_in_range(value, **kwargs):
+            if _attr_in_range(value, **valid_range):
                 return value
             else:
                 return default_val
@@ -5713,10 +5759,10 @@ class SpringSys(HasHandle):
         """
         Serialized save. Optional extension:
         1:.txt
-            text format
+            .TXT format
             (cross-platform, basically unreadable)
         2:.xml
-            xml format
+            .XML format
             (specific readability, largest volume, slowest read and write, cross-platform)
         3:. Other
             binary formats
@@ -6175,14 +6221,14 @@ class SeepageMesh(HasHandle, HasCells):
 
         core.use(c_double, 'seepage_mesh_get_cell_attr', c_void_p, c_size_t, c_size_t)
 
-        def get_attr(self, index, default_val=None, **kwargs):
+        def get_attr(self, index, default_val=None, **valid_range):
             """
             第index个自定义属性
             """
             if index is None:
                 return default_val
             value = core.seepage_mesh_get_cell_attr(self.model.handle, self.index, index)
-            if _attr_in_range(value, **kwargs):
+            if _attr_in_range(value, **valid_range):
                 return value
             else:
                 return default_val
@@ -6338,14 +6384,14 @@ class SeepageMesh(HasHandle, HasCells):
 
         core.use(c_double, 'seepage_mesh_get_face_attr', c_void_p, c_size_t, c_size_t)
 
-        def get_attr(self, index, default_val=None, **kwargs):
+        def get_attr(self, index, default_val=None, **valid_range):
             """
             第index个自定义属性
             """
             if index is None:
                 return default_val
             value = core.seepage_mesh_get_face_attr(self.model.handle, self.index, index)
-            if _attr_in_range(value, **kwargs):
+            if _attr_in_range(value, **valid_range):
                 return value
             else:
                 return default_val
@@ -6384,10 +6430,10 @@ class SeepageMesh(HasHandle, HasCells):
         """
         Serialized save. Optional extension:
         1:.txt
-            text format
+            .TXT format
             (cross-platform, basically unreadable)
         2:.xml
-            xml format
+            .XML format
             (specific readability, largest volume, slowest read and write, cross-platform)
         3:. Other
             binary formats
@@ -6779,10 +6825,10 @@ class ElementMap(HasHandle):
         """
         Serialized save. Optional extension:
         1:.txt
-            text format
+            .TXT format
             (cross-platform, basically unreadable)
         2:.xml
-            xml format
+            .XML format
             (specific readability, largest volume, slowest read and write, cross-platform)
         3:. Other
             binary formats
@@ -6867,10 +6913,10 @@ class Groups(HasHandle):
         """
         Serialized save. Optional extension:
         1:.txt
-            text format
+            .TXT format
             (cross-platform, basically unreadable)
         2:.xml
-            xml format
+            .XML format
             (specific readability, largest volume, slowest read and write, cross-platform)
         3:. Other
             binary formats
@@ -6936,10 +6982,10 @@ class Seepage(HasHandle, HasCells):
             """
             Serialized save. Optional extension:
             1:.txt
-                text format
+                .TXT format
                 (cross-platform, basically unreadable)
             2:.xml
-                xml format
+                .XML format
                 (specific readability, largest volume, slowest read and write, cross-platform)
             3:. Other
                 binary formats
@@ -7230,10 +7276,10 @@ class Seepage(HasHandle, HasCells):
             """
             Serialized save. Optional extension:
             1:.txt
-                text format
+                .TXT format
                 (cross-platform, basically unreadable)
             2:.xml
-                xml format
+                .XML format
                 (specific readability, largest volume, slowest read and write, cross-platform)
             3:. Other
                 binary formats
@@ -7332,6 +7378,18 @@ class Seepage(HasHandle, HasCells):
                     assert 1.0e-7 < value < 1.0e40
                     itp = Interp2.create_const(value)
                     self.vis.clone(itp)
+
+        def get_den(self, pressure, temp):
+            """
+            返回给定压力和温度下的密度
+            """
+            return self.den(pressure, temp)
+
+        def get_vis(self, pressure, temp):
+            """
+            返回给定压力和温度下的粘性
+            """
+            return self.vis(pressure, temp)
 
         core.use(c_double, 'fludef_get_specific_heat', c_void_p)
         core.use(None, 'fludef_set_specific_heat', c_void_p, c_double)
@@ -7485,10 +7543,10 @@ class Seepage(HasHandle, HasCells):
             """
             Serialized save. Optional extension:
             1:.txt
-                text format
+                .TXT format
                 (cross-platform, basically unreadable)
             2:.xml
-                xml format
+                .XML format
                 (specific readability, largest volume, slowest read and write, cross-platform)
             3:. Other
                 binary formats
@@ -7627,7 +7685,7 @@ class Seepage(HasHandle, HasCells):
         core.use(c_double, 'fluid_get_attr', c_void_p, c_size_t)
         core.use(None, 'fluid_set_attr', c_void_p, c_size_t, c_double)
 
-        def get_attr(self, index, default_val=None, **kwargs):
+        def get_attr(self, index, default_val=None, **valid_range):
             """
             第index个流体自定义属性。当两个流体数据相加时，自定义属性将根据质量进行加权平均。
             """
@@ -7635,7 +7693,7 @@ class Seepage(HasHandle, HasCells):
                 return default_val
             # 当index个属性不存在时，默认为无穷大的一个值(1.0e100以上的浮点数)
             value = core.fluid_get_attr(self.handle, index)
-            if _attr_in_range(value, **kwargs):
+            if _attr_in_range(value, **valid_range):
                 return value
             else:
                 return default_val
@@ -7770,10 +7828,10 @@ class Seepage(HasHandle, HasCells):
             """
             Serialized save. Optional extension:
             1:.txt
-                text format
+                .TXT format
                 (cross-platform, basically unreadable)
             2:.xml
-                xml format
+                .XML format
                 (specific readability, largest volume, slowest read and write, cross-platform)
             3:. Other
                 binary formats
@@ -7891,7 +7949,7 @@ class Seepage(HasHandle, HasCells):
 
         @v0.setter
         def v0(self, value):
-            assert value >= 1.0e-10
+            assert value >= 1.0e-10, f'value = {value}'
             core.seepage_cell_set_v0(self.handle, value)
 
         core.use(c_double, 'seepage_cell_get_k', c_void_p)
@@ -7916,9 +7974,9 @@ class Seepage(HasHandle, HasCells):
             k = max(1.0e-30, abs(dv)) / max(1.0e-30, abs(dp))
             self.k = k
             v0 = v - p * k
-            self.v0 = v0
             if v0 <= 0:
-                print(f'Warning: v0 (= {v0}) <= 0 at {self.pos}')
+                warnings.warn(f'v0 (= {v0}) <= 0 at {self.pos}. p={p}, v={v}, dp={dp}, dv={dv}')
+            self.v0 = v0
             return self
 
         def v2p(self, v):
@@ -8051,7 +8109,7 @@ class Seepage(HasHandle, HasCells):
             """
             return core.seepage_cell_get_attr_n(self.handle)
 
-        def get_attr(self, index, default_val=None, **kwargs):
+        def get_attr(self, index, default_val=None, **valid_range):
             """
             该Cell的第 attr_id个自定义属性值。当不存在时，默认为一个无穷大的值(大于1.0e100)
             """
@@ -8070,7 +8128,7 @@ class Seepage(HasHandle, HasCells):
                     return self.k
                 return default_val
             value = core.seepage_cell_get_attr(self.handle, index)
-            if _attr_in_range(value, **kwargs):
+            if _attr_in_range(value, **valid_range):
                 return value
             else:
                 return default_val
@@ -8310,10 +8368,10 @@ class Seepage(HasHandle, HasCells):
             """
             Serialized save. Optional extension:
             1:.txt
-                text format
+                .TXT format
                 (cross-platform, basically unreadable)
             2:.xml
-                xml format
+                .XML format
                 (specific readability, largest volume, slowest read and write, cross-platform)
             3:. Other
                 binary formats
@@ -8362,14 +8420,14 @@ class Seepage(HasHandle, HasCells):
         core.use(c_double, 'seepage_face_get_attr', c_void_p, c_size_t)
         core.use(None, 'seepage_face_set_attr', c_void_p, c_size_t, c_double)
 
-        def get_attr(self, index, default_val=None, **kwargs):
+        def get_attr(self, index, default_val=None, **valid_range):
             """
             该Face的第 attr_id个自定义属性值。当不存在时，默认为一个无穷大的值(大于1.0e100)
             """
             if index is None:
                 return default_val
             value = core.seepage_face_get_attr(self.handle, index)
-            if _attr_in_range(value, **kwargs):
+            if _attr_in_range(value, **valid_range):
                 return value
             else:
                 return default_val
@@ -8549,10 +8607,10 @@ class Seepage(HasHandle, HasCells):
             """
             Serialized save. Optional extension:
             1:.txt
-                text format
+                .TXT format
                 (cross-platform, basically unreadable)
             2:.xml
-                xml format
+                .XML format
                 (specific readability, largest volume, slowest read and write, cross-platform)
             3:. Other
                 binary formats
@@ -8940,10 +8998,10 @@ class Seepage(HasHandle, HasCells):
         """
         Serialized save. Optional extension:
         1:.txt
-            text format
+            .TXT format
             (cross-platform, basically unreadable)
         2:.xml
-            xml format
+            .XML format
             (specific readability, largest volume, slowest read and write, cross-platform)
         3:. Other
             binary formats
@@ -9357,6 +9415,8 @@ class Seepage(HasHandle, HasCells):
         通过这里Seepage.set_kr和Face.set_ikr配合，可以在模型的不同区域来配置不同的相渗.
         """
         assert kr is not None
+
+        # 获得相对渗透率曲线数据，并且存储在tmp中
         if isinstance(kr, Interp1):
             assert saturation is None
             tmp = kr
@@ -9367,9 +9427,31 @@ class Seepage(HasHandle, HasCells):
                 kr = Vector(kr)
             assert len(saturation) > 0 and len(kr) > 0
             tmp = Interp1(x=saturation, y=kr)
+
+        # 检查流体的id
         if index is None:
             index = 9999999999  # Now, modify the default kr
+        else:
+            if isinstance(index, str):  # 此时，通过查表来获得流体的id. since 2024-5-8
+                idx = self.find_fludef(name=index)
+                assert len(idx) == 1, f'You can not set the kr of {index} while its id is: {idx}'
+                index = idx[0]
+
+        # 最终，设置相渗数据
         core.seepage_set_kr(self.handle, index, tmp.handle)
+
+    def set_default_kr(self, value):
+        """
+        set the default kr. since 2024-5-8
+        """
+        if isinstance(value, Interp1):
+            self.set_kr(kr=value)
+            return
+        else:
+            x = value[0]
+            y = value[1]
+            self.set_kr(saturation=x, kr=y)
+            return
 
     core.use(c_double, 'seepage_get_kr', c_void_p, c_size_t)
 
@@ -9387,14 +9469,14 @@ class Seepage(HasHandle, HasCells):
     core.use(None, 'seepage_set_attr',
              c_void_p, c_size_t, c_double)
 
-    def get_attr(self, index, default_val=None, **kwargs):
+    def get_attr(self, index, default_val=None, **valid_range):
         """
         模型的第index个自定义属性
         """
         if index is None:
             return default_val
         value = core.seepage_get_attr(self.handle, index)
-        if _attr_in_range(value, **kwargs):
+        if _attr_in_range(value, **valid_range):
             return value
         else:
             return default_val
@@ -10030,8 +10112,8 @@ class Seepage(HasHandle, HasCells):
         清除并设置所有的流体定义
         """
         self.clear_fludefs()
-        for fdef in args:
-            self.add_fludef(fdef)
+        for item in args:
+            self.add_fludef(item)
 
     core.use(c_size_t, 'seepage_get_pc_n', c_void_p)
 
@@ -10740,10 +10822,10 @@ class Thermal(HasHandle):
         """
         Serialized save. Optional extension:
         1:.txt
-            text format
+            .TXT format
             (cross-platform, basically unreadable)
         2:.xml
-            xml format
+            .XML format
             (specific readability, largest volume, slowest read and write, cross-platform)
         3:. Other
             binary formats
@@ -11475,10 +11557,10 @@ class InvasionPercolation(HasHandle):
         """
         Serialized save. Optional extension:
         1:.txt
-            text format
+            .TXT format
             (cross-platform, basically unreadable)
         2:.xml
-            xml format
+            .XML format
             (specific readability, largest volume, slowest read and write, cross-platform)
         3:. Other
             binary formats
@@ -11939,10 +12021,10 @@ class Dfn2(HasHandle):
         """
         Serialized save. Optional extension:
         1:.txt
-            text format
+            .TXT format
             (cross-platform, basically unreadable)
         2:.xml
-            xml format
+            .XML format
             (specific readability, largest volume, slowest read and write, cross-platform)
         3:. Other
             binary formats
@@ -12067,10 +12149,10 @@ class Lattice3(HasHandle):
         """
         Serialized save. Optional extension:
         1:.txt
-            text format
+            .TXT format
             (cross-platform, basically unreadable)
         2:.xml
-            xml format
+            .XML format
             (specific readability, largest volume, slowest read and write, cross-platform)
         3:. Other
             binary formats
@@ -12201,10 +12283,10 @@ class DDMSolution2(HasHandle):
         """
         Serialized save. Optional extension:
         1:.txt
-            text format
+            .TXT format
             (cross-platform, basically unreadable)
         2:.xml
-            xml format
+            .XML format
             (specific readability, largest volume, slowest read and write, cross-platform)
         3:. Other
             binary formats
@@ -12328,7 +12410,7 @@ class FractureNetwork(HasHandle):
         core.use(c_double, 'frac_nd_get_attr', c_void_p, c_size_t)
         core.use(None, 'frac_nd_set_attr', c_void_p, c_size_t, c_double)
 
-        def get_attr(self, index, default_val=None, **kwargs):
+        def get_attr(self, index, default_val=None, **valid_range):
             """
             第index个自定义属性
             """
@@ -12336,7 +12418,7 @@ class FractureNetwork(HasHandle):
                 return default_val
             # 当index个属性不存在时，默认为无穷大的一个值(1.0e100以上的浮点数)
             value = core.frac_nd_get_attr(self.handle, index)
-            if _attr_in_range(value, **kwargs):
+            if _attr_in_range(value, **valid_range):
                 return value
             else:
                 return default_val
@@ -12363,7 +12445,7 @@ class FractureNetwork(HasHandle):
         core.use(c_double, 'frac_bd_get_attr', c_void_p, c_size_t)
         core.use(None, 'frac_bd_set_attr', c_void_p, c_size_t, c_double)
 
-        def get_attr(self, index, default_val=None, **kwargs):
+        def get_attr(self, index, default_val=None, **valid_range):
             """
             第index个自定义属性
             """
@@ -12371,7 +12453,7 @@ class FractureNetwork(HasHandle):
                 return default_val
             # 当index个属性不存在时，默认为无穷大的一个值(1.0e100以上的浮点数)
             value = core.frac_bd_get_attr(self.handle, index)
-            if _attr_in_range(value, **kwargs):
+            if _attr_in_range(value, **valid_range):
                 return value
             else:
                 return default_val
@@ -12604,10 +12686,10 @@ class FractureNetwork(HasHandle):
         """
         Serialized save. Optional extension:
         1:.txt
-            text format
+            .TXT format
             (cross-platform, basically unreadable)
         2:.xml
-            xml format
+            .XML format
             (specific readability, largest volume, slowest read and write, cross-platform)
         3:. Other
             binary formats
@@ -12733,18 +12815,20 @@ class FracAlg:
     core.use(c_size_t, 'frac_alg_update_disp', c_void_p, c_void_p,
              c_size_t, c_size_t,
              c_double, c_double,
-             c_size_t, c_double, c_double)
+             c_size_t, c_size_t, c_double, c_double)
 
     @staticmethod
-    def update_disp(network, matrix, fa_yy=99999999, fa_xy=99999999, gradw_max=0, err_max=0.1, iter_max=10000,
+    def update_disp(network, matrix, fa_yy=99999999, fa_xy=99999999,
+                    gradw_max=0, err_max=0.1, iter_min=10, iter_max=10000,
                     ratio_max=0.99, dist_max=1.0e6):
         """
         更新位移
         """
         assert isinstance(network, FractureNetwork)
         assert isinstance(matrix, InfMatrix)
-        return core.frac_alg_update_disp(network.handle, matrix.handle, fa_yy, fa_xy
-                                         , gradw_max, err_max, iter_max, ratio_max, dist_max)
+        return core.frac_alg_update_disp(network.handle, matrix.handle, fa_yy, fa_xy,
+                                         gradw_max, err_max, iter_min, iter_max,
+                                         ratio_max, dist_max)
 
     core.use(None, 'frac_alg_extend_tip',
              c_void_p, c_void_p, c_void_p, c_double, c_double, c_double)

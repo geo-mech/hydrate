@@ -47,6 +47,12 @@ def dfn_v3(data=None, **opt):
 
     # z方向的范围和裂缝的高度分布
     zr, heights = opt.get('zr'), opt.get('heights')
+
+    if heights is None:
+        hr = opt.get('hr')
+        if hr is not None:
+            heights = linspace(hr[0], hr[1], 100)
+
     if zr is None or heights is None:
         return []
 
@@ -57,8 +63,13 @@ def dfn_v3(data=None, **opt):
     if len(heights) <= 0:
         return []
 
-    # 返回结果
-    return from_segs(dfn2(**opt), z_min=zr[0], z_max=zr[1], heights=heights)
+    # 生成裂缝数据
+    fractures = from_segs(dfn2(**opt), z_min=zr[0], z_max=zr[1], heights=heights)
+
+    if opt.get('remove_small', False):
+        return remove_small(fractures)
+    else:
+        return fractures
 
 
 def create_fractures(box=None, p21=None, angles=None, lengths=None, heights=None, l_min=None):

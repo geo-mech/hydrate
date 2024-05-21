@@ -1,7 +1,11 @@
 import os
 
 from zmlx.filesys.join_paths import join_paths
-from zmlx.fluid.nist.from_file import from_file
+from zmlx.fluid.from_file import from_file
+
+
+def data_file():
+    return join_paths(os.path.dirname(__file__), 'data.txt')
 
 
 def create(t_min=261, t_max=329, p_min=2.0e6, p_max=99.0e6, name=None):
