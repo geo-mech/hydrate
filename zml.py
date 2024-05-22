@@ -38,7 +38,7 @@ except Exception as _err:
 is_windows = os.name == 'nt'
 
 # Version of the zml module (date represented by six digits)
-version = 240518
+version = 240522
 
 
 class Object:
