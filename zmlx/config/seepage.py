@@ -274,7 +274,7 @@ solid_buffer = Seepage.CellData()
 
 def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
             fa_q=None, fa_k=None, cond_updaters=None, diffusions=None,
-            react_bufs=None):
+            react_bufs=None, vis_max=None, vis_min=None):
     """
     在时间上向前迭代。其中
         dt:     时间步长,若为None，则使用自动步长
@@ -297,10 +297,16 @@ def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
         model.update_den(relax_factor=0.3, fa_t=fa_t)
 
     if model.not_has_tag('disable_update_vis') and model.fludef_number > 0:
+        # 更新流体的粘性系数(注意，当有固体存在的时候，无比将粘性系数的最大值设置为1.0e30)
+        if vis_min is None:
+            vis_min = 1.0e-7
+        if vis_max is None:
+            vis_max = 1.0
+        assert 1.0e-10 <= vis_min <= vis_max <= 1.0e40
         ca_p = model.reg_cell_key('pre')
         fa_t = model.reg_flu_key('temperature')
         model.update_vis(ca_p=ca_p, fa_t=fa_t,
-                         relax_factor=1.0, min=1.0e-7, max=1.0)
+                         relax_factor=1.0, min=vis_min, max=vis_max)
 
     if model.injector_number > 0:
         # 实施流体的注入操作.
