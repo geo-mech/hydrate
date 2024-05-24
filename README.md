@@ -31,14 +31,27 @@ ZmlVersion=240522
 ### 安装
 
 1. Windows 10/11, x64, 安装[VC_redist.x64.exe](https://gitee.com/geomech/hydrate/attach_files);
-2. 安装[Python](https://www.python.org/) 3.7+，并安装`numpy`, `scipy`, `PyQt5`, `matplotlib`; 
-3. 将[zml.py](https://gitee.com/geomech/hydrate/blob/master/zml.py)所在文件夹添加到Python[搜索路径](https://zhuanlan.zhihu.com/p/530589364);
+2. 安装[Python](https://www.python.org/) 3.7+ (建议3.9以上版本), 64位，并安装`numpy`, `scipy`, `PyQt5`, `matplotlib`; 建议使用 [WinPython](https://pan.baidu.com/s/1PnqdA28GdUKhA9A_7x20zQ) 集成环境 (链接：[https://pan.baidu.com/s/1PnqdA28GdUKhA9A_7x20zQ](https://pan.baidu.com/s/1PnqdA28GdUKhA9A_7x20zQ), 提取码：mba8);
+3. 将[zml.py](https://gitee.com/geomech/hydrate/blob/master/zml.py)所在文件夹添加到Python[搜索路径](https://zhuanlan.zhihu.com/p/530589364)。
 
 ### 使用
 
 1. 参考[zmlx/demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo);
 2. 运行[UI.pyw](https://gitee.com/geomech/hydrate/blob/master/UI.pyw)启动界面 (会尝试将`zml`添加到[搜索路径](https://zhuanlan.zhihu.com/p/530589364));
-3. 发现问题或者有其它建模需求，请[联系作者](http://sourcedb.igg.cas.cn/cn/zjrck/201703/t20170306_4755492.html);
+
+### 提问
+
+使用过程中遇到问题，请[**新建Issue**](https://gitee.com/geomech/hydrate/issues/new)来向作者提问。
+
+### 文章
+算法及结果参考基于[IGG-Hydrate](https://gitee.com/geomech/hydrate)发表的相关文章：
+
+1. [Zhang, Z., et al. (2024)](https://gitee.com/geomech/hydrate/attach_files). "Optimizing fracturing techniques for enhanced hydrate dissociation in low-permeability reservoirs: Insights from numerical simulation." _Gas Science and Engineering_ **125**.
+2. [Zhang, Z., et al. (2024)](https://gitee.com/geomech/hydrate/attach_files). "Optimization of the natural gas hydrate hot water injection production method: Insights from numerical and phase equilibrium analysis." _Applied Energy_ **361**.
+3. [Zhang, Z., et al. (2023)](https://gitee.com/geomech/hydrate/attach_files). "Comprehensive effects of heat and flow on the methane hydrate dissociation in porous media." _Energy_ **265**.
+4. [Li, Y., et al. (2023)](https://gitee.com/geomech/hydrate/attach_files). "Numerical Investigation of the Depressurization Exploitation Scheme of Offshore Natural Gas Hydrate: Enlightenments for the Depressurization Amplitude and Horizontal Well Location." _Energy & Fuels 37_(**14**): 10706-10720.
+5. [Briceño Montilla, M. J., et al. (2023)](https://gitee.com/geomech/hydrate/attach_files). "Theoretical Analysis of the Effect of Electrical Heat In Situ Injection on the Kerogen Decomposition for the Development of Shale Oil Deposits." _Energies_ **16**(13).
+6. [Xu, T., et al. (2021)](https://gitee.com/geomech/hydrate/attach_files). "Numerical Evaluation of Gas Hydrate Production Performance of the Depressurization and Backfilling with an In Situ Supplemental Heat Method." _ACS Omega_ **6**(18): 12274-12286.
 
 ### 开发
 欢迎并感谢您成为开发者并推送代码：
@@ -49,3 +62,5 @@ ZmlVersion=240522
 
 1. 中国科学院地质地球所重点部署项目(IGGCAS-201903);
 2. 国家自然科学基金地质联合基金(U2244223);
+
+

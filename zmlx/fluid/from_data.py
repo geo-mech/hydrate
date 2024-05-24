@@ -3,6 +3,9 @@ from zmlx.utility.Interp2 import Interp2 as Interpolator
 
 
 def get_max(data, get, max_):
+    """
+    找到一列元素的最大值
+    """
     if data is None:
         return
 
@@ -18,7 +21,13 @@ def get_max(data, get, max_):
     return result
 
 
-def get_itp(data, get_x, get_y, get_v, dx=None, dy=None, x_min=None, x_max=None, y_min=None, y_max=None):
+def get_itp(data, get_x, get_y, get_v, dx=None, dy=None,
+            x_min=None, x_max=None,
+            y_min=None, y_max=None,
+            v_min=None, v_max=None):
+    """
+    创建插值，用于创建流体. 其中v_min和v_max指定了数据的有效范围，超过这个范围的数据将会被忽略.
+    """
     if data is None:
         return
 
@@ -49,14 +58,24 @@ def get_itp(data, get_x, get_y, get_v, dx=None, dy=None, x_min=None, x_max=None,
     vy = []
     vv = []
 
+    # 允许的数值的范围，在此范围之外的数据将会被忽略掉
+    if v_min is None:
+        v_min = -1.0e100
+
+    if v_max is None:
+        v_max = 1.0e100
+
+    assert v_min <= v_max
+
     for item in data:
         x = get_x(item)
         y = get_y(item)
         v = get_v(item)
         if x is not None and y is not None and v is not None:
-            vx.append(x)
-            vy.append(y)
-            vv.append(v)
+            if v_min <= v <= v_max:
+                vx.append(x)
+                vy.append(y)
+                vv.append(v)
 
     if len(vx) == 0:
         return
@@ -80,17 +99,24 @@ def get_itp(data, get_x, get_y, get_v, dx=None, dy=None, x_min=None, x_max=None,
 
 
 def from_data(data, get_t, get_p, get_den, get_vis,
-              t_min=None, t_max=None, p_min=None, p_max=None, name=None, specific_heat=None):
+              t_min=None, t_max=None, p_min=None, p_max=None,
+              name=None, specific_heat=None):
     """
-    创建液态co2的定义.
+    创建流体的定义.
+        注意，对于流体数据，小于1.0e-20的密度或者粘性系数，将会被忽略掉
     """
     den = get_itp(data, get_x=get_p, get_y=get_t, get_v=get_den,
-                  dx=1e6, dy=1, x_min=p_min, x_max=p_max, y_min=t_min, y_max=t_max)
+                  dx=1e6, dy=1, x_min=p_min, x_max=p_max,
+                  y_min=t_min, y_max=t_max,
+                  v_min=1.0e-20, v_max=1.0e50)
 
     vis = get_itp(data, get_x=get_p, get_y=get_t, get_v=get_vis,
-                  dx=1e6, dy=1, x_min=p_min, x_max=p_max, y_min=t_min, y_max=t_max)
+                  dx=1e6, dy=1, x_min=p_min, x_max=p_max,
+                  y_min=t_min, y_max=t_max,
+                  v_min=1.0e-20, v_max=1.0e50)
 
     if specific_heat is None:
         specific_heat = 2000.0
 
-    return Seepage.FluDef(den=den, vis=vis, specific_heat=specific_heat, name=name)
+    return Seepage.FluDef(den=den, vis=vis, specific_heat=specific_heat,
+                          name=name)

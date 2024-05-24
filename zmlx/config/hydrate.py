@@ -163,11 +163,11 @@ def create_reactions(support_ch4_hyd_diss=True, support_ch4_hyd_form=True,
                                          wat='h2o'))
 
     if has_ch4_in_liq:
-        result.append(dissolution.create(gas='ch4', gas_in_liq='ch4_in_liq',
+        result.append(dissolution.create(sol='ch4', sol_in_liq='ch4_in_liq',
                                          liq='liq', ca_sol='n_ch4_sol'))
 
     if has_co2_in_liq:
-        result.append(dissolution.create(gas='co2', gas_in_liq='co2_in_liq',
+        result.append(dissolution.create(sol='co2', sol_in_liq='co2_in_liq',
                                          liq='liq', ca_sol='n_co2_sol'))
 
     # 其它的反应

@@ -77,12 +77,16 @@ def set_opath(folder=None, tag=None):
         warnings.warn('The given folder is None')
         return
 
+    # 转化为绝对路径，这很重要
+    folder = os.path.abspath(folder)
+
     assert not is_chinese(folder), f'Error: folder contains Chinese. folder = {folder}'
 
+    # 尝试创建目录
     if not os.path.isdir(folder):
         make_dirs(folder)
 
-    if os.path.isdir(folder):
+    if os.path.isdir(folder):   # 只有目录存在的时候才执行
         if tag is not None:
             # 当给定tag的时候，需要确保这个目录是一个空目录，
             # 或者此tag已经存在，防止数据被覆盖
@@ -96,15 +100,19 @@ def set_opath(folder=None, tag=None):
 
         # 修改工作目录
         app_data.setenv('current_work_directory',
-                        os.path.abspath(folder),  # 这里，写入绝对路径
+                        folder,  # 这里，写入绝对路径
                         encoding='utf-8')
+
+        # 显示消息
+        print(f'Succeed set data path to: "{folder}" ')
 
 
 def set(*args, **kwargs):
     """
     设置输出目录
     """
-    warnings.warn('Use set_opath instead. This function will be remove after 2025-5-21',
+    warnings.warn('Use set_opath instead. '
+                  'This function will be remove after 2025-5-21',
                   DeprecationWarning)
     set_opath(*args, **kwargs)
 

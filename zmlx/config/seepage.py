@@ -299,9 +299,15 @@ def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
     if model.not_has_tag('disable_update_vis') and model.fludef_number > 0:
         # 更新流体的粘性系数(注意，当有固体存在的时候，无比将粘性系数的最大值设置为1.0e30)
         if vis_min is None:
+            # 允许的最小的粘性系数
             vis_min = 1.0e-7
         if vis_max is None:
-            vis_max = 1.0
+            # !!
+            # 自2024-5-23开始，将vis_max的默认值从1.0修改为1.0e30，即默认
+            #                 不再对粘性系数的最大值进行限制.
+            #                 !!
+            vis_max = 1.0e30
+
         assert 1.0e-10 <= vis_min <= vis_max <= 1.0e40
         ca_p = model.reg_cell_key('pre')
         fa_t = model.reg_flu_key('temperature')
