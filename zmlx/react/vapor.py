@@ -1,5 +1,26 @@
+"""
+定义蒸汽和水之间的相变的反应.
+    假设水的比热取 4200
+    蒸汽的比热取 1850.0
+那么，将1kg的水，从273+20K加热到373K，需要消耗热量
+    4200*80=336000J
+接下来，相变气化消耗热量
+    2.26e6J
+在之后，蒸汽的温度每升高100K，消耗的热量大约为
+    1850*100=185000J
+因此，对于常温（20度）的水，加热形成蒸汽，所需要消耗的热量，是和蒸汽的温度相关的，具体地，
+产生1kg的蒸汽需要消耗的热量大约为
+    336000+2.26e6+(T-373)*1850
+    =2596000+(T-373)*1850
+这样：
+    T=400, 2645950J
+    T=500, 2830950J
+    T=600, 3015950J
+    T=700, 3200950J
+    T=800, 3385950J
+    T=900, 3570950J
+"""
 from math import exp
-
 from zmlx.react import melt
 
 
@@ -12,9 +33,15 @@ def create(vap, wat, fa_t=None, fa_c=None):
     vt = [float(i) for i in range(290, 700)]
     vp = [exp(9.3876 - 3826.36 / (t - 45.47)) * 1.0e6 for t in vt]
 
+    # 假设反应在373K的时候发生，那么每千克的物质，会释放
+    # 大约2.26e6焦耳的热量.
     return melt.create(sol=wat, flu=vap,
                        temp=273 + 100,
-                       heat=2.26e6, fa_t=fa_t, fa_c=fa_c, vp=vp, vt=vt, t2q=None)
+                       heat=2.26e6,
+                       fa_t=fa_t,
+                       fa_c=fa_c,
+                       vp=vp,
+                       vt=vt, t2q=None)
 
 
 def __compare():
