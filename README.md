@@ -39,11 +39,11 @@ ZmlVersion=240522
 1. 参考[zmlx/demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo);
 2. 运行[UI.pyw](https://gitee.com/geomech/hydrate/blob/master/UI.pyw)启动界面 (会尝试将`zml`添加到[搜索路径](https://zhuanlan.zhihu.com/p/530589364));
 
-### 提问
+### 反馈
 
-使用过程中遇到问题，请[**新建Issue**](https://gitee.com/geomech/hydrate/issues/new)来向作者提问。
+使用过程中遇到问题，请[新建Issue](https://gitee.com/geomech/hydrate/issues/new)来向作者提问或者反馈。
 
-### 文章
+### 资料
 算法及结果参考基于[IGG-Hydrate](https://gitee.com/geomech/hydrate)发表的相关文章：
 
 1. [Zhang, Z., et al. (2024)](https://gitee.com/geomech/hydrate/attach_files). "Optimizing fracturing techniques for enhanced hydrate dissociation in low-permeability reservoirs: Insights from numerical simulation." _Gas Science and Engineering_ **125**.
@@ -58,7 +58,7 @@ ZmlVersion=240522
 1. 使用[Fork + Pull 模式](https://help.gitee.com/base/pullrequest/Fork+Pull)参与开发;
 2. 只修改自己创建的文件(如果在其它文件里发现bug，请[新建Issue](https://gitee.com/geomech/hydrate/issues/new)来反馈).
 
-### 项目资助
+### 致谢
 
 1. 中国科学院地质地球所重点部署项目(IGGCAS-201903);
 2. 国家自然科学基金地质联合基金(U2244223);

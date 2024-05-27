@@ -6568,195 +6568,43 @@ class SeepageMesh(HasHandle, HasCells):
             vol += cell.vol
         return vol
 
-    def load_ascii(self, cellfile, facefile):
-        """
-        从文件中导入几何结构。其中cellfile定义cell的信息，至少包含4列，分别为x,y,z,vol；
-        facefile定义face的性质，至少包含4裂缝，分别为cell_i0,cell_i1,area,length
-        """
-        self.clear()
-        with open(cellfile, 'r') as file:
-            for line in file.readlines():
-                vals = [float(s) for s in line.split()]
-                if len(vals) == 0:
-                    continue
-                assert len(vals) >= 4
-                cell = self.add_cell()
-                assert cell is not None
-                cell.pos = [vals[i] for i in range(0, 3)]
-                cell.vol = vals[3]
-        cell_number = self.cell_number
-        with open(facefile, 'r') as file:
-            for line in file.readlines():
-                words = line.split()
-                if len(words) == 0:
-                    continue
-                assert len(words) >= 4
-                cell_i0 = int(words[0])
-                cell_i1 = int(words[1])
-                assert cell_i0 < cell_number
-                assert cell_i0 < cell_number
-                area = float(words[2])
-                assert area > 0
-                length = float(words[3])
-                assert length > 0
-                face = self.add_face(self.get_cell(cell_i0), self.get_cell(cell_i1))
-                if face is not None:
-                    face.area = area
-                    face.length = length
+    def load_ascii(self, *args, **kwargs):
+        warnings.warn('SeepageMesh.load_ascii will be removed after 2025-5-27, '
+                      'please use the function in zmlx.seepage_mesh.ascii instead',
+                      DeprecationWarning)
+        from zmlx.seepage_mesh.ascii import load_ascii
+        load_ascii(*args, **kwargs, mesh=self)
 
-    def save_ascii(self, cellfile, facefile):
-        """
-        将当前的网格数据导出到两个文件
-        """
-        with open(cellfile, 'w') as file:
-            for cell in self.cells:
-                for elem in cell.pos:
-                    file.write('%g ' % elem)
-                file.write('%g\n' % cell.vol)
-        with open(facefile, 'w') as file:
-            for face in self.faces:
-                link = face.link
-                file.write('%d %d %g %g\n' % (link[0], link[1],
-                                              face.area, face.length))
+    def save_ascii(self, *args, **kwargs):
+        warnings.warn('SeepageMesh.save_ascii will be removed after 2025-5-27, '
+                      'please use the function in zmlx.seepage_mesh.ascii instead',
+                      DeprecationWarning)
+        from zmlx.seepage_mesh.ascii import save_ascii
+        save_ascii(*args, **kwargs, mesh=self)
 
     @staticmethod
-    def load_mesh(cellfile=None, facefile=None, path=None):
-        """
-        从文件中读取Mesh文件
-        """
-        mesh = SeepageMesh()
-        if path is not None:
-            assert cellfile is None and facefile is None
-            mesh.load(path)
-        else:
-            assert cellfile is not None and facefile is not None
-            mesh.load_ascii(cellfile, facefile)
-        return mesh
+    def load_mesh(*args, **kwargs):
+        warnings.warn('SeepageMesh.load_mesh will be removed after 2025-5-27, '
+                      'please use the function in zmlx.seepage_mesh.load_mesh instead',
+                      DeprecationWarning)
+        from zmlx.seepage_mesh.load_mesh import load_mesh as load
+        return load(*args, **kwargs)
 
     @staticmethod
-    def create_cube(x=(-0.5, 0.5), y=(-0.5, 0.5), z=(-0.5, 0.5), boxes=None):
-        """
-        创建一个立方体网格的Mesh. 参数x、y、z分别为三个方向上网格节点的位置，应保证是从小到大
-        排列好的。
-        其中:
-            当boxes是一个list的时候，将会把各个Cell对应的box，格式为(x0, y0, z0, x1, y1, z1)附加到这个list里面，
-            用以定义各个Cell的具体形状.
-        """
-        assert x is not None and y is not None and z is not None
-        assert len(x) + len(y) + len(z) >= 6
-
-        def is_sorted(vx):
-            for i in range(len(vx) - 1):
-                if vx[i] >= vx[i + 1]:
-                    return False
-            return True
-
-        assert is_sorted(x) and is_sorted(y) and is_sorted(z)
-
-        jx = len(x) - 1
-        jy = len(y) - 1
-        jz = len(z) - 1
-        assert jx > 0 and jy > 0 and jz > 0
-
-        mesh = SeepageMesh()
-
-        for ix in range(0, jx):
-            dx = x[ix + 1] - x[ix]
-            cx = x[ix] + dx / 2
-            for iy in range(0, jy):
-                dy = y[iy + 1] - y[iy]
-                cy = y[iy] + dy / 2
-                for iz in range(0, jz):
-                    dz = z[iz + 1] - z[iz]
-                    cz = z[iz] + dz / 2
-                    cell = mesh.add_cell()
-                    assert cell is not None
-                    cell.pos = (cx, cy, cz)
-                    cell.vol = dx * dy * dz
-                    # 设置属性，用以定义Cell的位置的范围.
-                    if boxes is not None:
-                        boxes.append([cx - dx / 2, cy - dy / 2, cz - dz / 2, cx + dx / 2, cy + dy / 2, cz + dz / 2])
-
-        def get_id(ix, iy, iz):
-            """
-            返回cell的全局的序号
-            """
-            return ix * (jy * jz) + iy * jz + iz
-
-        cell_n = mesh.cell_number
-        for ix in range(0, jx - 1):
-            dx = (x[ix + 2] - x[ix]) / 2
-            for iy in range(0, jy):
-                dy = y[iy + 1] - y[iy]
-                for iz in range(0, jz):
-                    dz = z[iz + 1] - z[iz]
-                    i0 = get_id(ix, iy, iz)
-                    i1 = get_id(ix + 1, iy, iz)
-                    assert i0 < cell_n and i1 < cell_n
-                    face = mesh.add_face(mesh.get_cell(i0), mesh.get_cell(i1))
-                    assert face is not None
-                    face.area = dy * dz
-                    face.length = dx
-
-        for ix in range(0, jx):
-            dx = x[ix + 1] - x[ix]
-            for iy in range(0, jy - 1):
-                dy = (y[iy + 2] - y[iy]) / 2
-                for iz in range(0, jz):
-                    dz = z[iz + 1] - z[iz]
-                    i0 = get_id(ix, iy, iz)
-                    i1 = get_id(ix, iy + 1, iz)
-                    assert i0 < cell_n and i1 < cell_n
-                    face = mesh.add_face(mesh.get_cell(i0), mesh.get_cell(i1))
-                    assert face is not None
-                    face.area = dx * dz
-                    face.length = dy
-
-        for ix in range(0, jx):
-            dx = x[ix + 1] - x[ix]
-            for iy in range(0, jy):
-                dy = y[iy + 1] - y[iy]
-                for iz in range(0, jz - 1):
-                    dz = (z[iz + 2] - z[iz]) / 2
-                    i0 = get_id(ix, iy, iz)
-                    i1 = get_id(ix, iy, iz + 1)
-                    assert i0 < cell_n and i1 < cell_n
-                    face = mesh.add_face(mesh.get_cell(i0), mesh.get_cell(i1))
-                    assert face is not None
-                    face.area = dx * dy
-                    face.length = dz
-
-        return mesh
+    def create_cube(*args, **kwargs):
+        warnings.warn('The zml.SeepageMesh.create_cube will be removed after 2025-5-27. '
+                      'please use zmlx.seepage_mesh.cube.create_cube instead',
+                      DeprecationWarning)
+        from zmlx.seepage_mesh.cube import create_cube as create
+        return create(*args, **kwargs)
 
     @staticmethod
-    def create_cylinder(x=(0, 1, 2), r=(0, 1, 2)):
-        """
-        创建一个极坐标下的圆柱体的网格。其中圆柱体的对称轴为x轴。cell的y坐标为r。cell的z坐标为0.
-        """
-        assert x is not None and r is not None
-        assert len(x) >= 2 and len(r) >= 2
-        assert r[0] >= 0
-        # Moreover, both x and r should be sorted from small to big
-        # (this will be checked in function 'create_cube_seepage_mesh')
-
-        rmax = r[-1]
-        perimeter = 2.0 * math.pi * rmax
-        mesh = SeepageMesh.create_cube(x, r, (-perimeter * 0.5, perimeter * 0.5))
-
-        for cell in mesh.cells:
-            (x, y, z) = cell.pos
-            assert 0 < y < rmax
-            cell.vol *= (y / rmax)
-
-        for face in mesh.faces:
-            (i0, i1) = face.link
-            (x0, y0, _) = mesh.get_cell(i0).pos
-            (x1, y1, _) = mesh.get_cell(i1).pos
-            y = (y0 + y1) / 2
-            assert 0 < y < rmax
-            face.area *= (y / rmax)
-
-        return mesh
+    def create_cylinder(*args, **kwargs):
+        warnings.warn('The zml.SeepageMesh.create_cylinder will be removed after 2025-5-27. '
+                      'please use zmlx.seepage_mesh.cylinder.create_cylinder instead',
+                      DeprecationWarning)
+        from zmlx.seepage_mesh.cylinder import create_cylinder as create
+        return create(*args, **kwargs)
 
     core.use(None, 'seepage_mesh_find_inner_face_ids', c_void_p, c_void_p, c_void_p)
 
