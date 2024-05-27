@@ -33,6 +33,3 @@ def get_fn2(network: FractureNetwork, key=None):
         # 默认情况下，显示宽度
         c.append(-fracture.dn)
     return pos, w, c
-
-
-

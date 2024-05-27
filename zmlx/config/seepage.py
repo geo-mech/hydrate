@@ -38,23 +38,140 @@ Face的属性：
     igr：导流系数的相对曲线的id（用来修正孔隙空间大小改变所带来的渗透率的改变）
     g_heat：用于传热计算的导流系数（注意，并非热传导系数。这个系数，已经考虑了face的横截面积和长度）
 """
+import os
 import warnings
 
 import numpy as np
-from zml import get_average_perm, Tensor3, Seepage
+
+from zml import get_average_perm, Tensor3, Seepage, ConjugateGradientSolver
+from zmlx.alg.clamp import clamp
 from zmlx.alg.join_cols import join_cols
 from zmlx.alg.time2str import time2str
-from zmlx.config import capillary
+from zmlx.config import capillary, prod, fluid_heating, timer, sand
 from zmlx.config.attr_keys import cell_keys, face_keys, flu_keys
-from zmlx.geometry.point_distance import point_distance
-from zmlx.utility.Field import Field
-from zmlx.utility.SeepageNumpy import as_numpy
 from zmlx.config.seepage_face import (get_face_gradient, get_face_diff,
                                       get_face_sum, get_face_left,
                                       get_face_right, get_cell_average)
+from zmlx.filesys.join_paths import join_paths
+from zmlx.filesys.make_fname import make_fname
+from zmlx.filesys.make_parent import make_parent
+from zmlx.filesys.tag import print_tag
+from zmlx.geometry.point_distance import point_distance
+from zmlx.plt.tricontourf import tricontourf
+from zmlx.ui.GuiBuffer import gui
+from zmlx.utility.Field import Field
+from zmlx.utility.GuiIterator import GuiIterator
+from zmlx.utility.SaveManager import SaveManager
+from zmlx.utility.SeepageCellMonitor import SeepageCellMonitor
+from zmlx.utility.SeepageNumpy import as_numpy
 
+# 确保不会被优化掉
 _unused = [get_face_gradient, get_face_diff, get_face_sum, get_face_left,
            get_face_right, get_cell_average]
+
+
+def get_cell_mask(model: Seepage, xr=None, yr=None, zr=None):
+    """
+    返回给定坐标范围内的cell的index。主要用来辅助绘图。since 2024-6-12
+    """
+
+    def get_(v, r):
+        if r is None:
+            return [True] * len(v)  # 此时为所有
+        else:
+            return [r[0] <= v[i] <= r[1] for i in range(len(v))]
+
+    # 三个方向分别的mask
+    x_mask = get_(as_numpy(model).cells.x, xr)
+    y_mask = get_(as_numpy(model).cells.y, yr)
+    z_mask = get_(as_numpy(model).cells.z, zr)
+
+    # 返回结果
+    return [x_mask[i] and y_mask[i] and z_mask[i] for i in range(len(x_mask))]
+
+
+def get_cell_pos(model: Seepage, dim, mask=None):
+    """
+    返回cell的位置向量
+    """
+    assert 0 <= dim < 3
+    v = as_numpy(model).cells.get(-(dim + 1))
+    return v if mask is None else v[mask]
+
+
+def get_cell_pre(model: Seepage, mask=None):
+    v = as_numpy(model).cells.pre
+    return v if mask is None else v[mask]
+
+
+def get_cell_temp(model: Seepage, mask=None):
+    v = as_numpy(model).cells.get(model.get_cell_key('temperature'))
+    return v if mask is None else v[mask]
+
+
+def get_cell_fv(model: Seepage, fid=None, mask=None):
+    if fid is None:
+        v = as_numpy(model).cells.fluid_vol
+    else:
+        v = as_numpy(model).fluids(*fid).vol
+    return v if mask is None else v[mask]
+
+
+def get_cell_fm(model: Seepage, fid=None, mask=None):
+    if fid is None:
+        v = as_numpy(model).cells.fluid_mass
+    else:
+        v = as_numpy(model).fluids(*fid).mass
+    return v if mask is None else v[mask]
+
+
+def show_cells(model: Seepage, dim0, dim1, mask=None, show_p=True, show_t=True,
+               show_s=True, folder=None, use_mass=False):
+    """
+    二维绘图显示
+    """
+    if not gui.exists():
+        return
+
+    x = get_cell_pos(model=model, dim=dim0, mask=mask)
+    y = get_cell_pos(model=model, dim=dim1, mask=mask)
+    kw = {'title': f'time = {get_time(model, as_str=True)}'}
+
+    year = get_time(model) / (365 * 24 * 3600)
+
+    if show_p:  # 显示压力
+        v = get_cell_pre(model, mask=mask)
+        tricontourf(x, y, v, caption='pressure',
+                    fname=make_fname(year, join_paths(folder, 'pressure'), '.jpg', 'y'),
+                    **kw)
+
+    if show_t:  # 显示温度
+        v = get_cell_temp(model, mask=mask)
+        tricontourf(x, y, v, caption='temperature',
+                    fname=make_fname(year, join_paths(folder, 'temperature'), '.jpg', 'y'),
+                    **kw)
+
+    if not isinstance(show_s, list):
+        if show_s:  # 此时，显示所有组分的饱和度
+            show_s = list_comp(model, keep_structure=False)  # 所有的组分名称
+
+    if isinstance(show_s, list):
+        if use_mass:  # 此时，显示质量饱和度
+            get = get_cell_fm
+        else:
+            get = get_cell_fv
+
+        fv_all = get(model=model, mask=mask)
+        for name in show_s:
+            assert isinstance(name, str)
+            idx = model.find_fludef(name=name)
+            assert idx is not None
+            fv = get(model=model, fid=idx, mask=mask)  # 流体体积
+            v = fv / fv_all
+            # 绘图
+            tricontourf(x, y, v, caption=name,
+                        fname=make_fname(year, join_paths(folder, name), '.jpg', 'y'),
+                        **kw)
 
 
 def _get_names(f_def: Seepage.FluDef):
@@ -72,16 +189,60 @@ def _get_names(f_def: Seepage.FluDef):
         return names
 
 
-def list_comp(model: Seepage):
+def _flatten_comp(name):
+    """
+    用在list_comp中，去除组分的结构
+    """
+    if isinstance(name, str):
+        return [name]
+    else:
+        assert isinstance(name, list)
+        temp = []
+        for item in name:
+            temp = temp + _flatten_comp(item)
+        return temp
+
+
+def list_comp(model: Seepage, keep_structure=True):
     """
     列出所有组分的名字
+    :param keep_structure: 返回的结构是否保持流体的结构 (since 2024-7-25)
     :param model: 需要列出组分的模型
-    :return: 所有组分的名字作为list返回
+    :return: 所有组分的名字作为list返回(注意，会维持流体和组分的组成结构)
     """
     names = []
     for idx in range(model.fludef_number):
         names.append(_get_names(model.get_fludef(idx)))
-    return names
+    if keep_structure:
+        return names
+    else:
+        return _flatten_comp(names)
+
+
+def _list_comp_ids(fdef: Seepage.FluDef):
+    """
+    用在list_comp_ids中，列出组分中具有子组分的id (since 2024-7-25)
+    """
+    if fdef.component_number == 0:
+        return [[]]
+    result = []
+    for idx in range(fdef.component_number):
+        ids = _list_comp_ids(fdef.get_component(idx))
+        for item in ids:
+            result.append([idx] + item)
+    return result
+
+
+def list_comp_ids(model: Seepage):
+    """
+    列出模型中所有的流体的ID(其中每一个元素都是list)  (since 2024-7-25)
+    """
+    result = []
+    for idx in range(model.fludef_number):
+        ids = _list_comp_ids(model.get_fludef(idx))
+        for item in ids:
+            result.append([idx]+item)
+    return result
 
 
 def _pop_sat(name, table: dict):
@@ -274,7 +435,7 @@ solid_buffer = Seepage.CellData()
 
 def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
             fa_q=None, fa_k=None, cond_updaters=None, diffusions=None,
-            react_bufs=None, vis_max=None, vis_min=None):
+            react_bufs=None, vis_max=None, vis_min=None, slots=None):
     """
     在时间上向前迭代。其中
         dt:     时间步长,若为None，则使用自动步长
@@ -286,11 +447,18 @@ def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
         react_bufs:  反应的缓冲区，用来记录各个cell发生的反应的质量，
             其中的每一个buf都应该是一个pointer，且长度等于cell的数量;
     """
+    if gui.exists():  # 添加断点，从而使得在这里可以暂停和终止
+        gui.break_point()
+
     if dt is not None:
         set_dt(model, dt)
 
     dt = get_dt(model)
     assert dt is not None, 'You must set dt before iterate'
+
+    # 执行定时器函数.
+    timer.iterate(model, t0=get_time(model), t1=get_time(model) + dt,
+                  slots=slots)
 
     if model.not_has_tag('disable_update_den') and model.fludef_number > 0:
         fa_t = model.reg_flu_key('temperature')
@@ -316,7 +484,14 @@ def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
 
     if model.injector_number > 0:
         # 实施流体的注入操作.
-        model.apply_injectors(dt)
+        model.apply_injectors(dt=dt, time=get_time(model))
+
+    # 尝试修改边界的压力，从而使得流体生产 (使用模型内部定义的time)
+    #   since 2024-6-12
+    prod.iterate(model, time=get_time(model))
+
+    # 对流体进行加热
+    fluid_heating.iterate(model, dt=dt)
 
     has_solid = model.has_tag('has_solid')
 
@@ -366,6 +541,9 @@ def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
     if has_solid:
         # 恢复备份的固体物质
         model.push_fluids(solid_buffer)
+
+    # 更新沙子的沉降
+    sand.iterate(model=model, last_dt=dt)
 
     update_ther = model.not_has_tag('disable_ther')
 
@@ -422,6 +600,7 @@ def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
 
 def get_inited(fludefs=None, reactions=None, gravity=None, path=None,
                time=None, dt=None, dv_relative=None,
+               dt_max=None, dt_min=None,
                keys=None, tags=None, model_attrs=None):
     """
     创建一个模型，初始化必要的属性.
@@ -468,6 +647,12 @@ def get_inited(fludefs=None, reactions=None, gravity=None, path=None,
     if dt is not None:
         set_dt(model, dt)
 
+    if dt_min is not None:
+        set_dt_min(model, dt_min)
+
+    if dt_max is not None:
+        set_dt_max(model, dt_max)
+
     if dv_relative is not None:
         set_dv_relative(model, dv_relative)
 
@@ -482,13 +667,16 @@ def create(mesh=None,
            dt_max=None, dt_min=None, dt_ini=None, dv_relative=None,
            gr=None, bk_fv=None, bk_g=None, caps=None,
            keys=None, tags=None, kr=None, default_kr=None,
-           model_attrs=None,
+           model_attrs=None, prods=None,
+           warnings_ignored=None, injectors=None, texts=None,
            **kwargs):
     """
     利用给定的网格来创建一个模型.
         其中gr用来计算孔隙体积变化之后的渗透率的改变量.  gr的类型是一个Interp1.
     """
     model = Seepage()
+    if warnings_ignored is None:  # 忽略掉的警告
+        warnings_ignored = set()
 
     if keys is not None:
         # 预定义一些keys; 主要目的是为了保证两个Seepage的keys的一致，
@@ -535,9 +723,10 @@ def create(mesh=None,
         assert len(gravity) == 3
         model.gravity = gravity
         if point_distance(gravity, [0, 0, -10]) > 1.0:
-            print(f'Warning: In general, gravity should be [0,0, -10], '
-                  f'but here it is {gravity}, '
-                  f'please make sure this is the setting you need')
+            if 'gravity' not in warnings_ignored:
+                warnings.warn(f'In general, gravity should be [0,0, -10], '
+                              f'but here it is {gravity}, '
+                              f'please make sure this is the setting you need')
 
     if dt_max is not None:
         set_dt_max(model, dt_max)
@@ -582,10 +771,32 @@ def create(mesh=None,
     # 对模型的细节进行必要的配置
     set_model(model, igr=igr, bk_fv=bk_fv, bk_g=bk_g, **kwargs)
 
+    # 添加注入点   since 24-6-20
+    if injectors is not None:
+        if isinstance(injectors, dict):
+            model.add_injector(**injectors)
+        else:
+            for item in injectors:
+                assert isinstance(item, dict)
+                model.add_injector(**item)
+
     # 添加毛管效应.
     if caps is not None:
         for cap in caps:
             capillary.add(model, **cap)
+
+    if prods is not None:  # 添加用于生产的压力控制.
+        if isinstance(prods, dict):
+            prods = [prods, ]
+        for item in prods:
+            assert isinstance(item, dict)
+            prod.add_setting(model, **item)
+
+    # 添加文本属性
+    if texts is not None:
+        assert isinstance(texts, dict)
+        for key, value in texts.items():
+            model.set_text(key=key, text=value)
 
     return model
 
@@ -676,12 +887,18 @@ def set_model(model: Seepage, porosity=0.1,
         if isinstance(sat, dict):
             sat = get_sat(comp_names, sat)
 
+        # 热传导系数. todo: 当热传导系数各向异性的时候，取平均值，这可能并不是最合适的.  @2024-8-11
+        tmp = heat_cond(*pos)
+        if isinstance(tmp, Tensor3):
+            tmp = (tmp.xx + tmp.yy + tmp.zz) / 3.0
+
+        # 设置cell
         set_cell(cell, porosity=porosity(*pos),
                  pore_modulus=pore_modulus(*pos), denc=denc(*pos),
                  temperature=temperature(*pos),
                  p=p(*pos), s=sat,
                  pore_modulus_range=pore_modulus_range,
-                 dist=dist(*pos), bk_fv=bk_fv(*pos))
+                 dist=dist(*pos), bk_fv=bk_fv(*pos), heat_cond=tmp)
 
     for face in model.faces:
         assert isinstance(face, Seepage.Face)
@@ -696,7 +913,7 @@ def set_cell(cell: Seepage.Cell, pos=None, vol=None,
              porosity=0.1, pore_modulus=1000e6,
              denc=1.0e6, dist=0.1,
              temperature=280.0, p=1.0, s=None,
-             pore_modulus_range=None, bk_fv=True):
+             pore_modulus_range=None, bk_fv=True, heat_cond=1.0):
     """
     设置Cell的初始状态.
     """
@@ -729,7 +946,9 @@ def set_cell(cell: Seepage.Cell, pos=None, vol=None,
 
     if bk_fv:  # 备份流体体积
         cell.set_attr(ca.fv0, cell.fluid_vol)
-    cell.set_attr(ca.g_heat, vol / (dist ** 2))
+
+    # 流体的固体之间的换热的系数
+    cell.set_attr(ca.g_heat, vol * heat_cond / (dist ** 2))
 
 
 def set_face(face: Seepage.Face, area=None, length=None,
@@ -881,3 +1100,208 @@ def append_cells_and_faces(model: Seepage, other: Seepage):
         c1 = f.get_cell(1)
         model.add_face(model.get_cell(cell_n0 + c0.index),
                        model.get_cell(cell_n0 + c1.index), data=f)
+
+
+def set_solve(model: Seepage, **kw):
+    """
+    设置用于求解的控制参数
+    """
+    text = model.get_text(key='solve')
+    if len(text) > 0:
+        options = eval(text)
+    else:
+        options = {}
+    options.update(kw)
+    model.set_text(key='solve', text=options)
+
+
+def solve(model=None, folder=None, fname=None, gui_mode=None, close_after_done=None, solver=None,
+          extra_plot=None,
+          show_state=True, gui_iter=None, state_hint=None, slots=None,
+          save_dt=None,
+          **kwargs):
+    """
+    求解模型，并尝试将结果保存到folder.
+    """
+    if model is None:
+        if fname is not None:
+            assert os.path.isfile(fname), f'The file not exist: {fname}'
+            model = Seepage(path=fname)
+            if folder is None:
+                folder = os.path.splitext(fname)[0]
+    else:
+        if fname is not None:  # 此时，尝试保存到此文件
+            model.save(make_parent(fname))  # 保存
+            if folder is None:
+                folder = os.path.splitext(fname)[0]
+
+    # 打印标签
+    if folder is not None:
+        print_tag(folder=folder)
+
+    # step 1. 读取求解选项
+    text = model.get_text(key='solve')
+    if len(text) > 0:
+        solve_options = eval(text)
+    else:
+        solve_options = {}
+
+    # 更新
+    solve_options.update(kwargs)
+
+    # 建立求解器
+    if solver is None:  # 使用规定的精度
+        solver = ConjugateGradientSolver(tolerance=solve_options.get('tolerance', 1.0e-25))
+
+    # 创建monitor(同时，还保留了之前的配置信息)
+    monitors = solve_options.get('monitor')
+    if isinstance(monitors, dict):
+        monitors = [monitors]
+    elif monitors is None:
+        monitors = []
+    for item in monitors:
+        if isinstance(item, dict):
+            item['monitor'] = SeepageCellMonitor(get_t=lambda: get_time(model),
+                                                 cell=[model.get_cell(i) for i in item.get('cell_ids')])
+
+    # 每年的秒的数量
+    seconds_year = 3600.0 * 24.0 * 365.0
+
+    # 保存间隔的范围(以秒为单位)
+    save_dy_max = solve_options.get('save_dt_max', 5 * seconds_year) / seconds_year
+    save_dy_min = solve_options.get('save_dt_min', 0.01 * seconds_year) / seconds_year
+
+    # 定义函数get_save_dy
+    if save_dt is None:
+        def get_save_dy(year):
+            return clamp(year * 0.05, save_dy_min, save_dy_max)
+    else:
+        if hasattr(save_dt, '__call__'):
+            def get_save_dy(year):
+                return clamp(save_dt(year * seconds_year) / seconds_year, save_dy_min, save_dy_max)
+        else:
+            def get_save_dy(year):
+                return clamp(save_dt / seconds_year, save_dy_min, save_dy_max)
+
+    # 执行数据的保存
+    save_model = SaveManager(join_paths(folder, 'models'), save=model.save,
+                             ext='.seepage', time_unit='y',
+                             dtime=get_save_dy,
+                             get_time=lambda: get_time(model) / (3600.0 * 24.0 * 365.0),
+                             )
+
+    # 打印cell
+    save_cells = SaveManager(join_paths(folder, 'cells'), save=lambda name: print_cells(name, model=model,
+                                                                                        export_mass=True),
+                             ext='.txt', time_unit='y',
+                             dtime=get_save_dy,
+                             get_time=lambda: get_time(model) / (3600.0 * 24.0 * 365.0),
+                             )
+
+    # 保存所有
+    def save(*args, **kw):
+        save_model(*args, **kw)
+        save_cells(*args, **kw)
+
+    # 用来绘图的设置(show_cells)
+    data = solve_options.get('show_cells')
+    if isinstance(data, dict):
+        def do_show():
+            show_cells(model, folder=join_paths(folder, 'figures'), **data)
+    else:
+        do_show = None
+
+    def plot():
+        if do_show is not None:
+            do_show()
+        for index in range(len(monitors)):
+            item1 = monitors[index]
+            assert isinstance(item1, dict)
+            monitor = item1.get('monitor')
+            assert isinstance(monitor, SeepageCellMonitor)
+            plot_rate = item1.get('plot_rate')
+            if plot_rate is not None:
+                for idx in plot_rate:
+                    monitor.plot_rate(index=idx, caption=f'Rate_{index}.{idx}')  # 显示生产曲线
+        if extra_plot is not None:  # 一些额外的，非标准的绘图操作
+            extra_plot()
+
+    def save_monitors():
+        if folder is not None:
+            for index in range(len(monitors)):
+                item2 = monitors[index]
+                assert isinstance(item2, dict)
+                monitor = item2.get('monitor')
+                assert isinstance(monitor, SeepageCellMonitor)
+                monitor.save(join_paths(folder, f'monitor_{index}.txt'))
+
+    # 执行最终的迭代
+    if gui_iter is None:
+        gui_iter = GuiIterator(iterate, plot=plot)
+    else:  # 使用已有的配置(这样，方便多个求解过程，使用全局的iter)
+        assert isinstance(gui_iter, GuiIterator)
+        gui_iter.iterate = iterate
+        gui_iter.plot = plot
+
+    # 求解到的最大的时间
+    time_max = solve_options.get('time_max')
+    if time_max is None:
+        time_forward = solve_options.get('time_forward')
+        if time_forward is not None:
+            time_max = get_time(model) + time_forward
+    if time_max is None:  # 给定默认值
+        time_max = 1.0e100
+
+    # 求解到的最大的step
+    step_max = solve_options.get('step_max')
+    if step_max is None:
+        step_forward = solve_options.get('step_forward')  # 向前迭代的步数
+        if step_forward is not None:
+            step_max = get_step(model) + step_forward
+    if step_max is None:  # 给定默认值
+        step_max = 999999999999
+
+    # 状态提示
+    if state_hint is None:
+        state_hint = ''
+    else:
+        state_hint = state_hint + ': '
+
+    def do_show_state():
+        if show_state:
+            print(f'{state_hint}step={get_step(model)}, dt={get_dt(model, as_str=True)}, '
+                  f'time={get_time(model, as_str=True)}')
+
+    def main_loop():  # 主循环
+        if folder is not None:  # 显示求解的目录
+            if gui.exists():
+                gui.title(f'Solve seepage: {folder}')
+
+        while get_time(model) < time_max and get_step(model) < step_max:
+            gui_iter(model, solver=solver, slots=slots)
+            save()
+
+            for item3 in monitors:  # 更新所有的监控点
+                monitor = item3.get('monitor')
+                monitor.update(dt=3600.0)
+
+            if get_step(model) % 20 == 0:
+                do_show_state()
+                save_monitors()
+
+        # 显示并保存最终的状态
+        do_show_state()
+        save_monitors()
+        plot()
+        save(check_dt=False)  # 保存最终状态
+
+    if close_after_done is not None and gui_mode is None:  # 如果指定了close_after_done，那么一定是要使用界面
+        gui_mode = True
+
+    if gui_mode is None:  # 默认不使用界面
+        gui_mode = False
+
+    if close_after_done is None:  # 默认计算技术要关闭界面
+        close_after_done = True
+
+    gui.execute(func=main_loop, close_after_done=close_after_done, disable_gui=not gui_mode)

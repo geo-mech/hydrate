@@ -1,6 +1,7 @@
 import numpy as np
 
 from zml import SeepageMesh
+from zmlx.alg.is_sorted import is_sorted
 
 
 def create_cube(x=(-0.5, 0.5), y=(-0.5, 0.5), z=(-0.5, 0.5), boxes=None,
@@ -18,12 +19,6 @@ def create_cube(x=(-0.5, 0.5), y=(-0.5, 0.5), z=(-0.5, 0.5), boxes=None,
     """
     assert x is not None and y is not None and z is not None
     assert len(x) + len(y) + len(z) >= 6
-
-    def is_sorted(vx):
-        for i in range(len(vx) - 1):
-            if vx[i] >= vx[i + 1]:
-                return False
-        return True
 
     assert is_sorted(x) and is_sorted(y) and is_sorted(z)
 

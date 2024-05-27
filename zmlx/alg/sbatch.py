@@ -8,12 +8,13 @@
 
 """
 import os
+import sys
 import time
 
 
 def sbatch(*args, c=1, t=None, p='G1Part_sce', job=None):
     """
-    在超算上面创建一个任务. 其中:
+    在北京超算上面创建一个任务. 其中:
         args: 跟在python后面的参数.
         c: 调用的核心的数量
         t: 休眠时间(当启动多个的时候，加上休眠，确保多个任务不要同时启动)
@@ -46,9 +47,7 @@ srun     -n 1  -c {c}  python3 """
 
 
 def main():
-    from zml import is_windows
-    import sys
-
+    is_windows = os.name == 'nt'
     if is_windows:
         print('The current system is Windows (do not support)')
     else:

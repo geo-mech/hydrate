@@ -1,8 +1,8 @@
 import warnings
 
 from zml import Object, Seepage, get_average_perm, Reaction, log
-from zmlx.utility.Field import Field
 from zmlx.utility.AttrKeys import AttrKeys
+from zmlx.utility.Field import Field
 
 
 class TherFlowConfig(Object):
@@ -557,7 +557,7 @@ class TherFlowConfig(Object):
                              relax_factor=1.0, min=1.0e-7, max=1.0)
 
         if model.injector_number > 0:
-            model.apply_injectors(dt)
+            model.apply_injectors(dt=dt, time=self.get_time(model))
 
         has_solid = model.has_tag('has_solid')
 

@@ -2,9 +2,10 @@
 
 import numpy as np
 
-from zml import Seepage, SeepageMesh
+from zml import Seepage
 from zmlx.geometry.point_distance import point_distance
 from zmlx.plt.tricontourf import tricontourf
+from zmlx.seepage_mesh.cube import create_cube
 from zmlx.ui import gui
 from zmlx.utility.SeepageNumpy import as_numpy
 
@@ -20,7 +21,7 @@ class FaceAttrs:
 
 def create():
     model = Seepage()
-    mesh = SeepageMesh.create_cube(np.linspace(0, 100, 100), np.linspace(0, 100, 100), (-0.5, 0.5))
+    mesh = create_cube(np.linspace(0, 100, 100), np.linspace(0, 100, 100), (-0.5, 0.5))
 
     for c in mesh.cells:
         cell = model.add_cell()
@@ -36,9 +37,9 @@ def create():
 
 
 def show(model):
-    numpy = as_numpy(model)
-    tricontourf(numpy.cells.x, numpy.cells.y,
-                numpy.cells.get(CellAttrs.temperature), caption='temperature', gui_only=True)
+    ada = as_numpy(model)
+    tricontourf(ada.cells.x, ada.cells.y,
+                ada.cells.get(CellAttrs.temperature), caption='temperature', gui_only=True)
 
 
 def solve(model):

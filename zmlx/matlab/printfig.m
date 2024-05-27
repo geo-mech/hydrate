@@ -21,40 +21,6 @@ assert(ischar(thedir));
 print('-djpeg', thedpi, [thedir, '.jpg']);
 
 % 可选择关闭绘图，默认关闭
-if ~zexist(varargin, 'keep')
+if ~has_tag(varargin, 'keep')
     close;
-end
-
-% 辅助函数，在参数列表varargin中寻找和name匹配的位置的下一个值！其中vals为
-% 参数列表varargin，name为名称，val为默认参数
-
-function val = get_val(vals, name, val)
-assert(ischar(name), 'name should be a string');
-if nargin < 3
-    val = [];
-end
-for i = 1: numel(vals) - 1
-    if ~ischar(vals{i})
-        continue;
-    end
-    if strcmp(vals{i}, name)
-        val = vals{i+1};
-        return;
-    end
-end
-
-% 在一个cell中，寻找和那么匹配的值，如果找到，则返回true，否则返回false。其
-% 中的vals主要为参数列表varargin！！Name是一个字符串
-
-function val = zexist(vals, name)
-assert(ischar(name), 'name should be a string');
-val = false;
-for i = 1: numel(vals)
-    if ~ischar(vals{i})
-        continue;
-    end
-    if strcmp(vals{i}, name)
-        val = true;
-        return;
-    end
 end

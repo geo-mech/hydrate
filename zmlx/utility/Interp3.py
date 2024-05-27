@@ -9,6 +9,7 @@ class Interp3:
         注意：
             不支持向量化操作；
     """
+
     def __init__(self, x, y, z, v, rescale=True):
         """
         根据4列数据来构造一个三维插值。当不同维度的范围差异比较大的时候，务必将rescale设置为True

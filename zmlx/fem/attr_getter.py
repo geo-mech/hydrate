@@ -9,6 +9,6 @@ def attr_getter(index, min, max, default):
         return f
     else:
         def f(o):
-            return o.get_attr(index=index, min=min, max=max, default_val=default)
+            return o.get_attr(index=index, left=min, right=max, default_val=default)
 
         return f

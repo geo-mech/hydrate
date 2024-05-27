@@ -1,0 +1,7 @@
+# ** text = '新建'
+# ** icon = 'python.jpg'
+# ** on_toolbar = 0
+
+from zmlx.ui.CodeAlg import new_code
+
+new_code()

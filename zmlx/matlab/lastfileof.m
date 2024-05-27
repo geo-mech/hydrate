@@ -1,17 +1,21 @@
 
-function y = lastfileof(path, NumberLast)
+function filename = lastfileof(folder, index_from_end)
 
-y = dir(path);
-assert(length(y) >= 3, 'can not be empty directory');
-assert(nargin == 1 || nargin == 2);
-if nargin == 1
-    y = [path, '\', y(end).name];
-else
-    if length(y) >= 3 + NumberLast
-        y = [path, '\',y(end-NumberLast).name];
-    else
-        y = [path, '\',y(3).name];
-    end
+if nargin <= 1
+    index_from_end = 1;
 end
 
+dirs = dir(folder);
+assert(length(dirs) >= 3, 'can not be empty directory');
 
+if index_from_end <= 1
+    filename = fullfile(folder, dirs(end).name);
+else
+    index_from_end = index_from_end - 1;
+    assert(index_from_end >= 1)
+    if length(dirs) >= 3 + index_from_end
+        filename = fullfile(folder, dirs(end-index_from_end).name);
+    else
+        filename = fullfile(folder, dirs(3).name);
+    end
+end

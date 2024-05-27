@@ -3,12 +3,13 @@
 @author: Maryelin
 """
 
-from zml import Interp2, TherFlowConfig
+from zml import Interp2, Seepage
 from zmlx.fluid.conf.liqu_density.c2h6 import liq_den_c2h6
 from zmlx.fluid.conf.liqu_viscosity.c2h6 import liq_vis_c2h6
+import warnings
 
 
-def create_flu(tmin=200, tmax=280, pmin=1.0e6, pmax=20.0e6):
+def create(tmin=200, tmax=280, pmin=1.0e6, pmax=20.0e6, name=None):
     assert 150 < tmin < tmax < 260
     assert 0.01e6 < pmin < pmax < 30.0e6
 
@@ -37,8 +38,11 @@ def create_flu(tmin=200, tmax=280, pmin=1.0e6, pmax=20.0e6):
         return vis
 
     specific_heat = 2276.02  # J/kg K
-    return TherFlowConfig.FluProperty(den=create_density(), vis=create_viscosity(), specific_heat=specific_heat)
+    return Seepage.FluDef(den=create_density(), vis=create_viscosity(), specific_heat=specific_heat, name=name)
 
+def create_flu(*args, **kwargs):
+    warnings.warn('use function <create> instead', DeprecationWarning)
+    return create(*args, **kwargs)
 
 if __name__ == '__main__':
-    flu = create_flu()
+    flu = create()

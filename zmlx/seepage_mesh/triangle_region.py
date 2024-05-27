@@ -44,14 +44,25 @@ def split_triangles(vertexes: list, triangles: list):
     return v2, t3
 
 
-def create(x0, y0, x1, y1, x2, y2, n_max):
+def create(x0, y0, x1, y1, x2, y2, n_max=None, n_split=None):
     """
     在一个三角形区域，通过不断的四等分，来获得三角形剖分；
     """
     v = [[x0, y0], [x1, y1], [x2, y2]]
     t = [[0, 1, 2]]
-    while len(t) * 4 <= n_max:
-        v, t = split_triangles(v, t)
+
+    # 给定默认的参数
+    assert n_max is not None or n_split is not None
+    if n_max is None:
+        n_max = 9999999
+    if n_split is None:
+        n_split = 9999
+
+    for step in range(n_split):
+        if len(t) * 4 <= n_max:
+            v, t = split_triangles(v, t)
+        else:
+            break
 
     mesh3 = Mesh3()
 
@@ -87,7 +98,7 @@ def create(x0, y0, x1, y1, x2, y2, n_max):
 
 
 def test():
-    mesh = create(0, 0, 1, 0, 0, 1, 500)
+    mesh = create(0, 0, 1, 0, 0, 1, n_split=5)
     print(mesh)
 
 

@@ -15,30 +15,21 @@ Author:         ZHANG Zhaobin <zhangzhaobin@mail.iggcas.ac.cn>,
 
 import ctypes
 import datetime
+import importlib
 import math
 import os
 import sys
-import warnings
 import timeit
-import importlib
+import warnings
 
 warnings.simplefilter("default")  # Default warning display
 
-from ctypes import cdll, c_void_p, c_char_p, c_int, c_int64, c_bool, c_double, c_size_t, c_uint, CFUNCTYPE, POINTER
+from ctypes import (cdll, c_void_p, c_char_p, c_int, c_int64, c_bool, c_double,
+                    c_size_t, c_uint, CFUNCTYPE, POINTER)
 from typing import Iterable
-
-try:
-    import numpy as _np
-except Exception as _err:
-    # Some features are not available when numpy is not installed
-    _np = None
-    warnings.warn(f'cannot import numpy in zml. error = {_err}')
 
 # Indicates whether the system is currently Windows (both Windows and Linux systems are currently supported)
 is_windows = os.name == 'nt'
-
-# Version of the zml module (date represented by six digits)
-version = 240522
 
 
 class Object:
@@ -356,36 +347,38 @@ class _AppData(Object):
         paths = [os.getcwd(), self.proj()] if first is None else [first, os.getcwd(), self.proj()]
         return paths + [self.folder, os.path.join(self.folder, 'temp')] + self.paths + sys.path
 
-    def find(self, name, first=None):
+    def find(self, *name, first=None):
         """
         Searches for the specified file and returns the path. If not found, None is returned
         """
-        for folder in self.get_paths(first):
-            try:
-                path = os.path.join(folder, name)
-                if os.path.exists(path):
-                    return path
-            except:
-                pass
+        if len(name) > 0:
+            for folder in self.get_paths(first):
+                try:
+                    path = os.path.join(folder, *name)
+                    if os.path.exists(path):
+                        return path
+                except:
+                    pass
 
-    def find_all(self, name, first=None):
+    def find_all(self, *name, first=None):
         """
         Search the file and return all found < and ensure that duplicate elements have been removed >
         """
         results = []
-        for folder in self.get_paths(first):
-            try:
-                path = os.path.join(folder, name)
-                if os.path.exists(path):
-                    exists = False
-                    for x in results:
-                        if os.path.samefile(x, path):
-                            exists = True
-                            break
-                    if not exists:
-                        results.append(path)
-            except:
-                pass
+        if len(name) > 0:
+            for folder in self.get_paths(first):
+                try:
+                    path = os.path.join(folder, *name)
+                    if os.path.exists(path):
+                        exists = False
+                        for x in results:
+                            if os.path.samefile(x, path):
+                                exists = True
+                                break
+                        if not exists:
+                            results.append(path)
+                except:
+                    pass
         return results
 
     def get(self, *args, **kwargs):
@@ -420,11 +413,11 @@ def log(text, tag=None):
     app_data.log(text)
 
 
-def load_cdll(name, first=None):
+def load_cdll(name, *, first=None):
     """
     Load C-Style Dll by the given file name and the folder.
     """
-    path = app_data.find(name, first)
+    path = app_data.find(name, first=first)
     if path is not None:
         try:
             assert isinstance(path, str)
@@ -678,6 +671,13 @@ class DllCore:
 
 
 core = DllCore(dll=dll)
+
+
+# Version of the zml module (date represented by six digits)
+try:
+    version = core.version
+except:
+    version = 110101
 
 
 class Timer:
@@ -969,6 +969,7 @@ def fetch_m(folder=None):
     """
     Get those predefined m-files. These m files are used for debugging plots etc.
     """
+    warnings.warn('This function will be removed after 2025-8-11', DeprecationWarning)
     if folder is None:
         core.fetch_m(make_c_char_p(''))
     else:
@@ -1482,32 +1483,19 @@ class Vector(HasHandle):
         core.vf_write(self.handle, ctypes.cast(pointer, c_void_p))
 
     def read_numpy(self, data):
-        """
-        读取给定的numpy数组的数据
-        """
-        if _np is not None:
-            if not data.flags['C_CONTIGUOUS']:
-                data = _np.ascontiguous(data, dtype=data.dtype)  # 如果不是C连续的内存，必须强制转换
-            self.size = len(data)
-            self.read_memory(data.ctypes.data_as(POINTER(c_double)))
+        warnings.warn('remove after 2025-6-2', DeprecationWarning)
+        from zmlx.alg.Vector import read_numpy
+        return read_numpy(self, data)
 
     def write_numpy(self, data):
-        """
-        将数据写入到numpy数组，必须保证给定的numpy数组的长度和self一致
-        """
-        if _np is not None:
-            if not data.flags['C_CONTIGUOUS']:
-                data = _np.ascontiguous(data, dtype=data.dtype)  # 如果不是C连续的内存，必须强制转换
-            self.write_memory(data.ctypes.data_as(POINTER(c_double)))
-            return data
+        warnings.warn('remove after 2025-6-2', DeprecationWarning)
+        from zmlx.alg.Vector import write_numpy
+        return write_numpy(self, data)
 
     def to_numpy(self):
-        """
-        将这个Vector转化为一个numpy的数组
-        """
-        if _np is not None:
-            a = _np.zeros(shape=self.size, dtype=float)
-            return self.write_numpy(a)
+        warnings.warn('remove after 2025-6-2', DeprecationWarning)
+        from zmlx.alg.Vector import to_numpy
+        return to_numpy(self)
 
     core.use(c_void_p, 'vf_pointer', c_void_p)
 
@@ -7196,7 +7184,7 @@ class Seepage(HasHandle, HasCells):
                 if isinstance(value, Interp2):
                     self.den.clone(value)
                 else:  # 转化为二维插值
-                    assert 1.0e-3 < value < 1.0e5
+                    assert 1.0e-3 < value <= 1.0e7
                     itp = Interp2.create_const(value)
                     self.den.clone(itp)
 
@@ -7253,7 +7241,7 @@ class Seepage(HasHandle, HasCells):
         @specific_heat.setter
         def specific_heat(self, value):
             assert self.component_number == 0
-            assert 100.0 < value < 100000.0
+            assert 0.1 <= value <= 1.0e8
             core.fludef_set_specific_heat(self.handle, value)
 
         core.use(c_size_t, 'fludef_get_component_number', c_void_p)
@@ -8583,22 +8571,16 @@ class Seepage(HasHandle, HasCells):
             """
             core.injector_set_value(self.handle, val)
 
-        core.use(c_double, 'injector_get_time', c_void_p)
-        core.use(None, 'injector_set_time', c_void_p, c_double)
-
         @property
         def time(self):
-            """
-            每一个Injector都内置一个时间。请无比确保这个时间标签和model的时间一致
-            """
-            return core.injector_get_time(self.handle)
+            warnings.warn('Property Seepage.Injector.time has been removed',
+                          DeprecationWarning)
+            return 0
 
         @time.setter
         def time(self, value):
-            """
-            每一个Injector都内置一个时间。请无比确保这个时间标签和model的时间一致
-            """
-            core.injector_set_time(self.handle, value)
+            warnings.warn('Property Seepage.Injector.time has been removed',
+                          DeprecationWarning)
 
         core.use(c_double, 'injector_get_pos', c_void_p, c_size_t)
         core.use(None, 'injector_set_pos', c_void_p, c_size_t, c_double)
@@ -8718,15 +8700,20 @@ class Seepage(HasHandle, HasCells):
             core.injector_add_oper(self.handle, time, make_c_char_p(oper if isinstance(oper, str) else f'{oper}'))
             return self
 
-        core.use(None, 'injector_work', c_void_p, c_void_p, c_double)
+        core.use(None, 'injector_work', c_void_p, c_void_p, c_double, c_double)
 
-        def work(self, model, dt):
+        def work(self, model, *, time=None, dt=None):
             """
             执行注入操作。会同步更新injector内部存储的time属性；
             注：此函数不需要调用。内置在Seepage中的Injector，会在Seepage.iterate函数中被自动调用
             """
             assert isinstance(model, Seepage)
-            core.injector_work(self.handle, model.handle, dt)
+            if time is None:
+                warnings.warn('time is None for Seepage.Injector, use time=0 as default')
+                time = 0
+            if dt is None:
+                return
+            core.injector_work(self.handle, model.handle, time, dt)
 
         core.use(None, 'injector_clone', c_void_p, c_void_p)
 
@@ -8762,7 +8749,7 @@ class Seepage(HasHandle, HasCells):
             """
             lic.check_once()
             if solver is None:
-                self.solver = ConjugateGradientSolver(tolerance=1.0e-12)
+                self.solver = ConjugateGradientSolver(tolerance=1.0e-25)
                 solver = self.solver
             if fa_s is None:
                 fa_s = 1000000000
@@ -8790,7 +8777,7 @@ class Seepage(HasHandle, HasCells):
             dt：    时间步长;
             """
             if solver is None:
-                self.solver = ConjugateGradientSolver(tolerance=1.0e-12)
+                self.solver = ConjugateGradientSolver(tolerance=1.0e-25)
                 solver = self.solver
             lic.check_once()
             report = Map()
@@ -8908,6 +8895,8 @@ class Seepage(HasHandle, HasCells):
         """
         设置模型中存储的文本数据
         """
+        if not isinstance(text, str):
+            text = f'{text}'
         core.seepage_set_text(self.handle, make_c_char_p(key), make_c_char_p(text))
 
     def add_note(self, text):
@@ -9087,13 +9076,14 @@ class Seepage(HasHandle, HasCells):
             assert isinstance(data, Seepage.Injector)
             inj.clone(data)
 
-        if cell is not None:
+        if cell is not None:  # 可以是cell对象，也可以是cell的id
             if isinstance(cell, Seepage.Cell):
+                assert cell.model.handle == self.handle  # 必须是同一个模型
                 cell = cell.index
             inj.cell_id = cell
 
         if fluid_id is not None:
-            if isinstance(fluid_id, str):  # 给定组分名字，则从model中查找   since 231024
+            if isinstance(fluid_id, str):  # 给定组分名字，则从model中查找   since 2023-10-24
                 fluid_id = self.find_fludef(name=fluid_id)
                 assert fluid_id is not None
             inj.set_fid(fluid_id)
@@ -9102,26 +9092,26 @@ class Seepage(HasHandle, HasCells):
             assert isinstance(flu, Seepage.FluData)
             inj.flu.clone(flu)
 
-        if pos is not None:
+        if pos is not None:   # 给定注入的位置，后续，则自动去查找附近的cell
             inj.pos = pos
 
-        if radi is not None:
+        if radi is not None:  # 查找的半径
             inj.radi = radi
 
-        if ca_mc is not None:
+        if ca_mc is not None:  # Cell的属性
             inj.ca_mc = ca_mc
 
-        if ca_t is not None:
+        if ca_t is not None:  # Cell的属性(温度属性，在注入热量的时候会被修改)
             inj.ca_t = ca_t
 
-        if g_heat is not None:
+        if g_heat is not None:   # 恒定温度加热的时候需要给定
             inj.g_heat = g_heat
 
-        if opers is not None:
+        if opers is not None:   # 对属性的操作定时器
             for item in opers:
                 inj.add_oper(*item)
 
-        if value is not None:
+        if value is not None:   # 当前的值
             inj.value = value
 
         return inj
@@ -9147,13 +9137,19 @@ class Seepage(HasHandle, HasCells):
         """
         return Iterator(self, self.injector_number, lambda m, ind: m.get_injector(ind))
 
-    core.use(None, 'seepage_apply_injs', c_void_p, c_double)
+    core.use(None, 'seepage_apply_injs', c_void_p, c_double,
+             c_double)
 
-    def apply_injectors(self, dt):
+    def apply_injectors(self, *, time=None, dt=None):
         """
         所有的注入点执行注入操作.
         """
-        core.seepage_apply_injs(self.handle, dt)
+        if time is None:
+            warnings.warn('time is None for Seepage.Injector, use time=0 as default')
+            time = 0
+        if dt is None:
+            return
+        core.seepage_apply_injs(self.handle, time, dt)
 
     core.use(c_double, 'seepage_get_gravity', c_void_p, c_size_t)
     core.use(None, 'seepage_set_gravity', c_void_p, c_size_t, c_double)
@@ -9461,11 +9457,15 @@ class Seepage(HasHandle, HasCells):
     def exchange_heat(self, fid=None, thermal_model=None, dt=None, ca_g=None, ca_t=None, ca_mc=None,
                       fa_t=None, fa_c=None):
         """
-        其中一种流体(当fid为None的时候为所有的流体是为一个整体)，与另外一个模型交换热量
+        流体和固体交换热量。
+        注意：
+            1. 当thermal_model为None的时候，则在Seepage内部交换热量，此时，必须定义ca_t, ca_mc两个属性
+            2. 当fid为None的时候，将所有的流体视为整体，与固体交换。此时，会计算各个流体的平均温度，并且，此函数运行之后
+                各个流体的温度将相等
         """
         if dt is None:
             return
-        if thermal_model is None:
+        if thermal_model is None:   # 在模型的内部交换热量（流体和固体交换）
             assert fid is None
             core.seepage_exchange_heat(self.handle, dt, ca_g, ca_t, ca_mc, fa_t, fa_c)
             return
@@ -9593,8 +9593,11 @@ class Seepage(HasHandle, HasCells):
              c_double, c_void_p)
 
     def diffusion(self, dt, fid0, fid1, *,
-                  ps0=None, ls0=None, pk=None, lk=None, pg=None, lg=None, ppg=None, lpg=None,
-                  vs0=None, vk=None, vg=None, vpg=None, ds_max=0.05, face_groups=None):
+                  ps0=None, ls0=None, vs0=None,
+                  pk=None, lk=None, vk=None,
+                  pg=None, lg=None, vg=None,
+                  ppg=None, lpg=None, vpg=None,
+                  ds_max=0.05, face_groups=None):
         """
         扩散.
         其中fid0和fid1定义两种流体。在扩散的时候，相邻Cell的这两种流体会进行交换，但会保证每个Cell的流体体积不变；
@@ -10490,6 +10493,73 @@ class Seepage(HasHandle, HasCells):
         g = Groups()
         core.seepage_group_faces(self.handle, g.handle)
         return g
+
+    core.use(None, 'seepage_update_sand', c_void_p,
+             c_size_t, c_size_t, c_size_t,
+             c_size_t, c_size_t, c_size_t, c_void_p, c_double, c_void_p)
+
+    def update_sand(self, sol_sand, flu_sand, dt, v2q, vel=None):
+        """
+        计算流动的砂和沉降的砂之间的平衡. 其中vel为一个double类型的指针，存储在各个cell中当前的流动速度
+        """
+        assert isinstance(v2q, Interp1)
+        if vel is None:
+            vel = 0   # Data is None
+        if isinstance(vel, Vector):
+            vel = vel.pointer
+
+        if isinstance(sol_sand, str):
+            sol_sand = self.find_fludef(name=sol_sand)
+            assert sol_sand is not None
+
+        if isinstance(flu_sand, str):
+            flu_sand = self.find_fludef(name=flu_sand)
+            assert flu_sand is not None
+
+        # 它一定要在某一种流体内
+        assert len(flu_sand) >= 2
+
+        core.seepage_update_sand(self.handle, *parse_fid3(sol_sand),
+                                 *parse_fid3(flu_sand), vel, dt, v2q.handle)
+
+    core.use(None, 'seepage_get_cell_flu_vel', c_void_p, c_void_p,
+             c_size_t, c_double)
+
+    def get_cell_flu_vel(self, fid, last_dt, buf=None):
+        """
+        根据上一个时间步各个face内流过的流体的体积，来计算各个cell位置流体流动的速度.
+        返回：
+            一个Vector对象(优先使用buf)
+        """
+        if buf is None:
+            buf = Vector(size=self.cell_number)
+            core.seepage_get_cell_flu_vel(self.handle, buf.pointer, fid, last_dt)
+            return buf
+        elif isinstance(buf, Vector):
+            buf.size = self.cell_number
+            core.seepage_get_cell_flu_vel(self.handle, buf.pointer, fid, last_dt)
+            return buf
+        else:  # 此时，buf应该为一个长度为cell_number的指针类型
+            core.seepage_get_cell_flu_vel(self.handle, buf, fid, last_dt)
+
+    core.use(None, 'seepage_get_cell_gradient', c_void_p, c_void_p, c_void_p)
+
+    def get_cell_gradient(self, data, buf=None):
+        """
+        计算cell位置各个物理量的梯度. 这里，给定的data和buf都应该为长度等于cell_number的double指针
+        """
+        if isinstance(data, Vector):
+            data = data.pointer
+        if buf is None:
+            buf = Vector(size=self.cell_number)
+            core.seepage_get_cell_gradient(self.handle, buf.pointer, data)
+            return buf
+        elif isinstance(buf, Vector):
+            buf.size = self.cell_number
+            core.seepage_get_cell_gradient(self.handle, buf.pointer, data)
+            return buf
+        else:  # 此时，buf应该为一个长度为cell_number的指针类型
+            core.seepage_get_cell_gradient(self.handle, buf, data)
 
 
 Reaction = Seepage.Reaction
@@ -11821,33 +11891,19 @@ class InvasionPercolation(HasHandle):
         return x, y, z
 
     core.use(None, 'ip_write_pos', c_void_p, c_size_t, c_void_p)
+
+    def write_pos(self, dim, pointer):
+        core.ip_write_pos(self.handle, dim, ctypes.cast(pointer, c_void_p))
+
     core.use(None, 'ip_write_phase', c_void_p, c_void_p)
 
-    def nodes_write(self, index, pointer=None, buf=None):
-        """
-        导出属性:
-            index=-1, x坐标
-            index=-2, y坐标
-            index=-3, z坐标
-            index=-4, phase
-        """
-        if pointer is None:
-            if _np is not None:
-                if buf is None:
-                    buf = _np.zeros(shape=self.node_n, dtype=float)
-                else:
-                    assert len(buf) == self.node_n
-                if not buf.flags['C_CONTIGUOUS']:
-                    buf = _np.ascontiguous(buf, dtype=buf.dtype)
-                pointer = buf.ctypes.data_as(POINTER(c_double))
+    def write_phase(self, pointer):
+        core.ip_write_phase(self.handle, ctypes.cast(pointer, c_void_p))
 
-        if index == -1 or index == -2 or index == -3:
-            core.ip_write_pos(self.handle, -index - 1, ctypes.cast(pointer, c_void_p))
-            return buf
-
-        if index == -4:
-            core.ip_write_phase(self.handle, ctypes.cast(pointer, c_void_p))
-            return buf
+    def nodes_write(self, *args, **kwargs):
+        warnings.warn('remove after 2025-6-2', DeprecationWarning)
+        from zmlx.alg.ip_nodes_write import ip_nodes_write
+        return ip_nodes_write(self, *args, **kwargs)
 
 
 class Dfn2(HasHandle):
@@ -12737,5 +12793,22 @@ class FracAlg:
         core.frac_alg_get_induced(network.handle, fa_xy, fa_yy, matrix.handle)
 
 
+def main(argv: list):
+    """
+    模块运行的主函数.
+    """
+    if len(argv) == 1:
+        print(about())
+        return
+    if len(argv) == 2:
+        if argv[1] == 'env':
+            try:
+                from zmlx.alg.install_dep import install_dep
+                install_dep(print)
+            except Exception as e:
+                print(e)
+        return
+
+
 if __name__ == "__main__":
-    print(about())
+    main(sys.argv)

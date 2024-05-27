@@ -2,11 +2,12 @@
 
 import numpy as np
 
-from zml import Seepage, SeepageMesh
+from zml import Seepage
 from zmlx.config import capillary
 from zmlx.config import seepage
 from zmlx.geometry.point_distance import point_distance
 from zmlx.plt.tricontourf import tricontourf
+from zmlx.seepage_mesh.cube import create_cube
 from zmlx.ui import gui
 from zmlx.utility.SeepageNumpy import as_numpy
 
@@ -115,9 +116,9 @@ def create():
                Seepage.FluDef(den=1000, vis=1.0e-3, name='water')
                ]
     model = seepage.create(
-        mesh=SeepageMesh.create_cube(np.linspace(0, 100, 101),
-                                     np.linspace(0, 100, 101),
-                                     (-0.5, 0.5)),
+        mesh=create_cube(np.linspace(0, 100, 101),
+                         np.linspace(0, 100, 101),
+                         (-0.5, 0.5)),
         porosity=0.2, pore_modulus=100e6, p=1e6, temperature=280, perm=1e-14,
         s=get_s, fludefs=fludefs
     )

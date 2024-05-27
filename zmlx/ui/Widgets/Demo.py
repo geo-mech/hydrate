@@ -38,7 +38,8 @@ class DemoWidget(QtWidgets.QTableWidget):
             cfg = code_config(path=path, encoding='utf-8')
             desc = cfg.get('desc', '')
 
-            self.__data.append([name, path, desc])
+            if len(desc) > 0:
+                self.__data.append([name, path, desc])
 
         if len(self.__data) == 0:
             self.clear()
@@ -49,22 +50,22 @@ class DemoWidget(QtWidgets.QTableWidget):
         self.setHorizontalHeaderLabels(['项目', '说明'])
         self.horizontalHeader().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
 
-        for irow in range(len(self.__data)):
+        for row_id in range(len(self.__data)):
             try:
-                name, path, desc = self.__data[irow]
-                self.setItem(irow, 0, QtWidgets.QTableWidgetItem(name))
-                self.setItem(irow, 1, QtWidgets.QTableWidgetItem(desc))
+                name, path, desc = self.__data[row_id]
+                self.setItem(row_id, 0, QtWidgets.QTableWidgetItem(name))
+                self.setItem(row_id, 1, QtWidgets.QTableWidgetItem(desc))
             except:
-                for icol in range(2):
-                    self.setItem(irow, icol, QtWidgets.QTableWidgetItem(''))
+                for col_id in range(2):
+                    self.setItem(row_id, col_id, QtWidgets.QTableWidgetItem(''))
 
     def item_clicked(self, index):
-        irow = index.row()
-        if irow >= len(self.__data):
+        row_id = index.row()
+        if row_id >= len(self.__data):
             return
 
         try:
-            name, path, desc = self.__data[irow]
+            name, path, desc = self.__data[row_id]
             if os.path.isfile(path):
                 ext = os.path.splitext(path)[-1]
                 if ext is not None:

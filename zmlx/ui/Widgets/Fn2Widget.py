@@ -271,7 +271,7 @@ class Fn2Widget(QtWidgets.QWidget):
         h_layout.addWidget(self.path_edit)
         button = QtWidgets.QToolButton(self)
         button.setText('...')
-        button.setIcon(load_icon('open.png'))
+        button.setIcon(load_icon('open.jpg'))
         button.clicked.connect(self.open_fn2_file_by_file_dialog)
         h_layout.addWidget(button)
         v_layout.addLayout(h_layout)

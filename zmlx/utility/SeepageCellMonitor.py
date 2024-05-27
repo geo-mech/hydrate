@@ -1,6 +1,10 @@
 import warnings
 
 from zml import is_array, Seepage
+try:
+    import numpy as np
+except:
+    np = None
 
 
 def _get_mass(item):
@@ -92,7 +96,7 @@ class SeepageCellMonitor:
         # 返回质量rate
         return [m / dt for m in dm]
 
-    def get_prod(self, index=None, np=None):
+    def get_prod(self, index=None):
         """
         返回一组<时间>; 与时间对应的累积生产的<质量>
         """
@@ -109,7 +113,7 @@ class SeepageCellMonitor:
         except Exception as err:
             warnings.warn(f'meet exception when call function <{self.get_prod}>, err = <{err}>')
 
-    def get_rate(self, index=None, np=None):
+    def get_rate(self, index=None):
         """
         返回一组<时间>; 与时间对应的单位时间的生产<质量>
         """
@@ -143,17 +147,17 @@ class SeepageCellMonitor:
         except Exception as err:
             warnings.warn(f'meet exception <{err}> when call function <{self.save}>')
 
-    def plot(self, index, **kwargs):
+    def plot(self, index, caption=None, **kwargs):
         """
         同时显示累积生产曲线和生产速率曲线：已废弃
         """
         try:
-            self.plot_prod(index, **kwargs)
-            self.plot_rate(index, **kwargs)
+            self.plot_prod(index, caption=None if caption is None else caption+'_mass', **kwargs)
+            self.plot_rate(index, caption=None if caption is None else caption+'_rate', **kwargs)
         except Exception as err:
             warnings.warn(f'meet exception <{err}> when call function <{self.plot}>')
 
-    def plot_prod(self, index, **kwargs):
+    def plot_prod(self, index, caption=None, **kwargs):
         """
         显示累积生产曲线
         """
@@ -162,13 +166,15 @@ class SeepageCellMonitor:
             x, y = self.get_prod(index)
             x = [xi / (3600 * 24) for xi in x]
             kw = {}
-            kw.update(caption=f'累积<{index}>', xlabel='time/d', ylabel='kg')
+            if caption is None:
+                caption = f'mass<{index}>'
+            kw.update(caption=caption, xlabel='time/d', ylabel='kg')
             kw.update(kwargs)
             plotxy(x, y, **kw)
         except Exception as err:
             warnings.warn(f'meet exception <{err}> when call function <{self.plot_prod}>')
 
-    def plot_rate(self, index, **kwargs):
+    def plot_rate(self, index, caption=None, **kwargs):
         """
         显示生产速率曲线
         """
@@ -178,7 +184,9 @@ class SeepageCellMonitor:
             x = [xi / (3600 * 24) for xi in x]
             y = [yi * (3600 * 24) for yi in y]
             kw = {}
-            kw.update(caption=f'速率<{index}>', xlabel='time/d', ylabel='kg/day')
+            if caption is None:
+                caption = f'rate<{index}>'
+            kw.update(caption=caption, xlabel='time/d', ylabel='kg/day')
             kw.update(kwargs)
             plotxy(x, y, **kw)
         except Exception as err:

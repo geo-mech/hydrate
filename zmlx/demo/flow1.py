@@ -2,20 +2,16 @@
 
 import numpy as np
 
-from zml import SeepageMesh, ConjugateGradientSolver, get_distance
-from zmlx.alg.time2str import time2str
+from zml import get_distance
 from zmlx.config import seepage
 from zmlx.fluid import h2o
-from zmlx.plt.tricontourf import tricontourf
-from zmlx.ui.GuiBuffer import gui
-from zmlx.utility.GuiIterator import GuiIterator
-from zmlx.utility.SeepageNumpy import as_numpy
+from zmlx.seepage_mesh.cube import create_cube
 
 
 def create():
-    mesh = SeepageMesh.create_cube(x=np.linspace(0, 100, 100),
-                                   y=np.linspace(0, 50, 50),
-                                   z=[0, 1])
+    mesh = create_cube(x=np.linspace(0, 100, 100),
+                       y=np.linspace(0, 50, 50),
+                       z=[0, 1])
     x_min, x_max = mesh.get_pos_range(0)
 
     def get_fai(x, y, z):
@@ -36,33 +32,12 @@ def create():
                            fludefs=[h2o.create(name='h2o', density=1000.0, viscosity=1.0e-3)],
                            porosity=get_fai, pore_modulus=200e6, p=get_p, s=1.0, perm=get_k)
 
+    seepage.set_solve(model,
+                      show_cells={'dim0': 0, 'dim1': 1, 'show_t': False, 'show_s': []},
+                      time_max=3600 * 24 * 30
+                      )
     return model
 
 
-def show(model):
-    if gui.exists():
-        numpy = as_numpy(model)
-        tricontourf(numpy.cells.x, numpy.cells.y, numpy.cells.pre,
-                    caption='pressure', title=f'time = {time2str(seepage.get_time(model))}')
-
-
-def solve(model):
-    solver = ConjugateGradientSolver(tolerance=1.0e-20)
-    iterate = GuiIterator(seepage.iterate, lambda: show(model))
-
-    while seepage.get_time(model) < 3600 * 24 * 30:
-        iterate(model, solver=solver)
-        step = seepage.get_step(model)
-        if step % 10 == 0:
-            print(f'step = {step}, dt = {time2str(seepage.get_dt(model))}, time = {time2str(seepage.get_time(model))}')
-
-    show(model)
-
-
-def _test1():
-    model = create()
-    solve(model)
-
-
 if __name__ == '__main__':
-    gui.execute(_test1, close_after_done=False)
+    seepage.solve(create(), close_after_done=False)

@@ -45,6 +45,27 @@ def get_cells_in_range(model, xr=None, yr=None, zr=None,
     return cells
 
 
+def get_cell_mask(model, xr=None, yr=None, zr=None):
+    """
+    返回给定坐标范围内的cell的index。主要用来辅助绘图。since 2024-6-12
+    """
+
+    def get_(v, r):
+        if r is None:
+            return [True] * len(v)  # 此时为所有
+        else:
+            return [r[0] <= v[i] <= r[1] for i in range(len(v))]
+
+    v_pos = [c.pos for c in model.cells]
+    # 三个方向分别的mask
+    x_mask = get_([pos[0] for pos in v_pos], xr)
+    y_mask = get_([pos[1] for pos in v_pos], yr)
+    z_mask = get_([pos[2] for pos in v_pos], zr)
+
+    # 返回结果
+    return [x_mask[i] and y_mask[i] and z_mask[i] for i in range(len(x_mask))]
+
+
 def get_cell_pos(model, index=(0, 1, 2)):
     vpos = [cell.pos for cell in model.cells]
     results = []
