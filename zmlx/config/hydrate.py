@@ -301,8 +301,10 @@ def show_2d(model: Seepage, folder=None, xdim=0, ydim=1):
 
 
 def create_kwargs(has_co2=False, has_steam=False, has_inh=False,
-                  has_ch4_in_liq=False, inh_diff=None,
-                  ch4_diff=None, support_ch4_hyd_diss=True,
+                  has_ch4_in_liq=False, has_co2_in_liq=False,
+                  inh_diff=None,
+                  ch4_diff=None,
+                  support_ch4_hyd_diss=True,
                   support_ch4_hyd_form=True, gr=None, h2o_density=None,
                   co2_def=None, gravity=None, **kwargs):
     """
@@ -312,12 +314,17 @@ def create_kwargs(has_co2=False, has_steam=False, has_inh=False,
     fludefs = create_fludefs(h2o_density=h2o_density,
                              co2_def=co2_def, has_co2=has_co2,
                              has_steam=has_steam, has_inh=has_inh,
-                             has_ch4_in_liq=has_ch4_in_liq)
+                             has_ch4_in_liq=has_ch4_in_liq,
+                             has_co2_in_liq=has_co2_in_liq,
+                             )
     reactions = create_reactions(support_ch4_hyd_diss=support_ch4_hyd_diss,
                                  support_ch4_hyd_form=support_ch4_hyd_form,
                                  has_inh=has_inh,
-                                 has_co2=has_co2, has_steam=has_steam,
-                                 has_ch4_in_liq=has_ch4_in_liq)
+                                 has_co2=has_co2,
+                                 has_steam=has_steam,
+                                 has_ch4_in_liq=has_ch4_in_liq,
+                                 has_co2_in_liq=has_co2_in_liq,
+                                 )
     caps = create_caps(ch4_diff=ch4_diff,
                        inh_diff=inh_diff)
     return create_dict(dt_max=3600 * 24,
