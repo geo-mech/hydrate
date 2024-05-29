@@ -356,36 +356,38 @@ class _AppData(Object):
         paths = [os.getcwd(), self.proj()] if first is None else [first, os.getcwd(), self.proj()]
         return paths + [self.folder, os.path.join(self.folder, 'temp')] + self.paths + sys.path
 
-    def find(self, name, first=None):
+    def find(self, *name, first=None):
         """
         Searches for the specified file and returns the path. If not found, None is returned
         """
-        for folder in self.get_paths(first):
-            try:
-                path = os.path.join(folder, name)
-                if os.path.exists(path):
-                    return path
-            except:
-                pass
+        if len(name) > 0:
+            for folder in self.get_paths(first):
+                try:
+                    path = os.path.join(folder, *name)
+                    if os.path.exists(path):
+                        return path
+                except:
+                    pass
 
-    def find_all(self, name, first=None):
+    def find_all(self, *name, first=None):
         """
         Search the file and return all found < and ensure that duplicate elements have been removed >
         """
         results = []
-        for folder in self.get_paths(first):
-            try:
-                path = os.path.join(folder, name)
-                if os.path.exists(path):
-                    exists = False
-                    for x in results:
-                        if os.path.samefile(x, path):
-                            exists = True
-                            break
-                    if not exists:
-                        results.append(path)
-            except:
-                pass
+        if len(name) > 0:
+            for folder in self.get_paths(first):
+                try:
+                    path = os.path.join(folder, *name)
+                    if os.path.exists(path):
+                        exists = False
+                        for x in results:
+                            if os.path.samefile(x, path):
+                                exists = True
+                                break
+                        if not exists:
+                            results.append(path)
+                except:
+                    pass
         return results
 
     def get(self, *args, **kwargs):
@@ -420,11 +422,11 @@ def log(text, tag=None):
     app_data.log(text)
 
 
-def load_cdll(name, first=None):
+def load_cdll(name, *, first=None):
     """
     Load C-Style Dll by the given file name and the folder.
     """
-    path = app_data.find(name, first)
+    path = app_data.find(name, first=first)
     if path is not None:
         try:
             assert isinstance(path, str)

@@ -1,6 +1,6 @@
 ### 介绍
 
-[IGG-Hydrate](https://gitee.com/geomech/hydrate): 非常规储层*热/流/固/化耦合*(THMC)计算模块. 用于：1、天然气水合物储层成藏/开发; 2、陆相页岩原位转化开发；3、其它流动/传热/化学耦合问题。
+[IGG-Hydrate](https://gitee.com/geomech/hydrate): 天然气水合物开发模拟器。用于：1、天然气水合物成藏/开发; 2、页岩油原位转化；3、其它流动/传热/化学耦合问题。
  
 ### 版本
 

@@ -68,7 +68,7 @@ def _func(idx, s=None):
 
 
 def _test(n):
-    tasks = [create_async(_func, kwds={'idx': idx, 's': 30}) for idx in range(n)]
+    tasks = [create_async(_func, kwds={'idx': idx, 's': 1}) for idx in range(n)]
     t1 = timeit.default_timer()
     res = apply_async(tasks, processes=n)
     print(f'res = {res}')
@@ -76,4 +76,4 @@ def _test(n):
 
 
 if __name__ == '__main__':
-    _test(200)
+    _test(100)

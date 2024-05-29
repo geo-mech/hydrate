@@ -1,0 +1,6 @@
+# ** menu = '帮助'
+# ** text = '新建Issue(向作者提问)'
+
+from zmlx.alg import web
+
+web.open_new_tab('https://gitee.com/geomech/hydrate/issues/new')

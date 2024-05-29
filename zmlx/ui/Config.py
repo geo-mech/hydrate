@@ -234,16 +234,14 @@ def get_action_files():
         if not os.path.isdir(path):
             continue
         for filename in os.listdir(path):
-            if filename == '__init__.py':
-                continue
             name, ext = os.path.splitext(filename)
-            if ext == '.py' or ext == '.pyw':
+            if ext == '.act':
                 files[filename] = os.path.join(path, filename)
     return files
 
 
 try:
-    code_in_editor = read_text(find('zml_code_in_editor.py'), encoding='utf-8',
+    code_in_editor = read_text(find('zml_code_in_editor.txt'), encoding='utf-8',
                                default='')
 except:
     code_in_editor = ''

@@ -1,37 +1,37 @@
 {
   "文件": [
-    "set_cwd.py",
-    "quit.py",
-    "open.py",
-    "demo.py"
+    "set_cwd.act",
+    "quit.act",
+    "open.act",
+    "demo.act"
   ],
   "代码": [
-    "py_new.py",
-    "py_exec.py",
-    "kill.py"
+    "py_new.act",
+    "py_exec.act",
+    "kill.act"
   ],
   "显示": [
-    "refresh.py",
-    "cls.py",
-    "view_cwd.py",
-    "memory.py",
-    "timer.py",
-    "console.py",
-    "show_cwd.py"
+    "refresh.act",
+    "cls.act",
+    "view_cwd.act",
+    "memory.act",
+    "timer.act",
+    "console.act",
+    "show_cwd.act"
   ],
   "操作": [
-    "print_tag.py",
-    "play_images.py",
-    "close_all_tabs.py"
+    "print_tag.act",
+    "play_images.act",
+    "close_all_tabs.act"
   ],
   "设置": [
-    "search.py",
-    "env.py"
+    "search.act",
+    "env.act"
   ],
   "帮助": [
-    "about.py",
-    "readme.py",
-    "reg.py",
-    "homepage.py"
+    "about.act",
+    "readme.act",
+    "reg.act",
+    "homepage.act"
   ]
 }

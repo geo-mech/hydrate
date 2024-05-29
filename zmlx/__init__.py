@@ -115,7 +115,7 @@ def open_gui():
             print(f'Error: {e}')
 
         try:
-            gui.trigger('readme.py')
+            gui.trigger('readme.act')
         except Exception as e:
             print(f'Error: {e}')
 
