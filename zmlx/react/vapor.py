@@ -24,13 +24,19 @@ from math import exp
 from zmlx.react import melt
 
 
-def create(vap, wat, fa_t=None, fa_c=None):
+def create(vap, wat, fa_t=None, fa_c=None, temp_max=None):
     """
     创建水气化成为水蒸气的反应(以及其逆过程)
         ivap: 水蒸气的ID；iwat水的ID
     """
     # 使用Antoine 公式，实际上这个温度范围可能已经超过了该公式的适用范围
-    vt = [float(i) for i in range(290, 700)]
+    if temp_max is None:
+        temp_max = 700
+
+    assert 400 <= temp_max <= 1200
+    temp_max = round(temp_max)   # 液态水允许的最高的温度
+
+    vt = [float(i) for i in range(290, temp_max)]
     vp = [exp(9.3876 - 3826.36 / (t - 45.47)) * 1.0e6 for t in vt]
 
     # 假设反应在373K的时候发生，那么每千克的物质，会释放
@@ -51,7 +57,7 @@ def __compare():
     """
     from zmlx.plt.plot2 import plot2
 
-    vt = [float(i) for i in range(290, 700)]
+    vt = [float(i) for i in range(290, 1200)]
     vp = [exp(9.3876 - 3826.36 / (t - 45.47)) * 1.0e6 for t in vt]
     vt1 = [455, 460, 465, 470, 475, 480, 485, 490, 495, 500, 505, 510, 515, 520, 525, 530, 535, 540, 545,
            550, 555, 560, 565, 570, 575, 580, 585, 590, 595, 600]

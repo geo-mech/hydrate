@@ -3,17 +3,20 @@ from zmlx.react import vapor
 from zmlx.react.inh import add_inh
 
 
-def create_reactions():
+def create_reactions(temp_max=None):
     """
     创建反应:
         1. 干酪根的裂解
         2. 重油的裂解
         3. 蒸气/水的转化
+    其中temp_max为蒸汽反应的时候，设置的温度的最高值.
     """
     result = []
 
     # 水和蒸汽之间的可逆的反应
-    r = vapor.create(vap='steam', wat='h2o')
+    r = vapor.create(vap='steam', wat='h2o',
+                     temp_max=temp_max   # 液态水允许的最高的温度
+                     )
     result.append(r)
 
     # kerogen分解
