@@ -10,7 +10,7 @@ def apply(oper=None, caption=None, on_top=None):
         __CaptionVal[0] = caption
     if gui.exists() and oper is not None:
         gui.get_widget(type=pg.PlotWidget, oper=oper, caption=__CaptionVal[0], on_top=on_top,
-                       icon='gpu.png')
+                       icon='gpu.jpg')
 
 
 def make_fn(name):

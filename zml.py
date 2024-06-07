@@ -15,30 +15,24 @@ Author:         ZHANG Zhaobin <zhangzhaobin@mail.iggcas.ac.cn>,
 
 import ctypes
 import datetime
+import importlib
 import math
 import os
 import sys
-import warnings
 import timeit
-import importlib
+import warnings
 
 warnings.simplefilter("default")  # Default warning display
 
-from ctypes import cdll, c_void_p, c_char_p, c_int, c_int64, c_bool, c_double, c_size_t, c_uint, CFUNCTYPE, POINTER
+from ctypes import (cdll, c_void_p, c_char_p, c_int, c_int64, c_bool, c_double,
+                    c_size_t, c_uint, CFUNCTYPE, POINTER)
 from typing import Iterable
-
-try:
-    import numpy as _np
-except Exception as _err:
-    # Some features are not available when numpy is not installed
-    _np = None
-    warnings.warn(f'cannot import numpy in zml. error = {_err}')
 
 # Indicates whether the system is currently Windows (both Windows and Linux systems are currently supported)
 is_windows = os.name == 'nt'
 
 # Version of the zml module (date represented by six digits)
-version = 240522
+version = 240607
 
 
 class Object:
@@ -1484,32 +1478,19 @@ class Vector(HasHandle):
         core.vf_write(self.handle, ctypes.cast(pointer, c_void_p))
 
     def read_numpy(self, data):
-        """
-        读取给定的numpy数组的数据
-        """
-        if _np is not None:
-            if not data.flags['C_CONTIGUOUS']:
-                data = _np.ascontiguous(data, dtype=data.dtype)  # 如果不是C连续的内存，必须强制转换
-            self.size = len(data)
-            self.read_memory(data.ctypes.data_as(POINTER(c_double)))
+        warnings.warn('remove after 2025-6-2', DeprecationWarning)
+        from zmlx.alg.Vector import read_numpy
+        return read_numpy(self, data)
 
     def write_numpy(self, data):
-        """
-        将数据写入到numpy数组，必须保证给定的numpy数组的长度和self一致
-        """
-        if _np is not None:
-            if not data.flags['C_CONTIGUOUS']:
-                data = _np.ascontiguous(data, dtype=data.dtype)  # 如果不是C连续的内存，必须强制转换
-            self.write_memory(data.ctypes.data_as(POINTER(c_double)))
-            return data
+        warnings.warn('remove after 2025-6-2', DeprecationWarning)
+        from zmlx.alg.Vector import write_numpy
+        return write_numpy(self, data)
 
     def to_numpy(self):
-        """
-        将这个Vector转化为一个numpy的数组
-        """
-        if _np is not None:
-            a = _np.zeros(shape=self.size, dtype=float)
-            return self.write_numpy(a)
+        warnings.warn('remove after 2025-6-2', DeprecationWarning)
+        from zmlx.alg.Vector import to_numpy
+        return to_numpy(self)
 
     core.use(c_void_p, 'vf_pointer', c_void_p)
 
@@ -9595,8 +9576,11 @@ class Seepage(HasHandle, HasCells):
              c_double, c_void_p)
 
     def diffusion(self, dt, fid0, fid1, *,
-                  ps0=None, ls0=None, pk=None, lk=None, pg=None, lg=None, ppg=None, lpg=None,
-                  vs0=None, vk=None, vg=None, vpg=None, ds_max=0.05, face_groups=None):
+                  ps0=None, ls0=None, vs0=None,
+                  pk=None, lk=None, vk=None,
+                  pg=None, lg=None, vg=None,
+                  ppg=None, lpg=None, vpg=None,
+                  ds_max=0.05, face_groups=None):
         """
         扩散.
         其中fid0和fid1定义两种流体。在扩散的时候，相邻Cell的这两种流体会进行交换，但会保证每个Cell的流体体积不变；
@@ -11823,33 +11807,19 @@ class InvasionPercolation(HasHandle):
         return x, y, z
 
     core.use(None, 'ip_write_pos', c_void_p, c_size_t, c_void_p)
+
+    def write_pos(self, dim, pointer):
+        core.ip_write_pos(self.handle, dim, ctypes.cast(pointer, c_void_p))
+
     core.use(None, 'ip_write_phase', c_void_p, c_void_p)
 
-    def nodes_write(self, index, pointer=None, buf=None):
-        """
-        导出属性:
-            index=-1, x坐标
-            index=-2, y坐标
-            index=-3, z坐标
-            index=-4, phase
-        """
-        if pointer is None:
-            if _np is not None:
-                if buf is None:
-                    buf = _np.zeros(shape=self.node_n, dtype=float)
-                else:
-                    assert len(buf) == self.node_n
-                if not buf.flags['C_CONTIGUOUS']:
-                    buf = _np.ascontiguous(buf, dtype=buf.dtype)
-                pointer = buf.ctypes.data_as(POINTER(c_double))
+    def write_phase(self, pointer):
+        core.ip_write_phase(self.handle, ctypes.cast(pointer, c_void_p))
 
-        if index == -1 or index == -2 or index == -3:
-            core.ip_write_pos(self.handle, -index - 1, ctypes.cast(pointer, c_void_p))
-            return buf
-
-        if index == -4:
-            core.ip_write_phase(self.handle, ctypes.cast(pointer, c_void_p))
-            return buf
+    def nodes_write(self, *args, **kwargs):
+        warnings.warn('remove after 2025-6-2', DeprecationWarning)
+        from zmlx.alg.ip_nodes_write import ip_nodes_write
+        return ip_nodes_write(self, *args, **kwargs)
 
 
 class Dfn2(HasHandle):
@@ -12739,5 +12709,22 @@ class FracAlg:
         core.frac_alg_get_induced(network.handle, fa_xy, fa_yy, matrix.handle)
 
 
+def main(argv: list):
+    """
+    模块运行的主函数.
+    """
+    if len(argv) == 1:
+        print(about())
+        return
+    if len(argv) == 2:
+        if argv[1] == 'env':
+            try:
+                from zmlx.alg.install_dep import install_dep
+                install_dep(print)
+            except Exception as e:
+                print(e)
+        return
+
+
 if __name__ == "__main__":
-    print(about())
+    main(sys.argv)

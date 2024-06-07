@@ -43,11 +43,11 @@ class ConsoleWidget(QtWidgets.QWidget):
             h_layout.addWidget(button)
             return button
 
-        self.button_exec = add_button('运行', 'begin.png',
+        self.button_exec = add_button('运行', 'begin.jpg',
                                       lambda: self.exec_file(fname=None))
         self.button_exec.setShortcut('Ctrl+Return')
-        self.button_pause = add_button('暂停', 'pause.png', self.pause_clicked)
-        self.button_exit = add_button('终止', 'stop.png', self.stop_clicked)
+        self.button_pause = add_button('暂停', 'pause.jpg', self.pause_clicked)
+        self.button_exit = add_button('终止', 'stop.jpg', self.stop_clicked)
         h_layout.addItem(QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum))
         main_layout.addLayout(h_layout)
 
@@ -74,11 +74,11 @@ class ConsoleWidget(QtWidgets.QWidget):
     def refresh_buttons(self):
         if self.should_pause():
             self.button_pause.setText(get_text('继续'))
-            self.button_pause.setIcon(load_icon('begin.png'))
+            self.button_pause.setIcon(load_icon('begin.jpg'))
             self.button_pause.setStyleSheet('background-color: #e15631; ')
         else:
             self.button_pause.setText(get_text('暂停'))
-            self.button_pause.setIcon(load_icon('pause.png'))
+            self.button_pause.setIcon(load_icon('pause.jpg'))
             self.button_pause.setStyleSheet('')
         if self.flag_exit.value:
             self.button_exit.setStyleSheet('background-color: #e15631; ')

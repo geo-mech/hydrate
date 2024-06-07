@@ -1,0 +1,7 @@
+# ** is_sys = True
+# ** icon = 'kill.jpg'
+# ** text = '强制结束'
+
+from zmlx.ui.GuiBuffer import gui
+
+gui.kill_thread()

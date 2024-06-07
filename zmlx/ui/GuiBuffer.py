@@ -146,6 +146,7 @@ class GuiBuffer:
 
         if self.exists() or disable_gui:
             return fx()
+
         try:
             from zmlx.ui.MainWindow import execute
             return execute(fx, keep_cwd=keep_cwd, close_after_done=close_after_done)

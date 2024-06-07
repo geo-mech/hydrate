@@ -235,13 +235,13 @@ def get_action_files():
             continue
         for filename in os.listdir(path):
             name, ext = os.path.splitext(filename)
-            if ext == '.act':
+            if ext == '.txtpy':
                 files[filename] = os.path.join(path, filename)
     return files
 
 
 try:
-    code_in_editor = read_text(find('zml_code_in_editor.txt'), encoding='utf-8',
+    code_in_editor = read_text(find('zml_code_in_editor.txtpy'), encoding='utf-8',
                                default='')
 except:
     code_in_editor = ''

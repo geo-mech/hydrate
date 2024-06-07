@@ -26,7 +26,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
-        self.setWindowIcon(load_icon('app.png'))
+        self.setWindowIcon(load_icon('app.jpg'))
         self.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
         self.task_proc = TaskProc(self)
 
@@ -205,7 +205,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if iconname is not None:
             action.setIcon(load_icon(iconname))
         else:
-            action.setIcon(load_icon('python.png'))
+            action.setIcon(load_icon('python.jpg'))
         action.setEnabled(enabled)
         if tooltip is not None:
             assert isinstance(tooltip, str)
@@ -317,7 +317,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def get_figure_widget(self, clear=None, **kwargs):
         from zmlx.ui.MatplotWidget import MatplotWidget
         if kwargs.get('icon', None) is None:
-            kwargs['icon'] = 'matplotlib.png'
+            kwargs['icon'] = 'matplotlib.jpg'
         widget = self.get_widget(type=MatplotWidget, **kwargs)
         if clear:
             fig = widget.figure
@@ -359,7 +359,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def view_cwd(self):
         from zmlx.ui.Widgets.CwdViewer import CwdViewer
-        self.get_widget(type=CwdViewer, caption='文件', on_top=True, oper=lambda w: w.refresh(), icon='cwd.png')
+        self.get_widget(type=CwdViewer, caption='文件', on_top=True, oper=lambda w: w.refresh(), icon='cwd.jpg')
 
     def progress(self, label=None, range=None, value=None, visible=None, duration=5000):
         """
@@ -405,7 +405,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.get_widget(type=CodeEdit,
                                 caption=os.path.basename(fname) if caption is None else caption,
                                 on_top=True,
-                                oper=lambda x: x.open(fname), icon='python.png')
+                                oper=lambda x: x.open(fname), icon='python.jpg')
                 print(f'文件已打开: \n\t{fname}\n\n请点击工具栏上的<运行>按钮以运行!\n\n')
 
     def open_text(self, fname, caption=None):
@@ -547,14 +547,14 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
     def f1():
         app_data.space['main_window'] = win
         gui.push(win.gui_api)
-        print(f'Push Gui: {win.gui_api}')
+        print(f'Gui Open: {win.gui_api}')
         sys.stdout = win.console_widget.output_widget
         sys.stderr = win.console_widget.output_widget
 
     def f2():
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
-        print('Pop Gui')
+        print('Gui Close')
         gui.pop()
         app_data.space['main_window'] = None
 

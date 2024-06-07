@@ -17,7 +17,7 @@ def apply(oper=None, caption=None, on_top=None):
         __Captions[0] = caption
     if gui.exists() and oper is not None:
         gui.get_widget(type=gl.GLViewWidget, oper=oper, caption=__Captions[0], on_top=on_top,
-                       icon='gpu.png')
+                       icon='gpu.jpg')
 
 
 def get_widget(caption=None, on_top=None):

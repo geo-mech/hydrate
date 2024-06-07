@@ -1,6 +1,0 @@
-# ** menu = '帮助'
-# ** text = '中科院地质地球所主页'
-
-from zmlx.alg import web
-
-web.open_new_tab('http://www.igg.cas.cn/')

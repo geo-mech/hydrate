@@ -10,7 +10,8 @@ zmlx: zml模块的扩展，将首先引入zml的所有功能，并定义数据�
 from zml import *
 
 try:
-    from zmlx.ui.GuiBuffer import gui, information, question, plot as do_plot, break_point, gui_exec
+    from zmlx.ui.GuiBuffer import (gui, information, question,
+                                   plot as do_plot, break_point, gui_exec)
 except Exception as err:
     warnings.warn(f'meet exception when import GuiBuffer. error = {err}')
 
@@ -40,22 +41,36 @@ import zml
 setenv = app_data.setenv
 getenv = app_data.getenv
 
-create_ch4 = RuntimeFunc(pack_name='zmlx.fluid.ch4', func_name='create')
-create_ch4_hydrate = RuntimeFunc(pack_name='zmlx.fluid.ch4_hydrate', func_name='create')
-create_co2 = RuntimeFunc(pack_name='zmlx.fluid.co2', func_name='create')
-create_co2_hydrate = RuntimeFunc(pack_name='zmlx.fluid.co2_hydrate', func_name='create')
-create_h2o = RuntimeFunc(pack_name='zmlx.fluid.h2o', func_name='create')
-create_h2o_gas = RuntimeFunc(pack_name='zmlx.fluid.h2o_gas', func_name='create')
-create_h2o_ice = RuntimeFunc(pack_name='zmlx.fluid.h2o_ice', func_name='create')
+create_ch4 = RuntimeFunc(pack_name='zmlx.fluid.ch4',
+                         func_name='create')
+create_ch4_hydrate = RuntimeFunc(pack_name='zmlx.fluid.ch4_hydrate',
+                                 func_name='create')
+create_co2 = RuntimeFunc(pack_name='zmlx.fluid.co2',
+                         func_name='create')
+create_co2_hydrate = RuntimeFunc(pack_name='zmlx.fluid.co2_hydrate',
+                                 func_name='create')
+create_h2o = RuntimeFunc(pack_name='zmlx.fluid.h2o',
+                         func_name='create')
+create_h2o_gas = RuntimeFunc(pack_name='zmlx.fluid.h2o_gas',
+                             func_name='create')
+create_h2o_ice = RuntimeFunc(pack_name='zmlx.fluid.h2o_ice',
+                             func_name='create')
 
-create_hydconfig = RuntimeFunc(pack_name='zmlx.config.hydrate', func_name='create',
-                               deprecated_name='zmlx.create_hydconfig', deprecated_date='2025-5-7')
+create_hydconfig = RuntimeFunc(pack_name='zmlx.config.hydrate',
+                               func_name='create',
+                               deprecated_name='zmlx.create_hydconfig',
+                               deprecated_date='2025-5-7')
 
-plot2 = RuntimeFunc(pack_name='zmlx.plt.plot2', func_name='plot2')
-tricontourf = RuntimeFunc(pack_name='zmlx.plt.tricontourf', func_name='tricontourf')
-plotxy = RuntimeFunc(pack_name='zmlx.plt.plotxy', func_name='plotxy')
-find = RuntimeFunc(pack_name='zmlx.ui.Config', func_name='find')
-find_all = RuntimeFunc(pack_name='zmlx.ui.Config', func_name='find_all')
+plot2 = RuntimeFunc(pack_name='zmlx.plt.plot2',
+                    func_name='plot2')
+tricontourf = RuntimeFunc(pack_name='zmlx.plt.tricontourf',
+                          func_name='tricontourf')
+plotxy = RuntimeFunc(pack_name='zmlx.plt.plotxy',
+                     func_name='plotxy')
+find = RuntimeFunc(pack_name='zmlx.ui.Config',
+                   func_name='find')
+find_all = RuntimeFunc(pack_name='zmlx.ui.Config',
+                       func_name='find_all')
 
 try:
     from zmlx.utility.GuiIterator import GuiIterator
@@ -82,11 +97,6 @@ try:
 except Exception as err:
     warnings.warn(f'meet exception when import SeepageCellMonitor. error = {err}')
 
-try:
-    import numpy as np
-except Exception as err:
-    np = None
-    warnings.warn(f'meet exception when import numpy. error = {err}')
 
 try:
     __folder = os.path.dirname(__file__)
@@ -104,23 +114,15 @@ def get_path(*args):
     return make_parent(join_paths(os.path.dirname(__file__), *args))
 
 
-def open_gui():
-    def do_install():
-        try:
-            from zmlx.alg.install import install
-            install(name='zml.pth',
-                    folder=os.path.dirname(os.path.dirname(__file__))
-                    )
-        except Exception as e:
-            print(f'Error: {e}')
-
-        try:
-            gui.trigger('readme.act')
-        except Exception as e:
-            print(f'Error: {e}')
-
-    gui.execute(do_install, keep_cwd=False, close_after_done=False)
+try:
+    from zmlx.ui.main import open_gui
+except:
+    pass
 
 
 if __name__ == "__main__":
-    open_gui()
+    try:
+        open_gui(sys.argv)
+    except:
+        print(about())
+

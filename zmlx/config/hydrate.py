@@ -1,3 +1,6 @@
+"""
+用于水合物计算的配置.
+"""
 from zml import Seepage, create_dict, log
 from zmlx.alg.time2str import time2str
 from zmlx.config import seepage
@@ -27,15 +30,20 @@ from zmlx.utility.SeepageNumpy import as_numpy
 
 
 def create_fludefs(has_co2=False, has_steam=False, has_inh=False,
-                   has_ch4_in_liq=False, has_co2_in_liq=False,
-                   h2o_density=None, co2_def=None, inh_def=None,
-                   ch4_def=None, h2o_def=None,
+                   has_ch4_in_liq=False,
+                   has_co2_in_liq=False,
+                   h2o_density=None,
+                   ch4_def=None,
+                   co2_def=None,
+                   h2o_def=None,
+                   inh_def=None,
                    other_gas=None, other_liq=None, other_sol=None):
     """
-    创建水合物计算的时候的流体的定义.
+    创建水合物计算的时候的流体的定义(气体、液体和固体).
         当给定h2o_density的时候，h2o采用固定的密度.
         当给定co2的时候，将使用给定的定义.
-    返回流体的定义：
+
+    返回流体的定义(一个list)：
         气体：ch4, [co2, h2o_gas]
         液体：h2o, [ch4_in_liq, co2_in_liq]
         固体：ch4_hydrate, h2o_ice, [co2_hydrate]
@@ -43,7 +51,7 @@ def create_fludefs(has_co2=False, has_steam=False, has_inh=False,
 
     # ch4
     if ch4_def is None:
-        ch4_def = create_ch4()
+        ch4_def = create_ch4()   # 此时，使用默认的定义
 
     # co2
     if has_co2_in_liq:  # 此时必然要求co2存在
@@ -75,7 +83,7 @@ def create_fludefs(has_co2=False, has_steam=False, has_inh=False,
         gas.add_component(co2_def, name='co2')
     if has_steam:
         gas.add_component(create_h2o_gas(), name='h2o_gas')
-    if other_gas is not None:
+    if other_gas is not None:  # 其它所有的气体
         for item in other_gas:
             gas.add_component(item)
 
@@ -89,7 +97,7 @@ def create_fludefs(has_co2=False, has_steam=False, has_inh=False,
     if has_co2_in_liq:
         assert has_co2
         liq.add_component(co2_def, name='co2_in_liq')
-    if other_liq is not None:
+    if other_liq is not None:  # 其它的液体
         for item in other_liq:
             liq.add_component(item)
 
@@ -99,7 +107,7 @@ def create_fludefs(has_co2=False, has_steam=False, has_inh=False,
     sol.add_component(create_h2o_ice(), name='h2o_ice')
     if has_co2:
         sol.add_component(create_co2_hydrate(), name='co2_hydrate')
-    if other_sol is not None:
+    if other_sol is not None:  # 其它的固体
         for item in other_sol:
             sol.add_component(item)
 
@@ -236,7 +244,8 @@ def create_caps(inh_diff=None, co2_diff=None, ch4_diff=None,
 
 def create_t_ini(z_top=0.0, t_top=276.0, grad_t=0.04466):
     """
-    创建温度的初始场(在z方向线性)
+    创建温度的初始场;
+        (在z方向线性)
     """
     assert 0.02 <= grad_t <= 0.06
     return LinearField(v0=t_top, z0=z_top, dz=-grad_t)
@@ -244,8 +253,10 @@ def create_t_ini(z_top=0.0, t_top=276.0, grad_t=0.04466):
 
 def create_p_ini(z_top=0.0, p_top=12e6, grad_p=0.01e6):
     """
-    创建压力的初始场(在z方向线性)
+    创建压力的初始场;
+        (在z方向线性)
     """
+    assert 0.001e6 <= grad_p <= 0.1e6
     return LinearField(v0=p_top, z0=z_top, dz=-grad_p)
 
 

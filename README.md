@@ -4,7 +4,7 @@
  
 ### 版本
 
-ZmlVersion=240522
+ZmlVersion=240607
 
 ### 作者
 
@@ -31,13 +31,14 @@ ZmlVersion=240522
 ### 安装
 
 1. Windows 10/11, x64, 安装[VC_redist.x64.exe](https://gitee.com/geomech/hydrate/attach_files);
-2. 安装[Python](https://www.python.org/) 3.7+ (建议3.9以上版本), 64位，并安装`numpy`, `scipy`, `PyQt5`, `matplotlib`; 建议使用 [WinPython](https://pan.baidu.com/s/1PnqdA28GdUKhA9A_7x20zQ) 集成环境 (链接：[https://pan.baidu.com/s/1PnqdA28GdUKhA9A_7x20zQ](https://pan.baidu.com/s/1PnqdA28GdUKhA9A_7x20zQ), 提取码：mba8);
-3. 将[zml.py](https://gitee.com/geomech/hydrate/blob/master/zml.py)所在文件夹添加到Python[搜索路径](https://zhuanlan.zhihu.com/p/530589364)。
+2. 安装[Python](https://www.python.org/) 3.7+ (建议3.9以上版本) x64; 
+3. 将[zml.py](https://gitee.com/geomech/hydrate/blob/master/zml.py)所在文件夹添加到Python[搜索路径](https://zhuanlan.zhihu.com/p/530589364);
+4. 命令行运行`python.exe -m zml env`来安装 [IGG-Hydrate](https://gitee.com/geomech/hydrate) 依赖Python模块(包括：`numpy, scipy, PyQt5, matplotlib, pyqtgraph, PyOpenGL, PyQtWebEngine`等). 
 
 ### 使用
 
 1. 参考[zmlx/demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo);
-2. 运行[UI.pyw](https://gitee.com/geomech/hydrate/blob/master/UI.pyw)启动界面 (会尝试将`zml`添加到[搜索路径](https://zhuanlan.zhihu.com/p/530589364));
+2. 运行[UI.pyw](https://gitee.com/geomech/hydrate/blob/master/UI.pyw)启动界面.
 
 ### 反馈
 
