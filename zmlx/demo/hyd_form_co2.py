@@ -2,17 +2,10 @@
 
 import numpy as np
 
-from zml import get_distance, create_dict, Seepage, core
-from zmlx.alg.time2str import time2str
+from zml import get_distance, create_dict
 from zmlx.config import hydrate, seepage
-from zmlx.filesys.join_paths import join_paths
-from zmlx.filesys.make_fname import make_fname
-from zmlx.plt.tricontourf import tricontourf
-from zmlx.ui.GuiBuffer import gui
-from zmlx.utility.GuiIterator import GuiIterator
-from zmlx.utility.SaveManager import SaveManager
-from zmlx.utility.SeepageNumpy import as_numpy
 from zmlx.seepage_mesh.cube import create_cube
+from zmlx.ui.GuiBuffer import gui
 
 
 def create():
@@ -57,7 +50,7 @@ def create():
                           p=get_initial_p,
                           s=get_initial_s,
                           perm=get_perm, heat_cond=2.0,
-                          dt_max=3600*24*5,  # 允许的最大的时间步长
+                          dt_max=3600 * 24 * 5,  # 允许的最大的时间步长
                           dv_relative=0.1,  # 每一步流体流体的距离与网格大小的比值
                           ))
     model = seepage.create(**kw)
@@ -67,86 +60,15 @@ def create():
     for cell in model.cells:
         cell.set_attr(key, 0.06)
 
+    model.set_text(key='solve',
+                   text={'show_cells': {'dim0': 0, 'dim1': 2},
+                         'step_max': 10000,
+                         }
+                   )
     # 返回创建的模型.
     return model
 
 
-def show(model: Seepage, folder=None):
-    """
-    绘图，且当folder给定的时候，将绘图结果保存到给定的文件夹
-    """
-    if not gui.exists():
-        return
-    time = seepage.get_time(model)
-    kwargs = {'title': f'plot when time={time2str(time)}'}
-    x = as_numpy(model).cells.x
-    z = as_numpy(model).cells.z
-
-    def fname(key):
-        return make_fname(time / (3600 * 24 * 365),
-                          folder=join_paths(folder, key),
-                          ext='.jpg', unit='y')
-
-    cell_keys = seepage.cell_keys(model)
-
-    def show_key(key):
-        tricontourf(x, z, as_numpy(model).cells.get(cell_keys[key]),
-                    caption=key,
-                    fname=fname(key), **kwargs)
-
-    show_key('pre')
-    show_key('temperature')
-
-    fv_all = as_numpy(model).cells.fluid_vol
-
-    def show_s(flu_name):
-        s = as_numpy(model).fluids(*model.find_fludef(flu_name)).vol / fv_all
-        tricontourf(x, z, s, caption=flu_name,
-                    fname=fname(flu_name), **kwargs)
-
-    for item in ['co2', 'co2_in_liq', 'liq', 'co2_hydrate']:
-        show_s(item)
-
-
-def solve(model, folder=None, step_max=None):
-    """
-    执行求解，并将结果保存到指定的文件夹
-    """
-    iterate = GuiIterator(seepage.iterate,
-                          plot=lambda: show(model,
-                                            folder=join_paths(folder, 'figures')))
-
-    # get_time: 返回当前时间，单元：年
-    # dtime: 返回给定时刻保存数据的时间间隔<时间单元同get_time>. 此处为: 随着time增大，保存的间隔增大，但最大不超过5年，最小不小于0.1年
-    save = SaveManager(join_paths(folder, 'seepage'), save=model.save, ext='.seepage', time_unit='y',
-                       dtime=lambda time: min(5.0, max(0.1, time * 0.1)),
-                       get_time=lambda: seepage.get_time(model) / (3600 * 24 * 365),
-                       )
-
-    if step_max is None:
-        step_max = 10000
-
-    for step in range(step_max):
-        iterate(model)
-        save()
-        if step % 10 == 0:
-            print(f'step = {step}, dt = {seepage.get_dt(model, as_str=True)}, '
-                  f'time = {seepage.get_time(model, as_str=True)}')
-    show(model, folder=join_paths(folder, 'figures'))
-    save(check_dt=False)  # 保存最终状态
-    print(iterate.time_info())
-
-
-def execute(folder=None, step_max=None, gui_mode=False,
-            close_after_done=False):
-
-    def f():
-        model = create()
-        solve(model, folder=folder, step_max=step_max)
-
-    gui.execute(f, close_after_done=close_after_done, disable_gui=not gui_mode)
-
-
 if __name__ == '__main__':
-    execute(gui_mode=True)
-
+    gui.execute(lambda: seepage.solve(create()),
+                close_after_done=False)

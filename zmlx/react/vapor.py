@@ -24,6 +24,16 @@ from math import exp
 from zmlx.react import melt
 
 
+def get_heat_need(water_T, steam_T):
+    """
+    返回将1kg的T0温度的水加热并生成T1温度的蒸汽，所需要消耗的热量 (大约的，仅仅用于建模的时候使用)
+    """
+    E1 = 4200.0 * (273.15 + 100.0 - water_T)    # 首先，加热到100摄氏度的水
+    E2 = 2.26e6   # 相变
+    E3 = 1850 * (steam_T - (273.15 + 100.0))   # 蒸汽继续升温
+    return E1 + E2 + E3
+
+
 def create(vap, wat, fa_t=None, fa_c=None, temp_max=None):
     """
     创建水气化成为水蒸气的反应(以及其逆过程)
@@ -50,7 +60,7 @@ def create(vap, wat, fa_t=None, fa_c=None, temp_max=None):
                        vt=vt, t2q=None)
 
 
-def __compare():
+def test_1():
     """
     参考文献：Wagner, W.; Pruss, A., The IAPWS Formulation 1995 for the Thermodynamic Properties of Ordinary Water Substance for General
         and Scientific Use, J. Phys. Chem. Ref. Data, 2002, 31, 2, 387-535, https://doi.org/10.1063/1.1461829 .
@@ -71,5 +81,9 @@ def __compare():
     plot2(xlabel='x', ylabel='y', data=(d3, d4))
 
 
+def test_2():
+    print(get_heat_need(273.15+20, 400))
+
+
 if __name__ == '__main__':
-    __compare()
+    test_2()

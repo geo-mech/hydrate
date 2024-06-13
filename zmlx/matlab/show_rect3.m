@@ -42,7 +42,7 @@ if length(alpha) == 1
     alpha = ones(size(rect3, 1), 1) * alpha;
 end
 
-alphaLevels = 8;
+alphaLevels = 30;
 
 xx = cell(alphaLevels, 1);
 yy = cell(alphaLevels, 1);

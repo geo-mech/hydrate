@@ -1,6 +1,8 @@
 """
 用于水合物计算的配置.
 """
+import warnings
+
 from zml import Seepage, create_dict, log
 from zmlx.alg.time2str import time2str
 from zmlx.config import seepage
@@ -29,7 +31,9 @@ from zmlx.utility.LinearField import LinearField
 from zmlx.utility.SeepageNumpy import as_numpy
 
 
-def create_fludefs(has_co2=False, has_steam=False, has_inh=False,
+def create_fludefs(has_co2=False,
+                   has_steam=False,
+                   has_inh=False,
                    has_ch4_in_liq=False,
                    has_co2_in_liq=False,
                    h2o_density=None,
@@ -51,7 +55,7 @@ def create_fludefs(has_co2=False, has_steam=False, has_inh=False,
 
     # ch4
     if ch4_def is None:
-        ch4_def = create_ch4()   # 此时，使用默认的定义
+        ch4_def = create_ch4()  # 此时，使用默认的定义
 
     # co2
     if has_co2_in_liq:  # 此时必然要求co2存在
@@ -69,6 +73,9 @@ def create_fludefs(has_co2=False, has_steam=False, has_inh=False,
 
     # inh
     if inh_def is not None:
+        if has_inh is not None:  # add warning since 2024-6-11
+            if not has_inh:
+                warnings.warn('has inh define but do not has inh')
         has_inh = True
     else:
         assert inh_def is None
@@ -115,11 +122,15 @@ def create_fludefs(has_co2=False, has_steam=False, has_inh=False,
     return [gas, liq, sol]
 
 
-def create_reactions(support_ch4_hyd_diss=True, support_ch4_hyd_form=True,
+def create_reactions(has_co2=False,
+                     has_steam=False,
                      has_inh=False,
-                     has_co2=False, has_steam=False,
-                     has_ch4_in_liq=False, has_co2_in_liq=False,
-                     others=None, sol_dt=None):
+                     has_ch4_in_liq=False,
+                     has_co2_in_liq=False,
+                     support_ch4_hyd_diss=True,
+                     support_ch4_hyd_form=True,
+                     others=None,
+                     sol_dt=None):
     """
     创建反应.
         sol_dt: 由于固体的存在，对平衡温度的修改的幅度。从而使得，固体的比例越高，则水合物的形成
@@ -186,8 +197,11 @@ def create_reactions(support_ch4_hyd_diss=True, support_ch4_hyd_form=True,
     return result
 
 
-def create_caps(inh_diff=None, co2_diff=None, ch4_diff=None,
-                co2_cap=None, ch4_cap=None,
+def create_caps(inh_diff=None,
+                co2_diff=None,
+                ch4_diff=None,
+                co2_cap=None,
+                ch4_cap=None,
                 others=None):
     """
     创建扩散过程
@@ -240,6 +254,86 @@ def create_caps(inh_diff=None, co2_diff=None, ch4_diff=None,
 
     # 返回结果.
     return result
+
+
+def create_kwargs(has_co2=False,
+                  has_steam=False,
+                  has_inh=False,
+                  has_ch4_in_liq=False,
+                  has_co2_in_liq=False,
+                  inh_diff=None,
+                  ch4_diff=None,
+                  co2_diff=None,
+                  co2_cap=None,
+                  ch4_cap=None,
+                  support_ch4_hyd_diss=True,
+                  support_ch4_hyd_form=True,
+                  gr=None,
+                  h2o_density=None,
+                  co2_def=None,
+                  gravity=None,
+                  dt_max=None,
+                  sol_dt=None,
+                  **kwargs):
+    """
+    返回用于seepage.create的参数列表
+        当给定co2的时候，将使用给定的定义. (since 2024-1-10)
+    """
+    if has_co2_in_liq:   # 此时，必须要求存在co2
+        has_co2 = True
+
+    fludefs = create_fludefs(h2o_density=h2o_density,
+                             co2_def=co2_def,
+                             has_co2=has_co2,
+                             has_steam=has_steam,
+                             has_inh=has_inh,
+                             has_ch4_in_liq=has_ch4_in_liq,
+                             has_co2_in_liq=has_co2_in_liq,
+                             )
+    reactions = create_reactions(support_ch4_hyd_diss=support_ch4_hyd_diss,
+                                 support_ch4_hyd_form=support_ch4_hyd_form,
+                                 has_inh=has_inh,
+                                 has_co2=has_co2,
+                                 has_steam=has_steam,
+                                 has_ch4_in_liq=has_ch4_in_liq,
+                                 has_co2_in_liq=has_co2_in_liq,
+                                 sol_dt=sol_dt,
+                                 )
+
+    # 修改部分参数，确保协调.
+    if not has_inh:
+        inh_diff = None
+    if not has_ch4_in_liq:
+        ch4_diff = None
+    if not has_co2_in_liq:
+        co2_diff = None
+    if not has_co2:
+        co2_cap = None
+
+    caps = create_caps(ch4_diff=ch4_diff,
+                       inh_diff=inh_diff,
+                       co2_diff=co2_diff,
+                       co2_cap=co2_cap,
+                       ch4_cap=ch4_cap)
+
+    if dt_max is None:
+        dt_max = 3600 * 24
+
+    if gr is None:
+        gr = create_krf(as_interp=True)
+
+    if gravity is None:
+        gravity = [0, -10, 0]
+
+    # 返回结果.
+    return create_dict(dt_max=dt_max,
+                       fludefs=fludefs,
+                       reactions=reactions,
+                       caps=caps,
+                       gr=gr,
+                       gravity=gravity,
+                       has_solid=True,
+                       **kwargs)
 
 
 def create_t_ini(z_top=0.0, t_top=276.0, grad_t=0.04466):
@@ -309,41 +403,6 @@ def show_2d(model: Seepage, folder=None, xdim=0, ydim=1):
 
     for item in ['ch4', 'liq', 'ch4_hydrate']:
         show_s(item)
-
-
-def create_kwargs(has_co2=False, has_steam=False, has_inh=False,
-                  has_ch4_in_liq=False, has_co2_in_liq=False,
-                  inh_diff=None,
-                  ch4_diff=None,
-                  support_ch4_hyd_diss=True,
-                  support_ch4_hyd_form=True, gr=None, h2o_density=None,
-                  co2_def=None, gravity=None, **kwargs):
-    """
-    返回用于seepage.create的参数列表
-        当给定co2的时候，将使用给定的定义. (since 2024-1-10)
-    """
-    fludefs = create_fludefs(h2o_density=h2o_density,
-                             co2_def=co2_def, has_co2=has_co2,
-                             has_steam=has_steam, has_inh=has_inh,
-                             has_ch4_in_liq=has_ch4_in_liq,
-                             has_co2_in_liq=has_co2_in_liq,
-                             )
-    reactions = create_reactions(support_ch4_hyd_diss=support_ch4_hyd_diss,
-                                 support_ch4_hyd_form=support_ch4_hyd_form,
-                                 has_inh=has_inh,
-                                 has_co2=has_co2,
-                                 has_steam=has_steam,
-                                 has_ch4_in_liq=has_ch4_in_liq,
-                                 has_co2_in_liq=has_co2_in_liq,
-                                 )
-    caps = create_caps(ch4_diff=ch4_diff,
-                       inh_diff=inh_diff)
-    return create_dict(dt_max=3600 * 24,
-                       fludefs=fludefs, reactions=reactions,
-                       caps=caps,
-                       gr=create_krf(as_interp=True) if gr is None else gr,
-                       gravity=[0, -10, 0] if gravity is None else gravity,
-                       has_solid=True, **kwargs)
 
 
 class ConfigV2:

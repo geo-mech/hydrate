@@ -38,23 +38,136 @@ Face的属性：
     igr：导流系数的相对曲线的id（用来修正孔隙空间大小改变所带来的渗透率的改变）
     g_heat：用于传热计算的导流系数（注意，并非热传导系数。这个系数，已经考虑了face的横截面积和长度）
 """
+import os
 import warnings
 
 import numpy as np
-from zml import get_average_perm, Tensor3, Seepage
+
+from zml import get_average_perm, Tensor3, Seepage, ConjugateGradientSolver
 from zmlx.alg.join_cols import join_cols
 from zmlx.alg.time2str import time2str
-from zmlx.config import capillary
+from zmlx.config import capillary, prod
 from zmlx.config.attr_keys import cell_keys, face_keys, flu_keys
-from zmlx.geometry.point_distance import point_distance
-from zmlx.utility.Field import Field
-from zmlx.utility.SeepageNumpy import as_numpy
 from zmlx.config.seepage_face import (get_face_gradient, get_face_diff,
                                       get_face_sum, get_face_left,
                                       get_face_right, get_cell_average)
+from zmlx.filesys.join_paths import join_paths
+from zmlx.filesys.make_fname import make_fname
+from zmlx.filesys.make_parent import make_parent
+from zmlx.geometry.point_distance import point_distance
+from zmlx.plt.tricontourf import tricontourf
+from zmlx.ui.GuiBuffer import gui
+from zmlx.utility.Field import Field
+from zmlx.utility.SeepageNumpy import as_numpy
+from zmlx.utility.SeepageCellMonitor import SeepageCellMonitor
+from zmlx.utility.SaveManager import SaveManager
+from zmlx.utility.GuiIterator import GuiIterator
 
+# 确保不会被优化掉
 _unused = [get_face_gradient, get_face_diff, get_face_sum, get_face_left,
            get_face_right, get_cell_average]
+
+
+def get_cell_mask(model: Seepage, xr=None, yr=None, zr=None):
+    """
+    返回给定坐标范围内的cell的index。主要用来辅助绘图。since 2024-6-12
+    """
+
+    def get_(v, r):
+        if r is None:
+            return [True] * len(v)  # 此时为所有
+        else:
+            return [r[0] <= v[i] <= r[1] for i in range(len(v))]
+
+    # 三个方向分别的mask
+    x_mask = get_(as_numpy(model).cells.x, xr)
+    y_mask = get_(as_numpy(model).cells.y, yr)
+    z_mask = get_(as_numpy(model).cells.z, zr)
+
+    # 返回结果
+    return [x_mask[i] and y_mask[i] and z_mask[i] for i in range(len(x_mask))]
+
+
+def get_cell_pos(model: Seepage, dim, mask=None):
+    """
+    返回cell的位置向量
+    """
+    assert 0 <= dim < 3
+    v = as_numpy(model).cells.get(-(dim + 1))
+    return v if mask is None else v[mask]
+
+
+def get_cell_pre(model: Seepage, mask=None):
+    v = as_numpy(model).cells.pre
+    return v if mask is None else v[mask]
+
+
+def get_cell_temp(model: Seepage, mask=None):
+    v = as_numpy(model).cells.get(model.get_cell_key('temperature'))
+    return v if mask is None else v[mask]
+
+
+def get_cell_fv(model: Seepage, fid=None, mask=None):
+    if fid is None:
+        v = as_numpy(model).cells.fluid_vol
+    else:
+        v = as_numpy(model).fluids(*fid).vol
+    return v if mask is None else v[mask]
+
+
+def show_cells(model: Seepage, dim0, dim1, mask=None, show_p=True, show_t=True,
+               show_s=True, folder=None):
+    """
+    二维绘图显示
+    """
+    if not gui.exists():
+        return
+
+    x = get_cell_pos(model=model, dim=dim0, mask=mask)
+    y = get_cell_pos(model=model, dim=dim1, mask=mask)
+    kw = {'title': f'time = {get_time(model, as_str=True)}'}
+
+    year = get_time(model) / (365 * 24 * 3600)
+
+    if show_p:  # 显示压力
+        v = get_cell_pre(model, mask=mask)
+        tricontourf(x, y, v, caption='pressure',
+                    fname=make_fname(year, join_paths(folder, 'pressure'), '.jpg', 'y'),
+                    **kw)
+
+    if show_t:  # 显示温度
+        v = get_cell_temp(model, mask=mask)
+        tricontourf(x, y, v, caption='temperature',
+                    fname=make_fname(year, join_paths(folder, 'temperature'), '.jpg', 'y'),
+                    **kw)
+
+    if not isinstance(show_s, list):
+        if show_s:  # 此时，显示所有组分的饱和度
+            show_s = list_comp(model)  # 所有的组分名称
+            while True:  # 将组分名字解开
+                names = []
+                for item in show_s:
+                    if isinstance(item, list):
+                        names = names + item
+                    else:
+                        names.append(item)
+                if len(names) == len(show_s):
+                    break
+                else:
+                    show_s = names
+
+    if isinstance(show_s, list):
+        fv_all = get_cell_fv(model=model, mask=mask)
+        for name in show_s:
+            assert isinstance(name, str)
+            idx = model.find_fludef(name=name)
+            assert idx is not None
+            fv = get_cell_fv(model=model, fid=idx, mask=mask)  # 流体体积
+            v = fv / fv_all
+            # 绘图
+            tricontourf(x, y, v, caption=name,
+                        fname=make_fname(year, join_paths(folder, name), '.jpg', 'y'),
+                        **kw)
 
 
 def _get_names(f_def: Seepage.FluDef):
@@ -76,7 +189,7 @@ def list_comp(model: Seepage):
     """
     列出所有组分的名字
     :param model: 需要列出组分的模型
-    :return: 所有组分的名字作为list返回
+    :return: 所有组分的名字作为list返回(注意，会维持流体和组分的组成结构)
     """
     names = []
     for idx in range(model.fludef_number):
@@ -286,6 +399,9 @@ def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
         react_bufs:  反应的缓冲区，用来记录各个cell发生的反应的质量，
             其中的每一个buf都应该是一个pointer，且长度等于cell的数量;
     """
+    if gui.exists():  # 添加断点，从而使得在这里可以暂停和终止
+        gui.break_point()
+
     if dt is not None:
         set_dt(model, dt)
 
@@ -317,6 +433,10 @@ def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
     if model.injector_number > 0:
         # 实施流体的注入操作.
         model.apply_injectors(dt)
+
+    # 尝试修改边界的压力，从而使得流体生产 (使用模型内部定义的time)
+    #   since 2024-6-12
+    prod.iterate(model, time=get_time(model))
 
     has_solid = model.has_tag('has_solid')
 
@@ -482,7 +602,7 @@ def create(mesh=None,
            dt_max=None, dt_min=None, dt_ini=None, dv_relative=None,
            gr=None, bk_fv=None, bk_g=None, caps=None,
            keys=None, tags=None, kr=None, default_kr=None,
-           model_attrs=None,
+           model_attrs=None, prods=None,
            **kwargs):
     """
     利用给定的网格来创建一个模型.
@@ -535,9 +655,9 @@ def create(mesh=None,
         assert len(gravity) == 3
         model.gravity = gravity
         if point_distance(gravity, [0, 0, -10]) > 1.0:
-            print(f'Warning: In general, gravity should be [0,0, -10], '
-                  f'but here it is {gravity}, '
-                  f'please make sure this is the setting you need')
+            warnings.warn(f'In general, gravity should be [0,0, -10], '
+                          f'but here it is {gravity}, '
+                          f'please make sure this is the setting you need')
 
     if dt_max is not None:
         set_dt_max(model, dt_max)
@@ -586,6 +706,13 @@ def create(mesh=None,
     if caps is not None:
         for cap in caps:
             capillary.add(model, **cap)
+
+    if prods is not None:  # 添加用于生产的压力控制.
+        if isinstance(prods, dict):
+            prods = [prods, ]
+        for item in prods:
+            assert isinstance(item, dict)
+            prod.add_setting(model, **item)
 
     return model
 
@@ -881,3 +1008,127 @@ def append_cells_and_faces(model: Seepage, other: Seepage):
         c1 = f.get_cell(1)
         model.add_face(model.get_cell(cell_n0 + c0.index),
                        model.get_cell(cell_n0 + c1.index), data=f)
+
+
+def solve(model=None, folder=None, fname=None, gui_mode=False, close_after_done=True, **kwargs):
+    """
+    求解模型，并尝试将结果保存到folder.
+    """
+    if model is None:
+        if fname is not None:
+            assert os.path.isfile(fname), f'The file not exist: {fname}'
+            model = Seepage(path=fname)
+            if folder is None:
+                folder = os.path.splitext(fname)[0]
+    else:
+        if fname is not None:  # 此时，尝试保存到此文件
+            model.save(make_parent(fname))  # 保存
+            if folder is None:
+                folder = os.path.splitext(fname)[0]
+
+    # step 1. 读取求解选项
+    text = model.get_text(key='solve')
+    if len(text) > 0:
+        solve_options = eval(text)
+    else:
+        solve_options = {}
+
+    # 更新
+    solve_options.update(kwargs)
+
+    # 建立求解器
+    solver = ConjugateGradientSolver(tolerance=solve_options.get('tolerance', 1.0e-25))
+
+    # 创建monitor(同时，还保留了之前的配置信息)
+    monitors = solve_options.get('monitor')
+    if isinstance(monitors, dict):
+        monitors = [monitors]
+    elif monitors is None:
+        monitors = []
+    for item in monitors:
+        if isinstance(item, dict):
+            item['monitor'] = SeepageCellMonitor(get_t=lambda: get_time(model),
+                                                 cell=[model.get_cell(i) for i in item.get('cell_ids')])
+
+    # 执行数据的保存
+    save_model = SaveManager(join_paths(folder, 'models'), save=model.save,
+                             ext='.seepage', time_unit='y',
+                             dtime=lambda time: min(5.0, max(0.1, time * 0.1)),
+                             get_time=lambda: get_time(model) / (3600.0 * 24.0 * 365.0),
+                             )
+
+    # 打印cell
+    save_cells = SaveManager(join_paths(folder, 'cells'), save=lambda fname: print_cells(fname, model=model,
+                                                                                         export_mass=True),
+                             ext='.txt', time_unit='y',
+                             dtime=lambda time: min(5.0, max(0.1, time * 0.1)),
+                             get_time=lambda: get_time(model) / (3600.0 * 24.0 * 365.0),
+                             )
+
+    # 保存所有
+    def save(*args, **kwargs):
+        save_model(*args, **kwargs)
+        save_cells(*args, **kwargs)
+
+    # 用来绘图的设置(show_cells)
+    data = solve_options.get('show_cells')
+    if isinstance(data, dict):
+        def do_show():
+            show_cells(model, folder=join_paths(folder, 'figures'), **data)
+    else:
+        do_show = None
+
+    def plot():
+        if do_show is not None:
+            do_show()
+        for index in range(len(monitors)):
+            item = monitors[index]
+            assert isinstance(item, dict)
+            monitor = item.get('monitor')
+            assert isinstance(monitor, SeepageCellMonitor)
+            plot_rate = item.get('plot_rate')
+            if plot_rate is not None:
+                for idx in plot_rate:
+                    monitor.plot_rate(index=idx, caption=f'Rate_{index}.{idx}')   # 显示生产曲线
+
+    def save_monitors():
+        if folder is not None:
+            for index in range(len(monitors)):
+                item = monitors[index]
+                assert isinstance(item, dict)
+                monitor = item.get('monitor')
+                assert isinstance(monitor, SeepageCellMonitor)
+                monitor.save(join_paths(folder, f'monitor_{index}.txt'))
+
+    # 执行最终的迭代
+    do_iter = GuiIterator(iterate, plot=plot)
+
+    # 求解到的最大的时间
+    time_max = solve_options.get('time_max', 1.0e100)
+
+    # 求解到的最大的step
+    step_max = solve_options.get('step_max', 999999999999)
+
+    def main_loop():  # 主循环
+        if folder is not None:  # 显示求解的目录
+            if gui.exists():
+                gui.title(f'Solve seepage: {folder}')
+
+        while get_time(model) < time_max and get_step(model) < step_max:
+            do_iter(model, solver=solver)
+            save()
+            for item in monitors:   # 更新所有的监控点
+                monitor = item.get('monitor')
+                monitor.update(dt=3600.0)
+            step = get_step(model)
+            if step % 20 == 0:
+                print(f'step={step}, dt={get_dt(model, as_str=True)}, '
+                      f'time={get_time(model, as_str=True)}')
+                save_monitors()
+
+        # 显示并保存最终的状态
+        save_monitors()
+        plot()
+        save(check_dt=False)  # 保存最终状态
+
+    gui.execute(func=main_loop, close_after_done=close_after_done, disable_gui=not gui_mode)

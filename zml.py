@@ -8745,7 +8745,7 @@ class Seepage(HasHandle, HasCells):
             """
             lic.check_once()
             if solver is None:
-                self.solver = ConjugateGradientSolver(tolerance=1.0e-12)
+                self.solver = ConjugateGradientSolver(tolerance=1.0e-25)
                 solver = self.solver
             if fa_s is None:
                 fa_s = 1000000000
@@ -8773,7 +8773,7 @@ class Seepage(HasHandle, HasCells):
             dt：    时间步长;
             """
             if solver is None:
-                self.solver = ConjugateGradientSolver(tolerance=1.0e-12)
+                self.solver = ConjugateGradientSolver(tolerance=1.0e-25)
                 solver = self.solver
             lic.check_once()
             report = Map()
@@ -8891,6 +8891,8 @@ class Seepage(HasHandle, HasCells):
         """
         设置模型中存储的文本数据
         """
+        if not isinstance(text, str):
+            text = f'{text}'
         core.seepage_set_text(self.handle, make_c_char_p(key), make_c_char_p(text))
 
     def add_note(self, text):
@@ -9072,11 +9074,12 @@ class Seepage(HasHandle, HasCells):
 
         if cell is not None:
             if isinstance(cell, Seepage.Cell):
+                assert cell.model.handle == self.handle  # 必须是同一个模型
                 cell = cell.index
             inj.cell_id = cell
 
         if fluid_id is not None:
-            if isinstance(fluid_id, str):  # 给定组分名字，则从model中查找   since 231024
+            if isinstance(fluid_id, str):  # 给定组分名字，则从model中查找   since 2023-10-24
                 fluid_id = self.find_fludef(name=fluid_id)
                 assert fluid_id is not None
             inj.set_fid(fluid_id)
@@ -9085,26 +9088,26 @@ class Seepage(HasHandle, HasCells):
             assert isinstance(flu, Seepage.FluData)
             inj.flu.clone(flu)
 
-        if pos is not None:
+        if pos is not None:   # 给定注入的位置，后续，则自动去查找附近的cell
             inj.pos = pos
 
-        if radi is not None:
+        if radi is not None:  # 查找的半径
             inj.radi = radi
 
-        if ca_mc is not None:
+        if ca_mc is not None:  # Cell的属性
             inj.ca_mc = ca_mc
 
-        if ca_t is not None:
+        if ca_t is not None:  # Cell的属性(温度属性，在注入热量的时候会被修改)
             inj.ca_t = ca_t
 
-        if g_heat is not None:
+        if g_heat is not None:   # 恒定温度加热的时候需要给定
             inj.g_heat = g_heat
 
-        if opers is not None:
+        if opers is not None:   # 对属性的操作定时器
             for item in opers:
                 inj.add_oper(*item)
 
-        if value is not None:
+        if value is not None:   # 当前的值
             inj.value = value
 
         return inj
@@ -9444,11 +9447,15 @@ class Seepage(HasHandle, HasCells):
     def exchange_heat(self, fid=None, thermal_model=None, dt=None, ca_g=None, ca_t=None, ca_mc=None,
                       fa_t=None, fa_c=None):
         """
-        其中一种流体(当fid为None的时候为所有的流体是为一个整体)，与另外一个模型交换热量
+        流体和固体交换热量。
+        注意：
+            1. 当thermal_model为None的时候，则在Seepage内部交换热量，此时，必须定义ca_t, ca_mc两个属性
+            2. 当fid为None的时候，将所有的流体视为整体，与固体交换。此时，会计算各个流体的平均温度，并且，此函数运行之后
+                各个流体的温度将相等
         """
         if dt is None:
             return
-        if thermal_model is None:
+        if thermal_model is None:   # 在模型的内部交换热量（流体和固体交换）
             assert fid is None
             core.seepage_exchange_heat(self.handle, dt, ca_g, ca_t, ca_mc, fa_t, fa_c)
             return

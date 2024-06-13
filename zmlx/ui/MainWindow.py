@@ -547,14 +547,14 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
     def f1():
         app_data.space['main_window'] = win
         gui.push(win.gui_api)
-        print(f'Gui Open: {win.gui_api}')
+        print(f'Push Gui: {win.gui_api}')
         sys.stdout = win.console_widget.output_widget
         sys.stderr = win.console_widget.output_widget
 
     def f2():
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
-        print('Gui Close')
+        print('Pop Gui')
         gui.pop()
         app_data.space['main_window'] = None
 

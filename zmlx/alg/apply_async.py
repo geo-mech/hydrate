@@ -3,8 +3,6 @@ import multiprocessing
 import time
 import timeit
 
-processes_max = 60
-
 
 def apply_async(tasks, processes=None, sleep=None):
     """
@@ -25,7 +23,7 @@ def apply_async(tasks, processes=None, sleep=None):
         processes = multiprocessing.cpu_count()
 
     # 超过任务的数量是没有必要的
-    processes = min(processes, len(tasks), processes_max)
+    processes = min(processes, len(tasks), 60)
 
     # 创建pool来进行并行计算.
     with multiprocessing.Pool(processes=processes) as pool:
@@ -58,22 +56,3 @@ def create_async(func, args=None, kwds=None):
     return task
 
 
-def _func(idx, s=None):
-    """
-    用于测试的函数
-    """
-    print(f'idx = {idx}, now = {datetime.datetime.now()}')
-    time.sleep(0.5 if s is None else s)
-    return idx ** 2
-
-
-def _test(n):
-    tasks = [create_async(_func, kwds={'idx': idx, 's': 1}) for idx in range(n)]
-    t1 = timeit.default_timer()
-    res = apply_async(tasks, processes=n)
-    print(f'res = {res}')
-    print(f'n = {n}, time = {timeit.default_timer() - t1}')
-
-
-if __name__ == '__main__':
-    _test(100)
