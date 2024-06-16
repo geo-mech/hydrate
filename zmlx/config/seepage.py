@@ -54,6 +54,7 @@ from zmlx.config.seepage_face import (get_face_gradient, get_face_diff,
 from zmlx.filesys.join_paths import join_paths
 from zmlx.filesys.make_fname import make_fname
 from zmlx.filesys.make_parent import make_parent
+from zmlx.filesys.tag import print_tag
 from zmlx.geometry.point_distance import point_distance
 from zmlx.plt.tricontourf import tricontourf
 from zmlx.ui.GuiBuffer import gui
@@ -542,6 +543,7 @@ def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
 
 def get_inited(fludefs=None, reactions=None, gravity=None, path=None,
                time=None, dt=None, dv_relative=None,
+               dt_max=None, dt_min=None,
                keys=None, tags=None, model_attrs=None):
     """
     创建一个模型，初始化必要的属性.
@@ -587,6 +589,12 @@ def get_inited(fludefs=None, reactions=None, gravity=None, path=None,
 
     if dt is not None:
         set_dt(model, dt)
+
+    if dt_min is not None:
+        set_dt_min(model, dt_min)
+
+    if dt_max is not None:
+        set_dt_max(model, dt_max)
 
     if dv_relative is not None:
         set_dv_relative(model, dv_relative)
@@ -1026,6 +1034,10 @@ def solve(model=None, folder=None, fname=None, gui_mode=False, close_after_done=
             if folder is None:
                 folder = os.path.splitext(fname)[0]
 
+    # 打印标签
+    if folder is not None:
+        print_tag(folder=folder)
+
     # step 1. 读取求解选项
     text = model.get_text(key='solve')
     if len(text) > 0:
@@ -1058,17 +1070,17 @@ def solve(model=None, folder=None, fname=None, gui_mode=False, close_after_done=
                              )
 
     # 打印cell
-    save_cells = SaveManager(join_paths(folder, 'cells'), save=lambda fname: print_cells(fname, model=model,
-                                                                                         export_mass=True),
+    save_cells = SaveManager(join_paths(folder, 'cells'), save=lambda name: print_cells(name, model=model,
+                                                                                        export_mass=True),
                              ext='.txt', time_unit='y',
                              dtime=lambda time: min(5.0, max(0.1, time * 0.1)),
                              get_time=lambda: get_time(model) / (3600.0 * 24.0 * 365.0),
                              )
 
     # 保存所有
-    def save(*args, **kwargs):
-        save_model(*args, **kwargs)
-        save_cells(*args, **kwargs)
+    def save(*args, **kw):
+        save_model(*args, **kw)
+        save_cells(*args, **kw)
 
     # 用来绘图的设置(show_cells)
     data = solve_options.get('show_cells')
@@ -1082,11 +1094,11 @@ def solve(model=None, folder=None, fname=None, gui_mode=False, close_after_done=
         if do_show is not None:
             do_show()
         for index in range(len(monitors)):
-            item = monitors[index]
-            assert isinstance(item, dict)
-            monitor = item.get('monitor')
+            item1 = monitors[index]
+            assert isinstance(item1, dict)
+            monitor = item1.get('monitor')
             assert isinstance(monitor, SeepageCellMonitor)
-            plot_rate = item.get('plot_rate')
+            plot_rate = item1.get('plot_rate')
             if plot_rate is not None:
                 for idx in plot_rate:
                     monitor.plot_rate(index=idx, caption=f'Rate_{index}.{idx}')   # 显示生产曲线
@@ -1094,9 +1106,9 @@ def solve(model=None, folder=None, fname=None, gui_mode=False, close_after_done=
     def save_monitors():
         if folder is not None:
             for index in range(len(monitors)):
-                item = monitors[index]
-                assert isinstance(item, dict)
-                monitor = item.get('monitor')
+                item2 = monitors[index]
+                assert isinstance(item2, dict)
+                monitor = item2.get('monitor')
                 assert isinstance(monitor, SeepageCellMonitor)
                 monitor.save(join_paths(folder, f'monitor_{index}.txt'))
 
@@ -1117,8 +1129,8 @@ def solve(model=None, folder=None, fname=None, gui_mode=False, close_after_done=
         while get_time(model) < time_max and get_step(model) < step_max:
             do_iter(model, solver=solver)
             save()
-            for item in monitors:   # 更新所有的监控点
-                monitor = item.get('monitor')
+            for item3 in monitors:   # 更新所有的监控点
+                monitor = item3.get('monitor')
                 monitor.update(dt=3600.0)
             step = get_step(model)
             if step % 20 == 0:
