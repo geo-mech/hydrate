@@ -32,7 +32,7 @@ from typing import Iterable
 is_windows = os.name == 'nt'
 
 # Version of the zml module (date represented by six digits)
-version = 240607
+version = 240616
 
 
 class Object:

@@ -5,23 +5,16 @@ import numpy as np
 from zmlx.config import seepage
 from zmlx.geometry.point_distance import point_distance
 from zmlx.seepage_mesh.cube import create_cube
-from zmlx.ui import gui
 
-
-def solve():
-    model = seepage.create(mesh=create_cube(np.linspace(0, 100, 100),
-                                            np.linspace(0, 100, 100),
-                                            (-0.5, 0.5)),
-                           temperature=lambda *pos: 380 if point_distance(pos, (0, 0, 0)) < 30 else 280,
-                           denc=1.0e6, heat_cond=1.0, dt_max=1.0e6)
-    # 用于求解的选项
-    model.set_text(key='solve',
-                   text={'show_cells': {'dim0': 0, 'dim1': 1},
-                         'step_max': 500,
-                         }
-                   )
-    seepage.solve(model)
-
-
-if __name__ == '__main__':
-    gui.execute(solve, close_after_done=False)
+model = seepage.create(mesh=create_cube(np.linspace(0, 100, 100),
+                                        np.linspace(0, 100, 100),
+                                        (-0.5, 0.5)),
+                       temperature=lambda *pos: 380 if point_distance(pos, (0, 0, 0)) < 30 else 280,
+                       denc=1.0e6, heat_cond=1.0, dt_max=1.0e6)
+# 用于求解的选项
+model.set_text(key='solve',
+               text={'show_cells': {'dim0': 0, 'dim1': 1, 'show_p': False},
+                     'step_max': 500,
+                     }
+               )
+seepage.solve(model, close_after_done=False)

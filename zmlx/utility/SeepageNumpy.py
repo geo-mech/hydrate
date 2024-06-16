@@ -21,7 +21,6 @@ class SeepageNumpy:
 
         def __init__(self, model):
             assert isinstance(model, Seepage)
-            assert np is not None
             self.model = model
 
         def get(self, index, buf=None):
@@ -43,7 +42,7 @@ class SeepageNumpy:
             if not is_array(buf):
                 self.model.cells_read(value=buf, index=index)
                 return
-            if np is not None:
+            else:
                 assert len(buf) == self.model.cell_number
                 self.model.cells_read(pointer=get_pointer(buf, c_double), index=index)
 
@@ -174,7 +173,7 @@ class SeepageNumpy:
             if not is_array(buf):
                 self.model.faces_read(value=buf, index=index)
                 return
-            if np is not None:
+            else:
                 assert len(buf) == self.model.face_number
                 self.model.faces_read(pointer=get_pointer(buf, c_double), index=index)
 
@@ -254,7 +253,7 @@ class SeepageNumpy:
             if not is_array(buf):
                 self.model.fluids_read(fluid_id=self.fluid_id, value=buf, index=index)
                 return
-            if np is not None:
+            else:
                 assert len(buf) == self.model.cell_number
                 self.model.fluids_read(fluid_id=self.fluid_id, index=index,
                                        pointer=get_pointer(buf, c_double))

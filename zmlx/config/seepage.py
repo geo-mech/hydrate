@@ -611,12 +611,15 @@ def create(mesh=None,
            gr=None, bk_fv=None, bk_g=None, caps=None,
            keys=None, tags=None, kr=None, default_kr=None,
            model_attrs=None, prods=None,
+           warnings_ignored=None,
            **kwargs):
     """
     利用给定的网格来创建一个模型.
         其中gr用来计算孔隙体积变化之后的渗透率的改变量.  gr的类型是一个Interp1.
     """
     model = Seepage()
+    if warnings_ignored is None:   # 忽略掉的警告
+        warnings_ignored = set()
 
     if keys is not None:
         # 预定义一些keys; 主要目的是为了保证两个Seepage的keys的一致，
@@ -663,9 +666,10 @@ def create(mesh=None,
         assert len(gravity) == 3
         model.gravity = gravity
         if point_distance(gravity, [0, 0, -10]) > 1.0:
-            warnings.warn(f'In general, gravity should be [0,0, -10], '
-                          f'but here it is {gravity}, '
-                          f'please make sure this is the setting you need')
+            if 'gravity' not in warnings_ignored:
+                warnings.warn(f'In general, gravity should be [0,0, -10], '
+                              f'but here it is {gravity}, '
+                              f'please make sure this is the setting you need')
 
     if dt_max is not None:
         set_dt_max(model, dt_max)
@@ -1031,7 +1035,10 @@ def set_solve(model: Seepage, **kw):
     model.set_text(key='solve', text=options)
 
 
-def solve(model=None, folder=None, fname=None, gui_mode=None, close_after_done=None, **kwargs):
+def solve(model=None, folder=None, fname=None, gui_mode=None, close_after_done=None, solver=None,
+          extra_plot=None,
+          show_state=True,
+          **kwargs):
     """
     求解模型，并尝试将结果保存到folder.
     """
@@ -1062,7 +1069,8 @@ def solve(model=None, folder=None, fname=None, gui_mode=None, close_after_done=N
     solve_options.update(kwargs)
 
     # 建立求解器
-    solver = ConjugateGradientSolver(tolerance=solve_options.get('tolerance', 1.0e-25))
+    if solver is None:  # 使用规定的精度
+        solver = ConjugateGradientSolver(tolerance=solve_options.get('tolerance', 1.0e-25))
 
     # 创建monitor(同时，还保留了之前的配置信息)
     monitors = solve_options.get('monitor')
@@ -1115,6 +1123,8 @@ def solve(model=None, folder=None, fname=None, gui_mode=None, close_after_done=N
             if plot_rate is not None:
                 for idx in plot_rate:
                     monitor.plot_rate(index=idx, caption=f'Rate_{index}.{idx}')   # 显示生产曲线
+        if extra_plot is not None:  # 一些额外的，非标准的绘图操作
+            extra_plot()
 
     def save_monitors():
         if folder is not None:
@@ -1129,10 +1139,22 @@ def solve(model=None, folder=None, fname=None, gui_mode=None, close_after_done=N
     do_iter = GuiIterator(iterate, plot=plot)
 
     # 求解到的最大的时间
-    time_max = solve_options.get('time_max', 1.0e100)
+    time_max = solve_options.get('time_max')
+    if time_max is None:
+        time_forward = solve_options.get('time_forward')
+        if time_forward is not None:
+            time_max = get_time(model) + time_forward
+    if time_max is None:  # 给定默认值
+        time_max = 1.0e100
 
     # 求解到的最大的step
-    step_max = solve_options.get('step_max', 999999999999)
+    step_max = solve_options.get('step_max')
+    if step_max is None:
+        step_forward = solve_options.get('step_forward')   # 向前迭代的步数
+        if step_forward is not None:
+            step_max = get_step(model) + step_forward
+    if step_max is None:  # 给定默认值
+        step_max = 999999999999
 
     def main_loop():  # 主循环
         if folder is not None:  # 显示求解的目录
@@ -1147,9 +1169,14 @@ def solve(model=None, folder=None, fname=None, gui_mode=None, close_after_done=N
                 monitor.update(dt=3600.0)
             step = get_step(model)
             if step % 20 == 0:
-                print(f'step={step}, dt={get_dt(model, as_str=True)}, '
-                      f'time={get_time(model, as_str=True)}')
+                if show_state:
+                    print(f'step={step}, dt={get_dt(model, as_str=True)}, '
+                          f'time={get_time(model, as_str=True)}')
                 save_monitors()
+
+        if show_state:
+            print(f'step={get_step(model)}, dt={get_dt(model, as_str=True)}, '
+                  f'time={get_time(model, as_str=True)}')
 
         # 显示并保存最终的状态
         save_monitors()
