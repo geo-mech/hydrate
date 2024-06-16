@@ -5,7 +5,6 @@ import numpy as np
 from zml import get_distance, create_dict
 from zmlx.config import hydrate, seepage
 from zmlx.seepage_mesh.cube import create_cube
-from zmlx.ui.GuiBuffer import gui
 
 
 def create():
@@ -70,5 +69,4 @@ def create():
 
 
 if __name__ == '__main__':
-    gui.execute(lambda: seepage.solve(create()),
-                close_after_done=False)
+    seepage.solve(create(), close_after_done=False)

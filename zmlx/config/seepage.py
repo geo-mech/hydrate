@@ -1018,7 +1018,20 @@ def append_cells_and_faces(model: Seepage, other: Seepage):
                        model.get_cell(cell_n0 + c1.index), data=f)
 
 
-def solve(model=None, folder=None, fname=None, gui_mode=False, close_after_done=True, **kwargs):
+def set_solve(model: Seepage, **kw):
+    """
+    设置用于求解的控制参数
+    """
+    text = model.get_text(key='solve')
+    if len(text) > 0:
+        options = eval(text)
+    else:
+        options = {}
+    options.update(kw)
+    model.set_text(key='solve', text=options)
+
+
+def solve(model=None, folder=None, fname=None, gui_mode=None, close_after_done=None, **kwargs):
     """
     求解模型，并尝试将结果保存到folder.
     """
@@ -1142,5 +1155,14 @@ def solve(model=None, folder=None, fname=None, gui_mode=False, close_after_done=
         save_monitors()
         plot()
         save(check_dt=False)  # 保存最终状态
+
+    if close_after_done is not None and gui_mode is None:  # 如果指定了close_after_done，那么一定是要使用界面
+        gui_mode = True
+
+    if gui_mode is None:  # 默认不使用界面
+        gui_mode = False
+
+    if close_after_done is None:  # 默认计算技术要关闭界面
+        close_after_done = True
 
     gui.execute(func=main_loop, close_after_done=close_after_done, disable_gui=not gui_mode)
