@@ -8,7 +8,6 @@ from zmlx.config import seepage
 from zmlx.fluid.ch4 import create as create_ch4
 from zmlx.fluid.h2o import create as create_h2o
 from zmlx.seepage_mesh.cube import create_cube
-from zmlx.ui.GuiBuffer import gui
 
 
 def create():
@@ -62,5 +61,4 @@ def create():
 
 
 if __name__ == '__main__':
-    gui.execute(lambda: seepage.solve(create()),
-                close_after_done=False)
+    seepage.solve(create(), close_after_done=False)

@@ -3,7 +3,6 @@
 from zmlx.config import seepage, hydrate
 from zmlx.seepage_mesh.add_cell_face import add_cell_face
 from zmlx.seepage_mesh.hydrate import create_xz
-from zmlx.ui import gui
 
 
 def create():
@@ -87,5 +86,4 @@ def create():
 
 
 if __name__ == '__main__':
-    gui.execute(lambda: seepage.solve(create()),
-                close_after_done=False)
+    seepage.solve(create(), close_after_done=False)
