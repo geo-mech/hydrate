@@ -46,7 +46,7 @@ import numpy as np
 from zml import get_average_perm, Tensor3, Seepage, ConjugateGradientSolver
 from zmlx.alg.join_cols import join_cols
 from zmlx.alg.time2str import time2str
-from zmlx.config import capillary, prod
+from zmlx.config import capillary, prod, fluid_heating
 from zmlx.config.attr_keys import cell_keys, face_keys, flu_keys
 from zmlx.config.seepage_face import (get_face_gradient, get_face_diff,
                                       get_face_sum, get_face_left,
@@ -438,6 +438,9 @@ def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
     # 尝试修改边界的压力，从而使得流体生产 (使用模型内部定义的time)
     #   since 2024-6-12
     prod.iterate(model, time=get_time(model))
+
+    # 对流体进行加热
+    fluid_heating.iterate(model, dt=dt)
 
     has_solid = model.has_tag('has_solid')
 
@@ -1037,7 +1040,7 @@ def set_solve(model: Seepage, **kw):
 
 def solve(model=None, folder=None, fname=None, gui_mode=None, close_after_done=None, solver=None,
           extra_plot=None,
-          show_state=True,
+          show_state=True, gui_iter=None, state_hint=None,
           **kwargs):
     """
     求解模型，并尝试将结果保存到folder.
@@ -1136,7 +1139,12 @@ def solve(model=None, folder=None, fname=None, gui_mode=None, close_after_done=N
                 monitor.save(join_paths(folder, f'monitor_{index}.txt'))
 
     # 执行最终的迭代
-    do_iter = GuiIterator(iterate, plot=plot)
+    if gui_iter is None:
+        gui_iter = GuiIterator(iterate, plot=plot)
+    else:   # 使用已有的配置(这样，方便多个求解过程，使用全局的iter)
+        assert isinstance(gui_iter, GuiIterator)
+        gui_iter.iterate = iterate
+        gui_iter.plot = plot
 
     # 求解到的最大的时间
     time_max = solve_options.get('time_max')
@@ -1156,29 +1164,36 @@ def solve(model=None, folder=None, fname=None, gui_mode=None, close_after_done=N
     if step_max is None:  # 给定默认值
         step_max = 999999999999
 
+    # 状态提示
+    if state_hint is None:
+        state_hint = ''
+    else:
+        state_hint = state_hint + ': '
+
+    def do_show_state():
+        if show_state:
+            print(f'{state_hint}step={get_step(model)}, dt={get_dt(model, as_str=True)}, '
+                  f'time={get_time(model, as_str=True)}')
+
     def main_loop():  # 主循环
         if folder is not None:  # 显示求解的目录
             if gui.exists():
                 gui.title(f'Solve seepage: {folder}')
 
         while get_time(model) < time_max and get_step(model) < step_max:
-            do_iter(model, solver=solver)
+            gui_iter(model, solver=solver)
             save()
+
             for item3 in monitors:   # 更新所有的监控点
                 monitor = item3.get('monitor')
                 monitor.update(dt=3600.0)
-            step = get_step(model)
-            if step % 20 == 0:
-                if show_state:
-                    print(f'step={step}, dt={get_dt(model, as_str=True)}, '
-                          f'time={get_time(model, as_str=True)}')
+
+            if get_step(model) % 20 == 0:
+                do_show_state()
                 save_monitors()
 
-        if show_state:
-            print(f'step={get_step(model)}, dt={get_dt(model, as_str=True)}, '
-                  f'time={get_time(model, as_str=True)}')
-
         # 显示并保存最终的状态
+        do_show_state()
         save_monitors()
         plot()
         save(check_dt=False)  # 保存最终状态
