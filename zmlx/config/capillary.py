@@ -12,7 +12,7 @@ vk = Vector()
 vg = Vector()
 
 
-def get_cap_settings(model: Seepage):
+def get_settings(model: Seepage):
     """
     返回模型中的cap设置
     """
@@ -49,7 +49,7 @@ def get_cap_settings(model: Seepage):
     return settings
 
 
-def set_cap_settings(model: Seepage, settings):
+def set_settings(model: Seepage, settings):
     """
     将cap设置存储到model
     """
@@ -134,7 +134,7 @@ def iterate(model: Seepage, dt: float, fid0=None, fid1=None,
                                 pg=vg.pointer, lg=vg.size,
                                 ppg=ppg, lpg=lpg, ds_max=ds * 0.5)
     else:  # 读取设置
-        settings = get_cap_settings(model)
+        settings = get_settings(model)
         for setting in settings:
             assert isinstance(setting, dict)
             fid0 = setting.get('fid0')
@@ -168,7 +168,7 @@ def add(model: Seepage, fid0=None, fid1=None, get_idx=None, data=None,
         return
 
     # 获取现在已经有的设置.
-    settings = get_cap_settings(model)
+    settings = get_settings(model)
     assert isinstance(settings, list)
     count = len(settings)
 
@@ -199,7 +199,7 @@ def add(model: Seepage, fid0=None, fid1=None, get_idx=None, data=None,
     # 将设置添加到model
     settings.append({'ca_ipc': ca_ipc, 'fid0': fid0, 'fid1': fid1,
                      'gravity': gravity})
-    set_cap_settings(model, settings)
+    set_settings(model, settings)
 
 
 def s2p(text):

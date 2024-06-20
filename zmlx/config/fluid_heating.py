@@ -5,7 +5,7 @@ from zmlx.alg.Vector import to_numpy
 from zmlx.utility.SeepageNumpy import as_numpy
 
 
-def get_setting(model: Seepage):
+def get_settings(model: Seepage):
     """
     读取设置
     """
@@ -24,7 +24,7 @@ def add_setting(model: Seepage, fluid=None, power=None, temp_max=None):
     """
     if fluid is None:
         return
-    setting = get_setting(model)
+    setting = get_settings(model)
     setting.append({'fluid': fluid,
                     'power': power,
                     'temp_max': temp_max})
@@ -35,7 +35,7 @@ def iterate(model: Seepage, dt):
     """
     更新pore
     """
-    setting = get_setting(model)
+    setting = get_settings(model)
     if len(setting) == 0 or dt <= 0:
         return
 

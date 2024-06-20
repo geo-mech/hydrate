@@ -2,9 +2,9 @@
 
 import numpy as np
 
-from zml import SeepageMesh, ConjugateGradientSolver, get_distance, Seepage
+from zml import SeepageMesh, ConjugateGradientSolver, Seepage
 from zmlx.alg.time2str import time2str
-from zmlx.config import seepage, settle, capillary
+from zmlx.config import seepage, settle
 from zmlx.plt.tricontourf import tricontourf
 from zmlx.ui.GuiBuffer import gui
 from zmlx.utility.GuiIterator import GuiIterator

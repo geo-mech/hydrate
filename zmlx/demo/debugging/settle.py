@@ -6,10 +6,10 @@ import numpy as np
 from zml import SeepageMesh, Seepage
 from zmlx.alg.time2str import time2str
 from zmlx.config import seepage
+from zmlx.config import settle
 from zmlx.plt.tricontourf import tricontourf
 from zmlx.ui.GuiBuffer import gui
 from zmlx.utility.SeepageNumpy import as_numpy
-from zmlx.config import settle
 
 
 def create():

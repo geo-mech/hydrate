@@ -9,7 +9,8 @@ from zmlx.fluid.conf.liqu_density.c11h24 import liq_den_c11h24
 from zmlx.fluid.conf.liqu_viscosity.c11h24 import liq_vis_c11h24
 import warnings
 
-def create(tmin=280, tmax=600, pmin=1.0e6, pmax=20.0e6):
+
+def create(tmin=280, tmax=600, pmin=1.0e6, pmax=20.0e6, name=None):
     assert 250 < tmin < tmax < 650
     assert 0.01e6 < pmin < pmax < 30.0e6
 
@@ -38,7 +39,7 @@ def create(tmin=280, tmax=600, pmin=1.0e6, pmax=20.0e6):
         return vis
 
     specific_heat = 1800  # J/kg K
-    return Seepage.FluDef(den=create_density(), vis=create_viscosity(), specific_heat=specific_heat)
+    return Seepage.FluDef(den=create_density(), vis=create_viscosity(), specific_heat=specific_heat, name=name)
 
 
 def create_flu(*args, **kwargs):

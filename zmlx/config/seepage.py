@@ -46,7 +46,8 @@ import numpy as np
 from zml import get_average_perm, Tensor3, Seepage, ConjugateGradientSolver
 from zmlx.alg.join_cols import join_cols
 from zmlx.alg.time2str import time2str
-from zmlx.config import capillary, prod, fluid_heating
+from zmlx.alg.clamp import clamp
+from zmlx.config import capillary, prod, fluid_heating, timer
 from zmlx.config.attr_keys import cell_keys, face_keys, flu_keys
 from zmlx.config.seepage_face import (get_face_gradient, get_face_diff,
                                       get_face_sum, get_face_left,
@@ -388,7 +389,7 @@ solid_buffer = Seepage.CellData()
 
 def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
             fa_q=None, fa_k=None, cond_updaters=None, diffusions=None,
-            react_bufs=None, vis_max=None, vis_min=None):
+            react_bufs=None, vis_max=None, vis_min=None, slots=None):
     """
     在时间上向前迭代。其中
         dt:     时间步长,若为None，则使用自动步长
@@ -408,6 +409,10 @@ def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
 
     dt = get_dt(model)
     assert dt is not None, 'You must set dt before iterate'
+
+    # 执行定时器函数.
+    timer.iterate(model, t0=get_time(model), t1=get_time(model)+dt,
+                  slots=slots)
 
     if model.not_has_tag('disable_update_den') and model.fludef_number > 0:
         fa_t = model.reg_flu_key('temperature')
@@ -1040,7 +1045,8 @@ def set_solve(model: Seepage, **kw):
 
 def solve(model=None, folder=None, fname=None, gui_mode=None, close_after_done=None, solver=None,
           extra_plot=None,
-          show_state=True, gui_iter=None, state_hint=None,
+          show_state=True, gui_iter=None, state_hint=None, slots=None,
+          save_dt=None,
           **kwargs):
     """
     求解模型，并尝试将结果保存到folder.
@@ -1086,10 +1092,29 @@ def solve(model=None, folder=None, fname=None, gui_mode=None, close_after_done=N
             item['monitor'] = SeepageCellMonitor(get_t=lambda: get_time(model),
                                                  cell=[model.get_cell(i) for i in item.get('cell_ids')])
 
+    # 每年的秒的数量
+    seconds_year = 3600.0 * 24.0 * 365.0
+
+    # 保存间隔的范围(以秒为单位)
+    save_dy_max = solve_options.get('save_dt_max', 5 * seconds_year) / seconds_year
+    save_dy_min = solve_options.get('save_dt_min', 0.01 * seconds_year) / seconds_year
+
+    # 定义函数get_save_dy
+    if save_dt is None:
+        def get_save_dy(year):
+            return clamp(year * 0.05, save_dy_min, save_dy_max)
+    else:
+        if hasattr(save_dt, '__call__'):
+            def get_save_dy(year):
+                return clamp(save_dt(year*seconds_year)/seconds_year, save_dy_min, save_dy_max)
+        else:
+            def get_save_dy(year):
+                return clamp(save_dt/seconds_year, save_dy_min, save_dy_max)
+
     # 执行数据的保存
     save_model = SaveManager(join_paths(folder, 'models'), save=model.save,
                              ext='.seepage', time_unit='y',
-                             dtime=lambda time: min(5.0, max(0.1, time * 0.1)),
+                             dtime=get_save_dy,
                              get_time=lambda: get_time(model) / (3600.0 * 24.0 * 365.0),
                              )
 
@@ -1097,7 +1122,7 @@ def solve(model=None, folder=None, fname=None, gui_mode=None, close_after_done=N
     save_cells = SaveManager(join_paths(folder, 'cells'), save=lambda name: print_cells(name, model=model,
                                                                                         export_mass=True),
                              ext='.txt', time_unit='y',
-                             dtime=lambda time: min(5.0, max(0.1, time * 0.1)),
+                             dtime=get_save_dy,
                              get_time=lambda: get_time(model) / (3600.0 * 24.0 * 365.0),
                              )
 
@@ -1181,7 +1206,7 @@ def solve(model=None, folder=None, fname=None, gui_mode=None, close_after_done=N
                 gui.title(f'Solve seepage: {folder}')
 
         while get_time(model) < time_max and get_step(model) < step_max:
-            gui_iter(model, solver=solver)
+            gui_iter(model, solver=solver, slots=slots)
             save()
 
             for item3 in monitors:   # 更新所有的监控点

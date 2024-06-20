@@ -10,7 +10,7 @@
 
 import numpy as np
 
-from zml import SeepageMesh, set_srand, Dfn2, Seepage, ConjugateGradientSolver
+from zml import set_srand, Dfn2, Seepage, ConjugateGradientSolver
 from zmlx.alg.time2str import time2str
 from zmlx.config import seepage
 from zmlx.filesys import path
@@ -21,6 +21,7 @@ from zmlx.fluid import h2o
 from zmlx.geometry.point_distance import point_distance
 from zmlx.geometry.seg_point_distance import seg_point_distance
 from zmlx.plt.show_dfn2 import show_dfn2
+from zmlx.seepage_mesh.cube import create_cube
 from zmlx.ui.GuiBuffer import gui
 from zmlx.utility.GuiIterator import GuiIterator
 from zmlx.utility.PressureController import PressureController
@@ -61,7 +62,7 @@ def create_model(dx=100.0, dy=100.0, dz=100.0, temp=500.0, pre=10.0e6, perm=1.0e
     x = np.linspace(0, dx, jx)
     y = np.linspace(0, dy, jy)
     z = [-dz / 2, dz / 2]
-    mesh = SeepageMesh.create_cube(x, y, z)
+    mesh = create_cube(x, y, z)
 
     x_min, x_max = mesh.get_pos_range(0)
     y_min, y_max = mesh.get_pos_range(1)

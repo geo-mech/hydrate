@@ -39,7 +39,7 @@ def create():
         初始的饱和度场. 这里，假设在靠近底部的一个圆形区域内为气体，其它位置为液体
         """
         if get_distance((x, z), (0, -420)) < 80:
-            return {'ch4': 0.6, 'co2': 0.4}    # 假设co2和ch4共存
+            return {'ch4': 0.6, 'co2': 0.4}  # 假设co2和ch4共存
         else:
             return {'h2o': 1}
 
@@ -68,7 +68,7 @@ def create():
                           perm=1.0e-15,
                           heat_cond=2.0,
                           dv_relative=0.5,  # 一个时间步内，流体最多走过0.5个网格
-                          dt_max=3600*24*365,
+                          dt_max=3600 * 24 * 365,
                           ))
 
     # 创建模型，返回Seepage对象
