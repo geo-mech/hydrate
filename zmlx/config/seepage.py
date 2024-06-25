@@ -438,7 +438,7 @@ def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
 
     if model.injector_number > 0:
         # 实施流体的注入操作.
-        model.apply_injectors(dt)
+        model.apply_injectors(dt=dt, time=get_time(model))
 
     # 尝试修改边界的压力，从而使得流体生产 (使用模型内部定义的time)
     #   since 2024-6-12
@@ -619,7 +619,7 @@ def create(mesh=None,
            gr=None, bk_fv=None, bk_g=None, caps=None,
            keys=None, tags=None, kr=None, default_kr=None,
            model_attrs=None, prods=None,
-           warnings_ignored=None,
+           warnings_ignored=None, injectors=None, texts=None,
            **kwargs):
     """
     利用给定的网格来创建一个模型.
@@ -722,6 +722,15 @@ def create(mesh=None,
     # 对模型的细节进行必要的配置
     set_model(model, igr=igr, bk_fv=bk_fv, bk_g=bk_g, **kwargs)
 
+    # 添加注入点   since 24-6-20
+    if injectors is not None:
+        if isinstance(injectors, dict):
+            model.add_injector(**injectors)
+        else:
+            for item in injectors:
+                assert isinstance(item, dict)
+                model.add_injector(**item)
+
     # 添加毛管效应.
     if caps is not None:
         for cap in caps:
@@ -733,6 +742,12 @@ def create(mesh=None,
         for item in prods:
             assert isinstance(item, dict)
             prod.add_setting(model, **item)
+
+    # 添加文本属性
+    if texts is not None:
+        assert isinstance(texts, dict)
+        for key, value in texts.items():
+            model.set_text(key=key, text=value)
 
     return model
 

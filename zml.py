@@ -8566,22 +8566,16 @@ class Seepage(HasHandle, HasCells):
             """
             core.injector_set_value(self.handle, val)
 
-        core.use(c_double, 'injector_get_time', c_void_p)
-        core.use(None, 'injector_set_time', c_void_p, c_double)
-
         @property
         def time(self):
-            """
-            每一个Injector都内置一个时间。请无比确保这个时间标签和model的时间一致
-            """
-            return core.injector_get_time(self.handle)
+            warnings.warn('Property Seepage.Injector.time has been removed',
+                          DeprecationWarning)
+            return 0
 
         @time.setter
         def time(self, value):
-            """
-            每一个Injector都内置一个时间。请无比确保这个时间标签和model的时间一致
-            """
-            core.injector_set_time(self.handle, value)
+            warnings.warn('Property Seepage.Injector.time has been removed',
+                          DeprecationWarning)
 
         core.use(c_double, 'injector_get_pos', c_void_p, c_size_t)
         core.use(None, 'injector_set_pos', c_void_p, c_size_t, c_double)
@@ -8701,15 +8695,20 @@ class Seepage(HasHandle, HasCells):
             core.injector_add_oper(self.handle, time, make_c_char_p(oper if isinstance(oper, str) else f'{oper}'))
             return self
 
-        core.use(None, 'injector_work', c_void_p, c_void_p, c_double)
+        core.use(None, 'injector_work', c_void_p, c_void_p, c_double, c_double)
 
-        def work(self, model, dt):
+        def work(self, model, *, time=None, dt=None):
             """
             执行注入操作。会同步更新injector内部存储的time属性；
             注：此函数不需要调用。内置在Seepage中的Injector，会在Seepage.iterate函数中被自动调用
             """
             assert isinstance(model, Seepage)
-            core.injector_work(self.handle, model.handle, dt)
+            if time is None:
+                warnings.warn('time is None for Seepage.Injector, use time=0 as default')
+                time = 0
+            if dt is None:
+                return
+            core.injector_work(self.handle, model.handle, time, dt)
 
         core.use(None, 'injector_clone', c_void_p, c_void_p)
 
@@ -9133,13 +9132,19 @@ class Seepage(HasHandle, HasCells):
         """
         return Iterator(self, self.injector_number, lambda m, ind: m.get_injector(ind))
 
-    core.use(None, 'seepage_apply_injs', c_void_p, c_double)
+    core.use(None, 'seepage_apply_injs', c_void_p, c_double,
+             c_double)
 
-    def apply_injectors(self, dt):
+    def apply_injectors(self, *, time=None, dt=None):
         """
         所有的注入点执行注入操作.
         """
-        core.seepage_apply_injs(self.handle, dt)
+        if time is None:
+            warnings.warn('time is None for Seepage.Injector, use time=0 as default')
+            time = 0
+        if dt is None:
+            return
+        core.seepage_apply_injs(self.handle, time, dt)
 
     core.use(c_double, 'seepage_get_gravity', c_void_p, c_size_t)
     core.use(None, 'seepage_set_gravity', c_void_p, c_size_t, c_double)

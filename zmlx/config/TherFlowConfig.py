@@ -557,7 +557,7 @@ class TherFlowConfig(Object):
                              relax_factor=1.0, min=1.0e-7, max=1.0)
 
         if model.injector_number > 0:
-            model.apply_injectors(dt)
+            model.apply_injectors(dt=dt, time=self.get_time(model))
 
         has_solid = model.has_tag('has_solid')
 

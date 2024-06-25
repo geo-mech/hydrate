@@ -5,12 +5,13 @@ import random
 
 import numpy as np
 
-from zml import SeepageMesh, InvasionPercolation
+from zml import InvasionPercolation
+from zmlx.seepage_mesh.cube import create_cube
 from zmlx.ui import gui
 
 
 def create():
-    mesh = SeepageMesh.create_cube(x=np.linspace(0, 100, 100), y=np.linspace(0, 300, 300), z=(0, 1))
+    mesh = create_cube(x=np.linspace(0, 100, 100), y=np.linspace(0, 300, 300), z=(0, 1))
     model = InvasionPercolation()
     random.seed(1000000)
     for cell in mesh.cells:
