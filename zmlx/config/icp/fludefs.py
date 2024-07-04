@@ -28,4 +28,3 @@ def create_fludefs():
                                       char.create(den=1800.0, name='char')])
     # 返回定义
     return [gas, h2o, lo, ho, sol]
-

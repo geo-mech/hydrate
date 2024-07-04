@@ -8,6 +8,7 @@ class FloatBuffer:
     """
     准备一个数据的缓冲区
     """
+
     def __init__(self, value, is_input=None, length=None):
         self.data = None
         self.pointer = None
@@ -122,5 +123,3 @@ def get_cell_average(model: Seepage, fa, ca=None):
     ca = FloatBuffer(value=ca, is_input=False, length=model.cell_number)
     model.get_cell_average(fa=fa.pointer, ca=ca.pointer)
     return ca.data
-
-

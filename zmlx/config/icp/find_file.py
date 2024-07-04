@@ -26,5 +26,4 @@ def find_by_year(folder, year):
     """
     从文件夹中找到给定year的文件.
     """
-    return find_by_day(folder, year*365)
-
+    return find_by_day(folder, year * 365)

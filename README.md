@@ -4,7 +4,7 @@
  
 ### 版本
 
-ZmlVersion=240616
+ZmlVersion=240704
 
 ### 作者
 
@@ -21,7 +21,7 @@ ZmlVersion=240616
 
 ### 授权
 
-使用前请[联系作者](http://sourcedb.igg.cas.cn/cn/zjrck/201703/t20170306_4755492.html).
+免费用于学术用途；使用前请[联系作者](http://sourcedb.igg.cas.cn/cn/zjrck/201703/t20170306_4755492.html).
 
 ### 功能
 1. 多相多[组分](https://gitee.com/geomech/hydrate/tree/master/zmlx/fluid)流动，支持: 水/蒸气/水冰，ch4/ch4水合物，co2/co2水合物，盐度/砂，油/重油/干酪根;  

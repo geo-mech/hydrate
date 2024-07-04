@@ -4,12 +4,14 @@ from zml import Seepage
 from zmlx.alg.Vector import to_numpy
 from zmlx.utility.SeepageNumpy import as_numpy
 
+text_key = 'fluid_heating'
+
 
 def get_settings(model: Seepage):
     """
     读取设置
     """
-    text = model.get_text('fluid_heating')
+    text = model.get_text(text_key)
     if len(text) > 2:
         data = eval(text)
         assert isinstance(data, list)
@@ -28,7 +30,7 @@ def add_setting(model: Seepage, fluid=None, power=None, temp_max=None):
     setting.append({'fluid': fluid,
                     'power': power,
                     'temp_max': temp_max})
-    model.set_text('fluid_heating', setting)
+    model.set_text(text_key, setting)
 
 
 def iterate(model: Seepage, dt):
@@ -57,14 +59,14 @@ def iterate(model: Seepage, dt):
             power = np.array(power)
 
         # 加热
-        if len(power) == model.cell_number:   # 长度必须和cell的数量一致
+        if len(power) == model.cell_number:  # 长度必须和cell的数量一致
 
             m = as_numpy(model).fluids(*fluid).mass
             c = as_numpy(model).fluids(*fluid).get(model.reg_flu_key('specific_heat'))
             d_temp = (power * dt) / (m * c)
-            d_temp[d_temp < 0] = 0   # 温度不能降低
+            d_temp[d_temp < 0] = 0  # 温度不能降低
             t0 = as_numpy(model).fluids(*fluid).get(model.reg_flu_key('temperature'))
-            t1 = t0 + d_temp   # 加温之后的温度
+            t1 = t0 + d_temp  # 加温之后的温度
 
             temp_max = item.get('temp_max')
             if temp_max is not None:
@@ -77,4 +79,3 @@ def iterate(model: Seepage, dt):
                     t1[mask] = temp_max[mask]
 
             as_numpy(model).fluids(*fluid).set(model.reg_flu_key('temperature'), t1)
-

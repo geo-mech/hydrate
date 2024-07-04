@@ -1,8 +1,8 @@
 import warnings
 
 from zml import Object, Seepage, get_average_perm, Reaction, log
-from zmlx.utility.Field import Field
 from zmlx.utility.AttrKeys import AttrKeys
+from zmlx.utility.Field import Field
 
 
 class TherFlowConfig(Object):

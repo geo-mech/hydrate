@@ -1,15 +1,18 @@
 """
 用于管理毛管压力驱动下的流动
 """
-from zml import Vector, Seepage, Interp1
-from zmlx.utility.SeepageNumpy import as_numpy
 import numpy as np
-from zmlx.config.seepage_face import get_face_sum, get_face_diff
+
+from zml import Vector, Seepage, Interp1
 from zmlx.alg.np import get_pointer
+from zmlx.config.seepage_face import get_face_sum, get_face_diff
+from zmlx.utility.SeepageNumpy import as_numpy
 
 vs0 = Vector()
 vk = Vector()
 vg = Vector()
+
+text_key = 'cap_settings'
 
 
 def get_settings(model: Seepage):
@@ -19,7 +22,7 @@ def get_settings(model: Seepage):
     settings = []
 
     # from buffer
-    buf = model.get_buffer('cap_settings')
+    buf = model.get_buffer(text_key)
     ind = 0
     while ind + 6 < buf.size:
         # 流体0
@@ -39,7 +42,7 @@ def get_settings(model: Seepage):
                          'ca_ipc': ca_ipc})
 
     # from text
-    text = model.get_text('cap_settings')
+    text = model.get_text(text_key)
     if len(text) > 0:
         temp = eval(text)
         assert isinstance(temp, list)
@@ -54,7 +57,7 @@ def set_settings(model: Seepage, settings):
     将cap设置存储到model
     """
     assert isinstance(settings, list)
-    model.set_text('cap_settings',
+    model.set_text(text_key,
                    f'{settings}')
 
 
@@ -128,7 +131,7 @@ def iterate(model: Seepage, dt: float, fid0=None, fid1=None,
             if lpg > 0:  # 可以考虑重力
                 # print(f'Iterate the Capillary By Gravity = {gravity}')
                 model.get_cond_for_exchange(fid0=fid0, fid1=fid1,
-                                            buffer=vg)   # 用来交换的g
+                                            buffer=vg)  # 用来交换的g
                 assert lpg == model.face_number
                 model.diffusion(dt, fid0=fid0, fid1=fid1,
                                 pg=vg.pointer, lg=vg.size,
@@ -148,7 +151,7 @@ def iterate(model: Seepage, dt: float, fid0=None, fid1=None,
             gravity = setting.get('gravity')
             iterate(model=model, dt=dt, fid0=fid0, fid1=fid1,
                     ca_ipc=setting.get('ca_ipc'),
-                    ds=ds, gravity=gravity)   # 执行迭代.
+                    ds=ds, gravity=gravity)  # 执行迭代.
 
 
 def add(model: Seepage, fid0=None, fid1=None, get_idx=None, data=None,
@@ -161,10 +164,10 @@ def add(model: Seepage, fid0=None, fid1=None, get_idx=None, data=None,
         注意这个ID从0开始编号.
     后续的所有参数为毛管压力曲线，可以是Interp1类型，也可以给定两个list.
     """
-    if fid0 is None or fid1 is None:    # 必须指定一对流体
+    if fid0 is None or fid1 is None:  # 必须指定一对流体
         return
 
-    if data is None and gravity is None:   # 必须有毛管压力或者重力，否则，这个函数是不起作用的.
+    if data is None and gravity is None:  # 必须有毛管压力或者重力，否则，这个函数是不起作用的.
         return
 
     # 获取现在已经有的设置.
@@ -173,7 +176,7 @@ def add(model: Seepage, fid0=None, fid1=None, get_idx=None, data=None,
     count = len(settings)
 
     if data is not None:  # 给定的毛管压力的数据
-        ca_ipc = model.reg_cell_key(f'ipc_{count}')   # 在cell中注册一个key，用来存储pc的id
+        ca_ipc = model.reg_cell_key(f'ipc_{count}')  # 在cell中注册一个key，用来存储pc的id
         # 将data添加到model
         ipcs = []
         for curve_id in range(len(data)):
@@ -182,7 +185,7 @@ def add(model: Seepage, fid0=None, fid1=None, get_idx=None, data=None,
             elif isinstance(data[curve_id], str):
                 c = s2p(data[curve_id])
             else:
-                s, p = data[curve_id]   # 从饱和度到压力的插值.
+                s, p = data[curve_id]  # 从饱和度到压力的插值.
                 c = Interp1(x=s, y=p)
             idx = model.add_pc(c, need_id=True)
             ipcs.append(idx)
@@ -192,7 +195,7 @@ def add(model: Seepage, fid0=None, fid1=None, get_idx=None, data=None,
             idx = round(get_idx(*model.get_cell(cell_id).pos))
             assert 0 <= idx < len(data)
             ipc = ipcs[idx]
-            model.get_cell(cell_id).set_attr(ca_ipc, ipc)   # 设置pc的id
+            model.get_cell(cell_id).set_attr(ca_ipc, ipc)  # 设置pc的id
     else:  # 此时，不再考虑毛细管压力.
         ca_ipc = None
 

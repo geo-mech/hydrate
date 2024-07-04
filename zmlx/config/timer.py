@@ -4,12 +4,14 @@
 
 from zml import Seepage
 
+text_key = 'timers'
+
 
 def get_settings(model: Seepage):
     """
     读取设置
     """
-    text = model.get_text('timers')
+    text = model.get_text(text_key)
     if len(text) > 2:
         data = eval(text)
         assert isinstance(data, list)
@@ -30,7 +32,7 @@ def add_setting(model: Seepage, time, name, args=None, kwds=None):
                     })
     # 排序，确保顺序正确，从而，方便后续的执行
     setting = sorted(setting, key=lambda item: item['time'])
-    model.set_text('timers', setting)
+    model.set_text(text_key, setting)
 
 
 # 一些预定义函数
@@ -78,4 +80,3 @@ def iterate(model: Seepage, t0, t1, slots):
                 args = [time if equal(item, '@time') else item for item in args]
                 kwds = {key: time if equal(value, '@time') else value for key, value in kwds.items()}
                 func(*args, **kwds)
-

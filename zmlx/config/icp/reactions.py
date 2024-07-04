@@ -15,7 +15,7 @@ def create_reactions(temp_max=None):
 
     # 水和蒸汽之间的可逆的反应
     r = vapor.create(vap='steam', wat='h2o',
-                     temp_max=temp_max   # 液态水允许的最高的温度
+                     temp_max=temp_max  # 液态水允许的最高的温度
                      )
     result.append(r)
 

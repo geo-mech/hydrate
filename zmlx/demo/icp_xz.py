@@ -7,6 +7,7 @@ from zmlx.config.icp.reactions import create_reactions
 from zmlx.kr.create_krf import create_krf
 from zmlx.seepage_mesh.add_cell_face import add_cell_face
 from zmlx.seepage_mesh.cube import create_xz
+from zmlx.alg.has_cells import get_pos_range
 
 
 def create(years_heating=5.0, years_max=8.0, power=5e3):
@@ -15,6 +16,8 @@ def create(years_heating=5.0, years_max=8.0, power=5e3):
     """
     mesh = create_xz(x_min=0, dx=0.3, x_max=15.0, y_min=-1, y_max=0,
                      z_min=-30.0, dz=0.3, z_max=30.0)
+
+    z_min, z_max = get_pos_range(mesh, 2)
 
     # 添加虚拟的cell和face用于生产
     add_cell_face(mesh, pos=[0, 0, 0], offset=[0, 10, 0],
@@ -29,6 +32,12 @@ def create(years_heating=5.0, years_max=8.0, power=5e3):
                     'ho': 0.2, 'kg': 0.6}
         else:
             return {'ch4': 1}
+
+    def get_denc(x, y, z):   # 密度和比热的乘积
+        if abs(z - z_min) < 0.1 or abs(z - z_max) < 0.1:
+            return 1e20
+        else:
+            return 4e6
 
     def get_porosity(x, y, z):  # 孔隙度
         return 0.3 if -15 <= z <= 15 else 0.01
@@ -76,7 +85,7 @@ def create(years_heating=5.0, years_max=8.0, power=5e3):
                            pore_modulus=100e6,
                            p=20e6,
                            temperature=350.0,
-                           denc=4e6,
+                           denc=get_denc,
                            s=get_s,
                            perm=get_perm,
                            heat_cond=2.0,

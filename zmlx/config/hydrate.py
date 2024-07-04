@@ -279,7 +279,7 @@ def create_kwargs(has_co2=False,
     返回用于seepage.create的参数列表
         当给定co2的时候，将使用给定的定义. (since 2024-1-10)
     """
-    if has_co2_in_liq:   # 此时，必须要求存在co2
+    if has_co2_in_liq:  # 此时，必须要求存在co2
         has_co2 = True
 
     fludefs = create_fludefs(h2o_density=h2o_density,

@@ -44,10 +44,10 @@ import warnings
 import numpy as np
 
 from zml import get_average_perm, Tensor3, Seepage, ConjugateGradientSolver
+from zmlx.alg.clamp import clamp
 from zmlx.alg.join_cols import join_cols
 from zmlx.alg.time2str import time2str
-from zmlx.alg.clamp import clamp
-from zmlx.config import capillary, prod, fluid_heating, timer
+from zmlx.config import capillary, prod, fluid_heating, timer, sand
 from zmlx.config.attr_keys import cell_keys, face_keys, flu_keys
 from zmlx.config.seepage_face import (get_face_gradient, get_face_diff,
                                       get_face_sum, get_face_left,
@@ -60,10 +60,10 @@ from zmlx.geometry.point_distance import point_distance
 from zmlx.plt.tricontourf import tricontourf
 from zmlx.ui.GuiBuffer import gui
 from zmlx.utility.Field import Field
-from zmlx.utility.SeepageNumpy import as_numpy
-from zmlx.utility.SeepageCellMonitor import SeepageCellMonitor
-from zmlx.utility.SaveManager import SaveManager
 from zmlx.utility.GuiIterator import GuiIterator
+from zmlx.utility.SaveManager import SaveManager
+from zmlx.utility.SeepageCellMonitor import SeepageCellMonitor
+from zmlx.utility.SeepageNumpy import as_numpy
 
 # 确保不会被优化掉
 _unused = [get_face_gradient, get_face_diff, get_face_sum, get_face_left,
@@ -411,7 +411,7 @@ def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
     assert dt is not None, 'You must set dt before iterate'
 
     # 执行定时器函数.
-    timer.iterate(model, t0=get_time(model), t1=get_time(model)+dt,
+    timer.iterate(model, t0=get_time(model), t1=get_time(model) + dt,
                   slots=slots)
 
     if model.not_has_tag('disable_update_den') and model.fludef_number > 0:
@@ -495,6 +495,9 @@ def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
     if has_solid:
         # 恢复备份的固体物质
         model.push_fluids(solid_buffer)
+
+    # 更新沙子的沉降
+    sand.iterate(model=model, last_dt=dt)
 
     update_ther = model.not_has_tag('disable_ther')
 
@@ -626,7 +629,7 @@ def create(mesh=None,
         其中gr用来计算孔隙体积变化之后的渗透率的改变量.  gr的类型是一个Interp1.
     """
     model = Seepage()
-    if warnings_ignored is None:   # 忽略掉的警告
+    if warnings_ignored is None:  # 忽略掉的警告
         warnings_ignored = set()
 
     if keys is not None:
@@ -1121,10 +1124,10 @@ def solve(model=None, folder=None, fname=None, gui_mode=None, close_after_done=N
     else:
         if hasattr(save_dt, '__call__'):
             def get_save_dy(year):
-                return clamp(save_dt(year*seconds_year)/seconds_year, save_dy_min, save_dy_max)
+                return clamp(save_dt(year * seconds_year) / seconds_year, save_dy_min, save_dy_max)
         else:
             def get_save_dy(year):
-                return clamp(save_dt/seconds_year, save_dy_min, save_dy_max)
+                return clamp(save_dt / seconds_year, save_dy_min, save_dy_max)
 
     # 执行数据的保存
     save_model = SaveManager(join_paths(folder, 'models'), save=model.save,
@@ -1165,7 +1168,7 @@ def solve(model=None, folder=None, fname=None, gui_mode=None, close_after_done=N
             plot_rate = item1.get('plot_rate')
             if plot_rate is not None:
                 for idx in plot_rate:
-                    monitor.plot_rate(index=idx, caption=f'Rate_{index}.{idx}')   # 显示生产曲线
+                    monitor.plot_rate(index=idx, caption=f'Rate_{index}.{idx}')  # 显示生产曲线
         if extra_plot is not None:  # 一些额外的，非标准的绘图操作
             extra_plot()
 
@@ -1181,7 +1184,7 @@ def solve(model=None, folder=None, fname=None, gui_mode=None, close_after_done=N
     # 执行最终的迭代
     if gui_iter is None:
         gui_iter = GuiIterator(iterate, plot=plot)
-    else:   # 使用已有的配置(这样，方便多个求解过程，使用全局的iter)
+    else:  # 使用已有的配置(这样，方便多个求解过程，使用全局的iter)
         assert isinstance(gui_iter, GuiIterator)
         gui_iter.iterate = iterate
         gui_iter.plot = plot
@@ -1198,7 +1201,7 @@ def solve(model=None, folder=None, fname=None, gui_mode=None, close_after_done=N
     # 求解到的最大的step
     step_max = solve_options.get('step_max')
     if step_max is None:
-        step_forward = solve_options.get('step_forward')   # 向前迭代的步数
+        step_forward = solve_options.get('step_forward')  # 向前迭代的步数
         if step_forward is not None:
             step_max = get_step(model) + step_forward
     if step_max is None:  # 给定默认值
@@ -1224,7 +1227,7 @@ def solve(model=None, folder=None, fname=None, gui_mode=None, close_after_done=N
             gui_iter(model, solver=solver, slots=slots)
             save()
 
-            for item3 in monitors:   # 更新所有的监控点
+            for item3 in monitors:  # 更新所有的监控点
                 monitor = item3.get('monitor')
                 monitor.update(dt=3600.0)
 

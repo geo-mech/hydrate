@@ -2,8 +2,10 @@
 控制用来生产的Cell的压力
 """
 
-from zmlx.alg.interp1 import interp1
 from zml import Seepage
+from zmlx.alg.interp1 import interp1
+
+text_key = 'prod_settings'
 
 
 def modify_pore(cell: Seepage.CellData, target_fp):
@@ -20,7 +22,7 @@ def get_settings(model: Seepage):
     """
     读取设置
     """
-    text = model.get_text('prod_settings')
+    text = model.get_text(text_key)
     if len(text) > 2:
         data = eval(text)
         assert isinstance(data, list)
@@ -31,27 +33,25 @@ def set_settings(model: Seepage, data):
     """
     写入设置
     """
-    if data is None:
-        model.set_text('prod_settings', '')
-        return
+    if isinstance(data, list):
+        model.set_text(text_key, f'{data}')
     else:
-        assert isinstance(data, list)
-        model.set_text('prod_settings', f'{data}')
+        model.set_text(text_key, '')
 
 
 def add_setting(model: Seepage, index=None, pos=None, t=None, p=None):
     """
     添加设置. 其中index为cell的序号 (当index为None的时候，使用pos最为接近的Cell)
     """
-    if index is None and pos is not None:   # 当index没有给定的时候，使用pos来找到最为接近的index
+    if index is None and pos is not None:  # 当index没有给定的时候，使用pos来找到最为接近的index
         cell = model.get_nearest_cell(pos=pos)
         if cell is not None:
             index = cell.index
 
-    if index is None or t is None or p is None:   # 这些数据必须给定.
+    if index is None or t is None or p is None:  # 这些数据必须给定.
         return
 
-    if index < model.cell_number:   # 添加一个用于生产的确定压力的设置.
+    if index < model.cell_number:  # 添加一个用于生产的确定压力的设置.
         assert len(t) == len(p) and len(t) >= 2
         data = get_settings(model)
         if data is None:
@@ -65,7 +65,7 @@ def add_setting(model: Seepage, index=None, pos=None, t=None, p=None):
             if index == item.get('index'):
                 exists = True
                 break
-        if not exists:   # 只有当不存在的时候，才去设置
+        if not exists:  # 只有当不存在的时候，才去设置
             data.append({'index': index, 'time': t, 'pressure': p})
             set_settings(model, data=data)
 
@@ -86,7 +86,7 @@ def iterate(model: Seepage, time):
             if index < model.cell_number:
                 t = item.get('time')
                 p = item.get('pressure')
-                target_fp = interp1(x=t, y=p, xq=time)   # 获取此刻的目标压力
+                target_fp = interp1(x=t, y=p, xq=time)  # 获取此刻的目标压力
                 if target_fp > 0:  # 压力必须大于0
                     modify_pore(cell=model.get_cell(index), target_fp=target_fp)
         except Exception as err:  # 打印错误，但是不中断执行.

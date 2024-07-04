@@ -1,8 +1,9 @@
 """
 用于管理Seepage的动态属性
 """
-from zml import Seepage
 import warnings
+
+from zml import Seepage
 
 
 class DynKeys:

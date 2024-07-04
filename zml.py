@@ -32,7 +32,7 @@ from typing import Iterable
 is_windows = os.name == 'nt'
 
 # Version of the zml module (date represented by six digits)
-version = 240616
+version = 240704
 
 
 class Object:
@@ -10488,6 +10488,73 @@ class Seepage(HasHandle, HasCells):
         g = Groups()
         core.seepage_group_faces(self.handle, g.handle)
         return g
+
+    core.use(None, 'seepage_update_sand', c_void_p,
+             c_size_t, c_size_t, c_size_t,
+             c_size_t, c_size_t, c_size_t, c_void_p, c_double, c_void_p)
+
+    def update_sand(self, sol_sand, flu_sand, dt, v2q, vel=None):
+        """
+        计算流动的砂和沉降的砂之间的平衡. 其中vel为一个double类型的指针，存储在各个cell中当前的流动速度
+        """
+        assert isinstance(v2q, Interp1)
+        if vel is None:
+            vel = 0   # Data is None
+        if isinstance(vel, Vector):
+            vel = vel.pointer
+
+        if isinstance(sol_sand, str):
+            sol_sand = self.find_fludef(name=sol_sand)
+            assert sol_sand is not None
+
+        if isinstance(flu_sand, str):
+            flu_sand = self.find_fludef(name=flu_sand)
+            assert flu_sand is not None
+
+        # 它一定要在某一种流体内
+        assert len(flu_sand) >= 2
+
+        core.seepage_update_sand(self.handle, *parse_fid3(sol_sand),
+                                 *parse_fid3(flu_sand), vel, dt, v2q.handle)
+
+    core.use(None, 'seepage_get_cell_flu_vel', c_void_p, c_void_p,
+             c_size_t, c_double)
+
+    def get_cell_flu_vel(self, fid, last_dt, buf=None):
+        """
+        根据上一个时间步各个face内流过的流体的体积，来计算各个cell位置流体流动的速度.
+        返回：
+            一个Vector对象(优先使用buf)
+        """
+        if buf is None:
+            buf = Vector(size=self.cell_number)
+            core.seepage_get_cell_flu_vel(self.handle, buf.pointer, fid, last_dt)
+            return buf
+        elif isinstance(buf, Vector):
+            buf.size = self.cell_number
+            core.seepage_get_cell_flu_vel(self.handle, buf.pointer, fid, last_dt)
+            return buf
+        else:  # 此时，buf应该为一个长度为cell_number的指针类型
+            core.seepage_get_cell_flu_vel(self.handle, buf, fid, last_dt)
+
+    core.use(None, 'seepage_get_cell_gradient', c_void_p, c_void_p, c_void_p)
+
+    def get_cell_gradient(self, data, buf=None):
+        """
+        计算cell位置各个物理量的梯度. 这里，给定的data和buf都应该为长度等于cell_number的double指针
+        """
+        if isinstance(data, Vector):
+            data = data.pointer
+        if buf is None:
+            buf = Vector(size=self.cell_number)
+            core.seepage_get_cell_gradient(self.handle, buf.pointer, data)
+            return buf
+        elif isinstance(buf, Vector):
+            buf.size = self.cell_number
+            core.seepage_get_cell_gradient(self.handle, buf.pointer, data)
+            return buf
+        else:  # 此时，buf应该为一个长度为cell_number的指针类型
+            core.seepage_get_cell_gradient(self.handle, buf, data)
 
 
 Reaction = Seepage.Reaction
