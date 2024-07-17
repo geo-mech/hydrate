@@ -9,29 +9,11 @@ function show_rect3(rect3, varargin)
 % 
 
 % 默认参数值
-color = 0;
-alpha = 1;
-FaceColor = 'flat';
-edge = 'none';
-linewidth = 0.1;
-
-% 解析 varargin
-for i = 1:2:length(varargin)
-    switch lower(varargin{i})
-        case 'color'
-            color = varargin{i + 1};
-        case 'alpha'
-            alpha = varargin{i + 1};
-        case 'face'
-            FaceColor = varargin{i + 1};
-        case 'edge'
-            edge = varargin{i + 1};
-        case 'linewidth'
-            linewidth = varargin{i + 1};
-        otherwise
-            error(['Unknown option: ', varargin{i}]);
-    end
-end
+color = get_val(varargin, 'color', 0);
+alpha = get_val(varargin, 'alpha', 1);
+FaceColor = get_val(varargin, 'face', 'flat');
+edge = get_val(varargin, 'edge', 'none');
+linewidth = get_val(varargin, 'linewidth', 0.1);
 
 
 if length(color) == 1
@@ -89,10 +71,22 @@ for ind =1: alphaLevels
     hold on 
 end
 
-axis equal; box on
+xlabel(get_val(varargin, 'xlabel', 'x / m'))
+ylabel(get_val(varargin, 'ylabel', 'y / m'))
+zlabel(get_val(varargin, 'zlabel', 'z / m'))
+
+axis equal; 
+box on
 ax = gca;
 ax.BoxStyle = 'full';
-xlabel('x [m]')
-ylabel('y [m]')
-zlabel('z [m]')
-colormap('jet')
+
+colormap(get_val(varargin, 'cm', jet()));
+
+h = colorbar; % 显示 colorbar
+
+% 修改 colorbar 的标签
+ylabel(h, get_val(varargin, 'clabel', ''))
+
+% 添加 colorbar 的标题
+title(h, get_val(varargin, 'ctitle', ''));
+
