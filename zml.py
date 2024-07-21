@@ -7179,7 +7179,7 @@ class Seepage(HasHandle, HasCells):
                 if isinstance(value, Interp2):
                     self.den.clone(value)
                 else:  # 转化为二维插值
-                    assert 1.0e-3 < value < 1.0e5
+                    assert 1.0e-3 < value <= 1.0e7
                     itp = Interp2.create_const(value)
                     self.den.clone(itp)
 
@@ -7236,7 +7236,7 @@ class Seepage(HasHandle, HasCells):
         @specific_heat.setter
         def specific_heat(self, value):
             assert self.component_number == 0
-            assert 100.0 < value < 100000.0
+            assert 0.1 <= value <= 1.0e8
             core.fludef_set_specific_heat(self.handle, value)
 
         core.use(c_size_t, 'fludef_get_component_number', c_void_p)
@@ -9071,7 +9071,7 @@ class Seepage(HasHandle, HasCells):
             assert isinstance(data, Seepage.Injector)
             inj.clone(data)
 
-        if cell is not None:
+        if cell is not None:  # 可以是cell对象，也可以是cell的id
             if isinstance(cell, Seepage.Cell):
                 assert cell.model.handle == self.handle  # 必须是同一个模型
                 cell = cell.index

@@ -2,7 +2,7 @@
 竖直方向的圆柱网格.
 """
 import numpy as np
-
+from zmlx.seepage_mesh.cylinder import create_cylinder
 from zml import SeepageMesh
 
 
@@ -10,7 +10,7 @@ def create(z=(0, 1, 2), r=(0, 1, 2)):
     """
     创建一个竖直方向的圆柱坐标.
     """
-    mesh = SeepageMesh.create_cylinder(x=z, r=r)  # 此时是躺着的一个模型.
+    mesh = create_cylinder(x=z, r=r)  # 此时是躺着的一个模型.
 
     for cell in mesh.cells:  # 交换坐标
         assert isinstance(cell, SeepageMesh.Cell)

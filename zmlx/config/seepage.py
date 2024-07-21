@@ -117,8 +117,16 @@ def get_cell_fv(model: Seepage, fid=None, mask=None):
     return v if mask is None else v[mask]
 
 
+def get_cell_fm(model: Seepage, fid=None, mask=None):
+    if fid is None:
+        v = as_numpy(model).cells.fluid_mass
+    else:
+        v = as_numpy(model).fluids(*fid).mass
+    return v if mask is None else v[mask]
+
+
 def show_cells(model: Seepage, dim0, dim1, mask=None, show_p=True, show_t=True,
-               show_s=True, folder=None):
+               show_s=True, folder=None, use_mass=False):
     """
     二维绘图显示
     """
@@ -145,26 +153,20 @@ def show_cells(model: Seepage, dim0, dim1, mask=None, show_p=True, show_t=True,
 
     if not isinstance(show_s, list):
         if show_s:  # 此时，显示所有组分的饱和度
-            show_s = list_comp(model)  # 所有的组分名称
-            while True:  # 将组分名字解开
-                names = []
-                for item in show_s:
-                    if isinstance(item, list):
-                        names = names + item
-                    else:
-                        names.append(item)
-                if len(names) == len(show_s):
-                    break
-                else:
-                    show_s = names
+            show_s = list_comp(model, keep_structure=False)  # 所有的组分名称
 
     if isinstance(show_s, list):
-        fv_all = get_cell_fv(model=model, mask=mask)
+        if use_mass:  # 此时，显示质量饱和度
+            get = get_cell_fm
+        else:
+            get = get_cell_fv
+
+        fv_all = get(model=model, mask=mask)
         for name in show_s:
             assert isinstance(name, str)
             idx = model.find_fludef(name=name)
             assert idx is not None
-            fv = get_cell_fv(model=model, fid=idx, mask=mask)  # 流体体积
+            fv = get(model=model, fid=idx, mask=mask)  # 流体体积
             v = fv / fv_all
             # 绘图
             tricontourf(x, y, v, caption=name,
@@ -187,16 +189,60 @@ def _get_names(f_def: Seepage.FluDef):
         return names
 
 
-def list_comp(model: Seepage):
+def _flatten_comp(name):
+    """
+    用在list_comp中，去除组分的结构
+    """
+    if isinstance(name, str):
+        return [name]
+    else:
+        assert isinstance(name, list)
+        temp = []
+        for item in name:
+            temp = temp + _flatten_comp(item)
+        return temp
+
+
+def list_comp(model: Seepage, keep_structure=True):
     """
     列出所有组分的名字
+    :param keep_structure: 返回的结构是否保持流体的结构 (since 2024-7-25)
     :param model: 需要列出组分的模型
     :return: 所有组分的名字作为list返回(注意，会维持流体和组分的组成结构)
     """
     names = []
     for idx in range(model.fludef_number):
         names.append(_get_names(model.get_fludef(idx)))
-    return names
+    if keep_structure:
+        return names
+    else:
+        return _flatten_comp(names)
+
+
+def _list_comp_ids(fdef: Seepage.FluDef):
+    """
+    用在list_comp_ids中，列出组分中具有子组分的id (since 2024-7-25)
+    """
+    if fdef.component_number == 0:
+        return [[]]
+    result = []
+    for idx in range(fdef.component_number):
+        ids = _list_comp_ids(fdef.get_component(idx))
+        for item in ids:
+            result.append([idx] + item)
+    return result
+
+
+def list_comp_ids(model: Seepage):
+    """
+    列出模型中所有的流体的ID(其中每一个元素都是list)  (since 2024-7-25)
+    """
+    result = []
+    for idx in range(model.fludef_number):
+        ids = _list_comp_ids(model.get_fludef(idx))
+        for item in ids:
+            result.append([idx]+item)
+    return result
 
 
 def _pop_sat(name, table: dict):

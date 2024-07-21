@@ -13,6 +13,7 @@ from zmlx.filesys.join_paths import join_paths
 from zmlx.filesys.make_dirs import make_dirs
 from zmlx.filesys.make_parent import make_parent
 from zmlx.filesys.tag import print_tag
+from zmlx.filesys.in_directory import in_directory
 
 
 def opath(*args, tag=None):
@@ -61,7 +62,8 @@ def opath(*args, tag=None):
         path = root
 
     # 因为是输出目录，因此创建必要的文件夹.
-    return make_parent(path)
+    if not in_directory(path, get_dir()):   # 确保不在脚本目录内输出.
+        return make_parent(path)
 
 
 # 两个别名
@@ -81,6 +83,9 @@ def set_opath(folder=None, tag=None):
     folder = os.path.abspath(folder)
 
     assert not is_chinese(folder), f'Error: folder contains Chinese. folder = {folder}'
+
+    # 不可以在脚本目录下输出
+    assert not in_directory(folder, get_dir()), f'Error: try to export data to code folder: {get_dir()}'
 
     # 尝试创建目录
     if not os.path.isdir(folder):

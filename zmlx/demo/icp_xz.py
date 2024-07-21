@@ -1,13 +1,14 @@
 # ** desc = '原位转化：在xz平面二维的模型'
 
 from zmlx.alg.has_cells import get_cell_mask
+from zmlx.alg.has_cells import get_pos_range
 from zmlx.config import seepage
 from zmlx.config.icp.fludefs import create_fludefs
 from zmlx.config.icp.reactions import create_reactions
+from zmlx.filesys.opath import opath
 from zmlx.kr.create_krf import create_krf
 from zmlx.seepage_mesh.add_cell_face import add_cell_face
 from zmlx.seepage_mesh.cube import create_xz
-from zmlx.alg.has_cells import get_pos_range
 
 
 def create(years_heating=5.0, years_max=8.0, power=5e3):
@@ -33,7 +34,7 @@ def create(years_heating=5.0, years_max=8.0, power=5e3):
         else:
             return {'ch4': 1}
 
-    def get_denc(x, y, z):   # 密度和比热的乘积
+    def get_denc(x, y, z):  # 密度和比热的乘积
         if abs(z - z_min) < 0.1 or abs(z - z_max) < 0.1:
             return 1e20
         else:
@@ -104,4 +105,4 @@ def create(years_heating=5.0, years_max=8.0, power=5e3):
 
 
 if __name__ == '__main__':
-    seepage.solve(model=create(), close_after_done=False)
+    seepage.solve(model=create(), close_after_done=False, folder=opath('icp_xz'))
