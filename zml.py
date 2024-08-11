@@ -32,7 +32,7 @@ from typing import Iterable
 is_windows = os.name == 'nt'
 
 # Version of the zml module (date represented by six digits)
-version = 240704
+version = 240811
 
 
 class Object:
@@ -965,6 +965,7 @@ def fetch_m(folder=None):
     """
     Get those predefined m-files. These m files are used for debugging plots etc.
     """
+    warnings.warn('This function will be removed after 2025-8-11', DeprecationWarning)
     if folder is None:
         core.fetch_m(make_c_char_p(''))
     else:
