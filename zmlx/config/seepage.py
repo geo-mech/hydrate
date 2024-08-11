@@ -887,12 +887,18 @@ def set_model(model: Seepage, porosity=0.1,
         if isinstance(sat, dict):
             sat = get_sat(comp_names, sat)
 
+        # 热传导系数. todo: 当热传导系数各向异性的时候，取平均值，这可能并不是最合适的.  @2024-8-11
+        tmp = heat_cond(*pos)
+        if isinstance(tmp, Tensor3):
+            tmp = (tmp.xx + tmp.yy + tmp.zz) / 3.0
+
+        # 设置cell
         set_cell(cell, porosity=porosity(*pos),
                  pore_modulus=pore_modulus(*pos), denc=denc(*pos),
                  temperature=temperature(*pos),
                  p=p(*pos), s=sat,
                  pore_modulus_range=pore_modulus_range,
-                 dist=dist(*pos), bk_fv=bk_fv(*pos))
+                 dist=dist(*pos), bk_fv=bk_fv(*pos), heat_cond=tmp)
 
     for face in model.faces:
         assert isinstance(face, Seepage.Face)
@@ -907,7 +913,7 @@ def set_cell(cell: Seepage.Cell, pos=None, vol=None,
              porosity=0.1, pore_modulus=1000e6,
              denc=1.0e6, dist=0.1,
              temperature=280.0, p=1.0, s=None,
-             pore_modulus_range=None, bk_fv=True):
+             pore_modulus_range=None, bk_fv=True, heat_cond=1.0):
     """
     设置Cell的初始状态.
     """
@@ -940,7 +946,9 @@ def set_cell(cell: Seepage.Cell, pos=None, vol=None,
 
     if bk_fv:  # 备份流体体积
         cell.set_attr(ca.fv0, cell.fluid_vol)
-    cell.set_attr(ca.g_heat, vol / (dist ** 2))
+
+    # 流体的固体之间的换热的系数
+    cell.set_attr(ca.g_heat, vol * heat_cond / (dist ** 2))
 
 
 def set_face(face: Seepage.Face, area=None, length=None,

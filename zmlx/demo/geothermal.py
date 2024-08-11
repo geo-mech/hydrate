@@ -1,4 +1,4 @@
-# ** desc = '基于井筒换热的地热开发模拟'
+# ** desc = '基于井筒换热的地热开发模拟(存在尚未发现的bug)'
 
 
 import numpy as np
@@ -8,18 +8,18 @@ from zmlx.config import seepage
 from zmlx.filesys.join_paths import join_paths
 from zmlx.plt.plotxy import plotxy
 from zmlx.seepage_mesh.create_wellbore import create_wellbore
-from zmlx.seepage_mesh.cube import create_cube
+from zmlx.seepage_mesh.cylinder import create_cylinder
 from zmlx.ui import gui
 from zmlx.utility.Field import Field
 from zmlx.utility.GuiIterator import GuiIterator
 from zmlx.utility.SeepageNumpy import as_numpy
 
 
-def create_well(rate_inj=None, temp_inj=None, heat_cond=2.0):
+def create_well(rate_inj=None, temp_inj=None, heat_cond=2.0, dist=0.1):
     """
     创建井筒模型.
     """
-    mesh = create_wellbore(trajectory=[[0, 50, 0], [100, 50, 0]],
+    mesh = create_wellbore(trajectory=[[0, 0, 0], [100, 0, 0]],
                            length=1, area=0.01)
     # 井筒的总的体积
     mesh_vol = mesh.volume
@@ -36,6 +36,9 @@ def create_well(rate_inj=None, temp_inj=None, heat_cond=2.0):
     fludefs = [Seepage.FluDef(name='h2o', den=1000, vis=0.001,
                               specific_heat=4200.0)]
 
+    if temp_inj is None:
+        temp_inj = 273.15 + 50  # 默认注入50摄氏度的水
+
     # 创建水的单相流动计算模型
     model = seepage.create(mesh=mesh,
                            dv_relative=0.8,
@@ -47,8 +50,8 @@ def create_well(rate_inj=None, temp_inj=None, heat_cond=2.0):
                            p=1e6,
                            s=1.0,
                            denc=1e20,  # 设置得非常大，从而确保温度不变
-                           dist=0.1,  # 换热的距离
-                           temperature=400,  # 原始的温度
+                           dist=dist,  # 换热的距离
+                           temperature=temp_inj,  # 原始的温度
                            perm=1e-11 * rate_inj / 1e-6,  # 这个应该和流量对应(当rate增大的时候，同步增大)
                            gravity=[0, 0, 0],  # 鉴于我们虚拟单元的设置，最好将重力设置为0
                            tags=['disable_update_den', 'disable_update_vis',
@@ -56,8 +59,8 @@ def create_well(rate_inj=None, temp_inj=None, heat_cond=2.0):
                            warnings_ignored={'gravity'},
                            )
 
-    if temp_inj is None:
-        temp_inj = 273.15 + 50  # 默认注入50摄氏度的水
+    # for cell in model.cells:
+    #     print(cell.get_attr(model.reg_cell_key('g_heat')))
 
     # 从第一个cell来注入
     cell = model.get_cell(0)
@@ -75,7 +78,7 @@ def create_well(rate_inj=None, temp_inj=None, heat_cond=2.0):
     model.set_text('swap', swap)
 
     # 配置求解的选项
-    seepage.set_solve(model, time_forward=mesh_vol * 2 / rate_inj)
+    seepage.set_solve(model, time_forward=mesh_vol / rate_inj)
 
     return model
 
@@ -101,9 +104,9 @@ def solve_well(model, close_after_done=None, folder=None, gui_iter=None,
 
 
 def create_res(well: Seepage, heat_cond=2.0):
-    mesh = create_cube(np.linspace(0, 100, 100),
-                       np.linspace(0, 100, 100),
-                       (-0.5, 0.5))
+
+    mesh = create_cylinder(x=np.linspace(0, 100, 100),
+                           r=np.linspace(0, 50, 50))
 
     # 井筒的轨迹
     swap = eval(well.get_text('swap'))
@@ -162,6 +165,19 @@ def create_res(well: Seepage, heat_cond=2.0):
     return model
 
 
+def get_res_heat(model: Seepage):
+    """
+    返回储层中的显热
+    """
+    o_index = eval(model.get_text('o_index'))   # 添加的虚拟的cell. 不统计heat
+    assert len(o_index) > 0
+    temp = as_numpy(model).cells.get(model.reg_cell_key('temperature'))
+    mc = as_numpy(model).cells.get(model.reg_cell_key('mc'))
+    heat = temp * mc
+    heat = heat[0: model.cell_number - len(o_index)]
+    return np.sum(heat)
+
+
 def get_cell_t(model: Seepage):
     buf = as_numpy(model).cells.get(index=model.reg_cell_key('temperature'))
     text = model.get_text('o_index')
@@ -211,14 +227,18 @@ def test_2():
 
 def main(folder=None):
     def solve():
-        heat_cond = 2
-        well = create_well(heat_cond=heat_cond, rate_inj=1.0e-5)
+        heat_cond = 1
+        well = create_well(heat_cond=heat_cond, rate_inj=20e-5, dist=0.01)
         res = create_res(well=well, heat_cond=heat_cond)
 
         gui_iter = GuiIterator()
 
-        while seepage.get_time(res) < 10 * 365 * 24 * 3600:
+        # 从time到power和出口温度的映射
+        vtime, vpower, vtemp = [], [], []
+
+        while seepage.get_time(res) < 50 * 365 * 24 * 3600:
             seepage.set_time(well, seepage.get_time(res))  # 同步时间
+
             # 读取储层温度并设置给井筒
             set_cell_t(well, get_cell_t(res))
             # 井筒迭代
@@ -226,9 +246,29 @@ def main(folder=None):
                        gui_iter=gui_iter)
             # 读取井筒的温度，并设置给储层
             set_cell_t(res, get_flu_t(well))
+
             # 储层迭代
+            energy0 = get_res_heat(model=res)
+            time0 = seepage.get_time(res)
             seepage.solve(res, folder=join_paths(folder, 'res'),
                           gui_iter=gui_iter, state_hint='res')
+            energy1 = get_res_heat(model=res)
+            time1 = seepage.get_time(res)
+
+            # 从time0到time1，储层显热释放的功率
+            power = (energy0 - energy1) / (time1 - time0)
+            vtime.append(time1 / (3600*24*365))
+            vpower.append(power)
+
+            # 记录出口的温度
+            vtemp.append(get_flu_t(well)[-1])
+
+            # 更新功率曲线和温度曲线
+            plotxy(vtime, vpower, caption='time2power', title='Power',
+                   xlabel='Time/ year', ylabel='Power / W')
+            plotxy(vtime, vtemp, caption='time2temp', title='Outlet Temperature',
+                   xlabel='Time/ year',
+                   ylabel='Temperature / K')
 
     gui.execute(func=solve, close_after_done=False, disable_gui=False)
 
