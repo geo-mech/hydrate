@@ -30,7 +30,7 @@ def stiffness(x0, x1, x2, x3, y0, y1, y2, y3, z0, z1, z2, z3, E, mu):
     te = 1  # (Thickness) in our case is z
 
     # the matrix C contains the coordinates of the tet4 corner nodes
-    C = np.mat([
+    C = np.array([
         [1, ex[0], ey[0], ez[0], 0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 1, ex[0], ey[0], ez[0], 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0, 1, ex[0], ey[0], ez[0]],
@@ -45,23 +45,23 @@ def stiffness(x0, x1, x2, x3, y0, y1, y2, y3, z0, z1, z2, z3, E, mu):
         [0, 0, 0, 0, 0, 0, 0, 0, 1, ex[3], ey[3], ez[3]]
     ])
 
-    V = (1 / 6) * np.linalg.det(np.mat([
+    V = (1 / 6) * np.linalg.det(np.array([
         [1, ex[0], ey[0], ez[0]],
         [1, ex[1], ey[1], ez[1]],
         [1, ex[2], ey[2], ez[2]],
         [1, ex[3], ey[3], ez[3]]
     ]))
     # constant for the Constant Strain tet4
-    B = np.mat([
+    B = np.array([
         [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
         [0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0],
         [0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0],
-    ]) * np.linalg.inv(C)  # reemplantar la distribucion de esto en el papel.
+    ]) @ np.linalg.inv(C)  # reemplantar la distribucion de esto en el papel.
 
-    Dm = E / ((1 - mu) * (1 - 2 * mu)) * np.mat([
+    Dm = E / ((1 - mu) * (1 - 2 * mu)) * np.array([
         [1 - mu, mu, mu, 0, 0, 0],
         [mu, 1 - mu, mu, 0, 0, 0],
         [mu, mu, 1 - mu, 0, 0, 0],
@@ -70,7 +70,7 @@ def stiffness(x0, x1, x2, x3, y0, y1, y2, y3, z0, z1, z2, z3, E, mu):
         [0, 0, 0, 0, 0, 1 / 2 - mu]
     ])
 
-    ke = np.transpose(B) * Dm * B * V
+    ke = np.transpose(B) @ Dm @ B * V
     # k = [np.triu(ke)] #to show the upper part
 
     return ke
