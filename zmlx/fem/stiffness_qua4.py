@@ -33,7 +33,7 @@ def stiffness(x0, x1, x2, x3, y0, y1, y2, y3, E, mu):
         te = 0.3  # (Thickness) in our case is z
 
         # the matrix C contains the coordinates of the triangle corner nodes
-        C = np.mat([
+        C = np.array([
             [1, ex[0], ey[0], 0, 0, 0],
             [0, 0, 0, 1, ex[0], ey[0]],
             [1, ex[1], ey[1], 0, 0, 0],
@@ -42,24 +42,24 @@ def stiffness(x0, x1, x2, x3, y0, y1, y2, y3, E, mu):
             [0, 0, 0, 1, ex[2], ey[2]]
         ])
 
-        A = 0.5 * np.linalg.det(np.mat([
+        A = 0.5 * np.linalg.det(np.array([
             [1, ex[0], ey[0]],
             [1, ex[1], ey[1]],
             [1, ex[2], ey[2]]
         ]))
         # Stress elastic matrix
-        Dm = E / (1 - nu ** 2) * np.mat([[1, nu, 0],
-                                         [nu, 1, 0],
-                                         [0, 0, (1 - nu) / 2]])
+        Dm = E / (1 - nu ** 2) * np.array([[1, nu, 0],
+                                           [nu, 1, 0],
+                                           [0, 0, (1 - nu) / 2]])
 
         # constant for the Constant Strain Triangle
-        B = np.mat([
+        B = np.array([
             [0, 1, 0, 0, 0, 0, ],
             [0, 0, 0, 0, 0, 1, ],
             [0, 0, 1, 0, 1, 0, ]
-        ]) * np.linalg.inv(C)
+        ]) @ np.linalg.inv(C)
 
-        ke = np.transpose(B) * Dm * B * A * te
+        ke = np.transpose(B) @ Dm @ B * A * te
 
         return ke
 
