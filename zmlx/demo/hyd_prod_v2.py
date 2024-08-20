@@ -54,6 +54,9 @@ def create():
         else:
             return 0.3
 
+    def heat_cond(x, y, z):  # 确保不会有热量通过用于生产的虚拟的cell传递过来.
+        return 1.0 if abs(y) < 2 else 0.0
+
     # 关键词
     kw = hydrate.create_kwargs(gravity=[0, 0, -10],
                                dt_min=1,
@@ -67,8 +70,8 @@ def create():
                                p=get_p,
                                s=get_s,
                                perm=get_k,
-                               heat_cond=1.0,
-                               prods=[{'index': mesh.cell_number - 1, 't': [0, 1e10], 'p': [3e6, 3e6]}]
+                               heat_cond=heat_cond,
+                               prods=[{'index': mesh.cell_number - 1, 't': [0, 1e20], 'p': [3e6, 3e6]}]
                                )
     model = seepage.create(**kw)
 

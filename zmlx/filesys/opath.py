@@ -16,9 +16,9 @@ from zmlx.filesys.tag import print_tag
 from zmlx.filesys.in_directory import in_directory
 
 
-def opath(*args, tag=None):
+def opath(*args, tag=None, key=None):
     """
-    返回一个用于输出的文件路径. 如果给定的args为空，则返回root路径（由 current_work_directory 定义的环境变量或者当前工作路径）
+    返回一个用于输出的文件路径. 如果给定的args为空，则返回root路径（由 key 定义的环境变量或者当前工作路径）
     等同于UI界面设置的工作目录.
 
     当tag给定的时候，将检查主目录下是否存在给定tag的文件 (从而确保对文件夹进行误操作).
@@ -26,29 +26,31 @@ def opath(*args, tag=None):
     注意，当任何错误发生的时候，此函数返回None. (应用程序可以继续执行). Since 24-5-20
     """
 
-    # 当data文件夹存在的时候，则会优先使用 (有的时候，可能没有创建环境变量的权限)
-    data_folder = os.path.join(get_dir(), 'data')
-    if not os.path.isdir(data_folder):
-        data_folder = os.getcwd()
-
-    # 读取环境变量
-    root = app_data.getenv('current_work_directory',
-                           encoding='utf-8',
-                           default=data_folder)
+    if key is None:
+        # 当data文件夹存在的时候，则会优先使用 (有的时候，可能没有创建环境变量的权限)
+        data_folder = os.path.join(get_dir(), 'data')
+        if not os.path.isdir(data_folder):
+            data_folder = os.getcwd()
+        key = 'current_work_directory'
+        # 读取环境变量
+        root = app_data.getenv(key, encoding='utf-8', default=data_folder)
+    else:
+        # 读取环境变量
+        root = app_data.getenv(key, encoding='utf-8')
 
     if root is None:
-        warnings.warn('The root is None')
+        # warnings.warn(f'The root is None. (key={key})')
         return
 
     if is_chinese(root):
-        warnings.warn(f'The root contains Chinese. root = {root}')
+        warnings.warn(f'The root contains Chinese. key={key}, root = {root}')
         return
 
     # 检查根目录是否存在需要的tag
     if tag is not None:
-        fname = os.path.join(root, tag)
-        if not os.path.isfile(fname):
-            warnings.warn(f'The required tag file not exists: {fname}')
+        f_name = os.path.join(root, tag)
+        if not os.path.isfile(f_name):
+            warnings.warn(f'The required tag file not exists: {f_name}')
             return
 
     # 找到所需要的路径
@@ -62,7 +64,7 @@ def opath(*args, tag=None):
         path = root
 
     # 因为是输出目录，因此创建必要的文件夹.
-    if not in_directory(path, get_dir()):   # 确保不在脚本目录内输出.
+    if not in_directory(path, os.path.join(get_dir(), 'zmlx')):   # 确保不在脚本目录内输出.
         return make_parent(path)
 
 
@@ -71,7 +73,7 @@ get = opath
 get_opath = opath
 
 
-def set_opath(folder=None, tag=None):
+def set_opath(folder=None, tag=None, key=None):
     """
     设置输出目录＜等同于UI界面设置的工作目录＞
     """
@@ -83,9 +85,6 @@ def set_opath(folder=None, tag=None):
     folder = os.path.abspath(folder)
 
     assert not is_chinese(folder), f'Error: folder contains Chinese. folder = {folder}'
-
-    # 不可以在脚本目录下输出
-    assert not in_directory(folder, get_dir()), f'Error: try to export data to code folder: {get_dir()}'
 
     # 尝试创建目录
     if not os.path.isdir(folder):
@@ -103,13 +102,16 @@ def set_opath(folder=None, tag=None):
                     # 写入文件
                     file.write('tag')
 
+        if key is None:
+            key = 'current_work_directory'
+
         # 修改工作目录
-        app_data.setenv('current_work_directory',
+        app_data.setenv(key,
                         folder,  # 这里，写入绝对路径
                         encoding='utf-8')
 
         # 显示消息
-        print(f'Succeed set data path to: "{folder}" ')
+        print(f'Succeed set data path (key = {key}) to: "{folder}" ')
 
 
 def set(*args, **kwargs):
@@ -151,3 +153,4 @@ class TaskFolder:
 if __name__ == '__main__':
     print(opath())
     print(opath('x'))
+    print(opath('y', key='Test'))
