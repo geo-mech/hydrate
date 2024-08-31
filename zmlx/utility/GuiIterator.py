@@ -14,9 +14,10 @@ class GuiIterator:
     def __init__(self, iterate=None, plot=None, info=None, ratio=None):
         """
         初始化：其中：
-            iterate：程序内核进行计算迭代 (将接受__call__的所有参数)
-            plot：绘图操作 (函数不接受任何参数)
-            info：返回当前模型的状态信息 (函数不接受任何参数) 可以为None
+            iterate: 程序内核进行计算迭代 (将接受__call__的所有参数)
+            plot: 绘图操作 (函数不接受任何参数)
+            info: 返回当前模型的状态信息 (函数不接受任何参数) 可以为None
+            ratio: gui绘图所占据的总的时长的比例。默认为0.2
         """
         if hasattr(iterate, '__call__'):
             self.iterate = iterate
@@ -59,7 +60,7 @@ class GuiIterator:
         """
         调用iterate，并可能自动调用绘图操作. 返回 iterate执行的结果.
         """
-        if self.iterate is None:   # 此时不需要迭代
+        if self.iterate is None:  # 此时不需要迭代
             return
 
         assert self.iterate is not None
@@ -71,18 +72,16 @@ class GuiIterator:
             return r
 
         gui.break_point()
-        assert 0.0 < self.ratio < 0.5
+        assert 0.0 <= self.ratio < 0.5
 
-        if self.time_plot < self.time_iter * self.ratio:
-            if self.plot is not None:
-                try:
-                    self.time_plot += GuiIterator.timing(self.plot)[0]
-                except Exception as err:
-                    warnings.warn(f'meet exception <{err}> when run <{self.plot}>')
-        if self.step % 10 == 0:
-            if self.info is not None:
-                try:
-                    gui.status(self.info())
-                except Exception as err:
-                    warnings.warn(f'meet exception <{err}> when run <{self.info}>')
+        if self.time_plot < self.time_iter * self.ratio and self.plot is not None:
+            try:
+                self.time_plot += GuiIterator.timing(self.plot)[0]
+            except Exception as err:
+                warnings.warn(f'meet exception <{err}> when run <{self.plot}>')
+        if self.step % 10 == 0 and self.info is not None:
+            try:
+                gui.status(self.info())
+            except Exception as err:
+                warnings.warn(f'meet exception <{err}> when run <{self.info}>')
         return r
