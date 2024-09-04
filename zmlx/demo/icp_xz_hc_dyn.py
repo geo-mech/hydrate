@@ -9,7 +9,7 @@ from zmlx.alg.time2str import time2str
 from zmlx.config import seepage, timer
 from zmlx.config.icp.fludefs import create_fludefs
 from zmlx.config.icp.reactions import create_reactions
-from zmlx.filesys.opath import opath
+from zmlx.demo.opath import opath
 from zmlx.kr.create_krf import create_krf
 from zmlx.seepage_mesh.add_cell_face import add_cell_face
 from zmlx.seepage_mesh.cube import create_xz

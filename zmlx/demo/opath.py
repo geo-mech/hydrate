@@ -34,7 +34,9 @@ def main():
             set_output(name)
         else:
             print(f'Current folder: {root}')
+    else:
+        print(opath())
 
 
 if __name__ == '__main__':
-    gui.execute(func=main, close_after_done=False)
+    main()

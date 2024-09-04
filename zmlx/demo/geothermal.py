@@ -104,7 +104,6 @@ def solve_well(model, close_after_done=None, folder=None, gui_iter=None,
 
 
 def create_res(well: Seepage, heat_cond=2.0):
-
     mesh = create_cylinder(x=np.linspace(0, 100, 100),
                            r=np.linspace(0, 50, 50))
 
@@ -169,7 +168,7 @@ def get_res_heat(model: Seepage):
     """
     返回储层中的显热
     """
-    o_index = eval(model.get_text('o_index'))   # 添加的虚拟的cell. 不统计heat
+    o_index = eval(model.get_text('o_index'))  # 添加的虚拟的cell. 不统计heat
     assert len(o_index) > 0
     temp = as_numpy(model).cells.get(model.reg_cell_key('temperature'))
     mc = as_numpy(model).cells.get(model.reg_cell_key('mc'))
@@ -257,7 +256,7 @@ def main(folder=None):
 
             # 从time0到time1，储层显热释放的功率
             power = (energy0 - energy1) / (time1 - time0)
-            vtime.append(time1 / (3600*24*365))
+            vtime.append(time1 / (3600 * 24 * 365))
             vpower.append(power)
 
             # 记录出口的温度

@@ -50,5 +50,6 @@ def create():
 
 if __name__ == '__main__':
     from zmlx.demo.opath import opath
+
     gui.execute(lambda: seepage.solve(create(), folder=opath('liq_inj')),
                 close_after_done=False)
