@@ -1,5 +1,6 @@
-from zmlx.ui.GuiBuffer import gui
 import sys
+
+from zmlx.ui.GuiBuffer import gui
 
 
 def show_readme():

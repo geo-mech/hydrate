@@ -1,7 +1,6 @@
 import sys
 
-from zml import core, lic, get_dir, version
-from zmlx.alg.sys import get_latest_version
+from zml import core, lic, get_dir
 from zmlx.ui.Qt import QtWidgets, QtCore
 
 
@@ -17,7 +16,6 @@ class About(QtWidgets.QTableWidget):
     def refresh(self):
         while core.has_log():
             core.pop_log()
-        latest_version = get_latest_version()
         summary = lic.summary
         if summary is None:
             while core.has_log():
@@ -25,9 +23,7 @@ class About(QtWidgets.QTableWidget):
             print('\n\n')
         data = [['安装路径', f'{get_dir()}'],
                 ['运行环境', f'Python {sys.version}'],
-                ['当前版本', f'{version}; {core.time_compile}; {core.compiler}'],
-                ['最新版本', f'{latest_version}'],
-                ['是否需要更新', '是' if version < latest_version else '否'],
+                ['当前版本', f'{core.time_compile}; {core.compiler}'],
                 ['网址', 'https://gitee.com/geomech/hydrate'],
                 ['作者', 'Zhang Zhaobin'],
                 ['单位', '中国科学院地质与地球物理研究所'],

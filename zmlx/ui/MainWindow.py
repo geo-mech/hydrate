@@ -72,7 +72,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self._timer_close_progress.start(5000)
 
         self.status_bar = QtWidgets.QStatusBar(self)
-        self.status_bar.showMessage('正在初始化 ..')  # 在__init_later中显示“就绪”
         self.setStatusBar(self.status_bar)
         self.propress_label = QtWidgets.QLabel()
         self.propress_bar = QtWidgets.QProgressBar()
@@ -80,10 +79,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.status_bar.addPermanentWidget(self.propress_bar)
         self.status_bar.addPermanentWidget(VersionLabel())
         self.progress(visible=False)
-
-        self._timer_init_later = QtCore.QTimer(self)
-        self._timer_init_later.timeout.connect(self.__init_later)
-        self._timer_init_later.start(2000)
 
         self.update_widget_actions()  # 更新一些和控件相关的action的显示
 
@@ -95,23 +90,21 @@ class MainWindow(QtWidgets.QMainWindow):
         except:
             pass
 
-    def __init_later(self):
-        """
-        执行一些可能会比较耗时（但是又不那么关键的）的初始化任务
-        """
-        self._timer_init_later.stop()
-        # ----
-        try:
-            if lic.summary is None:
-                toolbar = self.__get_toolbar('NoLicense')
-                toolbar.setStyleSheet('background-color:rgb(255, 255, 0)')
-                action = QtWidgets.QAction(self)
-                action.setText('版本已过期，请更新并联网使用，谢谢！')
-                toolbar.addAction(action)
-        except:
-            pass
+        self.__check_license()
 
-        self.status_bar.showMessage('就绪')
+    def __check_license(self):
+        def do_init():
+            self.status_bar.showMessage('初始化 ... ')
+            try:
+                if lic.summary is None:
+                    print('此电脑未授权，请确保: 1、使用最新版；2、本机联网!')
+            except:
+                pass
+            self.status_bar.showMessage('就绪')
+
+        self.task_init = QtCore.QThread()
+        self.task_init.run = do_init
+        self.task_init.start(priority=QtCore.QThread.Priority.LowPriority)
 
     def __init_actions(self):
         scripts = {}

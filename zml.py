@@ -31,9 +31,6 @@ from typing import Iterable
 # Indicates whether the system is currently Windows (both Windows and Linux systems are currently supported)
 is_windows = os.name == 'nt'
 
-# Version of the zml module (date represented by six digits)
-version = 240904
-
 
 class Object:
     def set(self, **kwargs):
@@ -674,6 +671,13 @@ class DllCore:
 
 
 core = DllCore(dll=dll)
+
+
+# Version of the zml module (date represented by six digits)
+try:
+    version = core.version
+except:
+    version = 110101
 
 
 class Timer:

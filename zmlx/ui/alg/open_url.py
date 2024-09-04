@@ -1,6 +1,7 @@
-from zmlx.ui.Qt import QWebEngineView, QtCore
-from zmlx.ui.GuiBuffer import gui
 import os
+
+from zmlx.ui.GuiBuffer import gui
+from zmlx.ui.Qt import QWebEngineView, QtCore
 
 
 def open_url(url: str, caption=None, on_top=None, zoom_factor=2, use_web_engine=None):
@@ -17,7 +18,7 @@ def open_url(url: str, caption=None, on_top=None, zoom_factor=2, use_web_engine=
         except:
             use_web_engine = False
 
-    if use_web_engine is None:   # 确保其有一个默认的值
+    if use_web_engine is None:  # 确保其有一个默认的值
         use_web_engine = False
 
     if QWebEngineView is None:
