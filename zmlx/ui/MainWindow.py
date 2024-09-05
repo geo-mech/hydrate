@@ -27,7 +27,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
         self.setWindowIcon(load_icon('app.jpg'))
-        self.setToolButtonStyle(QtCore.Qt.ToolButtonTextBesideIcon)
+        self.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         self.task_proc = TaskProc(self)
 
         self.file_processors = {'.py': [self.open_code, 'Python File To Execute'],
@@ -73,10 +73,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.status_bar = QtWidgets.QStatusBar(self)
         self.setStatusBar(self.status_bar)
-        self.propress_label = QtWidgets.QLabel()
-        self.propress_bar = QtWidgets.QProgressBar()
-        self.status_bar.addPermanentWidget(self.propress_label)
-        self.status_bar.addPermanentWidget(self.propress_bar)
+        self.progress_label = QtWidgets.QLabel()
+        self.progress_bar = QtWidgets.QProgressBar()
+        self.status_bar.addPermanentWidget(self.progress_label)
+        self.status_bar.addPermanentWidget(self.progress_bar)
         self.status_bar.addPermanentWidget(VersionLabel())
         self.progress(visible=False)
 
@@ -84,35 +84,32 @@ class MainWindow(QtWidgets.QMainWindow):
 
         try:
             from zmlx.ui.data.get_path import get_path
-            fname = get_path('zml_icons', 'welcome.jpg')
-            if os.path.isfile(fname):
-                self.open_image(fname, caption='Welcome')
-        except:
-            pass
+            filename = get_path('zml_icons', 'welcome.jpg')
+            if os.path.isfile(filename):
+                self.open_image(filename, caption='Welcome')
+        except Exception as e:
+            print(f'Error: {e}')
 
-        self.__check_license()
+        self.task_ck = QtCore.QThread()
+        self.task_ck.run = self.__check_license
+        self.task_ck.start(priority=QtCore.QThread.Priority.LowPriority)
 
     def __check_license(self):
-        def do_init():
-            self.status_bar.showMessage('初始化 ... ')
-            try:
-                if lic.summary is None:
-                    print('此电脑未授权，请确保: 1、使用最新版；2、本机联网!')
-            except:
-                pass
-            self.status_bar.showMessage('就绪')
-
-        self.task_init = QtCore.QThread()
-        self.task_init.run = do_init
-        self.task_init.start(priority=QtCore.QThread.Priority.LowPriority)
+        self.status_bar.showMessage('初始化 ... ')
+        try:
+            if lic.summary is None:
+                print('此电脑未授权，请确保: 1、使用最新版；2、本机联网!')
+        except Exception as e:
+            print(f'Error: {e}')
+        self.status_bar.showMessage('就绪')
 
     def __init_actions(self):
         scripts = {}
         for name, file in get_action_files().items():
             scripts[name] = Script(file=file)
 
-        def add_action(menu, name):
-            script = scripts.pop(name, None)
+        def add_action(menu, action_name):
+            script = scripts.pop(action_name, None)
             if script is not None:
                 toolbar = self.__get_toolbar(menu) if script.on_toolbar else None
                 action = self.__create_action(text=script.text,
@@ -125,10 +122,10 @@ class MainWindow(QtWidgets.QMainWindow):
                                               tooltip=script.tooltip,
                                               )
                 self.__get_menu(menu).addAction(action)
-                self.actions[name] = action
+                self.actions[action_name] = action
 
-        def add_actions(menu, names):
-            for s in names:
+        def add_actions(menu, action_names):
+            for s in action_names:
                 add_action(menu, s)
 
         for title, names in get_menus().items():
@@ -223,8 +220,8 @@ class MainWindow(QtWidgets.QMainWindow):
             try:
                 ac = getattr(self, name)
                 ac.setEnabled(value)
-            except:
-                pass
+            except Exception as e:
+                print(f'Error: {e}')
 
         def f(action_name, func_name):
             set_visible(action_name, hasattr(widget, func_name))
@@ -248,8 +245,8 @@ class MainWindow(QtWidgets.QMainWindow):
             current = self.tab_widget.currentWidget()
             if hasattr(current, 'refresh'):
                 self.task_proc.add(lambda: current.refresh())
-        except:
-            pass
+        except Exception as e:
+            print(f'Error: {e}')
 
     def closeEvent(self, event):
         if self.console_widget.is_running():
@@ -284,13 +281,14 @@ class MainWindow(QtWidgets.QMainWindow):
             try:
                 widget = type(self.tab_widget, **type_kw)
                 assert isinstance(widget, type)
-            except:
+            except Exception as e:
+                print(f'Error: {e}')
                 return
             if init is not None:
                 try:
                     init(widget)
-                except:
-                    pass
+                except Exception as e:
+                    print(f'Error: {e}')
             if caption is None:
                 caption = 'untitled'
             index = self.tab_widget.addTab(widget, caption)
@@ -360,17 +358,17 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         if label is not None:
             visible = True
-            self.propress_label.setText(label)
+            self.progress_label.setText(label)
         if range is not None:
             visible = True
             assert len(range) == 2
-            self.propress_bar.setRange(*range)
+            self.progress_bar.setRange(*range)
         if value is not None:
             visible = True
-            self.propress_bar.setValue(value)
+            self.progress_bar.setValue(value)
         if visible is not None:
-            self.propress_bar.setVisible(visible)
-            self.propress_label.setVisible(visible)
+            self.progress_bar.setVisible(visible)
+            self.progress_label.setVisible(visible)
             if visible:
                 self._timer_close_progress.setInterval(duration)
             else:
@@ -490,8 +488,8 @@ class MainWindow(QtWidgets.QMainWindow):
                         os.chdir(folder)
                         save_cwd()
                         self.sig_cwd_changed.emit(os.getcwd())
-                    except:
-                        pass
+                    except Exception as e:
+                        print(f'Error: {e}')
 
     def set_cwd_by_dialog(self):
         folder = QtWidgets.QFileDialog.getExistingDirectory(self, get_text('请选择工程文件夹'), os.getcwd())
@@ -506,8 +504,8 @@ class MySplashScreen(QtWidgets.QSplashScreen):
 def execute(code=None, keep_cwd=True, close_after_done=True):
     try:
         app_data.log(f'gui_execute. file={__file__}')
-    except:
-        pass
+    except Exception as e:
+        print(f'Error: {e}')
 
     if gui.exists():
         if code is not None:
@@ -526,9 +524,9 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
         try:
             rect = QtWidgets.QDesktopWidget().availableGeometry()
             splash_fig = splash_fig.scaled(round(rect.width() * 0.3), round(rect.height() * 0.3),
-                                           QtCore.Qt.KeepAspectRatio)
-        except:
-            pass
+                                           QtCore.Qt.AspectRatioMode.KeepAspectRatio)
+        except Exception as e:
+            print(f'Error: {e}')
         splash.setPixmap(splash_fig)
         splash.show()
         app.processEvents()  # 处理主进程事件
@@ -555,20 +553,19 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
 
     try:
         load_window_size(win, 'main_window_size')
-    except:
-        pass
+    except Exception as e:
+        print(f'Error: {e}')
 
     try:
         load_window_style(win, 'zml_main.qss')
-    except:
-        pass
+    except Exception as e:
+        print(f'Error: {e}')
 
     def my_excepthook(type, value, tb):
         message = f"""Exception Type: {type}
 Message : {value}
-Object : {tb}
-We are very sorry for this exception. Please check your data according to the above message. If it's still unresolved, please contact the author (email: 'zhangzhaobin@mail.iggcas.ac.cn'or qq: 542844710), Thank you!
-"""
+Object : {tb} We are very sorry for this exception. Please check your data according to the above message. If it's 
+still unresolved, please contact the author (email: 'zhangzhaobin@mail.iggcas.ac.cn'or qq: 542844710), Thank you!"""
         print(message)
         QtWidgets.QMessageBox.warning(win, "Unresolved Exception", message)
 
@@ -584,8 +581,8 @@ We are very sorry for this exception. Please check your data according to the ab
             try:
                 print(f'Exec File: {path}')
                 exec(read_text(path, encoding='utf-8'), win.console_widget.workspace)
-            except Exception as e:
-                print(f'Failed: {e}')
+            except Exception as e2:
+                print(f'Failed: {e2}')
 
     results = []
     if close_after_done and code is not None:
