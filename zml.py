@@ -1125,7 +1125,7 @@ def about():
     """
     Return module information
     """
-    info = f'Welcome to zml (v{version}; {core.time_compile}; {core.compiler})'
+    info = f'Welcome to zml ({core.time_compile}; {core.compiler})'
     if not lic.exists():
         author = 'author (Email: zhangzhaobin@mail.iggcas.ac.cn, QQ: 542844710)'
         info = f"""{info}. 

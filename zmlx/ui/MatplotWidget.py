@@ -22,7 +22,7 @@ class MatplotWidget(QtWidgets.QWidget):
         self.__figure = plt.figure()
         self.__canvas = FigureCanvas(self.__figure)
         layout.addWidget(self.__canvas)
-        self.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.create_rightmenu)
 
     def draw(self):

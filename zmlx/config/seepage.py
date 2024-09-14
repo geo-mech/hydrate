@@ -1118,7 +1118,7 @@ def set_solve(model: Seepage, **kw):
 def solve(model=None, folder=None, fname=None, gui_mode=None, close_after_done=None, solver=None,
           extra_plot=None,
           show_state=True, gui_iter=None, state_hint=None, slots=None,
-          save_dt=None,
+          save_dt=None, export_mass=True,
           **kwargs):
     """
     求解模型，并尝试将结果保存到folder.
@@ -1192,7 +1192,7 @@ def solve(model=None, folder=None, fname=None, gui_mode=None, close_after_done=N
 
     # 打印cell
     save_cells = SaveManager(join_paths(folder, 'cells'), save=lambda name: print_cells(name, model=model,
-                                                                                        export_mass=True),
+                                                                                        export_mass=export_mass),
                              ext='.txt', time_unit='y',
                              dtime=get_save_dy,
                              get_time=lambda: get_time(model) / (3600.0 * 24.0 * 365.0),
