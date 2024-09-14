@@ -1,11 +1,14 @@
-# ** text = '导出'
-# ** menu = '文件'
-# ** name = 'action_export_data'
+text = '导出'
+menu = '文件'
 
-from zml import app_data
 
-main_window = app_data.space.get('main_window', None)
-if main_window is not None:
-    widget = main_window.tab_widget.currentWidget()
-    if hasattr(widget, 'export_data'):
-        main_window.task_proc.add(lambda: widget.export_data())
+def enabled():
+    from zmlx.ui.MainWindow import get_window
+    window = get_window()
+    if window is not None:
+        return hasattr(window.get_current_widget(), 'export_data')
+
+
+def func():
+    from zmlx.ui.MainWindow import get_window
+    getattr(get_window().get_current_widget(), 'export_data')()

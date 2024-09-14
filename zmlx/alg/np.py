@@ -2,10 +2,10 @@
 一些针对numpy的函数. 同时，也默认讲numpy内的内容引入. 因此，在大部分情况下，可以使用此模块来代替numpy
 """
 
+from ctypes import c_double, POINTER
 
-from ctypes import cdll, c_void_p, c_char_p, c_int, c_int64, c_bool, c_double, c_size_t, c_uint, CFUNCTYPE, POINTER
 import numpy as np
-from numpy import *   # 将numpy的内容引入
+from numpy import *  # 将numpy的内容引入
 
 
 def get_pointer(data, dtype=None):
@@ -19,5 +19,3 @@ def get_pointer(data, dtype=None):
         dtype = c_double
 
     return data.ctypes.data_as(POINTER(dtype))
-
-

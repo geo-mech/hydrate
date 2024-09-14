@@ -1,6 +1,7 @@
 import os
 import sys
 
+from zml import app_data
 from zmlx import get_path
 from zmlx.ui.Qt import QtWidgets
 from zmlx.ui.alg.code_config import code_config
@@ -70,13 +71,17 @@ class DemoWidget(QtWidgets.QTableWidget):
                 ext = os.path.splitext(path)[-1]
                 if ext is not None:
                     if ext.lower() == '.py' or ext.lower() == '.pyw':
-                        from zmlx.ui.GuiBuffer import gui
-                        gui.open_code(path)
+                        window = app_data.get('main_window')
+                        if window is not None:
+                            window.open_code(path)
 
             if os.path.isdir(path):
                 os.startfile(path)
         except:
             pass
+
+    def get_start_code(self):
+        return """gui.trigger('demo.txtpy')"""
 
 
 if __name__ == '__main__':

@@ -41,6 +41,9 @@ class RegTool(QtWidgets.QWidget):
         else:
             QtWidgets.QMessageBox.information(self, '提示', '请输入激活码后再试')
 
+    def get_start_code(self):
+        return """gui.trigger('reg.txtpy')"""
+
 
 def test1():
     app = QtWidgets.QApplication(sys.argv)

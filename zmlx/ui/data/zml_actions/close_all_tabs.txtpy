@@ -1,8 +1,14 @@
-# ** text = '关闭所有标签页'
-# ** on_toolbar = False
-# ** is_sys = True
-# ** name = 'action_close_all_tabs'
+text = '关闭所有标签页'
+support_hide = False
 
-from zmlx.ui.GuiBuffer import gui
 
-gui.close_all_tabs()
+def func():
+    from zmlx.ui.MainWindow import get_window
+    get_window().close_all_tabs()
+
+
+def enabled():
+    from zmlx.ui.MainWindow import get_window
+    window = get_window()
+    if window is not None:
+        return window.count_tabs() > 0

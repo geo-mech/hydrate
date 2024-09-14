@@ -1,5 +1,4 @@
-from zml import read_text, write_text
-from zmlx.ui.GuiBuffer import gui
+from zml import read_text, write_text, app_data
 from zmlx.ui.Qt import QtWidgets
 
 
@@ -33,4 +32,6 @@ class TextEdit(QtWidgets.QTextEdit):
         return self.__fname
 
     def enterEvent(self, event):
-        gui.status(f"Text Editor: {self.__fname}", 3000)
+        window = app_data.get('main_window')
+        if window is not None:
+            window.cmd_status(f"{self.__fname}", 3000)

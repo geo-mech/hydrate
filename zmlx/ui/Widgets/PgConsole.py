@@ -24,5 +24,8 @@ try:
             except:
                 pass
 
+        def get_start_code(self):
+            return """gui.trigger('console.txtpy')"""
+
 except:
     PgConsole = None

@@ -35,9 +35,9 @@ class About(QtWidgets.QTableWidget):
         self.setHorizontalHeaderLabels(['项目', '值'])
         self.horizontalHeader().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
 
-        for irow in range(len(data)):
-            for icol in range(2):
-                self.setItem(irow, icol, QtWidgets.QTableWidgetItem(data[irow][icol]))
+        for i_row in range(len(data)):
+            for i_col in range(2):
+                self.setItem(i_row, i_col, QtWidgets.QTableWidgetItem(data[i_row][i_col]))
 
 
 if __name__ == '__main__':

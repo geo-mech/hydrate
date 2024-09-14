@@ -51,6 +51,9 @@ class FileFind(QtWidgets.QWidget):
     def addPath(self):
         choose_path()
 
+    def get_start_code(self):
+        return """gui.trigger('search.txtpy')"""
+
 
 def test1():
     app = QtWidgets.QApplication(sys.argv)

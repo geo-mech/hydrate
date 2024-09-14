@@ -6,15 +6,15 @@ class SharedValue:
         self.__val = value
         self.__mtx = QtCore.QMutex()
 
-    def get(self):
+    @property
+    def value(self):
         self.__mtx.lock()
-        value = self.__val
+        buf = self.__val
         self.__mtx.unlock()
-        return value
+        return buf
 
-    def set(self, value):
+    @value.setter
+    def value(self, new_value):
         self.__mtx.lock()
-        self.__val = value
+        self.__val = new_value
         self.__mtx.unlock()
-
-    value = property(get, set)

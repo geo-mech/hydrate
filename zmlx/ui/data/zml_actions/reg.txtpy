@@ -1,8 +1,9 @@
-# ** text = '注册'
-# ** is_sys = True
-# ** icon = 'reg.jpg'
+text = '注册'
+is_sys = True
+icon = 'reg.jpg'
 
-from zmlx.ui.GuiBuffer import gui
-from zmlx.ui.Widgets.RegTool import RegTool
 
-gui.get_widget(type=RegTool, caption='注册', on_top=True, icon='reg.jpg')
+def func():
+    from zmlx.ui.MainWindow import get_window
+    from zmlx.ui.Widgets.RegTool import RegTool
+    get_window().get_widget(the_type=RegTool, caption='注册', on_top=True, icon='reg.jpg')

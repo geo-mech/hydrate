@@ -3,9 +3,9 @@ import sys
 import time
 import timeit
 
+from zml import app_data
 from zmlx.alg.clamp import clamp
 from zmlx.alg.fsize2str import fsize2str
-from zmlx.ui.GuiBuffer import gui
 from zmlx.ui.Qt import QtWidgets, QtCore
 
 
@@ -75,7 +75,9 @@ class CwdViewer(QtWidgets.QTableWidget):
             ext = os.path.splitext(fpath)[-1]
             if ext is not None:
                 if ext.lower() == '.py' or ext.lower() == '.pyw':
-                    gui.open_code(fpath)
+                    window = app_data.get('main_window')
+                    if window is not None:
+                        window.open_code(fpath)
 
     def item_double_clicked(self, index):
         if index.column() != 0:
@@ -86,7 +88,12 @@ class CwdViewer(QtWidgets.QTableWidget):
             fpath = os.path.dirname(os.getcwd())
         else:
             fpath = os.path.join(os.getcwd(), text)
-        gui.open_file(fpath)
+        window = app_data.get('main_window')
+        if window is not None:
+            window.open_file(fpath)
+
+    def get_start_code(self):
+        return """gui.trigger('view_cwd.txtpy')"""
 
 
 if __name__ == '__main__':

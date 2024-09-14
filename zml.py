@@ -148,11 +148,11 @@ def feedback(text='feedback', subject=None):
     Send some necessary statistical information to the software author by Email.
     This is important to improve this software. Thanks for your feedback!
     However, if you do not want to send anything, please run:
-        zml.app_data.setenv('disable_feedback', 'True')
+        zml.app_data.setenv('disable_feedback', 'Yes')
     then you will not send anything in the future. Thanks for using!
     """
     try:
-        if app_data.getenv('disable_feedback') == 'True':
+        if app_data.getenv('disable_feedback', default='No', ignore_empty=True) == 'Yes':
             return True
         else:
             return sendmail('zhangzhaobin@mail.iggcas.ac.cn', subject=subject, text=text,
@@ -285,12 +285,17 @@ class _AppData(Object):
         except:
             pass
 
-    def getenv(self, key, encoding=None, default=None):
+    def getenv(self, key, encoding=None, default=None, ignore_empty=False):
         """
         Get the value of an application environment variable
         """
         path = os.path.join(self.folder, 'env', key)
-        return read_text(path, encoding=encoding, default=default)
+        res = read_text(path, encoding=encoding, default=default)
+        if ignore_empty:
+            if isinstance(res, str):
+                if len(res) == 0:
+                    return default
+        return res
 
     def setenv(self, key, value, encoding=None):
         """
@@ -1125,7 +1130,7 @@ def about():
     """
     Return module information
     """
-    info = f'Welcome to zml (v{version}; {core.time_compile}; {core.compiler})'
+    info = f'Welcome to zml ({core.time_compile}; {core.compiler})'
     if not lic.exists():
         author = 'author (Email: zhangzhaobin@mail.iggcas.ac.cn, QQ: 542844710)'
         info = f"""{info}. 
@@ -1263,11 +1268,18 @@ def __feedback():
         make_dirs(folder_logs_feedback)
         has_feedback = set(os.listdir(folder_logs_feedback))
         date = datetime.datetime.now().strftime("%Y-%m-%d.log")
+        city = None
         for name in os.listdir(folder_logs):
             if name != date and name not in has_feedback:
                 with open(os.path.join(folder_logs, name), 'r') as f1:
                     text = f1.read()
-                    if feedback(text=text[0: 100000], subject=f'log <{name}>'):
+                    if city is None:
+                        try:
+                            from zmlx.alg.ipinfo import get_city
+                            city = f' from {get_city()}'
+                        except:
+                            city = ''
+                    if feedback(text=text[0: 100000], subject=f'log <{name}>{city}'):
                         with open(os.path.join(folder_logs_feedback, name), 'w') as f2:
                             f2.write('\n')
     except:
@@ -1275,14 +1287,14 @@ def __feedback():
 
 
 try:
-    if app_data.getenv('disable_auto_feedback', default='False') != 'True':
+    if app_data.getenv('disable_auto_feedback', default='No', ignore_empty=True) != 'Yes':
         __feedback()
 except:
     pass
 
 try:
-    disable_timer = app_data.getenv(key='disable_timer', encoding='utf-8', default='False')
-    if disable_timer == 'True':
+    disable_timer = app_data.getenv(key='disable_timer', encoding='utf-8', default='No', ignore_empty=True)
+    if disable_timer == 'Yes':
         timer.enabled(False)
         app_data.log(f'timer disabled')
 except:
@@ -11893,17 +11905,169 @@ class InvasionPercolation(HasHandle):
     core.use(None, 'ip_write_pos', c_void_p, c_size_t, c_void_p)
 
     def write_pos(self, dim, pointer):
+        """
+        批量获得位置
+        """
         core.ip_write_pos(self.handle, dim, ctypes.cast(pointer, c_void_p))
+
+    core.use(None, 'ip_read_pos', c_void_p, c_size_t, c_void_p)
+
+    def read_pos(self, dim, pointer):
+        """
+        批量修改位置
+        """
+        core.ip_read_pos(self.handle, dim, ctypes.cast(pointer, c_void_p))
 
     core.use(None, 'ip_write_phase', c_void_p, c_void_p)
 
     def write_phase(self, pointer):
+        """
+        获得phase。将phase数据写入到给定的pointer.
+            注意，虽然phase在模型内部的存储为int类型，但是此函数使用的是double类型的指针
+        """
         core.ip_write_phase(self.handle, ctypes.cast(pointer, c_void_p))
+
+    core.use(None, 'ip_read_phase', c_void_p, c_void_p)
+
+    def read_phase(self, pointer):
+        """
+        设置phase。从给定的pointer读取phase.
+            注意，虽然phase在模型内部的存储为int类型，但是此函数使用的是double类型的指针
+        """
+        core.ip_read_phase(self.handle, ctypes.cast(pointer, c_void_p))
 
     def nodes_write(self, *args, **kwargs):
         warnings.warn('remove after 2025-6-2', DeprecationWarning)
         from zmlx.alg.ip_nodes_write import ip_nodes_write
         return ip_nodes_write(self, *args, **kwargs)
+
+    core.use(None, 'ip_write_node_radi', c_void_p, c_void_p)
+
+    def write_node_radi(self, pointer):
+        """
+        写入数据到pointer
+        """
+        core.ip_write_node_radi(self.handle, ctypes.cast(pointer, c_void_p))
+
+    core.use(None, 'ip_read_node_radi', c_void_p, c_void_p)
+
+    def read_node_radi(self, pointer):
+        """
+        从pointer读取数据
+        """
+        core.ip_read_node_radi(self.handle, ctypes.cast(pointer, c_void_p))
+
+    core.use(None, 'ip_write_bond_radi', c_void_p, c_void_p)
+
+    def write_bond_radi(self, pointer):
+        """
+        写入数据到pointer
+        """
+        core.ip_write_bond_radi(self.handle, ctypes.cast(pointer, c_void_p))
+
+    core.use(None, 'ip_read_bond_radi', c_void_p, c_void_p)
+
+    def read_bond_radi(self, pointer):
+        """
+        从pointer读取数据
+        """
+        core.ip_read_bond_radi(self.handle, ctypes.cast(pointer, c_void_p))
+
+    core.use(None, 'ip_write_node_rate_invaded', c_void_p, c_void_p)
+
+    def write_node_rate_invaded(self, pointer):
+        """
+        写入数据到pointer
+        """
+        core.ip_write_node_rate_invaded(self.handle, ctypes.cast(pointer, c_void_p))
+
+    core.use(None, 'ip_read_node_rate_invaded', c_void_p, c_void_p)
+
+    def read_node_rate_invaded(self, pointer):
+        """
+        从pointer读取数据
+        """
+        core.ip_read_node_rate_invaded(self.handle, ctypes.cast(pointer, c_void_p))
+
+    core.use(None, 'ip_write_node_time_invaded', c_void_p, c_void_p)
+
+    def write_node_time_invaded(self, pointer):
+        """
+        写入数据到pointer
+        """
+        core.ip_write_node_time_invaded(self.handle, ctypes.cast(pointer, c_void_p))
+
+    core.use(None, 'ip_read_node_time_invaded', c_void_p, c_void_p)
+
+    def read_node_time_invaded(self, pointer):
+        """
+        从pointer读取数据
+        """
+        core.ip_read_node_time_invaded(self.handle, ctypes.cast(pointer, c_void_p))
+
+    core.use(None, 'ip_write_bond_dp0', c_void_p, c_void_p)
+
+    def write_bond_dp0(self, pointer):
+        """
+        写入数据到pointer
+        """
+        core.ip_write_bond_dp0(self.handle, ctypes.cast(pointer, c_void_p))
+
+    core.use(None, 'ip_read_bond_dp0', c_void_p, c_void_p)
+
+    def read_bond_dp0(self, pointer):
+        """
+        从pointer读取数据
+        """
+        core.ip_read_bond_dp0(self.handle, ctypes.cast(pointer, c_void_p))
+
+    core.use(None, 'ip_write_bond_dp1', c_void_p, c_void_p)
+
+    def write_bond_dp1(self, pointer):
+        """
+        写入数据到pointer
+        """
+        core.ip_write_bond_dp1(self.handle, ctypes.cast(pointer, c_void_p))
+
+    core.use(None, 'ip_read_bond_dp1', c_void_p, c_void_p)
+
+    def read_bond_dp1(self, pointer):
+        """
+        从pointer读取数据
+        """
+        core.ip_read_bond_dp1(self.handle, ctypes.cast(pointer, c_void_p))
+
+    core.use(None, 'ip_write_bond_tension', c_void_p, c_size_t, c_size_t, c_void_p)
+
+    def write_bond_tension(self, ph0, ph1, pointer):
+        """
+        写入数据到pointer
+        """
+        core.ip_write_bond_tension(self.handle, ph0, ph1, ctypes.cast(pointer, c_void_p))
+
+    core.use(None, 'ip_read_bond_tension', c_void_p, c_size_t, c_size_t, c_void_p)
+
+    def read_bond_tension(self, ph0, ph1, pointer):
+        """
+        从pointer读取数据
+        """
+        core.ip_read_bond_tension(self.handle, ph0, ph1, ctypes.cast(pointer, c_void_p))
+
+    core.use(None, 'ip_write_bond_contact_angle', c_void_p, c_size_t, c_size_t, c_void_p)
+
+    def write_bond_contact_angle(self, ph0, ph1, pointer):
+        """
+        写入数据到pointer
+        """
+        core.ip_write_bond_contact_angle(self.handle, ph0, ph1, ctypes.cast(pointer, c_void_p))
+
+    core.use(None, 'ip_read_bond_contact_angle', c_void_p, c_size_t, c_size_t, c_void_p)
+
+    def read_bond_contact_angle(self, ph0, ph1, pointer):
+        """
+        从pointer读取数据
+        """
+        core.ip_read_bond_contact_angle(self.handle, ph0, ph1, ctypes.cast(pointer, c_void_p))
 
 
 class Dfn2(HasHandle):

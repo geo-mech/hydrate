@@ -51,3 +51,6 @@ class TimerViewer(QtWidgets.QTableWidget):
         cpu_t = timeit.default_timer() - cpu_t
         msec = clamp(int(cpu_t * 200 / 0.001), 200, 8000)
         self.timer.setInterval(msec)
+
+    def get_start_code(self):
+        return """gui.trigger('timer.txtpy')"""

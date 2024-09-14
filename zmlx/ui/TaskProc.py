@@ -17,7 +17,8 @@ class TaskProc(QtCore.QObject):
                 task = self.__tasks.get(block=False)
                 if hasattr(task, '__call__'):
                     task()
-            except:
+            except Exception as e:
+                print(e)
                 return
 
     def add(self, task):
@@ -25,5 +26,5 @@ class TaskProc(QtCore.QObject):
             if hasattr(task, '__call__'):
                 self.__tasks.put(task, block=False)
                 self.__sig_do_task.emit()
-        except:
-            pass
+        except Exception as e:
+            print(e)

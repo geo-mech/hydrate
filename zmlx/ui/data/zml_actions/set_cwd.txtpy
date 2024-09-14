@@ -1,8 +1,9 @@
-# ** on_toolbar = True
-# ** icon = 'open.jpg'
-# ** tooltip = '设置当前的工作路径'
-# ** text = '工作路径'
+on_toolbar = True
+icon = 'open.jpg'
+tooltip = '设置当前的工作路径'
+text = '工作路径'
 
-from zmlx.ui import gui
 
-gui.set_cwd_by_dialog()
+def func():
+    from zmlx.ui.MainWindow import get_window
+    get_window().set_cwd_by_dialog()

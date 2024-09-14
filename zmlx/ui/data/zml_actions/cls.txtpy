@@ -1,6 +1,7 @@
-# ** is_sys, icon = True, 'clean.jpg'
-# ** text = '清屏'
+is_sys, icon = True, 'clean.jpg'
+text = '清屏'
 
-from zmlx.ui import gui
 
-gui.cls()
+def func():
+    from zmlx.ui.MainWindow import get_window
+    get_window().cls()

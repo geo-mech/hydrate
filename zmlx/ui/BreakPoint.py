@@ -2,8 +2,8 @@ from zmlx.ui.Qt import QtCore
 
 
 class BreakPoint(QtCore.QObject):
-    sig_unlocked = QtCore.pyqtSignal()
-    sig_locked = QtCore.pyqtSignal()
+    __sig_unlocked = QtCore.pyqtSignal()
+    __sig_locked = QtCore.pyqtSignal()
 
     def __init__(self, parent=None):
         super(BreakPoint, self).__init__(parent)
@@ -21,10 +21,10 @@ class BreakPoint(QtCore.QObject):
         if not self.__locked:
             self.__mtx.lock()
             self.__locked = True
-            self.sig_locked.emit()
+            self.__sig_locked.emit()
 
     def unlock(self):
         if self.__locked:
             self.__mtx.unlock()
             self.__locked = False
-            self.sig_unlocked.emit()
+            self.__sig_unlocked.emit()
