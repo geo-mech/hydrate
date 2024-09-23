@@ -92,7 +92,13 @@ class MainWindow(QtWidgets.QMainWindow):
 
         try:
             if lic.summary is None:
-                print('此电脑未授权，请确保: 1、使用最新版；2、本机联网!')
+                text = '此电脑未授权，请确保: 1、使用最新版；2、本机联网!'
+                print(text)
+                toolbar = self.__get_toolbar('no_license')
+                toolbar.setStyleSheet('background-color: yellow;')
+                action = QtWidgets.QAction(self)
+                action.setText(text)
+                toolbar.addAction(action)
         except Exception as e:
             print(f'Error: {e}')
 

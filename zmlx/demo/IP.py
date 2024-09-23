@@ -8,6 +8,7 @@ import numpy as np
 from zml import InvasionPercolation
 from zmlx.seepage_mesh.cube import create_cube
 from zmlx.ui import gui
+from zmlx.alg.np import get_pointer
 
 
 def create():
@@ -86,7 +87,20 @@ def solve(model):
 
 
 def execute(gui_mode=True, close_after_done=False):
-    gui.execute(lambda: solve(create()), close_after_done=close_after_done, disable_gui=not gui_mode)
+    model = create()
+
+    # 读取node的位置
+    x = np.zeros(shape=model.node_n)
+    y = np.zeros(shape=model.node_n)
+    model.write_pos(0, get_pointer(x))
+    model.write_pos(1, get_pointer(y))
+
+    # 修改x
+    x = x + y * 0.3
+    model.read_pos(0, get_pointer(x))
+
+    # 求解
+    gui.execute(lambda: solve(model), close_after_done=close_after_done, disable_gui=not gui_mode)
 
 
 if __name__ == '__main__':

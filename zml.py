@@ -11900,17 +11900,73 @@ class InvasionPercolation(HasHandle):
     core.use(None, 'ip_write_pos', c_void_p, c_size_t, c_void_p)
 
     def write_pos(self, dim, pointer):
+        """
+        批量获得位置
+        """
         core.ip_write_pos(self.handle, dim, ctypes.cast(pointer, c_void_p))
+
+    core.use(None, 'ip_read_pos', c_void_p, c_size_t, c_void_p)
+
+    def read_pos(self, dim, pointer):
+        """
+        批量修改位置
+        """
+        core.ip_read_pos(self.handle, dim, ctypes.cast(pointer, c_void_p))
 
     core.use(None, 'ip_write_phase', c_void_p, c_void_p)
 
     def write_phase(self, pointer):
+        """
+        获得phase。将phase数据写入到给定的pointer.
+            注意，虽然phase在模型内部的存储为int类型，但是此函数使用的是double类型的指针
+        """
         core.ip_write_phase(self.handle, ctypes.cast(pointer, c_void_p))
+
+    core.use(None, 'ip_read_phase', c_void_p, c_void_p)
+
+    def read_phase(self, pointer):
+        """
+        设置phase。从给定的pointer读取phase.
+            注意，虽然phase在模型内部的存储为int类型，但是此函数使用的是double类型的指针
+        """
+        core.ip_read_phase(self.handle, ctypes.cast(pointer, c_void_p))
 
     def nodes_write(self, *args, **kwargs):
         warnings.warn('remove after 2025-6-2', DeprecationWarning)
         from zmlx.alg.ip_nodes_write import ip_nodes_write
         return ip_nodes_write(self, *args, **kwargs)
+
+    core.use(None, 'ip_write_node_radi', c_void_p, c_void_p)
+
+    def write_node_radi(self, pointer):
+        """
+        写入数据到pointer
+        """
+        core.ip_write_node_radi(self.handle, ctypes.cast(pointer, c_void_p))
+
+    core.use(None, 'ip_read_node_radi', c_void_p, c_void_p)
+
+    def read_node_radi(self, pointer):
+        """
+        从pointer读取数据
+        """
+        core.ip_read_node_radi(self.handle, ctypes.cast(pointer, c_void_p))
+
+    core.use(None, 'ip_write_bond_radi', c_void_p, c_void_p)
+
+    def write_bond_radi(self, pointer):
+        """
+        写入数据到pointer
+        """
+        core.ip_write_bond_radi(self.handle, ctypes.cast(pointer, c_void_p))
+
+    core.use(None, 'ip_read_bond_radi', c_void_p, c_void_p)
+
+    def read_bond_radi(self, pointer):
+        """
+        从pointer读取数据
+        """
+        core.ip_read_bond_radi(self.handle, ctypes.cast(pointer, c_void_p))
 
 
 class Dfn2(HasHandle):
