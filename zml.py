@@ -1263,11 +1263,18 @@ def __feedback():
         make_dirs(folder_logs_feedback)
         has_feedback = set(os.listdir(folder_logs_feedback))
         date = datetime.datetime.now().strftime("%Y-%m-%d.log")
+        city = None
         for name in os.listdir(folder_logs):
             if name != date and name not in has_feedback:
                 with open(os.path.join(folder_logs, name), 'r') as f1:
                     text = f1.read()
-                    if feedback(text=text[0: 100000], subject=f'log <{name}>'):
+                    if city is None:
+                        try:
+                            from zmlx.alg.ipinfo import get_city
+                            city = f' from {get_city()}'
+                        except:
+                            city = ''
+                    if feedback(text=text[0: 100000], subject=f'log <{name}>{city}'):
                         with open(os.path.join(folder_logs_feedback, name), 'w') as f2:
                             f2.write('\n')
     except:

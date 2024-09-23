@@ -90,18 +90,11 @@ class MainWindow(QtWidgets.QMainWindow):
         except Exception as e:
             print(f'Error: {e}')
 
-        self.task_ck = QtCore.QThread()
-        self.task_ck.run = self.__check_license
-        self.task_ck.start(priority=QtCore.QThread.Priority.LowPriority)
-
-    def __check_license(self):
-        self.status_bar.showMessage('初始化 ... ')
         try:
             if lic.summary is None:
                 print('此电脑未授权，请确保: 1、使用最新版；2、本机联网!')
         except Exception as e:
             print(f'Error: {e}')
-        self.status_bar.showMessage('就绪')
 
     def __init_actions(self):
         scripts = {}
