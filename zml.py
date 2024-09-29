@@ -11968,6 +11968,102 @@ class InvasionPercolation(HasHandle):
         """
         core.ip_read_bond_radi(self.handle, ctypes.cast(pointer, c_void_p))
 
+    core.use(None, 'ip_write_node_rate_invaded', c_void_p, c_void_p)
+
+    def write_node_rate_invaded(self, pointer):
+        """
+        写入数据到pointer
+        """
+        core.ip_write_node_rate_invaded(self.handle, ctypes.cast(pointer, c_void_p))
+
+    core.use(None, 'ip_read_node_rate_invaded', c_void_p, c_void_p)
+
+    def read_node_rate_invaded(self, pointer):
+        """
+        从pointer读取数据
+        """
+        core.ip_read_node_rate_invaded(self.handle, ctypes.cast(pointer, c_void_p))
+
+    core.use(None, 'ip_write_node_time_invaded', c_void_p, c_void_p)
+
+    def write_node_time_invaded(self, pointer):
+        """
+        写入数据到pointer
+        """
+        core.ip_write_node_time_invaded(self.handle, ctypes.cast(pointer, c_void_p))
+
+    core.use(None, 'ip_read_node_time_invaded', c_void_p, c_void_p)
+
+    def read_node_time_invaded(self, pointer):
+        """
+        从pointer读取数据
+        """
+        core.ip_read_node_time_invaded(self.handle, ctypes.cast(pointer, c_void_p))
+
+    core.use(None, 'ip_write_bond_dp0', c_void_p, c_void_p)
+
+    def write_bond_dp0(self, pointer):
+        """
+        写入数据到pointer
+        """
+        core.ip_write_bond_dp0(self.handle, ctypes.cast(pointer, c_void_p))
+
+    core.use(None, 'ip_read_bond_dp0', c_void_p, c_void_p)
+
+    def read_bond_dp0(self, pointer):
+        """
+        从pointer读取数据
+        """
+        core.ip_read_bond_dp0(self.handle, ctypes.cast(pointer, c_void_p))
+
+    core.use(None, 'ip_write_bond_dp1', c_void_p, c_void_p)
+
+    def write_bond_dp1(self, pointer):
+        """
+        写入数据到pointer
+        """
+        core.ip_write_bond_dp1(self.handle, ctypes.cast(pointer, c_void_p))
+
+    core.use(None, 'ip_read_bond_dp1', c_void_p, c_void_p)
+
+    def read_bond_dp1(self, pointer):
+        """
+        从pointer读取数据
+        """
+        core.ip_read_bond_dp1(self.handle, ctypes.cast(pointer, c_void_p))
+
+    core.use(None, 'ip_write_bond_tension', c_void_p, c_size_t, c_size_t, c_void_p)
+
+    def write_bond_tension(self, ph0, ph1, pointer):
+        """
+        写入数据到pointer
+        """
+        core.ip_write_bond_tension(self.handle, ph0, ph1, ctypes.cast(pointer, c_void_p))
+
+    core.use(None, 'ip_read_bond_tension', c_void_p, c_size_t, c_size_t, c_void_p)
+
+    def read_bond_tension(self, ph0, ph1, pointer):
+        """
+        从pointer读取数据
+        """
+        core.ip_read_bond_tension(self.handle, ph0, ph1, ctypes.cast(pointer, c_void_p))
+
+    core.use(None, 'ip_write_bond_contact_angle', c_void_p, c_size_t, c_size_t, c_void_p)
+
+    def write_bond_contact_angle(self, ph0, ph1, pointer):
+        """
+        写入数据到pointer
+        """
+        core.ip_write_bond_contact_angle(self.handle, ph0, ph1, ctypes.cast(pointer, c_void_p))
+
+    core.use(None, 'ip_read_bond_contact_angle', c_void_p, c_size_t, c_size_t, c_void_p)
+
+    def read_bond_contact_angle(self, ph0, ph1, pointer):
+        """
+        从pointer读取数据
+        """
+        core.ip_read_bond_contact_angle(self.handle, ph0, ph1, ctypes.cast(pointer, c_void_p))
+
 
 class Dfn2(HasHandle):
     """

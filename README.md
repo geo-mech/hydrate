@@ -13,7 +13,7 @@
 
 <sup>3</sup>[中国科学院大学](https://www.ucas.ac.cn/)(北京, 101408).
 
-<sup>*</sup>联系: [zhangzhaobin@mail.iggcas.ac.cn](zhangzhaobin@mail.iggcas.ac.cn)
+<sup>*</sup>联系: [zhangzhaobin@mail.iggcas.ac.cn](zhangzhaobin@mail.iggcas.ac.cn).   (技术问题请[新建Issue](https://gitee.com/geomech/hydrate/issues/new))
 
 ### 授权
 
