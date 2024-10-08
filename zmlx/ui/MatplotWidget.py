@@ -21,9 +21,10 @@ class MatplotWidget(QtWidgets.QWidget):
         self.setLayout(layout)
         self.__figure = plt.figure()
         self.__canvas = FigureCanvas(self.__figure)
+        self.__right_menu = None
         layout.addWidget(self.__canvas)
         self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
-        self.customContextMenuRequested.connect(self.create_rightmenu)
+        self.customContextMenuRequested.connect(self.create_right_menu)
 
     def draw(self):
         self.__canvas.draw()
@@ -49,12 +50,10 @@ class MatplotWidget(QtWidgets.QWidget):
     def canvas(self):
         return self.__canvas
 
-    def create_rightmenu(self):
-        self.rightmenu = QtWidgets.QMenu(self)
-
+    def create_right_menu(self):
+        self.__right_menu = QtWidgets.QMenu(self)
         action = QtWidgets.QAction(self)
         action.setText('保存图片')
         action.triggered.connect(self.savefig_by_dlg)
-        self.rightmenu.addAction(action)
-
-        self.rightmenu.popup(QtGui.QCursor.pos())
+        self.__right_menu.addAction(action)
+        self.__right_menu.popup(QtGui.QCursor.pos())

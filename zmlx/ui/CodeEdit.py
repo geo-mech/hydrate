@@ -36,8 +36,8 @@ class CodeEdit(QtWidgets.QTextEdit):
         if self.__fname is not None:
             try:
                 write_text(path=self.__fname, text=self.toPlainText(), encoding='utf-8')
-            except:
-                pass
+            except Exception as e:
+                print(e)
 
     def open(self, fname=None):
         """
@@ -51,8 +51,8 @@ class CodeEdit(QtWidgets.QTextEdit):
                 self.__fname = None
                 self.setText(read_text(fname, encoding='utf-8', default=code_in_editor))
                 self.__fname = fname
-            except:
-                pass
+            except Exception as e:
+                print(e)
 
     def get_fname(self):
         """
@@ -65,6 +65,6 @@ class CodeEdit(QtWidgets.QTextEdit):
         if main_window is not None:
             try:
                 self.save()
-                main_window.console_widget.exec_file(self.get_fname())
-            except:
-                pass
+                main_window.exec_file(self.get_fname())
+            except Exception as e:
+                print(e)

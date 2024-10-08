@@ -2,7 +2,7 @@ from zml import app_data
 from zmlx.ui.Qt import QtWidgets
 
 
-def setTabPosition(widget):
+def set_position(widget):
     try:
         text = app_data.getenv('TabPosition', default='')
         if text == 'North':
@@ -13,19 +13,19 @@ def setTabPosition(widget):
             widget.setTabPosition(QtWidgets.QTabWidget.East)
         if text == 'West':
             widget.setTabPosition(QtWidgets.QTabWidget.West)
-    except:
-        pass
+    except Exception as e:
+        print(e)
 
 
-def setTabShape(widget):
+def set_shape(widget):
     try:
         text = app_data.getenv('TabShape', default='')
         if text == 'Triangular':
             widget.setTabShape(QtWidgets.QTabWidget.Triangular)
         if text == 'Rounded':
             widget.setTabShape(QtWidgets.QTabWidget.Rounded)
-    except:
-        pass
+    except Exception as e:
+        print(e)
 
 
 class TabWidget(QtWidgets.QTabWidget):
@@ -34,20 +34,20 @@ class TabWidget(QtWidgets.QTabWidget):
         self.setTabsClosable(True)
         self.tabCloseRequested.connect(self.close_tab)
         self.setMovable(True)
-        setTabPosition(self)
-        setTabShape(self)
+        set_position(self)
+        set_shape(self)
 
     def close_tab(self, index):
         widget = self.widget(index)
         widget.deleteLater()
         self.removeTab(index)
 
-    def find_widget(self, type=None, text=None):
-        assert type is not None or text is not None
+    def find_widget(self, the_type=None, text=None):
+        assert the_type is not None or text is not None
         for i in range(self.count()):
             widget = self.widget(i)
-            if type is not None:
-                if not isinstance(widget, type):
+            if the_type is not None:
+                if not isinstance(widget, the_type):
                     continue
             if text is not None:
                 if text != self.tabText(i):

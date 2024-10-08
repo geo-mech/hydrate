@@ -23,7 +23,7 @@ class ConsoleWidget(QtWidgets.QWidget):
         main_layout = QtWidgets.QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
         self.splitter = QtWidgets.QSplitter(self)
-        self.splitter.setOrientation(QtCore.Qt.Vertical)
+        self.splitter.setOrientation(QtCore.Qt.Orientation.Vertical)
         main_layout.addWidget(self.splitter)
 
         self.output_widget = ConsoleOutput(self.splitter)
@@ -57,8 +57,10 @@ class ConsoleWidget(QtWidgets.QWidget):
         try:
             self.workspace = app_data.get()
             self.workspace.update({'__name__': '__main__', 'gui': gui})
-        except:
+        except Exception as err:
+            print(err)
             self.workspace = {'__name__': '__main__', 'gui': gui}
+            
         self.text_when_beg = None
         self.text_when_end = None
         self.time_beg = None
@@ -99,7 +101,7 @@ class ConsoleWidget(QtWidgets.QWidget):
                                                   self.input_editor.get_fname()))
 
     def pause_clicked(self):
-        app_data.log(f'execute <__button_pause_clicked> of {self}')
+        app_data.log(f'execute <pause_clicked> of {self}')
         self.set_should_pause(not self.should_pause())
 
     def should_pause(self):
@@ -114,7 +116,7 @@ class ConsoleWidget(QtWidgets.QWidget):
             self.refresh_buttons()
 
     def stop_clicked(self):
-        app_data.log(f'execute <__button_exit_clicked> of {self}')
+        app_data.log(f'execute <stop_clicked> of {self}')
         self.set_should_stop(not self.flag_exit.value)
 
     def set_should_stop(self, value):

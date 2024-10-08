@@ -6,6 +6,6 @@ from zml import app_data
 
 main_window = app_data.space.get('main_window', None)
 if main_window is not None:
-    widget = main_window.tab_widget.currentWidget()
+    widget = main_window.get_current_widget()
     if hasattr(widget, 'export_data'):
-        main_window.task_proc.add(lambda: widget.export_data())
+        main_window.add_task(lambda: widget.export_data())

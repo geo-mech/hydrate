@@ -28,79 +28,81 @@ class MainWindow(QtWidgets.QMainWindow):
         super(MainWindow, self).__init__(parent)
         self.setWindowIcon(load_icon('app.jpg'))
         self.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-        self.task_proc = TaskProc(self)
+        self.__task_proc = TaskProc(self)
 
-        self.file_processors = {'.py': [self.open_code, 'Python File To Execute'],
-                                '.fn2': [self.show_fn2, 'Fracture Network 2D'],
-                                '.seepage': [show_seepage, 'Seepage Model File'],
-                                '.txt': [show_txt, 'Text file'],
-                                '.json': [show_txt, 'Json file'],
-                                '.xml': [show_txt, 'Xml file'],
-                                '.png': [self.open_image, 'Png file'],
-                                '.jpg': [self.open_image, 'Jpg file']
-                                }
+        self.__file_processors = {'.py': [self.open_code, 'Python File To Execute'],
+                                  '.fn2': [self.show_fn2, 'Fracture Network 2D'],
+                                  '.seepage': [show_seepage, 'Seepage Model File'],
+                                  '.txt': [show_txt, 'Text file'],
+                                  '.json': [show_txt, 'Json file'],
+                                  '.xml': [show_txt, 'Xml file'],
+                                  '.png': [self.open_image, 'Png file'],
+                                  '.jpg': [self.open_image, 'Jpg file']
+                                  }
 
         widget = QtWidgets.QWidget(self)
         h_layout = QtWidgets.QVBoxLayout(widget)
-        self.splitter = QtWidgets.QSplitter(widget)
-        self.splitter.setOrientation(QtCore.Qt.Orientation.Horizontal)
-        self.tab_widget = TabWidget(self.splitter)
-        self.tab_widget.currentChanged.connect(self.update_widget_actions)
-        self.console_widget = ConsoleWidget(self.splitter)
-        self.gui_api = GuiApi(widget, self.console_widget.get_break_point(), self.console_widget.get_flag_exit())
-        self.splitter.setStretchFactor(0, 1)
-        self.splitter.setStretchFactor(1, 0)
-        h_layout.addWidget(self.splitter)
+        splitter = QtWidgets.QSplitter(widget)
+        splitter.setOrientation(QtCore.Qt.Orientation.Horizontal)
+        self.__tab_widget = TabWidget(splitter)
+        self.__tab_widget.currentChanged.connect(self.update_widget_actions)
+        self.__console = ConsoleWidget(splitter)
+        self.__gui_api = GuiApi(widget, self.__console.get_break_point(), self.__console.get_flag_exit())
+        splitter.setStretchFactor(0, 1)
+        splitter.setStretchFactor(1, 0)
+        h_layout.addWidget(splitter)
         self.setCentralWidget(widget)
 
-        self.actions = {}
-        self.menu_bar = QtWidgets.QMenuBar(self)
-        self.setMenuBar(self.menu_bar)
-        self.menus = {}
-        self.toolbars = {}
-        self.titleText = None
+        self.__actions = {}
+        self.__menu_bar = QtWidgets.QMenuBar(self)
+        self.setMenuBar(self.__menu_bar)
+        self.__menus = {}
+        self.__toolbars = {}
+        self.__titleText = None
         self.__init_actions()
         self.__init_gui_api()
 
         self.sig_cwd_changed.connect(self.refresh)
         self.sig_cwd_changed.connect(self.view_cwd)
-        self.sig_cwd_changed.connect(self.console_widget.restore_code)
+        self.sig_cwd_changed.connect(self.__console.restore_code)
 
         # 尝试关闭进度条，从而使得进度条总是临时显示一下.
-        self._timer_close_progress = QtCore.QTimer(self)
-        self._timer_close_progress.timeout.connect(lambda: self.progress(visible=False))
-        self._timer_close_progress.start(5000)
+        self.__timer_close_progress = QtCore.QTimer(self)
+        self.__timer_close_progress.timeout.connect(lambda: self.progress(visible=False))
+        self.__timer_close_progress.start(5000)
 
-        self.status_bar = QtWidgets.QStatusBar(self)
-        self.setStatusBar(self.status_bar)
-        self.progress_label = QtWidgets.QLabel()
-        self.progress_bar = QtWidgets.QProgressBar()
-        self.status_bar.addPermanentWidget(self.progress_label)
-        self.status_bar.addPermanentWidget(self.progress_bar)
-        self.status_bar.addPermanentWidget(VersionLabel())
+        self.__status_bar = QtWidgets.QStatusBar(self)
+        self.setStatusBar(self.__status_bar)
+        self.__progress_label = QtWidgets.QLabel()
+        self.__progress_bar = QtWidgets.QProgressBar()
+        self.__status_bar.addPermanentWidget(self.__progress_label)
+        self.__status_bar.addPermanentWidget(self.__progress_bar)
+        self.__status_bar.addPermanentWidget(VersionLabel())
         self.progress(visible=False)
 
         self.update_widget_actions()  # 更新一些和控件相关的action的显示
+
+        # 用以显示警告
+        self.__warning_toolbar = self.__get_toolbar('WarningToolbar')
+        self.__warning_toolbar.setVisible(False)
+        self.__warning_toolbar.setStyleSheet('background-color: yellow;')
+        self.__warning_action = QtWidgets.QAction(self)
+        self.__warning_action.triggered.connect(lambda: self.toolbar_warning(text=''))
+        self.__warning_toolbar.addAction(self.__warning_action)
 
         try:
             from zmlx.ui.data.get_path import get_path
             filename = get_path('zml_icons', 'welcome.jpg')
             if os.path.isfile(filename):
                 self.open_image(filename, caption='Welcome')
-        except Exception as e:
-            print(f'Error: {e}')
+        except Exception as err:
+            print(f'Error: {err}')
 
         try:
             if lic.summary is None:
-                text = '此电脑未授权，请确保: 1、使用最新版；2、本机联网!'
-                print(text)
-                toolbar = self.__get_toolbar('no_license')
-                toolbar.setStyleSheet('background-color: yellow;')
-                action = QtWidgets.QAction(self)
-                action.setText(text)
-                toolbar.addAction(action)
-        except Exception as e:
-            print(f'Error: {e}')
+                self.toolbar_warning('此电脑未授权，请确保: 1、使用最新版；2、本机联网!')
+        except Exception as err:
+            print(f'Error: {err}')
 
     def __init_actions(self):
         scripts = {}
@@ -121,7 +123,7 @@ class MainWindow(QtWidgets.QMainWindow):
                                               tooltip=script.tooltip,
                                               )
                 self.__get_menu(menu).addAction(action)
-                self.actions[action_name] = action
+                self.__actions[action_name] = action
 
         def add_actions(menu, action_names):
             for s in action_names:
@@ -139,53 +141,54 @@ class MainWindow(QtWidgets.QMainWindow):
             add_actions('其它', list(scripts.keys()))
 
     def __init_gui_api(self):
-        self.gui_api.add_func('cls', self.console_widget.output_widget.clear)
-        self.gui_api.add_func('show_fn2', self.show_fn2)
-        self.gui_api.add_func('get_widget', self.get_widget)
-        self.gui_api.add_func('get_figure_widget', self.get_figure_widget)
-        self.gui_api.add_func('plot', self.cmd_plot)
-        self.gui_api.add_func('status', self.cmd_status)
-        self.gui_api.add_func('refresh', self.refresh)
-        self.gui_api.add_func('title', self.cmd_title)
-        self.gui_api.add_func('window', lambda: self)
-        self.gui_api.add_func('trigger', self.trigger)
-        self.gui_api.add_func('progress', self.progress)
-        self.gui_api.add_func('view_cwd', self.view_cwd)
-        self.gui_api.add_func('close', self.close)
-        self.gui_api.add_func('open_code', self.open_code)
-        self.gui_api.add_func('exec_current', self.exec_current)
-        self.gui_api.add_func('open_file', self.open_file)
-        self.gui_api.add_func('open_file_by_dlg', self.open_file_by_dlg)
-        self.gui_api.add_func('set_cwd', self.set_cwd)
-        self.gui_api.add_func('set_cwd_by_dialog', self.set_cwd_by_dialog)
-        self.gui_api.add_func('open_text', self.open_text)
-        self.gui_api.add_func('open_image', self.open_image)
-        self.gui_api.add_func('kill_thread', self.console_widget.kill_thread)
-        self.gui_api.add_func('show_next', self.tab_widget.show_next)
-        self.gui_api.add_func('show_prev', self.tab_widget.show_prev)
-        self.gui_api.add_func('close_all_tabs', self.tab_widget.close_all_tabs)
+        self.__gui_api.add_func('cls', self.__console.output_widget.clear)
+        self.__gui_api.add_func('show_fn2', self.show_fn2)
+        self.__gui_api.add_func('get_widget', self.get_widget)
+        self.__gui_api.add_func('get_figure_widget', self.get_figure_widget)
+        self.__gui_api.add_func('plot', self.cmd_plot)
+        self.__gui_api.add_func('status', self.cmd_status)
+        self.__gui_api.add_func('refresh', self.refresh)
+        self.__gui_api.add_func('title', self.cmd_title)
+        self.__gui_api.add_func('window', lambda: self)
+        self.__gui_api.add_func('trigger', self.trigger)
+        self.__gui_api.add_func('progress', self.progress)
+        self.__gui_api.add_func('view_cwd', self.view_cwd)
+        self.__gui_api.add_func('close', self.close)
+        self.__gui_api.add_func('open_code', self.open_code)
+        self.__gui_api.add_func('exec_current', self.exec_current)
+        self.__gui_api.add_func('open_file', self.open_file)
+        self.__gui_api.add_func('open_file_by_dlg', self.open_file_by_dlg)
+        self.__gui_api.add_func('set_cwd', self.set_cwd)
+        self.__gui_api.add_func('set_cwd_by_dialog', self.set_cwd_by_dialog)
+        self.__gui_api.add_func('open_text', self.open_text)
+        self.__gui_api.add_func('open_image', self.open_image)
+        self.__gui_api.add_func('kill_thread', self.__console.kill_thread)
+        self.__gui_api.add_func('show_next', self.__tab_widget.show_next)
+        self.__gui_api.add_func('show_prev', self.__tab_widget.show_prev)
+        self.__gui_api.add_func('close_all_tabs', self.__tab_widget.close_all_tabs)
+        self.__gui_api.add_func('toolbar_warning', self.toolbar_warning)
 
     def __get_menu(self, name):
         assert name is not None, f'Error: name is None when get_menu'
-        menu = self.menus.get(name)
+        menu = self.__menus.get(name)
         if menu is not None:
             return menu
         else:
-            menu = QtWidgets.QMenu(self.menu_bar)
+            menu = QtWidgets.QMenu(self.__menu_bar)
             menu.setTitle(get_text(name))
-            self.menu_bar.addAction(menu.menuAction())
-            self.menus[name] = menu
+            self.__menu_bar.addAction(menu.menuAction())
+            self.__menus[name] = menu
             return menu
 
     def __get_toolbar(self, name):
         if name is None:
             return
-        toolbar = self.toolbars.get(name)
+        toolbar = self.__toolbars.get(name)
         if toolbar is not None:
             return toolbar
         else:
             toolbar = self.addToolBar(name)
-            self.toolbars[name] = toolbar
+            self.__toolbars[name] = toolbar
             return toolbar
 
     def __create_action(self, text=None, slot=None, iconname=None, name=None, toolbar=None, shortcut=None,
@@ -212,15 +215,24 @@ class MainWindow(QtWidgets.QMainWindow):
             action.setShortcut(shortcut)
         return action
 
+    def toolbar_warning(self, text=None):
+        if isinstance(text, str):
+            if len(text) > 0:
+                self.__warning_toolbar.setVisible(True)
+                self.__warning_action.setText(text)
+            else:
+                self.__warning_toolbar.setVisible(False)
+                self.__warning_action.setText('')
+
     def update_widget_actions(self):
-        widget = self.tab_widget.currentWidget()
+        widget = self.__tab_widget.currentWidget()
 
         def set_visible(name, value):
             try:
                 ac = getattr(self, name)
                 ac.setEnabled(value)
-            except Exception as e:
-                print(f'Error: {e}')
+            except Exception as err:
+                print(f'Error: {err}')
 
         def f(action_name, func_name):
             set_visible(action_name, hasattr(widget, func_name))
@@ -229,26 +241,26 @@ class MainWindow(QtWidgets.QMainWindow):
                      ('action_exec_current', 'console_exec')]:
             f(a, b)
 
-        set_visible('action_close_all_tabs', self.tab_widget.count() > 0)
+        set_visible('action_close_all_tabs', self.__tab_widget.count() > 0)
 
     def refresh(self):
         """
         尝试刷新标题以及当前的页面
         """
-        if hasattr(self, 'titleText') and self.titleText is not None:
-            self.setWindowTitle(f'{self.titleText}')
+        if hasattr(self, 'titleText') and self.__titleText is not None:
+            self.setWindowTitle(f'{self.__titleText}')
         else:
             self.setWindowTitle(f'WorkDir: {os.getcwd()}')
 
         try:
-            current = self.tab_widget.currentWidget()
+            current = self.__tab_widget.currentWidget()
             if hasattr(current, 'refresh'):
-                self.task_proc.add(lambda: current.refresh())
-        except Exception as e:
-            print(f'Error: {e}')
+                self.__task_proc.add(lambda: current.refresh())
+        except Exception as err:
+            print(f'Error: {err}')
 
     def closeEvent(self, event):
-        if self.console_widget.is_running():
+        if self.__console.is_running():
             reply = QtWidgets.QMessageBox.question(self, '退出HfUI',
                                                    "内核似乎正在运行，确定要退出吗？",
                                                    QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
@@ -264,51 +276,52 @@ class MainWindow(QtWidgets.QMainWindow):
         super(MainWindow, self).resizeEvent(event)
         save_window_size(self, 'main_window_size')
 
-    def get_widget(self, type, caption=None, on_top=None, init=None, type_kw=None, oper=None, icon=None):
+    def get_widget(self, the_type, caption=None, on_top=None, init=None,
+                   type_kw=None, oper=None, icon=None):
         """
         返回一个控件，其中type为类型，caption为标题，现有的控件，只有类型和标题都满足，才会返回，否则就
         创建新的控件。
         init：首次生成控件，在显示之前所做的操作
         oper：每次调用都会执行，且在控件显示之后执行
         """
-        widget = self.tab_widget.find_widget(type=type, text=caption)
+        widget = self.__tab_widget.find_widget(the_type=the_type, text=caption)
         if widget is None:
             count_max = 100
-            assert self.tab_widget.count() < count_max, f'maximum count of tab_widget is {count_max}'
+            assert self.__tab_widget.count() < count_max, f'maximum count of tab_widget is {count_max}'
             if type_kw is None:
                 type_kw = {}
             try:
-                widget = type(self.tab_widget, **type_kw)
-                assert isinstance(widget, type)
-            except Exception as e:
-                print(f'Error: {e}')
+                widget = the_type(self.__tab_widget, **type_kw)
+                assert isinstance(widget, the_type)
+            except Exception as err:
+                print(f'Error: {err}')
                 return
             if init is not None:
                 try:
                     init(widget)
-                except Exception as e:
-                    print(f'Error: {e}')
+                except Exception as err:
+                    print(f'Error: {err}')
             if caption is None:
                 caption = 'untitled'
-            index = self.tab_widget.addTab(widget, caption)
+            index = self.__tab_widget.addTab(widget, caption)
             if icon is not None:
-                self.tab_widget.setTabIcon(index, load_icon(icon))
-            self.tab_widget.setCurrentWidget(widget)
+                self.__tab_widget.setTabIcon(index, load_icon(icon))
+            self.__tab_widget.setCurrentWidget(widget)
             if oper is not None:
-                self.task_proc.add(lambda: oper(widget))
+                self.add_task(lambda: oper(widget))
             return widget
         else:
             if on_top:
-                self.tab_widget.setCurrentWidget(widget)
+                self.__tab_widget.setCurrentWidget(widget)
             if oper is not None:
-                self.task_proc.add(lambda: oper(widget))
+                self.add_task(lambda: oper(widget))
             return widget
 
     def get_figure_widget(self, clear=None, **kwargs):
         from zmlx.ui.MatplotWidget import MatplotWidget
         if kwargs.get('icon', None) is None:
             kwargs['icon'] = 'matplotlib.jpg'
-        widget = self.get_widget(type=MatplotWidget, **kwargs)
+        widget = self.get_widget(the_type=MatplotWidget, **kwargs)
         if clear:
             fig = widget.figure
             for ax in fig.get_axes():
@@ -319,7 +332,7 @@ class MainWindow(QtWidgets.QMainWindow):
         from zmlx.ui.Widgets.Fn2Widget import Fn2Widget
         if kwargs.get('caption') is None:
             kwargs['caption'] = 'Fractures'
-        widget = self.get_widget(type=Fn2Widget, **kwargs)
+        widget = self.get_widget(the_type=Fn2Widget, **kwargs)
         assert widget is not None
         widget.open_fn2_file(filepath)
 
@@ -336,63 +349,63 @@ class MainWindow(QtWidgets.QMainWindow):
                 warnings.warn(f'meet exception <{err}> when run <{kernel}>')
 
     def cmd_status(self, *args, **kwargs):
-        self.status_bar.showMessage(*args, **kwargs)
+        self.__status_bar.showMessage(*args, **kwargs)
 
     def trigger(self, name):
-        action = self.actions.get(name, None)
+        action = self.__actions.get(name, None)
         assert action is not None, f'Error: action <{name}> not found'
         action.trigger()
 
     def cmd_title(self, title):
-        self.titleText = title
+        self.__titleText = title
         self.refresh()
 
     def view_cwd(self):
         from zmlx.ui.Widgets.CwdViewer import CwdViewer
-        self.get_widget(type=CwdViewer, caption='文件', on_top=True, oper=lambda w: w.refresh(), icon='cwd.jpg')
+        self.get_widget(the_type=CwdViewer, caption='文件', on_top=True, oper=lambda w: w.refresh(), icon='cwd.jpg')
 
-    def progress(self, label=None, range=None, value=None, visible=None, duration=5000):
+    def progress(self, label=None, val_range=None, value=None, visible=None, duration=5000):
         """
         显示进度
         """
         if label is not None:
             visible = True
-            self.progress_label.setText(label)
-        if range is not None:
+            self.__progress_label.setText(label)
+        if val_range is not None:
             visible = True
-            assert len(range) == 2
-            self.progress_bar.setRange(*range)
+            assert len(val_range) == 2
+            self.__progress_bar.setRange(*val_range)
         if value is not None:
             visible = True
-            self.progress_bar.setValue(value)
+            self.__progress_bar.setValue(value)
         if visible is not None:
-            self.progress_bar.setVisible(visible)
-            self.progress_label.setVisible(visible)
+            self.__progress_bar.setVisible(visible)
+            self.__progress_label.setVisible(visible)
             if visible:
-                self._timer_close_progress.setInterval(duration)
+                self.__timer_close_progress.setInterval(duration)
             else:
-                self._timer_close_progress.setInterval(5000000)  # 不再执行
+                self.__timer_close_progress.setInterval(5000000)  # 不再执行
 
     def open_code(self, fname, caption=None):
         if not isinstance(fname, str):
             return
 
-        def get_widget(fname):
-            for i in range(self.tab_widget.count()):
-                w = self.tab_widget.widget(i)
+        def get_widget(name_1):
+            for i in range(self.__tab_widget.count()):
+                w = self.__tab_widget.widget(i)
                 if isinstance(w, CodeEdit):
-                    if samefile(fname, w.get_fname()):
+                    if samefile(name_1, w.get_fname()):
                         return w
 
         if len(fname) > 0:
-            if samefile(fname, self.console_widget.get_fname()):
+            if samefile(fname, self.__console.get_fname()):
                 return
             widget = get_widget(fname)
             if widget is not None:
-                self.tab_widget.setCurrentWidget(widget)
+                self.__tab_widget.setCurrentWidget(widget)
                 return
             else:
-                self.get_widget(type=CodeEdit,
+                self.get_widget(the_type=CodeEdit,
                                 caption=os.path.basename(fname) if caption is None else caption,
                                 on_top=True,
                                 oper=lambda x: x.open(fname), icon='python.jpg')
@@ -402,13 +415,13 @@ class MainWindow(QtWidgets.QMainWindow):
         if not isinstance(fname, str):
             return
         if len(fname) > 0:
-            for i in range(self.tab_widget.count()):
-                w = self.tab_widget.widget(i)
+            for i in range(self.__tab_widget.count()):
+                w = self.__tab_widget.widget(i)
                 if isinstance(w, TextEdit):
                     if samefile(fname, w.get_fname()):
-                        self.tab_widget.setCurrentWidget(w)
+                        self.__tab_widget.setCurrentWidget(w)
                         return
-            self.get_widget(type=TextEdit,
+            self.get_widget(the_type=TextEdit,
                             caption=os.path.basename(fname) if caption is None else caption,
                             on_top=True,
                             oper=lambda x: x.set_fname(fname))
@@ -420,16 +433,16 @@ class MainWindow(QtWidgets.QMainWindow):
         if isinstance(fname, str):
             if os.path.isfile(fname):
                 from zmlx.ui.Widgets.Image import ImageViewer
-                self.get_widget(type=ImageViewer, caption=os.path.basename(fname) if caption is None else caption,
+                self.get_widget(the_type=ImageViewer, caption=os.path.basename(fname) if caption is None else caption,
                                 on_top=on_top,
-                                oper=lambda x: x.setImage(fname))
+                                oper=lambda x: x.set_image(fname))
 
     def exec_current(self):
-        if isinstance(self.tab_widget.currentWidget(), CodeEdit):
-            self.tab_widget.currentWidget().save()
-            self.console_widget.exec_file(self.tab_widget.currentWidget().get_fname())
+        if isinstance(self.__tab_widget.currentWidget(), CodeEdit):
+            self.__tab_widget.currentWidget().save()
+            self.__console.exec_file(self.__tab_widget.currentWidget().get_fname())
         else:
-            self.console_widget.exec_file()
+            self.__console.exec_file()
 
     def open_file(self, filepath):
         if not isinstance(filepath, str):
@@ -448,7 +461,7 @@ class MainWindow(QtWidgets.QMainWindow):
         assert isinstance(ext, str)
         ext = ext.lower()
 
-        proc = self.file_processors.get(ext, None)
+        proc = self.__file_processors.get(ext, None)
         if proc is None:
             if os.path.isfile(filepath):
                 show_fileinfo(filepath)
@@ -461,11 +474,11 @@ class MainWindow(QtWidgets.QMainWindow):
             print(f'Error: filepath = {filepath} \nmessage = {err}')
 
     def open_file_by_dlg(self, folder=None):
-        temp = ''
-        for ext, proc in self.file_processors.items():
+        temp_1 = ''
+        for ext, proc in self.__file_processors.items():
             assert len(proc) == 2
             func, desc = proc
-            temp = f'{temp}{desc} (*{ext});; '
+            temp_1 = f'{temp_1}{desc} (*{ext});; '
 
         if folder is None:
             folder = ''
@@ -475,7 +488,7 @@ class MainWindow(QtWidgets.QMainWindow):
             return fpath
 
         filepath = get_open_file_name('please choose the file to open',
-                                      folder, f'All File(*.*);;{temp}')
+                                      folder, f'All File(*.*);;{temp_1}')
         if os.path.isfile(filepath):
             self.open_file(filepath)
 
@@ -487,12 +500,33 @@ class MainWindow(QtWidgets.QMainWindow):
                         os.chdir(folder)
                         save_cwd()
                         self.sig_cwd_changed.emit(os.getcwd())
-                    except Exception as e:
-                        print(f'Error: {e}')
+                    except Exception as err:
+                        print(f'Error: {err}')
 
     def set_cwd_by_dialog(self):
         folder = QtWidgets.QFileDialog.getExistingDirectory(self, get_text('请选择工程文件夹'), os.getcwd())
         self.set_cwd(folder)
+
+    def get_current_widget(self):
+        return self.__tab_widget.currentWidget()
+
+    def exec_file(self, filename):
+        self.__console.exec_file(filename)
+
+    def get_workspace(self):
+        return self.__console.workspace
+
+    def get_output_widget(self):
+        return self.__console.output_widget
+
+    def add_task(self, task):
+        self.__task_proc.add(task)
+
+    def get_gui_api(self):
+        return self.__gui_api
+
+    def get_console(self):
+        return self.__console
 
 
 class MySplashScreen(QtWidgets.QSplashScreen):
@@ -503,8 +537,8 @@ class MySplashScreen(QtWidgets.QSplashScreen):
 def execute(code=None, keep_cwd=True, close_after_done=True):
     try:
         app_data.log(f'gui_execute. file={__file__}')
-    except Exception as e:
-        print(f'Error: {e}')
+    except Exception as err:
+        print(f'Error: {err}')
 
     if gui.exists():
         if code is not None:
@@ -522,10 +556,11 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
         splash = MySplashScreen()
         try:
             rect = QtWidgets.QDesktopWidget().availableGeometry()
-            splash_fig = splash_fig.scaled(round(rect.width() * 0.3), round(rect.height() * 0.3),
+            splash_fig = splash_fig.scaled(round(rect.width() * 0.3),
+                                           round(rect.height() * 0.3),
                                            QtCore.Qt.AspectRatioMode.KeepAspectRatio)
-        except Exception as e:
-            print(f'Error: {e}')
+        except Exception as err:
+            print(f'Error: {err}')
         splash.setPixmap(splash_fig)
         splash.show()
         app.processEvents()  # 处理主进程事件
@@ -536,10 +571,10 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
 
     def f1():
         app_data.space['main_window'] = win
-        gui.push(win.gui_api)
-        print(f'Push Gui: {win.gui_api}')
-        sys.stdout = win.console_widget.output_widget
-        sys.stderr = win.console_widget.output_widget
+        gui.push(win.get_gui_api())
+        print(f'Push Gui: {win.get_gui_api()}')
+        sys.stdout = win.get_output_widget()
+        sys.stderr = win.get_output_widget()
 
     def f2():
         sys.stdout = sys.__stdout__
@@ -552,23 +587,22 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
 
     try:
         load_window_size(win, 'main_window_size')
-    except Exception as e:
-        print(f'Error: {e}')
+    except Exception as err:
+        print(f'Error: {err}')
 
     try:
         load_window_style(win, 'zml_main.qss')
-    except Exception as e:
-        print(f'Error: {e}')
+    except Exception as err:
+        print(f'Error: {err}')
 
-    def my_excepthook(type, value, tb):
-        message = f"""Exception Type: {type}
+    def my_exception_hook(the_type, value, tb):
+        message = f"""Exception Type: {the_type}
 Message : {value}
 Object : {tb} We are very sorry for this exception. Please check your data according to the above message. If it's 
-still unresolved, please contact the author (email: 'zhangzhaobin@mail.iggcas.ac.cn'or qq: 542844710), Thank you!"""
+still unresolved, please contact the author (email: 'zhangzhaobin@mail.iggcas.ac.cn'), Thank you!"""
         print(message)
-        QtWidgets.QMessageBox.warning(win, "Unresolved Exception", message)
 
-    sys.excepthook = my_excepthook
+    sys.excepthook = my_exception_hook
     win.show()
 
     if splash is not None:
@@ -579,23 +613,23 @@ still unresolved, please contact the author (email: 'zhangzhaobin@mail.iggcas.ac
         for path in find_all('zml_gui_setup.py'):
             try:
                 print(f'Exec File: {path}')
-                exec(read_text(path, encoding='utf-8'), win.console_widget.workspace)
+                exec(read_text(path, encoding='utf-8'), win.get_console().workspace)
             except Exception as e2:
                 print(f'Failed: {e2}')
 
     results = []
     if close_after_done and code is not None:
-        win.console_widget.sig_kernel_done.connect(win.close)
-    win.console_widget.sig_kernel_done.connect(lambda: results.append(win.console_widget.result))
+        win.get_console().sig_kernel_done.connect(win.close)
+    win.get_console().sig_kernel_done.connect(lambda: results.append(win.get_console().result))
     if code is not None:
         def codex():
-            win.console_widget.time_beg = None  # 对于外部的这种调用，不显示cpu耗时
+            win.get_console().time_beg = None  # 对于外部的这种调用，不显示cpu耗时
             setup()
             return code()
 
-        win.console_widget.start_func(codex)
+        win.get_console().start_func(codex)
     else:
-        win.console_widget.start_func(setup)
+        win.get_console().start_func(setup)
     app.exec_()
     f2()
     if len(results) > 0:

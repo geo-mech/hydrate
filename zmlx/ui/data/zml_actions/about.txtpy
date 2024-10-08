@@ -5,4 +5,4 @@
 from zmlx.ui.GuiBuffer import gui
 from zmlx.ui.Widgets.About import About
 
-gui.get_widget(type=About, caption='关于', on_top=True, icon='info.jpg')
+gui.get_widget(the_type=About, caption='关于', on_top=True, icon='info.jpg')

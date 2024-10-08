@@ -7,31 +7,25 @@ from zmlx.ui.alg.code_config import code_config
 
 class Script:
     def __init__(self, file):
+        assert file is not None
         self.file = file
         self.config = code_config(path=file, encoding='utf-8')
 
     def __call__(self, win):
-        assert win is not None
         if not os.path.isfile(self.file):
             return
-
-        def show_err(e):
-            info = f'Meet error when run <{self.file}>. \nInfo = \n {e}'
-            print(info)
-            QtWidgets.QMessageBox.information(win, 'Error', info)
-
-        if self.is_sys:
-            try:
-                app_data.log(f'system run <{self.file}>')
+        try:
+            assert win is not None, 'Main window is not given when run script'
+            if self.is_sys:
                 exec(read_text(path=self.file, encoding='utf-8', default=''),
-                     win.console_widget.workspace)
-            except Exception as err:
-                show_err(err)
-        else:
-            try:
-                win.console_widget.exec_file(self.file)
-            except Exception as err:
-                show_err(err)
+                     win.get_workspace())
+                app_data.log(f'system run <{self.file}>')
+            else:
+                win.exec_file(self.file)
+        except Exception as err:
+            info = f'meet error when run <{self.file}>. \nInfo = \n {err}'
+            print(info)
+            app_data.log(info)
 
     @property
     def enabled(self):

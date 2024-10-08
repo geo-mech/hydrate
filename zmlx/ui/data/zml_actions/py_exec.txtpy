@@ -10,6 +10,6 @@ from zml import app_data
 
 main_window = app_data.space.get('main_window', None)
 if main_window is not None:
-    widget = main_window.tab_widget.currentWidget()
+    widget = main_window.get_current_widget()
     if hasattr(widget, 'console_exec'):
         widget.console_exec()

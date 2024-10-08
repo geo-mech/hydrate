@@ -11,8 +11,8 @@ from zmlx.ui.Qt import QtGui, QtWidgets, QtCore, QtMultimedia
 
 try:
     app_data.add_path(os.path.join(os.path.dirname(__file__), 'data'))
-except:
-    pass
+except Exception as e:
+    print(e)
 
 
 def temp(name):
@@ -37,8 +37,8 @@ def find_icon_file(name):
             filepath = os.path.join(folder, name)
             if os.path.isfile(filepath):
                 return filepath
-    except:
-        pass
+    except Exception as err_2:
+        print(err_2)
 
 
 def load_pixmap(name):
@@ -52,11 +52,12 @@ def load_icon(name):
         pixmap = load_pixmap(name)
         if pixmap is not None:
             icon = QtGui.QIcon()
-            icon.addPixmap(pixmap, QtGui.QIcon.Normal, QtGui.QIcon.Off)
+            icon.addPixmap(pixmap, QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
             return icon
         else:
             return QtGui.QIcon()
-    except:
+    except Exception as err_2:
+        print(err_2)
         return QtGui.QIcon()
 
 
@@ -66,8 +67,8 @@ def find_sound(name):
             filepath = os.path.join(folder, name)
             if os.path.isfile(filepath):
                 return filepath
-    except:
-        pass
+    except Exception as err_2:
+        print(err_2)
 
 
 def play_sound(name):
@@ -76,8 +77,8 @@ def play_sound(name):
         if filepath is not None:
             if QtMultimedia is not None:
                 QtMultimedia.QSound.play(filepath)
-    except:
-        pass
+    except Exception as err_2:
+        print(err_2)
 
 
 def play_click():
@@ -108,8 +109,8 @@ def load_window_style(win, name, extra=''):
     try:
         value = load(name, default='', encoding='utf-8')
         win.setStyleSheet(f'{value};{extra}')
-    except:
-        pass
+    except Exception as err_2:
+        print(err_2)
 
 
 def load_window_size(win, name):
@@ -122,7 +123,8 @@ def load_window_size(win, name):
             win.resize(int(w), int(h))
         else:
             win.resize(int(rect.width() * 0.7), int(rect.height() * 0.7))
-    except:
+    except Exception as err_2:
+        print(err_2)
         rect = QtWidgets.QDesktopWidget().availableGeometry()
         win.resize(int(rect.width() * 0.7), int(rect.height() * 0.7))
 
@@ -130,21 +132,22 @@ def load_window_size(win, name):
 def save_window_size(win, name):
     try:
         app_data.setenv(name, f'{win.width()}  {win.height()}')
-    except:
-        pass
+    except Exception as err_2:
+        print(err_2)
 
 
 def save_cwd():
     try:
         app_data.setenv('current_work_directory', os.getcwd(), encoding='utf-8')
-    except:
-        pass
+    except Exception as err_2:
+        print(err_2)
 
 
 def load_cwd():
     try:
         os.chdir(app_data.getenv('current_work_directory', default=os.getcwd(), encoding='utf-8'))
-    except:
+    except Exception as err_2:
+        print(err_2)
         save_cwd()
 
 
@@ -182,10 +185,10 @@ def load_ui_text():
         for path in reversed(find_all('zml_text.json')):
             try:
                 ui_text1.update(read_json(path, default={}))
-            except:
-                pass
-    except:
-        pass
+            except Exception as err_3:
+                print(err_3)
+    except Exception as err_2:
+        print(err_2)
     return ui_text1
 
 
@@ -207,8 +210,8 @@ def get_text(key):
             return texts
         else:
             return key
-    except:
-        pass
+    except Exception as err_2:
+        print(err_2)
 
 
 def get_menus():
@@ -243,7 +246,8 @@ def get_action_files():
 try:
     code_in_editor = read_text(find('zml_code_in_editor.txtpy'), encoding='utf-8',
                                default='')
-except:
+except Exception as e:
+    print(e)
     code_in_editor = ''
 
 

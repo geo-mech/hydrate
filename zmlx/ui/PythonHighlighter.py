@@ -1,3 +1,5 @@
+import sys
+
 from zmlx.ui.Qt import QtCore, QtGui
 from zmlx.ui.alg.zml_names import zml_names
 

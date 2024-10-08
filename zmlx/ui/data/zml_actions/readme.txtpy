@@ -20,5 +20,5 @@ def set_md(widget):
 
 
 if os.path.isfile(path):
-    gui.get_widget(type=QtWidgets.QTextBrowser, caption='ReadMe',
+    gui.get_widget(the_type=QtWidgets.QTextBrowser, caption='ReadMe',
                    on_top=True, oper=set_md, icon='info.jpg')

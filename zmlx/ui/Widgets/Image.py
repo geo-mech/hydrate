@@ -10,7 +10,9 @@ from PyQt5.QtWidgets import (QApplication, QGraphicsItem, QGraphicsPixmapItem,
 
 
 class ImageViewer(QGraphicsView):
-    """ 图片查看器 """
+    """
+    图片查看器
+    """
 
     def __init__(self, parent=None):
         super().__init__(parent=parent)
@@ -26,10 +28,12 @@ class ImageViewer(QGraphicsView):
         self.displayedImageSize = QSize(0, 0)
 
         # 初始化小部件
-        self.__initWidget()
+        self.__init_widget()
 
-    def __initWidget(self):
-        """ 初始化小部件 """
+    def __init_widget(self):
+        """
+        初始化小部件
+        """
         self.resize(1200, 900)
 
         # 隐藏滚动条
@@ -49,32 +53,38 @@ class ImageViewer(QGraphicsView):
         self.setScene(self.graphicsScene)
 
     def wheelEvent(self, e: QWheelEvent):
-        """ 滚动鼠标滚轮缩放图片 """
+        """
+        滚动鼠标滚轮缩放图片
+        """
         if e.angleDelta().y() > 0:
-            self.zoomIn()
+            self.zoom_in()
         else:
-            self.zoomOut()
+            self.zoom_out()
 
     def resizeEvent(self, e):
-        """ 缩放图片 """
+        """
+        缩放图片
+        """
         super().resizeEvent(e)
 
         if self.zoomInTimes > 0:
             return
 
         # 调整图片大小
-        ratio = self.__getScaleRatio()
+        ratio = self.__get_scale_ratio()
         self.displayedImageSize = self.pixmap.size() * ratio
         if ratio < 1:
             self.fitInView(self.pixmapItem, Qt.KeepAspectRatio)
         else:
             self.resetTransform()
 
-    def setImage(self, imagePath: str):
-        """ 设置显示的图片 """
-        self.setPixmap(QPixmap(imagePath))
+    def set_image(self, image_path: str):
+        """
+        设置显示的图片
+        """
+        self.set_pixmap(QPixmap(image_path))
 
-    def setPixmap(self, pixmap):
+    def set_pixmap(self, pixmap: QPixmap):
         assert isinstance(pixmap, QPixmap)
         self.resetTransform()
 
@@ -84,30 +94,38 @@ class ImageViewer(QGraphicsView):
 
         # 调整图片大小
         self.setSceneRect(QRectF(self.pixmap.rect()))
-        ratio = self.__getScaleRatio()
+        ratio = self.__get_scale_ratio()
         self.displayedImageSize = self.pixmap.size() * ratio
         if ratio < 1:
             self.fitInView(self.pixmapItem, Qt.KeepAspectRatio)
 
     def resetTransform(self):
-        """ 重置变换 """
+        """
+        重置变换
+        """
         super().resetTransform()
         self.zoomInTimes = 0
-        self.__setDragEnabled(False)
+        self.__set_drag_enabled(False)
 
-    def __isEnableDrag(self):
-        """ 根据图片的尺寸决定是否启动拖拽功能 """
+    def __is_enable_drag(self):
+        """
+        根据图片的尺寸决定是否启动拖拽功能
+        """
         v = self.verticalScrollBar().maximum() > 0
         h = self.horizontalScrollBar().maximum() > 0
         return v or h
 
-    def __setDragEnabled(self, isEnabled: bool):
-        """ 设置拖拽是否启动 """
+    def __set_drag_enabled(self, is_enabled: bool):
+        """
+        设置拖拽是否启动
+        """
         self.setDragMode(
-            self.ScrollHandDrag if isEnabled else self.NoDrag)
+            self.ScrollHandDrag if is_enabled else self.NoDrag)
 
-    def __getScaleRatio(self):
-        """ 获取显示的图像和原始图像的缩放比例 """
+    def __get_scale_ratio(self):
+        """
+        获取显示的图像和原始图像的缩放比例
+        """
         if self.pixmap.isNull():
             return 1
 
@@ -118,31 +136,33 @@ class ImageViewer(QGraphicsView):
         return min(rw, rh)
 
     def fitInView(self, item: QGraphicsItem, mode=Qt.KeepAspectRatio):
-        """ 缩放场景使其适应窗口大小 """
+        """
+        缩放场景使其适应窗口大小
+        """
         super().fitInView(item, mode)
-        self.displayedImageSize = self.__getScaleRatio() * self.pixmap.size()
+        self.displayedImageSize = self.__get_scale_ratio() * self.pixmap.size()
         self.zoomInTimes = 0
 
-    def zoomIn(self, viewAnchor=QGraphicsView.AnchorUnderMouse):
+    def zoom_in(self, view_anchor=QGraphicsView.AnchorUnderMouse):
         """ 放大图像 """
         if self.zoomInTimes == self.maxZoomInTimes:
             return
 
-        self.setTransformationAnchor(viewAnchor)
+        self.setTransformationAnchor(view_anchor)
 
         self.zoomInTimes += 1
         self.scale(1.1, 1.1)
-        self.__setDragEnabled(self.__isEnableDrag())
+        self.__set_drag_enabled(self.__is_enable_drag())
 
         # 还原 anchor
         self.setTransformationAnchor(self.AnchorUnderMouse)
 
-    def zoomOut(self, viewAnchor=QGraphicsView.AnchorUnderMouse):
+    def zoom_out(self, view_anchor=QGraphicsView.AnchorUnderMouse):
         """ 缩小图像 """
-        if self.zoomInTimes == 0 and not self.__isEnableDrag():
+        if self.zoomInTimes == 0 and not self.__is_enable_drag():
             return
 
-        self.setTransformationAnchor(viewAnchor)
+        self.setTransformationAnchor(view_anchor)
 
         self.zoomInTimes -= 1
 
@@ -167,7 +187,7 @@ class ImageViewer(QGraphicsView):
             else:
                 self.scale(1 / 1.1, 1 / 1.1)
 
-        self.__setDragEnabled(self.__isEnableDrag())
+        self.__set_drag_enabled(self.__is_enable_drag())
 
         # 还原 anchor
         self.setTransformationAnchor(self.AnchorUnderMouse)

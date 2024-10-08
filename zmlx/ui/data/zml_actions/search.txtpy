@@ -5,4 +5,4 @@
 from zmlx.ui.GuiBuffer import gui
 from zmlx.ui.Widgets.FileFind import FileFind
 
-gui.get_widget(type=FileFind, caption='搜索路径', on_top=True, icon='set.jpg')
+gui.get_widget(the_type=FileFind, caption='搜索路径', on_top=True, icon='set.jpg')

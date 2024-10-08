@@ -8,4 +8,4 @@ from zmlx.ui.GuiBuffer import gui
 from zmlx.ui.Widgets.PgConsole import PgConsole
 
 if PgConsole is not None:
-    gui.get_widget(type=PgConsole, caption='控制台', on_top=True, icon='console.jpg')
+    gui.get_widget(the_type=PgConsole, caption='控制台', on_top=True, icon='console.jpg')

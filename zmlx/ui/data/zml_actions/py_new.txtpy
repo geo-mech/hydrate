@@ -2,6 +2,6 @@
 # ** icon = 'python.jpg'
 # ** on_toolbar = 0
 
-from zmlx.ui.CodeAlg import new_code
+from zmlx.ui.alg.code import new_code
 
 new_code()
