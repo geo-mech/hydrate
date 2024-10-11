@@ -148,11 +148,11 @@ def feedback(text='feedback', subject=None):
     Send some necessary statistical information to the software author by Email.
     This is important to improve this software. Thanks for your feedback!
     However, if you do not want to send anything, please run:
-        zml.app_data.setenv('disable_feedback', 'True')
+        zml.app_data.setenv('disable_feedback', 'Yes')
     then you will not send anything in the future. Thanks for using!
     """
     try:
-        if app_data.getenv('disable_feedback') == 'True':
+        if app_data.getenv('disable_feedback', default='No', ignore_empty=True) == 'Yes':
             return True
         else:
             return sendmail('zhangzhaobin@mail.iggcas.ac.cn', subject=subject, text=text,
@@ -285,12 +285,17 @@ class _AppData(Object):
         except:
             pass
 
-    def getenv(self, key, encoding=None, default=None):
+    def getenv(self, key, encoding=None, default=None, ignore_empty=False):
         """
         Get the value of an application environment variable
         """
         path = os.path.join(self.folder, 'env', key)
-        return read_text(path, encoding=encoding, default=default)
+        res = read_text(path, encoding=encoding, default=default)
+        if ignore_empty:
+            if isinstance(res, str):
+                if len(res) == 0:
+                    return default
+        return res
 
     def setenv(self, key, value, encoding=None):
         """
@@ -1282,14 +1287,14 @@ def __feedback():
 
 
 try:
-    if app_data.getenv('disable_auto_feedback', default='False') != 'True':
+    if app_data.getenv('disable_auto_feedback', default='No', ignore_empty=True) != 'Yes':
         __feedback()
 except:
     pass
 
 try:
-    disable_timer = app_data.getenv(key='disable_timer', encoding='utf-8', default='False')
-    if disable_timer == 'True':
+    disable_timer = app_data.getenv(key='disable_timer', encoding='utf-8', default='No', ignore_empty=True)
+    if disable_timer == 'Yes':
         timer.enabled(False)
         app_data.log(f'timer disabled')
 except:

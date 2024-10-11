@@ -1,8 +1,8 @@
-# ** on_toolbar = False
-# ** text = '打开工作路径'
-# ** is_sys = True
+on_toolbar = False
+text = '打开工作路径'
 
-import os
 
-print(f'当前工作路径：\n{os.getcwd()}\n')
-os.startfile(os.getcwd())
+def func():
+    import os
+    print(f'当前工作路径：\n{os.getcwd()}\n')
+    os.startfile(os.getcwd())

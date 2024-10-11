@@ -1,8 +1,8 @@
-# ** text = '文件'
-# ** on_toolbar = True
-# ** is_sys = True
-# ** icon = 'cwd.jpg'
+text = '文件'
+on_toolbar = True
+icon = 'cwd.jpg'
 
-from zmlx.ui.GuiBuffer import gui
 
-gui.view_cwd()
+def func():
+    from zmlx.ui.MainWindow import get_window
+    get_window().view_cwd()

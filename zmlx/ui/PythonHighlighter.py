@@ -14,15 +14,15 @@ class PythonHighlighter(QtGui.QSyntaxHighlighter):
     def __init__(self, parent=None):
         super(PythonHighlighter, self).__init__(parent)
 
-        self.initializeFormats()
+        self.initialize_formats()
 
-        KEYWORDS = ["and", "as", "assert", "break", "class",
+        keywords = ["and", "as", "assert", "break", "class",
                     "continue", "def", "del", "elif", "else", "except",
                     "exec", "finally", "for", "from", "global", "if",
                     "import", "in", "is", "lambda", "not", "or", "pass",
                     "print", "raise", "return", "try", "while", "with",
                     "yield"]
-        BUILTINS = ["abs", "all", "any", "basestring", "bool",
+        builtins = ["abs", "all", "any", "basestring", "bool",
                     "callable", "chr", "classmethod", "cmp", "compile",
                     "complex", "delattr", "dict", "dir", "divmod",
                     "enumerate", "eval", "execfile", "exit", "file",
@@ -34,18 +34,18 @@ class PythonHighlighter(QtGui.QSyntaxHighlighter):
                     "round", "set", "setattr", "slice", "sorted",
                     "staticmethod", "str", "sum", "super", "tuple", "type",
                     "vars", "zip", "zml", "zmlx"] + zml_names()
-        CONSTANTS = ["False", "True", "None", "NotImplemented",
+        constants = ["False", "True", "None", "NotImplemented",
                      "Ellipsis"]
 
         PythonHighlighter.Rules.append((QtCore.QRegExp(
-            "|".join([r"\b%s\b" % keyword for keyword in KEYWORDS])),
+            "|".join([r"\b%s\b" % keyword for keyword in keywords])),
                                         "keyword"))
         PythonHighlighter.Rules.append((QtCore.QRegExp(
-            "|".join([r"\b%s\b" % builtin for builtin in BUILTINS])),
+            "|".join([r"\b%s\b" % builtin for builtin in builtins])),
                                         "builtin"))
         PythonHighlighter.Rules.append((QtCore.QRegExp(
             "|".join([r"\b%s\b" % constant
-                      for constant in CONSTANTS])), "constant"))
+                      for constant in constants])), "constant"))
         PythonHighlighter.Rules.append((QtCore.QRegExp(
             r"\b[+-]?[0-9]+[lL]?\b"
             r"|\b[+-]?0[xX][0-9A-Fa-f]+[lL]?\b"
@@ -55,9 +55,9 @@ class PythonHighlighter(QtGui.QSyntaxHighlighter):
             r"\bPyQt4\b|\bQt?[A-Z][a-z]\w+\b"), "pyqt"))
         PythonHighlighter.Rules.append((QtCore.QRegExp(r"\b@\w+\b"),
                                         "decorator"))
-        stringRe = QtCore.QRegExp(r"""(?:'[^']*'|"[^"]*")""")
-        stringRe.setMinimal(True)
-        PythonHighlighter.Rules.append((stringRe, "string"))
+        string_re = QtCore.QRegExp(r"""(?:'[^']*'|"[^"]*")""")
+        string_re.setMinimal(True)
+        PythonHighlighter.Rules.append((string_re, "string"))
         self.stringRe = QtCore.QRegExp(r"""(:?"["]".*"["]"|'''.*''')""")
         self.stringRe.setMinimal(True)
         PythonHighlighter.Rules.append((self.stringRe, "string"))
@@ -65,57 +65,61 @@ class PythonHighlighter(QtGui.QSyntaxHighlighter):
         self.tripleDoubleRe = QtCore.QRegExp(r'''"""(?!')''')
 
     @staticmethod
-    def initializeFormats():
-        baseFormat = QtGui.QTextCharFormat()
-        # baseFormat.setFontFamily("courier")
-        # baseFormat.setFontPointSize(12)
-        for name, color in (("normal", QtCore.Qt.black),
-                            ("keyword", QtCore.Qt.darkBlue), ("builtin", QtCore.Qt.darkRed),
-                            ("constant", QtCore.Qt.darkGreen),
-                            ("decorator", QtCore.Qt.darkBlue), ("comment", QtCore.Qt.darkGreen),
-                            ("string", QtCore.Qt.darkYellow), ("number", QtCore.Qt.darkMagenta),
-                            ("error", QtCore.Qt.darkRed), ("pyqt", QtCore.Qt.darkCyan)):
-            format = QtGui.QTextCharFormat(baseFormat)
-            format.setForeground(QtGui.QColor(color))
+    def initialize_formats():
+        base_format = QtGui.QTextCharFormat()
+        # base_format.setFontFamily("courier")
+        # base_format.setFontPointSize(10)
+        for name, color in (("normal", QtCore.Qt.GlobalColor.black),
+                            ("keyword", QtCore.Qt.GlobalColor.darkBlue),
+                            ("builtin", QtCore.Qt.GlobalColor.darkRed),
+                            ("constant", QtCore.Qt.GlobalColor.darkGreen),
+                            ("decorator", QtCore.Qt.GlobalColor.darkBlue),
+                            ("comment", QtCore.Qt.GlobalColor.darkGreen),
+                            ("string", QtCore.Qt.GlobalColor.darkYellow),
+                            ("number", QtCore.Qt.GlobalColor.darkMagenta),
+                            ("error", QtCore.Qt.GlobalColor.darkRed),
+                            ("pyqt", QtCore.Qt.GlobalColor.darkCyan)):
+            fmt = QtGui.QTextCharFormat(base_format)
+            fmt.setForeground(QtGui.QColor(color))
             if name in ("keyword", "decorator"):
-                format.setFontWeight(QtGui.QFont.Bold)
+                fmt.setFontWeight(QtGui.QFont.Bold)
             if name == "comment":
-                format.setFontItalic(True)
-            PythonHighlighter.Formats[name] = format
+                fmt.setFontItalic(True)
+            PythonHighlighter.Formats[name] = fmt
 
     def highlightBlock(self, text):
         try:
-            self.__highlightBlock(text)
-        except:
-            pass
+            self.__highlight_block(text)
+        except Exception as err:
+            print(err)
 
-    def __highlightBlock(self, text):
-        NORMAL, TRIPLESINGLE, TRIPLEDOUBLE, ERROR = range(4)
+    def __highlight_block(self, text):
+        normal, triple_single, triple_double, error = range(4)
 
-        textLength = len(text)
-        prevState = self.previousBlockState()
+        text_length = len(text)
+        prev_state = self.previousBlockState()
 
-        self.setFormat(0, textLength,
+        self.setFormat(0, text_length,
                        PythonHighlighter.Formats["normal"])
 
         if text.startswith("Traceback") or text.startswith("Error: "):
-            self.setCurrentBlockState(ERROR)
-            self.setFormat(0, textLength,
+            self.setCurrentBlockState(error)
+            self.setFormat(0, text_length,
                            PythonHighlighter.Formats["error"])
             return
-        if (prevState == ERROR and
+        if (prev_state == error and
                 not (text.startswith(sys.ps1) or text.startswith("#"))):
-            self.setCurrentBlockState(ERROR)
-            self.setFormat(0, textLength,
+            self.setCurrentBlockState(error)
+            self.setFormat(0, text_length,
                            PythonHighlighter.Formats["error"])
             return
 
-        for regex, format in PythonHighlighter.Rules:
+        for regex, fmt in PythonHighlighter.Rules:
             i = regex.indexIn(text)
             while i >= 0:
                 length = regex.matchedLength()
                 self.setFormat(i, length,
-                               PythonHighlighter.Formats[format])
+                               PythonHighlighter.Formats[fmt])
                 i = regex.indexIn(text, i + length)
 
         # Slow but good quality highlighting for comments. For more
@@ -139,22 +143,22 @@ class PythonHighlighter(QtGui.QSyntaxHighlighter):
                                    PythonHighlighter.Formats["comment"])
                     break
 
-        self.setCurrentBlockState(NORMAL)
+        self.setCurrentBlockState(normal)
 
         if self.stringRe.indexIn(text) != -1:
             return
         # This is fooled by triple quotes inside single quoted strings
         for i, state in ((self.tripleSingleRe.indexIn(text),
-                          TRIPLESINGLE),
+                          triple_single),
                          (self.tripleDoubleRe.indexIn(text),
-                          TRIPLEDOUBLE)):
+                          triple_double)):
             if self.previousBlockState() == state:
                 if i == -1:
-                    i = text.length()
+                    i = len(text)
                     self.setCurrentBlockState(state)
                 self.setFormat(0, i + 3,
                                PythonHighlighter.Formats["string"])
             elif i > -1:
                 self.setCurrentBlockState(state)
-                self.setFormat(i, text.length(),
+                self.setFormat(i, len(text),
                                PythonHighlighter.Formats["string"])

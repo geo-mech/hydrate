@@ -172,7 +172,7 @@ def load_priority():
     """
     应用内核的优先级。默认使用较低的优先级，以保证整个计算机运行的稳定
     """
-    return app_data.getenv('console_priority', default='LowPriority', encoding='utf-8')
+    return app_data.getenv('console_priority', default='LowPriority', encoding='utf-8', ignore_empty=True)
 
 
 def save_priority(value):

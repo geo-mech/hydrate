@@ -1,7 +1,7 @@
-# ** icon = 'refresh.jpg'
-# ** text = '刷新'
-# ** is_sys = True
+icon = 'refresh.jpg'
+text = '刷新'
 
-from zmlx.ui import gui
 
-gui.refresh()
+def func():
+    from zmlx.ui.MainWindow import get_window
+    get_window().refresh()

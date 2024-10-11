@@ -1,8 +1,8 @@
-# ** text = '搜索路径'
-# ** is_sys = True
-# ** icon = 'set.jpg'
+text = '搜索路径'
+icon = 'set.jpg'
 
-from zmlx.ui.GuiBuffer import gui
-from zmlx.ui.Widgets.FileFind import FileFind
 
-gui.get_widget(the_type=FileFind, caption='搜索路径', on_top=True, icon='set.jpg')
+def func():
+    from zmlx.ui.MainWindow import get_window
+    from zmlx.ui.Widgets.FileFind import FileFind
+    get_window().get_widget(the_type=FileFind, caption='搜索路径', on_top=True, icon='set.jpg')

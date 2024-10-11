@@ -1,24 +1,10 @@
-# ** on_toolbar = True
-# ** icon = 'info.jpg'
-# ** text = 'ReadMe'
-# ** is_sys = True
-
-import os
-
-from zml import get_dir, read_text
-from zmlx.ui.GuiBuffer import gui
-from zmlx.ui.Qt import QtWidgets
-
-path = os.path.join(get_dir(), 'README.md')
+on_toolbar = True
+icon = 'info.jpg'
+text = 'ReadMe'
 
 
-def set_md(widget):
-    assert isinstance(widget, QtWidgets.QTextBrowser)
-    widget.setOpenLinks(True)
-    widget.setOpenExternalLinks(True)
-    widget.setMarkdown(read_text(path=path, encoding='utf-8'))
-
-
-if os.path.isfile(path):
-    gui.get_widget(the_type=QtWidgets.QTextBrowser, caption='ReadMe',
-                   on_top=True, oper=set_md, icon='info.jpg')
+def func():
+    from zmlx.ui.MainWindow import get_window
+    from zmlx.ui.Widgets.ReadMe import ReadMeBrowser
+    get_window().get_widget(the_type=ReadMeBrowser, caption='ReadMe',
+                            on_top=True, icon='info.jpg')

@@ -1,6 +1,5 @@
 from zml import read_text, write_text, app_data
 from zmlx.ui.Config import code_in_editor
-from zmlx.ui.GuiBuffer import gui
 from zmlx.ui.PythonHighlighter import PythonHighlighter
 from zmlx.ui.Qt import QtCore, QtWidgets
 
@@ -19,9 +18,6 @@ class CodeEdit(QtWidgets.QTextEdit):
             cursor.insertText("    ")
             return True
         return QtWidgets.QTextEdit.event(self, event)
-
-    def enterEvent(self, event):
-        gui.status(f"Code Editor: {self.__fname}", 3000)
 
     def export_data(self):
         fpath, _ = QtWidgets.QFileDialog.getSaveFileName(self, '导出代码',
@@ -54,6 +50,12 @@ class CodeEdit(QtWidgets.QTextEdit):
             except Exception as e:
                 print(e)
 
+    def enterEvent(self, event):
+        window = app_data.get('main_window')
+        if window is not None:
+            window.cmd_status(self.__fname, 3000)
+        super().enterEvent(event)
+
     def get_fname(self):
         """
         返回当前的存储路径
@@ -61,10 +63,13 @@ class CodeEdit(QtWidgets.QTextEdit):
         return self.__fname
 
     def console_exec(self):
-        main_window = app_data.space.get('main_window', None)
+        main_window = app_data.get('main_window')
         if main_window is not None:
             try:
                 self.save()
                 main_window.exec_file(self.get_fname())
             except Exception as e:
                 print(e)
+
+    def get_start_code(self):
+        return f"""gui.open_code(r'{self.__fname}')"""

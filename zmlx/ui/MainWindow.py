@@ -1,17 +1,18 @@
+import os.path
 import sys
 import warnings
 
-from zml import lic
 from zmlx.filesys.has_permission import has_permission
 from zmlx.filesys.samefile import samefile
 from zmlx.filesys.show_fileinfo import show_fileinfo
+from zmlx.ui.ActionX import ActionX
 from zmlx.ui.CodeEdit import CodeEdit
 from zmlx.ui.Config import *
 from zmlx.ui.ConsoleWidget import ConsoleWidget
 from zmlx.ui.GuiApi import GuiApi
 from zmlx.ui.GuiBuffer import gui
+from zmlx.ui.Label import Label
 from zmlx.ui.Qt import QtCore
-from zmlx.ui.Script import Script
 from zmlx.ui.TabWidget import TabWidget
 from zmlx.ui.TaskProc import TaskProc
 from zmlx.ui.VersionLabel import VersionLabel
@@ -45,7 +46,7 @@ class MainWindow(QtWidgets.QMainWindow):
         splitter = QtWidgets.QSplitter(widget)
         splitter.setOrientation(QtCore.Qt.Orientation.Horizontal)
         self.__tab_widget = TabWidget(splitter)
-        self.__tab_widget.currentChanged.connect(self.update_widget_actions)
+        self.__tab_widget.currentChanged.connect(self.refresh)
         self.__console = ConsoleWidget(splitter)
         self.__gui_api = GuiApi(widget, self.__console.get_break_point(), self.__console.get_flag_exit())
         splitter.setStretchFactor(0, 1)
@@ -58,13 +59,15 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setMenuBar(self.__menu_bar)
         self.__menus = {}
         self.__toolbars = {}
-        self.__titleText = None
+        self.__title = None
         self.__init_actions()
         self.__init_gui_api()
 
         self.sig_cwd_changed.connect(self.refresh)
         self.sig_cwd_changed.connect(self.view_cwd)
         self.sig_cwd_changed.connect(self.__console.restore_code)
+
+        self.__console.sig_refresh.connect(self.refresh)
 
         # 尝试关闭进度条，从而使得进度条总是临时显示一下.
         self.__timer_close_progress = QtCore.QTimer(self)
@@ -73,56 +76,71 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.__status_bar = QtWidgets.QStatusBar(self)
         self.setStatusBar(self.__status_bar)
-        self.__progress_label = QtWidgets.QLabel()
+        self.__progress_label = Label()
         self.__progress_bar = QtWidgets.QProgressBar()
         self.__status_bar.addPermanentWidget(self.__progress_label)
         self.__status_bar.addPermanentWidget(self.__progress_bar)
         self.__status_bar.addPermanentWidget(VersionLabel())
         self.progress(visible=False)
 
-        self.update_widget_actions()  # 更新一些和控件相关的action的显示
-
         # 用以显示警告
-        self.__warning_toolbar = self.__get_toolbar('WarningToolbar')
+        self.__warning_toolbar = self.addToolBar('WarningToolbar')
         self.__warning_toolbar.setVisible(False)
         self.__warning_toolbar.setStyleSheet('background-color: yellow;')
         self.__warning_action = QtWidgets.QAction(self)
+        self.__warning_action.setToolTip('警告消息(点击以隐藏)')
         self.__warning_action.triggered.connect(lambda: self.toolbar_warning(text=''))
         self.__warning_toolbar.addAction(self.__warning_action)
 
         try:
-            from zmlx.ui.data.get_path import get_path
-            filename = get_path('zml_icons', 'welcome.jpg')
-            if os.path.isfile(filename):
-                self.open_image(filename, caption='Welcome')
+            filename = find_icon_file('welcome.jpg')
+            if filename is not None:
+                if os.path.isfile(filename):
+                    self.open_image(filename, caption='Welcome')
         except Exception as err:
             print(f'Error: {err}')
 
         try:
-            if lic.summary is None:
-                self.toolbar_warning('此电脑未授权，请确保: 1、使用最新版；2、本机联网!')
+            if app_data.getenv(key='check_lic_when_start', default='No', ignore_empty=True) == 'Yes':
+                self.check_license()
         except Exception as err:
             print(f'Error: {err}')
 
+        self.refresh()
+
     def __init_actions(self):
-        scripts = {}
-        for name, file in get_action_files().items():
-            scripts[name] = Script(file=file)
+        action_files = get_action_files()
+
+        def get_menu(name):
+            assert name is not None, f'Error: name is None when get_menu'
+            menu = self.__menus.get(name)
+            if menu is not None:
+                return menu
+            else:
+                menu = QtWidgets.QMenu(self.__menu_bar)
+                menu.setTitle(get_text(name))
+                self.__menu_bar.addAction(menu.menuAction())
+                self.__menus[name] = menu
+                return menu
+
+        def get_toolbar(name):
+            toolbar = self.__toolbars.get(name)
+            if toolbar is not None:
+                return toolbar
+            else:
+                toolbar = self.addToolBar(name)
+                self.__toolbars[name] = toolbar
+                return toolbar
 
         def add_action(menu, action_name):
-            script = scripts.pop(action_name, None)
-            if script is not None:
-                toolbar = self.__get_toolbar(menu) if script.on_toolbar else None
-                action = self.__create_action(text=script.text,
-                                              slot=lambda: script(self),
-                                              iconname=script.icon,
-                                              name=script.name,
-                                              toolbar=toolbar,
-                                              shortcut=None,
-                                              enabled=script.enabled,
-                                              tooltip=script.tooltip,
-                                              )
-                self.__get_menu(menu).addAction(action)
+            file = action_files.pop(action_name, None)
+            if file is not None:
+                action = ActionX(self, file=file)
+                if menu is None:
+                    menu = action.get('menu', '其它')
+                if action.get('on_toolbar', False):
+                    get_toolbar(menu).addAction(action)
+                get_menu(menu).addAction(action)
                 self.__actions[action_name] = action
 
         def add_actions(menu, action_names):
@@ -132,88 +150,53 @@ class MainWindow(QtWidgets.QMainWindow):
         for title, names in get_menus().items():
             add_actions(title, names)
 
-        for name in list(scripts.keys()):
-            menu_name = scripts.get(name).menu
-            if menu_name is not None:
-                add_action(menu_name, name)
-
-        if len(scripts) > 0:
-            add_actions('其它', list(scripts.keys()))
+        if len(action_files) > 0:
+            add_actions(None, list(action_files.keys()))
 
     def __init_gui_api(self):
-        self.__gui_api.add_func('cls', self.__console.output_widget.clear)
-        self.__gui_api.add_func('show_fn2', self.show_fn2)
+        self.__gui_api.add_func('cls', self.cls)
+        self.__gui_api.add_func('close', self.close)
+        self.__gui_api.add_func('close_all_tabs', self.__tab_widget.close_all_tabs)
+        self.__gui_api.add_func('exec_current', self.exec_current)
         self.__gui_api.add_func('get_widget', self.get_widget)
         self.__gui_api.add_func('get_figure_widget', self.get_figure_widget)
+        self.__gui_api.add_func('get_current_widget', self.get_current_widget)
+        self.__gui_api.add_func('is_running', self.is_running)
+        self.__gui_api.add_func('kill_thread', self.kill_thread)
         self.__gui_api.add_func('plot', self.cmd_plot)
-        self.__gui_api.add_func('status', self.cmd_status)
-        self.__gui_api.add_func('refresh', self.refresh)
-        self.__gui_api.add_func('title', self.cmd_title)
-        self.__gui_api.add_func('window', lambda: self)
-        self.__gui_api.add_func('trigger', self.trigger)
         self.__gui_api.add_func('progress', self.progress)
-        self.__gui_api.add_func('view_cwd', self.view_cwd)
-        self.__gui_api.add_func('close', self.close)
-        self.__gui_api.add_func('open_code', self.open_code)
-        self.__gui_api.add_func('exec_current', self.exec_current)
+        self.__gui_api.add_func('refresh', self.refresh)
         self.__gui_api.add_func('open_file', self.open_file)
         self.__gui_api.add_func('open_file_by_dlg', self.open_file_by_dlg)
-        self.__gui_api.add_func('set_cwd', self.set_cwd)
-        self.__gui_api.add_func('set_cwd_by_dialog', self.set_cwd_by_dialog)
         self.__gui_api.add_func('open_text', self.open_text)
         self.__gui_api.add_func('open_image', self.open_image)
-        self.__gui_api.add_func('kill_thread', self.__console.kill_thread)
+        self.__gui_api.add_func('open_code', self.open_code)
         self.__gui_api.add_func('show_next', self.__tab_widget.show_next)
         self.__gui_api.add_func('show_prev', self.__tab_widget.show_prev)
-        self.__gui_api.add_func('close_all_tabs', self.__tab_widget.close_all_tabs)
+        self.__gui_api.add_func('show_fn2', self.show_fn2)
+        self.__gui_api.add_func('set_cwd', self.set_cwd)
+        self.__gui_api.add_func('set_cwd_by_dialog', self.set_cwd_by_dialog)
+        self.__gui_api.add_func('status', self.cmd_status)
+        self.__gui_api.add_func('start_func', self.start_func)
+        self.__gui_api.add_func('show_about', self.show_about)
         self.__gui_api.add_func('toolbar_warning', self.toolbar_warning)
+        self.__gui_api.add_func('tab_count', self.count_tabs)
+        self.__gui_api.add_func('title', self.cmd_title)
+        self.__gui_api.add_func('trigger', self.trigger)
+        self.__gui_api.add_func('view_cwd', self.view_cwd)
+        self.__gui_api.add_func('window', lambda: self)
 
-    def __get_menu(self, name):
-        assert name is not None, f'Error: name is None when get_menu'
-        menu = self.__menus.get(name)
-        if menu is not None:
-            return menu
-        else:
-            menu = QtWidgets.QMenu(self.__menu_bar)
-            menu.setTitle(get_text(name))
-            self.__menu_bar.addAction(menu.menuAction())
-            self.__menus[name] = menu
-            return menu
+    def count_tabs(self):
+        return self.__tab_widget.count()
 
-    def __get_toolbar(self, name):
-        if name is None:
-            return
-        toolbar = self.__toolbars.get(name)
-        if toolbar is not None:
-            return toolbar
-        else:
-            toolbar = self.addToolBar(name)
-            self.__toolbars[name] = toolbar
-            return toolbar
+    def close_all_tabs(self):
+        self.__tab_widget.close_all_tabs()
 
-    def __create_action(self, text=None, slot=None, iconname=None, name=None, toolbar=None, shortcut=None,
-                        enabled=True, tooltip=None):
-        action = QtWidgets.QAction(self)
-        if iconname is not None:
-            action.setIcon(load_icon(iconname))
-        else:
-            action.setIcon(load_icon('python.jpg'))
-        action.setEnabled(enabled)
-        if tooltip is not None:
-            assert isinstance(tooltip, str)
-            action.setToolTip(get_text(tooltip))
-        if text is not None:
-            action.setText(get_text(text))
-        if slot is not None:
-            action.triggered.connect(slot)
-        if name is not None:
-            if len(name) > 0:
-                setattr(self, name, action)
-        if toolbar is not None:
-            toolbar.addAction(action)
-        if shortcut is not None:
-            action.setShortcut(shortcut)
-        return action
+    def cls(self):
+        self.__console.output_widget.clear()
+
+    def kill_thread(self):
+        self.__console.kill_thread()
 
     def toolbar_warning(self, text=None):
         if isinstance(text, str):
@@ -224,40 +207,27 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.__warning_toolbar.setVisible(False)
                 self.__warning_action.setText('')
 
-    def update_widget_actions(self):
-        widget = self.__tab_widget.currentWidget()
-
-        def set_visible(name, value):
-            try:
-                ac = getattr(self, name)
-                ac.setEnabled(value)
-            except Exception as err:
-                print(f'Error: {err}')
-
-        def f(action_name, func_name):
-            set_visible(action_name, hasattr(widget, func_name))
-
-        for a, b in [('action_export_data', 'export_data'),
-                     ('action_exec_current', 'console_exec')]:
-            f(a, b)
-
-        set_visible('action_close_all_tabs', self.__tab_widget.count() > 0)
-
     def refresh(self):
         """
         尝试刷新标题以及当前的页面
         """
-        if hasattr(self, 'titleText') and self.__titleText is not None:
-            self.setWindowTitle(f'{self.__titleText}')
+        if hasattr(self, 'titleText') and self.__title is not None:
+            self.setWindowTitle(f'{self.__title}')
         else:
             self.setWindowTitle(f'WorkDir: {os.getcwd()}')
 
         try:
-            current = self.__tab_widget.currentWidget()
+            current = self.get_current_widget()
             if hasattr(current, 'refresh'):
                 self.__task_proc.add(lambda: current.refresh())
         except Exception as err:
             print(f'Error: {err}')
+
+        for _, ac in self.__actions.items():
+            ac.update_view()
+
+        # 调用刷新
+        self.__console.refresh_buttons()
 
     def closeEvent(self, event):
         if self.__console.is_running():
@@ -352,12 +322,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.__status_bar.showMessage(*args, **kwargs)
 
     def trigger(self, name):
-        action = self.__actions.get(name, None)
+        action = self.__actions.get(name)
         assert action is not None, f'Error: action <{name}> not found'
         action.trigger()
 
     def cmd_title(self, title):
-        self.__titleText = title
+        self.__title = title
         self.refresh()
 
     def view_cwd(self):
@@ -513,6 +483,12 @@ class MainWindow(QtWidgets.QMainWindow):
     def exec_file(self, filename):
         self.__console.exec_file(filename)
 
+    def start_func(self, code):
+        """
+        在控制台执行代码
+        """
+        self.__console.start_func(code)
+
     def get_workspace(self):
         return self.__console.workspace
 
@@ -528,10 +504,52 @@ class MainWindow(QtWidgets.QMainWindow):
     def get_console(self):
         return self.__console
 
+    def exec_tab_func(self, name):
+        widget = self.get_current_widget()
+        if hasattr(widget, name):
+            f = getattr(widget, name)
+            f()
+
+    def is_running(self):
+        return self.__console.is_running()
+
+    def get_tabs(self):
+        return self.__tab_widget
+
+    def check_license(self):
+        try:
+            from zml import lic
+            if lic.summary is None:
+                self.toolbar_warning('此电脑未授权，请确保: 1、使用最新版；2、本机联网!')
+        except Exception as err:
+            print(f'Error: {err}')
+
+    def show_about(self):
+        from zmlx.ui.Widgets.About import About
+        self.check_license()
+        self.get_widget(the_type=About, caption='关于', on_top=True, icon='info.jpg')
+
 
 class MySplashScreen(QtWidgets.QSplashScreen):
     def mousePressEvent(self, event):
         pass
+
+
+def save_tab_start_code(filename, window: MainWindow):
+    data = []
+    tabs = window.get_tabs()
+    for idx in range(tabs.count()):
+        widget = tabs.widget(idx)
+        if hasattr(widget, 'get_start_code'):
+            try:
+                code = widget.get_start_code()
+                if isinstance(code, str):
+                    data.append(code)
+            except:
+                pass
+
+    from zmlx.io.json_ex import write
+    write(filename, data)
 
 
 def execute(code=None, keep_cwd=True, close_after_done=True):
@@ -552,7 +570,7 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
     app = QtWidgets.QApplication(sys.argv)
 
     splash_fig = load_pixmap('splash.jpg')
-    if splash_fig is not None and app_data.getenv('disable_splash', default='False') != 'True':
+    if splash_fig is not None and app_data.getenv('disable_splash', default='No', ignore_empty=True) != 'Yes':
         splash = MySplashScreen()
         try:
             rect = QtWidgets.QDesktopWidget().availableGeometry()
@@ -569,7 +587,11 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
 
     win = MainWindow()
 
+    temp_file = app_data.temp('console_output.txt')
+
     def f1():
+        if app_data.getenv(key='restore_console_output', default='Yes', ignore_empty=True) == 'Yes':
+            win.get_output_widget().load_text(temp_file)
         app_data.space['main_window'] = win
         gui.push(win.get_gui_api())
         print(f'Push Gui: {win.get_gui_api()}')
@@ -582,6 +604,7 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
         print('Pop Gui')
         gui.pop()
         app_data.space['main_window'] = None
+        win.get_output_widget().save_text(temp_file)
 
     f1()
 
@@ -632,5 +655,14 @@ still unresolved, please contact the author (email: 'zhangzhaobin@mail.iggcas.ac
         win.get_console().start_func(setup)
     app.exec_()
     f2()
+    if hasattr(win, 'tabs_should_be_saved'):
+        save_tab_start_code(app_data.temp('tab_start_code.json'), win)
     if len(results) > 0:
         return results[0]
+
+
+def get_window() -> MainWindow:
+    window = app_data.get('main_window')
+    if window is not None:
+        assert isinstance(window, MainWindow)
+        return window

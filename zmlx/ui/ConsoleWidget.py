@@ -16,6 +16,7 @@ class ConsoleWidget(QtWidgets.QWidget):
     sig_kernel_started = QtCore.pyqtSignal()
     sig_kernel_done = QtCore.pyqtSignal()
     sig_kernel_err = QtCore.pyqtSignal(str)
+    sig_refresh = QtCore.pyqtSignal()
 
     def __init__(self, parent, pre_task=None, post_task=None):
         super(ConsoleWidget, self).__init__(parent)
@@ -45,9 +46,11 @@ class ConsoleWidget(QtWidgets.QWidget):
 
         self.button_exec = add_button('运行', 'begin.jpg',
                                       lambda: self.exec_file(fname=None))
+        self.button_exec.setToolTip('运行此按钮上方输入框内的脚本. 如需要运行标签页的脚本，请点击工具栏的运行按钮')
         self.button_exec.setShortcut('Ctrl+Return')
         self.button_pause = add_button('暂停', 'pause.jpg', self.pause_clicked)
         self.button_exit = add_button('终止', 'stop.jpg', self.stop_clicked)
+        self.button_exit.setToolTip('安全地终止内核的执行 (需要提前在脚本内设置break_point)')
         h_layout.addItem(QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum))
         main_layout.addLayout(h_layout)
 
@@ -60,7 +63,7 @@ class ConsoleWidget(QtWidgets.QWidget):
         except Exception as err:
             print(err)
             self.workspace = {'__name__': '__main__', 'gui': gui}
-            
+
         self.text_when_beg = None
         self.text_when_end = None
         self.time_beg = None
@@ -113,7 +116,7 @@ class ConsoleWidget(QtWidgets.QWidget):
                 self.break_point.unlock()
             else:
                 self.break_point.lock()
-            self.refresh_buttons()
+            self.sig_refresh.emit()
 
     def stop_clicked(self):
         app_data.log(f'execute <stop_clicked> of {self}')
@@ -123,7 +126,7 @@ class ConsoleWidget(QtWidgets.QWidget):
         self.flag_exit.value = value
         if value:
             self.set_should_pause(False)
-        self.refresh_buttons()
+        self.sig_refresh.emit()
 
     def exec_file(self, fname=None):
         if fname is None:
@@ -165,7 +168,7 @@ class ConsoleWidget(QtWidgets.QWidget):
         self.set_should_pause(False)
         self.thread.start(priority_value(priority))
         self.sig_kernel_started.emit()
-        self.refresh_buttons()
+        self.sig_refresh.emit()
 
     def __kernel_exited(self):
         if self.thread is not None:
@@ -187,7 +190,7 @@ class ConsoleWidget(QtWidgets.QWidget):
             if self.post_task is not None:
                 self.post_task()
             self.sig_kernel_done.emit()
-            self.refresh_buttons()
+            self.sig_refresh.emit()
 
     def __kernel_err(self, err):
         self.kernel_err = err

@@ -1,8 +1,12 @@
-# ** icon = 'info.jpg'
-# ** text = '关于'
-# ** is_sys = True
+icon = 'info.jpg'
+text = '关于'
 
-from zmlx.ui.GuiBuffer import gui
-from zmlx.ui.Widgets.About import About
 
-gui.get_widget(the_type=About, caption='关于', on_top=True, icon='info.jpg')
+def func():
+    from zmlx.ui.MainWindow import get_window
+    xx = """
+from zml import lic
+print(lic.summary)
+gui.show_about()
+    """
+    get_window().start_func(xx)

@@ -1,7 +1,8 @@
 import sys
+
 import fitz  # PyMuPDF
-from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget, QScrollArea
 from PyQt5.QtGui import QPixmap, QImage
+from PyQt5.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget, QScrollArea
 
 
 class PDFViewer(QScrollArea):
@@ -16,7 +17,6 @@ class PDFViewer(QScrollArea):
         self.pdf_layout = QVBoxLayout(self.pdf_widget)
         self.load_pdf(pdf_path)
         self.setWidget(self.pdf_widget)
-
 
     def load_pdf(self, pdf_path):
         # Open the PDF file

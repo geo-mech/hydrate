@@ -4,7 +4,7 @@ from zmlx.ui.Qt import QtWidgets
 
 def set_position(widget):
     try:
-        text = app_data.getenv('TabPosition', default='')
+        text = app_data.getenv('TabPosition', default='North', ignore_empty=True)
         if text == 'North':
             widget.setTabPosition(QtWidgets.QTabWidget.North)
         if text == 'South':
@@ -19,7 +19,7 @@ def set_position(widget):
 
 def set_shape(widget):
     try:
-        text = app_data.getenv('TabShape', default='')
+        text = app_data.getenv('TabShape', default='Rounded', ignore_empty=True)
         if text == 'Triangular':
             widget.setTabShape(QtWidgets.QTabWidget.Triangular)
         if text == 'Rounded':

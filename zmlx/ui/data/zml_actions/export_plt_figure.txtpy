@@ -1,14 +1,16 @@
 text = '导出'
 menu = '文件'
+on_toolbar = True
+icon = 'matplotlib.jpg'
 
 
 def enabled():
     from zmlx.ui.MainWindow import get_window
     window = get_window()
     if window is not None:
-        return hasattr(window.get_current_widget(), 'export_data')
+        return hasattr(window.get_current_widget(), 'export_plt_figure')
 
 
 def func():
     from zmlx.ui.MainWindow import get_window
-    getattr(get_window().get_current_widget(), 'export_data')()
+    getattr(get_window().get_current_widget(), 'export_plt_figure')()

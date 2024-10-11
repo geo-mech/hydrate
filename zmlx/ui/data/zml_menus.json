@@ -4,12 +4,8 @@
     "quit.txtpy",
     "open.txtpy",
     "demo.txtpy",
-    "open_cwd.txtpy"
-  ],
-  "代码": [
-    "py_new.txtpy",
-    "py_exec.txtpy",
-    "kill.txtpy"
+    "open_cwd.txtpy",
+    "py_new.txtpy"
   ],
   "显示": [
     "refresh.txtpy",
@@ -18,6 +14,15 @@
     "memory.txtpy",
     "timer.txtpy",
     "console.txtpy"
+  ],
+  "控制台": [
+    "console_exec.txtpy",
+    "console_pause.txtpy",
+    "console_resume.txtpy",
+    "console_stop.txtpy",
+    "console_kill.txtpy",
+    "console_hide.txtpy",
+    "console_show.txtpy"
   ],
   "操作": [
     "print_tag.txtpy",
