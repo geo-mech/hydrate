@@ -12,7 +12,6 @@ class ConsoleOutput(TextBrowser):
         self.__length = 0
         self.__length_max = 1000000
         self.sig_add_text.connect(self.__add_text)
-        self.set_status('输出窗口，双击可清屏')
 
     def write(self, text):
         self.sig_add_text.emit(text)
@@ -27,16 +26,9 @@ class ConsoleOutput(TextBrowser):
             self.clear()
             self.setPlainText(fulltext)
             self.__length = len(fulltext)
-        self.moveCursor(QtGui.QTextCursor.End)
+        self.moveCursor(QtGui.QTextCursor.MoveOperation.End)
         self.insertPlainText(text)
         self.__length += len(text)
-
-    def mouseDoubleClickEvent(self, event):
-        """
-        在鼠标双击的时候，清除所有的内容
-        """
-        self.clear()
-        super().mouseDoubleClickEvent(event)  # 调用父类的事件处理
 
     def load_text(self, filename):
         try:
@@ -44,7 +36,7 @@ class ConsoleOutput(TextBrowser):
                 with open(filename, 'r') as file:
                     text = file.read()
                     self.setPlainText(text)
-                    self.moveCursor(QtGui.QTextCursor.End)
+                    self.moveCursor(QtGui.QTextCursor.MoveOperation.End)
         except Exception as err2:
             print(err2)
 

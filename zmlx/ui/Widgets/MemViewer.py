@@ -9,7 +9,7 @@ class MemViewer(QtWidgets.QTableWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.Stretch)
-        self.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
 
         # 添加需要忽略的键值(都显示出来会使得太乱了)
         try:

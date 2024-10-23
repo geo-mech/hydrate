@@ -1,5 +1,3 @@
-import sys
-
 from zml import core
 from zmlx.ui.Label import Label
 

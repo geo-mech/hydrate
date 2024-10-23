@@ -28,8 +28,8 @@ def paint_image(widget, pixmap):
             dpr = widget.devicePixelRatioF()
         except AttributeError:
             dpr = widget.devicePixelRatio()
-        spmap = pixmap.scaled(target.size() * dpr, QtCore.Qt.KeepAspectRatio,
-                              QtCore.Qt.SmoothTransformation)
+        spmap = pixmap.scaled(target.size() * dpr, QtCore.Qt.AspectRatioMode.KeepAspectRatio,
+                              QtCore.Qt.TransformationMode.SmoothTransformation)
         spmap.setDevicePixelRatio(dpr)
         painter.drawPixmap(target, spmap)
         painter.end()

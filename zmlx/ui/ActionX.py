@@ -1,7 +1,8 @@
 from zmlx.ui.Config import *
+from zmlx.ui.Qt import QAction
 
 
-class ActionX(QtWidgets.QAction):
+class ActionX(QAction):
     def __init__(self, parent, file=None):
         super().__init__(parent)
         self._window = parent
@@ -31,7 +32,7 @@ class ActionX(QtWidgets.QAction):
         if iconname is not None:
             self.setIcon(load_icon(iconname))
         else:
-            self.setIcon(load_icon('python.jpg'))
+            self.setIcon(load_icon('python'))
 
         tooltip = self._data.get('tooltip', None)
         if tooltip is not None:
@@ -41,9 +42,9 @@ class ActionX(QtWidgets.QAction):
         if text is not None:
             self.setText(get_text(text))
 
-        def task():
+        def slot():
             try:
-                self._data.get('func')()
+                self._data.get('slot')()
                 app_data.log(f'run <{self._file}>')
                 self._window.refresh()  # since 2024-10-11
             except Exception as e2:
@@ -51,7 +52,7 @@ class ActionX(QtWidgets.QAction):
                 print(info)
                 app_data.log(info)
 
-        self.triggered.connect(task)
+        self.triggered.connect(slot)
 
     def update_view(self):
         enabled = self._is_enabled()
@@ -66,7 +67,7 @@ class ActionX(QtWidgets.QAction):
             return False
 
         try:
-            exec(self._data.get('depend', ''), {})
+            exec(self._data.get('dependency', ''), {})
         except:
             return False  # 依赖项错误，则直接不可用
 

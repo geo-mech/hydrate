@@ -59,11 +59,11 @@ def create_cube(x=(-0.5, 0.5), y=(-0.5, 0.5), z=(-0.5, 0.5), boxes=None,
                                   cy + dy / 2,
                                   cz + dz / 2])
 
-    def get_id(ix, iy, iz):
+    def get_id(_ix, _iy, _iz):
         """
         返回cell的全局的序号
         """
-        return ix * (jy * jz) + iy * jz + iz
+        return _ix * (jy * jz) + _iy * jz + _iz
 
     cell_n = mesh.cell_number
     for ix in range(0, jx - 1):
@@ -118,6 +118,26 @@ def create_xyz(*, x_min, dx, x_max, y_min, dy, y_max, z_min, dz, z_max,
                show_details=False, **kwargs):
     """
     创建三维网格（采用完全均匀的网格）
+
+    参数:
+    - x_min: x方向的最小值
+    - dx: x方向的网格间距
+    - x_max: x方向的最大值
+    - y_min: y方向的最小值
+    - dy: y方向的网格间距
+    - y_max: y方向的最大值
+    - z_min: z方向的最小值
+    - dz: z方向的网格间距
+    - z_max: z方向的最大值
+    - show_details: 是否显示详细信息
+    - **kwargs: 其他参数
+
+    返回:
+    - 创建的三维网格
+
+    注意:
+    - 网格间距必须大于0
+    - 网格数量必须大于0
     """
     jx = max(round((x_max - x_min) / dx), 1) + 1
     jy = max(round((y_max - y_min) / dy), 1) + 1
@@ -139,6 +159,24 @@ def create_xy(*, x_min, dx, x_max, y_min, dy, y_max, z_min, z_max,
               **kwargs):
     """
     创建xy平面内的二维的网格
+
+    参数:
+    - x_min: x方向的最小值
+    - dx: x方向的网格间距
+    - x_max: x方向的最大值
+    - y_min: y方向的最小值
+    - dy: y方向的网格间距
+    - y_max: y方向的最大值
+    - z_min: z方向的最小值
+    - z_max: z方向的最大值
+    - **kwargs: 其他参数
+
+    返回:
+    - 创建的二维网格
+
+    注意:
+    - 网格间距必须大于0
+    - 网格数量必须大于0
     """
     return create_xyz(x_min=x_min, dx=dx, x_max=x_max,
                       y_min=y_min, dy=dy, y_max=y_max,
@@ -149,6 +187,24 @@ def create_xz(*, x_min, dx, x_max, z_min, dz, z_max, y_min, y_max,
               **kwargs):
     """
     创建xz平面内的二维的网格
+
+    参数:
+    - x_min: x方向的最小值
+    - dx: x方向的网格间距
+    - x_max: x方向的最大值
+    - z_min: z方向的最小值
+    - dz: z方向的网格间距
+    - z_max: z方向的最大值
+    - y_min: y方向的最小值
+    - y_max: y方向的最大值
+    - **kwargs: 其他参数
+
+    返回:
+    - 创建的二维网格
+
+    注意:
+    - 网格间距必须大于0
+    - 网格数量必须大于0
     """
     return create_xyz(x_min=x_min, dx=dx, x_max=x_max,
                       y_min=y_min, dy=1e20, y_max=y_max,

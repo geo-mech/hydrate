@@ -7,7 +7,7 @@ import os
 from zml import app_data, read_text, write_text
 from zmlx.alg.clamp import clamp
 from zmlx.io.json_ex import read as read_json
-from zmlx.ui.Qt import QtGui, QtWidgets, QtCore, QtMultimedia
+from zmlx.ui.Qt import QtGui, QtCore, screen_size
 
 try:
     app_data.add_path(os.path.join(os.path.dirname(__file__), 'data'))
@@ -31,12 +31,20 @@ def find_all(name):
     return app_data.find_all(name)
 
 
+# 默认搜索的图片扩展名
+image_exts = ['.jpg', '.png']
+
+
 def find_icon_file(name):
     try:
         for folder in reversed(find_all('zml_icons')):
             filepath = os.path.join(folder, name)
             if os.path.isfile(filepath):
                 return filepath
+            for ext in image_exts:
+                filepath = os.path.join(folder, name + ext)
+                if os.path.isfile(filepath):
+                    return filepath
     except Exception as err_2:
         print(err_2)
 
@@ -61,12 +69,19 @@ def load_icon(name):
         return QtGui.QIcon()
 
 
+sound_exts = ['.wav']
+
+
 def find_sound(name):
     try:
         for folder in reversed(find_all('zml_sounds')):
             filepath = os.path.join(folder, name)
             if os.path.isfile(filepath):
                 return filepath
+            for ext in sound_exts:
+                filepath = os.path.join(folder, name + ext)
+                if os.path.isfile(filepath):
+                    return filepath
     except Exception as err_2:
         print(err_2)
 
@@ -75,26 +90,28 @@ def play_sound(name):
     try:
         filepath = find_sound(name)
         if filepath is not None:
-            if QtMultimedia is not None:
-                QtMultimedia.QSound.play(filepath)
+            from zmlx.ui.MainWindow import get_window
+            window = get_window()
+            if window is not None:
+                window.play_sound(filepath)
     except Exception as err_2:
         print(err_2)
 
 
 def play_click():
-    play_sound('click.wav')
+    play_sound('click')
 
 
 def play_gallop():
-    play_sound('gallop.wav')
+    play_sound('gallop')
 
 
 def play_ding():
-    play_sound('ding.wav')
+    play_sound('ding')
 
 
 def play_error():
-    play_sound('error.wav')
+    play_sound('error')
 
 
 def save(key, value, encoding=None):
@@ -116,7 +133,7 @@ def load_window_style(win, name, extra=''):
 def load_window_size(win, name):
     try:
         words = app_data.getenv(name, encoding='utf-8', default='').split()
-        rect = QtWidgets.QDesktopWidget().availableGeometry()
+        rect = screen_size()
         if len(words) == 2:
             w = clamp(int(words[0]), rect.width() * 0.2, rect.width() * 0.8)
             h = clamp(int(words[1]), rect.height() * 0.2, rect.height() * 0.8)
@@ -125,7 +142,7 @@ def load_window_size(win, name):
             win.resize(int(rect.width() * 0.7), int(rect.height() * 0.7))
     except Exception as err_2:
         print(err_2)
-        rect = QtWidgets.QDesktopWidget().availableGeometry()
+        rect = screen_size()
         win.resize(int(rect.width() * 0.7), int(rect.height() * 0.7))
 
 

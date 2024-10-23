@@ -13,7 +13,8 @@
     "view_cwd.txtpy",
     "memory.txtpy",
     "timer.txtpy",
-    "console.txtpy"
+    "console.txtpy",
+    "close_all_tabs.txtpy"
   ],
   "控制台": [
     "console_exec.txtpy",
@@ -26,8 +27,7 @@
   ],
   "操作": [
     "print_tag.txtpy",
-    "play_images.txtpy",
-    "close_all_tabs.txtpy"
+    "play_images.txtpy"
   ],
   "设置": [
     "search.txtpy",

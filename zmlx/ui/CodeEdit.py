@@ -11,9 +11,10 @@ class CodeEdit(QtWidgets.QTextEdit):
         self.__fname = None
         self.setText(code_in_editor)
         self.textChanged.connect(self.save)
+        self.setStyleSheet('background-color: white')
 
     def event(self, event):
-        if event.type() == QtCore.QEvent.KeyPress and event.key() == QtCore.Qt.Key_Tab:
+        if event.type() == QtCore.QEvent.Type.KeyPress and event.key() == QtCore.Qt.Key.Key_Tab:
             cursor = self.textCursor()
             cursor.insertText("    ")
             return True

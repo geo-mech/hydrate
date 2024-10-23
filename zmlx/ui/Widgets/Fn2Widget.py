@@ -1,6 +1,7 @@
 from matplotlib import cm
 
 from zmlx.ui.Config import *
+from zmlx.ui.Qt import QtWidgets
 from zmlx.ui.Widgets.GraphicsView import GraphicsView
 
 
@@ -156,7 +157,7 @@ class Hf2FracView(QtWidgets.QWidget):
 
     def fit_bounding(self):
         if self.__boundingRect is not None:
-            self.view.fitInView(self.__boundingRect, QtCore.Qt.KeepAspectRatio)
+            self.view.fitInView(self.__boundingRect, QtCore.Qt.AspectRatioMode.KeepAspectRatio)
 
     def draw(self, data):  # Do the Draw.
         self.scene.clear()
@@ -231,7 +232,7 @@ class Hf2FracView(QtWidgets.QWidget):
         self.__addText(xmin, ymin, xmax, ymax, margin, lenUnit)
 
         # adjust view
-        self.view.fitInView(self.__boundingRect, QtCore.Qt.KeepAspectRatio)
+        self.view.fitInView(self.__boundingRect, QtCore.Qt.AspectRatioMode.KeepAspectRatio)
 
     def __addEllipse(self, x, y, r, pen):
         return self.scene.addEllipse(QtCore.QRectF(x - r, y - r, r * 2., r * 2.), pen=pen)
@@ -271,7 +272,7 @@ class Fn2Widget(QtWidgets.QWidget):
         h_layout.addWidget(self.path_edit)
         button = QtWidgets.QToolButton(self)
         button.setText('...')
-        button.setIcon(load_icon('open.jpg'))
+        button.setIcon(load_icon('open'))
         button.clicked.connect(self.open_fn2_file_by_file_dialog)
         h_layout.addWidget(button)
         v_layout.addLayout(h_layout)

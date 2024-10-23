@@ -12,12 +12,12 @@ Website:        https://gitee.com/geomech/hydrate
 Author:         ZHANG Zhaobin <zhangzhaobin@mail.iggcas.ac.cn>,
                 Institute of Geology and Geophysics, Chinese Academy of Sciences
 """
-
 import ctypes
 import datetime
 import importlib
 import math
 import os
+import re
 import sys
 import timeit
 import warnings
@@ -33,9 +33,22 @@ is_windows = os.name == 'nt'
 
 
 class Object:
+    """
+    定义一个对象类，包含一个设置属性的方法
+    """
+
     def set(self, **kwargs):
         """
-        set (but do not add new) attribution values
+        设置（但不添加新的）属性值
+
+        参数：
+        - **kwargs：包含属性名和对应值的关键字参数
+
+        返回：
+        - self：返回对象自身，以便进行链式调用
+
+        异常：
+        - AssertionError：如果尝试添加新的属性，则抛出异常
         """
         current_keys = dir(self)
         for key, value in kwargs.items():
@@ -47,6 +60,15 @@ class Object:
 def create_dict(**kwargs):
     """
     Converts the given parameter list into a dictionary
+
+    参数:
+    - **kwargs：包含属性名和对应值的关键字参数
+
+    返回:
+    - 一个字典，其中关键字参数的名称作为键，参数值作为值
+
+    异常:
+    - 无异常抛出
     """
     return kwargs
 
@@ -74,7 +96,17 @@ gui = _GuiAdaptor()
 
 def _deprecation_func(pack_name, func, date=None):
     """
-    Define a function that is defined in zmlx and deprecated in zml.
+    定义一个在zml中已被弃用但在zmlx中仍然可用的函数。
+
+    参数:
+    - pack_name: 新函数所在的包名
+    - func: 新函数的名称
+    - date: 弃用函数的移除日期（可选）
+
+    返回:
+    - a_function: 一个新函数，它会在调用时发出弃用警告，并调用新函数
+
+    该函数通过动态导入新函数所在的包和函数，然后在调用时发出弃用警告，建议用户使用新函数。
     """
 
     def a_function(*args, **kwargs):
@@ -97,15 +129,29 @@ gui_exec = _deprecation_func('zmlx.ui.GuiBuffer', 'gui_exec', '2025-1-21')
 
 def is_array(o):
     """
-    Checks if an object has a defined length and can use [] to get elements
+    判断一个对象是否可以像列表那样使用[]来获取给定位置的元素，并且可以使用len()函数来获取其长度
+
+    参数:
+    - obj: 要检查的对象
+
+    返回:
+    - 布尔值: 如果对象可以像列表那样使用，则返回True，否则返回False
     """
     return hasattr(o, '__getitem__') and hasattr(o, '__len__')
 
 
 def make_c_char_p(s):
     """
-    Converts a Python string to the c_char_p type that can be used in dynamic libraries. Note that since the C language
-    string is used, which is terminated by 0 by default, the string passed in here must be an ASCII format string
+    将Python字符串转换为C语言中的c_char_p类型。
+
+    参数:
+    - s: 要转换的Python字符串。
+
+    返回:
+    - c_char_p: 转换后的C字符串指针。
+
+    注意:
+    - 传入的字符串必须是ASCII格式。
     """
     return c_char_p(bytes(s, encoding='utf8'))
 
@@ -407,8 +453,15 @@ app_data = _AppData()
 
 def log(text, tag=None):
     """
-    Record a piece of information and, given the tag, make sure to record it only once a day.
-    When given a tag, make sure that tag is a valid variable name.
+    记录一条信息，并在给定标签的情况下，确保每天只记录一次。
+    当给定标签时，确保标签是一个有效的变量名。
+
+    参数:
+        text (str): 要记录的信息。
+        tag (str, optional): 标签，用于确保每天只记录一次。如果给定，必须是一个有效的变量名。
+
+    返回:
+        None
     """
     if tag is not None:
         if app_data.has_tag_today(tag):
@@ -421,6 +474,16 @@ def log(text, tag=None):
 def load_cdll(name, *, first=None):
     """
     Load C-Style Dll by the given file name and the folder.
+
+    参数:
+        name (str): 要加载的动态链接库的文件名。
+        first (str, optional): 首选搜索路径。如果指定，将首先在该路径下搜索动态链接库。
+
+    返回:
+        CDLL: 加载的动态链接库对象。
+
+    异常:
+        如果加载失败，将打印错误信息。
     """
     path = app_data.find(name, first=first)
     if path is not None:
@@ -446,7 +509,19 @@ class _NullFunction:
 
 def get_func(dll_obj, restype, name, *argtypes):
     """
-    Configure a dll function
+    配置一个 DLL 函数
+
+    参数:
+        dll_obj: DLL 对象
+        restype: 返回类型
+        name: 函数名
+        *argtypes: 参数类型列表
+
+    返回:
+        配置好的函数对象或 _NullFunction 对象（如果函数未找到）
+
+    异常:
+        如果 DLL 对象不是 CDLL 类型，将抛出断言错误
     """
     assert isinstance(name, str)
     fn = getattr(dll_obj, name, None)
@@ -463,14 +538,20 @@ def get_func(dll_obj, restype, name, *argtypes):
 
 def get_file():
     """
-    Returns the current file path
+    返回当前文件的路径
+
+    返回:
+        str: 当前文件的绝对路径
     """
     return os.path.realpath(__file__)
 
 
 def get_dir():
     """
-    Returns the path to the folder where the current file is located
+    返回当前文件所在的文件夹路径
+
+    返回:
+        str: 当前文件所在的文件夹的绝对路径
     """
     return os.path.dirname(os.path.realpath(__file__))
 
@@ -480,10 +561,17 @@ dll = load_cdll('zml.dll' if is_windows else 'zml.so.1', first=get_dir())
 
 class DllCore:
     """
-    Manage errors, warnings, etc. in the C++ kernel
+    管理 C++ 内核中的错误、警告等
     """
 
     def __init__(self, dll):
+        """
+        初始化 DllCore 对象
+
+        参数:
+            dll: 动态链接库对象
+        """
+        self.__err_handle = None
         self.dll = dll
         self._dll_funcs = {}
         self.dll_has_error = get_func(self.dll, c_bool, 'has_error')
@@ -505,41 +593,80 @@ class DllCore:
 
     def has_dll(self):
         """
-        Whether the dll was loaded correctly
+        是否正确加载了 dll
+
+        返回:
+            bool: 如果 dll 被正确加载，返回 True，否则返回 False
         """
         return self.dll is not None
 
     def has_error(self):
+        """
+        是否存在错误
+
+        返回:
+            bool: 如果存在错误，返回 True，否则返回 False
+        """
         if self.has_dll():
             return self.dll_has_error()
         else:
             return False
 
     def pop_error(self):
+        """
+        弹出并返回错误信息
+
+        返回:
+            str: 错误信息
+        """
         if self.has_dll():
             return self.dll_pop_error(0).decode()
         else:
             return ''
 
     def has_warning(self):
+        """
+        是否存在警告
+
+        返回:
+            bool: 如果存在警告，返回 True，否则返回 False
+        """
         if self.has_dll():
             return self.dll_has_warning()
         else:
             return False
 
     def pop_warning(self):
+        """
+        弹出并返回警告信息
+
+        返回:
+            str: 警告信息
+        """
         if self.has_dll():
             return self.dll_pop_warning(0).decode()
         else:
             return ''
 
     def has_log(self):
+        """
+        是否存在日志
+
+        返回:
+            bool: 如果存在日志，返回 True，否则返回 False
+        """
         if self.has_dll():
             return self.dll_has_log()
         else:
             return False
 
     def pop_log(self):
+        """
+        弹出并返回日志信息
+
+        返回:
+            str: 日志信息
+        """
         if self.has_dll():
             return self.dll_pop_log(0).decode()
         else:
@@ -548,8 +675,10 @@ class DllCore:
     @property
     def parallel_enabled(self):
         """
-        Whether to allow parallelism in kernel computing
-        (the kernel adopts multi-CPU shared memory parallelism by default)
+        是否允许内核计算并行
+
+        返回:
+            bool: 如果允许并行，返回 True，否则返回 False
         """
         if self.has_dll():
             return self.is_parallel_enabled()
@@ -559,15 +688,17 @@ class DllCore:
     @parallel_enabled.setter
     def parallel_enabled(self, value):
         """
-        Whether to allow parallelism in kernel computing
-        (the kernel adopts multi-CPU shared memory parallelism by default)
+        设置是否允许内核计算并行
+
+        参数:
+            value (bool): 如果允许并行，设置为 True，否则设置为 False
         """
         if self.has_dll():
             self.set_parallel_enabled(value)
 
     def check_error(self):
         """
-        Check and remove error messages in the dll. And throw an exception when the error message exists.
+        检查并清除 dll 中的错误信息。如果存在错误信息，抛出异常。
         """
         if self.has_error():
             error = self.pop_error()
@@ -578,8 +709,11 @@ class DllCore:
 
     def set_error_handle(self, func):
         """
-        Set the callback function of the error message. This function can be called when an error is encountered.
-        The passed-in function should be of the form void f(const char*) .
+        设置错误信息的回调函数。当遇到错误时，该函数会被调用。
+        传入的函数应该是 void f(const char*) 形式。
+
+        参数:
+            func: 回调函数
         """
         if self.has_dll():
             err_handle = CFUNCTYPE(None, c_char_p)
@@ -592,6 +726,12 @@ class DllCore:
 
     @property
     def log_nmax(self):
+        """
+        返回 dll 中日志的最大数量
+
+        返回:
+            int: 日志的最大数量
+        """
         if self.has_dll():
             return self.get_log_nmax()
         else:
@@ -599,13 +739,22 @@ class DllCore:
 
     @log_nmax.setter
     def log_nmax(self, value):
+        """
+        设置 dll 中日志的最大数量
+
+        参数:
+            value (int): 日志的最大数量
+        """
         if self.has_dll():
             self.set_log_nmax(value)
 
     @property
     def time_compile(self):
         """
-        Returns the time the dll was compiled (a string) to locate the version of the program
+        返回 dll 编译的时间（字符串），用于定位程序的版本
+
+        返回:
+            str: dll 编译的时间
         """
         if self.has_dll():
             return self.get_time_compile(0).decode()
@@ -615,7 +764,10 @@ class DllCore:
     @property
     def version(self):
         """
-        Return the version of the kernel (date of compilation)
+        返回内核的版本（编译日期）
+
+        返回:
+            int: 内核的版本
         """
         if self.has_dll():
             return core.get_version()
@@ -625,7 +777,10 @@ class DllCore:
     @property
     def compiler(self):
         """
-        Returns the compiler used by the kernel and its version
+        返回内核使用的编译器及其版本
+
+        返回:
+            str: 编译器及其版本
         """
         if self.has_dll():
             return self.get_compiler().decode()
@@ -634,7 +789,13 @@ class DllCore:
 
     def run(self, fn):
         """
-        Run code that needs to call memory and check for errors
+        运行需要调用内存并检查错误的代码
+
+        参数:
+            fn: 要运行的函数
+
+        返回:
+            函数的返回值
         """
         while self.has_error():
             print('\nError: \n', self.pop_error(), '\n')
@@ -647,7 +808,10 @@ class DllCore:
 
     def print_logs(self, path=None):
         """
-        Get the log inside the dll and print it to file
+        获取 dll 中的日志并将其打印到文件中
+
+        参数:
+            path (str, optional): 日志文件的路径。如果未指定，则默认为 'zml.log'
         """
         if self.has_dll():
             if path is None:
@@ -658,7 +822,15 @@ class DllCore:
 
     def use(self, restype, name, *argtypes):
         """
-        Declares that a function in the kernel dll will be used next
+        声明将使用内核 dll 中的某个函数
+
+        参数:
+            restype: 函数的返回类型
+            name: 函数的名称
+            *argtypes: 函数的参数类型列表
+
+        异常:
+            如果 dll 中已经存在同名函数，将打印警告信息
         """
         if self.has_dll():
             if self._dll_funcs.get(name) is not None:
@@ -670,13 +842,19 @@ class DllCore:
 
     def __getattr__(self, name):
         """
-        Attempts to return a dll function with a given name
+        当尝试访问一个不存在的属性时，这个方法会被调用。
+        它会尝试返回一个与给定名称匹配的 DLL 函数。
+
+        参数:
+            name (str): 要查找的属性名称
+
+        返回:
+            function: 如果找到匹配的 DLL 函数，则返回该函数；否则返回 None
         """
         return self._dll_funcs.get(name)
 
 
 core = DllCore(dll=dll)
-
 
 # Version of the zml module (date represented by six digits)
 try:
@@ -687,16 +865,16 @@ except:
 
 class Timer:
     """
-    Used to assist in the execution time of statistical functions.
-    For every function, there should be a key that represents the name of the function stored in memory.
+    用于辅助统计函数的执行时间。
+    对于每个函数，都应该有一个键，代表存储在内存中的函数名称。
 
     2023-7-7
     """
 
     def __init__(self, co):
         """
-        Initialize with an empty table (dictionary). The key of the dictionary is the name of
-        the function to be counted, and the value is the number of runs and the total time.
+        初始化时使用一个空表（字典）。字典的键是要统计的函数名称，
+        值是运行次数和总时间。
         """
         assert isinstance(co, DllCore), f'the type of <co> should be {type(DllCore)}'
         co.use(c_char_p, 'timer_summary', c_void_p)
@@ -709,10 +887,10 @@ class Timer:
 
     def __call__(self, key, func, *args, **kwargs):
         """
-        Call a function, and record the cpu time of the call, as well as the number of calls.
-        Returns the result of the function.
-        Note that this function will throw an exception for func to run.
-        The argument after func is passed to func.
+        调用一个函数，并记录调用的 cpu 时间，以及调用次数。
+        返回函数的结果。
+        请注意，这个函数会抛出 func 运行时的异常。
+        func 之后的参数会传递给 func。
         """
         self.beg(key)
         r = func(*args, **kwargs)
@@ -721,13 +899,13 @@ class Timer:
 
     def __str__(self):
         """
-        Converts data to string output.
+        将数据转换为字符串输出。
         """
         return self.summary()
 
     def summary(self):
         """
-        Returns cpu time-consuming statistics, only for calculation and testing
+        返回 cpu 耗时统计，仅用于计算和测试。
         """
         return self.co.timer_summary(0).decode()
 
@@ -742,19 +920,19 @@ class Timer:
 
     def log(self, name, seconds):
         """
-        Keep track of how long a process takes
+        记录一个过程花费的时间。
         """
         self.co.timer_log(make_c_char_p(name), seconds)
 
     def clear(self):
         """
-        reset
+        重置。
         """
         self.co.timer_reset()
 
     def enabled(self, value=None):
         """
-        Whether the cpu timer is on
+        cpu 计时器是否开启。
         """
         if value is not None:
             self.co.timer_enable(value)
@@ -762,13 +940,13 @@ class Timer:
 
     def beg(self, key):
         """
-        Start a test
+        开始一个测试。
         """
         self.__key2t[key] = timeit.default_timer()
 
     def end(self, key):
         """
-        End a test run (and record it)
+        结束一个测试运行（并记录它）。
         """
         t0 = self.__key2t.get(key, None)
         if t0 is not None:
@@ -861,7 +1039,13 @@ core.use(None, 'set_srand', c_uint)
 
 def set_srand(seed):
     """
-    Set the seed of a random number (an unsigned integer variable)
+    设置随机数生成器的种子（一个无符号整数变量）
+
+    参数:
+        seed (int): 随机数生成器的种子值。
+
+    返回:
+        None
     """
     core.set_srand(seed)
 
@@ -871,35 +1055,80 @@ core.use(c_double, 'get_rand')
 
 def get_rand():
     """
-    Returns a random number between 0 and 1
+    返回一个 0 到 1 之间的随机数
+
+    返回:
+        float: 一个 0 到 1 之间的随机数。
     """
     return core.get_rand()
 
 
 class HasHandle(Object):
+    """
+    一个基类，用于管理具有句柄（handle）的对象。
+    提供了创建、释放和访问句柄的方法。
+
+    参数:
+        handle: 对象的句柄。如果未提供，则会调用 create 方法创建一个新的句柄。
+        create: 一个函数，用于创建新的句柄。
+        release: 一个函数，用于释放句柄。
+
+    属性:
+        handle: 对象的句柄。
+    """
+
     def __init__(self, handle=None, create=None, release=None):
+        """
+        初始化 HasHandle 对象。
+
+        参数:
+            handle: 对象的句柄。如果未提供，则会调用 create 方法创建一个新的句柄。
+            create: 一个函数，用于创建新的句柄。
+            release: 一个函数，用于释放句柄。
+        """
         if handle is None:
             assert create is not None and release is not None
             self.__handle = create()
             self.__release = release
         else:
+            assert handle >= 1, 'handle should be greater than zero'
             self.__handle = handle
             self.__release = None
 
     def __del__(self):
+        """
+        在对象被销毁时调用，用于释放句柄。
+        """
         if self.__release is not None:
             self.__release(self.__handle)
 
     @property
     def handle(self):
+        """
+        获取对象的句柄。
+
+        返回:
+            对象的句柄。
+        """
         return self.__handle
 
 
 class String(HasHandle):
+    """
+    一个用于管理字符串对象的类，继承自 HasHandle 类。
+    提供了字符串的创建、赋值、克隆和转换等方法。
+    """
     core.use(None, 'del_str', c_void_p)
     core.use(c_void_p, 'new_str')
 
     def __init__(self, value=None, handle=None):
+        """
+        初始化 String 对象。
+
+        参数:
+            value (str): 要赋值给字符串的初始值。
+            handle: 字符串对象的句柄。如果未提供，则会创建一个新的字符串对象。
+        """
         super(String, self).__init__(handle, core.new_str, core.del_str)
         if handle is None:
             if value is not None:
@@ -907,9 +1136,21 @@ class String(HasHandle):
                 self.assign(value)
 
     def __str__(self):
+        """
+        返回字符串对象的字符串表示。
+
+        返回:
+            str: 字符串对象的字符串表示。
+        """
         return self.to_str()
 
     def __len__(self):
+        """
+        返回字符串对象的长度。
+
+        返回:
+            int: 字符串对象的长度。
+        """
         return self.size
 
     core.use(c_size_t, 'str_size', c_void_p)
@@ -917,7 +1158,10 @@ class String(HasHandle):
     @property
     def size(self):
         """
-        Returns the length of the std::string object
+        获取字符串对象的长度。
+
+        返回:
+            int: 字符串对象的长度。
         """
         return core.str_size(self.handle)
 
@@ -925,7 +1169,10 @@ class String(HasHandle):
 
     def assign(self, value):
         """
-        string assignment
+        给字符串对象赋值。
+
+        参数:
+            value (str): 要赋值给字符串对象的值。
         """
         core.str_assign(self.handle, make_c_char_p(value))
 
@@ -933,7 +1180,10 @@ class String(HasHandle):
 
     def to_str(self):
         """
-        Convert std::string to c_char_p, and further convert to Python string
+        将字符串对象转换为 Python 字符串。
+
+        返回:
+            str: 转换后的 Python 字符串。
         """
         if core.dll is not None:
             return core.str_to_char_p(self.handle).decode()
@@ -941,10 +1191,25 @@ class String(HasHandle):
     core.use(None, 'str_clone', c_void_p, c_void_p)
 
     def clone(self, other):
+        """
+        克隆另一个字符串对象。
+
+        参数:
+            other (String): 要克隆的字符串对象。
+        """
         assert isinstance(other, String)
         core.str_clone(self.handle, other.handle)
 
     def make_copy(self, buf=None):
+        """
+        创建当前字符串对象的副本。
+
+        参数:
+            buf (String): 用于存储副本的字符串对象。如果未提供，则会创建一个新的字符串对象。
+
+        返回:
+            String: 字符串对象的副本。
+        """
         if not isinstance(buf, String):
             buf = String()
         buf.clone(self)
@@ -1146,6 +1411,16 @@ to {author}"""
 def get_distance(p1, p2):
     """
     Returns the distance between two points
+
+    参数:
+    - p1：第一个点的坐标，列表或元组形式
+    - p2：第二个点的坐标，列表或元组形式
+
+    返回:
+    - 两个点之间的距离
+
+    异常:
+    - 无异常抛出
     """
     dist = 0.0
     for i in range(min(len(p1), len(p2))):
@@ -1156,6 +1431,15 @@ def get_distance(p1, p2):
 def get_norm(p):
     """
     Returns the distance from the origin
+
+    参数:
+    - p：点的坐标，列表或元组形式
+
+    返回:
+    - 点到原点的距离
+
+    异常:
+    - 无异常抛出
     """
     dist = 0.0
     for dim in range(len(p)):
@@ -1306,18 +1590,60 @@ except:
     pass
 
 
+def is_chinese(string):
+    """
+    检查整个字符串是否包含中文
+    """
+    return bool(re.search('[\u4e00-\u9fff]', string))
+
+
 class Iterator:
+    """
+    迭代器类，用于遍历模型中的元素。
+
+    参数:
+        model: 要迭代的模型对象。
+        count: 模型中元素的总数。
+        get: 一个函数，用于获取模型中指定索引位置的元素。
+
+    属性:
+        __model: 模型对象。
+        __index: 当前迭代的索引。
+        __count: 模型中元素的总数。
+        __get: 获取元素的函数。
+
+    方法:
+        __iter__: 返回迭代器对象本身。
+        __next__: 返回下一个元素，如果没有更多元素则抛出 StopIteration 异常。
+        __len__: 返回模型中元素的总数。
+        __getitem__: 返回指定索引位置的元素。
+    """
+
     def __init__(self, model, count, get):
+        """
+        初始化迭代器对象。
+
+        参数:
+            model: 要迭代的模型对象。
+            count: 模型中元素的总数。
+            get: 一个函数，用于获取模型中指定索引位置的元素。
+        """
         self.__model = model
         self.__index = 0
         self.__count = count
         self.__get = get
 
     def __iter__(self):
+        """
+        返回迭代器对象本身。
+        """
         self.__index = 0
         return self
 
     def __next__(self):
+        """
+        返回下一个元素，如果没有更多元素则抛出 StopIteration 异常。
+        """
         if self.__index < self.__count:
             cell = self.__get(self.__model, self.__index)
             self.__index += 1
@@ -1326,9 +1652,21 @@ class Iterator:
             raise StopIteration()
 
     def __len__(self):
+        """
+        返回模型中元素的总数。
+        """
         return self.__count
 
     def __getitem__(self, ind):
+        """
+        返回指定索引位置的元素。
+
+        参数:
+            ind: 索引位置。
+
+        返回:
+            指定索引位置的元素。
+        """
         if ind < self.__count:
             return self.__get(self.__model, ind)
 
@@ -1382,28 +1720,32 @@ class Vector(HasHandle):
 
     def save(self, path):
         """
-        Serialized save. Optional extension:
-        1:.txt
-            .TXT format
-            (cross-platform, basically unreadable)
-        2:.xml
-            .XML format
-            (specific readability, largest volume, slowest read and write, cross-platform)
-        3:. Other
-            binary formats
-            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+        序列化保存。可选扩展格式：
+            1：.txt
+            .TXT 格式
+            （跨平台，基本不可读）
+
+            2：.xml
+            .XML 格式
+            （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+            3：.其他
+            二进制格式
+            （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.vf_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'vf_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
-        Read the serialization archive.
-        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+        读取序列化文件。
+            根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.vf_load(self.handle, make_c_char_p(path))
 
@@ -1529,6 +1871,15 @@ class IntVector(HasHandle):
     core.use(None, 'del_vi', c_void_p)
 
     def __init__(self, value=None, handle=None):
+        """
+        初始化 IntVector 实例
+
+        参数:
+        - value: 可选参数，用于初始化向量的值
+        - handle: 可选参数，用于初始化向量的句柄
+
+        如果 handle 为 None，则根据 value 创建新的向量；否则，使用给定的 handle 初始化向量
+        """
         super(IntVector, self).__init__(handle, core.new_vi, core.del_vi)
         if handle is None:
             if value is not None:
@@ -1538,28 +1889,40 @@ class IntVector(HasHandle):
 
     def save(self, path):
         """
-        Serialized save. Optional extension:
+        序列化保存向量。可选扩展名：
         1:.txt
-            .TXT format
-            (cross-platform, basically unreadable)
+            .TXT 格式
+            (跨平台，基本不可读)
         2:.xml
-            .XML format
-            (specific readability, largest volume, slowest read and write, cross-platform)
-        3:. Other
-            binary formats
-            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+            .XML 格式
+            (特定可读性，体积最大，读写最慢，跨平台)
+        3:. 其他
+            二进制格式
+            (最快最小，但在 Windows 和 Linux 下生成的文件不能互相读取)
+
+        参数:
+        - path: 保存文件的路径
+
+        注意：必须使用纯英文路径
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.vi_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'vi_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
-        Read the serialization archive.
-        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+        读取序列化存档。
+        根据扩展名确定文件格式（txt、xml 和二进制），请参考保存函数。
+
+        参数:
+        - path: 读取文件的路径
+
+        注意：必须使用纯英文路径
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.vi_load(self.handle, make_c_char_p(path))
 
@@ -1567,20 +1930,49 @@ class IntVector(HasHandle):
 
     @property
     def size(self):
+        """
+        获取向量的大小。
+
+        返回值:
+        - 向量的大小
+        """
         return core.vi_size(self.handle)
 
     core.use(None, 'vi_resize', c_void_p, c_size_t)
 
     @size.setter
     def size(self, value):
+        """
+        设置向量的大小。
+
+        参数:
+        - value: 新的向量大小
+        """
         core.vi_resize(self.handle, value)
 
     def __len__(self):
+        """
+        获取向量的长度。
+
+        返回值:
+        - 向量的长度
+        """
         return self.size
 
     core.use(c_int64, 'vi_get', c_void_p, c_size_t)
 
     def __getitem__(self, idx):
+        """
+        获取向量指定位置的元素。
+
+        参数:
+        - idx: 元素的索引
+
+        返回值:
+        - 指定索引处的元素
+
+        注意：索引越界会返回 None
+        """
         idx = get_index(idx, self.size)
         if idx is not None:
             return core.vi_get(self.handle, idx)
@@ -1588,24 +1980,48 @@ class IntVector(HasHandle):
     core.use(None, 'vi_set', c_void_p, c_size_t, c_int64)
 
     def __setitem__(self, idx, value):
+        """
+        设置向量指定位置的元素。
+
+        参数:
+        - idx: 元素的索引
+        - value: 新的元素值
+
+        注意：索引越界会设置失败
+        """
         idx = get_index(idx, self.size)
         if idx is not None:
             core.vi_set(self.handle, idx, value)
 
     def append(self, value):
         """
-        追加数据
+        追加数据到向量末尾。
+
+        参数:
+        - value: 要追加的数据
         """
         key = self.size
         self.size += 1
         self[key] = value
 
     def set(self, value):
+        """
+        设置向量的内容。
+
+        参数:
+        - value: 新的向量内容
+        """
         self.size = len(value)
         for i in range(len(value)):
             self[i] = value[i]
 
     def to_list(self):
+        """
+        将向量转换为列表。
+
+        返回值:
+        - 向量内容的列表表示
+        """
         elements = []
         for i in range(len(self)):
             elements.append(self[i])
@@ -1616,7 +2032,12 @@ class IntVector(HasHandle):
     @property
     def pointer(self):
         """
-        首个元素的指针
+        获取向量首个元素的指针。
+
+        返回值:
+        - 首个元素的指针
+
+        注意：如果向量为空，返回 None
         """
         ptr = core.vi_pointer(self.handle)
         if ptr:
@@ -1634,6 +2055,15 @@ class UintVector(HasHandle):
     core.use(None, 'del_vui', c_void_p)
 
     def __init__(self, value=None, handle=None):
+        """
+        初始化 UintVector 实例
+
+        参数:
+        - value: 可选参数，用于初始化向量的值
+        - handle: 可选参数，用于初始化向量的句柄
+
+        如果 handle 为 None，则根据 value 创建新的向量；否则，使用给定的 handle 初始化向量
+        """
         super(UintVector, self).__init__(handle, core.new_vui, core.del_vui)
         if handle is None:
             if value is not None:
@@ -1643,34 +2073,54 @@ class UintVector(HasHandle):
 
     def save(self, path):
         """
-        Serialized save. Optional extension:
+        序列化保存向量。可选扩展名：
         1:.txt
-            .TXT format
-            (cross-platform, basically unreadable)
+            .TXT 格式
+            (跨平台，基本不可读)
         2:.xml
-            .XML format
-            (specific readability, largest volume, slowest read and write, cross-platform)
-        3:. Other
-            binary formats
-            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+            .XML 格式
+            (特定可读性，体积最大，读写最慢，跨平台)
+        3:. 其他
+            二进制格式
+            (最快最小，但在 Windows 和 Linux 下生成的文件不能互相读取)
+
+        参数:
+        - path: 保存文件的路径
+
+        注意：必须使用纯英文路径
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.vui_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'vui_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
-        Read the serialization archive.
-        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+        读取序列化存档。
+        根据扩展名确定文件格式（txt、xml 和二进制），请参考保存函数。
+
+        参数:
+        - path: 读取文件的路径
+
+        注意：必须使用纯英文路径
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.vui_load(self.handle, make_c_char_p(path))
 
     core.use(None, 'vui_print', c_void_p, c_char_p)
 
     def print_file(self, path):
+        """
+        将向量内容打印到文件中。
+
+        参数:
+        - path: 打印文件的路径
+
+        注意：必须使用纯英文路径
+        """
         if path is not None:
             core.vui_print(self.handle, make_c_char_p(path))
 
@@ -1678,20 +2128,49 @@ class UintVector(HasHandle):
 
     @property
     def size(self):
+        """
+        获取向量的大小。
+
+        返回值:
+        - 向量的大小
+        """
         return core.vui_size(self.handle)
 
     core.use(None, 'vui_resize', c_void_p, c_size_t)
 
     @size.setter
     def size(self, value):
+        """
+        设置向量的大小。
+
+        参数:
+        - value: 新的向量大小
+        """
         core.vui_resize(self.handle, value)
 
     def __len__(self):
+        """
+        获取向量的长度。
+
+        返回值:
+        - 向量的长度
+        """
         return self.size
 
     core.use(c_size_t, 'vui_get', c_void_p, c_size_t)
 
     def __getitem__(self, idx):
+        """
+        获取向量指定位置的元素。
+
+        参数:
+        - idx: 元素的索引
+
+        返回值:
+        - 指定索引处的元素
+
+        注意：索引越界会返回 None
+        """
         idx = get_index(idx, self.size)
         if idx is not None:
             return core.vui_get(self.handle, idx)
@@ -1699,24 +2178,48 @@ class UintVector(HasHandle):
     core.use(None, 'vui_set', c_void_p, c_size_t, c_size_t)
 
     def __setitem__(self, idx, value):
+        """
+        设置向量指定位置的元素。
+
+        参数:
+        - idx: 元素的索引
+        - value: 新的元素值
+
+        注意：索引越界会设置失败
+        """
         idx = get_index(idx, self.size)
         if idx is not None:
             core.vui_set(self.handle, idx, value)
 
     def append(self, value):
         """
-        追加数据
+        追加数据到向量末尾。
+
+        参数:
+        - value: 要追加的数据
         """
         key = self.size
         self.size += 1
         self[key] = value
 
     def set(self, value):
+        """
+        设置向量的内容。
+
+        参数:
+        - value: 新的向量内容
+        """
         self.size = len(value)
         for i in range(len(value)):
             self[i] = value[i]
 
     def to_list(self):
+        """
+        将向量转换为列表。
+
+        返回值:
+        - 向量内容的列表表示
+        """
         elements = []
         for i in range(len(self)):
             elements.append(self[i])
@@ -1727,7 +2230,12 @@ class UintVector(HasHandle):
     @property
     def pointer(self):
         """
-        首个元素的指针
+        获取向量首个元素的指针。
+
+        返回值:
+        - 首个元素的指针
+
+        注意：如果向量为空，返回 None
         """
         ptr = core.vui_pointer(self.handle)
         if ptr:
@@ -1958,28 +2466,32 @@ class Matrix2(HasHandle):
 
     def save(self, path):
         """
-        Serialized save. Optional extension:
-        1:.txt
-            .TXT format
-            (cross-platform, basically unreadable)
-        2:.xml
-            .XML format
-            (specific readability, largest volume, slowest read and write, cross-platform)
-        3:. Other
-            binary formats
-            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+        序列化保存。可选扩展格式：
+            1：.txt
+            .TXT 格式
+            （跨平台，基本不可读）
+
+            2：.xml
+            .XML 格式
+            （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+            3：.其他
+            二进制格式
+            （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.mat2_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'mat2_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
-        Read the serialization archive.
-        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+        读取序列化文件。
+            根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.mat2_load(self.handle, make_c_char_p(path))
 
@@ -2111,28 +2623,32 @@ class Matrix3(HasHandle):
 
     def save(self, path):
         """
-        Serialized save. Optional extension:
-        1:.txt
-            .TXT format
-            (cross-platform, basically unreadable)
-        2:.xml
-            .XML format
-            (specific readability, largest volume, slowest read and write, cross-platform)
-        3:. Other
-            binary formats
-            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+        序列化保存。可选扩展格式：
+            1：.txt
+            .TXT 格式
+            （跨平台，基本不可读）
+
+            2：.xml
+            .XML 格式
+            （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+            3：.其他
+            二进制格式
+            （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.mat3_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'mat3_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
-        Read the serialization archive.
-        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+        读取序列化文件。
+            根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.mat3_load(self.handle, make_c_char_p(path))
 
@@ -2283,28 +2799,32 @@ class Tensor3Matrix3(HasHandle):
 
     def save(self, path):
         """
-        Serialized save. Optional extension:
-        1:.txt
-            .TXT format
-            (cross-platform, basically unreadable)
-        2:.xml
-            .XML format
-            (specific readability, largest volume, slowest read and write, cross-platform)
-        3:. Other
-            binary formats
-            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+        序列化保存。可选扩展格式：
+            1：.txt
+            .TXT 格式
+            （跨平台，基本不可读）
+
+            2：.xml
+            .XML 格式
+            （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+            3：.其他
+            二进制格式
+            （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.ts3mat3_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'ts3mat3_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
-        Read the serialization archive.
-        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+        读取序列化文件。
+            根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.ts3mat3_load(self.handle, make_c_char_p(path))
 
@@ -2422,28 +2942,32 @@ class Interp1(HasHandle):
 
     def save(self, path):
         """
-        Serialized save. Optional extension:
-        1:.txt
-            .TXT format
-            (cross-platform, basically unreadable)
-        2:.xml
-            .XML format
-            (specific readability, largest volume, slowest read and write, cross-platform)
-        3:. Other
-            binary formats
-            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+        序列化保存。可选扩展格式：
+            1：.txt
+            .TXT 格式
+            （跨平台，基本不可读）
+
+            2：.xml
+            .XML 格式
+            （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+            3：.其他
+            二进制格式
+            （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.interp1_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'interp1_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
-        Read the serialization archive.
-        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+        读取序列化文件。
+            根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.interp1_load(self.handle, make_c_char_p(path))
 
@@ -2570,6 +3094,11 @@ class Interp1(HasHandle):
         assert isinstance(other, Interp1)
         core.interp1_clone(self.handle, other.handle)
 
+    def get_copy(self):
+        data = Interp1()
+        data.clone(self)
+        return data
+
 
 class Interp2(HasHandle):
     core.use(c_void_p, 'new_interp2')
@@ -2585,28 +3114,32 @@ class Interp2(HasHandle):
 
     def save(self, path):
         """
-        Serialized save. Optional extension:
-        1:.txt
-            .TXT format
-            (cross-platform, basically unreadable)
-        2:.xml
-            .XML format
-            (specific readability, largest volume, slowest read and write, cross-platform)
-        3:. Other
-            binary formats
-            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+        序列化保存。可选扩展格式：
+            1：.txt
+            .TXT 格式
+            （跨平台，基本不可读）
+
+            2：.xml
+            .XML 格式
+            （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+            3：.其他
+            二进制格式
+            （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.interp2_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'interp2_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
-        Read the serialization archive.
-        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+        读取序列化文件。
+            根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.interp2_load(self.handle, make_c_char_p(path))
 
@@ -2712,6 +3245,11 @@ class Interp2(HasHandle):
         assert isinstance(other, Interp2)
         core.interp2_clone(self.handle, other.handle)
 
+    def get_copy(self):
+        data = Interp2()
+        data.clone(self)
+        return data
+
 
 class Interp3(HasHandle):
     core.use(c_void_p, 'new_interp3')
@@ -2727,28 +3265,32 @@ class Interp3(HasHandle):
 
     def save(self, path):
         """
-        Serialized save. Optional extension:
-        1:.txt
-            .TXT format
-            (cross-platform, basically unreadable)
-        2:.xml
-            .XML format
-            (specific readability, largest volume, slowest read and write, cross-platform)
-        3:. Other
-            binary formats
-            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+        序列化保存。可选扩展格式：
+            1：.txt
+            .TXT 格式
+            （跨平台，基本不可读）
+
+            2：.xml
+            .XML 格式
+            （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+            3：.其他
+            二进制格式
+            （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.interp3_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'interp3_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
-        Read the serialization archive.
-        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+        读取序列化文件。
+            根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.interp3_load(self.handle, make_c_char_p(path))
 
@@ -2852,6 +3394,11 @@ class Interp3(HasHandle):
         assert isinstance(other, Interp3)
         core.interp3_clone(self.handle, other.handle)
 
+    def get_copy(self):
+        data = Interp3()
+        data.clone(self)
+        return data
+
 
 class FileMap(HasHandle):
     """
@@ -2938,6 +3485,7 @@ class FileMap(HasHandle):
         序列化保存 (鉴于此class的特殊性，务必保存为二进制格式，txt和xml格式，都可能带来不可预期的数据丢失).
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             ext = os.path.splitext(path)[-1].lower()
             assert ext != '.txt' and ext != '.xml'
             core.fmap_save(self.handle, make_c_char_p(path))
@@ -2949,6 +3497,7 @@ class FileMap(HasHandle):
         序列化读取
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.fmap_load(self.handle, make_c_char_p(path))
 
@@ -3002,28 +3551,32 @@ class Array2(HasHandle):
 
     def save(self, path):
         """
-        Serialized save. Optional extension:
-        1:.txt
-            .TXT format
-            (cross-platform, basically unreadable)
-        2:.xml
-            .XML format
-            (specific readability, largest volume, slowest read and write, cross-platform)
-        3:. Other
-            binary formats
-            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+        序列化保存。可选扩展格式：
+            1：.txt
+            .TXT 格式
+            （跨平台，基本不可读）
+
+            2：.xml
+            .XML 格式
+            （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+            3：.其他
+            二进制格式
+            （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.array2_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'array2_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
-        Read the serialization archive.
-        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+        读取序列化文件。
+            根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.array2_load(self.handle, make_c_char_p(path))
 
@@ -3125,28 +3678,32 @@ class Array3(HasHandle):
 
     def save(self, path):
         """
-        Serialized save. Optional extension:
-        1:.txt
-            .TXT format
-            (cross-platform, basically unreadable)
-        2:.xml
-            .XML format
-            (specific readability, largest volume, slowest read and write, cross-platform)
-        3:. Other
-            binary formats
-            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+        序列化保存。可选扩展格式：
+            1：.txt
+            .TXT 格式
+            （跨平台，基本不可读）
+
+            2：.xml
+            .XML 格式
+            （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+            3：.其他
+            二进制格式
+            （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.array3_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'array3_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
-        Read the serialization archive.
-        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+        读取序列化文件。
+            根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.array3_load(self.handle, make_c_char_p(path))
 
@@ -3249,28 +3806,32 @@ class Tensor2(HasHandle):
 
     def save(self, path):
         """
-        Serialized save. Optional extension:
-        1:.txt
-            .TXT format
-            (cross-platform, basically unreadable)
-        2:.xml
-            .XML format
-            (specific readability, largest volume, slowest read and write, cross-platform)
-        3:. Other
-            binary formats
-            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+        序列化保存。可选扩展格式：
+            1：.txt
+            .TXT 格式
+            （跨平台，基本不可读）
+
+            2：.xml
+            .XML 格式
+            （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+            3：.其他
+            二进制格式
+            （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.tensor2_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'tensor2_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
-        Read the serialization archive.
-        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+        读取序列化文件。
+            根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.tensor2_load(self.handle, make_c_char_p(path))
 
@@ -3454,28 +4015,32 @@ class Tensor3(HasHandle):
 
     def save(self, path):
         """
-        Serialized save. Optional extension:
-        1:.txt
-            .TXT format
-            (cross-platform, basically unreadable)
-        2:.xml
-            .XML format
-            (specific readability, largest volume, slowest read and write, cross-platform)
-        3:. Other
-            binary formats
-            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+        序列化保存。可选扩展格式：
+            1：.txt
+            .TXT 格式
+            （跨平台，基本不可读）
+
+            2：.xml
+            .XML 格式
+            （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+            3：.其他
+            二进制格式
+            （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.tensor3_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'tensor3_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
-        Read the serialization archive.
-        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+        读取序列化文件。
+            根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.tensor3_load(self.handle, make_c_char_p(path))
 
@@ -3647,28 +4212,32 @@ class Tensor2Interp2(HasHandle):
 
     def save(self, path):
         """
-        Serialized save. Optional extension:
-        1:.txt
-            .TXT format
-            (cross-platform, basically unreadable)
-        2:.xml
-            .XML format
-            (specific readability, largest volume, slowest read and write, cross-platform)
-        3:. Other
-            binary formats
-            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+        序列化保存。可选扩展格式：
+            1：.txt
+            .TXT 格式
+            （跨平台，基本不可读）
+
+            2：.xml
+            .XML 格式
+            （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+            3：.其他
+            二进制格式
+            （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.tensor2interp2_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'tensor2interp2_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
-        Read the serialization archive.
-        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+        读取序列化文件。
+            根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.tensor2interp2_load(self.handle, make_c_char_p(path))
 
@@ -3762,28 +4331,32 @@ class Tensor3Interp3(HasHandle):
 
     def save(self, path):
         """
-        Serialized save. Optional extension:
-        1:.txt
-            .TXT format
-            (cross-platform, basically unreadable)
-        2:.xml
-            .XML format
-            (specific readability, largest volume, slowest read and write, cross-platform)
-        3:. Other
-            binary formats
-            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+        序列化保存。可选扩展格式：
+            1：.txt
+            .TXT 格式
+            （跨平台，基本不可读）
+
+            2：.xml
+            .XML 格式
+            （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+            3：.其他
+            二进制格式
+            （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.tensor3interp3_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'tensor3interp3_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
-        Read the serialization archive.
-        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+        读取序列化文件。
+            根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.tensor3interp3_load(self.handle, make_c_char_p(path))
 
@@ -3893,28 +4466,32 @@ class Coord2(HasHandle):
 
     def save(self, path):
         """
-        Serialized save. Optional extension:
-        1:.txt
-            .TXT format
-            (cross-platform, basically unreadable)
-        2:.xml
-            .XML format
-            (specific readability, largest volume, slowest read and write, cross-platform)
-        3:. Other
-            binary formats
-            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+        序列化保存。可选扩展格式：
+            1：.txt
+            .TXT 格式
+            （跨平台，基本不可读）
+
+            2：.xml
+            .XML 格式
+            （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+            3：.其他
+            二进制格式
+            （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.coord2_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'coord2_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
-        Read the serialization archive.
-        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+        读取序列化文件。
+            根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.coord2_load(self.handle, make_c_char_p(path))
 
@@ -4023,28 +4600,32 @@ class Coord3(HasHandle):
 
     def save(self, path):
         """
-        Serialized save. Optional extension:
-        1:.txt
-            .TXT format
-            (cross-platform, basically unreadable)
-        2:.xml
-            .XML format
-            (specific readability, largest volume, slowest read and write, cross-platform)
-        3:. Other
-            binary formats
-            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+        序列化保存。可选扩展格式：
+            1：.txt
+            .TXT 格式
+            （跨平台，基本不可读）
+
+            2：.xml
+            .XML 格式
+            （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+            3：.其他
+            二进制格式
+            （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.coord3_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'coord3_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
-        Read the serialization archive.
-        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+        读取序列化文件。
+            根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.coord3_load(self.handle, make_c_char_p(path))
 
@@ -4611,28 +5192,32 @@ class Mesh3(HasHandle):
 
     def save(self, path):
         """
-        Serialized save. Optional extension:
-        1:.txt
-            .TXT format
-            (cross-platform, basically unreadable)
-        2:.xml
-            .XML format
-            (specific readability, largest volume, slowest read and write, cross-platform)
-        3:. Other
-            binary formats
-            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+        序列化保存。可选扩展格式：
+            1：.txt
+            .TXT 格式
+            （跨平台，基本不可读）
+
+            2：.xml
+            .XML 格式
+            （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+            3：.其他
+            二进制格式
+            （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.mesh3_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'mesh3_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
-        Read the serialization archive.
-        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+        读取序列化文件。
+            根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.mesh3_load(self.handle, make_c_char_p(path))
 
@@ -4980,28 +5565,32 @@ class LinearExpr(HasHandle):
 
     def save(self, path):
         """
-        Serialized save. Optional extension:
-        1:.txt
-            .TXT format
-            (cross-platform, basically unreadable)
-        2:.xml
-            .XML format
-            (specific readability, largest volume, slowest read and write, cross-platform)
-        3:. Other
-            binary formats
-            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+        序列化保存。可选扩展格式：
+            1：.txt
+            .TXT 格式
+            （跨平台，基本不可读）
+
+            2：.xml
+            .XML 格式
+            （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+            3：.其他
+            二进制格式
+            （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.lexpr_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'lexpr_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
-        Read the serialization archive.
-        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+        读取序列化文件。
+            根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.lexpr_load(self.handle, make_c_char_p(path))
 
@@ -5158,6 +5747,16 @@ class LinearExpr(HasHandle):
         lexpr.c = c
         return lexpr
 
+    core.use(None, 'lexpr_clone', c_void_p, c_void_p)
+
+    def clone(self, other):
+        """
+        克隆数据
+        """
+        if isinstance(other, LinearExpr):
+            core.lexpr_clone(self.handle, other.handle)
+        return self
+
 
 class DynSys(HasHandle):
     """
@@ -5189,6 +5788,17 @@ class DynSys(HasHandle):
     core.use(None, 'del_dynsys', c_void_p)
 
     def __init__(self, path=None, handle=None):
+        """
+        初始化 DynSys 对象。
+
+        参数:
+        - path: 序列化文件的路径。如果提供，将从该文件加载 DynSys 对象。
+        - handle: DynSys 对象的句柄。如果提供，将使用该句柄初始化对象。
+
+        注意:
+        - 如果 handle 为 None，则会根据 path 加载对象。
+        - 如果 path 为 None，则会创建一个新的 DynSys 对象。
+        """
         super(DynSys, self).__init__(handle, core.new_dynsys, core.del_dynsys)
         if handle is None:
             if path is not None:
@@ -5198,28 +5808,32 @@ class DynSys(HasHandle):
 
     def save(self, path):
         """
-        Serialized save. Optional extension:
-        1:.txt
-            .TXT format
-            (cross-platform, basically unreadable)
-        2:.xml
-            .XML format
-            (specific readability, largest volume, slowest read and write, cross-platform)
-        3:. Other
-            binary formats
-            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+        序列化保存。可选扩展格式：
+            1：.txt
+            .TXT 格式
+            （跨平台，基本不可读）
+
+            2：.xml
+            .XML 格式
+            （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+            3：.其他
+            二进制格式
+            （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.dynsys_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'dynsys_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
-        Read the serialization archive.
-        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+        读取序列化文件。
+            根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.dynsys_load(self.handle, make_c_char_p(path))
 
@@ -5253,7 +5867,17 @@ class DynSys(HasHandle):
 
     def iterate(self, dt, solver):
         """
-        求解迭代一次
+        对 DynSys 对象进行一次迭代计算。
+
+        参数:
+        - dt: 时间步长。
+        - solver: 求解器对象，用于求解线性方程组。
+
+        返回:
+        - 迭代结果的状态码。
+
+        注意:
+        - 必须提供有效的时间步长和求解器对象。
         """
         return core.dynsys_iterate(self.handle, dt, solver.handle)
 
@@ -5757,29 +6381,33 @@ class SpringSys(HasHandle):
 
     def save(self, path):
         """
-        Serialized save. Optional extension:
-        1:.txt
-            .TXT format
-            (cross-platform, basically unreadable)
-        2:.xml
-            .XML format
-            (specific readability, largest volume, slowest read and write, cross-platform)
-        3:. Other
-            binary formats
-            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+        序列化保存。可选扩展格式：
+            1：.txt
+            .TXT 格式
+            （跨平台，基本不可读）
+
+            2：.xml
+            .XML 格式
+            （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+            3：.其他
+            二进制格式
+            （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
         if path is not None:
             assert isinstance(path, str)
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.springsys_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'springsys_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
-        Read the serialization archive.
-        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+        读取序列化文件。
+            根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.springsys_load(self.handle, make_c_char_p(path))
 
@@ -6165,6 +6793,13 @@ class SeepageMesh(HasHandle, HasCells):
         """
 
         def __init__(self, model, index):
+            """
+            初始化Cell对象
+            
+            参数:
+            - model: SeepageMesh对象
+            - index: 单元格索引
+            """
             assert isinstance(model, SeepageMesh)
             assert isinstance(index, int)
             assert index < model.cell_number
@@ -6172,6 +6807,9 @@ class SeepageMesh(HasHandle, HasCells):
             self.index = index
 
         def __str__(self):
+            """
+            返回Cell对象的字符串表示
+            """
             return (f'zml.SeepageMesh.Cell(handle = {self.model.handle}, index = {self.index}, '
                     f'pos = {self.pos}, volume={self.vol})')
 
@@ -6185,10 +6823,16 @@ class SeepageMesh(HasHandle, HasCells):
 
         @property
         def pos(self):
+            """
+            中心点的三维坐标
+            """
             return [core.seepage_mesh_get_cell_pos(self.model.handle, self.index, i) for i in range(3)]
 
         @pos.setter
         def pos(self, value):
+            """
+            中心点的三维坐标
+            """
             assert len(value) == 3
             for dim in range(3):
                 core.seepage_mesh_set_cell_pos(self.model.handle, self.index,
@@ -6197,6 +6841,12 @@ class SeepageMesh(HasHandle, HasCells):
         def distance(self, other):
             """
             返回距离另外一个Cell或者另外一个位置的距离
+            
+            参数:
+            - other: 另一个Cell对象或位置
+            
+            返回值:
+            - 距离
             """
             p0 = self.pos
             if hasattr(other, 'pos'):
@@ -6213,17 +6863,31 @@ class SeepageMesh(HasHandle, HasCells):
 
         @property
         def vol(self):
+            """
+            体积 [m^3]
+            """
             return core.seepage_mesh_get_cell_volume(self.model.handle, self.index)
 
         @vol.setter
         def vol(self, value):
+            """
+            体积 [m^3]
+            """
             core.seepage_mesh_set_cell_volume(self.model.handle, self.index, value)
 
         core.use(c_double, 'seepage_mesh_get_cell_attr', c_void_p, c_size_t, c_size_t)
 
         def get_attr(self, index, default_val=None, **valid_range):
             """
-            第index个自定义属性
+            获取单元格的自定义属性
+            
+            参数:
+            - index: 属性索引
+            - default_val: 默认值
+            - valid_range: 有效范围
+            
+            返回值:
+            - 属性值
             """
             if index is None:
                 return default_val
@@ -6237,7 +6901,14 @@ class SeepageMesh(HasHandle, HasCells):
 
         def set_attr(self, index, value):
             """
-            第index个自定义属性
+            设置单元格的自定义属性
+            
+            参数:
+            - index: 属性索引
+            - value: 属性值
+            
+            返回值:
+            - Cell对象
             """
             if index is None:
                 return self
@@ -6250,21 +6921,33 @@ class SeepageMesh(HasHandle, HasCells):
 
         @property
         def face_number(self):
+            """
+            周边Face的数量
+            """
             return core.seepage_mesh_cell_get_face_n(self.model.handle, self.index)
 
         @property
         def cell_number(self):
+            """
+            周边Cell的数量
+            """
             return self.face_number
 
         core.use(c_size_t, 'seepage_mesh_cell_get_face_id', c_void_p, c_size_t, c_size_t)
 
         def get_face(self, index):
+            """
+            返回周边第index个Face
+            """
             index = get_index(index, self.face_number)
             return self.model.get_face(core.seepage_mesh_cell_get_face_id(self.model.handle, self.index, index))
 
         core.use(c_size_t, 'seepage_mesh_cell_get_cell_id', c_void_p, c_size_t, c_size_t)
 
         def get_cell(self, index):
+            """
+            返回周边第index个Cell
+            """
             index = get_index(index, self.cell_number)
             return self.model.get_cell(core.seepage_mesh_cell_get_cell_id(self.model.handle, self.index, index))
 
@@ -6288,6 +6971,13 @@ class SeepageMesh(HasHandle, HasCells):
         """
 
         def __init__(self, model, index):
+            """
+            初始化Face对象
+
+            参数:
+            - model: SeepageMesh对象
+            - index: 面的索引
+            """
             assert isinstance(model, SeepageMesh)
             assert isinstance(index, int)
             assert index < model.face_number
@@ -6295,6 +6985,9 @@ class SeepageMesh(HasHandle, HasCells):
             self.index = index
 
         def __str__(self):
+            """
+            返回Face对象的字符串表示
+            """
             return (f'zml.SeepageMesh.Face(handle = {self.model.handle}, index = {self.index}, '
                     f'area = {self.area}, length = {self.length}) ')
 
@@ -6306,10 +6999,16 @@ class SeepageMesh(HasHandle, HasCells):
 
         @property
         def area(self):
+            """
+            流动的横截面积 [m^2]
+            """
             return core.seepage_mesh_get_face_area(self.model.handle, self.index)
 
         @area.setter
         def area(self, value):
+            """
+            流动的横截面积 [m^2]
+            """
             core.seepage_mesh_set_face_area(self.model.handle, self.index, value)
 
         core.use(None, 'seepage_mesh_set_face_length', c_void_p,
@@ -6320,11 +7019,31 @@ class SeepageMesh(HasHandle, HasCells):
 
         @property
         def length(self):
+            """
+            流动的距离 [m]. 为了更加清晰的表示“流动距离”的概念，可以调用dist属性
+            """
             return core.seepage_mesh_get_face_length(self.model.handle, self.index)
 
         @length.setter
         def length(self, value):
+            """
+            流动的距离 [m]. 为了更加清晰的表示“流动距离”的概念，可以调用dist属性
+            """
             core.seepage_mesh_set_face_length(self.model.handle, self.index, value)
+
+        @property
+        def dist(self):
+            """
+            流动的距离 [m]
+            """
+            return self.length
+
+        @dist.setter
+        def dist(self, value):
+            """
+            流动的距离 [m]
+            """
+            self.length = value
 
         @property
         def pos(self):
@@ -6355,10 +7074,16 @@ class SeepageMesh(HasHandle, HasCells):
 
         @property
         def cell_ids(self):
+            """
+            两端Cell的ID
+            """
             return self.cell_i0, self.cell_i1
 
         @property
         def link(self):
+            """
+            两端Cell的ID
+            """
             return self.cell_ids
 
         @property
@@ -6371,6 +7096,12 @@ class SeepageMesh(HasHandle, HasCells):
         def get_cell(self, i):
             """
             返回与face相连的第i个cell
+
+            参数:
+            - i: Cell索引
+
+            返回值:
+            - Cell对象
             """
             i = get_index(i, 2)
             if i is not None:
@@ -6380,13 +7111,24 @@ class SeepageMesh(HasHandle, HasCells):
                     return self.model.get_cell(self.cell_i0)
 
         def cells(self):
+            """
+            遍历两端的Cell
+            """
             return self.get_cell(0), self.get_cell(1)
 
         core.use(c_double, 'seepage_mesh_get_face_attr', c_void_p, c_size_t, c_size_t)
 
         def get_attr(self, index, default_val=None, **valid_range):
             """
-            第index个自定义属性
+            获取第index个自定义属性
+
+            参数:
+            - index: 属性索引
+            - default_val: 默认值
+            - **valid_range: 属性值的有效范围
+
+            返回值:
+            - 属性值或默认值
             """
             if index is None:
                 return default_val
@@ -6400,7 +7142,14 @@ class SeepageMesh(HasHandle, HasCells):
 
         def set_attr(self, index, value):
             """
-            第index个自定义属性
+            设置第index个自定义属性
+
+            参数:
+            - index: 属性索引
+            - value: 属性值
+
+            返回值:
+            - self
             """
             if index is None:
                 return self
@@ -6413,6 +7162,15 @@ class SeepageMesh(HasHandle, HasCells):
     core.use(None, 'del_seepage_mesh', c_void_p)
 
     def __init__(self, path=None, handle=None):
+        """
+        初始化SeepageMesh对象
+
+        参数:
+        - path: 加载网格的路径
+        - handle: 网格的句柄
+
+        如果handle为None，则从path加载网格
+        """
         super(SeepageMesh, self).__init__(handle, core.new_seepage_mesh, core.del_seepage_mesh)
         if handle is None:
             if path is not None:
@@ -6420,36 +7178,45 @@ class SeepageMesh(HasHandle, HasCells):
 
     def __str__(self):
         """
-        Get the summary of the object for print.
+        返回对象的字符串表示
+
+        返回值:
+        - 字符串表示
         """
-        return f'zml.SeepageMesh(handle = {self.handle}, cell_n = {self.cell_number}, face_n = {self.face_number}, volume = {self.volume})'
+        return (f'zml.SeepageMesh(handle = {self.handle}, cell_n = {self.cell_number}, '
+                f'face_n = {self.face_number}, volume = {self.volume})')
 
     core.use(None, 'seepage_mesh_save', c_void_p, c_char_p)
 
     def save(self, path):
         """
-        Serialized save. Optional extension:
-        1:.txt
-            .TXT format
-            (cross-platform, basically unreadable)
-        2:.xml
-            .XML format
-            (specific readability, largest volume, slowest read and write, cross-platform)
-        3:. Other
-            binary formats
-            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+        保存网格到指定路径
+
+        参数:
+        - path: 保存网格的路径
+
+        可选扩展名:
+        - .txt: TXT格式（跨平台，基本不可读）
+        - .xml: XML格式（特定可读性，体积最大，读写最慢，跨平台）
+        - 其他: 二进制格式（最快最小，但Windows和Linux下生成的文件不能互相读取）
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.seepage_mesh_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'seepage_mesh_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
-        Read the serialization archive.
-        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+        从指定路径加载网格
+
+        参数:
+        - path: 加载网格的路径
+
+        根据扩展名确定文件格式（txt, xml, 二进制），参考save函数
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.seepage_mesh_load(self.handle, make_c_char_p(path))
 
@@ -6502,6 +7269,14 @@ class SeepageMesh(HasHandle, HasCells):
     def get_face(self, ind=None, cell_0=None, cell_1=None):
         """
         返回第ind个face，或者找到两个cell之间的face
+
+        参数:
+        - ind: 面的索引
+        - cell_0: 第一个单元格
+        - cell_1: 第二个单元格
+
+        返回值:
+        - 面的对象
         """
         if ind is not None:
             assert cell_0 is None and cell_1 is None
@@ -6533,6 +7308,13 @@ class SeepageMesh(HasHandle, HasCells):
     def add_face(self, cell_0, cell_1):
         """
         添加一个face，连接两个给定的cell
+
+        参数:
+        - cell_0: 第一个单元格
+        - cell_1: 第二个单元格
+
+        返回值:
+        - 新添加的面的对象
         """
         if isinstance(cell_0, SeepageMesh.Cell):
             assert cell_0.model.handle == self.handle
@@ -6611,6 +7393,20 @@ class SeepageMesh(HasHandle, HasCells):
     def find_inner_face_ids(self, cell_ids, buffer=None):
         """
         给定多个Cell，返回这些Cell内部相互连接的Face的序号
+
+        参数:
+        - cell_ids: 单元格的ID列表
+        - buffer: 缓冲区，用于存储返回的面的ID
+
+        返回值:
+        - 缓冲区，包含了内部相互连接的面的ID
+
+        断言:
+        - cell_ids 必须是 UintVector 类型
+        - 如果 buffer 不是 UintVector 类型，则创建一个新的 UintVector
+
+        调用核心函数:
+        - core.seepage_mesh_find_inner_face_ids 来查找内部面的ID
         """
         assert isinstance(cell_ids, UintVector)
         if not isinstance(buffer, UintVector):
@@ -6624,6 +7420,20 @@ class SeepageMesh(HasHandle, HasCells):
     def from_mesh3(mesh3, buffer=None):
         """
         利用一个Mesh3的Body来创建Cell，Face来创建Face
+
+        参数:
+        - mesh3: 一个Mesh3对象，用于创建SeepageMesh的单元格和面
+        - buffer: 一个可选的SeepageMesh对象，用于存储转换后的网格。如果未提供，则创建一个新的SeepageMesh对象
+
+        返回值:
+        - 如果成功，返回创建的或传入的SeepageMesh对象；否则抛出异常
+
+        断言:
+        - 确保mesh3参数是一个Mesh3类的实例
+        - 如果buffer参数不是SeepageMesh类的实例，则创建一个新的SeepageMesh对象
+
+        调用核心函数:
+        - core.seepage_mesh_from_mesh3 来创建SeepageMesh对象
         """
         assert isinstance(mesh3, Mesh3)
         if not isinstance(buffer, SeepageMesh):
@@ -6671,28 +7481,32 @@ class ElementMap(HasHandle):
 
     def save(self, path):
         """
-        Serialized save. Optional extension:
-        1:.txt
-            .TXT format
-            (cross-platform, basically unreadable)
-        2:.xml
-            .XML format
-            (specific readability, largest volume, slowest read and write, cross-platform)
-        3:. Other
-            binary formats
-            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+        序列化保存。可选扩展格式：
+            1：.txt
+            .TXT 格式
+            （跨平台，基本不可读）
+
+            2：.xml
+            .XML 格式
+            （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+            3：.其他
+            二进制格式
+            （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.element_map_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'element_map_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
-        Read the serialization archive.
-        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+        读取序列化文件。
+            根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.element_map_load(self.handle, make_c_char_p(path))
 
@@ -6759,28 +7573,32 @@ class Groups(HasHandle):
 
     def save(self, path):
         """
-        Serialized save. Optional extension:
-        1:.txt
-            .TXT format
-            (cross-platform, basically unreadable)
-        2:.xml
-            .XML format
-            (specific readability, largest volume, slowest read and write, cross-platform)
-        3:. Other
-            binary formats
-            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+        序列化保存。可选扩展格式：
+            1：.txt
+            .TXT 格式
+            （跨平台，基本不可读）
+
+            2：.xml
+            .XML 格式
+            （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+            3：.其他
+            二进制格式
+            （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.groups_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'groups_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
-        Read the serialization archive.
-        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+        读取序列化文件。
+            根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.groups_load(self.handle, make_c_char_p(path))
 
@@ -6828,28 +7646,32 @@ class Seepage(HasHandle, HasCells):
 
         def save(self, path):
             """
-            Serialized save. Optional extension:
-            1:.txt
-                .TXT format
-                (cross-platform, basically unreadable)
-            2:.xml
-                .XML format
-                (specific readability, largest volume, slowest read and write, cross-platform)
-            3:. Other
-                binary formats
-                (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+            序列化保存。可选扩展格式：
+                1：.txt
+                .TXT 格式
+                （跨平台，基本不可读）
+
+                2：.xml
+                .XML 格式
+                （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+                3：.其他
+                二进制格式
+                （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
             """
             if path is not None:
+                assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
                 core.reaction_save(self.handle, make_c_char_p(path))
 
         core.use(None, 'reaction_load', c_void_p, c_char_p)
 
         def load(self, path):
             """
-            Read the serialization archive.
-            To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+            读取序列化文件。
+                根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
             """
             if path is not None:
+                assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
                 _check_ipath(path, self)
                 core.reaction_load(self.handle, make_c_char_p(path))
 
@@ -7122,28 +7944,32 @@ class Seepage(HasHandle, HasCells):
 
         def save(self, path):
             """
-            Serialized save. Optional extension:
-            1:.txt
-                .TXT format
-                (cross-platform, basically unreadable)
-            2:.xml
-                .XML format
-                (specific readability, largest volume, slowest read and write, cross-platform)
-            3:. Other
-                binary formats
-                (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+            序列化保存。可选扩展格式：
+                1：.txt
+                .TXT 格式
+                （跨平台，基本不可读）
+
+                2：.xml
+                .XML 格式
+                （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+                3：.其他
+                二进制格式
+                （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
             """
             if path is not None:
+                assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
                 core.fludef_save(self.handle, make_c_char_p(path))
 
         core.use(None, 'fludef_load', c_void_p, c_char_p)
 
         def load(self, path):
             """
-            Read the serialization archive.
-            To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+            读取序列化文件。
+                根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
             """
             if path is not None:
+                assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
                 _check_ipath(path, self)
                 core.fludef_load(self.handle, make_c_char_p(path))
 
@@ -7389,28 +8215,32 @@ class Seepage(HasHandle, HasCells):
 
         def save(self, path):
             """
-            Serialized save. Optional extension:
-            1:.txt
-                .TXT format
-                (cross-platform, basically unreadable)
-            2:.xml
-                .XML format
-                (specific readability, largest volume, slowest read and write, cross-platform)
-            3:. Other
-                binary formats
-                (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+            序列化保存。可选扩展格式：
+                1：.txt
+                .TXT 格式
+                （跨平台，基本不可读）
+
+                2：.xml
+                .XML 格式
+                （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+                3：.其他
+                二进制格式
+                （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
             """
             if path is not None:
+                assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
                 core.fluid_save(self.handle, make_c_char_p(path))
 
         core.use(None, 'fluid_load', c_void_p, c_char_p)
 
         def load(self, path):
             """
-            Read the serialization archive.
-            To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+            读取序列化文件。
+                根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
             """
             if path is not None:
+                assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
                 _check_ipath(path, self)
                 core.fluid_load(self.handle, make_c_char_p(path))
 
@@ -7674,28 +8504,32 @@ class Seepage(HasHandle, HasCells):
 
         def save(self, path):
             """
-            Serialized save. Optional extension:
-            1:.txt
-                .TXT format
-                (cross-platform, basically unreadable)
-            2:.xml
-                .XML format
-                (specific readability, largest volume, slowest read and write, cross-platform)
-            3:. Other
-                binary formats
-                (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+            序列化保存。可选扩展格式：
+                1：.txt
+                .TXT 格式
+                （跨平台，基本不可读）
+
+                2：.xml
+                .XML 格式
+                （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+                3：.其他
+                二进制格式
+                （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
             """
             if path is not None:
+                assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
                 core.seepage_cell_save(self.handle, make_c_char_p(path))
 
         core.use(None, 'seepage_cell_load', c_void_p, c_char_p)
 
         def load(self, path):
             """
-            Read the serialization archive.
-            To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+            读取序列化文件。
+                根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
             """
             if path is not None:
+                assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
                 _check_ipath(path, self)
                 core.seepage_cell_load(self.handle, make_c_char_p(path))
 
@@ -8006,18 +8840,39 @@ class Seepage(HasHandle, HasCells):
                     self.k = value
                     return self
                 assert False
-                return self
             core.seepage_cell_set_attr(self.handle, index, value)
             return self
 
+        core.use(None, 'seepage_cell_multiply', c_void_p, c_void_p, c_double)
+
+        def multiply(self, scale, result=None):
+            """
+            将孔隙大小和流体都乘以相同的倍率，其余所有的属性保持不变.
+            """
+            if not isinstance(result, Seepage.CellData):
+                result = Seepage.CellData()
+            core.seepage_cell_multiply(result.handle, self.handle, scale)
+            return result
+
+        def __mul__(self, scale):
+            """
+            将孔隙大小和流体都乘以相同的倍率，其余所有的属性保持不变.
+            """
+            return self.multiply(scale)
+
         core.use(None, 'seepage_cell_clone', c_void_p, c_void_p)
 
-        def clone(self, other):
+        def clone(self, other, *, scale=None):
             """
             从other克隆数据（所有的数据）
             """
             assert isinstance(other, Seepage.CellData)
-            core.seepage_cell_clone(self.handle, other.handle)
+            if scale is not None:
+                other.multiply(scale, result=self)
+                return self
+            else:
+                core.seepage_cell_clone(self.handle, other.handle)
+                return self
 
         core.use(None, 'seepage_cell_set_fluid_components', c_void_p, c_void_p)
 
@@ -8214,28 +9069,32 @@ class Seepage(HasHandle, HasCells):
 
         def save(self, path):
             """
-            Serialized save. Optional extension:
-            1:.txt
-                .TXT format
-                (cross-platform, basically unreadable)
-            2:.xml
-                .XML format
-                (specific readability, largest volume, slowest read and write, cross-platform)
-            3:. Other
-                binary formats
-                (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+            序列化保存。可选扩展格式：
+                1：.txt
+                .TXT 格式
+                （跨平台，基本不可读）
+
+                2：.xml
+                .XML 格式
+                （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+                3：.其他
+                二进制格式
+                （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
             """
             if path is not None:
+                assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
                 core.seepage_face_save(self.handle, make_c_char_p(path))
 
         core.use(None, 'seepage_face_load', c_void_p, c_char_p)
 
         def load(self, path):
             """
-            Read the serialization archive.
-            To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+            读取序列化文件。
+                根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
             """
             if path is not None:
+                assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
                 _check_ipath(path, self)
                 core.seepage_face_load(self.handle, make_c_char_p(path))
 
@@ -8453,28 +9312,32 @@ class Seepage(HasHandle, HasCells):
 
         def save(self, path):
             """
-            Serialized save. Optional extension:
-            1:.txt
-                .TXT format
-                (cross-platform, basically unreadable)
-            2:.xml
-                .XML format
-                (specific readability, largest volume, slowest read and write, cross-platform)
-            3:. Other
-                binary formats
-                (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+            序列化保存。可选扩展格式：
+                1：.txt
+                .TXT 格式
+                （跨平台，基本不可读）
+
+                2：.xml
+                .XML 格式
+                （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+                3：.其他
+                二进制格式
+                （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
             """
             if path is not None:
+                assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
                 core.injector_save(self.handle, make_c_char_p(path))
 
         core.use(None, 'injector_load', c_void_p, c_char_p)
 
         def load(self, path):
             """
-            Read the serialization archive.
-            To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+            读取序列化文件。
+                根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
             """
             if path is not None:
+                assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
                 _check_ipath(path, self)
                 core.injector_load(self.handle, make_c_char_p(path))
 
@@ -8590,7 +9453,7 @@ class Seepage(HasHandle, HasCells):
             return 0
 
         @time.setter
-        def time(self, value):
+        def time(self, _):
             warnings.warn('Property Seepage.Injector.time has been removed',
                           DeprecationWarning)
 
@@ -8843,28 +9706,32 @@ class Seepage(HasHandle, HasCells):
 
     def save(self, path):
         """
-        Serialized save. Optional extension:
-        1:.txt
-            .TXT format
-            (cross-platform, basically unreadable)
-        2:.xml
-            .XML format
-            (specific readability, largest volume, slowest read and write, cross-platform)
-        3:. Other
-            binary formats
-            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+        序列化保存。可选扩展格式：
+            1：.txt
+            .TXT 格式
+            （跨平台，基本不可读）
+
+            2：.xml
+            .XML 格式
+            （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+            3：.其他
+            二进制格式
+            （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.seepage_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'seepage_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
-        Read the serialization archive.
-        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+        读取序列化文件。
+            根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.seepage_load(self.handle, make_c_char_p(path))
 
@@ -9104,7 +9971,7 @@ class Seepage(HasHandle, HasCells):
             assert isinstance(flu, Seepage.FluData)
             inj.flu.clone(flu)
 
-        if pos is not None:   # 给定注入的位置，后续，则自动去查找附近的cell
+        if pos is not None:  # 给定注入的位置，后续，则自动去查找附近的cell
             inj.pos = pos
 
         if radi is not None:  # 查找的半径
@@ -9116,14 +9983,14 @@ class Seepage(HasHandle, HasCells):
         if ca_t is not None:  # Cell的属性(温度属性，在注入热量的时候会被修改)
             inj.ca_t = ca_t
 
-        if g_heat is not None:   # 恒定温度加热的时候需要给定
+        if g_heat is not None:  # 恒定温度加热的时候需要给定
             inj.g_heat = g_heat
 
-        if opers is not None:   # 对属性的操作定时器
+        if opers is not None:  # 对属性的操作定时器
             for item in opers:
                 inj.add_oper(*item)
 
-        if value is not None:   # 当前的值
+        if value is not None:  # 当前的值
             inj.value = value
 
         return inj
@@ -9309,13 +10176,16 @@ class Seepage(HasHandle, HasCells):
             self.set_kr(saturation=x, kr=y)
             return
 
-    core.use(c_double, 'seepage_get_kr', c_void_p, c_size_t)
+    core.use(c_void_p, 'seepage_get_kr', c_void_p, c_size_t)
 
     def get_kr(self, index, saturation=None):
         """
-        返回第index个相对渗透率曲线
+        返回第index个相对渗透率曲线(或者在给定saturation的时候，返回相对渗透率数值)。
+        如果给定Index的kr不存在，则使用默认的kr
         """
-        curve = Interp1(handle=core.seepage_get_kr(self.handle, index))
+        handle = core.seepage_get_kr(self.handle, index)
+        assert handle > 0
+        curve = Interp1(handle=handle)
         if saturation is None:
             return curve
         else:
@@ -9477,7 +10347,7 @@ class Seepage(HasHandle, HasCells):
         """
         if dt is None:
             return
-        if thermal_model is None:   # 在模型的内部交换热量（流体和固体交换）
+        if thermal_model is None:  # 在模型的内部交换热量（流体和固体交换）
             assert fid is None
             core.seepage_exchange_heat(self.handle, dt, ca_g, ca_t, ca_mc, fa_t, fa_c)
             return
@@ -10085,6 +10955,7 @@ class Seepage(HasHandle, HasCells):
 
         components = kwargs.get('components', None)
         if components is not None:
+            assert isinstance(components, Iterable)
             for comp in components:
                 kind = comp.get('kind')
                 if isinstance(kind, str):
@@ -10107,6 +10978,7 @@ class Seepage(HasHandle, HasCells):
 
         inhibitors = kwargs.get('inhibitors', None)
         if inhibitors is not None:
+            assert isinstance(inhibitors, Iterable)
             for inh in inhibitors:
                 # 这里要注意的是，这里的浓度指的是质量浓度.
                 sol = inh.get('sol')
@@ -10253,7 +11125,7 @@ class Seepage(HasHandle, HasCells):
         """
         用以和numpy交互数据
         """
-        warnings.warn('Seepage.numpy will be removed after 2025-1-21. Use zmlx.utility.SeepageNumpy Instead. '
+        warnings.warn('Seepage.numpy will be removed after 2025-1-21. Use zmlx.utility.SeepageNumpy Instead.'
                       , DeprecationWarning)
         from zmlx.utility.SeepageNumpy import SeepageNumpy
         return SeepageNumpy(model=self)
@@ -10516,7 +11388,7 @@ class Seepage(HasHandle, HasCells):
         """
         assert isinstance(v2q, Interp1)
         if vel is None:
-            vel = 0   # Data is None
+            vel = 0  # Data is None
         if isinstance(vel, Vector):
             vel = vel.pointer
 
@@ -10750,28 +11622,32 @@ class Thermal(HasHandle):
 
     def save(self, path):
         """
-        Serialized save. Optional extension:
-        1:.txt
-            .TXT format
-            (cross-platform, basically unreadable)
-        2:.xml
-            .XML format
-            (specific readability, largest volume, slowest read and write, cross-platform)
-        3:. Other
-            binary formats
-            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+        序列化保存。可选扩展格式：
+            1：.txt
+            .TXT 格式
+            （跨平台，基本不可读）
+
+            2：.xml
+            .XML 格式
+            （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+            3：.其他
+            二进制格式
+            （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.thermal_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'thermal_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
-        Read the serialization archive.
-        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+        读取序列化文件。
+            根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.thermal_load(self.handle, make_c_char_p(path))
 
@@ -11485,28 +12361,32 @@ class InvasionPercolation(HasHandle):
 
     def save(self, path):
         """
-        Serialized save. Optional extension:
-        1:.txt
-            .TXT format
-            (cross-platform, basically unreadable)
-        2:.xml
-            .XML format
-            (specific readability, largest volume, slowest read and write, cross-platform)
-        3:. Other
-            binary formats
-            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+        序列化保存。可选扩展格式：
+            1：.txt
+            .TXT 格式
+            （跨平台，基本不可读）
+
+            2：.xml
+            .XML 格式
+            （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+            3：.其他
+            二进制格式
+            （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
         assert isinstance(path, str)
+        assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
         core.ip_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'ip_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
-        Read the serialization archive.
-        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+        读取序列化文件。
+            根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.ip_load(self.handle, make_c_char_p(path))
 
@@ -12087,28 +12967,32 @@ class Dfn2(HasHandle):
 
     def save(self, path):
         """
-        Serialized save. Optional extension:
-        1:.txt
-            .TXT format
-            (cross-platform, basically unreadable)
-        2:.xml
-            .XML format
-            (specific readability, largest volume, slowest read and write, cross-platform)
-        3:. Other
-            binary formats
-            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+        序列化保存。可选扩展格式：
+            1：.txt
+            .TXT 格式
+            （跨平台，基本不可读）
+
+            2：.xml
+            .XML 格式
+            （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+            3：.其他
+            二进制格式
+            （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.dfn2d_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'dfn2d_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
-        Read the serialization archive.
-        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+        读取序列化文件。
+            根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.dfn2d_load(self.handle, make_c_char_p(path))
 
@@ -12215,28 +13099,32 @@ class Lattice3(HasHandle):
 
     def save(self, path):
         """
-        Serialized save. Optional extension:
-        1:.txt
-            .TXT format
-            (cross-platform, basically unreadable)
-        2:.xml
-            .XML format
-            (specific readability, largest volume, slowest read and write, cross-platform)
-        3:. Other
-            binary formats
-            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+        序列化保存。可选扩展格式：
+            1：.txt
+            .TXT 格式
+            （跨平台，基本不可读）
+
+            2：.xml
+            .XML 格式
+            （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+            3：.其他
+            二进制格式
+            （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.lat3_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'lat3_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
-        Read the serialization archive.
-        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+        读取序列化文件。
+            根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.lat3_load(self.handle, make_c_char_p(path))
 
@@ -12329,7 +13217,7 @@ class Lattice3(HasHandle):
 
 class DDMSolution2(HasHandle):
     """
-    二维DDM的基本解
+    二维DDM的基本解：计算裂缝单元在任意位置的诱导应力.
     """
     core.use(c_void_p, 'new_ddm_sol2')
     core.use(None, 'del_ddm_sol2', c_void_p)
@@ -12349,26 +13237,30 @@ class DDMSolution2(HasHandle):
 
     def save(self, path):
         """
-        Serialized save. Optional extension:
-        1:.txt
-            .TXT format
-            (cross-platform, basically unreadable)
-        2:.xml
-            .XML format
-            (specific readability, largest volume, slowest read and write, cross-platform)
-        3:. Other
-            binary formats
-            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+        序列化保存。可选扩展格式：
+            1：.txt
+            .TXT 格式
+            （跨平台，基本不可读）
+
+            2：.xml
+            .XML 格式
+            （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+            3：.其他
+            二进制格式
+            （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.ddm_sol2_save(self.handle, make_c_char_p(path))
 
     def load(self, path):
         """
-        Read the serialization archive.
-        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+        读取序列化文件。
+            根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.ddm_sol2_load(self.handle, make_c_char_p(path))
 
     core.use(None, 'ddm_sol2_set_alpha', c_void_p, c_double)
@@ -12448,7 +13340,15 @@ class DDMSolution2(HasHandle):
 
 
 class FractureNetwork(HasHandle):
+    """
+    裂缝网络(二维). 由顶点和裂缝所组成的网络. 存储裂缝网络的数据.
+    """
+
     class VertexData(Object):
+        """
+        顶点的数据
+        """
+
         def __init__(self, handle):
             self.handle = handle
 
@@ -12503,7 +13403,9 @@ class FractureNetwork(HasHandle):
             return self
 
     class FractureData(HasHandle):
-
+        """
+        裂缝的数据
+        """
         core.use(c_void_p, 'new_frac_bd')
         core.use(None, 'del_frac_bd', c_void_p)
 
@@ -12564,6 +13466,9 @@ class FractureNetwork(HasHandle):
 
         @property
         def h(self):
+            """
+            The fracture height. [meter]
+            """
             return core.frac_bd_get_h(self.handle)
 
         @h.setter
@@ -12593,14 +13498,14 @@ class FractureNetwork(HasHandle):
         @property
         def p0(self):
             """
-            p = max(0, p0 + k * dn)
+            假设裂缝内流体的压力fp满足：fp = max(0, p0 + k * dn)
             """
             return core.frac_bd_get_p0(self.handle)
 
         @p0.setter
         def p0(self, value):
             """
-            p = max(0, p0 + k * dn)
+            假设裂缝内流体的压力fp满足：fp = max(0, p0 + k * dn)
             """
             core.frac_bd_set_p0(self.handle, value)
 
@@ -12610,14 +13515,14 @@ class FractureNetwork(HasHandle):
         @property
         def k(self):
             """
-            p = max(0, p0 + k * dn)
+            假设裂缝内流体的压力fp满足：fp = max(0, p0 + k * dn)
             """
             return core.frac_bd_get_k(self.handle)
 
         @k.setter
         def k(self, value):
             """
-            p = max(0, p0 + k * dn)
+            假设裂缝内流体的压力fp满足：fp = max(0, p0 + k * dn)
             """
             core.frac_bd_set_k(self.handle, value)
 
@@ -12626,9 +13531,20 @@ class FractureNetwork(HasHandle):
         @property
         def fp(self):
             """
-            根据此时的dn, p0和k计算得到的fp
+            根据此时的dn, p0和k计算得到的fp (流体压力)
             """
             return core.frac_bd_get_fp(self.handle)
+
+        core.use(c_void_p, 'frac_bd_get_flu', c_void_p)
+
+        @property
+        def flu(self):
+            """
+            返回流体的映射数据
+            """
+            handle = core.frac_bd_get_flu(self.handle)
+            if handle:
+                return LinearExpr(handle=handle)
 
         @staticmethod
         def create(ds=None, dn=None, h=None, f=None, p0=None, k=None):
@@ -12651,7 +13567,9 @@ class FractureNetwork(HasHandle):
             return data
 
     class Vertex(VertexData):
-
+        """
+        顶点
+        """
         core.use(c_void_p, 'frac_nt_get_nd', c_void_p, c_size_t)
 
         def __init__(self, network, index):
@@ -12670,18 +13588,26 @@ class FractureNetwork(HasHandle):
 
         @property
         def fracture_number(self):
+            """
+            :return: 共享此顶点的裂缝单元的数量.
+            """
             return core.frac_nt_nd_get_bd_n(self.network.handle, self.index)
 
         core.use(c_size_t, 'frac_nt_nd_get_bd_i', c_void_p, c_size_t, c_size_t)
 
         def get_fracture(self, index):
+            """
+            :return: 此顶点周边的裂缝单元
+            """
             index = get_index(index, self.fracture_number)
             if index is not None:
                 return self.network.get_fracture(
                     core.frac_nt_nd_get_bd_i(self.network.handle, self.index, index))
 
     class Fracture(FractureData):
-
+        """
+        裂缝.
+        """
         core.use(c_void_p, 'frac_nt_get_bd', c_void_p, c_size_t)
 
         def __init__(self, network, index):
@@ -12698,6 +13624,9 @@ class FractureNetwork(HasHandle):
 
         @property
         def vertex_number(self):
+            """
+            裂缝顶点的数量
+            """
             return 2
 
         core.use(c_size_t, 'frac_nt_bd_get_nd_i', c_void_p, c_size_t, c_size_t)
@@ -12752,28 +13681,32 @@ class FractureNetwork(HasHandle):
 
     def save(self, path):
         """
-        Serialized save. Optional extension:
-        1:.txt
-            .TXT format
-            (cross-platform, basically unreadable)
-        2:.xml
-            .XML format
-            (specific readability, largest volume, slowest read and write, cross-platform)
-        3:. Other
-            binary formats
-            (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
+        序列化保存。可选扩展格式：
+            1：.txt
+            .TXT 格式
+            （跨平台，基本不可读）
+
+            2：.xml
+            .XML 格式
+            （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+            3：.其他
+            二进制格式
+            （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.frac_nt_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'frac_nt_load', c_void_p, c_char_p)
 
     def load(self, path):
         """
-        Read the serialization archive.
-        To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
+        读取序列化文件。
+            根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.frac_nt_load(self.handle, make_c_char_p(path))
 
@@ -12807,9 +13740,15 @@ class FractureNetwork(HasHandle):
 
     @property
     def vertex_number(self):
+        """
+        顶点的数量
+        """
         return core.frac_nt_get_nd_n(self.handle)
 
     def get_vertex(self, index):
+        """
+        返回顶点
+        """
         index = get_index(index, self.vertex_number)
         if index is not None:
             return FractureNetwork.Vertex(self, index)
@@ -12818,9 +13757,15 @@ class FractureNetwork(HasHandle):
 
     @property
     def fracture_number(self):
+        """
+        裂缝单元(线段)的数量
+        """
         return core.frac_nt_get_bd_n(self.handle)
 
     def get_fracture(self, index):
+        """
+        返回裂缝单元
+        """
         index = get_index(index, self.fracture_number)
         if index is not None:
             return FractureNetwork.Fracture(self, index)
@@ -12828,32 +13773,68 @@ class FractureNetwork(HasHandle):
     core.use(c_size_t, 'frac_nt_add_nd', c_void_p, c_double, c_double)
 
     def add_vertex(self, x, y):
+        """
+        添加顶点(要添加裂缝单元，必须首先添加顶点)
+        """
         index = core.frac_nt_add_nd(self.handle, x, y)
         return self.get_vertex(index)
 
     core.use(c_size_t, 'frac_nt_add_bd', c_void_p, c_size_t, c_size_t)
 
     def add_fracture(self, i0, i1):
+        """
+        添加裂缝单元.
+        """
         index = core.frac_nt_add_bd(self.handle, i0, i1)
         return self.get_fracture(index)
 
     core.use(None, 'frac_nt_clear', c_void_p)
 
     def clear(self):
+        """
+        清除所有
+        """
         core.frac_nt_clear(self.handle)
 
     @property
     def vertexes(self):
+        """
+        所有的顶点(用于迭代)
+        """
         return Iterator(model=self,
                         count=self.vertex_number, get=lambda m, ind: m.get_vertex(ind))
 
     @property
     def fractures(self):
+        """
+        所有的裂缝(用于迭代)
+        """
         return Iterator(model=self,
                         count=self.fracture_number, get=lambda m, ind: m.get_fracture(ind))
 
+    core.use(None, 'frac_nt_get_induced_at', c_void_p, c_void_p, c_double, c_double, c_void_p)
+    core.use(None, 'frac_nt_get_induced_along', c_void_p, c_void_p,
+             c_double, c_double, c_double, c_double, c_void_p)
+
+    def get_induced(self, pos, sol2, buf=None):
+        """
+        返回在pos位置的诱导应力
+        """
+        assert len(pos) == 2 or len(pos) == 4
+        assert isinstance(sol2, DDMSolution2)
+        if not isinstance(buf, Tensor2):
+            buf = Tensor2()
+        if len(pos) == 2:
+            core.frac_nt_get_induced_at(self.handle, buf.handle, pos[0], pos[1], sol2.handle)
+        else:
+            core.frac_nt_get_induced_along(self.handle, buf.handle, pos[0], pos[1], pos[2], pos[3], sol2.handle)
+        return buf
+
 
 class InfMatrix(HasHandle):
+    """
+    影响系数矩阵.
+    """
     core.use(c_void_p, 'new_frac_mat')
     core.use(None, 'del_frac_mat', c_void_p)
 
@@ -12869,17 +13850,26 @@ class InfMatrix(HasHandle):
 
     @property
     def size(self):
+        """
+        :return: 裂缝单元的数量
+        """
         return core.frac_mat_size(self.handle)
 
     core.use(None, 'frac_mat_create', c_void_p, c_void_p, c_void_p)
 
     def update(self, network, sol2):
+        """
+        更新矩阵
+        """
         assert isinstance(network, FractureNetwork)
         assert isinstance(sol2, DDMSolution2)
         core.frac_mat_create(self.handle, network.handle, sol2.handle)
 
 
 class FracAlg:
+    """
+    提供一些裂缝相关的基础的算法.
+    """
     core.use(c_size_t, 'frac_alg_update_disp', c_void_p, c_void_p,
              c_size_t, c_size_t,
              c_double, c_double,
@@ -12890,7 +13880,7 @@ class FracAlg:
                     gradw_max=0, err_max=0.1, iter_min=10, iter_max=10000,
                     ratio_max=0.99, dist_max=1.0e6):
         """
-        更新位移
+        更新位移. 这是DDM计算的最核心的函数
         """
         assert isinstance(network, FractureNetwork)
         assert isinstance(matrix, InfMatrix)
@@ -12903,6 +13893,9 @@ class FracAlg:
 
     @staticmethod
     def extend_tip(network, kic, sol2, l_extend, va_wmin=99999999, angle_max=0.6):
+        """
+        尝试进行裂缝的扩展
+        """
         assert isinstance(network, FractureNetwork)
         assert isinstance(kic, Tensor2)
         assert isinstance(sol2, DDMSolution2)

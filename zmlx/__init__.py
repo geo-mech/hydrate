@@ -15,6 +15,11 @@ try:
 except Exception as err:
     warnings.warn(f'meet exception when import GuiBuffer. error = {err}')
 
+from zmlx.alg.is_chinese import is_chinese
+if is_chinese(get_dir()):
+    warnings.warn('Please make sure to install zml in a pure English path, '
+                  'otherwise it may cause unpredictable errors.')
+
 # 下面这几个，主要用来覆盖zml中的定义
 from zmlx.alg.time2str import time2str
 from zmlx.alg.mass2str import mass2str

@@ -1,5 +1,4 @@
 import os
-import sys
 
 from zml import app_data
 from zmlx import get_path
@@ -12,7 +11,7 @@ class DemoWidget(QtWidgets.QTableWidget):
         super(DemoWidget, self).__init__(parent)
         self.__data = []
         self.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.Stretch)
-        self.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
         self.clicked.connect(self.item_clicked)
         self.refresh()
 
@@ -49,7 +48,7 @@ class DemoWidget(QtWidgets.QTableWidget):
         self.setRowCount(len(self.__data))
         self.setColumnCount(2)
         self.setHorizontalHeaderLabels(['项目', '说明'])
-        self.horizontalHeader().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
+        self.horizontalHeader().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
 
         for row_id in range(len(self.__data)):
             try:
@@ -82,10 +81,3 @@ class DemoWidget(QtWidgets.QTableWidget):
 
     def get_start_code(self):
         return """gui.trigger('demo.txtpy')"""
-
-
-if __name__ == '__main__':
-    app = QtWidgets.QApplication(sys.argv)
-    w = DemoWidget()
-    w.show()
-    sys.exit(app.exec_())

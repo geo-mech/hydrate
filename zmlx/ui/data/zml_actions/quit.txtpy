@@ -1,7 +1,7 @@
-icon = 'quit.jpg'
+icon = 'quit'
 text = '退出'
 
 
-def func():
+def slot():
     from zmlx.ui.MainWindow import get_window
     get_window().close()

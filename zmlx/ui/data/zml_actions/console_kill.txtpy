@@ -1,8 +1,8 @@
-icon = 'kill.jpg'
+icon = 'kill'
 text = '强制结束'
 
 
-def func():
+def slot():
     from zmlx.ui.MainWindow import get_window
     get_window().kill_thread()
 

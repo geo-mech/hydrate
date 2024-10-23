@@ -2,17 +2,19 @@ import os.path
 import sys
 import warnings
 
+import zml
+from zmlx.alg.is_chinese import is_chinese
 from zmlx.filesys.has_permission import has_permission
 from zmlx.filesys.samefile import samefile
 from zmlx.filesys.show_fileinfo import show_fileinfo
-from zmlx.ui.ActionX import ActionX
+from zmlx.ui.ActionX import ActionX, QAction
 from zmlx.ui.CodeEdit import CodeEdit
 from zmlx.ui.Config import *
 from zmlx.ui.ConsoleWidget import ConsoleWidget
 from zmlx.ui.GuiApi import GuiApi
 from zmlx.ui.GuiBuffer import gui
 from zmlx.ui.Label import Label
-from zmlx.ui.Qt import QtCore
+from zmlx.ui.Qt import QtCore, has_PyQt6, QtWidgets, QtMultimedia
 from zmlx.ui.TabWidget import TabWidget
 from zmlx.ui.TaskProc import TaskProc
 from zmlx.ui.VersionLabel import VersionLabel
@@ -24,10 +26,11 @@ from zmlx.ui.alg.show_txt import show_txt
 class MainWindow(QtWidgets.QMainWindow):
     sig_cwd_changed = QtCore.pyqtSignal(str)
     sig_do_task = QtCore.pyqtSignal()
+    sig_play_sound = QtCore.pyqtSignal(str)
 
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
-        self.setWindowIcon(load_icon('app.jpg'))
+        self.setWindowIcon(load_icon('app'))
         self.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         self.__task_proc = TaskProc(self)
 
@@ -48,7 +51,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.__tab_widget = TabWidget(splitter)
         self.__tab_widget.currentChanged.connect(self.refresh)
         self.__console = ConsoleWidget(splitter)
-        self.__gui_api = GuiApi(widget, self.__console.get_break_point(), self.__console.get_flag_exit())
+        self.__gui_api = GuiApi(widget,
+                                self.__console.get_break_point(),
+                                self.__console.get_flag_exit())
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 0)
         h_layout.addWidget(splitter)
@@ -87,13 +92,26 @@ class MainWindow(QtWidgets.QMainWindow):
         self.__warning_toolbar = self.addToolBar('WarningToolbar')
         self.__warning_toolbar.setVisible(False)
         self.__warning_toolbar.setStyleSheet('background-color: yellow;')
-        self.__warning_action = QtWidgets.QAction(self)
+        self.__warning_action = QAction(self)
         self.__warning_action.setToolTip('警告消息(点击以隐藏)')
         self.__warning_action.triggered.connect(lambda: self.toolbar_warning(text=''))
         self.__warning_toolbar.addAction(self.__warning_action)
 
+        # 用以播放声音
+        if QtMultimedia is not None:
+            self.__sound = QtMultimedia.QSoundEffect()
+        else:
+            self.__sound = None
+
+        def play(name):
+            if self.__sound is not None:
+                self.__sound.setSource(QtCore.QUrl.fromLocalFile(name))
+                self.__sound.play()
+
+        self.sig_play_sound.connect(play)
+
         try:
-            filename = find_icon_file('welcome.jpg')
+            filename = find_icon_file('welcome')
             if filename is not None:
                 if os.path.isfile(filename):
                     self.open_image(filename, caption='Welcome')
@@ -165,6 +183,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.__gui_api.add_func('kill_thread', self.kill_thread)
         self.__gui_api.add_func('plot', self.cmd_plot)
         self.__gui_api.add_func('progress', self.progress)
+        self.__gui_api.add_func('play_sound', self.play_sound)
         self.__gui_api.add_func('refresh', self.refresh)
         self.__gui_api.add_func('open_file', self.open_file)
         self.__gui_api.add_func('open_file_by_dlg', self.open_file_by_dlg)
@@ -203,6 +222,7 @@ class MainWindow(QtWidgets.QMainWindow):
             if len(text) > 0:
                 self.__warning_toolbar.setVisible(True)
                 self.__warning_action.setText(text)
+                zml.log(text)
             else:
                 self.__warning_toolbar.setVisible(False)
                 self.__warning_action.setText('')
@@ -244,7 +264,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def resizeEvent(self, event):
         super(MainWindow, self).resizeEvent(event)
-        save_window_size(self, 'main_window_size')
+        name = 'main_window_size_PyQt6' if has_PyQt6 else 'main_window_size'
+        save_window_size(self, name)
 
     def get_widget(self, the_type, caption=None, on_top=None, init=None,
                    type_kw=None, oper=None, icon=None):
@@ -290,7 +311,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def get_figure_widget(self, clear=None, **kwargs):
         from zmlx.ui.MatplotWidget import MatplotWidget
         if kwargs.get('icon', None) is None:
-            kwargs['icon'] = 'matplotlib.jpg'
+            kwargs['icon'] = 'matplotlib'
         widget = self.get_widget(the_type=MatplotWidget, **kwargs)
         if clear:
             fig = widget.figure
@@ -332,7 +353,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def view_cwd(self):
         from zmlx.ui.Widgets.CwdViewer import CwdViewer
-        self.get_widget(the_type=CwdViewer, caption='文件', on_top=True, oper=lambda w: w.refresh(), icon='cwd.jpg')
+        self.get_widget(the_type=CwdViewer, caption='文件', on_top=True, oper=lambda w: w.refresh(), icon='cwd')
 
     def progress(self, label=None, val_range=None, value=None, visible=None, duration=5000):
         """
@@ -378,7 +399,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.get_widget(the_type=CodeEdit,
                                 caption=os.path.basename(fname) if caption is None else caption,
                                 on_top=True,
-                                oper=lambda x: x.open(fname), icon='python.jpg')
+                                oper=lambda x: x.open(fname), icon='python')
                 print(f'文件已打开: \n\t{fname}\n\n请点击工具栏上的<运行>按钮以运行!\n\n')
 
     def open_text(self, fname, caption=None):
@@ -527,7 +548,19 @@ class MainWindow(QtWidgets.QMainWindow):
     def show_about(self):
         from zmlx.ui.Widgets.About import About
         self.check_license()
-        self.get_widget(the_type=About, caption='关于', on_top=True, icon='info.jpg')
+        self.get_widget(the_type=About, caption='关于', on_top=True, icon='info')
+
+    def play_sound(self, filename):
+        """
+        播放声音
+        """
+        if isinstance(filename, str):
+            if not os.path.isfile(filename):
+                filename = find_sound(filename)
+                if filename is None:
+                    return
+            if os.path.isfile(filename):
+                self.sig_play_sound.emit(filename)
 
 
 class MySplashScreen(QtWidgets.QSplashScreen):
@@ -569,11 +602,11 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
 
     app = QtWidgets.QApplication(sys.argv)
 
-    splash_fig = load_pixmap('splash.jpg')
+    splash_fig = load_pixmap('splash')
     if splash_fig is not None and app_data.getenv('disable_splash', default='No', ignore_empty=True) != 'Yes':
         splash = MySplashScreen()
         try:
-            rect = QtWidgets.QDesktopWidget().availableGeometry()
+            rect = screen_size()
             splash_fig = splash_fig.scaled(round(rect.width() * 0.3),
                                            round(rect.height() * 0.3),
                                            QtCore.Qt.AspectRatioMode.KeepAspectRatio)
@@ -609,7 +642,8 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
     f1()
 
     try:
-        load_window_size(win, 'main_window_size')
+        name = 'main_window_size_PyQt6' if has_PyQt6 else 'main_window_size'
+        load_window_size(win, name)
     except Exception as err:
         print(f'Error: {err}')
 
@@ -633,6 +667,12 @@ still unresolved, please contact the author (email: 'zhangzhaobin@mail.iggcas.ac
         splash.deleteLater()
 
     def setup():
+        """
+        在程序界面启动之后执行的设置
+        """
+        if is_chinese(zml.get_dir()):
+            win.toolbar_warning('提醒：请务必将程序安装在纯英文路径下')
+
         for path in find_all('zml_gui_setup.py'):
             try:
                 print(f'Exec File: {path}')
@@ -653,7 +693,8 @@ still unresolved, please contact the author (email: 'zhangzhaobin@mail.iggcas.ac
         win.get_console().start_func(codex)
     else:
         win.get_console().start_func(setup)
-    app.exec_()
+
+    app.exec()
     f2()
     if hasattr(win, 'tabs_should_be_saved'):
         save_tab_start_code(app_data.temp('tab_start_code.json'), win)

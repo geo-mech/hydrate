@@ -11,7 +11,7 @@ class TimerViewer(QtWidgets.QTableWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.Stretch)
-        # self.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
 
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.refresh)
