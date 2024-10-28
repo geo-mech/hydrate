@@ -5,14 +5,14 @@ import warnings
 from zmlx.filesys.has_permission import has_permission
 from zmlx.filesys.samefile import samefile
 from zmlx.filesys.show_fileinfo import show_fileinfo
-from zmlx.ui.ActionX import ActionX
+from zmlx.ui.ActionX import ActionX, QAction
 from zmlx.ui.CodeEdit import CodeEdit
 from zmlx.ui.Config import *
 from zmlx.ui.ConsoleWidget import ConsoleWidget
 from zmlx.ui.GuiApi import GuiApi
 from zmlx.ui.GuiBuffer import gui
 from zmlx.ui.Label import Label
-from zmlx.ui.Qt import QtCore
+from zmlx.ui.Qt import QtCore, has_PyQt6, QtWidgets, QtMultimedia
 from zmlx.ui.TabWidget import TabWidget
 from zmlx.ui.TaskProc import TaskProc
 from zmlx.ui.VersionLabel import VersionLabel
@@ -24,6 +24,7 @@ from zmlx.ui.alg.show_txt import show_txt
 class MainWindow(QtWidgets.QMainWindow):
     sig_cwd_changed = QtCore.pyqtSignal(str)
     sig_do_task = QtCore.pyqtSignal()
+    sig_play_sound = QtCore.pyqtSignal(str)
 
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
@@ -48,7 +49,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.__tab_widget = TabWidget(splitter)
         self.__tab_widget.currentChanged.connect(self.refresh)
         self.__console = ConsoleWidget(splitter)
-        self.__gui_api = GuiApi(widget, self.__console.get_break_point(), self.__console.get_flag_exit())
+        self.__gui_api = GuiApi(widget,
+                                self.__console.get_break_point(),
+                                self.__console.get_flag_exit())
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 0)
         h_layout.addWidget(splitter)
@@ -87,10 +90,23 @@ class MainWindow(QtWidgets.QMainWindow):
         self.__warning_toolbar = self.addToolBar('WarningToolbar')
         self.__warning_toolbar.setVisible(False)
         self.__warning_toolbar.setStyleSheet('background-color: yellow;')
-        self.__warning_action = QtWidgets.QAction(self)
+        self.__warning_action = QAction(self)
         self.__warning_action.setToolTip('警告消息(点击以隐藏)')
         self.__warning_action.triggered.connect(lambda: self.toolbar_warning(text=''))
         self.__warning_toolbar.addAction(self.__warning_action)
+
+        # 用以播放声音
+        if QtMultimedia is not None:
+            self.__sound = QtMultimedia.QSoundEffect()
+        else:
+            self.__sound = None
+
+        def play(name):
+            if self.__sound is not None:
+                self.__sound.setSource(QtCore.QUrl.fromLocalFile(name))
+                self.__sound.play()
+
+        self.sig_play_sound.connect(play)
 
         try:
             filename = find_icon_file('welcome.jpg')
@@ -165,6 +181,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.__gui_api.add_func('kill_thread', self.kill_thread)
         self.__gui_api.add_func('plot', self.cmd_plot)
         self.__gui_api.add_func('progress', self.progress)
+        self.__gui_api.add_func('play_sound', self.play_sound)
         self.__gui_api.add_func('refresh', self.refresh)
         self.__gui_api.add_func('open_file', self.open_file)
         self.__gui_api.add_func('open_file_by_dlg', self.open_file_by_dlg)
@@ -244,7 +261,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def resizeEvent(self, event):
         super(MainWindow, self).resizeEvent(event)
-        save_window_size(self, 'main_window_size')
+        name = 'main_window_size_PyQt6' if has_PyQt6 else 'main_window_size'
+        save_window_size(self, name)
 
     def get_widget(self, the_type, caption=None, on_top=None, init=None,
                    type_kw=None, oper=None, icon=None):
@@ -529,6 +547,18 @@ class MainWindow(QtWidgets.QMainWindow):
         self.check_license()
         self.get_widget(the_type=About, caption='关于', on_top=True, icon='info.jpg')
 
+    def play_sound(self, filename):
+        """
+        播放声音
+        """
+        if isinstance(filename, str):
+            if not os.path.isfile(filename):
+                filename = find_sound(filename)
+                if filename is None:
+                    return
+            if os.path.isfile(filename):
+                self.sig_play_sound.emit(filename)
+
 
 class MySplashScreen(QtWidgets.QSplashScreen):
     def mousePressEvent(self, event):
@@ -573,7 +603,7 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
     if splash_fig is not None and app_data.getenv('disable_splash', default='No', ignore_empty=True) != 'Yes':
         splash = MySplashScreen()
         try:
-            rect = QtWidgets.QDesktopWidget().availableGeometry()
+            rect = screen_size()
             splash_fig = splash_fig.scaled(round(rect.width() * 0.3),
                                            round(rect.height() * 0.3),
                                            QtCore.Qt.AspectRatioMode.KeepAspectRatio)
@@ -609,7 +639,8 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
     f1()
 
     try:
-        load_window_size(win, 'main_window_size')
+        name = 'main_window_size_PyQt6' if has_PyQt6 else 'main_window_size'
+        load_window_size(win, name)
     except Exception as err:
         print(f'Error: {err}')
 
@@ -653,7 +684,8 @@ still unresolved, please contact the author (email: 'zhangzhaobin@mail.iggcas.ac
         win.get_console().start_func(codex)
     else:
         win.get_console().start_func(setup)
-    app.exec_()
+
+    app.exec()
     f2()
     if hasattr(win, 'tabs_should_be_saved'):
         save_tab_start_code(app_data.temp('tab_start_code.json'), win)

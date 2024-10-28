@@ -6,13 +6,13 @@ def set_position(widget):
     try:
         text = app_data.getenv('TabPosition', default='North', ignore_empty=True)
         if text == 'North':
-            widget.setTabPosition(QtWidgets.QTabWidget.North)
+            widget.setTabPosition(QtWidgets.QTabWidget.TabPosition.North)
         if text == 'South':
-            widget.setTabPosition(QtWidgets.QTabWidget.South)
+            widget.setTabPosition(QtWidgets.QTabWidget.TabPosition.South)
         if text == 'East':
-            widget.setTabPosition(QtWidgets.QTabWidget.East)
+            widget.setTabPosition(QtWidgets.QTabWidget.TabPosition.East)
         if text == 'West':
-            widget.setTabPosition(QtWidgets.QTabWidget.West)
+            widget.setTabPosition(QtWidgets.QTabWidget.TabPosition.West)
     except Exception as e:
         print(e)
 
@@ -21,9 +21,9 @@ def set_shape(widget):
     try:
         text = app_data.getenv('TabShape', default='Rounded', ignore_empty=True)
         if text == 'Triangular':
-            widget.setTabShape(QtWidgets.QTabWidget.Triangular)
+            widget.setTabShape(QtWidgets.QTabWidget.TabShape.Triangular)
         if text == 'Rounded':
-            widget.setTabShape(QtWidgets.QTabWidget.Rounded)
+            widget.setTabShape(QtWidgets.QTabWidget.TabShape.Rounded)
     except Exception as e:
         print(e)
 

@@ -1,6 +1,6 @@
 ### 介绍
 
-[IGG-Hydrate](https://gitee.com/geomech/hydrate): 天然气水合物开发模拟器。用于：1、天然气水合物成藏/开发; 2、页岩油原位转化；3、其它流动/传热/化学耦合问题。
+[IGG-Hydrate](https://gitee.com/geomech/hydrate): 天然气水合物开发模拟器。用于：1、天然气水合物成藏/开发; 2、页岩油原位转化；3、其它流动/传热/化学/变形耦合问题.
 
 ### 作者
 
@@ -17,28 +17,28 @@
 
 ### 授权
 
-免费用于学术用途；使用前请[联系作者](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/201703/t20170306_4755492.html).
+免费用于学术用途； 使用前请[联系作者](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/201703/t20170306_4755492.html);
 
 ### 功能
-1. 多相多[组分](https://gitee.com/geomech/hydrate/tree/master/zmlx/fluid)流动，支持: 水/蒸气/水冰，ch4/ch4水合物，co2/co2水合物，盐度/砂，油/重油/干酪根;  
-2. [反应](https://gitee.com/geomech/hydrate/tree/master/zmlx/react): 水的蒸发/结冰/融化; ch4水合物形成/分解; co2水合物形成/分解; 干酪根/重油裂解;
-3. 热传导/对流;
+1. 多相多[组分](https://gitee.com/geomech/hydrate/tree/master/zmlx/fluid)流动，支持: 水/蒸气/水冰，ch4/ch4水合物，co2/co2水合物，盐度/砂，油/重油/干酪根，或其它自定义组分;  
+2. [反应](https://gitee.com/geomech/hydrate/tree/master/zmlx/react): 水的蒸发/结冰/融化; ch4水合物形成/分解; co2水合物形成/分解; 干酪根/重油裂解，或其它自定义的反应;
+3. 热传导/对流.
 
 ### 安装
 
 1. Windows 10/11, x64, 安装[VC_redist.x64.exe](https://gitee.com/geomech/hydrate/attach_files);
 2. 安装[Python](https://www.python.org/) 3.7+ (x64); 
-3. 将[zml.py](https://gitee.com/geomech/hydrate/blob/master/zml.py)所在文件夹添加到Python[搜索路径](https://zhuanlan.zhihu.com/p/530589364);
-4. 命令行运行`python.exe -m zml env`来安装 [IGG-Hydrate](https://gitee.com/geomech/hydrate) 依赖的Python模块(包括：`numpy, scipy, PyQt5, matplotlib, pyqtgraph, PyOpenGL, PyQtWebEngine`等). 
+3. 确保第三方[Python](https://www.python.org/)模块配置成功：`numpy, scipy, PyQt5或PyQt6 (只安装一个), matplotlib, pyqtgraph, PyOpenGL, PyQtWebEngine`等；
+4. 将[zml.py](https://gitee.com/geomech/hydrate/blob/master/zml.py)所在文件夹添加到Python[搜索路径](https://zhuanlan.zhihu.com/p/530589364). 
 
 ### 使用
 
-1. 参考[zmlx/demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo);
-2. 运行[UI.pyw](https://gitee.com/geomech/hydrate/blob/master/UI.pyw)启动界面.
+1. 参考[zmlx/demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)来建模;
+2. 用[Python](https://www.python.org/)执行[UI.pyw](https://gitee.com/geomech/hydrate/blob/master/UI.pyw)以启动界面.
 
 ### 反馈
 
-使用过程中遇到问题，请[新建Issue](https://gitee.com/geomech/hydrate/issues/new)来向作者提问或者反馈。
+使用过程中遇到问题，请[新建Issue](https://gitee.com/geomech/hydrate/issues/new)来向作者提问或者反馈.
 
 ### 开发
 欢迎并感谢您成为开发者并推送代码：
@@ -47,7 +47,7 @@
 
 ### 致谢
 
-1. 中国科学院地质地球所重点部署项目(IGGCAS-201903);
+1. [中国科学院地质地球所](https://igg.cas.cn/)重点部署项目(IGGCAS-201903);
 2. 国家自然科学基金地质联合基金(U2244223);
 
 

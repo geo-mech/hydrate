@@ -11,15 +11,26 @@ class TaskProc(QtCore.QObject):
         self.__tasks = Queue()
         self.__sig_do_task.connect(self.__do_task)
 
+    def _get_task(self):
+        """
+        弹出一个任务.
+        """
+        try:
+            return self.__tasks.get(block=False)
+        except:
+            return None
+
     def __do_task(self):
         while True:
             try:
-                task = self.__tasks.get(block=False)
-                if hasattr(task, '__call__'):
+                task = self._get_task()
+                if task is None:
+                    break
+                else:
+                    assert hasattr(task, '__call__'), 'The task is not a function'
                     task()
             except Exception as e:
-                print(e)
-                return
+                print(f'meet error {e}')
 
     def add(self, task):
         try:
@@ -27,4 +38,4 @@ class TaskProc(QtCore.QObject):
                 self.__tasks.put(task, block=False)
                 self.__sig_do_task.emit()
         except Exception as e:
-            print(e)
+            print(f'meet error {e}')

@@ -37,32 +37,30 @@ class PythonHighlighter(QtGui.QSyntaxHighlighter):
         constants = ["False", "True", "None", "NotImplemented",
                      "Ellipsis"]
 
-        PythonHighlighter.Rules.append((QtCore.QRegExp(
+        PythonHighlighter.Rules.append((QtCore.QRegularExpression(
             "|".join([r"\b%s\b" % keyword for keyword in keywords])),
                                         "keyword"))
-        PythonHighlighter.Rules.append((QtCore.QRegExp(
+        PythonHighlighter.Rules.append((QtCore.QRegularExpression(
             "|".join([r"\b%s\b" % builtin for builtin in builtins])),
                                         "builtin"))
-        PythonHighlighter.Rules.append((QtCore.QRegExp(
+        PythonHighlighter.Rules.append((QtCore.QRegularExpression(
             "|".join([r"\b%s\b" % constant
                       for constant in constants])), "constant"))
-        PythonHighlighter.Rules.append((QtCore.QRegExp(
+        PythonHighlighter.Rules.append((QtCore.QRegularExpression(
             r"\b[+-]?[0-9]+[lL]?\b"
             r"|\b[+-]?0[xX][0-9A-Fa-f]+[lL]?\b"
             r"|\b[+-]?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?\b"),
                                         "number"))
-        PythonHighlighter.Rules.append((QtCore.QRegExp(
+        PythonHighlighter.Rules.append((QtCore.QRegularExpression(
             r"\bPyQt4\b|\bQt?[A-Z][a-z]\w+\b"), "pyqt"))
-        PythonHighlighter.Rules.append((QtCore.QRegExp(r"\b@\w+\b"),
+        PythonHighlighter.Rules.append((QtCore.QRegularExpression(r"\b@\w+\b"),
                                         "decorator"))
-        string_re = QtCore.QRegExp(r"""(?:'[^']*'|"[^"]*")""")
-        string_re.setMinimal(True)
+        string_re = QtCore.QRegularExpression(r"""(?:'[^']*?'|"[^"]*?")""")
         PythonHighlighter.Rules.append((string_re, "string"))
-        self.stringRe = QtCore.QRegExp(r"""(:?"["]".*"["]"|'''.*''')""")
-        self.stringRe.setMinimal(True)
+        self.stringRe = QtCore.QRegularExpression(r"""(:?"["].*?"|'''.*?'')""")
         PythonHighlighter.Rules.append((self.stringRe, "string"))
-        self.tripleSingleRe = QtCore.QRegExp(r"""'''(?!")""")
-        self.tripleDoubleRe = QtCore.QRegExp(r'''"""(?!')''')
+        self.tripleSingleRe = QtCore.QRegularExpression(r"""'''(?!")""")
+        self.tripleDoubleRe = QtCore.QRegularExpression(r'''"""(?!')''')
 
     @staticmethod
     def initialize_formats():
@@ -82,7 +80,7 @@ class PythonHighlighter(QtGui.QSyntaxHighlighter):
             fmt = QtGui.QTextCharFormat(base_format)
             fmt.setForeground(QtGui.QColor(color))
             if name in ("keyword", "decorator"):
-                fmt.setFontWeight(QtGui.QFont.Bold)
+                fmt.setFontWeight(QtGui.QFont.Weight.Bold)
             if name == "comment":
                 fmt.setFontItalic(True)
             PythonHighlighter.Formats[name] = fmt
@@ -115,12 +113,13 @@ class PythonHighlighter(QtGui.QSyntaxHighlighter):
             return
 
         for regex, fmt in PythonHighlighter.Rules:
-            i = regex.indexIn(text)
-            while i >= 0:
-                length = regex.matchedLength()
-                self.setFormat(i, length,
-                               PythonHighlighter.Formats[fmt])
-                i = regex.indexIn(text, i + length)
+            matches = regex.globalMatch(text)
+            # 处理匹配项并设置格式
+            while matches.hasNext():
+                match = matches.next()  # 获取下一个匹配
+                start = match.capturedStart(0)  # 获取匹配的起始索引
+                length = match.capturedLength(0)  # 获取匹配的长度
+                self.setFormat(start, length, PythonHighlighter.Formats[fmt])
 
         # Slow but good quality highlighting for comments. For more
         # speed, comment this out and add the following to __init__:
@@ -145,20 +144,21 @@ class PythonHighlighter(QtGui.QSyntaxHighlighter):
 
         self.setCurrentBlockState(normal)
 
-        if self.stringRe.indexIn(text) != -1:
+        match = self.stringRe.match(text)
+        if match.hasMatch():  # 检查是否有匹配
             return
+
         # This is fooled by triple quotes inside single quoted strings
-        for i, state in ((self.tripleSingleRe.indexIn(text),
-                          triple_single),
-                         (self.tripleDoubleRe.indexIn(text),
-                          triple_double)):
+        for regex, state in ((self.tripleSingleRe, triple_single),
+                             (self.tripleDoubleRe, triple_double)):
+            match = regex.match(text)  # 使用 match() 方法获取匹配结果
+            i = match.capturedStart(0) if match.hasMatch() else -1  # 获取匹配的起始位置
+
             if self.previousBlockState() == state:
-                if i == -1:
+                if i == -1:  # 如果没有匹配，设置 i 为文本长度
                     i = len(text)
                     self.setCurrentBlockState(state)
-                self.setFormat(0, i + 3,
-                               PythonHighlighter.Formats["string"])
-            elif i > -1:
+                self.setFormat(0, i + 3, PythonHighlighter.Formats["string"])  # 设置格式
+            elif i > -1:  # 如果找到匹配
                 self.setCurrentBlockState(state)
-                self.setFormat(i, len(text),
-                               PythonHighlighter.Formats["string"])
+                self.setFormat(i, len(text), PythonHighlighter.Formats["string"])  # 设置格式

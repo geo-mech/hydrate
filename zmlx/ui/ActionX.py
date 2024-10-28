@@ -1,7 +1,8 @@
 from zmlx.ui.Config import *
+from zmlx.ui.Qt import QAction
 
 
-class ActionX(QtWidgets.QAction):
+class ActionX(QAction):
     def __init__(self, parent, file=None):
         super().__init__(parent)
         self._window = parent
@@ -66,7 +67,7 @@ class ActionX(QtWidgets.QAction):
             return False
 
         try:
-            exec(self._data.get('depend', ''), {})
+            exec(self._data.get('dependency', ''), {})
         except:
             return False  # 依赖项错误，则直接不可用
 

@@ -7,7 +7,7 @@ import os
 from zml import app_data, read_text, write_text
 from zmlx.alg.clamp import clamp
 from zmlx.io.json_ex import read as read_json
-from zmlx.ui.Qt import QtGui, QtWidgets, QtCore, QtMultimedia
+from zmlx.ui.Qt import QtGui, QtCore, screen_size
 
 try:
     app_data.add_path(os.path.join(os.path.dirname(__file__), 'data'))
@@ -75,8 +75,10 @@ def play_sound(name):
     try:
         filepath = find_sound(name)
         if filepath is not None:
-            if QtMultimedia is not None:
-                QtMultimedia.QSound.play(filepath)
+            from zmlx.ui.MainWindow import get_window
+            window = get_window()
+            if window is not None:
+                window.play_sound(filepath)
     except Exception as err_2:
         print(err_2)
 
@@ -116,7 +118,7 @@ def load_window_style(win, name, extra=''):
 def load_window_size(win, name):
     try:
         words = app_data.getenv(name, encoding='utf-8', default='').split()
-        rect = QtWidgets.QDesktopWidget().availableGeometry()
+        rect = screen_size()
         if len(words) == 2:
             w = clamp(int(words[0]), rect.width() * 0.2, rect.width() * 0.8)
             h = clamp(int(words[1]), rect.height() * 0.2, rect.height() * 0.8)
@@ -125,7 +127,7 @@ def load_window_size(win, name):
             win.resize(int(rect.width() * 0.7), int(rect.height() * 0.7))
     except Exception as err_2:
         print(err_2)
-        rect = QtWidgets.QDesktopWidget().availableGeometry()
+        rect = screen_size()
         win.resize(int(rect.width() * 0.7), int(rect.height() * 0.7))
 
 

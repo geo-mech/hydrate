@@ -8,6 +8,7 @@ from zmlx.ui.Config import *
 from zmlx.ui.ConsoleOutput import ConsoleOutput
 from zmlx.ui.ConsoleThread import ConsoleThread
 from zmlx.ui.GuiBuffer import gui
+from zmlx.ui.Qt import QtWidgets
 from zmlx.ui.SharedValue import SharedValue
 from zmlx.ui.alg.add_code_history import add_code_history
 
@@ -34,7 +35,8 @@ class ConsoleWidget(QtWidgets.QWidget):
         self.splitter.setStretchFactor(1, 1)
 
         h_layout = QtWidgets.QHBoxLayout()
-        h_layout.addItem(QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum))
+        h_layout.addItem(QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Policy.Expanding,
+                                               QtWidgets.QSizePolicy.Policy.Minimum))
 
         def add_button(text, icon, slot):
             button = QtWidgets.QPushButton(self)
@@ -51,7 +53,8 @@ class ConsoleWidget(QtWidgets.QWidget):
         self.button_pause = add_button('暂停', 'pause.jpg', self.pause_clicked)
         self.button_exit = add_button('终止', 'stop.jpg', self.stop_clicked)
         self.button_exit.setToolTip('安全地终止内核的执行 (需要提前在脚本内设置break_point)')
-        h_layout.addItem(QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum))
+        h_layout.addItem(QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Policy.Expanding,
+                                               QtWidgets.QSizePolicy.Policy.Minimum))
         main_layout.addLayout(h_layout)
 
         self.kernel_err = None

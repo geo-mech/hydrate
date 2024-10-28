@@ -1,8 +1,6 @@
-import sys
-
 from zml import app_data, create_dict
-from zmlx.ui.Qt import QtWidgets, QtCore
 from zmlx.ui import gui
+from zmlx.ui.Qt import QtWidgets, QtCore
 
 
 class LineEdit(QtWidgets.QLineEdit):
@@ -53,7 +51,7 @@ class EnvEdit(QtWidgets.QTableWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.Stretch)
-        self.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
         self.sigRefresh.connect(self.refresh)
         self.sigRefresh.emit()
 
@@ -89,11 +87,14 @@ class EnvEdit(QtWidgets.QTableWidget):
                             items=['', 'Yes', 'No'],
                             note='默认开启反馈。向软件开发者发送程序错误的信息，仅用于改进程序。'
                                  '如果打开此选项，则不会向开发者反馈任何信息'),
+                create_dict(label='Qt版本', key='Qt_version',
+                            items=['', 'PyQt5', 'PyQt6'],
+                            note='界面优先使用Qt版本，默认为PyQt6'),
                 ]
         self.setRowCount(len(data))
         self.setColumnCount(3)
         self.setHorizontalHeaderLabels(['项目', '值', '备注'])
-        self.horizontalHeader().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
+        self.horizontalHeader().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
 
         for i in range(len(data)):
             label = data[i].get('label')
@@ -123,14 +124,3 @@ class EnvEdit(QtWidgets.QTableWidget):
     @staticmethod
     def get_start_code():
         return """gui.trigger('env.txtpy')"""
-
-
-def test1():
-    app = QtWidgets.QApplication(sys.argv)
-    w = EnvEdit()
-    w.show()
-    sys.exit(app.exec_())
-
-
-if __name__ == '__main__':
-    test1()

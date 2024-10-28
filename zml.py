@@ -12852,6 +12852,24 @@ class FractureNetwork(HasHandle):
         return Iterator(model=self,
                         count=self.fracture_number, get=lambda m, ind: m.get_fracture(ind))
 
+    core.use(None, 'frac_nt_get_induced_at', c_void_p, c_void_p, c_double, c_double, c_void_p)
+    core.use(None, 'frac_nt_get_induced_along', c_void_p, c_void_p,
+             c_double, c_double, c_double, c_double, c_void_p)
+
+    def get_induced(self, pos, sol2, buf=None):
+        """
+        返回在pos位置的诱导应力
+        """
+        assert len(pos) == 2 or len(pos) == 4
+        assert isinstance(sol2, DDMSolution2)
+        if not isinstance(buf, Tensor2):
+            buf = Tensor2()
+        if len(pos) == 2:
+            core.frac_nt_get_induced_at(self.handle, buf.handle, pos[0], pos[1], sol2.handle)
+        else:
+            core.frac_nt_get_induced_along(self.handle, buf.handle, pos[0], pos[1], pos[2], pos[3], sol2.handle)
+        return buf
+
 
 class InfMatrix(HasHandle):
     core.use(c_void_p, 'new_frac_mat')

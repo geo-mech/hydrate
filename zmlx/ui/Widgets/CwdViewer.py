@@ -1,5 +1,4 @@
 import os
-import sys
 import time
 import timeit
 
@@ -13,7 +12,7 @@ class CwdViewer(QtWidgets.QTableWidget):
     def __init__(self, parent=None):
         super(CwdViewer, self).__init__(parent)
         self.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.Stretch)
-        self.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
 
         self.clicked.connect(self.item_clicked)
         self.doubleClicked.connect(self.item_double_clicked)
@@ -94,10 +93,3 @@ class CwdViewer(QtWidgets.QTableWidget):
 
     def get_start_code(self):
         return """gui.trigger('view_cwd.txtpy')"""
-
-
-if __name__ == '__main__':
-    app = QtWidgets.QApplication(sys.argv)
-    w = CwdViewer()
-    w.show()
-    sys.exit(app.exec_())
