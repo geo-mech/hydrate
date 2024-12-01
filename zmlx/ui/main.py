@@ -33,6 +33,15 @@ def init():
     except Exception as e:
         print(f'Error: {e}')
 
+    try:
+        from zml import get_dir
+        from zmlx.alg.is_chinese import is_chinese
+        if is_chinese(get_dir()):
+            from zmlx.ui import gui
+            gui.toolbar_warning('提醒：请务必将程序安装在纯英文路径下')
+    except Exception as e:
+        print(f'Error: {e}')
+
 
 def open_gui(argv=None):
     """

@@ -3,10 +3,10 @@ import os
 
 import matplotlib
 
-matplotlib.use('Qt5Agg')
+matplotlib.use('QtAgg')
 # 使用 matplotlib中的FigureCanvas (在使用 Qt5 Backends中 FigureCanvas继承自QtWidgets.QWidget)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from zmlx.ui.Qt import QtWidgets, QtCore, QtGui
+from zmlx.ui.Qt import QtWidgets, QtCore, QtGui, QAction
 import matplotlib.pyplot as plt
 
 
@@ -52,7 +52,7 @@ class MatplotWidget(QtWidgets.QWidget):
 
     def create_right_menu(self):
         self.__right_menu = QtWidgets.QMenu(self)
-        action = QtWidgets.QAction(self)
+        action = QAction(self)
         action.setText('保存图片')
         action.triggered.connect(self.savefig_by_dlg)
         self.__right_menu.addAction(action)

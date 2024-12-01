@@ -2,6 +2,7 @@ import os.path
 import sys
 import warnings
 
+import zml
 from zmlx.filesys.has_permission import has_permission
 from zmlx.filesys.samefile import samefile
 from zmlx.filesys.show_fileinfo import show_fileinfo
@@ -220,6 +221,7 @@ class MainWindow(QtWidgets.QMainWindow):
             if len(text) > 0:
                 self.__warning_toolbar.setVisible(True)
                 self.__warning_action.setText(text)
+                zml.log(text)
             else:
                 self.__warning_toolbar.setVisible(False)
                 self.__warning_action.setText('')

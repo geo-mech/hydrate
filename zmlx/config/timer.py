@@ -3,6 +3,7 @@
 """
 
 from zml import Seepage
+from zmlx.config.standard_slots import standard_slots
 
 text_key = 'timers'
 
@@ -33,10 +34,6 @@ def add_setting(model: Seepage, time, name, args=None, kwds=None):
     # 排序，确保顺序正确，从而，方便后续的执行
     setting = sorted(setting, key=lambda item: item['time'])
     model.set_text(text_key, setting)
-
-
-# 一些预定义函数
-standard_slots = {'print': print}
 
 
 def iterate(model: Seepage, t0, t1, slots):

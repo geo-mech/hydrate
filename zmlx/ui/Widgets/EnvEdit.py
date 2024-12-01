@@ -57,9 +57,11 @@ class EnvEdit(QtWidgets.QTableWidget):
 
     def refresh(self):
         data = [create_dict(label='主界面标签位置', key='TabPosition',
-                            items=['', 'North', 'East', 'South', 'West'], note='默认在顶部'),
+                            items=['', 'North', 'East', 'South', 'West'],
+                            note='默认在顶部'),
                 create_dict(label='主界面标签形状', key='TabShape',
-                            items=['', 'Rounded', 'Triangular']),
+                            items=['', 'Rounded', 'Triangular'],
+                            note='默认:Rounded'),
                 create_dict(label='控制台内核优先级', key='console_priority',
                             items=['', 'LowestPriority', 'LowPriority',
                                    'InheritPriority', 'NormalPriority',
@@ -67,15 +69,18 @@ class EnvEdit(QtWidgets.QTableWidget):
                             note='默认为低优先级。提高内核的优先级，可能会提高计算速度，'
                                  '但是可能会影响到界面的稳定性，从而造成卡顿'),
                 create_dict(label='是否禁用计时器', key='disable_timer',
-                            items=['', 'Yes', 'No']),
+                            items=['', 'Yes', 'No'],
+                            note='默认为No'),
                 create_dict(label='是否禁用启动画面', key='disable_splash',
-                            items=['', 'Yes', 'No']),
+                            items=['', 'Yes', 'No'],
+                            note='默认为No'),
                 create_dict(label='使用WebEngine', key='use_web_engine',
                             items=['', 'Yes', 'No'],
                             note='默认为否。如果使用WebEngine，则在需要打开网页的时候，'
                                  '会在此软件的标签页面内直接打开，否则，则会调用系统的浏览器'),
                 create_dict(label='恢复关闭时的标签', key='restore_tabs',
-                            items=['', 'Yes', 'No']),
+                            items=['', 'Yes', 'No'],
+                            note='默认为Yes'),
                 create_dict(label='启动时显示ReadMe', key='show_readme',
                             items=['', 'Yes', 'No']),
                 create_dict(label='启动时恢复控制台输出', key='restore_console_output',
@@ -89,7 +94,8 @@ class EnvEdit(QtWidgets.QTableWidget):
                                  '如果打开此选项，则不会向开发者反馈任何信息'),
                 create_dict(label='Qt版本', key='Qt_version',
                             items=['', 'PyQt5', 'PyQt6'],
-                            note='界面优先使用Qt版本，默认为PyQt6'),
+                            note='界面优先使用Qt版本，默认为PyQt6. 请尽量保证系统里PyQt5或者PyQt6，仅安装其中一个。'
+                                 '两个同时安装，可能会带来不可预知的错误'),
                 ]
         self.setRowCount(len(data))
         self.setColumnCount(3)

@@ -1,7 +1,7 @@
 """
 用以实现Seepage和numpy之间的数据交换
 """
-from ctypes import c_double, POINTER
+from ctypes import c_double
 
 import numpy as np
 

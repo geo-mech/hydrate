@@ -47,7 +47,7 @@ from zml import get_average_perm, Tensor3, Seepage, ConjugateGradientSolver
 from zmlx.alg.clamp import clamp
 from zmlx.alg.join_cols import join_cols
 from zmlx.alg.time2str import time2str
-from zmlx.config import capillary, prod, fluid_heating, timer, sand
+from zmlx.config import capillary, prod, fluid_heating, timer, sand, step_iteration, adjust_vis
 from zmlx.config.attr_keys import cell_keys, face_keys, flu_keys
 from zmlx.config.seepage_face import (get_face_gradient, get_face_diff,
                                       get_face_sum, get_face_left,
@@ -142,13 +142,15 @@ def show_cells(model: Seepage, dim0, dim1, mask=None, show_p=True, show_t=True,
     if show_p:  # 显示压力
         v = get_cell_pre(model, mask=mask)
         tricontourf(x, y, v, caption='pressure',
-                    fname=make_fname(year, join_paths(folder, 'pressure'), '.jpg', 'y'),
+                    fname=make_fname(year, join_paths(folder, 'pressure'),
+                                     '.jpg', 'y'),
                     **kw)
 
     if show_t:  # 显示温度
         v = get_cell_temp(model, mask=mask)
         tricontourf(x, y, v, caption='temperature',
-                    fname=make_fname(year, join_paths(folder, 'temperature'), '.jpg', 'y'),
+                    fname=make_fname(year, join_paths(folder, 'temperature'),
+                                     '.jpg', 'y'),
                     **kw)
 
     if not isinstance(show_s, list):
@@ -170,7 +172,8 @@ def show_cells(model: Seepage, dim0, dim1, mask=None, show_p=True, show_t=True,
             v = fv / fv_all
             # 绘图
             tricontourf(x, y, v, caption=name,
-                        fname=make_fname(year, join_paths(folder, name), '.jpg', 'y'),
+                        fname=make_fname(year, join_paths(folder, name),
+                                         '.jpg', 'y'),
                         **kw)
 
 
@@ -460,12 +463,17 @@ def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
     timer.iterate(model, t0=get_time(model), t1=get_time(model) + dt,
                   slots=slots)
 
+    # 执行step迭代
+    step_iteration.iterate(model=model,
+                           current_step=get_step(model),
+                           slots=slots)
+
     if model.not_has_tag('disable_update_den') and model.fludef_number > 0:
         fa_t = model.reg_flu_key('temperature')
         model.update_den(relax_factor=0.3, fa_t=fa_t)
 
     if model.not_has_tag('disable_update_vis') and model.fludef_number > 0:
-        # 更新流体的粘性系数(注意，当有固体存在的时候，无比将粘性系数的最大值设置为1.0e30)
+        # 更新流体的粘性系数(注意，当有固体存在的时候，务必将粘性系数的最大值设置为1.0e30)
         if vis_min is None:
             # 允许的最小的粘性系数
             vis_min = 1.0e-7
@@ -479,7 +487,8 @@ def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
         assert 1.0e-10 <= vis_min <= vis_max <= 1.0e40
         ca_p = model.reg_cell_key('pre')
         fa_t = model.reg_flu_key('temperature')
-        model.update_vis(ca_p=ca_p, fa_t=fa_t,
+        model.update_vis(ca_p=ca_p,  # 压力属性
+                         fa_t=fa_t,  # 温度属性
                          relax_factor=1.0, min=vis_min, max=vis_max)
 
     if model.injector_number > 0:
@@ -522,11 +531,13 @@ def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
 
     if update_flow:
         ca_p = model.reg_cell_key('pre')
+        adjust_vis.adjust(model=model)  # 备份粘性，并且尝试调整
         if model.has_tag('has_inertia'):
             r1 = model.iterate(dt=dt, solver=solver, fa_s=fa_s,
                                fa_q=fa_q, fa_k=fa_k, ca_p=ca_p)
         else:
             r1 = model.iterate(dt=dt, solver=solver, ca_p=ca_p)
+        adjust_vis.restore(model=model)  # 恢复之前备份的粘性
     else:
         r1 = None
 
@@ -1115,9 +1126,11 @@ def set_solve(model: Seepage, **kw):
     model.set_text(key='solve', text=options)
 
 
-def solve(model=None, folder=None, fname=None, gui_mode=None, close_after_done=None, solver=None,
+def solve(model=None, folder=None, fname=None, gui_mode=None,
+          close_after_done=None, solver=None,
           extra_plot=None,
-          show_state=True, gui_iter=None, state_hint=None, slots=None,
+          show_state=True, gui_iter=None, state_hint=None,
+          slots=None,
           save_dt=None, export_mass=True,
           **kwargs):
     """
@@ -1151,7 +1164,8 @@ def solve(model=None, folder=None, fname=None, gui_mode=None, close_after_done=N
 
     # 建立求解器
     if solver is None:  # 使用规定的精度
-        solver = ConjugateGradientSolver(tolerance=solve_options.get('tolerance', 1.0e-25))
+        solver = ConjugateGradientSolver(
+            tolerance=solve_options.get('tolerance', 1.0e-25))
 
     # 创建monitor(同时，还保留了之前的配置信息)
     monitors = solve_options.get('monitor')
@@ -1161,8 +1175,9 @@ def solve(model=None, folder=None, fname=None, gui_mode=None, close_after_done=N
         monitors = []
     for item in monitors:
         if isinstance(item, dict):
-            item['monitor'] = SeepageCellMonitor(get_t=lambda: get_time(model),
-                                                 cell=[model.get_cell(i) for i in item.get('cell_ids')])
+            item['monitor'] = SeepageCellMonitor(
+                get_t=lambda: get_time(model),
+                cell=[model.get_cell(i) for i in item.get('cell_ids')])
 
     # 每年的秒的数量
     seconds_year = 3600.0 * 24.0 * 365.0
@@ -1178,10 +1193,12 @@ def solve(model=None, folder=None, fname=None, gui_mode=None, close_after_done=N
     else:
         if hasattr(save_dt, '__call__'):
             def get_save_dy(year):
-                return clamp(save_dt(year * seconds_year) / seconds_year, save_dy_min, save_dy_max)
+                return clamp(save_dt(year * seconds_year) / seconds_year,
+                             save_dy_min, save_dy_max)
         else:
-            def get_save_dy(year):
-                return clamp(save_dt / seconds_year, save_dy_min, save_dy_max)
+            def get_save_dy(_):
+                return clamp(save_dt / seconds_year,
+                             save_dy_min, save_dy_max)
 
     # 执行数据的保存
     save_model = SaveManager(join_paths(folder, 'models'), save=model.save,
@@ -1191,8 +1208,9 @@ def solve(model=None, folder=None, fname=None, gui_mode=None, close_after_done=N
                              )
 
     # 打印cell
-    save_cells = SaveManager(join_paths(folder, 'cells'), save=lambda name: print_cells(name, model=model,
-                                                                                        export_mass=export_mass),
+    save_cells = SaveManager(join_paths(folder, 'cells'),
+                             save=lambda name: print_cells(name, model=model,
+                                                           export_mass=export_mass),
                              ext='.txt', time_unit='y',
                              dtime=get_save_dy,
                              get_time=lambda: get_time(model) / (3600.0 * 24.0 * 365.0),
@@ -1295,7 +1313,8 @@ def solve(model=None, folder=None, fname=None, gui_mode=None, close_after_done=N
         plot()
         save(check_dt=False)  # 保存最终状态
 
-    if close_after_done is not None and gui_mode is None:  # 如果指定了close_after_done，那么一定是要使用界面
+    if close_after_done is not None and gui_mode is None:
+        # 如果指定了close_after_done，那么一定是要使用界面
         gui_mode = True
 
     if gui_mode is None:  # 默认不使用界面
@@ -1304,4 +1323,5 @@ def solve(model=None, folder=None, fname=None, gui_mode=None, close_after_done=N
     if close_after_done is None:  # 默认计算技术要关闭界面
         close_after_done = True
 
-    gui.execute(func=main_loop, close_after_done=close_after_done, disable_gui=not gui_mode)
+    gui.execute(func=main_loop, close_after_done=close_after_done,
+                disable_gui=not gui_mode)
