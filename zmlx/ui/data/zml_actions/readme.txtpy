@@ -3,7 +3,7 @@ icon = 'info.jpg'
 text = 'ReadMe'
 
 
-def func():
+def slot():
     from zmlx.ui.MainWindow import get_window
     from zmlx.ui.Widgets.ReadMe import ReadMeBrowser
     get_window().get_widget(the_type=ReadMeBrowser, caption='ReadMe',

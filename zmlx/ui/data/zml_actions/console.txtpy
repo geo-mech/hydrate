@@ -11,7 +11,7 @@ def enabled():
         return False
 
 
-def func():
+def slot():
     from zmlx.ui.Widgets.PgConsole import PgConsole
     from zmlx.ui.MainWindow import get_window
     if PgConsole is not None:

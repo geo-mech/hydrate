@@ -12,7 +12,7 @@ Website:        https://gitee.com/geomech/hydrate
 Author:         ZHANG Zhaobin <zhangzhaobin@mail.iggcas.ac.cn>,
                 Institute of Geology and Geophysics, Chinese Academy of Sciences
 """
-
+import collections
 import ctypes
 import datetime
 import importlib
@@ -484,6 +484,7 @@ class DllCore:
     """
 
     def __init__(self, dll):
+        self.__err_handle = None
         self.dll = dll
         self._dll_funcs = {}
         self.dll_has_error = get_func(self.dll, c_bool, 'has_error')
@@ -676,7 +677,6 @@ class DllCore:
 
 
 core = DllCore(dll=dll)
-
 
 # Version of the zml module (date represented by six digits)
 try:
@@ -6422,7 +6422,8 @@ class SeepageMesh(HasHandle, HasCells):
         """
         Get the summary of the object for print.
         """
-        return f'zml.SeepageMesh(handle = {self.handle}, cell_n = {self.cell_number}, face_n = {self.face_number}, volume = {self.volume})'
+        return (f'zml.SeepageMesh(handle = {self.handle}, cell_n = {self.cell_number}, '
+                f'face_n = {self.face_number}, volume = {self.volume})')
 
     core.use(None, 'seepage_mesh_save', c_void_p, c_char_p)
 
@@ -8006,7 +8007,6 @@ class Seepage(HasHandle, HasCells):
                     self.k = value
                     return self
                 assert False
-                return self
             core.seepage_cell_set_attr(self.handle, index, value)
             return self
 
@@ -8590,7 +8590,7 @@ class Seepage(HasHandle, HasCells):
             return 0
 
         @time.setter
-        def time(self, value):
+        def time(self, _):
             warnings.warn('Property Seepage.Injector.time has been removed',
                           DeprecationWarning)
 
@@ -9104,7 +9104,7 @@ class Seepage(HasHandle, HasCells):
             assert isinstance(flu, Seepage.FluData)
             inj.flu.clone(flu)
 
-        if pos is not None:   # 给定注入的位置，后续，则自动去查找附近的cell
+        if pos is not None:  # 给定注入的位置，后续，则自动去查找附近的cell
             inj.pos = pos
 
         if radi is not None:  # 查找的半径
@@ -9116,14 +9116,14 @@ class Seepage(HasHandle, HasCells):
         if ca_t is not None:  # Cell的属性(温度属性，在注入热量的时候会被修改)
             inj.ca_t = ca_t
 
-        if g_heat is not None:   # 恒定温度加热的时候需要给定
+        if g_heat is not None:  # 恒定温度加热的时候需要给定
             inj.g_heat = g_heat
 
-        if opers is not None:   # 对属性的操作定时器
+        if opers is not None:  # 对属性的操作定时器
             for item in opers:
                 inj.add_oper(*item)
 
-        if value is not None:   # 当前的值
+        if value is not None:  # 当前的值
             inj.value = value
 
         return inj
@@ -9477,7 +9477,7 @@ class Seepage(HasHandle, HasCells):
         """
         if dt is None:
             return
-        if thermal_model is None:   # 在模型的内部交换热量（流体和固体交换）
+        if thermal_model is None:  # 在模型的内部交换热量（流体和固体交换）
             assert fid is None
             core.seepage_exchange_heat(self.handle, dt, ca_g, ca_t, ca_mc, fa_t, fa_c)
             return
@@ -10085,6 +10085,7 @@ class Seepage(HasHandle, HasCells):
 
         components = kwargs.get('components', None)
         if components is not None:
+            assert isinstance(components, collections.Iterable)
             for comp in components:
                 kind = comp.get('kind')
                 if isinstance(kind, str):
@@ -10107,6 +10108,7 @@ class Seepage(HasHandle, HasCells):
 
         inhibitors = kwargs.get('inhibitors', None)
         if inhibitors is not None:
+            assert isinstance(inhibitors, collections.Iterable)
             for inh in inhibitors:
                 # 这里要注意的是，这里的浓度指的是质量浓度.
                 sol = inh.get('sol')
@@ -10253,7 +10255,7 @@ class Seepage(HasHandle, HasCells):
         """
         用以和numpy交互数据
         """
-        warnings.warn('Seepage.numpy will be removed after 2025-1-21. Use zmlx.utility.SeepageNumpy Instead. '
+        warnings.warn('Seepage.numpy will be removed after 2025-1-21. Use zmlx.utility.SeepageNumpy Instead.'
                       , DeprecationWarning)
         from zmlx.utility.SeepageNumpy import SeepageNumpy
         return SeepageNumpy(model=self)
@@ -10516,7 +10518,7 @@ class Seepage(HasHandle, HasCells):
         """
         assert isinstance(v2q, Interp1)
         if vel is None:
-            vel = 0   # Data is None
+            vel = 0  # Data is None
         if isinstance(vel, Vector):
             vel = vel.pointer
 
@@ -12329,7 +12331,7 @@ class Lattice3(HasHandle):
 
 class DDMSolution2(HasHandle):
     """
-    二维DDM的基本解
+    二维DDM的基本解：计算裂缝单元在任意位置的诱导应力.
     """
     core.use(c_void_p, 'new_ddm_sol2')
     core.use(None, 'del_ddm_sol2', c_void_p)
@@ -12448,7 +12450,13 @@ class DDMSolution2(HasHandle):
 
 
 class FractureNetwork(HasHandle):
+    """
+    裂缝网络(二维). 由顶点和裂缝所组成的网络. 存储裂缝网络的数据.
+    """
     class VertexData(Object):
+        """
+        顶点的数据
+        """
         def __init__(self, handle):
             self.handle = handle
 
@@ -12503,7 +12511,9 @@ class FractureNetwork(HasHandle):
             return self
 
     class FractureData(HasHandle):
-
+        """
+        裂缝的数据
+        """
         core.use(c_void_p, 'new_frac_bd')
         core.use(None, 'del_frac_bd', c_void_p)
 
@@ -12564,6 +12574,9 @@ class FractureNetwork(HasHandle):
 
         @property
         def h(self):
+            """
+            The fracture height. [meter]
+            """
             return core.frac_bd_get_h(self.handle)
 
         @h.setter
@@ -12593,14 +12606,14 @@ class FractureNetwork(HasHandle):
         @property
         def p0(self):
             """
-            p = max(0, p0 + k * dn)
+            假设裂缝内流体的压力fp满足：fp = max(0, p0 + k * dn)
             """
             return core.frac_bd_get_p0(self.handle)
 
         @p0.setter
         def p0(self, value):
             """
-            p = max(0, p0 + k * dn)
+            假设裂缝内流体的压力fp满足：fp = max(0, p0 + k * dn)
             """
             core.frac_bd_set_p0(self.handle, value)
 
@@ -12610,14 +12623,14 @@ class FractureNetwork(HasHandle):
         @property
         def k(self):
             """
-            p = max(0, p0 + k * dn)
+            假设裂缝内流体的压力fp满足：fp = max(0, p0 + k * dn)
             """
             return core.frac_bd_get_k(self.handle)
 
         @k.setter
         def k(self, value):
             """
-            p = max(0, p0 + k * dn)
+            假设裂缝内流体的压力fp满足：fp = max(0, p0 + k * dn)
             """
             core.frac_bd_set_k(self.handle, value)
 
@@ -12626,7 +12639,7 @@ class FractureNetwork(HasHandle):
         @property
         def fp(self):
             """
-            根据此时的dn, p0和k计算得到的fp
+            根据此时的dn, p0和k计算得到的fp (流体压力)
             """
             return core.frac_bd_get_fp(self.handle)
 
@@ -12651,7 +12664,9 @@ class FractureNetwork(HasHandle):
             return data
 
     class Vertex(VertexData):
-
+        """
+        顶点
+        """
         core.use(c_void_p, 'frac_nt_get_nd', c_void_p, c_size_t)
 
         def __init__(self, network, index):
@@ -12670,18 +12685,26 @@ class FractureNetwork(HasHandle):
 
         @property
         def fracture_number(self):
+            """
+            :return: 共享此顶点的裂缝单元的数量.
+            """
             return core.frac_nt_nd_get_bd_n(self.network.handle, self.index)
 
         core.use(c_size_t, 'frac_nt_nd_get_bd_i', c_void_p, c_size_t, c_size_t)
 
         def get_fracture(self, index):
+            """
+            :return: 此顶点周边的裂缝单元
+            """
             index = get_index(index, self.fracture_number)
             if index is not None:
                 return self.network.get_fracture(
                     core.frac_nt_nd_get_bd_i(self.network.handle, self.index, index))
 
     class Fracture(FractureData):
-
+        """
+        裂缝.
+        """
         core.use(c_void_p, 'frac_nt_get_bd', c_void_p, c_size_t)
 
         def __init__(self, network, index):
@@ -12698,6 +12721,9 @@ class FractureNetwork(HasHandle):
 
         @property
         def vertex_number(self):
+            """
+            裂缝顶点的数量
+            """
             return 2
 
         core.use(c_size_t, 'frac_nt_bd_get_nd_i', c_void_p, c_size_t, c_size_t)
@@ -12807,9 +12833,15 @@ class FractureNetwork(HasHandle):
 
     @property
     def vertex_number(self):
+        """
+        顶点的数量
+        """
         return core.frac_nt_get_nd_n(self.handle)
 
     def get_vertex(self, index):
+        """
+        返回顶点
+        """
         index = get_index(index, self.vertex_number)
         if index is not None:
             return FractureNetwork.Vertex(self, index)
@@ -12818,9 +12850,15 @@ class FractureNetwork(HasHandle):
 
     @property
     def fracture_number(self):
+        """
+        裂缝单元(线段)的数量
+        """
         return core.frac_nt_get_bd_n(self.handle)
 
     def get_fracture(self, index):
+        """
+        返回裂缝单元
+        """
         index = get_index(index, self.fracture_number)
         if index is not None:
             return FractureNetwork.Fracture(self, index)
@@ -12828,27 +12866,42 @@ class FractureNetwork(HasHandle):
     core.use(c_size_t, 'frac_nt_add_nd', c_void_p, c_double, c_double)
 
     def add_vertex(self, x, y):
+        """
+        添加顶点(要添加裂缝单元，必须首先添加顶点)
+        """
         index = core.frac_nt_add_nd(self.handle, x, y)
         return self.get_vertex(index)
 
     core.use(c_size_t, 'frac_nt_add_bd', c_void_p, c_size_t, c_size_t)
 
     def add_fracture(self, i0, i1):
+        """
+        添加裂缝单元.
+        """
         index = core.frac_nt_add_bd(self.handle, i0, i1)
         return self.get_fracture(index)
 
     core.use(None, 'frac_nt_clear', c_void_p)
 
     def clear(self):
+        """
+        清除所有
+        """
         core.frac_nt_clear(self.handle)
 
     @property
     def vertexes(self):
+        """
+        所有的顶点(用于迭代)
+        """
         return Iterator(model=self,
                         count=self.vertex_number, get=lambda m, ind: m.get_vertex(ind))
 
     @property
     def fractures(self):
+        """
+        所有的裂缝(用于迭代)
+        """
         return Iterator(model=self,
                         count=self.fracture_number, get=lambda m, ind: m.get_fracture(ind))
 
@@ -12872,6 +12925,9 @@ class FractureNetwork(HasHandle):
 
 
 class InfMatrix(HasHandle):
+    """
+    影响系数矩阵.
+    """
     core.use(c_void_p, 'new_frac_mat')
     core.use(None, 'del_frac_mat', c_void_p)
 
@@ -12887,17 +12943,26 @@ class InfMatrix(HasHandle):
 
     @property
     def size(self):
+        """
+        :return: 裂缝单元的数量
+        """
         return core.frac_mat_size(self.handle)
 
     core.use(None, 'frac_mat_create', c_void_p, c_void_p, c_void_p)
 
     def update(self, network, sol2):
+        """
+        更新矩阵
+        """
         assert isinstance(network, FractureNetwork)
         assert isinstance(sol2, DDMSolution2)
         core.frac_mat_create(self.handle, network.handle, sol2.handle)
 
 
 class FracAlg:
+    """
+    提供一些裂缝相关的基础的算法.
+    """
     core.use(c_size_t, 'frac_alg_update_disp', c_void_p, c_void_p,
              c_size_t, c_size_t,
              c_double, c_double,
@@ -12908,7 +12973,7 @@ class FracAlg:
                     gradw_max=0, err_max=0.1, iter_min=10, iter_max=10000,
                     ratio_max=0.99, dist_max=1.0e6):
         """
-        更新位移
+        更新位移. 这是DDM计算的最核心的函数
         """
         assert isinstance(network, FractureNetwork)
         assert isinstance(matrix, InfMatrix)
@@ -12921,6 +12986,9 @@ class FracAlg:
 
     @staticmethod
     def extend_tip(network, kic, sol2, l_extend, va_wmin=99999999, angle_max=0.6):
+        """
+        尝试进行裂缝的扩展
+        """
         assert isinstance(network, FractureNetwork)
         assert isinstance(kic, Tensor2)
         assert isinstance(sol2, DDMSolution2)

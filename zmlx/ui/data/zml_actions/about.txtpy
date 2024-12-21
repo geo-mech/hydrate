@@ -2,7 +2,7 @@ icon = 'info.jpg'
 text = '关于'
 
 
-def func():
+def slot():
     from zmlx.ui.MainWindow import get_window
     xx = """
 from zml import lic

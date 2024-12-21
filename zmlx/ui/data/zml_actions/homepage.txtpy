@@ -3,7 +3,7 @@ text = '主页'
 icon = 'home.jpg'
 
 
-def func():
+def slot():
     from zmlx.ui.alg.open_url import open_url
     from zmlx.ui.MainWindow import get_window
     get_window().start_func(lambda: open_url(url='https://gitee.com/geomech/hydrate', on_top=True,

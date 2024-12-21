@@ -2,7 +2,7 @@ text = '关闭所有标签页'
 support_hide = False
 
 
-def func():
+def slot():
     from zmlx.ui.MainWindow import get_window
     get_window().close_all_tabs()
 

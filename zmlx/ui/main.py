@@ -1,6 +1,3 @@
-import sys
-
-
 def init():
     try:
         from zmlx.io.python import read_py
@@ -14,14 +11,14 @@ def init():
                     exec(text, {'gui': gui})
                 except Exception as err:
                     print(err)
-    except:
-        pass
+    except Exception as e:
+        print(f'Error: {e}')
 
     try:
         from zmlx.ui.MainWindow import get_window
         setattr(get_window(), 'tabs_should_be_saved', 1)
-    except:
-        pass
+    except Exception as e:
+        print(f'Error: {e}')
 
     try:
         from zmlx.ui.MainWindow import get_window
@@ -45,11 +42,15 @@ def init():
 
 def open_gui(argv=None):
     """
-    打开gui; 将首先尝试安装依赖项.
+    打开gui
     """
+    if argv is not None:
+        print(argv)
     from zmlx.ui.GuiBuffer import gui
     gui.execute(init, keep_cwd=False, close_after_done=False)
 
 
 if __name__ == "__main__":
+    import sys
+
     open_gui(sys.argv)

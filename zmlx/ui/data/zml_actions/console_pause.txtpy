@@ -4,7 +4,7 @@ on_toolbar = True
 tooltip = '暂停内核的执行 (需要提前在脚本内设置break_point)'
 
 
-def func():
+def slot():
     from zmlx.ui.MainWindow import get_window
     console = get_window().get_console()
     console.pause_clicked()

@@ -3,7 +3,7 @@ icon = 'begin.jpg'
 on_toolbar = True
 
 
-def func():
+def slot():
     from zmlx.ui.MainWindow import get_window
     console = get_window().get_console()
     console.pause_clicked()

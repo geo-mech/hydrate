@@ -11,6 +11,6 @@ def enabled():
         return hasattr(window.get_current_widget(), 'export_plt_figure')
 
 
-def func():
+def slot():
     from zmlx.ui.MainWindow import get_window
     getattr(get_window().get_current_widget(), 'export_plt_figure')()

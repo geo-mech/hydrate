@@ -42,9 +42,9 @@ class ActionX(QAction):
         if text is not None:
             self.setText(get_text(text))
 
-        def task():
+        def slot():
             try:
-                self._data.get('func')()
+                self._data.get('slot')()
                 app_data.log(f'run <{self._file}>')
                 self._window.refresh()  # since 2024-10-11
             except Exception as e2:
@@ -52,7 +52,7 @@ class ActionX(QAction):
                 print(info)
                 app_data.log(info)
 
-        self.triggered.connect(task)
+        self.triggered.connect(slot)
 
     def update_view(self):
         enabled = self._is_enabled()
