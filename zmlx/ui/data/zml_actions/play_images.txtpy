@@ -6,7 +6,7 @@ def slot():
     from zmlx.ui.GuiBuffer import gui
 
     def task():
-        files = list_files(exts=['.jpg', '.jpg'])
+        files = list_files(exts=['.jpg', '.png'])
         for idx in range(len(files)):
             print(files[idx])
             gui.open_image(files[idx], caption='播放图片', on_top=False)

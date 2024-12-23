@@ -32,7 +32,7 @@ class ActionX(QAction):
         if iconname is not None:
             self.setIcon(load_icon(iconname))
         else:
-            self.setIcon(load_icon('python.jpg'))
+            self.setIcon(load_icon('python'))
 
         tooltip = self._data.get('tooltip', None)
         if tooltip is not None:

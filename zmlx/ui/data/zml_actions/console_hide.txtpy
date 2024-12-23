@@ -1,6 +1,6 @@
 text = '隐藏'
 on_toolbar = True
-icon = 'console.jpg'
+icon = 'console'
 tooltip = '隐藏主窗口右侧的控制台'
 
 

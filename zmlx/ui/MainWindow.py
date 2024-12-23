@@ -29,7 +29,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
-        self.setWindowIcon(load_icon('app.jpg'))
+        self.setWindowIcon(load_icon('app'))
         self.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         self.__task_proc = TaskProc(self)
 
@@ -110,7 +110,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.sig_play_sound.connect(play)
 
         try:
-            filename = find_icon_file('welcome.jpg')
+            filename = find_icon_file('welcome')
             if filename is not None:
                 if os.path.isfile(filename):
                     self.open_image(filename, caption='Welcome')
@@ -310,7 +310,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def get_figure_widget(self, clear=None, **kwargs):
         from zmlx.ui.MatplotWidget import MatplotWidget
         if kwargs.get('icon', None) is None:
-            kwargs['icon'] = 'matplotlib.jpg'
+            kwargs['icon'] = 'matplotlib'
         widget = self.get_widget(the_type=MatplotWidget, **kwargs)
         if clear:
             fig = widget.figure
@@ -352,7 +352,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def view_cwd(self):
         from zmlx.ui.Widgets.CwdViewer import CwdViewer
-        self.get_widget(the_type=CwdViewer, caption='文件', on_top=True, oper=lambda w: w.refresh(), icon='cwd.jpg')
+        self.get_widget(the_type=CwdViewer, caption='文件', on_top=True, oper=lambda w: w.refresh(), icon='cwd')
 
     def progress(self, label=None, val_range=None, value=None, visible=None, duration=5000):
         """
@@ -398,7 +398,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.get_widget(the_type=CodeEdit,
                                 caption=os.path.basename(fname) if caption is None else caption,
                                 on_top=True,
-                                oper=lambda x: x.open(fname), icon='python.jpg')
+                                oper=lambda x: x.open(fname), icon='python')
                 print(f'文件已打开: \n\t{fname}\n\n请点击工具栏上的<运行>按钮以运行!\n\n')
 
     def open_text(self, fname, caption=None):
@@ -547,7 +547,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def show_about(self):
         from zmlx.ui.Widgets.About import About
         self.check_license()
-        self.get_widget(the_type=About, caption='关于', on_top=True, icon='info.jpg')
+        self.get_widget(the_type=About, caption='关于', on_top=True, icon='info')
 
     def play_sound(self, filename):
         """
@@ -601,7 +601,7 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
 
     app = QtWidgets.QApplication(sys.argv)
 
-    splash_fig = load_pixmap('splash.jpg')
+    splash_fig = load_pixmap('splash')
     if splash_fig is not None and app_data.getenv('disable_splash', default='No', ignore_empty=True) != 'Yes':
         splash = MySplashScreen()
         try:

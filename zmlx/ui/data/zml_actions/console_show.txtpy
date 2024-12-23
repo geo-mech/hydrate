@@ -1,6 +1,6 @@
 text = '显示'
 on_toolbar = True
-icon = 'console.jpg'
+icon = 'console'
 tooltip = '显示主窗口右侧的控制台'
 
 

@@ -1,4 +1,4 @@
-is_sys, icon = True, 'clean.jpg'
+is_sys, icon = True, 'clean'
 text = '清屏'
 
 

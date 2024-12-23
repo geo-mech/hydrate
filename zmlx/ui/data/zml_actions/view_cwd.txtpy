@@ -1,8 +1,15 @@
 text = '文件'
 on_toolbar = True
-icon = 'cwd.jpg'
+icon = 'cwd'
 
 
 def slot():
     from zmlx.ui.MainWindow import get_window
     get_window().view_cwd()
+
+
+def enabled():
+    from zmlx.ui.MainWindow import get_window
+    window = get_window()
+    if window is not None:
+        return not window.is_running()

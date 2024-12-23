@@ -4,7 +4,8 @@ from zmlx.ui.GuiBuffer import gui
 from zmlx.ui.Qt import QWebEngineView, QtCore
 
 
-def open_url(url: str, caption=None, on_top=None, zoom_factor=2, use_web_engine=None):
+def open_url(url: str, caption=None, on_top=None, zoom_factor=2,
+             use_web_engine=None, icon=None):
     """
     显示一个htm文件
     """
@@ -41,7 +42,11 @@ def open_url(url: str, caption=None, on_top=None, zoom_factor=2, use_web_engine=
             else:
                 widget.load(QtCore.QUrl(url))
 
-        gui.get_widget(the_type=QWebEngineView, caption=caption, on_top=on_top, oper=f)
+        if icon is None:
+            icon = 'web'
+
+        gui.get_widget(the_type=QWebEngineView, caption=caption, on_top=on_top,
+                       oper=f, icon=icon)
 
 
 if __name__ == '__main__':

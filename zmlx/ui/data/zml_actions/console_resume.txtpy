@@ -1,5 +1,5 @@
 text = '继续'
-icon = 'begin.jpg'
+icon = 'begin'
 on_toolbar = True
 
 

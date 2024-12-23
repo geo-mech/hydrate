@@ -5158,6 +5158,16 @@ class LinearExpr(HasHandle):
         lexpr.c = c
         return lexpr
 
+    core.use(None, 'lexpr_clone', c_void_p, c_void_p)
+
+    def clone(self, other):
+        """
+        克隆数据
+        """
+        if isinstance(other, LinearExpr):
+            core.lexpr_clone(self.handle, other.handle)
+        return self
+
 
 class DynSys(HasHandle):
     """
@@ -10085,7 +10095,7 @@ class Seepage(HasHandle, HasCells):
 
         components = kwargs.get('components', None)
         if components is not None:
-            assert isinstance(components, collections.Iterable)
+            assert isinstance(components, Iterable)
             for comp in components:
                 kind = comp.get('kind')
                 if isinstance(kind, str):
@@ -10108,7 +10118,7 @@ class Seepage(HasHandle, HasCells):
 
         inhibitors = kwargs.get('inhibitors', None)
         if inhibitors is not None:
-            assert isinstance(inhibitors, collections.Iterable)
+            assert isinstance(inhibitors, Iterable)
             for inh in inhibitors:
                 # 这里要注意的是，这里的浓度指的是质量浓度.
                 sol = inh.get('sol')
@@ -12642,6 +12652,17 @@ class FractureNetwork(HasHandle):
             根据此时的dn, p0和k计算得到的fp (流体压力)
             """
             return core.frac_bd_get_fp(self.handle)
+
+        core.use(c_void_p, 'frac_bd_get_flu', c_void_p)
+
+        @property
+        def flu(self):
+            """
+            返回流体的映射数据
+            """
+            handle = core.frac_bd_get_flu(self.handle)
+            if handle:
+                return LinearExpr(handle=handle)
 
         @staticmethod
         def create(ds=None, dn=None, h=None, f=None, p0=None, k=None):

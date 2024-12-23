@@ -30,6 +30,8 @@ def find(name):
 def find_all(name):
     return app_data.find_all(name)
 
+# 默认搜索的图片扩展名
+image_exts = ['.jpg', '.png']
 
 def find_icon_file(name):
     try:
@@ -37,6 +39,10 @@ def find_icon_file(name):
             filepath = os.path.join(folder, name)
             if os.path.isfile(filepath):
                 return filepath
+            for ext in image_exts:
+                filepath = os.path.join(folder, name+ext)
+                if os.path.isfile(filepath):
+                    return filepath
     except Exception as err_2:
         print(err_2)
 
