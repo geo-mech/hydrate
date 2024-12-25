@@ -14,7 +14,5 @@ def slot():
 def enabled():
     from zmlx.ui.MainWindow import get_window
     window = get_window()
-    if window is None:
-        return False
-    console = window.get_console()
-    return not console.is_running()
+    if window is not None:
+        return not window.is_running()

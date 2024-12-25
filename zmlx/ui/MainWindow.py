@@ -3,6 +3,7 @@ import sys
 import warnings
 
 import zml
+from zmlx.alg.is_chinese import is_chinese
 from zmlx.filesys.has_permission import has_permission
 from zmlx.filesys.samefile import samefile
 from zmlx.filesys.show_fileinfo import show_fileinfo
@@ -666,6 +667,12 @@ still unresolved, please contact the author (email: 'zhangzhaobin@mail.iggcas.ac
         splash.deleteLater()
 
     def setup():
+        """
+        在程序界面启动之后执行的设置
+        """
+        if is_chinese(zml.get_dir()):
+            win.toolbar_warning('提醒：请务必将程序安装在纯英文路径下')
+
         for path in find_all('zml_gui_setup.py'):
             try:
                 print(f'Exec File: {path}')

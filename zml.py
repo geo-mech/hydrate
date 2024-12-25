@@ -12,7 +12,6 @@ Website:        https://gitee.com/geomech/hydrate
 Author:         ZHANG Zhaobin <zhangzhaobin@mail.iggcas.ac.cn>,
                 Institute of Geology and Geophysics, Chinese Academy of Sciences
 """
-import collections
 import ctypes
 import datetime
 import importlib
@@ -1306,6 +1305,17 @@ except:
     pass
 
 
+def is_chinese(string):
+    """
+    检查整个字符串是否包含中文:
+        https://blog.csdn.net/qdPython/article/details/110231244
+    """
+    for ch in string:
+        if u'\u4e00' <= ch <= u'\u9fff':
+            return True
+    return False
+
+
 class Iterator:
     def __init__(self, model, count, get):
         self.__model = model
@@ -1394,6 +1404,7 @@ class Vector(HasHandle):
             (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.vf_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'vf_load', c_void_p, c_char_p)
@@ -1404,6 +1415,7 @@ class Vector(HasHandle):
         To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.vf_load(self.handle, make_c_char_p(path))
 
@@ -1550,6 +1562,7 @@ class IntVector(HasHandle):
             (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.vi_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'vi_load', c_void_p, c_char_p)
@@ -1560,6 +1573,7 @@ class IntVector(HasHandle):
         To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.vi_load(self.handle, make_c_char_p(path))
 
@@ -1655,6 +1669,7 @@ class UintVector(HasHandle):
             (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.vui_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'vui_load', c_void_p, c_char_p)
@@ -1665,6 +1680,7 @@ class UintVector(HasHandle):
         To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.vui_load(self.handle, make_c_char_p(path))
 
@@ -1970,6 +1986,7 @@ class Matrix2(HasHandle):
             (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.mat2_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'mat2_load', c_void_p, c_char_p)
@@ -1980,6 +1997,7 @@ class Matrix2(HasHandle):
         To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.mat2_load(self.handle, make_c_char_p(path))
 
@@ -2123,6 +2141,7 @@ class Matrix3(HasHandle):
             (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.mat3_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'mat3_load', c_void_p, c_char_p)
@@ -2133,6 +2152,7 @@ class Matrix3(HasHandle):
         To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.mat3_load(self.handle, make_c_char_p(path))
 
@@ -2295,6 +2315,7 @@ class Tensor3Matrix3(HasHandle):
             (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.ts3mat3_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'ts3mat3_load', c_void_p, c_char_p)
@@ -2305,6 +2326,7 @@ class Tensor3Matrix3(HasHandle):
         To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.ts3mat3_load(self.handle, make_c_char_p(path))
 
@@ -2434,6 +2456,7 @@ class Interp1(HasHandle):
             (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.interp1_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'interp1_load', c_void_p, c_char_p)
@@ -2444,6 +2467,7 @@ class Interp1(HasHandle):
         To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.interp1_load(self.handle, make_c_char_p(path))
 
@@ -2597,6 +2621,7 @@ class Interp2(HasHandle):
             (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.interp2_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'interp2_load', c_void_p, c_char_p)
@@ -2607,6 +2632,7 @@ class Interp2(HasHandle):
         To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.interp2_load(self.handle, make_c_char_p(path))
 
@@ -2739,6 +2765,7 @@ class Interp3(HasHandle):
             (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.interp3_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'interp3_load', c_void_p, c_char_p)
@@ -2749,6 +2776,7 @@ class Interp3(HasHandle):
         To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.interp3_load(self.handle, make_c_char_p(path))
 
@@ -2938,6 +2966,7 @@ class FileMap(HasHandle):
         序列化保存 (鉴于此class的特殊性，务必保存为二进制格式，txt和xml格式，都可能带来不可预期的数据丢失).
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             ext = os.path.splitext(path)[-1].lower()
             assert ext != '.txt' and ext != '.xml'
             core.fmap_save(self.handle, make_c_char_p(path))
@@ -2949,6 +2978,7 @@ class FileMap(HasHandle):
         序列化读取
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.fmap_load(self.handle, make_c_char_p(path))
 
@@ -3014,6 +3044,7 @@ class Array2(HasHandle):
             (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.array2_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'array2_load', c_void_p, c_char_p)
@@ -3024,6 +3055,7 @@ class Array2(HasHandle):
         To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.array2_load(self.handle, make_c_char_p(path))
 
@@ -3137,6 +3169,7 @@ class Array3(HasHandle):
             (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.array3_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'array3_load', c_void_p, c_char_p)
@@ -3147,6 +3180,7 @@ class Array3(HasHandle):
         To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.array3_load(self.handle, make_c_char_p(path))
 
@@ -3261,6 +3295,7 @@ class Tensor2(HasHandle):
             (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.tensor2_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'tensor2_load', c_void_p, c_char_p)
@@ -3271,6 +3306,7 @@ class Tensor2(HasHandle):
         To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.tensor2_load(self.handle, make_c_char_p(path))
 
@@ -3466,6 +3502,7 @@ class Tensor3(HasHandle):
             (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.tensor3_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'tensor3_load', c_void_p, c_char_p)
@@ -3476,6 +3513,7 @@ class Tensor3(HasHandle):
         To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.tensor3_load(self.handle, make_c_char_p(path))
 
@@ -3659,6 +3697,7 @@ class Tensor2Interp2(HasHandle):
             (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.tensor2interp2_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'tensor2interp2_load', c_void_p, c_char_p)
@@ -3669,6 +3708,7 @@ class Tensor2Interp2(HasHandle):
         To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.tensor2interp2_load(self.handle, make_c_char_p(path))
 
@@ -3774,6 +3814,7 @@ class Tensor3Interp3(HasHandle):
             (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.tensor3interp3_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'tensor3interp3_load', c_void_p, c_char_p)
@@ -3784,6 +3825,7 @@ class Tensor3Interp3(HasHandle):
         To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.tensor3interp3_load(self.handle, make_c_char_p(path))
 
@@ -3905,6 +3947,7 @@ class Coord2(HasHandle):
             (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.coord2_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'coord2_load', c_void_p, c_char_p)
@@ -3915,6 +3958,7 @@ class Coord2(HasHandle):
         To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.coord2_load(self.handle, make_c_char_p(path))
 
@@ -4035,6 +4079,7 @@ class Coord3(HasHandle):
             (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.coord3_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'coord3_load', c_void_p, c_char_p)
@@ -4045,6 +4090,7 @@ class Coord3(HasHandle):
         To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.coord3_load(self.handle, make_c_char_p(path))
 
@@ -4623,6 +4669,7 @@ class Mesh3(HasHandle):
             (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.mesh3_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'mesh3_load', c_void_p, c_char_p)
@@ -4633,6 +4680,7 @@ class Mesh3(HasHandle):
         To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.mesh3_load(self.handle, make_c_char_p(path))
 
@@ -4992,6 +5040,7 @@ class LinearExpr(HasHandle):
             (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.lexpr_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'lexpr_load', c_void_p, c_char_p)
@@ -5002,6 +5051,7 @@ class LinearExpr(HasHandle):
         To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.lexpr_load(self.handle, make_c_char_p(path))
 
@@ -5220,6 +5270,7 @@ class DynSys(HasHandle):
             (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.dynsys_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'dynsys_load', c_void_p, c_char_p)
@@ -5230,6 +5281,7 @@ class DynSys(HasHandle):
         To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.dynsys_load(self.handle, make_c_char_p(path))
 
@@ -5780,6 +5832,7 @@ class SpringSys(HasHandle):
         """
         if path is not None:
             assert isinstance(path, str)
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.springsys_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'springsys_load', c_void_p, c_char_p)
@@ -5790,6 +5843,7 @@ class SpringSys(HasHandle):
         To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.springsys_load(self.handle, make_c_char_p(path))
 
@@ -6195,10 +6249,16 @@ class SeepageMesh(HasHandle, HasCells):
 
         @property
         def pos(self):
+            """
+            中心点的三维坐标
+            """
             return [core.seepage_mesh_get_cell_pos(self.model.handle, self.index, i) for i in range(3)]
 
         @pos.setter
         def pos(self, value):
+            """
+            中心点的三维坐标
+            """
             assert len(value) == 3
             for dim in range(3):
                 core.seepage_mesh_set_cell_pos(self.model.handle, self.index,
@@ -6223,10 +6283,16 @@ class SeepageMesh(HasHandle, HasCells):
 
         @property
         def vol(self):
+            """
+            体积 [m^3]
+            """
             return core.seepage_mesh_get_cell_volume(self.model.handle, self.index)
 
         @vol.setter
         def vol(self, value):
+            """
+            体积 [m^3]
+            """
             core.seepage_mesh_set_cell_volume(self.model.handle, self.index, value)
 
         core.use(c_double, 'seepage_mesh_get_cell_attr', c_void_p, c_size_t, c_size_t)
@@ -6260,21 +6326,33 @@ class SeepageMesh(HasHandle, HasCells):
 
         @property
         def face_number(self):
+            """
+            周边Face的数量
+            """
             return core.seepage_mesh_cell_get_face_n(self.model.handle, self.index)
 
         @property
         def cell_number(self):
+            """
+            周边Cell的数量
+            """
             return self.face_number
 
         core.use(c_size_t, 'seepage_mesh_cell_get_face_id', c_void_p, c_size_t, c_size_t)
 
         def get_face(self, index):
+            """
+            返回周边第index个Face
+            """
             index = get_index(index, self.face_number)
             return self.model.get_face(core.seepage_mesh_cell_get_face_id(self.model.handle, self.index, index))
 
         core.use(c_size_t, 'seepage_mesh_cell_get_cell_id', c_void_p, c_size_t, c_size_t)
 
         def get_cell(self, index):
+            """
+            返回周边第index个Cell
+            """
             index = get_index(index, self.cell_number)
             return self.model.get_cell(core.seepage_mesh_cell_get_cell_id(self.model.handle, self.index, index))
 
@@ -6316,10 +6394,16 @@ class SeepageMesh(HasHandle, HasCells):
 
         @property
         def area(self):
+            """
+            流动的横截面积 [m^2]
+            """
             return core.seepage_mesh_get_face_area(self.model.handle, self.index)
 
         @area.setter
         def area(self, value):
+            """
+            流动的横截面积 [m^2]
+            """
             core.seepage_mesh_set_face_area(self.model.handle, self.index, value)
 
         core.use(None, 'seepage_mesh_set_face_length', c_void_p,
@@ -6330,11 +6414,31 @@ class SeepageMesh(HasHandle, HasCells):
 
         @property
         def length(self):
+            """
+            流动的距离 [m]. 为了更加清晰的表示“流动距离”的概念，可以调用dist属性
+            """
             return core.seepage_mesh_get_face_length(self.model.handle, self.index)
 
         @length.setter
         def length(self, value):
+            """
+            流动的距离 [m]. 为了更加清晰的表示“流动距离”的概念，可以调用dist属性
+            """
             core.seepage_mesh_set_face_length(self.model.handle, self.index, value)
+
+        @property
+        def dist(self):
+            """
+            流动的距离 [m]
+            """
+            return self.length
+
+        @dist.setter
+        def dist(self, value):
+            """
+            流动的距离 [m]
+            """
+            self.length = value
 
         @property
         def pos(self):
@@ -6365,10 +6469,16 @@ class SeepageMesh(HasHandle, HasCells):
 
         @property
         def cell_ids(self):
+            """
+            两端Cell的ID
+            """
             return self.cell_i0, self.cell_i1
 
         @property
         def link(self):
+            """
+            两端Cell的ID
+            """
             return self.cell_ids
 
         @property
@@ -6390,6 +6500,9 @@ class SeepageMesh(HasHandle, HasCells):
                     return self.model.get_cell(self.cell_i0)
 
         def cells(self):
+            """
+            遍历两端的Cell
+            """
             return self.get_cell(0), self.get_cell(1)
 
         core.use(c_double, 'seepage_mesh_get_face_attr', c_void_p, c_size_t, c_size_t)
@@ -6451,6 +6564,7 @@ class SeepageMesh(HasHandle, HasCells):
             (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.seepage_mesh_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'seepage_mesh_load', c_void_p, c_char_p)
@@ -6461,6 +6575,7 @@ class SeepageMesh(HasHandle, HasCells):
         To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.seepage_mesh_load(self.handle, make_c_char_p(path))
 
@@ -6694,6 +6809,7 @@ class ElementMap(HasHandle):
             (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.element_map_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'element_map_load', c_void_p, c_char_p)
@@ -6704,6 +6820,7 @@ class ElementMap(HasHandle):
         To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.element_map_load(self.handle, make_c_char_p(path))
 
@@ -6782,6 +6899,7 @@ class Groups(HasHandle):
             (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.groups_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'groups_load', c_void_p, c_char_p)
@@ -6792,6 +6910,7 @@ class Groups(HasHandle):
         To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.groups_load(self.handle, make_c_char_p(path))
 
@@ -6851,6 +6970,7 @@ class Seepage(HasHandle, HasCells):
                 (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
             """
             if path is not None:
+                assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
                 core.reaction_save(self.handle, make_c_char_p(path))
 
         core.use(None, 'reaction_load', c_void_p, c_char_p)
@@ -6861,6 +6981,7 @@ class Seepage(HasHandle, HasCells):
             To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
             """
             if path is not None:
+                assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
                 _check_ipath(path, self)
                 core.reaction_load(self.handle, make_c_char_p(path))
 
@@ -7145,6 +7266,7 @@ class Seepage(HasHandle, HasCells):
                 (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
             """
             if path is not None:
+                assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
                 core.fludef_save(self.handle, make_c_char_p(path))
 
         core.use(None, 'fludef_load', c_void_p, c_char_p)
@@ -7155,6 +7277,7 @@ class Seepage(HasHandle, HasCells):
             To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
             """
             if path is not None:
+                assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
                 _check_ipath(path, self)
                 core.fludef_load(self.handle, make_c_char_p(path))
 
@@ -7412,6 +7535,7 @@ class Seepage(HasHandle, HasCells):
                 (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
             """
             if path is not None:
+                assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
                 core.fluid_save(self.handle, make_c_char_p(path))
 
         core.use(None, 'fluid_load', c_void_p, c_char_p)
@@ -7422,6 +7546,7 @@ class Seepage(HasHandle, HasCells):
             To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
             """
             if path is not None:
+                assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
                 _check_ipath(path, self)
                 core.fluid_load(self.handle, make_c_char_p(path))
 
@@ -7697,6 +7822,7 @@ class Seepage(HasHandle, HasCells):
                 (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
             """
             if path is not None:
+                assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
                 core.seepage_cell_save(self.handle, make_c_char_p(path))
 
         core.use(None, 'seepage_cell_load', c_void_p, c_char_p)
@@ -7707,6 +7833,7 @@ class Seepage(HasHandle, HasCells):
             To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
             """
             if path is not None:
+                assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
                 _check_ipath(path, self)
                 core.seepage_cell_load(self.handle, make_c_char_p(path))
 
@@ -8020,14 +8147,36 @@ class Seepage(HasHandle, HasCells):
             core.seepage_cell_set_attr(self.handle, index, value)
             return self
 
+        core.use(None, 'seepage_cell_multiply', c_void_p, c_void_p, c_double)
+
+        def multiply(self, scale, result=None):
+            """
+            将孔隙大小和流体都乘以相同的倍率，其余所有的属性保持不变.
+            """
+            if not isinstance(result, Seepage.CellData):
+                result = Seepage.CellData()
+            core.seepage_cell_multiply(result.handle, self.handle, scale)
+            return result
+
+        def __mul__(self, scale):
+            """
+            将孔隙大小和流体都乘以相同的倍率，其余所有的属性保持不变.
+            """
+            return self.multiply(scale)
+
         core.use(None, 'seepage_cell_clone', c_void_p, c_void_p)
 
-        def clone(self, other):
+        def clone(self, other, *, scale=None):
             """
             从other克隆数据（所有的数据）
             """
             assert isinstance(other, Seepage.CellData)
-            core.seepage_cell_clone(self.handle, other.handle)
+            if scale is not None:
+                other.multiply(scale, result=self)
+                return self
+            else:
+                core.seepage_cell_clone(self.handle, other.handle)
+                return self
 
         core.use(None, 'seepage_cell_set_fluid_components', c_void_p, c_void_p)
 
@@ -8236,6 +8385,7 @@ class Seepage(HasHandle, HasCells):
                 (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
             """
             if path is not None:
+                assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
                 core.seepage_face_save(self.handle, make_c_char_p(path))
 
         core.use(None, 'seepage_face_load', c_void_p, c_char_p)
@@ -8246,6 +8396,7 @@ class Seepage(HasHandle, HasCells):
             To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
             """
             if path is not None:
+                assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
                 _check_ipath(path, self)
                 core.seepage_face_load(self.handle, make_c_char_p(path))
 
@@ -8475,6 +8626,7 @@ class Seepage(HasHandle, HasCells):
                 (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
             """
             if path is not None:
+                assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
                 core.injector_save(self.handle, make_c_char_p(path))
 
         core.use(None, 'injector_load', c_void_p, c_char_p)
@@ -8485,6 +8637,7 @@ class Seepage(HasHandle, HasCells):
             To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
             """
             if path is not None:
+                assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
                 _check_ipath(path, self)
                 core.injector_load(self.handle, make_c_char_p(path))
 
@@ -8865,6 +9018,7 @@ class Seepage(HasHandle, HasCells):
             (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.seepage_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'seepage_load', c_void_p, c_char_p)
@@ -8875,6 +9029,7 @@ class Seepage(HasHandle, HasCells):
         To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.seepage_load(self.handle, make_c_char_p(path))
 
@@ -10774,6 +10929,7 @@ class Thermal(HasHandle):
             (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.thermal_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'thermal_load', c_void_p, c_char_p)
@@ -10784,6 +10940,7 @@ class Thermal(HasHandle):
         To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.thermal_load(self.handle, make_c_char_p(path))
 
@@ -11509,6 +11666,7 @@ class InvasionPercolation(HasHandle):
             (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         assert isinstance(path, str)
+        assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
         core.ip_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'ip_load', c_void_p, c_char_p)
@@ -11519,6 +11677,7 @@ class InvasionPercolation(HasHandle):
         To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.ip_load(self.handle, make_c_char_p(path))
 
@@ -12111,6 +12270,7 @@ class Dfn2(HasHandle):
             (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.dfn2d_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'dfn2d_load', c_void_p, c_char_p)
@@ -12121,6 +12281,7 @@ class Dfn2(HasHandle):
         To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.dfn2d_load(self.handle, make_c_char_p(path))
 
@@ -12239,6 +12400,7 @@ class Lattice3(HasHandle):
             (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.lat3_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'lat3_load', c_void_p, c_char_p)
@@ -12249,6 +12411,7 @@ class Lattice3(HasHandle):
         To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.lat3_load(self.handle, make_c_char_p(path))
 
@@ -12373,6 +12536,7 @@ class DDMSolution2(HasHandle):
             (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.ddm_sol2_save(self.handle, make_c_char_p(path))
 
     def load(self, path):
@@ -12381,6 +12545,7 @@ class DDMSolution2(HasHandle):
         To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.ddm_sol2_load(self.handle, make_c_char_p(path))
 
     core.use(None, 'ddm_sol2_set_alpha', c_void_p, c_double)
@@ -12811,6 +12976,7 @@ class FractureNetwork(HasHandle):
             (fastest and smallest, but files generated under Windows and Linux cannot be read from each other)
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             core.frac_nt_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'frac_nt_load', c_void_p, c_char_p)
@@ -12821,6 +12987,7 @@ class FractureNetwork(HasHandle):
         To determine the file format (txt, xml, and binary) based on the extension, refer to the save function
         """
         if path is not None:
+            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
             _check_ipath(path, self)
             core.frac_nt_load(self.handle, make_c_char_p(path))
 

@@ -31,7 +31,7 @@
 
 1. Windows 10/11, x64, 安装[VC_redist.x64.exe](https://gitee.com/geomech/hydrate/attach_files);
 2. 安装[Python](https://www.python.org/) 3.7+ (x64); 
-3. 确保第三方[Python](https://www.python.org/)模块配置成功：`numpy, scipy, PyQt5或PyQt6, matplotlib, pyqtgraph, PyOpenGL, PyQtWebEngine`等；
+3. 确保第三方[Python](https://www.python.org/)模块配置成功：`numpy, scipy, PyQt5, matplotlib, pyqtgraph, PyOpenGL, PyQtWebEngine`等；
 4. 将[zml.py](https://gitee.com/geomech/hydrate/blob/master/zml.py)所在文件夹添加到Python[搜索路径](https://zhuanlan.zhihu.com/p/530589364). 
 
 ### 使用

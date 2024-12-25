@@ -59,11 +59,11 @@ def create_cube(x=(-0.5, 0.5), y=(-0.5, 0.5), z=(-0.5, 0.5), boxes=None,
                                   cy + dy / 2,
                                   cz + dz / 2])
 
-    def get_id(ix, iy, iz):
+    def get_id(_ix, _iy, _iz):
         """
         返回cell的全局的序号
         """
-        return ix * (jy * jz) + iy * jz + iz
+        return _ix * (jy * jz) + _iy * jz + _iz
 
     cell_n = mesh.cell_number
     for ix in range(0, jx - 1):

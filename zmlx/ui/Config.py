@@ -30,8 +30,10 @@ def find(name):
 def find_all(name):
     return app_data.find_all(name)
 
+
 # 默认搜索的图片扩展名
 image_exts = ['.jpg', '.png']
+
 
 def find_icon_file(name):
     try:
@@ -40,7 +42,7 @@ def find_icon_file(name):
             if os.path.isfile(filepath):
                 return filepath
             for ext in image_exts:
-                filepath = os.path.join(folder, name+ext)
+                filepath = os.path.join(folder, name + ext)
                 if os.path.isfile(filepath):
                     return filepath
     except Exception as err_2:
@@ -67,12 +69,19 @@ def load_icon(name):
         return QtGui.QIcon()
 
 
+sound_exts = ['.wav']
+
+
 def find_sound(name):
     try:
         for folder in reversed(find_all('zml_sounds')):
             filepath = os.path.join(folder, name)
             if os.path.isfile(filepath):
                 return filepath
+            for ext in sound_exts:
+                filepath = os.path.join(folder, name + ext)
+                if os.path.isfile(filepath):
+                    return filepath
     except Exception as err_2:
         print(err_2)
 
@@ -90,19 +99,19 @@ def play_sound(name):
 
 
 def play_click():
-    play_sound('click.wav')
+    play_sound('click')
 
 
 def play_gallop():
-    play_sound('gallop.wav')
+    play_sound('gallop')
 
 
 def play_ding():
-    play_sound('ding.wav')
+    play_sound('ding')
 
 
 def play_error():
-    play_sound('error.wav')
+    play_sound('error')
 
 
 def save(key, value, encoding=None):
