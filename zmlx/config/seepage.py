@@ -73,9 +73,30 @@ _unused = [get_face_gradient, get_face_diff, get_face_sum, get_face_left,
 def get_cell_mask(model: Seepage, xr=None, yr=None, zr=None):
     """
     返回给定坐标范围内的cell的index。主要用来辅助绘图。since 2024-6-12
+
+    参数:
+    - model: Seepage 模型对象
+    - xr: x 坐标范围（可选）
+    - yr: y 坐标范围（可选）
+    - zr: z 坐标范围（可选）
+
+    返回值:
+    - 一个列表，包含给定坐标范围内的单元格索引
+
+    如果 xr、yr 或 zr 为 None，则表示该方向上没有限制
     """
 
     def get_(v, r):
+        """
+        辅助函数，用于判断每个坐标是否在给定范围内
+
+        参数:
+        - v: 坐标值列表
+        - r: 坐标范围（可选）
+
+        返回值:
+        - 一个列表，包含每个坐标是否在给定范围内的布尔值
+        """
         if r is None:
             return [True] * len(v)  # 此时为所有
         else:
@@ -93,6 +114,16 @@ def get_cell_mask(model: Seepage, xr=None, yr=None, zr=None):
 def get_cell_pos(model: Seepage, dim, mask=None):
     """
     返回cell的位置向量
+
+    参数:
+    - model: Seepage 模型对象
+    - dim: 维度索引（0, 1, 2 分别对应 x, y, z 维度）
+    - mask: 可选的掩码，用于筛选特定的单元格
+
+    返回值:
+    - 一个 numpy 数组，包含给定维度上单元格的位置向量
+
+    如果 mask 为 None，则返回所有单元格的位置向量；否则，返回掩码指定的单元格的位置向量
     """
     assert 0 <= dim < 3
     v = as_numpy(model).cells.get(-(dim + 1))
@@ -100,16 +131,51 @@ def get_cell_pos(model: Seepage, dim, mask=None):
 
 
 def get_cell_pre(model: Seepage, mask=None):
+    """
+    返回模型中单元格的压力值。
+
+    参数:
+    - model: Seepage 模型对象
+    - mask: 可选的掩码，用于筛选特定的单元格
+
+    返回值:
+    - 一个 numpy 数组，包含模型中所有单元格的压力值。
+    - 如果提供了掩码，则返回掩码指定的单元格的压力值。
+    """
     v = as_numpy(model).cells.pre
     return v if mask is None else v[mask]
 
 
 def get_cell_temp(model: Seepage, mask=None):
+    """
+    返回模型中单元格的温度值。
+
+    参数:
+    - model: Seepage 模型对象
+    - mask: 可选的掩码，用于筛选特定的单元格
+
+    返回值:
+    - 一个 numpy 数组，包含模型中所有单元格的温度值。
+    - 如果提供了掩码，则返回掩码指定的单元格的温度值。
+    """
     v = as_numpy(model).cells.get(model.get_cell_key('temperature'))
     return v if mask is None else v[mask]
 
 
 def get_cell_fv(model: Seepage, fid=None, mask=None):
+    """
+    返回模型中单元格的流体体积。
+
+    参数:
+    - model: Seepage 模型对象
+    - fid: 流体 ID（可选），如果未提供，则返回所有流体的总体积
+    - mask: 可选的掩码，用于筛选特定的单元格
+
+    返回值:
+    - 一个 numpy 数组，包含模型中所有单元格的流体体积。
+    - 如果提供了流体 ID，则返回该流体在所有单元格中的体积。
+    - 如果提供了掩码，则返回掩码指定的单元格的流体体积。
+    """
     if fid is None:
         v = as_numpy(model).cells.fluid_vol
     else:
@@ -118,6 +184,19 @@ def get_cell_fv(model: Seepage, fid=None, mask=None):
 
 
 def get_cell_fm(model: Seepage, fid=None, mask=None):
+    """
+    返回模型中单元格的流体质量。
+
+    参数:
+    - model: Seepage 模型对象
+    - fid: 流体 ID（可选），如果未提供，则返回所有流体的总质量
+    - mask: 可选的掩码，用于筛选特定的单元格
+
+    返回值:
+    - 一个 numpy 数组，包含模型中所有单元格的流体质量。
+    - 如果提供了流体 ID，则返回该流体在所有单元格中的质量。
+    - 如果提供了掩码，则返回掩码指定的单元格的流体质量。
+    """
     if fid is None:
         v = as_numpy(model).cells.fluid_mass
     else:
@@ -129,6 +208,23 @@ def show_cells(model: Seepage, dim0, dim1, mask=None, show_p=True, show_t=True,
                show_s=True, folder=None, use_mass=False):
     """
     二维绘图显示
+
+    参数:
+    - model: Seepage 模型对象
+    - dim0: 第一个维度索引（0, 1, 2 分别对应 x, y, z 维度）
+    - dim1: 第二个维度索引（0, 1, 2 分别对应 x, y, z 维度）
+    - mask: 可选的掩码，用于筛选特定的单元格
+    - show_p: 是否显示压力（默认为 True）
+    - show_t: 是否显示温度（默认为 True）
+    - show_s: 是否显示饱和度（默认为 True）
+    - folder: 图像保存的文件夹路径（可选）
+    - use_mass: 是否使用质量饱和度（默认为 False）
+
+    返回值:
+    - 无
+
+    该函数通过获取模型中单元格的位置和属性值，使用 tricontourf 函数绘制二维等值线图，
+    显示模型中单元格的压力、温度和饱和度分布。如果提供了文件夹路径，则将图像保存到指定文件夹中。
     """
     if not gui.exists():
         return
@@ -195,6 +291,15 @@ def _get_names(f_def: Seepage.FluDef):
 def _flatten_comp(name):
     """
     用在list_comp中，去除组分的结构
+
+    参数:
+    - name: 组分的名字，可以是字符串或列表
+
+    返回值:
+    - 一个列表，包含所有组分的名字，去除了嵌套结构
+
+    如果输入的是字符串，则直接返回一个包含该字符串的列表；
+    如果输入的是列表，则遍历该列表，递归地展开所有嵌套的子列表，并将结果合并成一个平面列表。
     """
     if isinstance(name, str):
         return [name]
@@ -249,6 +354,23 @@ def list_comp_ids(model: Seepage):
 
 
 def _pop_sat(name, table: dict):
+    """
+    从饱和度表中获取指定流体或流体组分的饱和度值。
+
+    参数:
+    - name: 流体或流体组分的名称，可以是字符串或列表。
+    - table: 饱和度表，一个字典，其中键是流体或流体组分的名称，值是对应的饱和度值。
+
+    返回值:
+    - 如果 name 是字符串，则返回该流体的饱和度值；如果 name 是列表，
+    则返回一个列表，包含每个流体组分的饱和度值。
+    - 如果指定的流体或流体组分名称不在饱和度表中，则返回默认值 0.0。
+
+    该函数首先检查 name 是否为字符串。如果是字符串，它会验证名称是否为空，
+    并从饱和度表中获取相应的饱和度值。如果 name 不在表中，它会返回默认值 0.0。
+    如果 name 是列表，函数会遍历列表中的每个元素，递归调用 _pop_sat
+    函数获取每个流体组分的饱和度值，并将这些值收集到一个列表中返回。
+    """
     if isinstance(name, str):
         assert len(name) > 0, 'fluid name not set'
         return table.pop(name, 0.0)
@@ -277,9 +399,23 @@ def get_sat(names, table: dict):
 def get_attr(model: Seepage, key, default_val=None, cast=None,
              **valid_range):
     """
-    返回模型的属性. 其中key可以是字符串，也可以是一个int.
-        valid_range主要用来定义范围，即left和right两个属性
-        (也包括弃用的min和max两个属性)
+    返回模型的属性。其中 key 可以是字符串，也可以是一个 int。
+    valid_range 主要用来定义范围，即 left 和 right 两个属性
+    (也包括弃用的 min 和 max 两个属性)
+
+    参数:
+    - model: Seepage 模型对象
+    - key: 属性的键，可以是字符串或整数
+    - default_val: 如果属性不存在，返回的默认值
+    - cast: 可选的类型转换函数，用于将属性值转换为特定类型
+    - **valid_range: 包含属性值有效范围的关键字参数，如 left 和 right
+
+    返回值:
+    - 属性的值，如果属性不存在且没有提供默认值，则返回 None
+
+    该函数首先检查 key 是否为字符串或整数。如果是字符串，它会将其转换为模型内部使用的键。
+    然后，它尝试从模型中获取属性值，如果属性不存在，它会返回默认值或发出警告。
+    如果提供了类型转换函数 cast，它会将属性值转换为指定的类型。最后，它返回属性值或默认值。
     """
     assert isinstance(key, (int, str))
     key_backup = key
@@ -303,6 +439,17 @@ def get_attr(model: Seepage, key, default_val=None, cast=None,
 def set_attr(model: Seepage, key=None, value=None, **key_values):
     """
     设置模型的属性. 其中key可以是字符串，也可以是一个int
+
+    参数:
+    - model: Seepage 模型对象
+    - key: 属性的键，可以是字符串或整数
+    - value: 属性的值
+    - **key_values: 包含多个属性键值对的关键字参数
+
+    返回值:
+    - 无
+
+    该函数首先检查是否提供了单个键值对。如果提供了键，它会将键转换为模型内部使用的键，并尝试设置属性值。如果值为 None，它会发出警告。如果提供了多个键值对，它会遍历这些键值对，并调用自身来设置每个属性。
     """
     if key is not None:
         if isinstance(key, str):
@@ -322,6 +469,15 @@ def set_attr(model: Seepage, key=None, value=None, **key_values):
 def set_dt(model: Seepage, dt):
     """
     设置模型的时间步长
+
+    参数:
+    - model: Seepage 模型对象
+    - dt: 要设置的时间步长
+
+    返回值:
+    - 无
+
+    该函数通过调用 `set_attr` 函数来设置模型的时间步长属性。
     """
     set_attr(model, 'dt', dt)
 
@@ -329,6 +485,16 @@ def set_dt(model: Seepage, dt):
 def get_dt(model: Seepage, as_str=False):
     """
     返回模型内存储的时间步长. 当as_str的时候，返回一个字符串用以显示
+
+    参数:
+    - model: Seepage 模型对象
+    - as_str: 是否以字符串形式返回时间步长
+
+    返回值:
+    - 如果 as_str 为 False，返回时间步长的数值
+    - 如果 as_str 为 True，返回时间步长的字符串表示
+
+    该函数通过调用 `get_attr` 函数获取模型的时间步长属性，并根据 `as_str` 参数决定返回值的格式。
     """
     result = get_attr(model, key='dt', default_val=1.0e-10)
     return time2str(result) if as_str else result
@@ -337,6 +503,16 @@ def get_dt(model: Seepage, as_str=False):
 def get_time(model: Seepage, as_str=False):
     """
     返回模型的时间. 当as_str的时候，返回一个字符串用以显示
+
+    参数:
+    - model: Seepage 模型对象
+    - as_str: 是否以字符串形式返回时间
+
+    返回值:
+    - 如果 as_str 为 False，返回时间的数值
+    - 如果 as_str 为 True，返回时间的字符串表示
+
+    该函数通过调用 `get_attr` 函数获取模型的时间属性，并根据 `as_str` 参数决定返回值的格式。
     """
     result = get_attr(model, key='time', default_val=0.0)
     return time2str(result) if as_str else result
@@ -345,6 +521,15 @@ def get_time(model: Seepage, as_str=False):
 def set_time(model: Seepage, value):
     """
     设置模型的时间
+
+    参数:
+    - model: Seepage 模型对象
+    - value: 要设置的时间值
+
+    返回值:
+    - 无
+
+    该函数通过调用 `set_attr` 函数来设置模型的时间属性。
     """
     set_attr(model, 'time', value)
 
@@ -352,6 +537,16 @@ def set_time(model: Seepage, value):
 def update_time(model: Seepage, dt=None):
     """
     更新模型的时间
+
+    参数:
+    - model: Seepage 模型对象
+    - dt: 要更新的时间步长，如果为 None，则使用模型当前的时间步长
+
+    返回值:
+    - 无
+
+    该函数首先检查是否提供了时间步长。如果没有提供，它会获取模型当前的时间步长。
+    然后，它将模型的时间更新为当前时间加上时间步长。
     """
     if dt is None:
         dt = get_dt(model)
@@ -361,6 +556,15 @@ def update_time(model: Seepage, dt=None):
 def get_step(model: Seepage):
     """
     返回模型迭代的次数
+
+    参数:
+    - model: Seepage 模型对象
+
+    返回值:
+    - 模型迭代的次数，如果模型尚未迭代，则返回默认值 0
+
+    该函数通过调用 `get_attr` 函数获取模型的 `step` 属性，并将其转换为整数类型。
+    如果模型尚未迭代，`step` 属性可能不存在，此时函数将返回默认值 0。
     """
     return get_attr(model, 'step', default_val=0, cast=round)
 
@@ -368,6 +572,15 @@ def get_step(model: Seepage):
 def set_step(model: Seepage, step):
     """
     设置模型迭代的步数
+
+    参数:
+    - model: Seepage 模型对象
+    - step: 要设置的迭代步数
+
+    返回值:
+    - 无
+
+    该函数通过调用 `set_attr` 函数来设置模型的 `step` 属性。
     """
     set_attr(model, 'step', step)
 
@@ -376,7 +589,21 @@ def get_recommended_dt(model: Seepage, previous_dt,
                        dv_relative=0.1,
                        using_flow=True, using_ther=True):
     """
-    在调用了iterate函数之后，调用此函数，来获取更优的时间步长.
+    在调用了 iterate 函数之后，调用此函数，来获取更优的时间步长。
+
+    参数:
+    - model: Seepage 模型对象
+    - previous_dt: 之前的时间步长
+    - dv_relative: 相对体积变化率，默认为 0.1
+    - using_flow: 是否使用流动模型，默认为 True
+    - using_ther: 是否使用热模型，默认为 True
+
+    返回值:
+    - 更优的时间步长
+
+    该函数首先断言 `using_flow` 或 `using_ther` 至少有一个为真。
+    然后，根据是否使用流动模型和热模型，分别计算推荐的时间步长 `dt1` 和 `dt2`。
+    最后，返回 `dt1` 和 `dt2` 中的较小值。
     """
     assert using_flow or using_ther
     if using_flow:
@@ -399,11 +626,31 @@ def get_recommended_dt(model: Seepage, previous_dt,
 def get_dv_relative(model: Seepage):
     """
     每一个时间步dt内流体流过的网格数. 用于控制时间步长. 正常取值应该在0到1之间.
+
+    参数:
+    - model: Seepage 模型对象
+
+    返回值:
+    - dv_relative: 流体流过的网格数与时间步长的比值，如果模型中未设置该值，则返回默认值 0.1
+
+    该函数通过调用 `get_attr` 函数获取模型的 `dv_relative` 属性，并将其作为时间步长的控制参数。
     """
     return get_attr(model, 'dv_relative', default_val=0.1)
 
 
 def set_dv_relative(model: Seepage, value):
+    """
+    设置模型中流体流过的网格数与时间步长的比值，该比值用于控制时间步长
+
+    参数:
+    - model: Seepage 模型对象
+    - value: 要设置的 dv_relative 值
+
+    返回值:
+    - 无
+
+    该函数通过调用 `set_attr` 函数来设置模型的 `dv_relative` 属性。
+    """
     set_attr(model, 'dv_relative', value)
 
 
@@ -412,11 +659,33 @@ def get_dt_min(model: Seepage):
     允许的最小的时间步长
         注意: 这是对时间步长的一个硬约束。
         当利用dv_relative计算的步长不在此范围内的时候，则将它强制拉回到这个范围.
+
+    参数:
+    - model: Seepage 模型对象
+
+    返回值:
+    - 模型允许的最小时间步长，如果模型中未设置该值，则返回默认值 1.0e-15
+
+    该函数通过调用 `get_attr` 函数获取模型的 `dt_min` 属性，并将其作为时间步长的硬约束。
     """
     return get_attr(model, key='dt_min', default_val=1.0e-15)
 
 
 def set_dt_min(model: Seepage, value):
+    """
+    设置模型允许的最小时间步长
+        注意: 这是对时间步长的一个硬约束。
+        当利用dv_relative计算的步长不在此范围内的时候，则将它强制拉回到这个范围.
+
+    参数:
+    - model: Seepage 模型对象
+    - value: 要设置的最小时间步长值
+
+    返回值:
+    - 无
+
+    该函数通过调用 `set_attr` 函数来设置模型的 `dt_min` 属性，并将其作为时间步长的硬约束。
+    """
     set_attr(model, 'dt_min', value)
 
 
@@ -425,11 +694,33 @@ def get_dt_max(model: Seepage):
     允许的最大的时间步长
         注意: 这是对时间步长的一个硬约束。
         当利用dv_relative计算的步长不在此范围内的时候，则将它强制拉回到这个范围.
+
+    参数:
+    - model: Seepage 模型对象
+
+    返回值:
+    - 模型允许的最大时间步长，如果模型中未设置该值，则返回默认值 1.0e10
+
+    该函数通过调用 `get_attr` 函数获取模型的 `dt_max` 属性，并将其作为时间步长的硬约束。
     """
     return get_attr(model, 'dt_max', default_val=1.0e10)
 
 
 def set_dt_max(model: Seepage, value):
+    """
+    设置模型允许的最大时间步长
+        注意: 这是对时间步长的一个硬约束。
+        当利用dv_relative计算的步长不在此范围内的时候，则将它强制拉回到这个范围.
+
+    参数:
+    - model: Seepage 模型对象
+    - value: 要设置的最大时间步长值
+
+    返回值:
+    - 无
+
+    该函数通过调用 `set_attr` 函数来设置模型的 `dt_max` 属性，并将其作为时间步长的硬约束。
+    """
     set_attr(model, 'dt_max', value)
 
 
@@ -817,6 +1108,15 @@ def add_mesh(model: Seepage, mesh):
     根据给定的mesh，添加Cell和Face. 并对Cell和Face设置基本的属性.
         对于Cell，仅仅设置位置和体积这两个属性.
         对于Face，仅仅设置面积和长度这两个属性.
+
+    参数:
+    - model: Seepage 模型对象
+    - mesh: 要添加的网格对象
+
+    返回值:
+    - 无
+
+    该函数通过遍历网格中的单元格和面，将它们添加到模型中，并设置相应的属性。
     """
     if mesh is not None:
         ca_vol = cell_keys(model).vol
@@ -927,6 +1227,27 @@ def set_cell(cell: Seepage.Cell, pos=None, vol=None,
              pore_modulus_range=None, bk_fv=True, heat_cond=1.0):
     """
     设置Cell的初始状态.
+
+    参数:
+    - cell: Seepage.Cell 类型的单元格对象
+    - pos: 单元格的位置，可选参数
+    - vol: 单元格的体积，可选参数
+    - porosity: 孔隙度，默认值为0.1
+    - pore_modulus: 孔隙模量，默认值为1000e6
+    - denc: 密度，默认值为1.0e6
+    - dist: 距离，默认值为0.1
+    - temperature: 温度，默认值为280.0
+    - p: 压力，默认值为1.0
+    - s: 饱和度，可选参数
+    - pore_modulus_range: 孔隙模量范围，可选参数
+    - bk_fv: 是否备份流体体积，默认值为True
+    - heat_cond: 热传导系数，默认值为1.0
+
+    返回值:
+    - 无
+
+    该函数通过设置单元格的位置、体积、孔隙度、孔隙模量、密度、距离、温度、压力、饱和度等属性，
+    来初始化单元格的状态。
     """
     assert isinstance(cell, Seepage.Cell)
     ca = cell_keys(cell.model)
@@ -966,6 +1287,20 @@ def set_face(face: Seepage.Face, area=None, length=None,
              perm=None, heat_cond=None, igr=None, bk_g=True):
     """
     对一个Face进行配置
+
+    参数:
+    - face: Seepage.Face 类型的面对象
+    - area: 面的面积，可选参数
+    - length: 面的长度，可选参数
+    - perm: 渗透率，可选参数
+    - heat_cond: 热传导系数，可选参数
+    - igr: 未知参数，可选参数
+    - bk_g: 是否备份渗透率，默认值为True
+
+    返回值:
+    - 无
+
+    该函数通过设置面的面积、长度、渗透率、热传导系数等属性，来初始化面的状态。
     """
     assert isinstance(face, Seepage.Face)
     fa = face_keys(face.model)
@@ -1025,6 +1360,17 @@ def set_face(face: Seepage.Face, area=None, length=None,
 def add_cell(model: Seepage, *args, **kwargs):
     """
     添加一个新的Cell，并返回Cell对象
+
+    参数:
+    - model: Seepage 模型对象
+    - *args: 传递给 set_cell 函数的位置参数
+    - **kwargs: 传递给 set_cell 函数的关键字参数
+
+    返回值:
+    - cell: 新添加的 Cell 对象
+
+    该函数通过调用模型的 add_cell 方法创建一个新的单元格，
+    然后使用 set_cell 函数设置该单元格的初始状态，并返回这个单元格对象。
     """
     cell = model.add_cell()
     set_cell(cell, *args, **kwargs)
@@ -1034,6 +1380,19 @@ def add_cell(model: Seepage, *args, **kwargs):
 def add_face(model: Seepage, cell0, cell1, *args, **kwargs):
     """
     添加一个Face，并且返回
+
+    参数:
+    - model: Seepage 模型对象
+    - cell0: 第一个单元格对象
+    - cell1: 第二个单元格对象
+    - *args: 传递给 set_face 函数的位置参数
+    - **kwargs: 传递给 set_face 函数的关键字参数
+
+    返回值:
+    - face: 新添加的 Face 对象
+
+    该函数通过调用模型的 add_face 方法创建一个新的面，
+    然后使用 set_face 函数设置该面的初始状态，并返回这个面对象。
     """
     face = model.add_face(cell0, cell1)
     set_face(face, *args, **kwargs)

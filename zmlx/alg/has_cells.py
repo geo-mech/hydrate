@@ -6,6 +6,17 @@ from zmlx.ui import gui
 def get_pos_range(model, dim):
     """
     返回cells在某一个坐标维度上的范围
+
+    参数:
+    - model: 网格模型对象
+    - dim: 维度索引（0表示x维度，1表示y维度，2表示z维度）
+
+    返回:
+    - lrange: 该维度上的最小位置值
+    - rrange: 该维度上的最大位置值
+
+    异常:
+    - 断言错误: 如果模型中的单元格数量小于等于0，或者维度索引不在[0, 2]范围内
     """
     assert model.cell_number > 0
     assert 0 <= dim <= 2
@@ -22,6 +33,20 @@ def get_cells_in_range(model, xr=None, yr=None, zr=None,
     """
     返回在给定的坐标范围内的所有的cell. 其中xr为x坐标的范围，yr为y坐标的范围，zr为
     z坐标的范围。当某个范围为None的时候，则不检测.
+
+    参数:
+    - model: 网格模型对象
+    - xr: x坐标范围（可选）
+    - yr: y坐标范围（可选）
+    - zr: z坐标范围（可选）
+    - center: 中心点坐标（可选）
+    - radi: 半径（可选）
+
+    返回:
+    - cells: 在给定范围内的单元格列表
+
+    异常:
+    - 无异常抛出
     """
     if xr is None and yr is None and zr is None and center is not None and radi is not None:
         cells = []
@@ -48,9 +73,31 @@ def get_cells_in_range(model, xr=None, yr=None, zr=None,
 def get_cell_mask(model, xr=None, yr=None, zr=None):
     """
     返回给定坐标范围内的cell的index。主要用来辅助绘图。since 2024-6-12
+
+    参数:
+    - model: 网格模型对象
+    - xr: x坐标范围（可选）
+    - yr: y坐标范围（可选）
+    - zr: z坐标范围（可选）
+
+    返回:
+    - mask: 在给定范围内的单元格索引列表
+
+    异常:
+    - 无异常抛出
     """
 
     def get_(v, r):
+        """
+        根据给定的值和范围生成一个布尔掩码。
+
+        参数:
+        - v: 值的列表
+        - r: 范围（可选）
+
+        返回:
+        - mask: 布尔掩码列表
+        """
         if r is None:
             return [True] * len(v)  # 此时为所有
         else:
@@ -67,6 +114,19 @@ def get_cell_mask(model, xr=None, yr=None, zr=None):
 
 
 def get_cell_pos(model, index=(0, 1, 2)):
+    """
+    从网格模型中获取指定索引的单元格位置信息
+
+    参数:
+    - model: 网格模型对象
+    - index: 索引元组，默认为 (0, 1, 2)，表示获取 x、y、z 坐标
+
+    返回:
+    - results: 包含指定索引位置信息的元组
+
+    异常:
+    - 无异常抛出
+    """
     vpos = [cell.pos for cell in model.cells]
     results = []
     for i in index:
@@ -75,11 +135,43 @@ def get_cell_pos(model, index=(0, 1, 2)):
 
 
 def get_cell_property(model, get):
+    """
+    从网格模型中获取每个单元格的指定属性值
+
+    参数:
+    - model: 网格模型对象
+    - get: 用于获取单元格属性的函数
+
+    返回:
+    - results: 包含每个单元格属性值的列表
+
+    异常:
+    - 无异常抛出
+    """
     return [get(cell) for cell in model.cells]
 
 
 def plot_tricontourf(model, get, caption=None, gui_only=False, title=None, triangulation=None,
                      fname=None, dpi=300):
+    """
+    绘制网格模型中每个单元格的指定属性值的三角剖分等值线图。
+
+    参数:
+    - model: 网格模型对象
+    - get: 用于获取单元格属性的函数
+    - caption: 图形标题（可选）
+    - gui_only: 是否仅在图形用户界面中显示（可选）
+    - title: 图形标题（可选）
+    - triangulation: 三角剖分对象（可选）
+    - fname: 保存文件名（可选）
+    - dpi: 图像分辨率（可选）
+
+    返回:
+    - 无返回值
+
+    异常:
+    - 无异常抛出
+    """
     if gui_only and not gui.exists():
         return
     if triangulation is None:

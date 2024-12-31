@@ -6,6 +6,22 @@ from zmlx.seepage_mesh.cube import create_cube
 def create_xz(x_max, z_min, z_max, dx, dz, upper=0, lower=0):
     """
     创建一个具有上覆层和下伏层的二维网格
+
+    参数:
+    - x_max: x方向的最大值
+    - z_min: z方向的最小值
+    - z_max: z方向的最大值
+    - dx: x方向的网格间距
+    - dz: z方向的网格间距
+    - upper: 上覆层的厚度
+    - lower: 下伏层的厚度
+
+    返回:
+    - 一个二维网格
+
+    注意:
+    - 上覆层和下伏层的厚度不能超过总厚度的90%
+    - x方向的网格数量必须在5到200之间
     """
     # 创建x
     assert x_max > 0
