@@ -31,13 +31,12 @@
 
 1. Windows 10/11, x64, 安装[VC_redist.x64.exe](https://gitee.com/geomech/hydrate/attach_files);
 2. 安装[Python](https://www.python.org/) 3.7+ (x64); 
-3. 确保第三方[Python](https://www.python.org/)模块配置成功：`numpy, scipy, PyQt5, matplotlib, pyqtgraph, PyOpenGL, PyQtWebEngine`等；
-4. 将[zml.py](https://gitee.com/geomech/hydrate/blob/master/zml.py)所在文件夹添加到Python[搜索路径](https://zhuanlan.zhihu.com/p/530589364). 
+3. 使用[pip](https://www.runoob.com/w3cnote/python-pip-install-usage.html)安装: `pip install git+https://gitee.com/geomech/hydrate.git`;
 
 ### 使用
 
 1. 参考[zmlx/demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)来建模;
-2. 用[Python](https://www.python.org/)执行[UI.pyw](https://gitee.com/geomech/hydrate/blob/master/UI.pyw)以启动界面.
+2. 用[Python](https://www.python.org/)执行[zml_ui.pyw](https://gitee.com/geomech/hydrate/blob/master/zml_ui.pyw)以启动界面.
 
 ### 反馈
 
@@ -52,5 +51,3 @@
 
 1. [中国科学院地质地球所](https://igg.cas.cn/)重点部署项目(IGGCAS-201903);
 2. 国家自然科学基金地质联合基金(U2244223);
-
-
