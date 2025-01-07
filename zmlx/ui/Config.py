@@ -134,10 +134,12 @@ def load_window_size(win, name):
     try:
         words = app_data.getenv(name, encoding='utf-8', default='').split()
         rect = screen_size()
-        if len(words) == 2:
+        if len(words) == 3:
             w = clamp(int(words[0]), rect.width() * 0.2, rect.width() * 0.8)
             h = clamp(int(words[1]), rect.height() * 0.2, rect.height() * 0.8)
             win.resize(int(w), int(h))
+            if words[2] == 'True':
+                win.showMaximized()
         else:
             win.resize(int(rect.width() * 0.7), int(rect.height() * 0.7))
     except Exception as err_2:
@@ -148,7 +150,7 @@ def load_window_size(win, name):
 
 def save_window_size(win, name):
     try:
-        app_data.setenv(name, f'{win.width()}  {win.height()}')
+        app_data.setenv(name, f'{win.width()}  {win.height()}   {win.isMaximized()}')
     except Exception as err_2:
         print(err_2)
 

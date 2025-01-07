@@ -204,6 +204,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.__gui_api.add_func('trigger', self.trigger)
         self.__gui_api.add_func('view_cwd', self.view_cwd)
         self.__gui_api.add_func('window', lambda: self)
+        self.__gui_api.add_func('is_maximized', lambda: self.isMaximized())
+        self.__gui_api.add_func('show_maximized', lambda: self.showMaximized())
 
     def count_tabs(self):
         return self.__tab_widget.count()
@@ -261,11 +263,6 @@ class MainWindow(QtWidgets.QMainWindow):
     def showEvent(self, event):
         super(MainWindow, self).showEvent(event)
         self.refresh()
-
-    def resizeEvent(self, event):
-        super(MainWindow, self).resizeEvent(event)
-        name = 'main_window_size_PyQt6' if has_PyQt6 else 'main_window_size'
-        save_window_size(self, name)
 
     def get_widget(self, the_type, caption=None, on_top=None, init=None,
                    type_kw=None, oper=None, icon=None):
@@ -623,7 +620,7 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
     temp_file = app_data.temp('console_output.txt')
 
     def f1():
-        if app_data.getenv(key='restore_console_output', default='Yes', ignore_empty=True) == 'Yes':
+        if app_data.getenv(key='restore_console_output', default='No', ignore_empty=True) == 'Yes':
             win.get_output_widget().load_text(temp_file)
         app_data.space['main_window'] = win
         gui.push(win.get_gui_api())
@@ -631,26 +628,33 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
         sys.stdout = win.get_output_widget()
         sys.stderr = win.get_output_widget()
 
+        try:
+            name = 'main_window_size_PyQt6' if has_PyQt6 else 'main_window_size'
+            load_window_size(win, name)
+        except Exception as err:
+            print(f'Error: {err}')
+
+        try:
+            load_window_style(win, 'zml_main.qss')
+        except Exception as err:
+            print(f'Error: {err}')
+
     def f2():
+        try:
+            name = 'main_window_size_PyQt6' if has_PyQt6 else 'main_window_size'
+            save_window_size(win, name)
+        except Exception as err:
+            print(f'Error: {err}')
+
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
         print('Pop Gui')
         gui.pop()
         app_data.space['main_window'] = None
-        win.get_output_widget().save_text(temp_file)
+        if app_data.getenv(key='restore_console_output', default='No', ignore_empty=True) == 'Yes':
+            win.get_output_widget().save_text(temp_file)
 
     f1()
-
-    try:
-        name = 'main_window_size_PyQt6' if has_PyQt6 else 'main_window_size'
-        load_window_size(win, name)
-    except Exception as err:
-        print(f'Error: {err}')
-
-    try:
-        load_window_style(win, 'zml_main.qss')
-    except Exception as err:
-        print(f'Error: {err}')
 
     def my_exception_hook(the_type, value, tb):
         message = f"""Exception Type: {the_type}
@@ -695,6 +699,7 @@ still unresolved, please contact the author (email: 'zhangzhaobin@mail.iggcas.ac
         win.get_console().start_func(setup)
 
     app.exec()
+
     f2()
     if hasattr(win, 'tabs_should_be_saved'):
         save_tab_start_code(app_data.temp('tab_start_code.json'), win)

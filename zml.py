@@ -8646,6 +8646,9 @@ class Seepage(HasHandle, HasCells):
 
         @k.setter
         def k(self, value):
+            """
+            流体压力增加1Pa的时候，孔隙体积的增加量(m^3). k的数值越小，则刚度越大.
+            """
             core.seepage_cell_set_k(self.handle, value)
 
         def set_pore(self, p, v, dp, dv):
@@ -13546,24 +13549,23 @@ class FractureNetwork(HasHandle):
             if handle:
                 return LinearExpr(handle=handle)
 
+        @flu.setter
+        def flu(self, value):
+            """
+            设置流体的映射数据
+            """
+            left = self.flu
+            if left is not None:
+                left.clone(value)
+
         @staticmethod
-        def create(ds=None, dn=None, h=None, f=None, p0=None, k=None):
+        def create(**kwargs):
             """
             创建裂缝数据. Since 2024-2-19
             """
             data = FractureNetwork.FractureData()
-            if ds is not None:
-                data.ds = ds
-            if dn is not None:
-                data.dn = dn
-            if h is not None:
-                data.h = h
-            if k is not None:
-                data.k = k
-            if p0 is not None:
-                data.p0 = p0
-            if f is not None:
-                data.f = f
+            for key, value in kwargs.items():
+                setattr(data, key, value)
             return data
 
     class Vertex(VertexData):
@@ -13645,6 +13647,15 @@ class FractureNetwork(HasHandle):
             p0 = self.get_vertex(0).pos
             p1 = self.get_vertex(1).pos
             return p0[0], p0[1], p1[0], p1[1]
+
+        @property
+        def length(self):
+            """
+            裂缝的长度(根据裂缝两个端点的位置计算)
+            """
+            p0 = self.get_vertex(0).pos
+            p1 = self.get_vertex(1).pos
+            return get_distance(p0, p1)
 
         @property
         def center(self):

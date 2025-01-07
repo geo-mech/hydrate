@@ -3,7 +3,7 @@ def init():
         from zmlx.io.python import read_py
         from zml import app_data
         from zmlx.ui import gui
-        if app_data.getenv('restore_tabs', default='Yes', ignore_empty=True) == 'Yes':
+        if app_data.getenv('restore_tabs', default='No', ignore_empty=True) == 'Yes':
             filename = app_data.temp('tab_start_code.json')
             data = read_py(filename)
             for text in data:
