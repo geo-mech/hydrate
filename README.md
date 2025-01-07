@@ -30,13 +30,9 @@
 ### 安装
 
 1. Windows 10/11, x64, 安装[VC_redist.x64.exe](https://gitee.com/geomech/hydrate/attach_files);
-2. 安装[Python](https://www.python.org/) 3.7+ (x64); 
-3. 使用[pip](https://www.runoob.com/w3cnote/python-pip-install-usage.html)安装: `pip install git+https://gitee.com/geomech/hydrate.git`;
-
-### 使用
-
-1. 参考[zmlx/demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)来建模;
-2. 用[Python](https://www.python.org/)执行[zml_ui.pyw](https://gitee.com/geomech/hydrate/blob/master/zml_ui.pyw)以启动界面.
+2. 安装[Python](https://www.python.org/) 3.7+ (x64); 或安装[Winpython64-3.10.11.1dot.exe](https://gitee.com/geomech/hydrate/attach_files); 
+3. 使用[pip](https://www.runoob.com/w3cnote/python-pip-install-usage.html)安装: `pip install git+https://gitee.com/geomech/hydrate.git`; 
+4. 参考[zmlx/demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)来建模. 
 
 ### 反馈
 
