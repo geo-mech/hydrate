@@ -70,7 +70,8 @@ class ImageViewer(QtWidgets.QGraphicsView):
         ratio = self.__get_scale_ratio()
         self.displayedImageSize = self.pixmap.size() * ratio
         if ratio < 1:
-            self.fitInView(self.pixmapItem, QtCore.Qt.AspectRatioMode.KeepAspectRatio)
+            self.fitInView(self.pixmapItem,
+                           QtCore.Qt.AspectRatioMode.KeepAspectRatio)
         else:
             self.resetTransform()
 
@@ -131,7 +132,8 @@ class ImageViewer(QtWidgets.QGraphicsView):
         rh = min(1, int(self.height() / ph))
         return min(rw, rh)
 
-    def fitInView(self, item: QtWidgets.QGraphicsItem, mode=QtCore.Qt.AspectRatioMode.KeepAspectRatio):
+    def fitInView(self, item: QtWidgets.QGraphicsItem,
+                  mode=QtCore.Qt.AspectRatioMode.KeepAspectRatio):
         """
         缩放场景使其适应窗口大小
         """

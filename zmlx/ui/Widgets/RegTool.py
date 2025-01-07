@@ -1,5 +1,3 @@
-import sys
-
 from zml import reg
 from zmlx.ui.Qt import QtWidgets
 
@@ -27,10 +25,10 @@ class RegTool(QtWidgets.QWidget):
 
         button = QtWidgets.QPushButton(self)
         button.setText('第3步，点击此按钮完成注册')
-        button.clicked.connect(self.applyReg)
+        button.clicked.connect(self.apply_reg)
         layout.addWidget(button)
 
-    def applyReg(self):
+    def apply_reg(self):
         text = self.code.toPlainText()
         if len(text) > 10:
             try:
@@ -39,18 +37,15 @@ class RegTool(QtWidgets.QWidget):
             except:
                 pass
         else:
-            QtWidgets.QMessageBox.information(self, '提示', '请输入激活码后再试')
+            QtWidgets.QMessageBox.information(self,
+                                              '提示', '请输入激活码后再试')
 
-    def get_start_code(self):
-        return """gui.trigger('reg.txtpy')"""
-
-
-def test1():
-    app = QtWidgets.QApplication(sys.argv)
-    w = RegTool()
-    w.show()
-    sys.exit(app.exec_())
+    @staticmethod
+    def get_start_code():
+        return """gui.trigger('reg')"""
 
 
 if __name__ == '__main__':
-    test1()
+    from zmlx.ui.alg.show_widget import show_widget
+
+    show_widget(RegTool, use_gui=True)

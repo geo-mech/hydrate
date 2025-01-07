@@ -3,7 +3,7 @@ def init():
         from zmlx.io.python import read_py
         from zml import app_data
         from zmlx.ui import gui
-        if app_data.getenv('restore_tabs', default='Yes', ignore_empty=True) == 'Yes':
+        if app_data.getenv('restore_tabs', default='No', ignore_empty=True) == 'Yes':
             filename = app_data.temp('tab_start_code.json')
             data = read_py(filename)
             for text in data:
@@ -26,7 +26,7 @@ def init():
         if app_data.getenv('show_readme', default='Yes', ignore_empty=True) == 'Yes':
             window = get_window()
             if window.count_tabs() == 0:
-                window.trigger('readme.txtpy')
+                window.trigger('readme')
     except Exception as e:
         print(f'Error: {e}')
 

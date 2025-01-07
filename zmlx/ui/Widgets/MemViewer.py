@@ -60,5 +60,6 @@ class MemViewer(QtWidgets.QTableWidget):
         msec = clamp(int(cpu_t * 200 / 0.001), 200, 8000)
         self.timer.setInterval(msec)
 
-    def get_start_code(self):
-        return """gui.trigger('memory.txtpy')"""
+    @staticmethod
+    def get_start_code():
+        return """gui.trigger('memory')"""

@@ -1,42 +1,42 @@
 {
   "文件": [
-    "set_cwd.txtpy",
-    "quit.txtpy",
-    "open.txtpy",
-    "demo.txtpy",
-    "open_cwd.txtpy",
-    "py_new.txtpy"
+    "set_cwd.py",
+    "quit.py",
+    "open.py",
+    "demo.py",
+    "open_cwd.py",
+    "py_new.py"
   ],
   "显示": [
-    "refresh.txtpy",
-    "cls.txtpy",
-    "view_cwd.txtpy",
-    "memory.txtpy",
-    "timer.txtpy",
-    "console.txtpy",
-    "close_all_tabs.txtpy"
+    "refresh.py",
+    "cls.py",
+    "view_cwd.py",
+    "memory.py",
+    "timer.py",
+    "console.py",
+    "close_all_tabs.py"
   ],
   "控制台": [
-    "console_exec.txtpy",
-    "console_pause.txtpy",
-    "console_resume.txtpy",
-    "console_stop.txtpy",
-    "console_kill.txtpy",
-    "console_hide.txtpy",
-    "console_show.txtpy"
+    "console_exec.py",
+    "console_pause.py",
+    "console_resume.py",
+    "console_stop.py",
+    "console_kill.py",
+    "console_hide.py",
+    "console_show.py"
   ],
   "操作": [
-    "print_tag.txtpy",
-    "play_images.txtpy"
+    "print_tag.py",
+    "play_images.py"
   ],
   "设置": [
-    "search.txtpy",
-    "env.txtpy"
+    "search.py",
+    "env.py"
   ],
   "帮助": [
-    "about.txtpy",
-    "readme.txtpy",
-    "reg.txtpy",
-    "homepage.txtpy"
+    "about.py",
+    "readme.py",
+    "reg.py",
+    "homepage.py"
   ]
 }

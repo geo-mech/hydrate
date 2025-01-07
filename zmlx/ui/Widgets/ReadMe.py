@@ -14,5 +14,6 @@ class ReadMeBrowser(TextBrowser):
             self.setMarkdown(read_text(path=path, encoding='utf-8'))
             self.set_status(path)
 
-    def get_start_code(self):
-        return """gui.trigger('readme.txtpy')"""
+    @staticmethod
+    def get_start_code():
+        return """gui.trigger('readme')"""

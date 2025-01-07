@@ -10,6 +10,7 @@ def add_code_history(fname):
         if fname is None:
             return
         if os.path.isfile(fname):
-            shutil.copy(fname, app_data.root('console_history', f'{time_string()}.py'))
+            shutil.copy(fname,
+                        app_data.root('console_history', f'{time_string()}.py'))
     except:
         pass
