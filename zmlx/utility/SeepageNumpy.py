@@ -32,7 +32,8 @@ class SeepageNumpy:
                     buf = np.zeros(shape=self.model.cell_number, dtype=float)
                 else:
                     assert len(buf) == self.model.cell_number
-                self.model.cells_write(pointer=get_pointer(buf, c_double), index=index)
+                self.model.cells_write(pointer=get_pointer(buf, c_double),
+                                       index=index)
                 return buf
 
         def set(self, index, buf):
@@ -222,6 +223,13 @@ class SeepageNumpy:
             """
             return self.get(-3)
 
+        @property
+        def gravity(self):
+            """
+            重力的分量与face两侧Cell距离的乘积. inner_prod(gravity, cell1.pos - cell0.pos)
+            """
+            return self.get(-4)
+
     class Fluids:
         """
         用以批量读取或者设置某一种流体的属性
@@ -231,6 +239,10 @@ class SeepageNumpy:
             assert isinstance(model, Seepage)
             assert np is not None
             self.model = model
+            if isinstance(fluid_id, str):
+                fluid_id = self.model.find_fludef(name=fluid_id)
+                assert fluid_id is not None
+                assert len(fluid_id) > 0
             self.fluid_id = fluid_id
 
         def get(self, index, buf=None):
@@ -323,6 +335,10 @@ class SeepageNumpy:
         """
         返回给定流体或者组分的属性适配器
         """
+        if len(fluid_id) == 1:
+            if isinstance(fluid_id[0], str):
+                return SeepageNumpy.Fluids(model=self.model,
+                                           fluid_id=fluid_id[0])
         return SeepageNumpy.Fluids(model=self.model, fluid_id=fluid_id)
 
 

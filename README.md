@@ -4,14 +4,11 @@
 
 ### 作者
 
-[张召彬](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/201703/t20170306_4755492.html)<sup>1,2,3,*</sup>, [李守定](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/201412/t20141218_4278784.html)<sup>1,2,3</sup>, [李晓](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/200907/t20090713_2065538.html)<sup>1,2,3</sup>, [赫建明](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/201203/t20120302_3448658.html)<sup>1,2,3</sup>, 李关访<sup>1,2,3</sup>, [郑博](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/202303/t20230322_6706946.html)<sup>1,2,3</sup>, 毛天桥<sup>1,2,3</sup>, 徐涛<sup>1,2,3</sup>, 李宇轩<sup>1,2,3</sup>, Maryelin<sup>1,2,3</sup>, 谢卓然<sup>1,2,3</sup>
-
+[张召彬](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/201703/t20170306_4755492.html)<sup>1,2,*</sup>, [李守定](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/201412/t20141218_4278784.html)<sup>1,2</sup>, [李晓](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/200907/t20090713_2065538.html)<sup>1,2</sup>, [赫建明](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/201203/t20120302_3448658.html)<sup>1,2</sup>, 李关访<sup>1,2</sup>, [郑博](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/202303/t20230322_6706946.html)<sup>1,2</sup>, 毛天桥<sup>1,2</sup>, 徐涛<sup>1,2</sup>, 李宇轩<sup>1,2</sup>, Maryelin<sup>1,2</sup>, 谢卓然<sup>1,2</sup>
 
 <sup>1</sup>[中国科学院地质与地球物理研究所](https://igg.cas.cn/)(北京, 100029);
 
-<sup>2</sup>中国科学院地球科学研究院(北京, 100029);
-
-<sup>3</sup>[中国科学院大学](https://www.ucas.ac.cn/)(北京, 101408).
+<sup>2</sup>[中国科学院大学](https://www.ucas.ac.cn/)(北京, 101408).
 
 <sup>*</sup>联系: [zhangzhaobin@mail.iggcas.ac.cn](zhangzhaobin@mail.iggcas.ac.cn).   (技术问题请[新建Issue](https://gitee.com/geomech/hydrate/issues/new))
 
@@ -28,11 +25,9 @@
 基于[IGG-Hydrate](https://gitee.com/geomech/hydrate)已发表的文章，请点击[云盘链接](https://pan.cstcloud.cn/s/5cKaQrdFSHM). 
 
 ### 安装
-
-1. Windows 10/11, x64, 安装[VC_redist.x64.exe](https://gitee.com/geomech/hydrate/attach_files);
-2. 安装[Python](https://www.python.org/) 3.7+ (x64); 或安装[Winpython64-3.10.11.1dot.exe](https://gitee.com/geomech/hydrate/attach_files); 
-3. 使用[pip](https://www.runoob.com/w3cnote/python-pip-install-usage.html)安装: `pip install git+https://gitee.com/geomech/hydrate.git`; 
-4. 参考[zmlx/demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)来建模. 
+1. 确保操作系统为Windows 10/11, 64位；确保正确安装了64位的[Python ](https://www.python.org/)3.8或后续版本 (python及[pip](https://www.runoob.com/w3cnote/python-pip-install-usage.html)命令可用)；确保正确安装了[git](https://git-scm.com/) (git命令可用)；
+2. 运行命令 `pip install git+https://gitee.com/geomech/hydrate.git` 自动安装/更新 [IGG-Hydrate](https://gitee.com/geomech/hydrate)；
+3. 运行 `python -m zml_ui` 来启动[IGG-Hydrate](https://gitee.com/geomech/hydrate)的主界面，具体的建模方法，可以参考[zmlx/demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo). 
 
 ### 反馈
 
@@ -46,4 +41,4 @@
 ### 致谢
 
 1. [中国科学院地质地球所](https://igg.cas.cn/)重点部署项目(IGGCAS-201903);
-2. 国家自然科学基金地质联合基金(U2244223);
+2. 国家自然科学基金地质联合基金(U2244223).

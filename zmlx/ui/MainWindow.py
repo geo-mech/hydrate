@@ -341,6 +341,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def trigger(self, name):
         action = self.__actions.get(name)
+        if action is None:
+            action = self.__actions.get(name + '.py')
         assert action is not None, f'Error: action <{name}> not found'
         action.trigger()
 

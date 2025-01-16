@@ -79,5 +79,6 @@ class DemoWidget(QtWidgets.QTableWidget):
         except:
             pass
 
-    def get_start_code(self):
-        return """gui.trigger('demo.txtpy')"""
+    @staticmethod
+    def get_start_code():
+        return """gui.trigger('demo')"""

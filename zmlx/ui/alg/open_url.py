@@ -15,7 +15,9 @@ def open_url(url: str, caption=None, on_top=None, zoom_factor=2,
     if use_web_engine is None:
         try:
             from zml import app_data
-            use_web_engine = app_data.getenv(key='use_web_engine', default='No', ignore_empty=True) == 'Yes'
+            use_web_engine = app_data.getenv(key='use_web_engine',
+                                             default='No',
+                                             ignore_empty=True) == 'Yes'
         except:
             use_web_engine = False
 

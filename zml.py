@@ -22,14 +22,39 @@ import sys
 import timeit
 import warnings
 
+try:
+    import numpy as np
+except:
+    np = None
+
 warnings.simplefilter("default")  # Default warning display
 
 from ctypes import (cdll, c_void_p, c_char_p, c_int, c_int64, c_bool, c_double,
                     c_size_t, c_uint, CFUNCTYPE, POINTER)
-from typing import Iterable
+from collections.abc import Iterable
 
 # Indicates whether the system is currently Windows (both Windows and Linux systems are currently supported)
 is_windows = os.name == 'nt'
+
+
+def get_numpy_pointer(arr):
+    """
+    Returns the C language pointer to the given NumPy array.
+    """
+    if np is not None:
+        # Ensure the input is a NumPy array
+        if not isinstance(arr, np.ndarray):
+            raise ValueError("Input must be a NumPy array")
+
+        # Get the data type of the array
+        dtype = arr.dtype
+
+        # Convert the NumPy array to a C array
+        c_arr = np.ctypeslib.as_ctypes(arr)
+
+        # Get the pointer to the C array
+        return ctypes.cast(c_arr,
+                           ctypes.POINTER(ctypes.c_double if dtype == np.float64 else ctypes.c_float))
 
 
 class Object:
@@ -1391,12 +1416,16 @@ def test_loop(count, parallel=True):
     return core.test_loop(count, parallel)
 
 
-def about():
+def about(check_lic=True):
     """
     Return module information
     """
     info = f'Welcome to zml ({core.time_compile}; {core.compiler})'
-    if not lic.exists():
+    if check_lic:
+        has_lic = lic.exists()
+    else:
+        has_lic = True
+    if not has_lic:
         author = 'author (Email: zhangzhaobin@mail.iggcas.ac.cn, QQ: 542844710)'
         info = f"""{info}. 
         
@@ -10033,6 +10062,40 @@ class Seepage(HasHandle, HasCells):
             return
         core.seepage_apply_injs(self.handle, time, dt)
 
+    core.use(None, 'seepage_append', c_void_p, c_void_p, c_bool, c_size_t)
+
+    def append(self, other, cell_i0=None, with_faces=True):
+        """
+        将other中所有的Cell和Face追加到这个模型中，并且从这个模型的cell_i0开始，和从other新添加的cell之间
+        建立一一对应的Face. 默认情况下，仅仅追加，但是不建立和现有的Cell的连接。
+            2023-4-19
+
+        注意：
+            仅仅追加Cell和Face，other中的其它数据，比如反应、注入点、相渗曲线等，均不会被追加到这个
+            模型中。
+
+        当with_faces为False的时候，则仅仅追加other中的Cell (other中的 Face 不被追加)
+
+        注意函数实际的执行顺序：
+            第一步：添加other的所有的Cell
+            第二步：添加other的所有的Face (with_faces属性为True的时候)
+            第三步：创建一些额外Face连接 (从这个模型的cell_i0开始，和other的cell之间)
+
+        """
+        assert isinstance(other, Seepage)
+        if cell_i0 is None:
+            cell_i0 = self.cell_number
+        core.seepage_append(self.handle, other.handle, with_faces, cell_i0)
+
+    core.use(None, 'seepage_pop_cells', c_void_p, c_size_t)
+
+    def pop_cells(self, count=1):
+        """
+        删除最后count个Cell的所有的Face，然后移除最后count个Cell
+        """
+        core.seepage_pop_cells(self.handle, count)
+        return self
+
     core.use(c_double, 'seepage_get_gravity', c_void_p, c_size_t)
     core.use(None, 'seepage_set_gravity', c_void_p, c_size_t, c_double)
 
@@ -10193,593 +10256,6 @@ class Seepage(HasHandle, HasCells):
             return curve
         else:
             return curve.get(saturation)
-
-    core.use(c_double, 'seepage_get_attr', c_void_p, c_size_t)
-    core.use(None, 'seepage_set_attr',
-             c_void_p, c_size_t, c_double)
-
-    def get_attr(self, index, default_val=None, **valid_range):
-        """
-        模型的第index个自定义属性
-        """
-        if index is None:
-            return default_val
-        value = core.seepage_get_attr(self.handle, index)
-        if _attr_in_range(value, **valid_range):
-            return value
-        else:
-            return default_val
-
-    def set_attr(self, index, value):
-        """
-        模型的第index个自定义属性
-        """
-        if index is None:
-            return self
-        if value is None:
-            value = 1.0e200
-        core.seepage_set_attr(self.handle, index, value)
-        return self
-
-    core.use(None, 'seepage_get_cells_v0', c_void_p, c_void_p)
-    core.use(None, 'seepage_get_cells_k', c_void_p, c_void_p)
-    core.use(None, 'seepage_get_cells_fv', c_void_p, c_void_p)
-    core.use(None, 'seepage_get_cells_attr', c_void_p, c_size_t, c_void_p)
-    core.use(None, 'seepage_get_faces_attr', c_void_p, c_size_t, c_void_p)
-    core.use(None, 'seepage_set_cells_attr', c_void_p, c_size_t, c_void_p)
-    core.use(None, 'seepage_set_faces_attr', c_void_p, c_size_t, c_void_p)
-
-    def get_attrs(self, key, index=None, buffer=None):
-        """
-        返回所有指定元素的属性 <作为Vector返回>.
-        """
-        warnings.warn('please use function <Seepage.cells_write> and <Seepage.faces_write> instead. '
-                      'Will remove after 2024-6-14', DeprecationWarning)
-        if not isinstance(buffer, Vector):
-            buffer = Vector()
-        if key == 'cells_v0':
-            core.seepage_get_cells_v0(self.handle, buffer.handle)
-            return buffer
-        if key == 'cells_k':
-            core.seepage_get_cells_k(self.handle, buffer.handle)
-            return buffer
-        if key == 'cells_fv':
-            core.seepage_get_cells_fv(self.handle, buffer.handle)
-            return buffer
-        if key == 'cells':
-            core.seepage_get_cells_attr(self.handle, index, buffer.handle)
-            return buffer
-        if key == 'faces':
-            core.seepage_get_faces_attr(self.handle, index, buffer.handle)
-            return buffer
-
-    def set_attrs(self, key, value=None, index=None):
-        """
-        设置所有指定元素的属性
-        """
-        warnings.warn('please use function <Seepage.cells_read> and <Seepage.faces_read> instead. '
-                      'will be removed after 2024-6-14', DeprecationWarning)
-        assert isinstance(value, Vector)
-        if key == 'cells':
-            core.seepage_set_cells_attr(self.handle, index, value.handle)
-        if key == 'faces':
-            core.seepage_set_faces_attr(self.handle, index, value.handle)
-
-    core.use(None, 'seepage_update_den',
-             c_void_p, c_size_t, c_size_t, c_size_t,
-             c_void_p, c_size_t,
-             c_double, c_double, c_double)
-
-    def update_den(self, fluid_id=None, kernel=None, relax_factor=1.0, fa_t=None, min=-1, max=-1):
-        """
-        更新流体的密度。其中
-            fluid_id为需要更新的流体的ID (当None的时候，则更新所有)
-            kernel为Interp2(p,T)
-            relax_factor为松弛因子，限定密度的最大变化幅度.
-
-        注意:
-            当 relax_factor <= 0的时候，内核不会执行任何更新  (since 2023-9-27)
-        """
-        if relax_factor <= 0:
-            return
-        assert isinstance(fa_t, int)
-        core.seepage_update_den(self.handle, *parse_fid3(fluid_id),
-                                kernel.handle if isinstance(kernel, Interp2) else 0,
-                                fa_t, relax_factor, min, max)
-
-    core.use(None, 'seepage_update_vis', c_void_p, c_size_t, c_size_t, c_size_t,
-             c_void_p,
-             c_size_t,
-             c_size_t, c_double,
-             c_double, c_double)
-
-    def update_vis(self, fluid_id=None, kernel=None, ca_p=None, fa_t=None, relax_factor=0.3, min=1.0e-7, max=1.0):
-        """
-        更新流体的粘性系数。
-        Note:
-            当不给定fluid_id的时候，则尝试更新所有流体的粘性（利用model内置的流体定义）；
-
-        Note:
-            当kernel为None的时候，使用模型内置的流体定义；
-
-        注意:
-            当 relax_factor <= 0的时候，内核不会执行任何更新  (since 2023-9-27)
-        """
-        if relax_factor <= 0:
-            return
-        if ca_p is None:
-            # 此时，利用流体的体积来计算压力 (不可以指定流体ID：此时更新所有的流体)
-            ca_p = 99999999
-            assert fluid_id is None
-        else:
-            assert isinstance(ca_p, int)
-        assert isinstance(fa_t, int)
-        if kernel is None:
-            kernel_handle = 0
-        else:
-            assert isinstance(kernel, Interp2)
-            kernel_handle = kernel.handle
-        core.seepage_update_vis(self.handle, *parse_fid3(fluid_id), kernel_handle, ca_p, fa_t,
-                                relax_factor, min, max)
-
-    core.use(None, 'seepage_update_pore', c_void_p, c_size_t, c_size_t, c_double)
-
-    def update_pore(self, ca_v0, ca_k, relax_factor=0.01):
-        """
-        更新pore的属性，使得当前压力下，孔隙空间的体积可以逐渐逼近真实值(真实值由ca_v0和ca_k定义的属性给定).
-        注意：这个函数仅更新那些定义了ca_v0和ca_k属性的Cell.
-        """
-        core.seepage_update_pore(self.handle, ca_v0, ca_k, relax_factor)
-        return self
-
-    core.use(None, 'seepage_thermal_exchange', c_void_p, c_size_t, c_void_p, c_double,
-             c_size_t, c_size_t, c_size_t)
-
-    core.use(None, 'seepage_exchange_heat', c_void_p, c_double,
-             c_size_t, c_size_t,
-             c_size_t, c_size_t, c_size_t)
-
-    def exchange_heat(self, fid=None, thermal_model=None, dt=None, ca_g=None, ca_t=None, ca_mc=None,
-                      fa_t=None, fa_c=None):
-        """
-        流体和固体交换热量。
-        注意：
-            1. 当thermal_model为None的时候，则在Seepage内部交换热量，此时，必须定义ca_t, ca_mc两个属性
-            2. 当fid为None的时候，将所有的流体视为整体，与固体交换。此时，会计算各个流体的平均温度，并且，此函数运行之后
-                各个流体的温度将相等
-        """
-        if dt is None:
-            return
-        if thermal_model is None:  # 在模型的内部交换热量（流体和固体交换）
-            assert fid is None
-            core.seepage_exchange_heat(self.handle, dt, ca_g, ca_t, ca_mc, fa_t, fa_c)
-            return
-        if isinstance(thermal_model, Thermal):
-            if fid is None:
-                fid = 100000000  # exchange with all fluid when fid not exists
-            core.seepage_thermal_exchange(self.handle, fid, thermal_model.handle, dt, ca_g, fa_t, fa_c)
-            return
-
-    def print_cells(self, path, get=None, properties=None):
-        """
-        输出cell的属性（前三列固定为x y z坐标）. 默认第4列为pre，第5列为体积，后面依次为各流体组分的体积饱和度.
-        """
-        if path is None:
-            return
-
-        def get_vols(flu):
-            if flu.component_number == 0:
-                return [flu.vol]
-            else:
-                vols = []
-                for i in range(flu.component_number):
-                    vols.extend(get_vols(flu.get_component(i)))
-                return vols
-
-        def to_str(c):
-            vols = []
-            for i in range(c.fluid_number):
-                vols.extend(get_vols(c.get_fluid(i)))
-            vol = sum(vols)
-            s = f'{c.pre}\t{vol}'
-            for v in vols:
-                s = f'{s}\t{v / vol}'
-            return s
-
-        if get is None:
-            get = to_str
-        with open(path, 'w') as file:
-            for cell in self.cells:
-                x, y, z = cell.pos
-                file.write(f'{x}\t{y}\t{z}\t{get(cell)}')
-                if properties is not None:
-                    for prop in properties:
-                        file.write(f'\t{prop(cell)}')
-                file.write('\n')
-
-    core.use(c_size_t, 'seepage_get_nearest_cell_id',
-             c_void_p, c_double, c_double, c_double, c_size_t, c_size_t)
-
-    def get_nearest_cell(self, pos, i_beg=None, i_end=None):
-        """
-        返回与给定位置距离最近的cell (在[i_beg, i_end)的范围内搜索)
-        """
-        cell_n = self.cell_number
-        if cell_n > 0:
-            index = core.seepage_get_nearest_cell_id(self.handle, pos[0], pos[1], pos[2],
-                                                     i_beg if i_beg is not None else 0,
-                                                     i_end if i_end is not None else cell_n)
-            return self.get_cell(index)
-
-    core.use(None, 'seepage_clone', c_void_p, c_void_p)
-
-    def clone(self, other):
-        """
-        从另外一个模型克隆数据.
-        """
-        assert isinstance(other, Seepage)
-        core.seepage_clone(self.handle, other.handle)
-
-    def get_copy(self):
-        """
-        返回一个拷贝.
-        """
-        temp = Seepage()
-        temp.clone(self)
-        return temp
-
-    core.use(None, 'seepage_clone_cells', c_void_p, c_void_p, c_size_t, c_size_t, c_size_t)
-
-    def clone_cells(self, ibeg0, other, ibeg1, count):
-        """
-        拷贝Cell数据:
-            将other的[ibeg1, ibeg1+count)范围内的Cell的数据，拷贝到self的[ibeg0, ibeg0+count)范围内的Cell
-        此函数会自动跳过不存在的CellID.
-            since 2023-4-20
-        """
-        if count <= 0:
-            return
-        assert isinstance(other, Seepage)
-        core.seepage_clone_cells(self.handle, other.handle, ibeg0, ibeg1, count)
-
-    core.use(None, 'seepage_clone_inner_faces', c_void_p, c_void_p, c_size_t, c_size_t, c_size_t)
-
-    def clone_inner_faces(self, ibeg0, other, ibeg1, count):
-        """
-        拷贝Face数据:
-            将other的[ibeg1, ibeg1+count)范围内的Cell对应的Face，拷贝到self的[ibeg0, ibeg0+count)范围内的Cell对应的Face
-        此函数会自动跳过不存在的CellID.
-            since 2023-9-3
-        """
-        if count <= 0:
-            return
-        assert isinstance(other, Seepage)
-        core.seepage_clone_inner_faces(self.handle, other.handle, ibeg0, ibeg1, count)
-
-    def iterate(self, *args, **kwargs):
-        if self.__updater is None:
-            self.__updater = Seepage.Updater()
-        return self.__updater.iterate(self, *args, **kwargs)
-
-    def iterate_thermal(self, *args, **kwargs):
-        if self.__updater is None:
-            self.__updater = Seepage.Updater()
-        return self.__updater.iterate_thermal(self, *args, **kwargs)
-
-    def get_recommended_dt(self, *args, **kwargs):
-        if self.__updater is None:
-            self.__updater = Seepage.Updater()
-        return self.__updater.get_recommended_dt(self, *args, **kwargs)
-
-    core.use(None, 'seepage_diffusion', c_void_p, c_double,
-             c_size_t, c_size_t, c_size_t,
-             c_size_t, c_size_t, c_size_t,
-             c_void_p, c_size_t, c_void_p, c_size_t, c_void_p, c_size_t, c_void_p, c_size_t,
-             c_double, c_void_p)
-
-    def diffusion(self, dt, fid0, fid1, *,
-                  ps0=None, ls0=None, vs0=None,
-                  pk=None, lk=None, vk=None,
-                  pg=None, lg=None, vg=None,
-                  ppg=None, lpg=None, vpg=None,
-                  ds_max=0.05, face_groups=None):
-        """
-        扩散.
-        其中fid0和fid1定义两种流体。在扩散的时候，相邻Cell的这两种流体会进行交换，但会保证每个Cell的流体体积不变；
-            其中vs0定义两种流体压力相等的时候fid0的饱和度；vk当饱和度变化1的时候，压力的变化幅度；
-            vg定义face的导流能力(针对fid0和fid1作为一个整体);
-            vpg定义流体fid0受到的重力减去fid1的重力在face上的投影;
-            ds_max为允许的饱和度最大的改变量
-        """
-        if ps0 is None:
-            if isinstance(vs0, Vector):
-                warnings.warn('parameter <vs0> of Seepage.diffusion will be removed after 2025-4-6',
-                              DeprecationWarning)
-                if vs0.size > 0:
-                    ps0 = vs0.pointer
-                    ls0 = vs0.size
-
-        if pk is None:
-            if isinstance(vk, Vector):
-                warnings.warn('parameter <vk> of Seepage.diffusion will be removed after 2025-4-6',
-                              DeprecationWarning)
-                if vk.size > 0:
-                    pk = vk.pointer
-                    lk = vk.size
-
-        if pg is None:
-            if isinstance(vg, Vector):
-                warnings.warn('parameter <vg> of Seepage.diffusion will be removed after 2025-4-6',
-                              DeprecationWarning)
-                if vg.size > 0:
-                    pg = vg.pointer
-                    lg = vg.size
-
-        if ppg is None:
-            if isinstance(vpg, Vector):
-                warnings.warn('parameter <vpg> of Seepage.diffusion will be removed after 2025-4-6',
-                              DeprecationWarning)
-                if vpg.size > 0:
-                    ppg = vpg.pointer
-                    lpg = vpg.size
-
-        if pg is None:
-            return  # 没有g，则无法交换
-
-        if pk is None and ppg is None:
-            return  # 既没有定义毛管力，也没有定义重力，没有执行的必要了
-
-        # 下面，解析指针和长度
-        if ps0 is None:
-            ps0 = 0
-            ls0 = 0
-        else:
-            ps0 = ctypes.cast(ps0, c_void_p)
-            if ls0 is None:
-                ls0 = self.cell_number
-
-        if pk is None:
-            pk = 0
-            lk = 0
-        else:
-            pk = ctypes.cast(pk, c_void_p)
-            if lk is None:
-                lk = self.cell_number
-
-        if pg is None:
-            pg = 0
-            lg = 0
-        else:
-            pg = ctypes.cast(pg, c_void_p)
-            if lg is None:
-                lg = self.face_number
-
-        if ppg is None:
-            ppg = 0
-            lpg = 0
-        else:
-            ppg = ctypes.cast(ppg, c_void_p)
-            if lpg is None:
-                lpg = self.face_number
-
-        if face_groups is not None:
-            assert isinstance(face_groups, Groups)  # 分组
-
-        # 执行扩散操作.
-        core.seepage_diffusion(self.handle, dt, *parse_fid3(fid0), *parse_fid3(fid1),
-                               ps0, ls0,
-                               pk, lk,
-                               pg, lg,
-                               ppg, lpg,
-                               ds_max,
-                               0 if face_groups is None else face_groups.handle)
-
-    core.use(c_double, 'seepage_get_fluid_mass', c_void_p, c_size_t, c_size_t, c_size_t)
-
-    def get_fluid_mass(self, fluid_id=None):
-        """
-        返回模型中所有Cell内的流体mass的和。
-            当fluid_id指定的时候，则仅仅对给定的流体进行加和，否则，将加和所有的流体
-        """
-        return core.seepage_get_fluid_mass(self.handle, *parse_fid3(fluid_id))
-
-    @property
-    def fluid_mass(self):
-        """
-        返回模型中所有Cell内的流体mass的和
-        """
-        return self.get_fluid_mass()
-
-    core.use(c_double, 'seepage_get_fluid_vol', c_void_p, c_size_t, c_size_t, c_size_t)
-
-    def get_fluid_vol(self, fluid_id=None):
-        """
-        返回模型中所有Cell内的流体vol的和
-            当fluid_id指定的时候，则仅仅对给定的流体进行加和，否则，将加和所有的流体
-        """
-        return core.seepage_get_fluid_vol(self.handle, *parse_fid3(fluid_id))
-
-    @property
-    def fluid_vol(self):
-        """
-        返回模型中所有Cell内的流体vol的和
-        """
-        return self.get_fluid_vol()
-
-    core.use(None, 'seepage_update_cond', c_void_p, c_size_t, c_size_t, c_size_t, c_double)
-
-    def update_cond(self, ca_v0, fa_g0, fa_igr, relax_factor=1.0):
-        """
-        给定初始时刻各Cell流体体积v0，各Face的导流g0，v/v0到g/g0的映射gr，来更新此刻Face的g.
-        ca_v0是cell的属性id，fa_g0是face的属性id的时候，fa_igr是face的属性id
-            (用以表示此face选用的gr的序号。注意此时必须提前将gr存储到model中).
-        """
-        core.seepage_update_cond(self.handle, ca_v0, fa_g0, fa_igr, relax_factor)
-
-    core.use(None, 'seepage_update_g0', c_void_p, c_size_t, c_size_t, c_size_t, c_size_t)
-
-    def update_g0(self, fa_g0, fa_k, fa_s, fa_l):
-        """
-        对于所有的face，根据它的渗透率，面积和长度来计算cond (流体饱和的时候的cond).
-            ---
-            此函数非必须，可以基于numpy在Python层面实现同样的功能，后续可能会移除.
-        """
-        core.seepage_update_g0(self.handle, fa_g0, fa_k, fa_s, fa_l)
-
-    core.use(None, 'seepage_find_inner_face_ids', c_void_p, c_void_p, c_void_p)
-
-    def find_inner_face_ids(self, cell_ids, buffer=None):
-        """
-        给定多个Cell，返回这些Cell内部相互连接的Face的序号
-        """
-        assert isinstance(cell_ids, UintVector)
-        if not isinstance(buffer, UintVector):
-            buffer = UintVector()
-        core.seepage_find_inner_face_ids(self.handle, buffer.handle, cell_ids.handle)
-        return buffer
-
-    core.use(None, 'seepage_get_cond_for_exchange', c_void_p, c_void_p, c_size_t, c_size_t, c_size_t,
-             c_size_t, c_size_t, c_size_t)
-
-    def get_cond_for_exchange(self, fid0, fid1, buffer=None):
-        """
-        根据相对渗透率曲线、粘性系数，计算相邻两个Cell交换流体的时候的导流系数
-        """
-        if not isinstance(buffer, Vector):
-            buffer = Vector()
-        core.seepage_get_cond_for_exchange(self.handle, buffer.handle, *parse_fid3(fid0), *parse_fid3(fid1))
-        return buffer
-
-    core.use(None, 'seepage_get_linear_dpre', c_void_p, c_void_p, c_void_p,
-             c_size_t, c_size_t, c_size_t,
-             c_size_t, c_size_t, c_size_t,
-             c_void_p, c_size_t, c_double, c_void_p)
-
-    def get_linear_dpre(self, fid0, fid1, s2p=None, ca_ipc=99999999, vs0=None, vk=None, ds=0.05, cell_ids=None):
-        """
-        更新两种流体之间压力差和饱和度之间的线性关系
-        """
-        if not isinstance(vs0, Vector):
-            vs0 = Vector()
-        if not isinstance(vk, Vector):
-            vk = Vector()
-        if cell_ids is not None:
-            if not isinstance(cell_ids, UintVector):
-                cell_ids = UintVector(cell_ids)
-        core.seepage_get_linear_dpre(self.handle, vs0.handle, vk.handle,
-                                     *parse_fid3(fid0),
-                                     *parse_fid3(fid1),
-                                     s2p.handle if isinstance(s2p, Interp1) else 0,
-                                     ca_ipc, ds,
-                                     0 if cell_ids is None else cell_ids.handle)
-        return vs0, vk
-
-    core.use(None, 'seepage_get_vol_fraction', c_void_p, c_void_p, c_size_t, c_size_t, c_size_t)
-
-    def get_vol_fraction(self, fid, buffer=None):
-        """
-        返回给定序号的流体的体积饱和度，并且作为一个Vector返回
-        """
-        if not isinstance(buffer, Vector):
-            buffer = Vector()
-        core.seepage_get_vol_fraction(self.handle, buffer.handle, *parse_fid3(fid))
-        return buffer
-
-    core.use(None, 'seepage_get_face_gradient', c_void_p, c_void_p, c_void_p)
-
-    def get_face_gradient(self, fa, ca):
-        """
-        根据cell中心位置的属性的值来计算各个face位置的梯度.
-            (c1 - c0) / dist
-        其中:
-            fa为face的属性(指针，用于输出)
-            ca为各个cell的属性(指针，用于输入)
-        建议：
-            这里的参数都是指针。建议使用zmlx.config.seepage.get_face_gradient来替代此函数
-        """
-        core.seepage_get_face_gradient(self.handle, ctypes.cast(fa, c_void_p), ctypes.cast(ca, c_void_p))
-
-    core.use(None, 'seepage_get_face_diff', c_void_p, c_void_p, c_void_p)
-
-    def get_face_diff(self, fa, ca):
-        """
-        计算face两侧的cell的属性的值的差异。
-            c1 - c0
-        其中:
-            fa为face的属性(指针，用于输出)
-            ca为各个cell的属性(指针，用于输入)
-        建议：
-            这里的参数都是指针。建议使用zmlx.config.seepage.get_face_diff来替代此函数
-        """
-        core.seepage_get_face_diff(self.handle, ctypes.cast(fa, c_void_p), ctypes.cast(ca, c_void_p))
-
-    core.use(None, 'seepage_get_face_sum', c_void_p, c_void_p, c_void_p)
-
-    def get_face_sum(self, fa, ca):
-        """
-        计算face两侧的cell的属性的值的和。
-            c1 + c0
-        其中:
-            fa为face的属性(指针，用于输出)
-            ca为各个cell的属性(指针，用于输入)
-        建议：
-            这里的参数都是指针。建议使用zmlx.config.seepage.get_face_sum来替代此函数
-        """
-        core.seepage_get_face_sum(self.handle, ctypes.cast(fa, c_void_p), ctypes.cast(ca, c_void_p))
-
-    core.use(None, 'seepage_get_face_left', c_void_p, c_void_p, c_void_p)
-
-    def get_face_left(self, fa, ca):
-        """
-        计算face左侧的cell属性
-        其中:
-            fa为face的属性(指针，用于输出)
-            ca为各个cell的属性(指针，用于输入)
-        建议：
-            这里的参数都是指针。建议使用zmlx.config.seepage.get_face_left来替代此函数
-        """
-        core.seepage_get_face_left(self.handle, ctypes.cast(fa, c_void_p), ctypes.cast(ca, c_void_p))
-
-    core.use(None, 'seepage_get_face_right', c_void_p, c_void_p, c_void_p)
-
-    def get_face_right(self, fa, ca):
-        """
-        计算face右侧的cell属性
-        其中:
-            fa为face的属性(指针，用于输出)
-            ca为各个cell的属性(指针，用于输入)
-        建议：
-            这里的参数都是指针。建议使用zmlx.config.seepage.get_face_right来替代此函数
-        """
-        core.seepage_get_face_right(self.handle, ctypes.cast(fa, c_void_p), ctypes.cast(ca, c_void_p))
-
-    core.use(None, 'seepage_get_cell_average', c_void_p, c_void_p, c_void_p)
-
-    def get_cell_average(self, ca, fa):
-        """
-        计算cell周围face的平均值
-        其中:
-            ca为各个cell的属性(指针，用于输出)
-            fa为face的属性(指针，用于输如)
-        建议：
-            这里的参数都是指针。建议使用zmlx.config.seepage.get_cell_average来替代此函数
-        """
-        core.seepage_get_cell_average(self.handle, ctypes.cast(ca, c_void_p), ctypes.cast(fa, c_void_p))
-
-    def get_face_average(self, *args, **kwargs):
-        warnings.warn('This function will be removed after 2025-4-6, use get_cell_average instead',
-                      DeprecationWarning)
-        return self.get_cell_average(*args, **kwargs)
-
-    core.use(None, 'seepage_heating', c_void_p, c_size_t, c_size_t, c_size_t, c_double)
-
-    def heating(self, ca_mc, ca_t, ca_p, dt):
-        """
-        按照各个Cell给定的功率来对各个Cell进行加热 (此功能非必须，可以借助numpy实现).
-        其中：
-            ca_p：定义Cell加热的功率.
-        """
-        core.seepage_heating(self.handle, ca_mc, ca_t, ca_p, dt)
 
     core.use(c_size_t, 'seepage_get_fludef_n', c_void_p)
 
@@ -11012,152 +10488,6 @@ class Seepage(HasHandle, HasCells):
 
         return data
 
-    core.use(None, 'seepage_pop_fluids', c_void_p, c_void_p)
-    core.use(None, 'seepage_push_fluids', c_void_p, c_void_p)
-
-    def pop_fluids(self, buffer):
-        """
-        将各个Cell中的最后一个流体暂存到buffer中。一般情况下，将固体作为最后一种流体。在计算流动的
-        时候，如果这些固体存在，则会影响到相对渗透率。因此，当模型中存在固体的时候，需要先将固体组分
-        弹出，然后再计算流动。计算流动之后，再将备份的固体组分压入，使得模型恢复到最初的状态。
-        注意：在弹出最后一种流体的时候，会同步修改Cell中的pore的大小，并保证压力不变;
-            since: 2023-04
-        """
-        assert isinstance(buffer, Seepage.CellData)
-        core.seepage_pop_fluids(self.handle, buffer.handle)
-
-    def push_fluids(self, buffer):
-        """
-        将buffer中暂存的流体追加到各个Cell中。和pop_fluids函数搭配使用。
-        """
-        assert isinstance(buffer, Seepage.CellData)
-        core.seepage_push_fluids(self.handle, buffer.handle)
-
-    core.use(None, 'seepage_cells_write', c_void_p, c_void_p, c_int64)
-
-    def cells_write(self, index, pointer):
-        """
-        导出属性(所有的Cell): 当 index >= 0 的时候，为属性ID; 如果index < 0，则：
-            index=-1, x坐标
-            index=-2, y坐标
-            index=-3, z坐标
-            index=-4, v0 of pore
-            index=-5, k  of pore
-            index=-6, inner_prod(pos, gravity)
-        --- (以下为只读属性):
-            index=-10, 所有流体的总的质量 (只读)
-            index=-11, 所有流体的总的体积 (只读)
-            index=-12, 根据流体的体积和pore，来计算的Cell的压力 (只读)
-        """
-        core.seepage_cells_write(self.handle, ctypes.cast(pointer, c_void_p), index)
-
-    core.use(None, 'seepage_cells_read', c_void_p, c_void_p, c_double, c_int64)
-
-    def cells_read(self, index, pointer=None, value=None):
-        """
-        导入属性: 当 index >= 0 的时候，为属性ID；如果index < 0，则：
-            index=-1, x坐标
-            index=-2, y坐标
-            index=-3, z坐标
-            index=-4, v0 of pore
-            index=-5, k  of pore
-        """
-        if pointer is not None:
-            core.seepage_cells_read(self.handle, ctypes.cast(pointer, c_void_p), 0, index)
-        else:
-            assert value is not None
-            core.seepage_cells_read(self.handle, 0, value, index)
-
-    core.use(None, 'seepage_faces_write', c_void_p, c_void_p, c_int64)
-
-    def faces_write(self, index, pointer):
-        """
-        导出属性: 当 index >= 0 的时候，为属性ID；如果index < 0，则：
-            index=-1, cond
-            index=-2, dr
-            index=-3, distance between two cells
-
-            index=-10, dv of fluid 0
-            index=-11, dv of fluid 1
-            index=-12, dv of fluid 2
-            ...
-            index=-19, dv of fluid ALL
-        """
-        core.seepage_faces_write(self.handle, ctypes.cast(pointer, c_void_p), index)
-
-    core.use(None, 'seepage_faces_read', c_void_p, c_void_p, c_double, c_int64)
-
-    def faces_read(self, index, pointer=None, value=None):
-        """
-        导入属性: 当 index >= 0 的时候，为属性ID；如果index < 0，则：
-            index=-1, cond
-            index=-2, dr
-        """
-        if pointer is not None:
-            core.seepage_faces_read(self.handle, ctypes.cast(pointer, c_void_p), 0, index)
-        else:
-            assert value is not None
-            core.seepage_faces_read(self.handle, 0, value, index)
-
-    core.use(None, 'seepage_fluids_write', c_void_p, c_void_p, c_int64, c_size_t, c_size_t, c_size_t)
-
-    def fluids_write(self, fluid_id, index, pointer):
-        """
-        导出属性: 当 index >= 0 的时候，为属性ID；如果index < 0，则：
-            index=-1, 质量
-            index=-2, 密度
-            index=-3, 体积
-            index=-4, 粘性
-        """
-        core.seepage_fluids_write(self.handle, ctypes.cast(pointer, c_void_p), index, *parse_fid3(fluid_id))
-
-    core.use(None, 'seepage_fluids_read', c_void_p, c_void_p, c_double, c_int64, c_size_t, c_size_t, c_size_t)
-
-    def fluids_read(self, fluid_id, index, pointer=None, value=None):
-        """
-        导入属性
-        """
-        if pointer is not None:
-            core.seepage_fluids_read(self.handle, ctypes.cast(pointer, c_void_p), 0, index, *parse_fid3(fluid_id))
-        else:
-            assert value is not None
-            core.seepage_fluids_read(self.handle, 0, value, index, *parse_fid3(fluid_id))
-
-    @property
-    def numpy(self):
-        """
-        用以和numpy交互数据
-        """
-        warnings.warn('Seepage.numpy will be removed after 2025-1-21. Use zmlx.utility.SeepageNumpy Instead.'
-                      , DeprecationWarning)
-        from zmlx.utility.SeepageNumpy import SeepageNumpy
-        return SeepageNumpy(model=self)
-
-    core.use(None, 'seepage_append', c_void_p, c_void_p, c_bool, c_size_t)
-
-    def append(self, other, cell_i0=None, with_faces=True):
-        """
-        将other中所有的Cell和Face追加到这个模型中，并且从这个模型的cell_i0开始，和从other新添加的cell之间
-        建立一一对应的Face. 默认情况下，仅仅追加，但是不建立和现有的Cell的连接。
-            2023-4-19
-
-        注意：
-            仅仅追加Cell和Face，other中的其它数据，比如反应、注入点、相渗曲线等，均不会被追加到这个
-            模型中。
-
-        当with_faces为False的时候，则仅仅追加other中的Cell (other中的 Face 不被追加)
-
-        注意函数实际的执行顺序：
-            第一步：添加other的所有的Cell
-            第二步：添加other的所有的Face (with_faces属性为True的时候)
-            第三步：创建一些额外Face连接 (从这个模型的cell_i0开始，和other的cell之间)
-
-        """
-        assert isinstance(other, Seepage)
-        if cell_i0 is None:
-            cell_i0 = self.cell_number
-        core.seepage_append(self.handle, other.handle, with_faces, cell_i0)
-
     core.use(c_void_p, 'seepage_get_buffer', c_void_p, c_char_p)
 
     def get_buffer(self, key):
@@ -11355,14 +10685,685 @@ class Seepage(HasHandle, HasCells):
         core.seepage_get_tags(self.handle, s.handle)
         return eval(s.to_str())
 
-    core.use(None, 'seepage_pop_cells', c_void_p, c_size_t)
+    core.use(c_double, 'seepage_get_attr', c_void_p, c_size_t)
+    core.use(None, 'seepage_set_attr',
+             c_void_p, c_size_t, c_double)
 
-    def pop_cells(self, count=1):
+    def get_attr(self, index, default_val=None, **valid_range):
         """
-        删除最后count个Cell的所有的Face，然后移除最后count个Cell
+        模型的第index个自定义属性
         """
-        core.seepage_pop_cells(self.handle, count)
+        if index is None:
+            return default_val
+        value = core.seepage_get_attr(self.handle, index)
+        if _attr_in_range(value, **valid_range):
+            return value
+        else:
+            return default_val
+
+    def set_attr(self, index, value):
+        """
+        模型的第index个自定义属性
+        """
+        if index is None:
+            return self
+        if value is None:
+            value = 1.0e200
+        core.seepage_set_attr(self.handle, index, value)
         return self
+
+    core.use(c_size_t, 'seepage_get_nearest_cell_id',
+             c_void_p, c_double, c_double, c_double, c_size_t, c_size_t)
+
+    def get_nearest_cell(self, pos, i_beg=None, i_end=None):
+        """
+        返回与给定位置距离最近的cell (在[i_beg, i_end)的范围内搜索)
+        """
+        cell_n = self.cell_number
+        if cell_n > 0:
+            index = core.seepage_get_nearest_cell_id(self.handle, pos[0], pos[1], pos[2],
+                                                     i_beg if i_beg is not None else 0,
+                                                     i_end if i_end is not None else cell_n)
+            return self.get_cell(index)
+
+    core.use(None, 'seepage_clone', c_void_p, c_void_p)
+
+    def clone(self, other):
+        """
+        从另外一个模型克隆数据.
+        """
+        assert isinstance(other, Seepage)
+        core.seepage_clone(self.handle, other.handle)
+
+    def get_copy(self):
+        """
+        返回一个拷贝.
+        """
+        temp = Seepage()
+        temp.clone(self)
+        return temp
+
+    core.use(None, 'seepage_clone_cells', c_void_p, c_void_p, c_size_t, c_size_t, c_size_t)
+
+    def clone_cells(self, ibeg0, other, ibeg1, count):
+        """
+        拷贝Cell数据:
+            将other的[ibeg1, ibeg1+count)范围内的Cell的数据，拷贝到self的[ibeg0, ibeg0+count)范围内的Cell
+        此函数会自动跳过不存在的CellID.
+            since 2023-4-20
+        """
+        if count <= 0:
+            return
+        assert isinstance(other, Seepage)
+        core.seepage_clone_cells(self.handle, other.handle, ibeg0, ibeg1, count)
+
+    core.use(None, 'seepage_clone_inner_faces', c_void_p, c_void_p, c_size_t, c_size_t, c_size_t)
+
+    def clone_inner_faces(self, ibeg0, other, ibeg1, count):
+        """
+        拷贝Face数据:
+            将other的[ibeg1, ibeg1+count)范围内的Cell对应的Face，拷贝到self的[ibeg0, ibeg0+count)范围内的Cell对应的Face
+        此函数会自动跳过不存在的CellID.
+            since 2023-9-3
+        """
+        if count <= 0:
+            return
+        assert isinstance(other, Seepage)
+        core.seepage_clone_inner_faces(self.handle, other.handle, ibeg0, ibeg1, count)
+
+    core.use(None, 'seepage_update_den',
+             c_void_p, c_size_t, c_size_t, c_size_t,
+             c_void_p, c_size_t,
+             c_double, c_double, c_double)
+
+    def update_den(self, fluid_id=None, kernel=None, relax_factor=1.0, fa_t=None, min=-1, max=-1):
+        """
+        更新流体的密度。其中
+            fluid_id为需要更新的流体的ID (当None的时候，则更新所有)
+            kernel为Interp2(p,T)
+            relax_factor为松弛因子，限定密度的最大变化幅度.
+
+        注意:
+            当 relax_factor <= 0的时候，内核不会执行任何更新  (since 2023-9-27)
+        """
+        if relax_factor <= 0:
+            return
+        assert isinstance(fa_t, int)
+        core.seepage_update_den(self.handle, *parse_fid3(fluid_id),
+                                kernel.handle if isinstance(kernel, Interp2) else 0,
+                                fa_t, relax_factor, min, max)
+
+    core.use(None, 'seepage_update_vis', c_void_p, c_size_t, c_size_t, c_size_t,
+             c_void_p,
+             c_size_t,
+             c_size_t, c_double,
+             c_double, c_double)
+
+    def update_vis(self, fluid_id=None, kernel=None, ca_p=None, fa_t=None, relax_factor=0.3, min=1.0e-7, max=1.0):
+        """
+        更新流体的粘性系数。
+        Note:
+            当不给定fluid_id的时候，则尝试更新所有流体的粘性（利用model内置的流体定义）；
+
+        Note:
+            当kernel为None的时候，使用模型内置的流体定义；
+
+        注意:
+            当 relax_factor <= 0的时候，内核不会执行任何更新  (since 2023-9-27)
+        """
+        if relax_factor <= 0:
+            return
+        if ca_p is None:
+            # 此时，利用流体的体积来计算压力 (不可以指定流体ID：此时更新所有的流体)
+            ca_p = 99999999
+            assert fluid_id is None
+        else:
+            assert isinstance(ca_p, int)
+        assert isinstance(fa_t, int)
+        if kernel is None:
+            kernel_handle = 0
+        else:
+            assert isinstance(kernel, Interp2)
+            kernel_handle = kernel.handle
+        core.seepage_update_vis(self.handle, *parse_fid3(fluid_id), kernel_handle, ca_p, fa_t,
+                                relax_factor, min, max)
+
+    core.use(None, 'seepage_update_pore', c_void_p, c_size_t, c_size_t, c_double)
+
+    def update_pore(self, ca_v0, ca_k, relax_factor=0.01):
+        """
+        更新pore的属性，使得当前压力下，孔隙空间的体积可以逐渐逼近真实值(真实值由ca_v0和ca_k定义的属性给定).
+        注意：这个函数仅更新那些定义了ca_v0和ca_k属性的Cell.
+        """
+        core.seepage_update_pore(self.handle, ca_v0, ca_k, relax_factor)
+        return self
+
+    core.use(None, 'seepage_thermal_exchange', c_void_p, c_size_t, c_void_p, c_double,
+             c_size_t, c_size_t, c_size_t)
+
+    core.use(None, 'seepage_exchange_heat', c_void_p, c_double,
+             c_size_t, c_size_t,
+             c_size_t, c_size_t, c_size_t)
+
+    def exchange_heat(self, fid=None, thermal_model=None, dt=None, ca_g=None, ca_t=None, ca_mc=None,
+                      fa_t=None, fa_c=None):
+        """
+        流体和固体交换热量。
+        注意：
+            1. 当thermal_model为None的时候，则在Seepage内部交换热量，此时，必须定义ca_t, ca_mc两个属性
+            2. 当fid为None的时候，将所有的流体视为整体，与固体交换。此时，会计算各个流体的平均温度，并且，此函数运行之后
+                各个流体的温度将相等
+        """
+        if dt is None:
+            return
+        if thermal_model is None:  # 在模型的内部交换热量（流体和固体交换）
+            assert fid is None
+            core.seepage_exchange_heat(self.handle, dt, ca_g, ca_t, ca_mc, fa_t, fa_c)
+            return
+        if isinstance(thermal_model, Thermal):
+            if fid is None:
+                fid = 100000000  # exchange with all fluid when fid not exists
+            core.seepage_thermal_exchange(self.handle, fid, thermal_model.handle, dt, ca_g, fa_t, fa_c)
+            return
+
+    core.use(None, 'seepage_update_cond',
+             c_void_p, c_size_t, c_size_t, c_size_t, c_double)
+
+    def update_cond(self, ca_v0, fa_g0, fa_igr, relax_factor=1.0):
+        """
+        给定初始时刻各Cell流体体积v0，各Face的导流g0，v/v0到g/g0的映射gr，来更新此刻Face的g.
+        ca_v0是cell的属性id，fa_g0是face的属性id的时候，fa_igr是face的属性id
+            (用以表示此face选用的gr的序号。注意此时必须提前将gr存储到model中).
+        """
+        core.seepage_update_cond(self.handle, ca_v0, fa_g0, fa_igr, relax_factor)
+
+    core.use(None, 'seepage_update_g0', c_void_p, c_size_t, c_size_t, c_size_t, c_size_t)
+
+    def update_g0(self, fa_g0, fa_k, fa_s, fa_l):
+        """
+        对于所有的face，根据它的渗透率，面积和长度来计算cond (流体饱和的时候的cond).
+            ---
+            此函数非必须，可以基于numpy在Python层面实现同样的功能，后续可能会移除.
+        """
+        core.seepage_update_g0(self.handle, fa_g0, fa_k, fa_s, fa_l)
+
+    core.use(None, 'seepage_diffusion', c_void_p, c_double,
+             c_size_t, c_size_t, c_size_t,
+             c_size_t, c_size_t, c_size_t,
+             c_void_p, c_size_t, c_void_p, c_size_t, c_void_p, c_size_t, c_void_p, c_size_t,
+             c_double, c_void_p)
+
+    def diffusion(self, dt, fid0, fid1, *,
+                  ps0=None, ls0=None, vs0=None,
+                  pk=None, lk=None, vk=None,
+                  pg=None, lg=None, vg=None,
+                  ppg=None, lpg=None, vpg=None,
+                  ds_max=0.05, face_groups=None):
+        """
+        扩散.
+        其中fid0和fid1定义两种流体。在扩散的时候，相邻Cell的这两种流体会进行交换，但会保证每个Cell的流体体积不变；
+            其中vs0定义两种流体压力相等的时候fid0的饱和度；vk当饱和度变化1的时候，压力的变化幅度；
+            vg定义face的导流能力(针对fid0和fid1作为一个整体);
+            vpg定义流体fid0受到的重力减去fid1的重力在face上的投影;
+            ds_max为允许的饱和度最大的改变量
+        """
+        if ps0 is None:
+            if isinstance(vs0, Vector):
+                warnings.warn('parameter <vs0> of Seepage.diffusion will be removed after 2025-4-6',
+                              DeprecationWarning)
+                if vs0.size > 0:
+                    ps0 = vs0.pointer
+                    ls0 = vs0.size
+
+        if pk is None:
+            if isinstance(vk, Vector):
+                warnings.warn('parameter <vk> of Seepage.diffusion will be removed after 2025-4-6',
+                              DeprecationWarning)
+                if vk.size > 0:
+                    pk = vk.pointer
+                    lk = vk.size
+
+        if pg is None:
+            if isinstance(vg, Vector):
+                warnings.warn('parameter <vg> of Seepage.diffusion will be removed after 2025-4-6',
+                              DeprecationWarning)
+                if vg.size > 0:
+                    pg = vg.pointer
+                    lg = vg.size
+
+        if ppg is None:
+            if isinstance(vpg, Vector):
+                warnings.warn('parameter <vpg> of Seepage.diffusion will be removed after 2025-4-6',
+                              DeprecationWarning)
+                if vpg.size > 0:
+                    ppg = vpg.pointer
+                    lpg = vpg.size
+
+        if pg is None:
+            return  # 没有g，则无法交换
+
+        if pk is None and ppg is None:
+            return  # 既没有定义毛管力，也没有定义重力，没有执行的必要了
+
+        # 下面，解析指针和长度
+        if ps0 is None:
+            ps0 = 0
+            ls0 = 0
+        else:
+            ps0 = ctypes.cast(ps0, c_void_p)
+            if ls0 is None:
+                ls0 = self.cell_number
+
+        if pk is None:
+            pk = 0
+            lk = 0
+        else:
+            pk = ctypes.cast(pk, c_void_p)
+            if lk is None:
+                lk = self.cell_number
+
+        if pg is None:
+            pg = 0
+            lg = 0
+        else:
+            pg = ctypes.cast(pg, c_void_p)
+            if lg is None:
+                lg = self.face_number
+
+        if ppg is None:
+            ppg = 0
+            lpg = 0
+        else:
+            ppg = ctypes.cast(ppg, c_void_p)
+            if lpg is None:
+                lpg = self.face_number
+
+        if face_groups is not None:
+            assert isinstance(face_groups, Groups)  # 分组
+
+        # 执行扩散操作.
+        core.seepage_diffusion(self.handle, dt, *parse_fid3(fid0), *parse_fid3(fid1),
+                               ps0, ls0,
+                               pk, lk,
+                               pg, lg,
+                               ppg, lpg,
+                               ds_max,
+                               0 if face_groups is None else face_groups.handle)
+
+    core.use(None, 'seepage_heating', c_void_p, c_size_t, c_size_t, c_size_t, c_double)
+
+    def heating(self, ca_mc, ca_t, ca_p, dt):
+        """
+        按照各个Cell给定的功率来对各个Cell进行加热 (此功能非必须，可以借助numpy实现).
+        其中：
+            ca_p：定义Cell加热的功率.
+        """
+        core.seepage_heating(self.handle, ca_mc, ca_t, ca_p, dt)
+
+    core.use(None, 'seepage_pop_fluids', c_void_p, c_void_p)
+    core.use(None, 'seepage_push_fluids', c_void_p, c_void_p)
+
+    def pop_fluids(self, buffer):
+        """
+        将各个Cell中的最后一个流体暂存到buffer中。一般情况下，将固体作为最后一种流体。在计算流动的
+        时候，如果这些固体存在，则会影响到相对渗透率。因此，当模型中存在固体的时候，需要先将固体组分
+        弹出，然后再计算流动。计算流动之后，再将备份的固体组分压入，使得模型恢复到最初的状态。
+        注意：在弹出最后一种流体的时候，会同步修改Cell中的pore的大小，并保证压力不变;
+            since: 2023-04
+        """
+        assert isinstance(buffer, Seepage.CellData)
+        core.seepage_pop_fluids(self.handle, buffer.handle)
+
+    def push_fluids(self, buffer):
+        """
+        将buffer中暂存的流体追加到各个Cell中。和pop_fluids函数搭配使用。
+        """
+        assert isinstance(buffer, Seepage.CellData)
+        core.seepage_push_fluids(self.handle, buffer.handle)
+
+    core.use(None, 'seepage_update_sand', c_void_p,
+             c_size_t, c_size_t, c_size_t,
+             c_size_t, c_size_t, c_size_t, c_void_p, c_double, c_void_p)
+    core.use(None, 'seepage_update_sand_by_gradp', c_void_p,
+             c_size_t, c_size_t,
+             c_void_p, c_void_p,
+             c_size_t, c_size_t, c_size_t,
+             c_size_t, c_size_t, c_size_t,
+             c_size_t, c_size_t, c_size_t,
+             c_double
+             )
+
+    def update_sand(self, *, sol_sand, flu_sand, dt, v2q, vel=None,
+                    flu=None,
+                    ca_c=None, ca_gc0=None, dg2p=None, s2dgc=None):
+        """
+        计算流动的砂和沉降的砂之间的平衡.
+            其中vel为一个double类型的指针，存储在各个cell中当前的流动速度
+        """
+        if isinstance(sol_sand, str):
+            sol_sand = self.find_fludef(name=sol_sand)
+            assert sol_sand is not None
+
+        if isinstance(flu_sand, str):
+            flu_sand = self.find_fludef(name=flu_sand)
+            assert flu_sand is not None
+
+        if isinstance(flu, str):
+            flu = self.find_fludef(name=flu)
+            assert flu is not None
+
+        if ca_c is not None and ca_gc0 is not None and flu is not None:
+            assert isinstance(dg2p, Interp1)
+            assert isinstance(s2dgc, Interp1)
+            core.seepage_update_sand_by_gradp(self.handle,
+                                              ca_c, ca_gc0,
+                                              dg2p.handle, s2dgc.handle,
+                                              *parse_fid3(sol_sand),
+                                              *parse_fid3(flu_sand),
+                                              *parse_fid3(flu), dt)
+        else:
+            assert isinstance(v2q, Interp1)
+            if vel is None:
+                vel = 0  # Data is None
+            if isinstance(vel, Vector):
+                vel = vel.pointer
+            # 它一定要在某一种流体内
+            assert len(flu_sand) >= 2
+            core.seepage_update_sand(self.handle, *parse_fid3(sol_sand),
+                                     *parse_fid3(flu_sand), vel, dt, v2q.handle)
+
+    def iterate(self, *args, **kwargs):
+        if self.__updater is None:
+            self.__updater = Seepage.Updater()
+        return self.__updater.iterate(self, *args, **kwargs)
+
+    def iterate_thermal(self, *args, **kwargs):
+        if self.__updater is None:
+            self.__updater = Seepage.Updater()
+        return self.__updater.iterate_thermal(self, *args, **kwargs)
+
+    def get_recommended_dt(self, *args, **kwargs):
+        if self.__updater is None:
+            self.__updater = Seepage.Updater()
+        return self.__updater.get_recommended_dt(self, *args, **kwargs)
+
+    core.use(c_double, 'seepage_get_fluid_mass', c_void_p, c_size_t, c_size_t, c_size_t)
+
+    def get_fluid_mass(self, fluid_id=None):
+        """
+        返回模型中所有Cell内的流体mass的和。
+            当fluid_id指定的时候，则仅仅对给定的流体进行加和，否则，将加和所有的流体
+        """
+        return core.seepage_get_fluid_mass(self.handle, *parse_fid3(fluid_id))
+
+    @property
+    def fluid_mass(self):
+        """
+        返回模型中所有Cell内的流体mass的和
+        """
+        return self.get_fluid_mass()
+
+    core.use(c_double, 'seepage_get_fluid_vol', c_void_p, c_size_t, c_size_t, c_size_t)
+
+    def get_fluid_vol(self, fluid_id=None):
+        """
+        返回模型中所有Cell内的流体vol的和
+            当fluid_id指定的时候，则仅仅对给定的流体进行加和，否则，将加和所有的流体
+        """
+        return core.seepage_get_fluid_vol(self.handle, *parse_fid3(fluid_id))
+
+    @property
+    def fluid_vol(self):
+        """
+        返回模型中所有Cell内的流体vol的和
+        """
+        return self.get_fluid_vol()
+
+    core.use(None, 'seepage_find_inner_face_ids', c_void_p, c_void_p, c_void_p)
+
+    def find_inner_face_ids(self, cell_ids, buffer=None):
+        """
+        给定多个Cell，返回这些Cell内部相互连接的Face的序号
+        """
+        assert isinstance(cell_ids, UintVector)
+        if not isinstance(buffer, UintVector):
+            buffer = UintVector()
+        core.seepage_find_inner_face_ids(self.handle, buffer.handle, cell_ids.handle)
+        return buffer
+
+    core.use(None, 'seepage_get_cond_for_exchange', c_void_p, c_void_p, c_size_t, c_size_t, c_size_t,
+             c_size_t, c_size_t, c_size_t)
+
+    def get_cond_for_exchange(self, fid0, fid1, buffer=None):
+        """
+        根据相对渗透率曲线、粘性系数，计算相邻两个Cell交换流体的时候的导流系数
+        """
+        if not isinstance(buffer, Vector):
+            buffer = Vector()
+        core.seepage_get_cond_for_exchange(self.handle, buffer.handle, *parse_fid3(fid0), *parse_fid3(fid1))
+        return buffer
+
+    core.use(None, 'seepage_get_linear_dpre', c_void_p, c_void_p, c_void_p,
+             c_size_t, c_size_t, c_size_t,
+             c_size_t, c_size_t, c_size_t,
+             c_void_p, c_size_t, c_double, c_void_p)
+
+    def get_linear_dpre(self, fid0, fid1, s2p=None, ca_ipc=99999999, vs0=None, vk=None, ds=0.05, cell_ids=None):
+        """
+        更新两种流体之间压力差和饱和度之间的线性关系
+        """
+        if not isinstance(vs0, Vector):
+            vs0 = Vector()
+        if not isinstance(vk, Vector):
+            vk = Vector()
+        if cell_ids is not None:
+            if not isinstance(cell_ids, UintVector):
+                cell_ids = UintVector(cell_ids)
+        core.seepage_get_linear_dpre(self.handle, vs0.handle, vk.handle,
+                                     *parse_fid3(fid0),
+                                     *parse_fid3(fid1),
+                                     s2p.handle if isinstance(s2p, Interp1) else 0,
+                                     ca_ipc, ds,
+                                     0 if cell_ids is None else cell_ids.handle)
+        return vs0, vk
+
+    core.use(None, 'seepage_get_vol_fraction', c_void_p, c_void_p, c_size_t, c_size_t, c_size_t)
+
+    def get_vol_fraction(self, fid, buffer=None):
+        """
+        返回给定序号的流体的体积饱和度，并且作为一个Vector返回
+        """
+        if not isinstance(buffer, Vector):
+            buffer = Vector()
+        core.seepage_get_vol_fraction(self.handle, buffer.handle, *parse_fid3(fid))
+        return buffer
+
+    core.use(None, 'seepage_cells_write',
+             c_void_p, c_void_p, c_int64)
+
+    def cells_write(self, *, index, pointer):
+        """
+        导出属性(所有的Cell): 当 index >= 0 的时候，为属性ID; 如果index < 0，则：
+            index=-1, x坐标
+            index=-2, y坐标
+            index=-3, z坐标
+            index=-4, v0 of pore
+            index=-5, k  of pore
+            index=-6, inner_prod(pos, gravity)
+        --- (以下为只读属性):
+            index=-10, 所有流体的总的质量 (只读)
+            index=-11, 所有流体的总的体积 (只读)
+            index=-12, 根据流体的体积和pore，来计算的Cell的压力 (只读)
+        """
+        core.seepage_cells_write(self.handle,
+                                 ctypes.cast(pointer, c_void_p), index)
+
+    core.use(None, 'seepage_cells_read',
+             c_void_p, c_void_p, c_double, c_int64)
+
+    def cells_read(self, *, index, pointer=None, value=None):
+        """
+        导入属性: 当 index >= 0 的时候，为属性ID；如果index < 0，则：
+            index=-1, x坐标
+            index=-2, y坐标
+            index=-3, z坐标
+            index=-4, v0 of pore
+            index=-5, k  of pore
+        """
+        if pointer is not None:
+            core.seepage_cells_read(self.handle, ctypes.cast(pointer, c_void_p), 0, index)
+        else:
+            assert value is not None
+            core.seepage_cells_read(self.handle, 0, value, index)
+
+    core.use(None, 'seepage_faces_write', c_void_p, c_void_p, c_int64)
+
+    def faces_write(self, *, index, pointer):
+        """
+        导出属性:
+            index >= 0 的时候，为属性ID；
+        如果index < 0，则：
+            index=-1, cond
+            index=-2, dr
+            index=-3, face两侧的cell的距离
+            index=-4, 重力的分量与face两侧Cell距离的乘积. inner_prod(gravity, cell1.pos - cell0.pos)
+            ...
+            index=-10, dv of fluid 0
+            index=-11, dv of fluid 1
+            index=-12, dv of fluid 2
+            ...
+            index=-19, dv of fluid ALL
+        """
+        core.seepage_faces_write(self.handle, ctypes.cast(pointer, c_void_p), index)
+
+    core.use(None, 'seepage_faces_read', c_void_p, c_void_p, c_double, c_int64)
+
+    def faces_read(self, *, index, pointer=None, value=None):
+        """
+        导入属性: 当 index >= 0 的时候，为属性ID；如果index < 0，则：
+            index=-1, cond
+            index=-2, dr
+        """
+        if pointer is not None:
+            core.seepage_faces_read(self.handle, ctypes.cast(pointer, c_void_p), 0, index)
+        else:
+            assert value is not None
+            core.seepage_faces_read(self.handle, 0, value, index)
+
+    core.use(None, 'seepage_fluids_write', c_void_p, c_void_p, c_int64, c_size_t, c_size_t, c_size_t)
+
+    def fluids_write(self, *, fluid_id, index, pointer):
+        """
+        导出属性: 当 index >= 0 的时候，为属性ID；如果index < 0，则：
+            index=-1, 质量
+            index=-2, 密度
+            index=-3, 体积
+            index=-4, 粘性
+        """
+        core.seepage_fluids_write(self.handle, ctypes.cast(pointer, c_void_p), index, *parse_fid3(fluid_id))
+
+    core.use(None, 'seepage_fluids_read', c_void_p, c_void_p, c_double, c_int64, c_size_t, c_size_t, c_size_t)
+
+    def fluids_read(self, *, fluid_id, index, pointer=None, value=None):
+        """
+        导入属性
+        """
+        if pointer is not None:
+            core.seepage_fluids_read(self.handle, ctypes.cast(pointer, c_void_p), 0, index, *parse_fid3(fluid_id))
+        else:
+            assert value is not None
+            core.seepage_fluids_read(self.handle, 0, value, index, *parse_fid3(fluid_id))
+
+    @property
+    def numpy(self):
+        """
+        用以和numpy交互数据
+        """
+        warnings.warn('Seepage.numpy will be removed after 2025-1-21. Use zmlx.utility.SeepageNumpy Instead.'
+                      , DeprecationWarning)
+        from zmlx.utility.SeepageNumpy import SeepageNumpy
+        return SeepageNumpy(model=self)
+
+    core.use(None, 'seepage_get_cells_v0', c_void_p, c_void_p)
+    core.use(None, 'seepage_get_cells_k', c_void_p, c_void_p)
+    core.use(None, 'seepage_get_cells_fv', c_void_p, c_void_p)
+    core.use(None, 'seepage_get_cells_attr', c_void_p, c_size_t, c_void_p)
+    core.use(None, 'seepage_get_faces_attr', c_void_p, c_size_t, c_void_p)
+    core.use(None, 'seepage_set_cells_attr', c_void_p, c_size_t, c_void_p)
+    core.use(None, 'seepage_set_faces_attr', c_void_p, c_size_t, c_void_p)
+
+    def get_attrs(self, key, index=None, buffer=None):
+        """
+        返回所有指定元素的属性 <作为Vector返回>.
+        """
+        warnings.warn('please use function <Seepage.cells_write> and <Seepage.faces_write> instead. '
+                      'Will remove after 2024-6-14', DeprecationWarning)
+        if not isinstance(buffer, Vector):
+            buffer = Vector()
+        if key == 'cells_v0':
+            core.seepage_get_cells_v0(self.handle, buffer.handle)
+            return buffer
+        if key == 'cells_k':
+            core.seepage_get_cells_k(self.handle, buffer.handle)
+            return buffer
+        if key == 'cells_fv':
+            core.seepage_get_cells_fv(self.handle, buffer.handle)
+            return buffer
+        if key == 'cells':
+            core.seepage_get_cells_attr(self.handle, index, buffer.handle)
+            return buffer
+        if key == 'faces':
+            core.seepage_get_faces_attr(self.handle, index, buffer.handle)
+            return buffer
+
+    def set_attrs(self, key, value=None, index=None):
+        """
+        设置所有指定元素的属性
+        """
+        warnings.warn('please use function <Seepage.cells_read> and <Seepage.faces_read> instead. '
+                      'will be removed after 2024-6-14', DeprecationWarning)
+        assert isinstance(value, Vector)
+        if key == 'cells':
+            core.seepage_set_cells_attr(self.handle, index, value.handle)
+        if key == 'faces':
+            core.seepage_set_faces_attr(self.handle, index, value.handle)
+
+    def print_cells(self, path, get=None, properties=None):
+        """
+        输出cell的属性（前三列固定为x y z坐标）. 默认第4列为pre，第5列为体积，后面依次为各流体组分的体积饱和度.
+        """
+        if path is None:
+            return
+
+        def get_vols(flu):
+            if flu.component_number == 0:
+                return [flu.vol]
+            else:
+                vols = []
+                for i in range(flu.component_number):
+                    vols.extend(get_vols(flu.get_component(i)))
+                return vols
+
+        def to_str(c):
+            vols = []
+            for i in range(c.fluid_number):
+                vols.extend(get_vols(c.get_fluid(i)))
+            vol = sum(vols)
+            s = f'{c.pre}\t{vol}'
+            for v in vols:
+                s = f'{s}\t{v / vol}'
+            return s
+
+        if get is None:
+            get = to_str
+        with open(path, 'w') as file:
+            for cell in self.cells:
+                x, y, z = cell.pos
+                file.write(f'{x}\t{y}\t{z}\t{get(cell)}')
+                if properties is not None:
+                    for prop in properties:
+                        file.write(f'\t{prop(cell)}')
+                file.write('\n')
 
     core.use(None, 'seepage_group_cells', c_void_p, c_void_p)
 
@@ -11380,34 +11381,6 @@ class Seepage(HasHandle, HasCells):
         g = Groups()
         core.seepage_group_faces(self.handle, g.handle)
         return g
-
-    core.use(None, 'seepage_update_sand', c_void_p,
-             c_size_t, c_size_t, c_size_t,
-             c_size_t, c_size_t, c_size_t, c_void_p, c_double, c_void_p)
-
-    def update_sand(self, sol_sand, flu_sand, dt, v2q, vel=None):
-        """
-        计算流动的砂和沉降的砂之间的平衡. 其中vel为一个double类型的指针，存储在各个cell中当前的流动速度
-        """
-        assert isinstance(v2q, Interp1)
-        if vel is None:
-            vel = 0  # Data is None
-        if isinstance(vel, Vector):
-            vel = vel.pointer
-
-        if isinstance(sol_sand, str):
-            sol_sand = self.find_fludef(name=sol_sand)
-            assert sol_sand is not None
-
-        if isinstance(flu_sand, str):
-            flu_sand = self.find_fludef(name=flu_sand)
-            assert flu_sand is not None
-
-        # 它一定要在某一种流体内
-        assert len(flu_sand) >= 2
-
-        core.seepage_update_sand(self.handle, *parse_fid3(sol_sand),
-                                 *parse_fid3(flu_sand), vel, dt, v2q.handle)
 
     core.use(None, 'seepage_get_cell_flu_vel', c_void_p, c_void_p,
              c_size_t, c_double)
@@ -11448,8 +11421,222 @@ class Seepage(HasHandle, HasCells):
         else:  # 此时，buf应该为一个长度为cell_number的指针类型
             core.seepage_get_cell_gradient(self.handle, buf, data)
 
+    core.use(None, 'seepage_get_cell_average',
+             c_void_p, c_void_p, c_void_p)
+
+    def get_cell_average(self, fa, *, buf=None):
+        """
+        计算cell周围face的平均值
+        其中:
+            fa为face的属性(指针，用于输入)
+            buf为各个cell的属性(指针，用于输出)
+        """
+        if buf is None and np is not None:
+            data = np.zeros(self.cell_number)
+            buf = get_numpy_pointer(data)
+        else:
+            data = None
+        assert buf is not None
+        core.seepage_get_cell_average(self.handle, ctypes.cast(buf, c_void_p),
+                                      ctypes.cast(fa, c_void_p))
+        return data
+
+    core.use(None, 'seepage_get_cell_max',
+             c_void_p, c_void_p, c_void_p)
+
+    def get_cell_max(self, fa, *, buf=None):
+        """
+        计算cell周围face的属性的最大值
+        其中:
+            fa为face的属性(指针，用于输入)
+            buf为各个cell的属性(指针，用于输出)
+        """
+        if buf is None and np is not None:
+            data = np.zeros(self.cell_number)
+            buf = get_numpy_pointer(data)
+        else:
+            data = None
+        assert buf is not None
+        core.seepage_get_cell_max(self.handle, ctypes.cast(buf, c_void_p),
+                                  ctypes.cast(fa, c_void_p))
+        return data
+
+    core.use(None, 'seepage_get_face_gradient',
+             c_void_p, c_void_p, c_void_p)
+
+    def get_face_gradient(self, ca, *, buf=None):
+        """
+        根据cell中心位置的属性的值来计算各个face位置的梯度.
+            (c1 - c0) / dist
+        其中:
+            c1和c0分别位face右侧和左侧的cell的属性.
+            buf为face的属性(指针，用于输出)
+            ca为各个cell的属性(指针，用于输入)
+        注意：
+            这里计算梯度的时候，并未计算绝对值，即返回的gradient可能是负值.
+        """
+        if buf is None and np is not None:
+            data = np.zeros(self.face_number)
+            buf = get_numpy_pointer(data)
+        else:
+            data = None
+        assert buf is not None
+        core.seepage_get_face_gradient(self.handle, ctypes.cast(buf, c_void_p),
+                                       ctypes.cast(ca, c_void_p))
+        return data
+
+    core.use(None, 'seepage_get_face_diff',
+             c_void_p, c_void_p, c_void_p)
+
+    def get_face_diff(self, ca, *, buf=None):
+        """
+        计算face两侧的cell的属性的值的差异。
+            c1 - c0
+        其中:
+            c1和c0分别位face右侧和左侧的cell的属性.
+            buf为face的属性(指针，用于输出)
+            ca为各个cell的属性(指针，用于输入)
+        注意：
+            并未计算绝对值，及返回的数值可能是负值.
+        """
+        if buf is None and np is not None:
+            data = np.zeros(self.face_number)
+            buf = get_numpy_pointer(data)
+        else:
+            data = None
+        assert buf is not None
+        core.seepage_get_face_diff(self.handle, ctypes.cast(buf, c_void_p),
+                                   ctypes.cast(ca, c_void_p))
+        return data
+
+    core.use(None, 'seepage_get_face_sum',
+             c_void_p, c_void_p, c_void_p)
+
+    def get_face_sum(self, ca, *, buf=None):
+        """
+        计算face两侧的cell的属性的值的和。
+            c1 + c0
+        其中:
+            buf为face的属性(指针，用于输出)
+            ca为各个cell的属性(指针，用于输入)
+        """
+        if buf is None and np is not None:
+            data = np.zeros(self.face_number)
+            buf = get_numpy_pointer(data)
+        else:
+            data = None
+        assert buf is not None
+        core.seepage_get_face_sum(self.handle, ctypes.cast(buf, c_void_p),
+                                  ctypes.cast(ca, c_void_p))
+        return data
+
+    core.use(None, 'seepage_get_face_average',
+             c_void_p, c_void_p, c_void_p)
+
+    def get_face_average(self, ca, *, buf=None):
+        """
+        计算face两侧的cell的属性的值的平均值。
+            (c1 + c0) / 2
+        其中:
+            buf为face的属性(指针，用于输出)
+            ca为各个cell的属性(指针，用于输入)
+        """
+        if buf is None and np is not None:
+            data = np.zeros(self.face_number)
+            buf = get_numpy_pointer(data)
+        else:
+            data = None
+        assert buf is not None
+        core.seepage_get_face_average(self.handle, ctypes.cast(buf, c_void_p),
+                                      ctypes.cast(ca, c_void_p))
+        return data
+
+    core.use(None, 'seepage_get_face_left',
+             c_void_p, c_void_p, c_void_p)
+
+    def get_face_left(self, ca, *, buf=None):
+        """
+        计算face左侧的cell属性
+        其中:
+            buf为face的属性(指针，用于输出)
+            ca为各个cell的属性(指针，用于输入)
+        """
+        if buf is None and np is not None:
+            data = np.zeros(self.face_number)
+            buf = get_numpy_pointer(data)
+        else:
+            data = None
+        assert buf is not None
+        core.seepage_get_face_left(self.handle, ctypes.cast(buf, c_void_p),
+                                   ctypes.cast(ca, c_void_p))
+        return data
+
+    core.use(None, 'seepage_get_face_right',
+             c_void_p, c_void_p, c_void_p)
+
+    def get_face_right(self, ca, *, buf=None):
+        """
+        计算face右侧的cell属性
+        其中:
+            buf为face的属性(指针，用于输出)
+            ca为各个cell的属性(指针，用于输入)
+        """
+        if buf is None and np is not None:
+            data = np.zeros(self.face_number)
+            buf = get_numpy_pointer(data)
+        else:
+            data = None
+        assert buf is not None
+        core.seepage_get_face_right(self.handle, ctypes.cast(buf, c_void_p),
+                                    ctypes.cast(ca, c_void_p))
+        return data
+
 
 Reaction = Seepage.Reaction
+
+
+core.use(None, 'get_mass_to_flu_sand', c_void_p, c_size_t,
+         c_void_p, c_void_p, c_void_p,
+         c_void_p,
+         c_void_p,
+         c_void_p,
+         c_void_p,
+         c_void_p,
+         c_double)
+
+def get_mass_to_flu_sand(*, length, sol_sand_mass, flu_sand_mass, flu_mass, dg2q, q_times, s2gc, gc0, g, dt,
+                         buf=None):
+    """
+    计算给定情况下，从固定的砂到可以移动的砂的质量. 其中：
+        dg2q: 根据 dg=g-gc 来计算解离速率
+        q_times: 解离速率的倍率
+        s2gc: 随着流动砂浓度的增大，gc的变化趋势  (假设基准的gc0等于0)
+        gc0: 矫正gc
+        g: 压力梯度
+        dt: 时间步长.
+    """
+    assert length > 0
+    if buf is None and np is not None:
+        data = np.zeros(length)
+        buf = get_numpy_pointer(data)
+    else:
+        data = None
+    assert buf is not None
+
+    assert isinstance(dg2q, Interp1)
+    assert isinstance(s2gc, Interp1)
+
+    core.get_mass_to_flu_sand(ctypes.cast(buf, c_void_p), length,
+                              ctypes.cast(sol_sand_mass, c_void_p),
+                              ctypes.cast(flu_sand_mass, c_void_p),
+                              ctypes.cast(flu_mass, c_void_p),
+                              dg2q.handle,
+                              ctypes.cast(q_times, c_void_p),
+                              s2gc.handle,
+                              ctypes.cast(gc0, c_void_p), ctypes.cast(g, c_void_p),
+                              dt)
+    return data
+
 
 
 class Thermal(HasHandle):
@@ -13900,17 +14087,23 @@ class FracAlg:
                                          ratio_max, dist_max)
 
     core.use(None, 'frac_alg_extend_tip',
-             c_void_p, c_void_p, c_void_p, c_double, c_double, c_double)
+             c_void_p, c_void_p, c_void_p,
+             c_double, c_double, c_size_t, c_double)
 
     @staticmethod
-    def extend_tip(network, kic, sol2, l_extend, va_wmin=99999999, angle_max=0.6):
+    def extend_tip(network, kic, sol2, l_extend, va_wmin=99999999, angle_max=0.6, lave=-1.0):
         """
-        尝试进行裂缝的扩展
+        尝试进行裂缝的扩展.
+            其中 l_extend是扩展的长度.
+            注意，默认的情况下(即lave小于等于0的时候)，将简单地在裂缝的简短添加新的单元.
+                当lave大于0的时候，将首先尝试增加简短裂缝单元的长度.
+
+            在2025-1-8添加了lave参数.
         """
         assert isinstance(network, FractureNetwork)
         assert isinstance(kic, Tensor2)
         assert isinstance(sol2, DDMSolution2)
-        core.frac_alg_extend_tip(network.handle, kic.handle, sol2.handle, l_extend,
+        core.frac_alg_extend_tip(network.handle, kic.handle, sol2.handle, lave, l_extend,
                                  va_wmin, angle_max)
 
     core.use(None, 'frac_alg_update_topology', c_void_p,
@@ -13966,9 +14159,12 @@ def main(argv: list):
     模块运行的主函数.
     """
     if len(argv) == 1:
-        print(about())
+        print(about(check_lic=False))
         return
     if len(argv) == 2:
+        if argv[1] == 'lic':
+            print(lic.summary)
+            return
         if argv[1] == 'env':
             try:
                 from zmlx.alg.install_dep import install_dep

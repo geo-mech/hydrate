@@ -1,6 +1,7 @@
 """
 用于模拟砂的沉降及脱离
 """
+from zmlx.config.alg import settings
 from zml import Seepage, Interp1
 
 # 存储的text
@@ -11,34 +12,22 @@ def get_settings(model: Seepage):
     """
     读取设置
     """
-    text = model.get_text(text_key)
-    if len(text) > 2:
-        data = eval(text)
-        assert isinstance(data, list)
-        return data
-    else:
-        return []
+    return settings.get(model, text_key=text_key)
 
 
 def set_settings(model: Seepage, data):
     """
     写入设置
     """
-    if isinstance(data, list):
-        model.set_text(text_key, f'{data}')
-    else:
-        model.set_text(text_key, '')
+    return settings.put(model, data=data, text_key=text_key)
 
 
 def add_setting(model: Seepage, *, sol_sand, flu_sand, v2q, fid):
     """
     添加设置
     """
-    data = get_settings(model)
-    data.append({'sol_sand': sol_sand,
-                 'flu_sand': flu_sand,
-                 'v2q': v2q, 'fid': fid})
-    set_settings(model, data)
+    return settings.add(model, text_key=text_key,
+                        sol_sand=sol_sand, flu_sand=flu_sand, v2q=v2q, fid=fid)
 
 
 def iterate(model: Seepage, last_dt):

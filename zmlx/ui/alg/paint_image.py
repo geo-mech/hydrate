@@ -22,16 +22,17 @@ def paint_image(widget, pixmap):
             y = (widget.rect().height() - height) / 2
             target = QtCore.QRect(int(x), int(y), int(fig_w), int(height))
         painter = QtGui.QPainter(widget)
-        painter.setRenderHints(QtGui.QPainter.Antialiasing
-                               | QtGui.QPainter.SmoothPixmapTransform)
+        painter.setRenderHints(QtGui.QPainter.RenderHint.Antialiasing
+                               | QtGui.QPainter.RenderHint.SmoothPixmapTransform)
         try:
             dpr = widget.devicePixelRatioF()
         except AttributeError:
             dpr = widget.devicePixelRatio()
-        spmap = pixmap.scaled(target.size() * dpr, QtCore.Qt.AspectRatioMode.KeepAspectRatio,
-                              QtCore.Qt.TransformationMode.SmoothTransformation)
-        spmap.setDevicePixelRatio(dpr)
-        painter.drawPixmap(target, spmap)
+        pixmap_scaled = pixmap.scaled(target.size() * dpr,
+                                      QtCore.Qt.AspectRatioMode.KeepAspectRatio,
+                                      QtCore.Qt.TransformationMode.SmoothTransformation)
+        pixmap_scaled.setDevicePixelRatio(dpr)
+        painter.drawPixmap(target, pixmap_scaled)
         painter.end()
     except:
         pass

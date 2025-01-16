@@ -31,6 +31,8 @@ def save_paths(paths):
 
 
 def choose_path():
+    if not gui.exists():
+        return
     folder = gui.get_existing_directory('请选择文件夹', os.getcwd())
     if len(folder) > 0 and os.path.isdir(folder):
         try:

@@ -42,6 +42,7 @@ import os
 import warnings
 
 import numpy as np
+from collections.abc import Iterable
 
 from zml import get_average_perm, Tensor3, Seepage, ConjugateGradientSolver
 from zmlx.alg.clamp import clamp
@@ -49,9 +50,7 @@ from zmlx.alg.join_cols import join_cols
 from zmlx.alg.time2str import time2str
 from zmlx.config import capillary, prod, fluid_heating, timer, sand, step_iteration, adjust_vis
 from zmlx.config.attr_keys import cell_keys, face_keys, flu_keys
-from zmlx.config.seepage_face import (get_face_gradient, get_face_diff,
-                                      get_face_sum, get_face_left,
-                                      get_face_right, get_cell_average)
+from zmlx.config.seepage_base import *
 from zmlx.filesys.join_paths import join_paths
 from zmlx.filesys.make_fname import make_fname
 from zmlx.filesys.make_parent import make_parent
@@ -65,9 +64,9 @@ from zmlx.utility.SaveManager import SaveManager
 from zmlx.utility.SeepageCellMonitor import SeepageCellMonitor
 from zmlx.utility.SeepageNumpy import as_numpy
 
-# 确保不会被优化掉
+# 确保这些import不会被PyCharm优化掉
 _unused = [get_face_gradient, get_face_diff, get_face_sum, get_face_left,
-           get_face_right, get_cell_average]
+           get_face_right, get_cell_average, get_cell_max]
 
 
 def get_cell_mask(model: Seepage, xr=None, yr=None, zr=None):
@@ -1601,7 +1600,18 @@ def solve(model=None, folder=None, fname=None, gui_mode=None,
                 for idx in plot_rate:
                     monitor.plot_rate(index=idx, caption=f'Rate_{index}.{idx}')  # 显示生产曲线
         if extra_plot is not None:  # 一些额外的，非标准的绘图操作
-            extra_plot()
+            if callable(extra_plot):
+                try:
+                    extra_plot()
+                except:
+                    pass
+            elif isinstance(extra_plot, Iterable):
+                for extra_plot_i in extra_plot:
+                    if callable(extra_plot_i):
+                        try:
+                            extra_plot_i()
+                        except:
+                            pass
 
     def save_monitors():
         if folder is not None:

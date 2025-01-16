@@ -91,5 +91,6 @@ class CwdViewer(QtWidgets.QTableWidget):
         if window is not None:
             window.open_file(fpath)
 
-    def get_start_code(self):
-        return """gui.trigger('view_cwd.txtpy')"""
+    @staticmethod
+    def get_start_code():
+        return """gui.trigger('view_cwd')"""

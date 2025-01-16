@@ -26,7 +26,7 @@ def init():
         if app_data.getenv('show_readme', default='Yes', ignore_empty=True) == 'Yes':
             window = get_window()
             if window.count_tabs() == 0:
-                window.trigger('readme.txtpy')
+                window.trigger('readme')
     except Exception as e:
         print(f'Error: {e}')
 

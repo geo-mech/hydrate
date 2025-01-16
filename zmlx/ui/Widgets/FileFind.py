@@ -16,7 +16,7 @@ class FileFind(QtWidgets.QWidget):
         layout.addWidget(label)
 
         self.fname_edit = QtWidgets.QLineEdit(self)
-        self.fname_edit.textChanged.connect(self.updateFiles)
+        self.fname_edit.textChanged.connect(self.update_files)
         layout.addWidget(self.fname_edit)
 
         label = QtWidgets.QLabel(self)
@@ -28,12 +28,12 @@ class FileFind(QtWidgets.QWidget):
 
         button = QtWidgets.QPushButton(self)
         button.setText('添加搜索路径')
-        button.clicked.connect(self.addPath)
+        button.clicked.connect(self.add_path)
         layout.addWidget(button)
 
-        self.updateFiles()
+        self.update_files()
 
-    def updateFiles(self):
+    def update_files(self):
         filename = self.fname_edit.text()
         if len(filename) == 0:
             text = ''
@@ -48,18 +48,20 @@ class FileFind(QtWidgets.QWidget):
         else:
             self.output.setPlainText('\n'.join(results))
 
-    def addPath(self):
+    @staticmethod
+    def add_path(self):
         choose_path()
 
-    def get_start_code(self):
-        return """gui.trigger('search.txtpy')"""
+    @staticmethod
+    def get_start_code():
+        return """gui.trigger('search')"""
 
 
 def test1():
     app = QtWidgets.QApplication(sys.argv)
     w = FileFind()
     w.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 if __name__ == '__main__':

@@ -19,3 +19,11 @@ def get_pointer(data, dtype=None):
         dtype = c_double
 
     return data.ctypes.data_as(POINTER(dtype))
+
+
+if __name__ == '__main__':
+    a = np.linspace(0, 3, 10)
+    print(a)
+    p = get_pointer(a)
+    p[2] = 123
+    print(a)

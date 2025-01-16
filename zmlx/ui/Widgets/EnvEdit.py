@@ -8,10 +8,10 @@ class LineEdit(QtWidgets.QLineEdit):
     def __init__(self, parent=None, key=None):
         super().__init__(parent)
         self.key = None
-        self.setKey(key)
+        self.set_key(key)
         self.editingFinished.connect(self.save)
 
-    def setKey(self, key):
+    def set_key(self, key):
         self.key = key
         self.load()
 
@@ -31,7 +31,7 @@ class ComboBox(QtWidgets.QComboBox):
         self.key = key
         self.currentTextChanged.connect(self.save)
 
-    def setKey(self, key):
+    def set_key(self, key):
         self.key = key
         self.load()
 
@@ -114,11 +114,11 @@ class EnvEdit(QtWidgets.QTableWidget):
             assert isinstance(key, str)
             if items is None:
                 item = LineEdit()
-                item.setKey(key)
+                item.set_key(key)
             else:
                 item = ComboBox()
                 item.addItems(items)
-                item.setKey(key)
+                item.set_key(key)
             self.setCellWidget(i, 1, item)
             if isinstance(note, str):
                 self.setItem(i, 2, QtWidgets.QTableWidgetItem(note))
@@ -131,4 +131,4 @@ class EnvEdit(QtWidgets.QTableWidget):
 
     @staticmethod
     def get_start_code():
-        return """gui.trigger('env.txtpy')"""
+        return """gui.trigger('env')"""

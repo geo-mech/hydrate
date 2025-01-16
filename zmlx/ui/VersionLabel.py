@@ -18,7 +18,7 @@ class VersionLabel(Label):
         """
         try:
             from zmlx.ui.MainWindow import get_window
-            get_window().trigger('about.txtpy')
+            get_window().trigger('about')
         except Exception as e:
             print(e)
         super().mouseDoubleClickEvent(event)  # 调用父类的事件处理
