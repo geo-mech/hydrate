@@ -1,8 +1,13 @@
 """
 用于模拟砂的沉降及脱离
 """
+import numpy as np
+
+from zml import Seepage, get_pointer64
 from zmlx.config.alg import settings
-from zml import Seepage, Interp1
+from zmlx.config.alg.pressure_gradient import get_face_pressure_gradient
+from zmlx.exts.beta import update_sand
+from zmlx.utility.SeepageNumpy import as_numpy
 
 # 存储的text
 text_key = 'sand_settings'
@@ -22,15 +27,31 @@ def set_settings(model: Seepage, data):
     return settings.put(model, data=data, text_key=text_key)
 
 
-def add_setting(model: Seepage, *, sol_sand, flu_sand, v2q, fid):
+def add_setting(model: Seepage, *, sol_sand, flu_sand, ca_i0, ca_i1, use_average=False):
     """
     添加设置
     """
     return settings.add(model, text_key=text_key,
-                        sol_sand=sol_sand, flu_sand=flu_sand, v2q=v2q, fid=fid)
+                        sol_sand=sol_sand,
+                        flu_sand=flu_sand,
+                        ca_i0=ca_i0, ca_i1=ca_i1, use_average=use_average)
+
+def get_stress(model: Seepage, fluid=None, use_average=False):
+    """
+    计算Face位置的剪切应力
+    """
+    face_f = get_face_pressure_gradient(model=model, fluid=fluid)
+    face_f = np.abs(face_f)
+    face_k = as_numpy(model).faces.get(index='perm')
+    face_f *= (face_k ** 0.5)
+    if use_average:
+        cell_f = model.get_cell_average(fa=get_pointer64(face_f))
+    else:
+        cell_f = model.get_cell_max(fa=get_pointer64(face_f))
+    return cell_f
 
 
-def iterate(model: Seepage, last_dt):
+def iterate(model: Seepage):
     """
     更新砂
     """
@@ -39,13 +60,19 @@ def iterate(model: Seepage, last_dt):
 
         sol_sand = item.get('sol_sand')
         flu_sand = item.get('flu_sand')
-        v2q = item.get('v2q')
-        fid = item.get('fid')
+        ca_i0 = item.get('ca_i0')
+        ca_i1 = item.get('ca_i1')
+        use_average = item.get('use_average')
 
-        # 计算此刻的速度
-        vel = model.get_cell_flu_vel(fid=fid, last_dt=last_dt)
+        if isinstance(sol_sand, str):
+            sol_sand = model.find_fludef(name=sol_sand)
 
-        # 更新砂
-        model.update_sand(sol_sand=sol_sand, flu_sand=flu_sand, dt=last_dt,
-                          v2q=Interp1(x=v2q[0], y=v2q[1]),
-                          vel=vel)
+        if isinstance(flu_sand, str):
+            flu_sand = model.find_fludef(name=flu_sand)
+
+        assert len(flu_sand) >= 2
+        cell_f = get_stress(model, fluid=[flu_sand[0]], use_average=use_average)
+
+        # 更新砂的体积
+        update_sand(model, sol_sand=sol_sand, flu_sand=flu_sand,
+                    ca_i0=ca_i0, ca_i1=ca_i1, stress=get_pointer64(cell_f))

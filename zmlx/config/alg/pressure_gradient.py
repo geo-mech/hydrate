@@ -2,7 +2,7 @@
 计算各个face的位置流体压力的梯度，并作为一个numpy的数组返回
 """
 
-from zml import Seepage, get_numpy_pointer as pointer
+from zml import Seepage, get_pointer64 as pointer
 from zmlx.utility.SeepageNumpy import as_numpy
 
 

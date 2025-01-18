@@ -24,10 +24,27 @@
 ### 成果
 基于[IGG-Hydrate](https://gitee.com/geomech/hydrate)已发表的文章，请点击[云盘链接](https://pan.cstcloud.cn/s/5cKaQrdFSHM). 
 
+### 运行环境
+1. 操作系统: Windows 10/11, 64位; 已安装[VC_redist.x64.exe](https://gitee.com/geomech/hydrate/attach_files);
+2. 已正确安装[Python](https://www.python.org/) 3.8+, 64位，且python及[pip](https://www.runoob.com/w3cnote/python-pip-install-usage.html)命令可用; 
+3. 已正确安装了[git](https://git-scm.com/). 
+
 ### 安装
-1. 确保操作系统为Windows 10/11, 64位；确保正确安装了64位的[Python ](https://www.python.org/)3.8或后续版本 (python及[pip](https://www.runoob.com/w3cnote/python-pip-install-usage.html)命令可用)；确保正确安装了[git](https://git-scm.com/) (git命令可用)；
-2. 运行命令 `pip install git+https://gitee.com/geomech/hydrate.git` 自动安装/更新 [IGG-Hydrate](https://gitee.com/geomech/hydrate)；
-3. 运行 `python -m zml_ui` 来启动[IGG-Hydrate](https://gitee.com/geomech/hydrate)的主界面，具体的建模方法，可以参考[zmlx/demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo). 
+在正确配置了运行环境之后，可以采用如下方法安装(**任选其一**):
+1. **推荐安装方法**，联网并使用[pip](https://www.runoob.com/w3cnote/python-pip-install-usage.html)+[git](https://git-scm.com/)安装. cmd运行如下命令，自动安装[IGG-Hydrate](https://gitee.com/geomech/hydrate)及其依赖项:
+
+    `pip install git+https://gitee.com/geomech/hydrate.git`
+
+2. 若无[git](https://git-scm.com/)，可先手动下载[IGG-Hydrate](https://gitee.com/geomech/hydrate)为`hydrate.zip`。之后，再cmd运行如下命令，也可以安装本模块及依赖项:
+
+    `pip install hydrate.zip` 
+
+3. 若[pip](https://www.runoob.com/w3cnote/python-pip-install-usage.html)不可用，也可手动将下载的zip文件解压到[Python](https://www.python.org/)的搜索路径，并手动安装PyQt6, numpy, scipy, matplotlib等依赖项. 
+
+### 运行
+
+1. 运行 `python -m zml_ui` 可启动[IGG-Hydrate](https://gitee.com/geomech/hydrate)的主界面;
+2. 具体的建模方法，可以参考[zmlx/demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo). 
 
 ### 反馈
 
@@ -42,3 +59,5 @@
 
 1. [中国科学院地质地球所](https://igg.cas.cn/)重点部署项目(IGGCAS-201903);
 2. 国家自然科学基金地质联合基金(U2244223).
+
+

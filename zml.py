@@ -37,24 +37,26 @@ from collections.abc import Iterable
 is_windows = os.name == 'nt'
 
 
-def get_numpy_pointer(arr):
+def get_pointer64(arr):
     """
     Returns the C language pointer to the given NumPy array.
     """
+    if isinstance(arr, Vector):
+        return arr.pointer
+
     if np is not None:
         # Ensure the input is a NumPy array
         if not isinstance(arr, np.ndarray):
             raise ValueError("Input must be a NumPy array")
 
-        # Get the data type of the array
-        dtype = arr.dtype
-
         # Convert the NumPy array to a C array
         c_arr = np.ctypeslib.as_ctypes(arr)
 
+        # Check the data type of the array
+        assert arr.dtype == np.float64
+
         # Get the pointer to the C array
-        return ctypes.cast(c_arr,
-                           ctypes.POINTER(ctypes.c_double if dtype == np.float64 else ctypes.c_float))
+        return ctypes.cast(c_arr, ctypes.POINTER(ctypes.c_double))
 
 
 class Object:
@@ -1821,6 +1823,11 @@ class Vector(HasHandle):
         Assign a list to this Vector
         """
         if value is not None:
+            if np is not None:
+                if isinstance(value, np.ndarray):
+                    self.read_numpy(value)
+                    return
+
             self.size = len(value)
             if len(value) > 0:
                 p = self.pointer
@@ -1866,19 +1873,22 @@ class Vector(HasHandle):
         core.vf_write(self.handle, ctypes.cast(pointer, c_void_p))
 
     def read_numpy(self, data):
-        warnings.warn('remove after 2025-6-2', DeprecationWarning)
-        from zmlx.alg.Vector import read_numpy
-        return read_numpy(self, data)
+        if np is not None:
+            assert isinstance(data, np.ndarray)
+            self.size = len(data)
+            self.read_memory(get_pointer64(data))
 
     def write_numpy(self, data):
-        warnings.warn('remove after 2025-6-2', DeprecationWarning)
-        from zmlx.alg.Vector import write_numpy
-        return write_numpy(self, data)
+        if np is not None:
+            assert isinstance(data, np.ndarray)
+            assert len(data) >= self.size
+            self.write_memory(get_pointer64(data))
 
     def to_numpy(self):
-        warnings.warn('remove after 2025-6-2', DeprecationWarning)
-        from zmlx.alg.Vector import to_numpy
-        return to_numpy(self)
+        if np is not None:
+            arr = np.zeros(self.size)
+            self.write_numpy(arr)
+            return arr
 
     core.use(c_void_p, 'vf_pointer', c_void_p)
 
@@ -10257,6 +10267,34 @@ class Seepage(HasHandle, HasCells):
         else:
             return curve.get(saturation)
 
+    core.use(c_size_t, 'seepage_get_curve_n', c_void_p)
+
+    @property
+    def curve_number(self):
+        """
+        曲线的数量.
+        """
+        return core.seepage_get_curve_n(self.handle)
+
+    core.use(c_void_p, 'seepage_get_curve', c_void_p, c_size_t)
+
+    def get_curve(self, index):
+        """
+        返回第index个曲线
+        """
+        handle = core.seepage_get_curve(self.handle, index)
+        if handle > 0:
+            return Interp1(handle=handle)
+
+    core.use(None, 'seepage_set_curve', c_void_p, c_size_t, c_void_p)
+
+    def set_curve(self, index, curve):
+        """
+        设置第index个曲线
+        """
+        if isinstance(curve, Interp1):
+            core.seepage_set_curve(self.handle, index, curve.handle)
+
     core.use(c_size_t, 'seepage_get_fludef_n', c_void_p)
 
     @property
@@ -11021,57 +11059,6 @@ class Seepage(HasHandle, HasCells):
         assert isinstance(buffer, Seepage.CellData)
         core.seepage_push_fluids(self.handle, buffer.handle)
 
-    core.use(None, 'seepage_update_sand', c_void_p,
-             c_size_t, c_size_t, c_size_t,
-             c_size_t, c_size_t, c_size_t, c_void_p, c_double, c_void_p)
-    core.use(None, 'seepage_update_sand_by_gradp', c_void_p,
-             c_size_t, c_size_t,
-             c_void_p, c_void_p,
-             c_size_t, c_size_t, c_size_t,
-             c_size_t, c_size_t, c_size_t,
-             c_size_t, c_size_t, c_size_t,
-             c_double
-             )
-
-    def update_sand(self, *, sol_sand, flu_sand, dt, v2q, vel=None,
-                    flu=None,
-                    ca_c=None, ca_gc0=None, dg2p=None, s2dgc=None):
-        """
-        计算流动的砂和沉降的砂之间的平衡.
-            其中vel为一个double类型的指针，存储在各个cell中当前的流动速度
-        """
-        if isinstance(sol_sand, str):
-            sol_sand = self.find_fludef(name=sol_sand)
-            assert sol_sand is not None
-
-        if isinstance(flu_sand, str):
-            flu_sand = self.find_fludef(name=flu_sand)
-            assert flu_sand is not None
-
-        if isinstance(flu, str):
-            flu = self.find_fludef(name=flu)
-            assert flu is not None
-
-        if ca_c is not None and ca_gc0 is not None and flu is not None:
-            assert isinstance(dg2p, Interp1)
-            assert isinstance(s2dgc, Interp1)
-            core.seepage_update_sand_by_gradp(self.handle,
-                                              ca_c, ca_gc0,
-                                              dg2p.handle, s2dgc.handle,
-                                              *parse_fid3(sol_sand),
-                                              *parse_fid3(flu_sand),
-                                              *parse_fid3(flu), dt)
-        else:
-            assert isinstance(v2q, Interp1)
-            if vel is None:
-                vel = 0  # Data is None
-            if isinstance(vel, Vector):
-                vel = vel.pointer
-            # 它一定要在某一种流体内
-            assert len(flu_sand) >= 2
-            core.seepage_update_sand(self.handle, *parse_fid3(sol_sand),
-                                     *parse_fid3(flu_sand), vel, dt, v2q.handle)
-
     def iterate(self, *args, **kwargs):
         if self.__updater is None:
             self.__updater = Seepage.Updater()
@@ -11195,6 +11182,9 @@ class Seepage(HasHandle, HasCells):
             index=-11, 所有流体的总的体积 (只读)
             index=-12, 根据流体的体积和pore，来计算的Cell的压力 (只读)
         """
+        if isinstance(index, str):
+            index = self.get_cell_key(key=index)
+            assert index is not None
         core.seepage_cells_write(self.handle,
                                  ctypes.cast(pointer, c_void_p), index)
 
@@ -11210,6 +11200,8 @@ class Seepage(HasHandle, HasCells):
             index=-4, v0 of pore
             index=-5, k  of pore
         """
+        if isinstance(index, str):
+            index = self.reg_cell_key(key=index)
         if pointer is not None:
             core.seepage_cells_read(self.handle, ctypes.cast(pointer, c_void_p), 0, index)
         else:
@@ -11234,6 +11226,9 @@ class Seepage(HasHandle, HasCells):
             ...
             index=-19, dv of fluid ALL
         """
+        if isinstance(index, str):
+            index = self.get_face_key(key=index)
+            assert index is not None
         core.seepage_faces_write(self.handle, ctypes.cast(pointer, c_void_p), index)
 
     core.use(None, 'seepage_faces_read', c_void_p, c_void_p, c_double, c_int64)
@@ -11244,6 +11239,8 @@ class Seepage(HasHandle, HasCells):
             index=-1, cond
             index=-2, dr
         """
+        if isinstance(index, str):
+            index = self.reg_face_key(key=index)
         if pointer is not None:
             core.seepage_faces_read(self.handle, ctypes.cast(pointer, c_void_p), 0, index)
         else:
@@ -11260,6 +11257,9 @@ class Seepage(HasHandle, HasCells):
             index=-3, 体积
             index=-4, 粘性
         """
+        if isinstance(index, str):
+            index = self.get_flu_key(key=index)
+            assert index is not None
         core.seepage_fluids_write(self.handle, ctypes.cast(pointer, c_void_p), index, *parse_fid3(fluid_id))
 
     core.use(None, 'seepage_fluids_read', c_void_p, c_void_p, c_double, c_int64, c_size_t, c_size_t, c_size_t)
@@ -11268,6 +11268,8 @@ class Seepage(HasHandle, HasCells):
         """
         导入属性
         """
+        if isinstance(index, str):
+            index = self.reg_flu_key(key=index)
         if pointer is not None:
             core.seepage_fluids_read(self.handle, ctypes.cast(pointer, c_void_p), 0, index, *parse_fid3(fluid_id))
         else:
@@ -11391,6 +11393,12 @@ class Seepage(HasHandle, HasCells):
         返回：
             一个Vector对象(优先使用buf)
         """
+        if isinstance(fid, str):
+            fid = self.find_fludef(name=fid)
+        if is_array(fid):
+            assert len(fid) == 1
+            fid = fid[0]
+        assert 0 <= fid < self.fludef_number
         if buf is None:
             buf = Vector(size=self.cell_number)
             core.seepage_get_cell_flu_vel(self.handle, buf.pointer, fid, last_dt)
@@ -11433,7 +11441,7 @@ class Seepage(HasHandle, HasCells):
         """
         if buf is None and np is not None:
             data = np.zeros(self.cell_number)
-            buf = get_numpy_pointer(data)
+            buf = get_pointer64(data)
         else:
             data = None
         assert buf is not None
@@ -11453,7 +11461,7 @@ class Seepage(HasHandle, HasCells):
         """
         if buf is None and np is not None:
             data = np.zeros(self.cell_number)
-            buf = get_numpy_pointer(data)
+            buf = get_pointer64(data)
         else:
             data = None
         assert buf is not None
@@ -11477,7 +11485,7 @@ class Seepage(HasHandle, HasCells):
         """
         if buf is None and np is not None:
             data = np.zeros(self.face_number)
-            buf = get_numpy_pointer(data)
+            buf = get_pointer64(data)
         else:
             data = None
         assert buf is not None
@@ -11501,7 +11509,7 @@ class Seepage(HasHandle, HasCells):
         """
         if buf is None and np is not None:
             data = np.zeros(self.face_number)
-            buf = get_numpy_pointer(data)
+            buf = get_pointer64(data)
         else:
             data = None
         assert buf is not None
@@ -11522,7 +11530,7 @@ class Seepage(HasHandle, HasCells):
         """
         if buf is None and np is not None:
             data = np.zeros(self.face_number)
-            buf = get_numpy_pointer(data)
+            buf = get_pointer64(data)
         else:
             data = None
         assert buf is not None
@@ -11543,7 +11551,7 @@ class Seepage(HasHandle, HasCells):
         """
         if buf is None and np is not None:
             data = np.zeros(self.face_number)
-            buf = get_numpy_pointer(data)
+            buf = get_pointer64(data)
         else:
             data = None
         assert buf is not None
@@ -11563,7 +11571,7 @@ class Seepage(HasHandle, HasCells):
         """
         if buf is None and np is not None:
             data = np.zeros(self.face_number)
-            buf = get_numpy_pointer(data)
+            buf = get_pointer64(data)
         else:
             data = None
         assert buf is not None
@@ -11583,7 +11591,7 @@ class Seepage(HasHandle, HasCells):
         """
         if buf is None and np is not None:
             data = np.zeros(self.face_number)
-            buf = get_numpy_pointer(data)
+            buf = get_pointer64(data)
         else:
             data = None
         assert buf is not None
@@ -11593,50 +11601,6 @@ class Seepage(HasHandle, HasCells):
 
 
 Reaction = Seepage.Reaction
-
-
-core.use(None, 'get_mass_to_flu_sand', c_void_p, c_size_t,
-         c_void_p, c_void_p, c_void_p,
-         c_void_p,
-         c_void_p,
-         c_void_p,
-         c_void_p,
-         c_void_p,
-         c_double)
-
-def get_mass_to_flu_sand(*, length, sol_sand_mass, flu_sand_mass, flu_mass, dg2q, q_times, s2gc, gc0, g, dt,
-                         buf=None):
-    """
-    计算给定情况下，从固定的砂到可以移动的砂的质量. 其中：
-        dg2q: 根据 dg=g-gc 来计算解离速率
-        q_times: 解离速率的倍率
-        s2gc: 随着流动砂浓度的增大，gc的变化趋势  (假设基准的gc0等于0)
-        gc0: 矫正gc
-        g: 压力梯度
-        dt: 时间步长.
-    """
-    assert length > 0
-    if buf is None and np is not None:
-        data = np.zeros(length)
-        buf = get_numpy_pointer(data)
-    else:
-        data = None
-    assert buf is not None
-
-    assert isinstance(dg2q, Interp1)
-    assert isinstance(s2gc, Interp1)
-
-    core.get_mass_to_flu_sand(ctypes.cast(buf, c_void_p), length,
-                              ctypes.cast(sol_sand_mass, c_void_p),
-                              ctypes.cast(flu_sand_mass, c_void_p),
-                              ctypes.cast(flu_mass, c_void_p),
-                              dg2q.handle,
-                              ctypes.cast(q_times, c_void_p),
-                              s2gc.handle,
-                              ctypes.cast(gc0, c_void_p), ctypes.cast(g, c_void_p),
-                              dt)
-    return data
-
 
 
 class Thermal(HasHandle):
