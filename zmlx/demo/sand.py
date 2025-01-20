@@ -11,8 +11,8 @@ from zmlx.utility.SeepageNumpy import as_numpy
 
 
 def create():
-    mesh = create_cube(x=np.linspace(0, 50, 50),
-                       y=np.linspace(0, 50, 50),
+    mesh = create_cube(x=np.linspace(0, 50, 100),
+                       y=np.linspace(0, 50, 100),
                        z=[0, 1])
 
     # 所有的流体的定义
@@ -56,13 +56,12 @@ def create():
                       )
 
     # 添加压力梯度到饱和度的映射.
-    x0 = [0, 0.003, 0.01]
-    y0 = [0, 0.0, 0.1]
-    x1 = [0, 0.001, 0.01]
-    y1 = [0, 0.0, 0.05]
+    x  = [0, 0.01e6, 0.03e6, 0.1e6]
+    y0 = [0, 0.0,    0.0,    0.1]
+    y1 = [0, 0.0001, 0.001,  0.2]
 
-    model.set_curve(index=0, curve=Interp1(x=x0, y=y0))
-    model.set_curve(index=1, curve=Interp1(x=x1, y=y1))
+    model.set_curve(index=0, curve=Interp1(x=x, y=y0))
+    model.set_curve(index=1, curve=Interp1(x=x, y=y1))
 
     idx = model.reg_cell_key('i0')
     for cell in model.cells:
@@ -84,16 +83,16 @@ def create():
     return model
 
 
-def show_stress(model: Seepage):
+def show_gradient(model: Seepage):
     x = as_numpy(model).cells.x
     y = as_numpy(model).cells.y
-    v = sand.get_stress(model, fluid=[0])
-    tricontourf(x, y, v, caption='stress')
+    v = sand.get_gradient(model, fluid=[0])
+    tricontourf(x, y, v, caption='gradient')
 
 
 def test_1():
     model = create()
-    seepage.solve(model, close_after_done=False, extra_plot=lambda: show_stress(model))
+    seepage.solve(model, close_after_done=False, extra_plot=lambda: show_gradient(model))
 
 
 if __name__ == '__main__':
