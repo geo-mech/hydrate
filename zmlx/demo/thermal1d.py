@@ -7,7 +7,9 @@ from zmlx.seepage_mesh.cube import create_cube
 from zmlx.ui import gui
 from zmlx.utility.SeepageNumpy import as_numpy
 from zmlx.plt.plotxy import plotxy
-
+import matplotlib.pyplot as plt
+from scipy.special import erf
+import os
 
 class CellAttrs:
     temperature = 0
@@ -41,12 +43,12 @@ def create():
     return model
 
 
-def show(model,step):
+def show(model,step,folder_name):
     ada = as_numpy(model)
     plotxy(ada.cells.x, ada.cells.get(CellAttrs.temperature), caption='temperature', gui_only=True)
-    np.savetxt(f'./Heat1D/{step:05d}.txt',np.column_stack((ada.cells.x, ada.cells.get(CellAttrs.temperature))))
+    np.savetxt(f'{folder_name}/{step:05d}.txt',np.column_stack((ada.cells.x, ada.cells.get(CellAttrs.temperature))))
 
-def solve(model):
+def solve(model,folder_name):
     dt = 200000
     
     for step in range(5001):
@@ -54,19 +56,16 @@ def solve(model):
         model.iterate_thermal(dt=dt, ca_t=CellAttrs.temperature, ca_mc=CellAttrs.mc,
                               fa_g=FaceAttrs.g_heat)
         if (step*dt) % (500*24*3600) < dt:
-            show(model,step)
+            show(model,step,folder_name)
             print(f'step = {step}') 
 
 
 def execute(gui_mode=False, close_after_done=False):
-    gui.execute(solve, close_after_done=close_after_done, args=(create(),), disable_gui=not gui_mode)
+    gui.execute(solve, close_after_done=close_after_done, args=(create(),folder_name), disable_gui=not gui_mode)
 
 
-def plt_compr():
-    import numpy as np
-    import matplotlib.pyplot as plt
-    from scipy.special import erf
-    import os
+def plt_compr(folder_name):
+
     # 设置颜色循环
     colors = plt.cm.tab20.colors[:13]  # 使用前13个颜色
     # 定义参数
@@ -77,7 +76,7 @@ def plt_compr():
     rho = 2640
     c = 754.4
     alpha = k /(rho * c)
-    folder = './Heat1D/'
+    folder = folder_name
     names = os.listdir(folder)
 
     # 创建图形
@@ -102,9 +101,21 @@ def plt_compr():
     # 显示图形
     plt.xlabel('Distance (m)')
     plt.ylabel('Temperature (℃)')
+    plt.tight_layout()
     plt.show()
 
 if __name__ == '__main__':
-    execute()
-    plt_compr()
+
+    # 创建文件夹
+    folder_name = 'Heat1D'
+    # 检查文件夹是否存在
+    if not os.path.exists(folder_name):
+        # 如果不存在，创建文件夹
+        os.makedirs(folder_name)
+        print(f"文件夹 '{folder_name}' 已创建")
+    else:
+        print(f"文件夹 '{folder_name}' 已存在")
+
+    execute(folder_name)
+    plt_compr(folder_name)
 
