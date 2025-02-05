@@ -1,5 +1,12 @@
 # 1D benchmark case of heat conduction
+"""
+by 徐涛
 
+todo:
+    1. 建议所有的操作在gui内实现
+    2. 建议使用zmlx.demo.opath来获得输出数据的路径
+    3. 倒数第二行execute(folder_name)调用错误
+"""
 
 import numpy as np
 from zml import Seepage
@@ -10,6 +17,7 @@ from zmlx.plt.plotxy import plotxy
 import matplotlib.pyplot as plt
 from scipy.special import erf
 import os
+
 
 class CellAttrs:
     temperature = 0
@@ -31,9 +39,9 @@ def create():
         x = c.pos[0]
         # T0 = 273.15 T1 = 373.15
         cell.set_attr(CellAttrs.temperature,
-                      373.15 if abs(x-x0) < 1e-3 else 273.15)
+                      373.15 if abs(x - x0) < 1e-3 else 273.15)
         # 设置比热容 和 密度
-        cell.set_attr(CellAttrs.mc, 1.0e20 * c.vol if abs(x-x0) < 1e-3 else 2640 * 754.4 * c.vol)
+        cell.set_attr(CellAttrs.mc, 1.0e20 * c.vol if abs(x - x0) < 1e-3 else 2640 * 754.4 * c.vol)
 
     for f in mesh.faces:
         # 高温高压测试结果 热导率为1.69 W/(K·m)
@@ -43,29 +51,29 @@ def create():
     return model
 
 
-def show(model,step,folder_name):
+def show(model, step, folder_name):
     ada = as_numpy(model)
     plotxy(ada.cells.x, ada.cells.get(CellAttrs.temperature), caption='temperature', gui_only=True)
-    np.savetxt(f'{folder_name}/{step:05d}.txt',np.column_stack((ada.cells.x, ada.cells.get(CellAttrs.temperature))))
+    np.savetxt(f'{folder_name}/{step:05d}.txt', np.column_stack((ada.cells.x, ada.cells.get(CellAttrs.temperature))))
 
-def solve(model,folder_name):
+
+def solve(model, folder_name):
     dt = 200000
-    
+
     for step in range(5001):
         gui.break_point()
         model.iterate_thermal(dt=dt, ca_t=CellAttrs.temperature, ca_mc=CellAttrs.mc,
                               fa_g=FaceAttrs.g_heat)
-        if (step*dt) % (500*24*3600) < dt:
-            show(model,step,folder_name)
-            print(f'step = {step}') 
+        if (step * dt) % (500 * 24 * 3600) < dt:
+            show(model, step, folder_name)
+            print(f'step = {step}')
 
 
 def execute(gui_mode=False, close_after_done=False):
-    gui.execute(solve, close_after_done=close_after_done, args=(create(),folder_name), disable_gui=not gui_mode)
+    gui.execute(solve, close_after_done=close_after_done, args=(create(), folder_name), disable_gui=not gui_mode)
 
 
 def plt_compr(folder_name):
-
     # 设置颜色循环
     colors = plt.cm.tab20.colors[:13]  # 使用前13个颜色
     # 定义参数
@@ -75,19 +83,19 @@ def plt_compr(folder_name):
     k = 1.69
     rho = 2640
     c = 754.4
-    alpha = k /(rho * c)
+    alpha = k / (rho * c)
     folder = folder_name
     names = os.listdir(folder)
 
     # 创建图形
-    fig,ax = plt.subplots(figsize=(6,3),dpi=300)
+    fig, ax = plt.subplots(figsize=(6, 3), dpi=300)
 
-    day = 24*3600
+    day = 24 * 3600
 
     # 理论解
-    for i,t in enumerate(np.linspace(500*day, 3000*day, 6)):
+    for i, t in enumerate(np.linspace(500 * day, 3000 * day, 6)):
         T = T1 + (T0 - T1) * erf(x / (2 * np.sqrt(alpha * t)))
-        ax.plot(x, T, c=colors[i],label=f'{t/3600/24:.0f} d')
+        ax.plot(x, T, c=colors[i], label=f'{t / 3600 / 24:.0f} d')
 
     # 数值模拟
     step = 5  # 每隔 10 个点取一个点
@@ -96,13 +104,14 @@ def plt_compr(folder_name):
         print(os.path.join(folder, names[i]))
         ax.plot(d[::step, 0], d[::step, 1] - 273.15, 'o', markersize=3, c=colors[i - 1])
 
-    ax.set(xlim=(0,100),ylim=(0,100))
+    ax.set(xlim=(0, 100), ylim=(0, 100))
     ax.legend(frameon=False)
     # 显示图形
     plt.xlabel('Distance (m)')
     plt.ylabel('Temperature (℃)')
     plt.tight_layout()
     plt.show()
+
 
 if __name__ == '__main__':
 
@@ -118,4 +127,3 @@ if __name__ == '__main__':
 
     execute(folder_name)
     plt_compr(folder_name)
-
