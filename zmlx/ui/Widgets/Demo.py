@@ -1,9 +1,9 @@
 import os
 
 from zml import app_data
-from zmlx import get_path
+from zmlx.demo.get_path import get_path
+from zmlx.demo.list_demo_files import list_demo_files
 from zmlx.ui.Qt import QtWidgets
-from zmlx.ui.alg.code_config import code_config
 
 
 class DemoWidget(QtWidgets.QTableWidget):
@@ -16,30 +16,11 @@ class DemoWidget(QtWidgets.QTableWidget):
         self.refresh()
 
     def refresh(self):
-        folder = get_path('demo')
-        if not os.path.isdir(folder):
-            self.clear()
-            return
-
+        folder = get_path()
         self.__data = [['关于', folder,
                         f'注意，请单击以下项目以打开，之后点击任务栏上的<运行>按钮来运行. 可以在文件夹<{folder}>找到这些示例'], ]
-        for name in os.listdir(folder):
-            if name == '__init__.py':
-                continue
-
-            path = os.path.join(folder, name)
-            if not os.path.isfile(path):
-                continue
-
-            ext = os.path.splitext(path)[-1]
-            if ext != '.py':
-                continue
-
-            cfg = code_config(path=path, encoding='utf-8')
-            desc = cfg.get('desc', '')
-
-            if len(desc) > 0:
-                self.__data.append([name, path, desc])
+        for path, desc in list_demo_files():
+            self.__data.append([os.path.relpath(path, folder), path, desc])
 
         if len(self.__data) == 0:
             self.clear()

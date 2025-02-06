@@ -6,7 +6,6 @@ import numpy as np
 from zml import Seepage, get_pointer64
 from zmlx.config.alg import settings
 from zmlx.config.alg.pressure_gradient import get_face_pressure_gradient
-from zmlx.exts.beta import update_sand
 
 # 存储的text
 text_key = 'sand_settings'
@@ -71,5 +70,5 @@ def iterate(model: Seepage):
         grad = get_gradient(model, fluid=[flu_sand[0]], use_average=use_average)
 
         # 更新砂的体积
-        update_sand(model, sol_sand=sol_sand, flu_sand=flu_sand,
-                    ca_i0=ca_i0, ca_i1=ca_i1, force=get_pointer64(grad))
+        model.update_sand(sol_sand=sol_sand, flu_sand=flu_sand,
+                          ca_i0=ca_i0, ca_i1=ca_i1, force=get_pointer64(grad))

@@ -14,13 +14,15 @@ Author:         ZHANG Zhaobin <zhangzhaobin@mail.iggcas.ac.cn>,
 """
 import ctypes
 import datetime
-import importlib
 import math
 import os
 import re
 import sys
 import timeit
 import warnings
+from collections.abc import Iterable
+from ctypes import (cdll, c_void_p, c_char_p, c_int, c_int64, c_bool, c_double,
+                    c_size_t, c_uint, CFUNCTYPE, POINTER)
 
 try:
     import numpy as np
@@ -28,10 +30,6 @@ except:
     np = None
 
 warnings.simplefilter("default")  # Default warning display
-
-from ctypes import (cdll, c_void_p, c_char_p, c_int, c_int64, c_bool, c_double,
-                    c_size_t, c_uint, CFUNCTYPE, POINTER)
-from collections.abc import Iterable
 
 # Indicates whether the system is currently Windows (both Windows and Linux systems are currently supported)
 is_windows = os.name == 'nt'
@@ -98,60 +96,6 @@ def create_dict(**kwargs):
     - 无异常抛出
     """
     return kwargs
-
-
-class _GuiAdaptor:
-    def __getattr__(self, item):
-        warnings.warn('zml.gui will be removed after 2025-1-21. use zmlx.ui.GuiBuffer.gui instead',
-                      DeprecationWarning)
-        from zmlx.ui.GuiBuffer import gui as _gui
-        return getattr(_gui, item)
-
-    def __call__(self, *args, **kwargs):
-        warnings.warn('zml.gui will be removed after 2025-1-21. use zmlx.ui.GuiBuffer.gui instead',
-                      DeprecationWarning)
-        from zmlx.ui.GuiBuffer import gui as _gui
-        return _gui(*args, **kwargs)
-
-    def __bool__(self):
-        return self.exists()
-
-
-# will be removed after 2025-1-21. use zmlx.ui.GuiBuffer.gui instead
-gui = _GuiAdaptor()
-
-
-def _deprecation_func(pack_name, func, date=None):
-    """
-    定义一个在zml中已被弃用但在zmlx中仍然可用的函数。
-
-    参数:
-    - pack_name: 新函数所在的包名
-    - func: 新函数的名称
-    - date: 弃用函数的移除日期（可选）
-
-    返回:
-    - a_function: 一个新函数，它会在调用时发出弃用警告，并调用新函数
-
-    该函数通过动态导入新函数所在的包和函数，然后在调用时发出弃用警告，建议用户使用新函数。
-    """
-
-    def a_function(*args, **kwargs):
-        warnings.warn(f'zml.{func} will be removed after {date}, use {pack_name}.{func} instead. ',
-                      DeprecationWarning)
-        mod = importlib.import_module(pack_name)
-        f = getattr(mod, func)
-        return f(*args, **kwargs)
-
-    return a_function
-
-
-information = _deprecation_func('zmlx.ui.GuiBuffer', 'information', '2025-1-21')
-question = _deprecation_func('zmlx.ui.GuiBuffer', 'question', '2025-1-21')
-plot = _deprecation_func('zmlx.ui.GuiBuffer', 'plot', '2025-1-21')
-break_point = _deprecation_func('zmlx.ui.GuiBuffer', 'break_point', '2025-1-21')
-breakpoint = break_point
-gui_exec = _deprecation_func('zmlx.ui.GuiBuffer', 'gui_exec', '2025-1-21')
 
 
 def is_array(o):
@@ -1254,11 +1198,6 @@ def run(fn):
     return core.run(fn)
 
 
-time_string = _deprecation_func('zmlx.filesys.tag', 'time_string', '2025-1-21')
-is_time_string = _deprecation_func('zmlx.filesys.tag', 'is_time_string', '2025-1-21')
-has_tag = _deprecation_func('zmlx.filesys.tag', 'has_tag', '2025-1-21')
-print_tag = _deprecation_func('zmlx.filesys.tag', 'print_tag', '2025-1-21')
-
 core.use(None, 'fetch_m', c_char_p)
 
 
@@ -1406,8 +1345,6 @@ def reg(code=None):
             lic.load(code)
 
 
-first_only = _deprecation_func('zmlx.filesys.first_only', 'first_only', '2025-1-21')
-
 core.use(c_double, 'test_loop', c_size_t, c_bool)
 
 
@@ -1489,15 +1426,6 @@ def confuse_file(ipath, opath, password, is_encrypt=True):
     return core.confuse_file(make_c_char_p(ipath), make_c_char_p(opath), make_c_char_p(password), is_encrypt)
 
 
-prepare_dir = _deprecation_func('zmlx.filesys.prepare_dir', 'prepare_dir', '2025-1-21')
-time2str = _deprecation_func('zmlx.alg.time2str', 'time2str', '2025-1-21')
-mass2str = _deprecation_func('zmlx.alg.mass2str', 'mass2str', '2025-1-21')
-make_fpath = _deprecation_func('zmlx.filesys.make_fpath', 'make_fpath', '2025-1-21')
-get_last_file = _deprecation_func('zmlx.filesys.get_last_file', 'get_last_file', '2025-1-21')
-write_py = _deprecation_func('zmlx.io.python', 'write_py', '2025-1-21')
-read_py = _deprecation_func('zmlx.io.python', 'read_py', '2025-1-21')
-
-
 def parse_fid3(fluid_id):
     """
     Automatically identifies a given fluid ID as the ID of a certain component of a fluid
@@ -1546,11 +1474,6 @@ def get_average_perm(p0, p1, get_perm, sample_dist=None, depth=0):
     k1 = get_average_perm(p0, pos, get_perm, sample_dist, depth + 1)
     k2 = get_average_perm(p1, pos, get_perm, sample_dist, depth + 1)
     return k1 * k2 * 2.0 / (k1 + k2)
-
-
-add_keys = _deprecation_func('zmlx.utility.AttrKeys', 'add_keys', '2025-1-21')
-AttrKeys = _deprecation_func('zmlx.utility.AttrKeys', 'AttrKeys', '2025-1-21')
-install = _deprecation_func('zmlx.alg.install', 'install', '2025-1-21')
 
 
 def get_index(index, count=None):
@@ -8406,6 +8329,10 @@ class Seepage(HasHandle, HasCells):
             """
             第index个流体自定义属性。当两个流体数据相加时，自定义属性将根据质量进行加权平均。
             """
+            if isinstance(index, str):
+                assert isinstance(self, Seepage.Fluid)
+                assert isinstance(self.cell, Seepage.Cell)
+                index = self.cell.model.get_flu_key(key=index)
             if index is None:
                 return default_val
             # 当index个属性不存在时，默认为无穷大的一个值(1.0e100以上的浮点数)
@@ -8419,6 +8346,10 @@ class Seepage(HasHandle, HasCells):
             """
             参考get_attr函数
             """
+            if isinstance(index, str):
+                assert isinstance(self, Seepage.Fluid)
+                assert isinstance(self.cell, Seepage.Cell)
+                index = self.cell.model.reg_flu_key(key=index)
             if index is None:
                 return self
             if value is None:
@@ -8837,6 +8768,9 @@ class Seepage(HasHandle, HasCells):
             """
             该Cell的第 attr_id个自定义属性值。当不存在时，默认为一个无穷大的值(大于1.0e100)
             """
+            if isinstance(index, str):
+                assert isinstance(self, Seepage.Cell)
+                index = self.model.get_cell_key(key=index)
             if index is None:
                 return default_val
             if index < 0:
@@ -8861,6 +8795,9 @@ class Seepage(HasHandle, HasCells):
             """
             该Cell的第 attr_id个自定义属性值。当不存在时，默认为一个无穷大的值(大于1.0e100)
             """
+            if isinstance(index, str):
+                assert isinstance(self, Seepage.Cell)
+                index = self.model.reg_cell_key(key=index)
             if index is None:
                 return self
             if value is None:
@@ -9173,6 +9110,9 @@ class Seepage(HasHandle, HasCells):
             """
             该Face的第 attr_id个自定义属性值。当不存在时，默认为一个无穷大的值(大于1.0e100)
             """
+            if isinstance(index, str):
+                assert isinstance(self, Seepage.Face)
+                index = self.model.get_face_key(key=index)
             if index is None:
                 return default_val
             value = core.seepage_face_get_attr(self.handle, index)
@@ -9185,6 +9125,9 @@ class Seepage(HasHandle, HasCells):
             """
             该Face的第 attr_id个自定义属性值。当不存在时，默认为一个无穷大的值(大于1.0e100)
             """
+            if isinstance(index, str):
+                assert isinstance(self, Seepage.Face)
+                index = self.model.reg_face_key(key=index)
             if index is None:
                 return self
             if value is None:
@@ -10731,6 +10674,8 @@ class Seepage(HasHandle, HasCells):
         """
         模型的第index个自定义属性
         """
+        if isinstance(index, str):
+            index = self.get_model_key(key=index)
         if index is None:
             return default_val
         value = core.seepage_get_attr(self.handle, index)
@@ -10743,6 +10688,8 @@ class Seepage(HasHandle, HasCells):
         """
         模型的第index个自定义属性
         """
+        if isinstance(index, str):
+            index = self.reg_model_key(key=index)
         if index is None:
             return self
         if value is None:
@@ -11037,6 +10984,41 @@ class Seepage(HasHandle, HasCells):
             ca_p：定义Cell加热的功率.
         """
         core.seepage_heating(self.handle, ca_mc, ca_t, ca_p, dt)
+
+    core.use(None, 'seepage_update_sand', c_void_p,
+             c_size_t, c_size_t,
+             c_size_t, c_size_t, c_size_t,
+             c_size_t, c_size_t, c_size_t, c_void_p, c_void_p)
+
+    def update_sand(self, *, sol_sand, flu_sand, ca_i0, ca_i1,
+                    force, ratio=None):
+        """
+        更新流动的砂和沉降的砂之间的体积. 其中:
+            sol_sand, flu_sand: 表示流动的砂和沉降的砂的Index.
+            force: 一个指针，给定各个cell位置的单位面积孔隙表面的剪切力;
+            ratio: 一个指针，定义各个Cell位置砂子趋向于目标浓度的达成比率(默认为1).
+            ca_i0, ca_i1: Cell的属性ID，定义的是存储的曲线的ID。曲线的横坐标是剪切力，纵轴为流动砂的浓度.
+        """
+        if isinstance(sol_sand, str):
+            sol_sand = self.find_fludef(name=sol_sand)
+            assert sol_sand is not None
+
+        if isinstance(flu_sand, str):
+            flu_sand = self.find_fludef(name=flu_sand)
+            assert flu_sand is not None
+
+        if isinstance(ca_i0, str):
+            ca_i0 = self.get_cell_key(ca_i0)
+            assert ca_i0 is not None
+
+        if isinstance(ca_i1, str):
+            ca_i1 = self.get_cell_key(ca_i1)
+            assert ca_i1 is not None
+
+        core.seepage_update_sand(self.handle, ca_i0, ca_i1,
+                                 *parse_fid3(sol_sand),
+                                 *parse_fid3(flu_sand),
+                                 ctypes.cast(force, c_void_p), ctypes.cast(ratio, c_void_p))
 
     core.use(None, 'seepage_pop_fluids', c_void_p, c_void_p)
     core.use(None, 'seepage_push_fluids', c_void_p, c_void_p)
@@ -11910,24 +11892,6 @@ class Thermal(HasHandle):
         """
         if isinstance(model, Seepage):
             model.exchange_heat(fid=fid, thermal_model=self, dt=dt, ca_g=ca_g, fa_t=fa_t, fa_c=fa_c)
-
-
-class TherFlowAdaptor:
-    def __getattr__(self, item):
-        warnings.warn('please use <zmlx.config.TherFlowConfig> instead of <zml.TherFlowConfig>',
-                      DeprecationWarning)
-        from zmlx.config.TherFlowConfig import TherFlowConfig as Config
-        return getattr(Config, item)
-
-    def __call__(self, *args, **kwargs):
-        warnings.warn('please use <zmlx.config.TherFlowConfig> instead of <zml.TherFlowConfig>',
-                      DeprecationWarning)
-        from zmlx.config.TherFlowConfig import TherFlowConfig as Config
-        return Config(*args, **kwargs)
-
-
-TherFlowConfig = TherFlowAdaptor()
-SeepageTher = TherFlowAdaptor()
 
 
 class ConjugateGradientSolver(HasHandle):
@@ -13942,13 +13906,25 @@ class FractureNetwork(HasHandle):
         return self.get_vertex(index)
 
     core.use(c_size_t, 'frac_nt_add_bd', c_void_p, c_size_t, c_size_t)
+    core.use(None, 'frac_alg_add_frac', c_void_p,
+             c_double, c_double, c_double, c_double,
+             c_double, c_void_p)
 
-    def add_fracture(self, i0, i1):
+    def add_fracture(self, first, second, *, lave=None, data=None):
         """
         添加裂缝单元.
+        注意：
+            当给定lave的时候，将根据给定的lave来分割单元，并自动处理和已有裂缝之间的位置关系.
         """
-        index = core.frac_nt_add_bd(self.handle, i0, i1)
-        return self.get_fracture(index)
+        if lave is None:
+            index = core.frac_nt_add_bd(self.handle, first, second)
+            return self.get_fracture(index)
+        else:
+            if data is not None:
+                assert isinstance(data, FractureNetwork.FractureData)
+            core.frac_alg_add_frac(self.handle, first[0], first[1],
+                                   second[0], second[1],
+                                   lave, 0 if data is None else data.handle)
 
     core.use(None, 'frac_nt_clear', c_void_p)
 
@@ -13974,23 +13950,71 @@ class FractureNetwork(HasHandle):
         return Iterator(model=self,
                         count=self.fracture_number, get=lambda m, ind: m.get_fracture(ind))
 
-    core.use(None, 'frac_nt_get_induced_at', c_void_p, c_void_p, c_double, c_double, c_void_p)
-    core.use(None, 'frac_nt_get_induced_along', c_void_p, c_void_p,
+    core.use(None, 'frac_nt_get_induced_at',
+             c_void_p, c_void_p, c_double, c_double, c_void_p)
+    core.use(None, 'frac_nt_get_induced_along',
+             c_void_p, c_void_p,
              c_double, c_double, c_double, c_double, c_void_p)
+    core.use(None, 'frac_alg_get_induced',
+             c_void_p,
+             c_size_t, c_size_t, c_void_p)
 
-    def get_induced(self, pos, sol2, buf=None):
+    def get_induced(self, pos=None, sol2=None, buf=None, *,
+                    fa_xy=None, fa_yy=None, matrix=None):
         """
         返回在pos位置的诱导应力
         """
-        assert len(pos) == 2 or len(pos) == 4
-        assert isinstance(sol2, DDMSolution2)
-        if not isinstance(buf, Tensor2):
-            buf = Tensor2()
-        if len(pos) == 2:
-            core.frac_nt_get_induced_at(self.handle, buf.handle, pos[0], pos[1], sol2.handle)
+        if fa_xy is not None and fa_yy is not None and matrix is not None:
+            assert isinstance(matrix, InfMatrix)
+            assert self.fracture_number == matrix.size
+            core.frac_alg_get_induced(self.handle, fa_xy, fa_yy, matrix.handle)
         else:
-            core.frac_nt_get_induced_along(self.handle, buf.handle, pos[0], pos[1], pos[2], pos[3], sol2.handle)
-        return buf
+            assert len(pos) == 2 or len(pos) == 4
+            assert isinstance(sol2, DDMSolution2)
+            if not isinstance(buf, Tensor2):
+                buf = Tensor2()
+            if len(pos) == 2:
+                core.frac_nt_get_induced_at(self.handle, buf.handle,
+                                            pos[0], pos[1], sol2.handle)
+            else:
+                core.frac_nt_get_induced_along(self.handle, buf.handle,
+                                               pos[0], pos[1], pos[2], pos[3], sol2.handle)
+            return buf
+
+    core.use(c_size_t, 'frac_alg_update_disp', c_void_p, c_void_p,
+             c_size_t, c_size_t,
+             c_double, c_double,
+             c_size_t, c_size_t, c_double, c_double)
+
+    def update_disp(self, matrix, fa_yy=99999999, fa_xy=99999999,
+                    gradw_max=0, err_max=0.1, iter_min=10, iter_max=10000,
+                    ratio_max=0.99, dist_max=1.0e6):
+        """
+        更新位移.
+            这是DDM计算的最核心的函数
+        """
+        assert isinstance(matrix, InfMatrix)
+        return core.frac_alg_update_disp(self.handle, matrix.handle, fa_yy, fa_xy,
+                                         gradw_max, err_max, iter_min, iter_max,
+                                         ratio_max, dist_max)
+
+    core.use(None, 'frac_alg_extend_tip',
+             c_void_p, c_void_p, c_void_p,
+             c_double, c_double, c_size_t, c_double)
+
+    def extend_tip(self, kic, sol2, l_extend, va_wmin=99999999, angle_max=0.6, lave=-1.0):
+        """
+        尝试进行裂缝的扩展.
+            其中 l_extend是扩展的长度.
+            注意，默认的情况下(即lave小于等于0的时候)，将简单地在裂缝的简短添加新的单元.
+                当lave大于0的时候，将首先尝试增加简短裂缝单元的长度.
+
+            在2025-1-8添加了lave参数.
+        """
+        assert isinstance(kic, Tensor2)
+        assert isinstance(sol2, DDMSolution2)
+        core.frac_alg_extend_tip(self.handle, kic.handle, sol2.handle, lave, l_extend,
+                                 va_wmin, angle_max)
 
 
 class InfMatrix(HasHandle):
@@ -14032,43 +14056,22 @@ class FracAlg:
     """
     提供一些裂缝相关的基础的算法.
     """
-    core.use(c_size_t, 'frac_alg_update_disp', c_void_p, c_void_p,
-             c_size_t, c_size_t,
-             c_double, c_double,
-             c_size_t, c_size_t, c_double, c_double)
 
     @staticmethod
-    def update_disp(network, matrix, fa_yy=99999999, fa_xy=99999999,
-                    gradw_max=0, err_max=0.1, iter_min=10, iter_max=10000,
-                    ratio_max=0.99, dist_max=1.0e6):
-        """
-        更新位移. 这是DDM计算的最核心的函数
-        """
-        assert isinstance(network, FractureNetwork)
-        assert isinstance(matrix, InfMatrix)
-        return core.frac_alg_update_disp(network.handle, matrix.handle, fa_yy, fa_xy,
-                                         gradw_max, err_max, iter_min, iter_max,
-                                         ratio_max, dist_max)
-
-    core.use(None, 'frac_alg_extend_tip',
-             c_void_p, c_void_p, c_void_p,
-             c_double, c_double, c_size_t, c_double)
+    def update_disp(network: FractureNetwork, *args, **kwargs):
+        return network.update_disp(*args, **kwargs)
 
     @staticmethod
-    def extend_tip(network, kic, sol2, l_extend, va_wmin=99999999, angle_max=0.6, lave=-1.0):
-        """
-        尝试进行裂缝的扩展.
-            其中 l_extend是扩展的长度.
-            注意，默认的情况下(即lave小于等于0的时候)，将简单地在裂缝的简短添加新的单元.
-                当lave大于0的时候，将首先尝试增加简短裂缝单元的长度.
+    def add_frac(network: FractureNetwork, p0, p1, lave, *, data=None):
+        return network.add_fracture(first=p0, second=p1, lave=lave, data=data)
 
-            在2025-1-8添加了lave参数.
-        """
-        assert isinstance(network, FractureNetwork)
-        assert isinstance(kic, Tensor2)
-        assert isinstance(sol2, DDMSolution2)
-        core.frac_alg_extend_tip(network.handle, kic.handle, sol2.handle, lave, l_extend,
-                                 va_wmin, angle_max)
+    @staticmethod
+    def extend_tip(network: FractureNetwork, *args, **kwargs):
+        return network.extend_tip(*args, **kwargs)
+
+    @staticmethod
+    def get_induced(network: FractureNetwork, fa_xy, fa_yy, matrix):
+        return network.get_induced(fa_xy=fa_xy, fa_yy=fa_yy, matrix=matrix)
 
     core.use(None, 'frac_alg_update_topology', c_void_p,
              c_void_p, c_size_t, c_double, c_double,
@@ -14090,33 +14093,6 @@ class FracAlg:
         core.frac_alg_update_topology(seepage.handle, network.handle, layer_n, z_min, z_max,
                                       ca_area, fa_width, fa_dist)
 
-    core.use(None, 'frac_alg_add_frac', c_void_p, c_double, c_double, c_double, c_double,
-             c_double, c_void_p)
-
-    @staticmethod
-    def add_frac(network: FractureNetwork, p0, p1, lave, *, data=None):
-        """
-        添加裂缝单元.
-        注意：
-            将根据给定的lave来分割单元，并自动处理和已有裂缝之间的位置关系.
-        """
-        assert isinstance(network, FractureNetwork)
-        if data is not None:
-            assert isinstance(data, FractureNetwork.FractureData)
-        core.frac_alg_add_frac(network.handle, p0[0], p0[1], p1[0], p1[1], lave, 0 if data is None else data.handle)
-
-    core.use(None, 'frac_alg_get_induced', c_void_p, c_size_t, c_size_t, c_void_p)
-
-    @staticmethod
-    def get_induced(network, fa_xy, fa_yy, matrix):
-        """
-        计算诱导应力，并且存储到给定的属性中
-        """
-        assert isinstance(network, FractureNetwork)
-        assert isinstance(matrix, InfMatrix)
-        assert network.fracture_number == matrix.size
-        core.frac_alg_get_induced(network.handle, fa_xy, fa_yy, matrix.handle)
-
 
 def main(argv: list):
     """
@@ -14136,6 +14112,61 @@ def main(argv: list):
             except Exception as e:
                 print(e)
         return
+
+
+def __deprecated_func(pack_name, func, date=None):
+    return create_dict(pack_name=pack_name, func=func, date=date)
+
+
+_deprecated_funcs = create_dict(
+    information=__deprecated_func('zmlx.ui.GuiBuffer', 'information', '2025-1-21'),
+    question=__deprecated_func('zmlx.ui.GuiBuffer', 'question', '2025-1-21'),
+    plot=__deprecated_func('zmlx.ui.GuiBuffer', 'plot', '2025-1-21'),
+    gui=__deprecated_func('zmlx.ui.GuiBuffer', 'gui', '2025-1-21'),
+    break_point=__deprecated_func('zmlx.ui.GuiBuffer', 'break_point', '2025-1-21'),
+    breakpoint=__deprecated_func('zmlx.ui.GuiBuffer', 'break_point', '2025-1-21'),
+    gui_exec=__deprecated_func('zmlx.ui.GuiBuffer', 'gui_exec', '2025-1-21'),
+    time_string=__deprecated_func('zmlx.filesys.tag', 'time_string', '2025-1-21'),
+    is_time_string=__deprecated_func('zmlx.filesys.tag', 'is_time_string', '2025-1-21'),
+    has_tag=__deprecated_func('zmlx.filesys.tag', 'has_tag', '2025-1-21'),
+    print_tag=__deprecated_func('zmlx.filesys.tag', 'print_tag', '2025-1-21'),
+    first_only=__deprecated_func('zmlx.filesys.first_only', 'first_only', '2025-1-21'),
+    add_keys=__deprecated_func('zmlx.utility.AttrKeys', 'add_keys', '2025-1-21'),
+    AttrKeys=__deprecated_func('zmlx.utility.AttrKeys', 'AttrKeys', '2025-1-21'),
+    install=__deprecated_func('zmlx.alg.install', 'install', '2025-1-21'),
+    prepare_dir=__deprecated_func('zmlx.filesys.prepare_dir', 'prepare_dir', '2025-1-21'),
+    time2str=__deprecated_func('zmlx.alg.time2str', 'time2str', '2025-1-21'),
+    mass2str=__deprecated_func('zmlx.alg.mass2str', 'mass2str', '2025-1-21'),
+    make_fpath=__deprecated_func('zmlx.filesys.make_fpath', 'make_fpath', '2025-1-21'),
+    get_last_file=__deprecated_func('zmlx.filesys.get_last_file', 'get_last_file',
+                                    '2025-1-21'),
+    write_py=__deprecated_func('zmlx.io.python', 'write_py', '2025-1-21'),
+    read_py=__deprecated_func('zmlx.io.python', 'read_py', '2025-1-21'),
+    TherFlowConfig=__deprecated_func('zmlx.config.TherFlowConfig', 'TherFlowConfig',
+                                     '2025-1-21'),
+    SeepageTher=__deprecated_func('zmlx.config.TherFlowConfig', 'TherFlowConfig',
+                                  '2025-1-21'),
+)
+
+
+def __getattr__(name):
+    """
+    当访问不存在的属性时，尝试从其他模块中导入
+    """
+    import importlib
+    value = _deprecated_funcs.get(name)
+    if value is not None:
+        pack_name = value.get('pack_name')
+        func = value.get('func')
+        date = value.get('date')
+        warnings.warn(
+            f'<zml.{name}> will be removed after {date}, please use <{pack_name}.{func}> instead.',
+            DeprecationWarning,
+            stacklevel=2
+        )
+        mod = importlib.import_module(pack_name)
+        return getattr(mod, func)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 if __name__ == "__main__":

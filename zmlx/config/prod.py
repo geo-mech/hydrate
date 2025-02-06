@@ -51,6 +51,11 @@ def add_setting(model: Seepage, index=None, pos=None, t=None, p=None):
     if index is None or t is None or p is None:  # 这些数据必须给定.
         return
 
+    assert isinstance(index, int), f'The index should be integer type'
+
+    if index < 0:
+        index = model.cell_number + index
+
     if index < model.cell_number:  # 添加一个用于生产的确定压力的设置.
         assert len(t) == len(p) and len(t) >= 2
         data = get_settings(model)

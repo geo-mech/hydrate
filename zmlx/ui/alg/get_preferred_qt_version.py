@@ -22,3 +22,7 @@ def get_preferred_qt_version():
         pass
 
     return 'PyQt6'
+
+
+if __name__ == '__main__':
+    print(get_preferred_qt_version())
