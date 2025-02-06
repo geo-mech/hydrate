@@ -14,6 +14,7 @@ def install_dep(show=None):
 
     from zmlx.ui.alg.get_preferred_qt_version import get_preferred_qt_version
     version = get_preferred_qt_version()
+    print(f'The preferred Qt Version is: {version}')
 
     if version == 'PyQt5':
         for name, pip in [

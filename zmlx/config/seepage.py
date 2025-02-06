@@ -755,7 +755,7 @@ def create(mesh=None,
         model.gravity = gravity
         if point_distance(gravity, [0, 0, -10]) > 1.0:
             if 'gravity' not in warnings_ignored:
-                warnings.warn(f'In general, gravity should be [0,0, -10], '
+                warnings.warn(f'In general, gravity should be [0, 0, -10], '
                               f'but here it is {gravity}, '
                               f'please make sure this is the setting you need')
 

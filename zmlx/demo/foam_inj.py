@@ -1,5 +1,3 @@
-# ** desc = '三相流，流体注入驱替'
-
 import numpy as np
 
 from zml import Seepage, Tensor3

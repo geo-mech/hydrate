@@ -46,18 +46,30 @@
 1. 运行 `python -m zml_ui` 可启动[IGG-Hydrate](https://gitee.com/geomech/hydrate)的主界面;
 2. 具体的建模方法，可以参考[zmlx/demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo). 
 
+### Python集成开发环境
+
+在使用的过程中，需要边界[Python](https://www.python.org/)代码。建议使用[PyCharm](https://www.jetbrains.com/pycharm/)集成开发环境，提供强大的[Python](https://www.python.org/)编辑和代码提示的功能。
+
 ### 反馈
 
 使用过程中遇到问题，请[新建Issue](https://gitee.com/geomech/hydrate/issues/new)来向作者提问或者反馈.
 
 ### 开发
-欢迎并感谢您成为开发者并推送代码：
-1. 使用[Fork + Pull 模式](https://help.gitee.com/base/pullrequest/Fork+Pull)参与开发;
-2. 只修改自己创建的文件(如果在其它文件里发现bug，请[新建Issue](https://gitee.com/geomech/hydrate/issues/new)来反馈).
+
+1. 非常欢迎并感谢您申请成为[IGG-Hydrate](https://gitee.com/geomech/hydrate)的开发者。成为开发者之后，可以直接推送或者修改代码，[git](https://git-scm.com/)将会记录您的每一个贡献；
+2. 如果不想申请成为开发着，也可以使用[Fork + Pull 模式](https://help.gitee.com/base/pullrequest/Fork+Pull)参与开发；
+3. 无论采用何种形式，请只修改自己创建的文件(如果在其它文件里发现bug，请[新建Issue](https://gitee.com/geomech/hydrate/issues/new)来反馈)，这样可以有效地避免文件的冲突；
+4. 参与开发之前，请[点击此处](https://gitee.com/all-about-git)熟悉[git](https://git-scm.com/)。
 
 ### 致谢
 
 1. [中国科学院地质地球所](https://igg.cas.cn/)重点部署项目(IGGCAS-201903);
 2. 国家自然科学基金地质联合基金(U2244223).
 
+### 文件说明
+
+1. [zml.py](https://gitee.com/geomech/hydrate/blob/master/zml.py)和zml.dll：计算内核的接口文件以及动态库文件，是整个模块的基础；
+2. [zml_ui.pyw](https://gitee.com/geomech/hydrate/blob/master/zml_ui.pyw)：用户界面的入口；
+3. [zmlx](https://gitee.com/geomech/hydrate/tree/master/zmlx)：zml内核的扩展，提供进一步的功能；
+4. [zmlx/demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)：建模的示例，应是用户使用此模块建模时阅读的起点。
 
