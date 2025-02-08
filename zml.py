@@ -1168,8 +1168,10 @@ class String(HasHandle):
         参数:
             other (String): 要克隆的字符串对象。
         """
-        assert isinstance(other, String)
-        core.str_clone(self.handle, other.handle)
+        if other is not None:
+            assert isinstance(other, String)
+            core.str_clone(self.handle, other.handle)
+        return self
 
     def make_copy(self, buf=None):
         """
@@ -2546,8 +2548,10 @@ class Matrix2(HasHandle):
         """
         克隆数据
         """
-        assert isinstance(other, Matrix2)
-        core.mat2_clone(self.handle, other.handle)
+        if other is not None:
+            assert isinstance(other, Matrix2)
+            core.mat2_clone(self.handle, other.handle)
+        return self
 
     core.use(None, 'mat2_fill', c_void_p, c_double, c_bool)
 
@@ -2732,8 +2736,10 @@ class Matrix3(HasHandle):
         """
         克隆数据
         """
-        assert isinstance(other, Matrix3)
-        core.mat3_clone(self.handle, other.handle)
+        if other is not None:
+            assert isinstance(other, Matrix3)
+            core.mat3_clone(self.handle, other.handle)
+        return self
 
     core.use(None, 'mat3_fill', c_void_p, c_double, c_bool)
 
@@ -2871,8 +2877,10 @@ class Tensor3Matrix3(HasHandle):
         """
         克隆数据
         """
-        assert isinstance(other, Tensor3Matrix3)
-        core.ts3mat3_clone(self.handle, other.handle)
+        if other is not None:
+            assert isinstance(other, Tensor3Matrix3)
+            core.ts3mat3_clone(self.handle, other.handle)
+        return self
 
     core.use(None, 'ts3mat3_interp', c_void_p, c_void_p, c_double, c_double, c_double,
              c_double, c_double, c_double, c_double, c_double, c_double)
@@ -3053,13 +3061,15 @@ class Interp1(HasHandle):
     core.use(None, 'interp1_clone', c_void_p, c_void_p)
 
     def clone(self, other):
-        assert isinstance(other, Interp1)
-        core.interp1_clone(self.handle, other.handle)
+        if other is not None:
+            assert isinstance(other, Interp1)
+            core.interp1_clone(self.handle, other.handle)
+        return self
 
     def get_copy(self):
-        data = Interp1()
-        data.clone(self)
-        return data
+        result = Interp1()
+        result.clone(self)
+        return result
 
 
 class Interp2(HasHandle):
@@ -3204,13 +3214,15 @@ class Interp2(HasHandle):
     core.use(None, 'interp2_clone', c_void_p, c_void_p)
 
     def clone(self, other):
-        assert isinstance(other, Interp2)
-        core.interp2_clone(self.handle, other.handle)
+        if other is not None:
+            assert isinstance(other, Interp2)
+            core.interp2_clone(self.handle, other.handle)
+        return self
 
     def get_copy(self):
-        data = Interp2()
-        data.clone(self)
-        return data
+        result = Interp2()
+        result.clone(self)
+        return result
 
 
 class Interp3(HasHandle):
@@ -3353,13 +3365,15 @@ class Interp3(HasHandle):
     core.use(None, 'interp3_clone', c_void_p, c_void_p)
 
     def clone(self, other):
-        assert isinstance(other, Interp3)
-        core.interp3_clone(self.handle, other.handle)
+        if other is not None:
+            assert isinstance(other, Interp3)
+            core.interp3_clone(self.handle, other.handle)
+        return self
 
     def get_copy(self):
-        data = Interp3()
-        data.clone(self)
-        return data
+        result = Interp3()
+        result.clone(self)
+        return result
 
 
 class FileMap(HasHandle):
@@ -3489,8 +3503,10 @@ class FileMap(HasHandle):
         """
         克隆数据
         """
-        assert isinstance(other, FileMap)
-        core.fmap_clone(self.handle, other.handle)
+        if other is not None:
+            assert isinstance(other, FileMap)
+            core.fmap_clone(self.handle, other.handle)
+        return self
 
 
 class Array2(HasHandle):
@@ -3609,8 +3625,10 @@ class Array2(HasHandle):
         """
         克隆数据
         """
-        for i in range(2):
-            self.set(i, other[i])
+        if other is not None:
+            for i in range(2):
+                self.set(i, other[i])
+        return self
 
     core.use(c_double, 'array2_get_angle', c_void_p)
 
@@ -3736,8 +3754,10 @@ class Array3(HasHandle):
         """
         克隆数据
         """
-        for i in range(3):
-            self.set(i, other[i])
+        if other is not None:
+            for i in range(3):
+                self.set(i, other[i])
+        return self
 
 
 class Tensor2(HasHandle):
@@ -3916,8 +3936,10 @@ class Tensor2(HasHandle):
         """
         克隆数据
         """
-        assert isinstance(other, Tensor2)
-        core.tensor2_clone(self.handle, other.handle)
+        if other is not None:
+            assert isinstance(other, Tensor2)
+            core.tensor2_clone(self.handle, other.handle)
+        return self
 
     core.use(None, 'tensor2_rotate', c_void_p, c_void_p, c_double)
 
@@ -4156,8 +4178,10 @@ class Tensor3(HasHandle):
         """
         克隆数据
         """
-        assert isinstance(other, Tensor3)
-        core.tensor3_clone(self.handle, other.handle)
+        if other is not None:
+            assert isinstance(other, Tensor3)
+            core.tensor3_clone(self.handle, other.handle)
+        return self
 
 
 class Tensor2Interp2(HasHandle):
@@ -7754,9 +7778,9 @@ class Seepage(HasHandle, HasCells):
         core.use(None, 'reaction_add_inhibitor', c_void_p,
                  c_size_t, c_size_t, c_size_t,
                  c_size_t, c_size_t, c_size_t,
-                 c_void_p, c_void_p)
+                 c_void_p, c_void_p, c_bool)
 
-        def add_inhibitor(self, sol, liq, c, t):
+        def add_inhibitor(self, sol, liq, c, t, *, use_vol=False):
             """
             添加一种抑制剂。其中sol为抑制剂对应的组分ID，liq为流体的组分ID。sol的质量除以liq的质量为抑制剂的浓度。则向量c和向量t定义随着
             这个浓度的变化，化学反应平衡温度的变化情况.
@@ -7765,7 +7789,8 @@ class Seepage(HasHandle, HasCells):
                 c = Vector(c)
             if not isinstance(t, Vector):
                 t = Vector(t)
-            core.reaction_add_inhibitor(self.handle, *parse_fid3(sol), *parse_fid3(liq), c.handle, t.handle)
+            core.reaction_add_inhibitor(self.handle, *parse_fid3(sol), *parse_fid3(liq), c.handle, t.handle,
+                                        use_vol)
 
         core.use(None, 'reaction_clear_inhibitors', c_void_p)
 
@@ -7867,6 +7892,25 @@ class Seepage(HasHandle, HasCells):
         @irate.setter
         def irate(self, value):
             core.reaction_set_irate(self.handle, value)
+
+        core.use(None, 'reaction_clone', c_void_p, c_void_p)
+
+        def clone(self, other):
+            """
+            拷贝所有的数据
+            """
+            if other is not None:
+                assert isinstance(other, Seepage.Reaction)
+                core.reaction_clone(self.handle, other.handle)
+            return self
+
+        def get_copy(self):
+            """
+            返回一个拷贝(而非一个引用)
+            """
+            result = Seepage.Reaction()
+            result.clone(self)
+            return result
 
     class FluDef(HasHandle):
         """
@@ -8127,18 +8171,20 @@ class Seepage(HasHandle, HasCells):
             """
             克隆数据
             """
-            assert isinstance(other, Seepage.FluDef)
-            core.fludef_clone(self.handle, other.handle)
+            if other is not None:
+                assert isinstance(other, Seepage.FluDef)
+                core.fludef_clone(self.handle, other.handle)
+            return self
 
         def get_copy(self, name=None):
             """
             返回当前数据的一个拷贝(当给定name的时候，则修改返回数据的name)
             """
-            data = Seepage.FluDef()
-            data.clone(self)
+            result = Seepage.FluDef()
+            result.clone(self)
             if name is not None:
-                data.name = name
-            return data
+                result.name = name
+            return result
 
     class FluData(HasHandle):
         """
@@ -8363,13 +8409,15 @@ class Seepage(HasHandle, HasCells):
             """
             拷贝所有的数据
             """
-            assert isinstance(other, Seepage.FluData)
-            core.fluid_clone(self.handle, other.handle)
+            if other is not None:
+                assert isinstance(other, Seepage.FluData)
+                core.fluid_clone(self.handle, other.handle)
+            return self
 
         def get_copy(self):
-            data = Seepage.FluData()
-            data.clone(self)
-            return data
+            result = Seepage.FluData()
+            result.clone(self)
+            return result
 
         core.use(None, 'fluid_add', c_void_p, c_void_p)
 
@@ -8845,6 +8893,8 @@ class Seepage(HasHandle, HasCells):
             """
             从other克隆数据（所有的数据）
             """
+            if other is None:
+                return self
             assert isinstance(other, Seepage.CellData)
             if scale is not None:
                 other.multiply(scale, result=self)
@@ -9138,8 +9188,10 @@ class Seepage(HasHandle, HasCells):
         core.use(None, 'seepage_face_clone', c_void_p, c_void_p)
 
         def clone(self, other):
-            assert isinstance(other, Seepage.FaceData)
-            core.seepage_face_clone(self.handle, other.handle)
+            if other is not None:
+                assert isinstance(other, Seepage.FaceData)
+                core.seepage_face_clone(self.handle, other.handle)
+            return self
 
         core.use(c_double, 'seepage_face_get_cond', c_void_p)
         core.use(None, 'seepage_face_set_cond', c_void_p, c_double)
@@ -9581,8 +9633,10 @@ class Seepage(HasHandle, HasCells):
             """
             克隆所有的数据；包括作用的cell_id
             """
-            assert isinstance(other, Seepage.Injector)
-            core.injector_clone(self.handle, other.handle)
+            if other is not None:
+                assert isinstance(other, Seepage.Injector)
+                core.injector_clone(self.handle, other.handle)
+            return self
 
     class Updater(HasHandle):
         """
@@ -10374,6 +10428,8 @@ class Seepage(HasHandle, HasCells):
         添加一个反应
         """
         if not isinstance(data, Seepage.Reaction):
+            warnings.warn('The none Seepage.Reaction type will not be supported after 2026-2-7, '
+                          'please use zmlx.react.add_reaction instead.', DeprecationWarning)
             data = self.create_reaction(**data)
         idx = core.seepage_add_reaction(self.handle, data.handle)
         if need_id:
@@ -10389,85 +10445,24 @@ class Seepage(HasHandle, HasCells):
         """
         core.seepage_clear_reactions(self.handle)
 
+    core.use(None, 'seepage_remove_reaction', c_void_p, c_size_t)
+
+    def remove_reaction(self, idx):
+        """
+        移除给定序号的一个反应
+        """
+        idx = get_index(idx, self.reaction_number)
+        if idx is not None:
+            core.seepage_remove_reaction(self.handle, idx)
+
     def create_reaction(self, **kwargs):
         """
         根据给定的参数，创建一个反应（可能需要读取model中的流体定义，以及会在model中注册属性）
         """
-        data = Seepage.Reaction()
-
-        temp = kwargs.get('temp', None)
-        if temp is not None:
-            data.temp = temp
-
-        heat = kwargs.get('heat', None)
-        if heat is not None:
-            data.heat = heat
-
-        p2t = kwargs.get('p2t', None)
-        if p2t is not None:
-            p, t = p2t
-            data.set_p2t(p, t)
-
-        t2q = kwargs.get('t2q', None)
-        if t2q is not None:
-            t, q = t2q
-            data.set_t2q(t, q)
-
-        components = kwargs.get('components', None)
-        if components is not None:
-            assert isinstance(components, Iterable)
-            for comp in components:
-                kind = comp.get('kind')
-                if isinstance(kind, str):
-                    kind = self.find_fludef(kind)
-
-                weight = comp.get('weight')
-                assert -1 <= weight <= 1
-
-                fa_t = comp.get('fa_t', None)
-                assert fa_t is not None
-                if isinstance(fa_t, str):
-                    fa_t = self.reg_flu_key(fa_t)
-
-                fa_c = comp.get('fa_c', None)
-                assert fa_c is not None
-                if isinstance(fa_c, str):
-                    fa_c = self.reg_flu_key(fa_c)
-
-                data.add_component(index=kind, weight=weight, fa_t=fa_t, fa_c=fa_c)
-
-        inhibitors = kwargs.get('inhibitors', None)
-        if inhibitors is not None:
-            assert isinstance(inhibitors, Iterable)
-            for inh in inhibitors:
-                # 这里要注意的是，这里的浓度指的是质量浓度.
-                sol = inh.get('sol')
-                if isinstance(sol, str):
-                    sol = self.find_fludef(sol)
-
-                liq = inh.get('liq')
-                if isinstance(liq, str):
-                    liq = self.find_fludef(liq)
-
-                data.add_inhibitor(sol=sol, liq=liq, c=inh.get('c'), t=inh.get('t'))
-
-        idt = kwargs.get('idt', None)
-        if idt is not None:
-            if isinstance(idt, str):
-                idt = self.reg_cell_key(idt)
-            data.idt = idt
-
-        wdt = kwargs.get('wdt', None)
-        if wdt is not None:
-            data.wdt = wdt
-
-        irate = kwargs.get('irate', None)
-        if irate is not None:
-            if isinstance(irate, str):
-                irate = self.reg_cell_key(irate)
-            data.irate = irate
-
-        return data
+        warnings.warn('zml.Seepage.Reaction.create_reaction will be remove after 2026-2-7, '
+                      'please use zmlx.react.create_reaction instead', DeprecationWarning)
+        from zmlx.react.create_reaction import create_reaction as create
+        return create(self, **kwargs)
 
     core.use(c_void_p, 'seepage_get_buffer', c_void_p, c_char_p)
 
@@ -10717,8 +10712,10 @@ class Seepage(HasHandle, HasCells):
         """
         从另外一个模型克隆数据.
         """
-        assert isinstance(other, Seepage)
-        core.seepage_clone(self.handle, other.handle)
+        if other is not None:
+            assert isinstance(other, Seepage)
+            core.seepage_clone(self.handle, other.handle)
+        return self
 
     def get_copy(self):
         """

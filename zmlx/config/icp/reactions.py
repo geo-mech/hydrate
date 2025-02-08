@@ -40,7 +40,7 @@ def create_reactions(temp_max=None):
     # 当固体占据的比重达到80%之后，增加裂解温度，从而限制继续分解 (避免所有的孔隙被固体占据)
     add_inh(r, sol='sol', liq=None,
             c=[0, 0.8, 1.0],
-            t=[0, 0, 1.0e4])
+            t=[0, 0, 1.0e4], use_vol=True)
     result.append(r)
 
     # 返回所有的反应

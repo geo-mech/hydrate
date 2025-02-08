@@ -151,7 +151,7 @@ def create_reactions(has_co2=False,
     assert -5.0 <= sol_dt <= 0.0
     add_inh(r, sol='sol', liq=None,
             c=[0, 0.8, 1.0],
-            t=[0, sol_dt, -200.0])
+            t=[0, sol_dt, -200.0], use_vol=True)
     if has_inh:
         add_inh(r, sol='inh', liq='liq',
                 c=salinity_c2t[0],
@@ -168,7 +168,7 @@ def create_reactions(has_co2=False,
         # 抑制固体比例过高，增强计算稳定性 （非常必要）
         add_inh(r, sol='sol', liq=None,
                 c=[0, 0.8, 1.0],
-                t=[0, sol_dt, -200.0])
+                t=[0, sol_dt, -200.0], use_vol=True)
         if has_inh:
             add_inh(r, sol='inh', liq='liq',
                     c=salinity_c2t[0],
