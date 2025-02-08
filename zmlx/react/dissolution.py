@@ -1,6 +1,7 @@
 import warnings
 
 from zml import Seepage, create_dict
+from zmlx.react.add_reaction import add_reaction
 
 
 def create(*, sol=None, sol_in_liq=None, liq=None, ca_sol=None, rate=1.0, fa_t=None, fa_c=None,
@@ -84,7 +85,7 @@ def test():
     c.set_attr(0, 0.1)
 
     print(c.get_fluid(0).mass, c.get_fluid(1).get_component(0).mass, c.get_fluid(1).get_component(1).mass)
-    r = model.add_reaction(create(gas=0, gas_in_liq=(1, 1), liq=1, ca_sol=0, fa_c=fa_c, fa_t=fa_t))
+    r = add_reaction(model, create(gas=0, gas_in_liq=(1, 1), liq=1, ca_sol=0, fa_c=fa_c, fa_t=fa_t))
     for step in range(20):
         r.react(model, dt=0.1)
         print(c.get_fluid(0).mass, c.get_fluid(1).get_component(0).mass, c.get_fluid(1).get_component(1).mass)

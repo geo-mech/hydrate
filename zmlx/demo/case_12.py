@@ -52,7 +52,7 @@ def create():
     # 关键词
     kw = hydrate.create_kwargs(gravity=[0, 0, 0],
                                dt_min=1.0e-4,
-                               dt_max=24 * 3600,
+                               dt_max=10,
                                dv_relative=0.1,
                                mesh=mesh,
                                porosity=0.3,
@@ -68,7 +68,8 @@ def create():
                                        't': [0, 1e20],
                                        'p': [0.3e6, 0.3e6]}]
                                )
-    model = seepage.create(**kw)
+    model = seepage.create(**kw,
+                           warnings_ignored={'gravity'})
 
     # 用于solve的选项
     model.set_text(key='solve',
@@ -76,7 +77,7 @@ def create():
                          'show_cells': {'dim0': 0,
                                         'dim1': 2,
                                         'mask': seepage.get_cell_mask(model=model, yr=[-1, 1])},
-                         'time_max': 365 * 24 * 3600,
+                         'time_max': 3 * 24 * 3600,
                          }
                    )
     # 返回模型

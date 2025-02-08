@@ -1,4 +1,5 @@
 from zmlx.react import endothermic
+from zmlx.react.add_reaction import add_reaction
 
 
 def create(left, right, temp, heat, rate, fa_t=None, fa_c=None):
@@ -47,7 +48,7 @@ def test(t_ini=510):
         f.set_attr(fa_t, t_ini)
         f.set_attr(fa_c, 1000)
     r = create(left=[(0, 0.5), (1, 0.5)], right=[(2, 1.0)], temp=500, heat=1.0e6, rate=1.0e-2, fa_t=fa_t, fa_c=fa_c)
-    model.add_reaction(r)
+    add_reaction(model, r)
 
     buf = np.zeros(shape=model.cell_number)
     for step in range(20):

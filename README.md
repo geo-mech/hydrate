@@ -48,7 +48,7 @@
 
 ### Python集成开发环境
 
-在使用的过程中，需要边界[Python](https://www.python.org/)代码。建议使用[PyCharm](https://www.jetbrains.com/pycharm/)集成开发环境，提供强大的[Python](https://www.python.org/)编辑和代码提示的功能。
+在使用的过程中，需要编辑[Python](https://www.python.org/)代码。建议使用[PyCharm](https://www.jetbrains.com/pycharm/)集成开发环境。
 
 ### 反馈
 
@@ -56,7 +56,7 @@
 
 ### 开发
 
-1. 非常欢迎并感谢您申请成为[IGG-Hydrate](https://gitee.com/geomech/hydrate)的开发者。成为开发者之后，可以直接推送或者修改代码，[git](https://git-scm.com/)将会记录您的每一个贡献；
+1. 非常欢迎并感谢您成为[IGG-Hydrate](https://gitee.com/geomech/hydrate)的开发者。成为开发者之后，可以直接推送或者修改代码，[git](https://git-scm.com/)会记录您的每一个贡献；
 2. 如果不想申请成为开发着，也可以使用[Fork + Pull 模式](https://help.gitee.com/base/pullrequest/Fork+Pull)参与开发；
 3. 无论采用何种形式，请只修改自己创建的文件(如果在其它文件里发现bug，请[新建Issue](https://gitee.com/geomech/hydrate/issues/new)来反馈)，这样可以有效地避免文件的冲突；
 4. 参与开发之前，请[点击此处](https://gitee.com/all-about-git)熟悉[git](https://git-scm.com/)。

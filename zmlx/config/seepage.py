@@ -64,6 +64,7 @@ from zmlx.utility.GuiIterator import GuiIterator
 from zmlx.utility.SaveManager import SaveManager
 from zmlx.utility.SeepageCellMonitor import SeepageCellMonitor
 from zmlx.utility.SeepageNumpy import as_numpy
+from zmlx.react.add_reaction import add_reaction
 
 # 确保这些import不会被PyCharm优化掉
 _unused = [get_face_gradient, get_face_diff, get_face_sum, get_face_left,
@@ -662,7 +663,7 @@ def get_inited(fludefs=None, reactions=None, gravity=None, path=None,
     model.clear_reactions()  # 清空已经存在的定义.
     if reactions is not None:
         for r in reactions:
-            model.add_reaction(r)
+            add_reaction(model, r)
 
     if gravity is not None:
         assert len(gravity) == 3
@@ -747,7 +748,7 @@ def create(mesh=None,
     model.clear_reactions()  # 清空已经存在的定义.
     if reactions is not None:
         for r in reactions:
-            model.add_reaction(r)
+            add_reaction(model, r)
 
     # 设置重力
     if gravity is not None:
