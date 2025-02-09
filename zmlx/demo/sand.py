@@ -3,7 +3,6 @@
 import numpy as np
 
 from zml import Seepage, Interp1
-from zml import get_distance
 from zmlx.config import seepage, sand
 from zmlx.plt.tricontourf import tricontourf
 from zmlx.seepage_mesh.cube import create_cube
@@ -47,7 +46,8 @@ def create():
 
     model = seepage.create(mesh=mesh, dv_relative=0.2,
                            fludefs=fludefs,
-                           porosity=get_fai, pore_modulus=200e6, p=get_p, s=get_s, perm=get_k,
+                           porosity=get_fai, pore_modulus=200e6,
+                           p=get_p, s=get_s, perm=get_k,
                            has_solid=True)
 
     seepage.set_solve(model,
@@ -56,9 +56,9 @@ def create():
                       )
 
     # 添加压力梯度到饱和度的映射.
-    x  = [0, 0.01e6, 0.03e6, 0.1e6]
-    y0 = [0, 0.0,    0.0,    0.1]
-    y1 = [0, 0.0001, 0.001,  0.2]
+    x = [0, 0.01e6, 0.03e6, 0.1e6]
+    y0 = [0, 0.0, 0.0, 0.1]
+    y1 = [0, 0.0001, 0.001, 0.2]
 
     model.set_curve(index=0, curve=Interp1(x=x, y=y0))
     model.set_curve(index=1, curve=Interp1(x=x, y=y1))
@@ -77,7 +77,8 @@ def create():
         if abs(x - x_min) > 0.1 or abs(y - y_min) > 0.1:
             cell.set_attr(index=idx, value=1)
 
-    sand.add_setting(model, sol_sand='sol_sand', flu_sand='flu_sand',
+    sand.add_setting(model,
+                     sol_sand='sol_sand', flu_sand='flu_sand',
                      ca_i0='i0', ca_i1='i1')
 
     return model
@@ -90,9 +91,21 @@ def show_gradient(model: Seepage):
     tricontourf(x, y, v, caption='gradient')
 
 
+def update_sand(*args, **kwargs):
+    print('my update sand')
+    sand.iterate(*args, **kwargs)
+
+
 def test_1():
     model = create()
-    seepage.solve(model, close_after_done=False, extra_plot=lambda: show_gradient(model))
+
+    def extra_plot():
+        show_gradient(model)
+
+    seepage.solve(model, close_after_done=False,
+                  extra_plot=extra_plot,
+                  slots={'update_sand': update_sand}
+                  )
 
 
 if __name__ == '__main__':

@@ -5,7 +5,7 @@ import numpy as np
 
 from zml import Vector, Seepage, Interp1
 from zmlx.alg.np import get_pointer
-from zmlx.config.seepage_base import get_face_sum, get_face_diff
+from zmlx.config.seepage_base import get_face_sum, get_face_diff, get_dt
 from zmlx.utility.SeepageNumpy import as_numpy
 
 vs0 = Vector()
@@ -81,7 +81,7 @@ def get_face_gra(model: Seepage):
     return fa
 
 
-def iterate(model: Seepage, dt: float, fid0=None, fid1=None,
+def iterate(model: Seepage, dt=None, fid0=None, fid1=None,
             ca_ipc=None, ds=0.05, gravity=None):
     """
     在毛管力驱动下的流动。
@@ -91,6 +91,9 @@ def iterate(model: Seepage, dt: float, fid0=None, fid1=None,
         ca_ipc为cell的属性，定义cell选择毛管压力曲线的id
         ds为线性化的时候饱和度的变化幅度;
     """
+    if dt is None:
+        dt = get_dt(model)
+
     if dt <= 1.0e-30:
         return
     if fid0 is not None and fid1 is not None:

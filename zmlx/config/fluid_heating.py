@@ -2,6 +2,7 @@ import numpy as np
 
 from zml import Seepage
 from zmlx.alg.Vector import to_numpy
+from zmlx.config.seepage_base import get_dt
 from zmlx.utility.SeepageNumpy import as_numpy
 
 text_key = 'fluid_heating'
@@ -33,10 +34,13 @@ def add_setting(model: Seepage, fluid=None, power=None, temp_max=None):
     model.set_text(text_key, setting)
 
 
-def iterate(model: Seepage, dt):
+def iterate(model: Seepage, dt=None):
     """
     更新pore
     """
+    if dt is None:
+        dt = get_dt(model)
+
     setting = get_settings(model)
     if len(setting) == 0 or dt <= 0:
         return
