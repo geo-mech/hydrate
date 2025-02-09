@@ -4,6 +4,7 @@
 
 from zml import Seepage
 from zmlx.alg.interp1 import interp1
+from zmlx.config.seepage_base import get_time
 
 text_key = 'prod_settings'
 
@@ -75,13 +76,16 @@ def add_setting(model: Seepage, index=None, pos=None, t=None, p=None):
             set_settings(model, data=data)
 
 
-def iterate(model: Seepage, time):
+def iterate(model: Seepage, time=None):
     """
     更新pore
     """
     data = get_settings(model)
     if data is None:
         return
+
+    if time is None:
+        time = get_time(model)
 
     assert isinstance(data, list)
     for item in data:

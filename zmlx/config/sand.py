@@ -34,6 +34,7 @@ def add_setting(model: Seepage, *, sol_sand, flu_sand, ca_i0, ca_i1, use_average
                         flu_sand=flu_sand,
                         ca_i0=ca_i0, ca_i1=ca_i1, use_average=use_average)
 
+
 def get_gradient(model: Seepage, fluid=None, use_average=False):
     """
     计算Face位置的剪切应力
@@ -67,8 +68,10 @@ def iterate(model: Seepage):
             flu_sand = model.find_fludef(name=flu_sand)
 
         assert len(flu_sand) >= 2
-        grad = get_gradient(model, fluid=[flu_sand[0]], use_average=use_average)
+        grad = get_gradient(model, fluid=[flu_sand[0]],
+                            use_average=use_average)
 
         # 更新砂的体积
         model.update_sand(sol_sand=sol_sand, flu_sand=flu_sand,
-                          ca_i0=ca_i0, ca_i1=ca_i1, force=get_pointer64(grad))
+                          ca_i0=ca_i0, ca_i1=ca_i1,
+                          force=get_pointer64(grad))

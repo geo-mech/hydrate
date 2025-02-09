@@ -52,6 +52,7 @@ from zmlx.config import (capillary, prod, fluid_heating, timer,
                          sand, step_iteration, adjust_vis)
 from zmlx.config.attr_keys import cell_keys, face_keys, flu_keys
 from zmlx.config.seepage_base import *
+from zmlx.config.standard_slots import standard_slots
 from zmlx.filesys.join_paths import join_paths
 from zmlx.filesys.make_fname import make_fname
 from zmlx.filesys.make_parent import make_parent
@@ -458,8 +459,10 @@ solid_buffer = Seepage.CellData()
 
 
 def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
-            fa_q=None, fa_k=None, cond_updaters=None, diffusions=None,
-            react_bufs=None, vis_max=None, vis_min=None, slots=None):
+            fa_q=None, fa_k=None,
+            cond_updaters=None, diffusions=None,
+            react_bufs=None,
+            vis_max=None, vis_min=None, slots=None):
     """
     在时间上向前迭代。其中
         dt:     时间步长,若为None，则使用自动步长
@@ -479,6 +482,12 @@ def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
 
     dt = get_dt(model)
     assert dt is not None, 'You must set dt before iterate'
+
+    # 使得slots至少包含standard_slots
+    temp = standard_slots.copy()
+    if slots is not None:
+        temp.update(slots)
+    slots = temp
 
     # 执行定时器函数.
     timer.iterate(model, t0=get_time(model), t1=get_time(model) + dt,
@@ -518,10 +527,10 @@ def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
 
     # 尝试修改边界的压力，从而使得流体生产 (使用模型内部定义的time)
     #   since 2024-6-12
-    prod.iterate(model, time=get_time(model))
+    prod.iterate(model)
 
     # 对流体进行加热
-    fluid_heating.iterate(model, dt=dt)
+    fluid_heating.iterate(model)
 
     has_solid = model.has_tag('has_solid')
 
@@ -540,7 +549,8 @@ def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
         fa_igr = model.get_face_key('igr')
         if ca_v0 is not None and fa_g0 is not None and fa_igr is not None:
             model.update_cond(ca_v0=ca_v0, fa_g0=fa_g0,
-                              fa_igr=fa_igr, relax_factor=0.3)
+                              fa_igr=fa_igr,
+                              relax_factor=0.3)
 
     # 施加cond的更新操作
     if cond_updaters is not None:
@@ -568,15 +578,19 @@ def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
             update(model, dt)
 
     # 执行毛管力相关的操作
-    capillary.iterate(model, dt)
+    capillary.iterate(model)
 
     if has_solid:
         # 恢复备份的固体物质
         model.push_fluids(solid_buffer)
 
-    # 更新砂子的体积
-    sand.iterate(model=model)
+    # 更新砂子的体积（优先使用自定义的update_sand）
+    update_sand = slots.get('update_sand', None)
+    if update_sand is None:
+        update_sand = sand.iterate  # 优先使用自定义的update_sand
+    update_sand(model=model)
 
+    # 是否禁用热力学过程
     update_ther = model.not_has_tag('disable_ther')
 
     if update_ther:
