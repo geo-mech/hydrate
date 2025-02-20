@@ -28,17 +28,17 @@ class ActionX(QAction):
             except Exception as err:
                 self._err = err
 
-        iconname = self._data.get('icon', None)
+        iconname = self._data.get('icon')
         if iconname is not None:
             self.setIcon(load_icon(iconname))
         else:
             self.setIcon(load_icon('python'))
 
-        tooltip = self._data.get('tooltip', None)
+        tooltip = self._data.get('tooltip')
         if tooltip is not None:
             self.setToolTip(get_text(tooltip))
 
-        text = self._data.get('text', None)
+        text = self._data.get('text')
         if text is not None:
             self.setText(get_text(text))
 

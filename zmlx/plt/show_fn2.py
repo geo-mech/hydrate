@@ -5,11 +5,11 @@
 
 from zml import is_array
 from zmlx.plt.get_color import get_color
-from zmlx.plt.plot2 import plot2
-from zmlx.ui.GuiBuffer import gui
+from zmlx.ui.GuiBuffer import gui, plot
 
 
-def show_fn2(pos=None, w=None, c=None, w_max=4, ipath=None, iw=4, ic=6, **kwargs):
+def show_fn2(pos=None, w=None, c=None, w_max=4, ipath=None, iw=4, ic=6, clabel=None,
+             **opt):
     """
     显示二维裂缝网络数据。其中：
         pos包含4列，为各个线段的位置
@@ -63,38 +63,46 @@ def show_fn2(pos=None, w=None, c=None, w_max=4, ipath=None, iw=4, ic=6, **kwargs
     yl, yr = get_r(lambda i: (pos[i][1] + pos[i][3]) / 2)
 
     # 获取颜色表
-    cmap = kwargs.pop('cmap', None)
-    if cmap is None:
-        from matplotlib import cm
-        cmap = cm.coolwarm
+    cmap = opt.pop('cmap', None)  # 这个default不可以省略
+    if isinstance(cmap, str) or cmap is None:
+        from zmlx.plt.get_cm import get_cm
+        cmap = get_cm(cmap)
 
-    data = []
-    for idx in range(count):
-        x0, y0, x1, y1 = pos[idx]
-        data.append({'name': 'plot', 'args': [[x0, x1], [y0, y1]],
-                     'kwargs':
-                         {'c': get_color(cmap, cl, cr, get_c(idx)),
-                          'linewidth': 0.1 + get_w(idx) * w_max / max(wr, 1.0e-10)}
-                     })
+    def on_figure(fig):
+        ax = fig.subplots()
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+        for idx in range(count):
+            x0, y0, x1, y1 = pos[idx]
+            ax.plot([x0, x1],
+                    [y0, y1],
+                    c=get_color(cmap, cl, cr, get_c(idx)),
+                    linewidth=0.1 + get_w(idx) * w_max / max(wr, 1.0e-10))
+        # 在中心点画一个小三角形，用以显示颜色
+        xc = (xl + xr) / 2
+        yc = (yl + yr) / 2
+        xw = max(xr - xl, yr - yl)
+        yw = xw
+        tricontourf = ax.tricontourf([xc, xc + xw / 1e6, xc],
+                                     [yc, yc, yc + yw / 1e6],
+                                     [cl, (cl + cr) / 2, cr],
+                                     levels=20)
+        cbar = fig.colorbar(tricontourf, ax=ax)
+        if clabel is not None:
+            cbar.set_label(clabel)
 
-    # 在中心点画一个小三角形，用以显示颜色
-    xc = (xl + xr) / 2
-    yc = (yl + yr) / 2
-    xw = xr - xl
-    yw = yr - yl
-    data.append({'name': 'tricontourf', 'has_colorbar': True, 'kwargs': {
-        'x': [xc, xc + xw / 1e6, xc],
-        'y': [yc, yc, yc + yw / 1e6],
-        'z': [cl, (cl + cr) / 2, cr],
-        'levels': 20}})
+        ratio = max(xr - xl, 1.0e-10) / max(yr - yl, 1.0e-10)
+        if 0.05 <= ratio <= 20:
+            ax.set_aspect('equal')
 
-    kwargs['aspect'] = 'equal'
-    plot2(data=data, **kwargs)
+    # 执行绘图
+    plot(on_figure, **opt)
 
 
 def test():
     from zmlx.data.example_fn2 import pos, w, c
-    gui.execute(lambda: show_fn2(pos, w, c), close_after_done=False)
+    gui.execute(lambda: show_fn2(pos, w, c),
+                close_after_done=False)
 
 
 if __name__ == '__main__':

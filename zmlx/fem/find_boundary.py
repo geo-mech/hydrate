@@ -35,4 +35,3 @@ def find_boundary(dyn: DynSys, n_dim, i_dim, lower, i_dir, eps=None):
         idx += n_dim
 
     return ids
-

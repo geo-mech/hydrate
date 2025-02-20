@@ -30,4 +30,3 @@ def swap_xy(mesh):
     for cell in mesh.cells:
         x, y, z = cell.pos
         cell.pos = [y, x, z]
-

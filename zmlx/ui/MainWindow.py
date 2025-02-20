@@ -181,7 +181,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.__gui_api.add_func('get_current_widget', self.get_current_widget)
         self.__gui_api.add_func('is_running', self.is_running)
         self.__gui_api.add_func('kill_thread', self.kill_thread)
-        self.__gui_api.add_func('plot', self.cmd_plot)
+        self.__gui_api.add_func('plot', self.plot)
         self.__gui_api.add_func('progress', self.progress)
         self.__gui_api.add_func('play_sound', self.play_sound)
         self.__gui_api.add_func('refresh', self.refresh)
@@ -305,9 +305,9 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.add_task(lambda: oper(widget))
             return widget
 
-    def get_figure_widget(self, clear=None, **kwargs):
+    def get_figure_widget(self, clear=True, **kwargs):
         from zmlx.ui.MatplotWidget import MatplotWidget
-        if kwargs.get('icon', None) is None:
+        if kwargs.get('icon') is None:
             kwargs['icon'] = 'matplotlib'
         widget = self.get_widget(the_type=MatplotWidget, **kwargs)
         if clear:
@@ -324,7 +324,7 @@ class MainWindow(QtWidgets.QMainWindow):
         assert widget is not None
         widget.open_fn2_file(filepath)
 
-    def cmd_plot(self, kernel=None, fname=None, dpi=300, **kwargs):
+    def plot(self, kernel=None, fname=None, dpi=300, **kwargs):
         if kernel is not None:
             try:
                 widget = self.get_figure_widget(**kwargs)
@@ -451,7 +451,7 @@ class MainWindow(QtWidgets.QMainWindow):
         assert isinstance(ext, str)
         ext = ext.lower()
 
-        proc = self.__file_processors.get(ext, None)
+        proc = self.__file_processors.get(ext)
         if proc is None:
             if os.path.isfile(filepath):
                 show_fileinfo(filepath)

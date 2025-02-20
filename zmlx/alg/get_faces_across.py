@@ -16,7 +16,7 @@ def get_faces_across(model, p0, p1):
         return seg_point_distance([p0, p1], cell_pos) + point_distance(cell_pos, cell_end.pos)
 
     face_ids = []
-    while cell_beg.index != cell_end.index:   # 遍历的目标，是利用这些face建立这两个cell之间的通道.
+    while cell_beg.index != cell_end.index:  # 遍历的目标，是利用这些face建立这两个cell之间的通道.
         dist = [get_dist(c.pos) for c in cell_beg.cells]
         idx = 0
         for i in range(1, len(dist)):
@@ -25,7 +25,7 @@ def get_faces_across(model, p0, p1):
         cell = cell_beg.get_cell(idx)
         # face的数量(备份以供后续检查)
         face_n = model.face_number
-        face = model.add_face(cell_beg, cell)   # 此时，一定不会创建新的face
+        face = model.add_face(cell_beg, cell)  # 此时，一定不会创建新的face
         assert face_n == model.face_number
         face_ids.append(face.index)
         cell_beg = cell

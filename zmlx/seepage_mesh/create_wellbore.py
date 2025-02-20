@@ -1,7 +1,7 @@
 import numpy as np
+from scipy.interpolate import interp1d
 
 from zml import SeepageMesh
-from scipy.interpolate import interp1d
 from zmlx.geometry.point_distance import point_distance
 
 
@@ -21,7 +21,7 @@ def create_wellbore(trajectory, length=1.0, area=0.01):
 
     for idx in range(1, len(trajectory)):
         p = trajectory[idx]
-        vl.append(vl[-1] + point_distance(p, trajectory[idx-1]))
+        vl.append(vl[-1] + point_distance(p, trajectory[idx - 1]))
         vx.append(p[0])
         vy.append(p[1])
         vz.append(p[2])
@@ -29,7 +29,7 @@ def create_wellbore(trajectory, length=1.0, area=0.01):
     # 新的节点的数量
     count = round(vl[-1] / length) + 1
     assert count >= 3
-    length = vl[-1] / (count - 1)   # 每一个单元的长度
+    length = vl[-1] / (count - 1)  # 每一个单元的长度
 
     # 在长度维度上的插值点
     lq = np.linspace(vl[0], vl[-1], count)
@@ -72,4 +72,3 @@ def test_1():
 
 if __name__ == '__main__':
     test_1()
-

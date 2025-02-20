@@ -7,8 +7,8 @@ config中的其它模块调用。
 如果在config之外使用，则请直接使用seepage模块。
 """
 import ctypes
-from ctypes import c_void_p
 import warnings
+from ctypes import c_void_p
 
 from zml import Seepage, Vector, is_array
 from zmlx.alg.time2str import time2str

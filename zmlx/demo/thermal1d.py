@@ -8,15 +8,17 @@ todo:
     3. 倒数第二行execute(folder_name)调用错误
 """
 
+import os
+
+import matplotlib.pyplot as plt
 import numpy as np
+from scipy.special import erf
+
 from zml import Seepage
+from zmlx.plt.plotxy import plotxy
 from zmlx.seepage_mesh.cube import create_cube
 from zmlx.ui import gui
 from zmlx.utility.SeepageNumpy import as_numpy
-from zmlx.plt.plotxy import plotxy
-import matplotlib.pyplot as plt
-from scipy.special import erf
-import os
 
 
 class CellAttrs:

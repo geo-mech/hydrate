@@ -21,6 +21,7 @@
     T=900, 3570950J
 """
 from math import exp
+
 from zmlx.react import melt
 
 
@@ -28,9 +29,9 @@ def get_heat_need(water_T, steam_T):
     """
     返回将1kg的T0温度的水加热并生成T1温度的蒸汽，所需要消耗的热量 (大约的，仅仅用于建模的时候使用)
     """
-    E1 = 4200.0 * (273.15 + 100.0 - water_T)    # 首先，加热到100摄氏度的水
-    E2 = 2.26e6   # 相变
-    E3 = 1850 * (steam_T - (273.15 + 100.0))   # 蒸汽继续升温
+    E1 = 4200.0 * (273.15 + 100.0 - water_T)  # 首先，加热到100摄氏度的水
+    E2 = 2.26e6  # 相变
+    E3 = 1850 * (steam_T - (273.15 + 100.0))  # 蒸汽继续升温
     return E1 + E2 + E3
 
 
@@ -44,7 +45,7 @@ def create(vap, wat, fa_t=None, fa_c=None, temp_max=None):
         temp_max = 700
 
     assert 400 <= temp_max <= 1200
-    temp_max = round(temp_max)   # 液态水允许的最高的温度
+    temp_max = round(temp_max)  # 液态水允许的最高的温度
 
     vt = [float(i) for i in range(290, temp_max)]
     vp = [exp(9.3876 - 3826.36 / (t - 45.47)) * 1.0e6 for t in vt]
@@ -82,7 +83,7 @@ def test_1():
 
 
 def test_2():
-    print(get_heat_need(273.15+20, 400))
+    print(get_heat_need(273.15 + 20, 400))
 
 
 if __name__ == '__main__':

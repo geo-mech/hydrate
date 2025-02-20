@@ -33,7 +33,13 @@ def create():
                            porosity=get_fai, pore_modulus=200e6, p=get_p, s=1.0, perm=get_k)
 
     seepage.set_solve(model,
-                      show_cells={'dim0': 0, 'dim1': 1, 'show_t': False, 'show_s': []},
+                      show_cells=dict(
+                          dim0=0,
+                          dim1=1,
+                          show_t=False,
+                          show_s=[],
+                          cmap='jet'
+                      ),
                       time_max=3600 * 24 * 30
                       )
     return model

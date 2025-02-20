@@ -1,7 +1,5 @@
-import datetime
 import multiprocessing
 import time
-import timeit
 
 
 def apply_async(tasks, processes=None, sleep=None):
@@ -30,7 +28,7 @@ def apply_async(tasks, processes=None, sleep=None):
         results = []
         for task in tasks:
             # 读取函数和参数
-            func = task.get('func', None)
+            func = task.get('func')
             assert func is not None
             args = task.get('args', [])
             kwds = task.get('kwds', {})
@@ -54,5 +52,3 @@ def create_async(func, args=None, kwds=None):
     if kwds is not None:
         task['kwds'] = kwds
     return task
-
-

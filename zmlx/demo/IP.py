@@ -6,9 +6,9 @@ import random
 import numpy as np
 
 from zml import InvasionPercolation
+from zmlx.alg.np import get_pointer
 from zmlx.seepage_mesh.cube import create_cube
 from zmlx.ui import gui
-from zmlx.alg.np import get_pointer
 
 
 def create():

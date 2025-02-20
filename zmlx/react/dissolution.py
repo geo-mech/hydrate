@@ -1,6 +1,6 @@
 import warnings
 
-from zml import Seepage, create_dict
+from zml import Seepage
 from zmlx.react.add_reaction import add_reaction
 
 
@@ -52,11 +52,11 @@ def create(*, sol=None, sol_in_liq=None, liq=None, ca_sol=None, rate=1.0, fa_t=N
     # 溶解量增大1，则teq增加1e8，则T-teq减小1e8，q减小，不利于溶解
     # 溶解度增大1，则teq降低1e8，则T-teq升高1e8，q增大，促进溶解
     # 设置当<虚拟>温度升高的时候，促进溶解
-    return {'components': [create_dict(kind=sol, weight=-1.0, fa_t=fa_t, fa_c=fa_c),
-                           create_dict(kind=sol_in_liq, weight=1.0, fa_t=fa_t, fa_c=fa_c)], 'temp': 280, 'heat': 0,
+    return {'components': [dict(kind=sol, weight=-1.0, fa_t=fa_t, fa_c=fa_c),
+                           dict(kind=sol_in_liq, weight=1.0, fa_t=fa_t, fa_c=fa_c)], 'temp': 280, 'heat': 0,
             'p2t': ([0, 1e8], [280, 280]),
-            'inhibitors': [create_dict(sol=sol_in_liq, liq=liq, c=[0, 1], t=[0, 1e8])],
-            'idt': ca_sol,   # 可以是一个属性字符串，后续添加的时候去注册
+            'inhibitors': [dict(sol=sol_in_liq, liq=liq, c=[0, 1], t=[0, 1e8])],
+            'idt': ca_sol,  # 可以是一个属性字符串，后续添加的时候去注册
             'wdt': -1.0e8,
             't2q': ([-1e8, 1e8], [-rate, rate])
             }

@@ -7,6 +7,7 @@ if _version is None:
     if _version_text == 'PyQt6':
         try:
             from PyQt6 import QtGui, QtCore, QtWidgets
+
             _version = 6
         except:
             pass
@@ -15,6 +16,7 @@ if _version is None:
     if _version_text == 'PyQt5':
         try:
             from PyQt5 import QtGui, QtCore, QtWidgets
+
             _version = 5
         except:
             pass
@@ -22,6 +24,7 @@ if _version is None:
 if _version is None:
     try:
         from PyQt6 import QtGui, QtCore, QtWidgets
+
         _version = 6
     except:
         pass
@@ -29,6 +32,7 @@ if _version is None:
 if _version is None:
     try:
         from PyQt5 import QtGui, QtCore, QtWidgets
+
         _version = 5
     except:
         pass
@@ -43,17 +47,16 @@ try:
     else:
         from PyQt5.QtWebEngineWidgets import QWebEngineView
         from PyQt5 import QtWebEngineWidgets
-except Exception as e:
-    print(f'Error import QWebEngineView: {e}')
+except:
     QWebEngineView = None
+    QtWebEngineWidgets = None
 
 try:
     if has_PyQt6:
         from PyQt6 import QtMultimedia
     else:
         from PyQt5 import QtMultimedia
-except Exception as e:
-    print(f'Error import QtMultimedia: {e}')
+except:
     QtMultimedia = None
 
 if has_PyQt6:
@@ -68,4 +71,5 @@ else:
     def screen_size():
         return QtWidgets.QDesktopWidget().availableGeometry()
 
-__all__ = ['QtGui', 'QtCore', 'QtWidgets', 'QtMultimedia', 'QWebEngineView', 'has_PyQt6', 'QAction', 'screen_size']
+__all__ = ['QtGui', 'QtCore', 'QtWidgets', 'QtMultimedia', 'QWebEngineView', 'has_PyQt6',
+           'QAction', 'screen_size']

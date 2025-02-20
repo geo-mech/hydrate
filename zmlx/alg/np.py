@@ -5,7 +5,6 @@
 from ctypes import c_double, POINTER
 
 import numpy as np
-from numpy import *  # 将numpy的内容引入
 
 
 def get_pointer(data, dtype=None):

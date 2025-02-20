@@ -80,7 +80,8 @@ def get_dheat(Nh=5.75):
             Long-term viability of carbon sequestration in deep-sea sediments (的附件)
     """
     # return 394225.0  (旧版本)
-    return 60.0e3 / get_mol_mass(Nh=Nh)   # 默认返回 406514.3
+    return 60.0e3 / get_mol_mass(Nh=Nh)  # 默认返回 406514.3
+
 
 #
 # if __name__ == '__main__':

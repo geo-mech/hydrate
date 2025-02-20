@@ -15,7 +15,7 @@ def test():
     5 6
     7 8
     """
-    print(load_txt(StringIO(text), usecols=1))
+    print(load_txt(StringIO(text)))
 
 
 if __name__ == '__main__':

@@ -1,7 +1,5 @@
 # ** desc = '水平井注入，浮力作用下气体运移、水合物成藏过程模拟(co2)'
 
-from zml import create_dict
-
 from zmlx.config import hydrate, seepage
 from zmlx.kr.create_kr import create_kr
 from zmlx.kr.create_krf import create_krf
@@ -120,20 +118,20 @@ def create(mass_rate=50.0 / (3600.0 * 24.0), years_inj=20,
                                inh_diff=1.0e6 / 400
                                )
     # 添加额外的属性
-    kw.update(create_dict(mesh=mesh,
-                          porosity=get_porosity,
-                          pore_modulus=200e6,
-                          denc=get_denc,
-                          temperature=get_t,
-                          p=get_p,
-                          s=s_ini,  # 初始饱和度自定义
-                          perm=perm,
-                          heat_cond=2.0,
-                          dt_max=3600 * 24 * 365 * 10,  # 允许的最大的时间步长
-                          dv_relative=0.1,  # 每一步流体流体的距离与网格大小的比值
-                          gr=create_krf(0.2, 3, as_interp=True,
-                                        k_max=1, s_max=1, count=200)
-                          ))
+    kw.update(dict(mesh=mesh,
+                   porosity=get_porosity,
+                   pore_modulus=200e6,
+                   denc=get_denc,
+                   temperature=get_t,
+                   p=get_p,
+                   s=s_ini,  # 初始饱和度自定义
+                   perm=perm,
+                   heat_cond=2.0,
+                   dt_max=3600 * 24 * 365 * 10,  # 允许的最大的时间步长
+                   dv_relative=0.1,  # 每一步流体流体的距离与网格大小的比值
+                   gr=create_krf(0.2, 3, as_interp=True,
+                                 k_max=1, s_max=1, count=200)
+                   ))
 
     # 用于求解的选项
     if save_dt_min is None:

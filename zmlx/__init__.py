@@ -16,6 +16,7 @@ except Exception as err:
     warnings.warn(f'meet exception when import GuiBuffer. error = {err}')
 
 from zmlx.alg.is_chinese import is_chinese
+
 if is_chinese(get_dir()):
     warnings.warn('Please make sure to install zml in a pure English path, '
                   'otherwise it may cause unpredictable errors.')
@@ -30,18 +31,17 @@ from zmlx.filesys.first_only import first_only
 from zmlx.filesys.tag import print_tag
 
 from zmlx.filesys.join_paths import join_paths
-from zmlx.filesys.opath import opath
 from zmlx.filesys.make_fname import make_fname
 from zmlx.alg.sys import get_latest_version
 from zmlx.alg.clamp import clamp
 from zmlx.alg.linspace import linspace
 from zmlx.alg.has_module import has_numpy, has_PyQt5, has_matplotlib
+from zmlx.io.path import get_path as opath
 
 # 使得import的时候，尽可能不去执行复杂的操作
 from zmlx.utility.RuntimeFunc import RuntimeFunc
 import os
 import warnings
-import zml
 
 setenv = app_data.setenv
 getenv = app_data.getenv
@@ -102,7 +102,6 @@ try:
 except Exception as err:
     warnings.warn(f'meet exception when import SeepageCellMonitor. error = {err}')
 
-
 try:
     __folder = os.path.dirname(__file__)
     app_data.add_path(__folder)
@@ -124,10 +123,8 @@ try:
 except:
     pass
 
-
 if __name__ == "__main__":
     try:
         open_gui(sys.argv)
     except:
         print(about())
-

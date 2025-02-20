@@ -28,4 +28,3 @@ class RuntimeFunc:
         f = self.get_func()
         if f is not None:
             return f(*args, **kwargs)
-

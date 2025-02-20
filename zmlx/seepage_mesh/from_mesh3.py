@@ -32,7 +32,7 @@ def face_centered(mesh, thick=1.0):
         for i0 in range(link.face_number):
             face0 = link.get_face(i0)
             dist0 = point_distance(face0.pos, pos)
-            for i1 in range(i0+1, link.face_number):
+            for i1 in range(i0 + 1, link.face_number):
                 face1 = link.get_face(i1)
                 dist1 = point_distance(face1.pos, pos)
                 dist = dist0 + dist1  # 总的流动距离
@@ -54,8 +54,3 @@ def test():
 
 if __name__ == '__main__':
     test()
-
-
-
-
-

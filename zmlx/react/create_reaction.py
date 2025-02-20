@@ -1,5 +1,6 @@
-from zml import Seepage
 from collections.abc import Iterable
+
+from zml import Seepage
 
 
 def create_reaction(model, **kwargs):
@@ -8,25 +9,25 @@ def create_reaction(model, **kwargs):
     """
     data = Seepage.Reaction()
 
-    temp = kwargs.get('temp', None)
+    temp = kwargs.get('temp')
     if temp is not None:
         data.temp = temp
 
-    heat = kwargs.get('heat', None)
+    heat = kwargs.get('heat')
     if heat is not None:
         data.heat = heat
 
-    p2t = kwargs.get('p2t', None)
+    p2t = kwargs.get('p2t')
     if p2t is not None:
         p, t = p2t
         data.set_p2t(p, t)
 
-    t2q = kwargs.get('t2q', None)
+    t2q = kwargs.get('t2q')
     if t2q is not None:
         t, q = t2q
         data.set_t2q(t, q)
 
-    components = kwargs.get('components', None)
+    components = kwargs.get('components')
     if components is not None:
         assert isinstance(components, Iterable)
         for comp in components:
@@ -37,19 +38,19 @@ def create_reaction(model, **kwargs):
             weight = comp.get('weight')
             assert -1 <= weight <= 1
 
-            fa_t = comp.get('fa_t', None)
+            fa_t = comp.get('fa_t')
             assert fa_t is not None
             if isinstance(fa_t, str):
                 fa_t = model.reg_flu_key(fa_t)
 
-            fa_c = comp.get('fa_c', None)
+            fa_c = comp.get('fa_c')
             assert fa_c is not None
             if isinstance(fa_c, str):
                 fa_c = model.reg_flu_key(fa_c)
 
             data.add_component(index=kind, weight=weight, fa_t=fa_t, fa_c=fa_c)
 
-    inhibitors = kwargs.get('inhibitors', None)
+    inhibitors = kwargs.get('inhibitors')
     if inhibitors is not None:
         assert isinstance(inhibitors, Iterable)
         for inh in inhibitors:
@@ -66,21 +67,20 @@ def create_reaction(model, **kwargs):
             data.add_inhibitor(sol=sol, liq=liq, c=inh.get('c'), t=inh.get('t'),
                                use_vol=use_vol)
 
-    idt = kwargs.get('idt', None)
+    idt = kwargs.get('idt')
     if idt is not None:
         if isinstance(idt, str):
             idt = model.reg_cell_key(idt)
         data.idt = idt
 
-    wdt = kwargs.get('wdt', None)
+    wdt = kwargs.get('wdt')
     if wdt is not None:
         data.wdt = wdt
 
-    irate = kwargs.get('irate', None)
+    irate = kwargs.get('irate')
     if irate is not None:
         if isinstance(irate, str):
             irate = model.reg_cell_key(irate)
         data.irate = irate
 
     return data
-

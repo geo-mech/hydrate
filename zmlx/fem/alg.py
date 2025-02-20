@@ -4,9 +4,9 @@ import numpy as np
 
 from zml import DynSys, Mesh3, ConjugateGradientSolver
 from zmlx.fem.create3 import create3
-from zmlx.geometry.point_distance import point_distance as get_distance
 from zmlx.fem.find_boundary import find_boundary
 from zmlx.fem.set_mas import set_mas
+from zmlx.geometry.point_distance import point_distance as get_distance
 
 
 def _test1():

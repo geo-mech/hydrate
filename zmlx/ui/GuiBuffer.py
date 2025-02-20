@@ -100,10 +100,12 @@ gui = GuiBuffer()
 
 
 def information(*args, **kwargs):
+    break_point()
     return gui.information(*args, **kwargs)
 
 
 def question(info):
+    break_point()
     return gui.question(info)
 
 
@@ -111,6 +113,12 @@ def plot(*args, **kwargs):
     """
     调用matplotlib执行绘图操作
     """
+    if 'gui_only' in kwargs:
+        if kwargs.get('gui_only'):
+            if not gui.exists():
+                return
+        kwargs.pop('gui_only')
+    break_point()
     gui.plot(*args, **kwargs)
 
 

@@ -1,4 +1,3 @@
-
 from zml import Seepage
 
 
@@ -34,4 +33,3 @@ def add(model: Seepage, *, text_key: str, **kwargs):
         assert isinstance(data, list)
         data.append(kwargs)
         put(model, text_key=text_key, data=data)
-

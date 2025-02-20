@@ -49,10 +49,13 @@ def create():
 
     # 用于求解的选项
     model.set_text(key='solve',
-                   text={'show_cells': {'dim0': 0, 'dim1': 2},
-                         'step_max': 10000,
-                         }
-                   )
+                   text=dict(
+                       show_cells=dict(
+                           dim0=0,
+                           dim1=2
+                       ),
+                       step_max=10000
+                   ))
     return model
 
 

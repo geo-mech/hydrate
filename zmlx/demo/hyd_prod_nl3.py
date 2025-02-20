@@ -120,8 +120,6 @@ def parse_coordinates(input_str):
     return x_values, y_values
 
 
-
-
 def create():
     """
     创建模型

@@ -1,3 +1,5 @@
+import sys
+
 
 def get_preferred_qt_version():
     """
@@ -9,19 +11,10 @@ def get_preferred_qt_version():
     if text == 'PyQt5' or text == 'PyQt6':
         return text
 
-    try:
-        from PyQt6 import QtGui, QtCore, QtWidgets
+    if sys.version_info >= (3, 10):  # Python 版本大于 3.11
         return 'PyQt6'
-    except:
-        pass
-
-    try:
-        from PyQt5 import QtGui, QtCore, QtWidgets
+    else:
         return 'PyQt5'
-    except:
-        pass
-
-    return 'PyQt6'
 
 
 if __name__ == '__main__':
