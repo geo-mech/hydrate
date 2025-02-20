@@ -73,4 +73,5 @@ def show_all():
 
 if __name__ == '__main__':
     from zmlx.ui import gui
+
     gui.execute(show_all, close_after_done=False)

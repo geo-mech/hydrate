@@ -143,5 +143,3 @@ def create_face_xy(mesh):
         result.append(lex)
     # 每一个元素都是一个线性表达式
     return result
-
-

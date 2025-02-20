@@ -6,8 +6,8 @@
     此模块后续可能会被标记为弃用。
 """
 
-from zmlx.utility.SeepageNumpy import as_numpy
 from zml import Seepage
+from zmlx.utility.SeepageNumpy import as_numpy
 
 text_key = 'adjust_vis'
 
@@ -82,7 +82,7 @@ def adjust(model: Seepage):
         flu = as_numpy(model).fluids(*fid)
         vis = flu.vis
         data_backups.append(vis)
-        flu.vis = vis * ratio   # 修改粘性系数
+        flu.vis = vis * ratio  # 修改粘性系数
 
 
 def restore(model: Seepage):
@@ -105,5 +105,3 @@ def restore(model: Seepage):
         flu = as_numpy(model).fluids(*fid)
         flu.vis = data_backups[idx]
     data_backups.clear()  # 清空数据
-
-

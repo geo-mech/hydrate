@@ -19,5 +19,3 @@ def get_viscosity(pre, temp, flu_def: Seepage.FluDef):
 
     if data is not None:
         return data(pre, temp)
-
-

@@ -1,5 +1,7 @@
-from PIL import Image
 import os
+
+from PIL import Image
+
 from zmlx.filesys.make_parent import make_parent
 
 

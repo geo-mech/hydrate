@@ -1,5 +1,5 @@
-import timeit
 import time
+import timeit
 
 
 def timing_show(key, func, *args, **kwargs):

@@ -1,6 +1,6 @@
+from zml import SeepageMesh, Mesh3
 from zmlx.geometry.get_center import get_center
 from zmlx.geometry.point_distance import point_distance
-from zml import SeepageMesh, Mesh3
 
 
 def split_triangles(vertexes: list, triangles: list):

@@ -2,8 +2,9 @@
 竖直方向的圆柱网格.
 """
 import numpy as np
-from zmlx.seepage_mesh.cylinder import create_cylinder
+
 from zml import SeepageMesh
+from zmlx.seepage_mesh.cylinder import create_cylinder
 
 
 def create(z=(0, 1, 2), r=(0, 1, 2)):

@@ -1,5 +1,3 @@
-import os
-
 from zmlx.filesys.make_parent import make_parent
 from zmlx.filesys.path import *
 from zmlx.io.json_ex import read as read_json, write as write_json

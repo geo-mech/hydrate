@@ -57,4 +57,3 @@ def save_ascii(cellfile, facefile, mesh):
             link = face.link
             file.write('%d %d %g %g\n' % (link[0], link[1],
                                           face.area, face.length))
-

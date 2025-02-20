@@ -1,8 +1,8 @@
 import warnings
 
-import pyqtgraph.colormap as pgc
-import pyqtgraph as pg
 import numpy as np
+import pyqtgraph as pg
+import pyqtgraph.colormap as pgc
 
 
 def from_matplotlib(name='coolwarm'):

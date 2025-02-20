@@ -103,7 +103,7 @@ class ConsoleWidget(QtWidgets.QWidget):
             self.button_exec.setEnabled(False)
             self.button_pause.setEnabled(True)
             self.button_exit.setEnabled(True)
-            self.input_editor.setVisible(samefile(self.workspace.get('__file__', None),
+            self.input_editor.setVisible(samefile(self.workspace.get('__file__'),
                                                   self.input_editor.get_fname()))
 
     def pause_clicked(self):

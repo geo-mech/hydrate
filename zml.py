@@ -82,20 +82,7 @@ class Object:
         return self
 
 
-def create_dict(**kwargs):
-    """
-    Converts the given parameter list into a dictionary
-
-    参数:
-    - **kwargs：包含属性名和对应值的关键字参数
-
-    返回:
-    - 一个字典，其中关键字参数的名称作为键，参数值作为值
-
-    异常:
-    - 无异常抛出
-    """
-    return kwargs
+create_dict = dict
 
 
 def is_array(o):
@@ -919,7 +906,7 @@ class Timer:
         """
         结束一个测试运行（并记录它）。
         """
-        t0 = self.__key2t.get(key, None)
+        t0 = self.__key2t.get(key)
         if t0 is not None:
             cpu_t = timeit.default_timer() - t0
             self.log(key, cpu_t)
@@ -13903,11 +13890,11 @@ class FractureNetwork(HasHandle):
         return self.get_vertex(index)
 
     core.use(c_size_t, 'frac_nt_add_bd', c_void_p, c_size_t, c_size_t)
-    core.use(None, 'frac_alg_add_frac', c_void_p,
+    core.use(None, 'frac_nt_add_frac', c_void_p,
              c_double, c_double, c_double, c_double,
              c_double, c_void_p)
 
-    def add_fracture(self, first, second, *, lave=None, data=None):
+    def add_fracture(self, first=None, second=None, *, lave=None, data=None, pos=None):
         """
         添加裂缝单元.
         注意：
@@ -13917,11 +13904,16 @@ class FractureNetwork(HasHandle):
             index = core.frac_nt_add_bd(self.handle, first, second)
             return self.get_fracture(index)
         else:
+            if pos is not None:
+                assert len(pos) == 4
+                assert first is None and second is None, 'you should not set first and second when pos is given'
+                first = pos[0: 2]
+                second = pos[2: 4]
             if data is not None:
                 assert isinstance(data, FractureNetwork.FractureData)
-            core.frac_alg_add_frac(self.handle, first[0], first[1],
-                                   second[0], second[1],
-                                   lave, 0 if data is None else data.handle)
+            core.frac_nt_add_frac(self.handle, first[0], first[1],
+                                  second[0], second[1],
+                                  lave, 0 if data is None else data.handle)
 
     core.use(None, 'frac_nt_clear', c_void_p)
 
@@ -13952,7 +13944,7 @@ class FractureNetwork(HasHandle):
     core.use(None, 'frac_nt_get_induced_along',
              c_void_p, c_void_p,
              c_double, c_double, c_double, c_double, c_void_p)
-    core.use(None, 'frac_alg_get_induced',
+    core.use(None, 'frac_nt_get_induced',
              c_void_p,
              c_size_t, c_size_t, c_void_p)
 
@@ -13964,7 +13956,7 @@ class FractureNetwork(HasHandle):
         if fa_xy is not None and fa_yy is not None and matrix is not None:
             assert isinstance(matrix, InfMatrix)
             assert self.fracture_number == matrix.size
-            core.frac_alg_get_induced(self.handle, fa_xy, fa_yy, matrix.handle)
+            core.frac_nt_get_induced(self.handle, fa_xy, fa_yy, matrix.handle)
         else:
             assert len(pos) == 2 or len(pos) == 4
             assert isinstance(sol2, DDMSolution2)
@@ -13978,7 +13970,7 @@ class FractureNetwork(HasHandle):
                                                pos[0], pos[1], pos[2], pos[3], sol2.handle)
             return buf
 
-    core.use(c_size_t, 'frac_alg_update_disp', c_void_p, c_void_p,
+    core.use(c_size_t, 'frac_nt_update_disp', c_void_p, c_void_p,
              c_size_t, c_size_t,
              c_double, c_double,
              c_size_t, c_size_t, c_double, c_double)
@@ -13991,11 +13983,11 @@ class FractureNetwork(HasHandle):
             这是DDM计算的最核心的函数
         """
         assert isinstance(matrix, InfMatrix)
-        return core.frac_alg_update_disp(self.handle, matrix.handle, fa_yy, fa_xy,
-                                         gradw_max, err_max, iter_min, iter_max,
-                                         ratio_max, dist_max)
+        return core.frac_nt_update_disp(self.handle, matrix.handle, fa_yy, fa_xy,
+                                        gradw_max, err_max, iter_min, iter_max,
+                                        ratio_max, dist_max)
 
-    core.use(None, 'frac_alg_extend_tip',
+    core.use(None, 'frac_nt_extend_tip',
              c_void_p, c_void_p, c_void_p,
              c_double, c_double, c_size_t, c_double)
 
@@ -14010,8 +14002,8 @@ class FractureNetwork(HasHandle):
         """
         assert isinstance(kic, Tensor2)
         assert isinstance(sol2, DDMSolution2)
-        core.frac_alg_extend_tip(self.handle, kic.handle, sol2.handle, lave, l_extend,
-                                 va_wmin, angle_max)
+        core.frac_nt_extend_tip(self.handle, kic.handle, sol2.handle, lave, l_extend,
+                                va_wmin, angle_max)
 
 
 class InfMatrix(HasHandle):
@@ -14056,18 +14048,26 @@ class FracAlg:
 
     @staticmethod
     def update_disp(network: FractureNetwork, *args, **kwargs):
+        warnings.warn('FracAlg.update_disp will be removed after 2026-2-11, use FractureNetwork.update_disp instead',
+                      DeprecationWarning)
         return network.update_disp(*args, **kwargs)
 
     @staticmethod
     def add_frac(network: FractureNetwork, p0, p1, lave, *, data=None):
+        warnings.warn('FracAlg.add_frac will be removed after 2026-2-11, use FractureNetwork.add_fracture instead',
+                      DeprecationWarning)
         return network.add_fracture(first=p0, second=p1, lave=lave, data=data)
 
     @staticmethod
     def extend_tip(network: FractureNetwork, *args, **kwargs):
+        warnings.warn('FracAlg.extend_tip will be removed after 2026-2-11, use FractureNetwork.extend_tip instead',
+                      DeprecationWarning)
         return network.extend_tip(*args, **kwargs)
 
     @staticmethod
     def get_induced(network: FractureNetwork, fa_xy, fa_yy, matrix):
+        warnings.warn('FracAlg.get_induced will be removed after 2026-2-11, use FractureNetwork.get_induced instead',
+                      DeprecationWarning)
         return network.get_induced(fa_xy=fa_xy, fa_yy=fa_yy, matrix=matrix)
 
     core.use(None, 'frac_alg_update_topology', c_void_p,
@@ -14112,10 +14112,10 @@ def main(argv: list):
 
 
 def __deprecated_func(pack_name, func, date=None):
-    return create_dict(pack_name=pack_name, func=func, date=date)
+    return dict(pack_name=pack_name, func=func, date=date)
 
 
-_deprecated_funcs = create_dict(
+_deprecated_funcs = dict(
     information=__deprecated_func('zmlx.ui.GuiBuffer', 'information', '2025-1-21'),
     question=__deprecated_func('zmlx.ui.GuiBuffer', 'question', '2025-1-21'),
     plot=__deprecated_func('zmlx.ui.GuiBuffer', 'plot', '2025-1-21'),

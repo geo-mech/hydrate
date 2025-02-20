@@ -29,5 +29,3 @@ def to_numpy(vec):
     """
     a = np.zeros(shape=vec.size, dtype=float)
     return write_numpy(vec, a)
-
-

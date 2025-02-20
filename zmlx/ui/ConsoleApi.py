@@ -1,6 +1,6 @@
 import warnings
 
-from zml import create_dict, log
+from zml import log
 
 try:
     import matplotlib.pyplot as plt
@@ -11,9 +11,9 @@ except Exception as e:
 
 class ConsoleApi:
     def __init__(self):
-        self.__commands = create_dict(about=self.show_all, information=self.show_all,
-                                      question=self.question, plot=self.plot,
-                                      progress=self.do_nothing)
+        self.__commands = dict(about=self.show_all, information=self.show_all,
+                               question=self.question, plot=self.plot,
+                               progress=self.do_nothing)
 
     @staticmethod
     def do_nothing(*args, **kwargs):
@@ -44,7 +44,7 @@ class ConsoleApi:
         try:
             fig = plt.figure()
             kernel(fig)
-            fname = kwargs.get('fname', None)
+            fname = kwargs.get('fname')
             if fname is not None:
                 dpi = kwargs.get('dpi', 300)
                 fig.savefig(fname=fname, dpi=dpi)
@@ -58,7 +58,7 @@ class ConsoleApi:
         """
         当GUI不存在的时候来执行默认的命令
         """
-        cmd = self.__commands.get(name, None)
+        cmd = self.__commands.get(name)
         if cmd is not None:
             return cmd(*args, **kwargs)
         else:

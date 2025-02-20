@@ -1,6 +1,7 @@
 import warnings
 
 from zml import is_array, Seepage
+
 try:
     import numpy as np
 except:
@@ -152,8 +153,8 @@ class SeepageCellMonitor:
         同时显示累积生产曲线和生产速率曲线：已废弃
         """
         try:
-            self.plot_prod(index, caption=None if caption is None else caption+'_mass', **kwargs)
-            self.plot_rate(index, caption=None if caption is None else caption+'_rate', **kwargs)
+            self.plot_prod(index, caption=None if caption is None else caption + '_mass', **kwargs)
+            self.plot_rate(index, caption=None if caption is None else caption + '_rate', **kwargs)
         except Exception as err:
             warnings.warn(f'meet exception <{err}> when call function <{self.plot}>')
 

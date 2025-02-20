@@ -45,4 +45,3 @@ def py2pyc(ipath: str, opath: str):
 if __name__ == '__main__':
     if len(sys.argv) == 3:
         py2pyc(ipath=sys.argv[1], opath=sys.argv[2])
-

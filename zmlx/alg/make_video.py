@@ -1,5 +1,6 @@
-import cv2   # python -m pip install opencv-python
 import glob
+
+import cv2  # python -m pip install opencv-python
 
 
 def make_video(video_name, image_folder, fps=30, img_ext='.jpg'):

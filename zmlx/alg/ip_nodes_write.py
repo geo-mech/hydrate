@@ -1,5 +1,6 @@
-import numpy as np
 from ctypes import c_double, POINTER
+
+import numpy as np
 
 
 def ip_nodes_write(ip_model, index, pointer=None, buf=None):

@@ -15,7 +15,7 @@ def create_task(func, args=None, kwds=None):
 
 def exec_task(task):
     # 读取函数和参数
-    func = task.get('func', None)
+    func = task.get('func')
     assert func is not None
     args = task.get('args', [])
     kwds = task.get('kwds', {})
@@ -54,7 +54,7 @@ def apply_threads(tasks):
 def test():
     tasks = []
     for idx in range(20):
-        tasks.append(create_task(func=lambda x: x**2, args=[idx]))
+        tasks.append(create_task(func=lambda x: x ** 2, args=[idx]))
     res = apply_threads(tasks)
     print(res)
 

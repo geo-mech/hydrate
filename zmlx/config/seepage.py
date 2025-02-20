@@ -40,12 +40,11 @@ Face的属性：
     perm: face位置的渗透率
 """
 import os
-import warnings
-
-import numpy as np
 from collections.abc import Iterable
 
-from zml import get_average_perm, Tensor3, Seepage, ConjugateGradientSolver
+import numpy as np
+
+from zml import get_average_perm, Tensor3, ConjugateGradientSolver
 from zmlx.alg.clamp import clamp
 from zmlx.alg.join_cols import join_cols
 from zmlx.config import (capillary, prod, fluid_heating, timer,
@@ -59,13 +58,13 @@ from zmlx.filesys.make_parent import make_parent
 from zmlx.filesys.tag import print_tag
 from zmlx.geometry.point_distance import point_distance
 from zmlx.plt.tricontourf import tricontourf
+from zmlx.react.add_reaction import add_reaction
 from zmlx.ui.GuiBuffer import gui
 from zmlx.utility.Field import Field
 from zmlx.utility.GuiIterator import GuiIterator
 from zmlx.utility.SaveManager import SaveManager
 from zmlx.utility.SeepageCellMonitor import SeepageCellMonitor
 from zmlx.utility.SeepageNumpy import as_numpy
-from zmlx.react.add_reaction import add_reaction
 
 # 确保这些import不会被PyCharm优化掉
 _unused = [get_face_gradient, get_face_diff, get_face_sum, get_face_left,
@@ -207,7 +206,7 @@ def get_cell_fm(model: Seepage, fid=None, mask=None):
 
 
 def show_cells(model: Seepage, dim0, dim1, mask=None, show_p=True, show_t=True,
-               show_s=True, folder=None, use_mass=False):
+               show_s=True, folder=None, use_mass=False, **opts):
     """
     二维绘图显示
 
@@ -233,7 +232,9 @@ def show_cells(model: Seepage, dim0, dim1, mask=None, show_p=True, show_t=True,
 
     x = get_cell_pos(model=model, dim=dim0, mask=mask)
     y = get_cell_pos(model=model, dim=dim1, mask=mask)
-    kw = {'title': f'time = {get_time(model, as_str=True)}'}
+
+    kw = dict(title=f'time = {get_time(model, as_str=True)}')
+    kw.update(opts)
 
     year = get_time(model) / (365 * 24 * 3600)
 
@@ -351,7 +352,7 @@ def list_comp_ids(model: Seepage):
     for idx in range(model.fludef_number):
         ids = _list_comp_ids(model.get_fludef(idx))
         for item in ids:
-            result.append([idx]+item)
+            result.append([idx] + item)
     return result
 
 
@@ -585,7 +586,7 @@ def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
         model.push_fluids(solid_buffer)
 
     # 更新砂子的体积（优先使用自定义的update_sand）
-    update_sand = slots.get('update_sand', None)
+    update_sand = slots.get('update_sand')
     if update_sand is None:
         update_sand = sand.iterate  # 优先使用自定义的update_sand
     update_sand(model=model)

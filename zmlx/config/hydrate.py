@@ -3,7 +3,7 @@
 """
 import warnings
 
-from zml import Seepage, create_dict, log
+from zml import Seepage, log
 from zmlx.alg.time2str import time2str
 from zmlx.config import seepage
 from zmlx.config.TherFlowConfig import TherFlowConfig
@@ -211,41 +211,41 @@ def create_caps(inh_diff=None,
     # 盐度的扩散
     if inh_diff is not None:
         assert inh_diff >= 0
-        cap = create_dict(fid0='inh', fid1='h2o',
-                          get_idx=lambda x, y, z: 0,
-                          data=[[[0, 1], [0, inh_diff]], ])
+        cap = dict(fid0='inh', fid1='h2o',
+                   get_idx=lambda x, y, z: 0,
+                   data=[[[0, 1], [0, inh_diff]], ])
         result.append(cap)
 
     # 溶解co2的扩散
     if co2_diff is not None:
         assert co2_diff >= 0
-        cap = create_dict(fid0='co2_in_liq', fid1='h2o',
-                          get_idx=lambda x, y, z: 0,
-                          data=[[[0, 1], [0, co2_diff]], ])
+        cap = dict(fid0='co2_in_liq', fid1='h2o',
+                   get_idx=lambda x, y, z: 0,
+                   data=[[[0, 1], [0, co2_diff]], ])
         result.append(cap)
 
     # 溶解ch4的扩散
     if ch4_diff is not None:
         assert ch4_diff >= 0
-        cap = create_dict(fid0='ch4_in_liq', fid1='h2o',
-                          get_idx=lambda x, y, z: 0,
-                          data=[[[0, 1], [0, ch4_diff]], ])
+        cap = dict(fid0='ch4_in_liq', fid1='h2o',
+                   get_idx=lambda x, y, z: 0,
+                   data=[[[0, 1], [0, ch4_diff]], ])
         result.append(cap)
 
     # 自由co2的扩散（毛管压力驱动下）
     if co2_cap is not None:
         assert co2_cap >= 0
-        cap = create_dict(fid0='co2', fid1='liq',
-                          get_idx=lambda x, y, z: 0,
-                          data=[[[0, 1], [0, co2_cap]], ])
+        cap = dict(fid0='co2', fid1='liq',
+                   get_idx=lambda x, y, z: 0,
+                   data=[[[0, 1], [0, co2_cap]], ])
         result.append(cap)
 
     # 自由ch4的扩散（毛管压力驱动下）
     if ch4_cap is not None:
         assert ch4_cap >= 0
-        cap = create_dict(fid0='ch4', fid1='liq',
-                          get_idx=lambda x, y, z: 0,
-                          data=[[[0, 1], [0, ch4_cap]], ])
+        cap = dict(fid0='ch4', fid1='liq',
+                   get_idx=lambda x, y, z: 0,
+                   data=[[[0, 1], [0, ch4_cap]], ])
         result.append(cap)
 
     if others is not None:
@@ -326,14 +326,14 @@ def create_kwargs(has_co2=False,
         gravity = [0, -10, 0]
 
     # 返回结果.
-    return create_dict(dt_max=dt_max,
-                       fludefs=fludefs,
-                       reactions=reactions,
-                       caps=caps,
-                       gr=gr,
-                       gravity=gravity,
-                       has_solid=True,
-                       **kwargs)
+    return dict(dt_max=dt_max,
+                fludefs=fludefs,
+                reactions=reactions,
+                caps=caps,
+                gr=gr,
+                gravity=gravity,
+                has_solid=True,
+                **kwargs)
 
 
 def create_t_ini(z_top=0.0, t_top=276.0, grad_t=0.04466):
@@ -480,12 +480,12 @@ class ConfigV2:
         返回用于seepage.create的参数列表
             当给定co2的时候，将使用给定的定义. (since 2024-1-10)
         """
-        return create_dict(dt_max=3600 * 24,
-                           fludefs=self.get_fludefs(h2o_density=h2o_density,
-                                                    co2=co2),
-                           reactions=self.reactions,
-                           caps=self.caps,
-                           gr=self.gr, gravity=[0, -10, 0], has_solid=True)
+        return dict(dt_max=3600 * 24,
+                    fludefs=self.get_fludefs(h2o_density=h2o_density,
+                                             co2=co2),
+                    reactions=self.reactions,
+                    caps=self.caps,
+                    gr=self.gr, gravity=[0, -10, 0], has_solid=True)
 
 
 class Config(TherFlowConfig):
@@ -615,16 +615,16 @@ class Config(TherFlowConfig):
             formation=support_ch4_hyd_form
         )
         # 抑制固体比例过高，增强计算稳定性 （非常必要）
-        r['inhibitors'].append(create_dict(sol=self.components['sol'],
-                                           liq=None,
-                                           c=[0, 0.8, 1.0],
-                                           t=[0, 0, -200.0]))
+        r['inhibitors'].append(dict(sol=self.components['sol'],
+                                    liq=None,
+                                    c=[0, 0.8, 1.0],
+                                    t=[0, 0, -200.0]))
         if has_inh:
             # 抑制剂修改平衡温度
-            r['inhibitors'].append(create_dict(sol=self.components['inh'],
-                                               liq=self.components['liq'],
-                                               c=salinity_c2t[0],
-                                               t=salinity_c2t[1]))
+            r['inhibitors'].append(dict(sol=self.components['inh'],
+                                        liq=self.components['liq'],
+                                        c=salinity_c2t[0],
+                                        t=salinity_c2t[1]))
         self.reactions.append(r)
 
         # -------------------------------------------------------------
@@ -647,16 +647,16 @@ class Config(TherFlowConfig):
                 fa_t=self.flu_keys['temperature'],
                 fa_c=self.flu_keys['specific_heat'])
             # 抑制固体比例过高，增强计算稳定性 （非常必要）
-            r['inhibitors'].append(create_dict(sol=self.components['sol'],
-                                               liq=None,
-                                               c=[0, 0.8, 1.0],
-                                               t=[0, 0, -200.0], ))
+            r['inhibitors'].append(dict(sol=self.components['sol'],
+                                        liq=None,
+                                        c=[0, 0.8, 1.0],
+                                        t=[0, 0, -200.0], ))
             if has_inh:
                 # 抑制剂修改平衡温度
-                r['inhibitors'].append(create_dict(sol=self.components['inh'],
-                                                   liq=self.components['liq'],
-                                                   c=salinity_c2t[0],
-                                                   t=salinity_c2t[1]))
+                r['inhibitors'].append(dict(sol=self.components['inh'],
+                                            liq=self.components['liq'],
+                                            c=salinity_c2t[0],
+                                            t=salinity_c2t[1]))
             self.reactions.append(r)
 
         # -------------------------------------------------------------

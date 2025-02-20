@@ -19,4 +19,3 @@ def enabled():
     window = get_window()
     if window is not None:
         return not window.is_running()
-

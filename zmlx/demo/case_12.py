@@ -58,7 +58,7 @@ def create():
                                porosity=0.3,
                                pore_modulus=100e6,
                                denc=denc,
-                               temperature=273.15+3.0,
+                               temperature=273.15 + 3.0,
                                p=4e6,
                                s=get_s,
                                perm=1.0e-14,

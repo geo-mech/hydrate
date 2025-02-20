@@ -13,9 +13,9 @@ import numpy as np
 from zml import set_srand, Dfn2, Seepage, ConjugateGradientSolver
 from zmlx.alg.time2str import time2str
 from zmlx.config import seepage
+from zmlx.demo.opath import opath
 from zmlx.filesys import path
 from zmlx.filesys.make_fname import make_fname
-from zmlx.demo.opath import opath
 from zmlx.filesys.tag import print_tag
 from zmlx.fluid import h2o
 from zmlx.geometry.point_distance import point_distance
