@@ -65,7 +65,7 @@ package_data = {
 # 使用 setup() 函数定义包的元数据
 setup(
     name='IggHydrate',  # 包名称
-    version='1.3.23',  # 包版本
+    version='1.3.25',  # 包版本
     description='IggHydrate',  # 描述
     author='Zhaobin Zhang',  # 作者名称
     author_email='zhangzhaobin@mail.iggcas.ac.cn',  # 作者邮箱

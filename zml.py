@@ -444,7 +444,7 @@ def load_cdll(name, *, first=None):
         如果加载失败，将打印错误信息。
     """
     path = app_data.find(name, first=first)
-    if path is not None:
+    if isinstance(path, str):
         try:
             assert isinstance(path, str)
             return cdll.LoadLibrary(path)
@@ -1647,7 +1647,7 @@ class Vector(HasHandle):
             if value is not None:
                 self.set(value)
                 return
-            if path is not None:
+            if isinstance(path, str):
                 self.load(path)
                 return
             if size is not None:
@@ -1676,8 +1676,8 @@ class Vector(HasHandle):
             二进制格式
             （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
+            make_parent(path)
             core.vf_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'vf_load', c_void_p, c_char_p)
@@ -1687,8 +1687,7 @@ class Vector(HasHandle):
         读取序列化文件。
             根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
             _check_ipath(path, self)
             core.vf_load(self.handle, make_c_char_p(path))
 
@@ -1856,8 +1855,8 @@ class IntVector(HasHandle):
 
         注意：必须使用纯英文路径
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
+            make_parent(path)
             core.vi_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'vi_load', c_void_p, c_char_p)
@@ -1872,8 +1871,7 @@ class IntVector(HasHandle):
 
         注意：必须使用纯英文路径
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
             _check_ipath(path, self)
             core.vi_load(self.handle, make_c_char_p(path))
 
@@ -2040,8 +2038,8 @@ class UintVector(HasHandle):
 
         注意：必须使用纯英文路径
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
+            make_parent(path)
             core.vui_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'vui_load', c_void_p, c_char_p)
@@ -2056,8 +2054,7 @@ class UintVector(HasHandle):
 
         注意：必须使用纯英文路径
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
             _check_ipath(path, self)
             core.vui_load(self.handle, make_c_char_p(path))
 
@@ -2072,7 +2069,7 @@ class UintVector(HasHandle):
 
         注意：必须使用纯英文路径
         """
-        if path is not None:
+        if isinstance(path, str):
             core.vui_print(self.handle, make_c_char_p(path))
 
     core.use(c_size_t, 'vui_size', c_void_p)
@@ -2403,7 +2400,7 @@ class Matrix2(HasHandle):
     def __init__(self, path=None, handle=None, size=None, value=None):
         super(Matrix2, self).__init__(handle, core.new_mat2, core.del_mat2)
         if handle is None:
-            if path is not None:
+            if isinstance(path, str):
                 self.load(path)
             if size is not None:
                 self.resize(size)
@@ -2430,8 +2427,8 @@ class Matrix2(HasHandle):
             二进制格式
             （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
+            make_parent(path)
             core.mat2_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'mat2_load', c_void_p, c_char_p)
@@ -2441,8 +2438,7 @@ class Matrix2(HasHandle):
         读取序列化文件。
             根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
             _check_ipath(path, self)
             core.mat2_load(self.handle, make_c_char_p(path))
 
@@ -2562,7 +2558,7 @@ class Matrix3(HasHandle):
         """
         super(Matrix3, self).__init__(handle, core.new_mat3, core.del_mat3)
         if handle is None:
-            if path is not None:
+            if isinstance(path, str):
                 self.load(path)
             if size is not None:
                 self.resize(size)
@@ -2589,8 +2585,8 @@ class Matrix3(HasHandle):
             二进制格式
             （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
+            make_parent(path)
             core.mat3_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'mat3_load', c_void_p, c_char_p)
@@ -2600,8 +2596,7 @@ class Matrix3(HasHandle):
         读取序列化文件。
             根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
             _check_ipath(path, self)
             core.mat3_load(self.handle, make_c_char_p(path))
 
@@ -2747,7 +2742,7 @@ class Tensor3Matrix3(HasHandle):
     def __init__(self, path=None, handle=None):
         super(Tensor3Matrix3, self).__init__(handle, core.new_ts3mat3, core.del_ts3mat3)
         if handle is None:
-            if path is not None:
+            if isinstance(path, str):
                 self.load(path)
 
     core.use(None, 'ts3mat3_save', c_void_p, c_char_p)
@@ -2767,8 +2762,8 @@ class Tensor3Matrix3(HasHandle):
             二进制格式
             （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
+            make_parent(path)
             core.ts3mat3_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'ts3mat3_load', c_void_p, c_char_p)
@@ -2778,8 +2773,7 @@ class Tensor3Matrix3(HasHandle):
         读取序列化文件。
             根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
             _check_ipath(path, self)
             core.ts3mat3_load(self.handle, make_c_char_p(path))
 
@@ -2892,7 +2886,7 @@ class Interp1(HasHandle):
         super(Interp1, self).__init__(handle, core.new_interp1, core.del_interp1)
         if handle is None:
             self.set(xmin=xmin, dx=dx, x=x, y=y, value=value)
-            if path is not None:
+            if isinstance(path, str):
                 self.load(path)
 
     core.use(None, 'interp1_save', c_void_p, c_char_p)
@@ -2912,8 +2906,8 @@ class Interp1(HasHandle):
             二进制格式
             （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
+            make_parent(path)
             core.interp1_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'interp1_load', c_void_p, c_char_p)
@@ -2923,8 +2917,7 @@ class Interp1(HasHandle):
         读取序列化文件。
             根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
             _check_ipath(path, self)
             core.interp1_load(self.handle, make_c_char_p(path))
 
@@ -3066,7 +3059,7 @@ class Interp2(HasHandle):
     def __init__(self, path=None, handle=None):
         super(Interp2, self).__init__(handle, core.new_interp2, core.del_interp2)
         if handle is None:
-            if path is not None:
+            if isinstance(path, str):
                 self.load(path)
 
     core.use(None, 'interp2_save', c_void_p, c_char_p)
@@ -3086,8 +3079,8 @@ class Interp2(HasHandle):
             二进制格式
             （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
+            make_parent(path)
             core.interp2_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'interp2_load', c_void_p, c_char_p)
@@ -3097,8 +3090,7 @@ class Interp2(HasHandle):
         读取序列化文件。
             根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
             _check_ipath(path, self)
             core.interp2_load(self.handle, make_c_char_p(path))
 
@@ -3219,7 +3211,7 @@ class Interp3(HasHandle):
     def __init__(self, path=None, handle=None):
         super(Interp3, self).__init__(handle, core.new_interp3, core.del_interp3)
         if handle is None:
-            if path is not None:
+            if isinstance(path, str):
                 self.load(path)
 
     core.use(None, 'interp3_save', c_void_p, c_char_p)
@@ -3239,8 +3231,8 @@ class Interp3(HasHandle):
             二进制格式
             （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
+            make_parent(path)
             core.interp3_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'interp3_load', c_void_p, c_char_p)
@@ -3250,8 +3242,7 @@ class Interp3(HasHandle):
         读取序列化文件。
             根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
             _check_ipath(path, self)
             core.interp3_load(self.handle, make_c_char_p(path))
 
@@ -3375,7 +3366,7 @@ class FileMap(HasHandle):
         if handle is None:
             if data is not None:
                 self.data = data
-            if path is not None:
+            if isinstance(path, str):
                 self.load(path)
 
     core.use(c_bool, 'fmap_is_dir', c_void_p)
@@ -3447,10 +3438,10 @@ class FileMap(HasHandle):
         """
         序列化保存 (鉴于此class的特殊性，务必保存为二进制格式，txt和xml格式，都可能带来不可预期的数据丢失).
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
             ext = os.path.splitext(path)[-1].lower()
             assert ext != '.txt' and ext != '.xml'
+            make_parent(path)
             core.fmap_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'fmap_load', c_void_p, c_char_p)
@@ -3459,8 +3450,7 @@ class FileMap(HasHandle):
         """
         序列化读取
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
             _check_ipath(path, self)
             core.fmap_load(self.handle, make_c_char_p(path))
 
@@ -3503,7 +3493,7 @@ class Array2(HasHandle):
     def __init__(self, x=None, y=None, path=None, handle=None):
         super(Array2, self).__init__(handle, core.new_array2, core.del_array2)
         if handle is None:
-            if path is not None:
+            if isinstance(path, str):
                 self.load(path)
             if x is not None:
                 self[0] = x
@@ -3529,8 +3519,8 @@ class Array2(HasHandle):
             二进制格式
             （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
+            make_parent(path)
             core.array2_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'array2_load', c_void_p, c_char_p)
@@ -3540,8 +3530,7 @@ class Array2(HasHandle):
         读取序列化文件。
             根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
             _check_ipath(path, self)
             core.array2_load(self.handle, make_c_char_p(path))
 
@@ -3630,7 +3619,7 @@ class Array3(HasHandle):
     def __init__(self, x=None, y=None, z=None, path=None, handle=None):
         super(Array3, self).__init__(handle, core.new_array3, core.del_array3)
         if handle is None:
-            if path is not None:
+            if isinstance(path, str):
                 self.load(path)
             if x is not None:
                 self[0] = x
@@ -3658,8 +3647,8 @@ class Array3(HasHandle):
             二进制格式
             （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
+            make_parent(path)
             core.array3_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'array3_load', c_void_p, c_char_p)
@@ -3669,8 +3658,7 @@ class Array3(HasHandle):
         读取序列化文件。
             根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
             _check_ipath(path, self)
             core.array3_load(self.handle, make_c_char_p(path))
 
@@ -3760,7 +3748,7 @@ class Tensor2(HasHandle):
         """
         super(Tensor2, self).__init__(handle, core.new_tensor2, core.del_tensor2)
         if handle is None:
-            if path is not None:
+            if isinstance(path, str):
                 self.load(path)
             if xx is not None:
                 self.xx = xx
@@ -3788,8 +3776,8 @@ class Tensor2(HasHandle):
             二进制格式
             （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
+            make_parent(path)
             core.tensor2_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'tensor2_load', c_void_p, c_char_p)
@@ -3799,8 +3787,7 @@ class Tensor2(HasHandle):
         读取序列化文件。
             根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
             _check_ipath(path, self)
             core.tensor2_load(self.handle, make_c_char_p(path))
 
@@ -3965,7 +3952,7 @@ class Tensor3(HasHandle):
     def __init__(self, xx=None, yy=None, zz=None, xy=None, yz=None, zx=None, path=None, handle=None):
         super(Tensor3, self).__init__(handle, core.new_tensor3, core.del_tensor3)
         if handle is None:
-            if path is not None:
+            if isinstance(path, str):
                 self.load(path)
             if xx is not None:
                 self.xx = xx
@@ -3999,8 +3986,8 @@ class Tensor3(HasHandle):
             二进制格式
             （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
+            make_parent(path)
             core.tensor3_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'tensor3_load', c_void_p, c_char_p)
@@ -4010,8 +3997,7 @@ class Tensor3(HasHandle):
         读取序列化文件。
             根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
             _check_ipath(path, self)
             core.tensor3_load(self.handle, make_c_char_p(path))
 
@@ -4178,7 +4164,7 @@ class Tensor2Interp2(HasHandle):
     def __init__(self, path=None, handle=None):
         super(Tensor2Interp2, self).__init__(handle, core.new_tensor2interp2, core.del_tensor2interp2)
         if handle is None:
-            if path is not None:
+            if isinstance(path, str):
                 self.load(path)
 
     core.use(None, 'tensor2interp2_save', c_void_p, c_char_p)
@@ -4198,8 +4184,8 @@ class Tensor2Interp2(HasHandle):
             二进制格式
             （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
+            make_parent(path)
             core.tensor2interp2_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'tensor2interp2_load', c_void_p, c_char_p)
@@ -4209,8 +4195,7 @@ class Tensor2Interp2(HasHandle):
         读取序列化文件。
             根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
             _check_ipath(path, self)
             core.tensor2interp2_load(self.handle, make_c_char_p(path))
 
@@ -4297,7 +4282,7 @@ class Tensor3Interp3(HasHandle):
     def __init__(self, path=None, handle=None):
         super(Tensor3Interp3, self).__init__(handle, core.new_tensor3interp3, core.del_tensor3interp3)
         if handle is None:
-            if path is not None:
+            if isinstance(path, str):
                 self.load(path)
 
     core.use(None, 'tensor3interp3_save', c_void_p, c_char_p)
@@ -4317,8 +4302,8 @@ class Tensor3Interp3(HasHandle):
             二进制格式
             （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
+            make_parent(path)
             core.tensor3interp3_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'tensor3interp3_load', c_void_p, c_char_p)
@@ -4328,8 +4313,7 @@ class Tensor3Interp3(HasHandle):
         读取序列化文件。
             根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
             _check_ipath(path, self)
             core.tensor3interp3_load(self.handle, make_c_char_p(path))
 
@@ -4430,7 +4414,7 @@ class Coord2(HasHandle):
     def __init__(self, origin=None, xdir=None, path=None, handle=None):
         super(Coord2, self).__init__(handle, core.new_coord2, core.del_coord2)
         if handle is None:
-            if path is not None:
+            if isinstance(path, str):
                 self.load(path)
             if origin is not None and xdir is not None:
                 self.set(origin, xdir)
@@ -4452,8 +4436,8 @@ class Coord2(HasHandle):
             二进制格式
             （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
+            make_parent(path)
             core.coord2_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'coord2_load', c_void_p, c_char_p)
@@ -4463,8 +4447,7 @@ class Coord2(HasHandle):
         读取序列化文件。
             根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
             _check_ipath(path, self)
             core.coord2_load(self.handle, make_c_char_p(path))
 
@@ -4562,7 +4545,7 @@ class Coord3(HasHandle):
         """
         super(Coord3, self).__init__(handle, core.new_coord3, core.del_coord3)
         if handle is None:  # 此时为新建对象.
-            if path is not None:
+            if isinstance(path, str):
                 self.load(path)
             if origin is not None and xdir is not None and ydir is not None:
                 self.set(origin, xdir, ydir)
@@ -4586,8 +4569,8 @@ class Coord3(HasHandle):
             二进制格式
             （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
+            make_parent(path)
             core.coord3_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'coord3_load', c_void_p, c_char_p)
@@ -4597,8 +4580,7 @@ class Coord3(HasHandle):
         读取序列化文件。
             根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
             _check_ipath(path, self)
             core.coord3_load(self.handle, make_c_char_p(path))
 
@@ -5154,7 +5136,7 @@ class Mesh3(HasHandle):
     def __init__(self, path=None, handle=None):
         super(Mesh3, self).__init__(handle, core.new_mesh3, core.del_mesh3)
         if handle is None:
-            if path is not None:
+            if isinstance(path, str):
                 self.load(path)
 
     def __str__(self):
@@ -5178,8 +5160,8 @@ class Mesh3(HasHandle):
             二进制格式
             （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
+            make_parent(path)
             core.mesh3_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'mesh3_load', c_void_p, c_char_p)
@@ -5189,8 +5171,7 @@ class Mesh3(HasHandle):
         读取序列化文件。
             根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
             _check_ipath(path, self)
             core.mesh3_load(self.handle, make_c_char_p(path))
 
@@ -5551,8 +5532,8 @@ class LinearExpr(HasHandle):
             二进制格式
             （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
+            make_parent(path)
             core.lexpr_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'lexpr_load', c_void_p, c_char_p)
@@ -5562,8 +5543,7 @@ class LinearExpr(HasHandle):
         读取序列化文件。
             根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
             _check_ipath(path, self)
             core.lexpr_load(self.handle, make_c_char_p(path))
 
@@ -5774,7 +5754,7 @@ class DynSys(HasHandle):
         """
         super(DynSys, self).__init__(handle, core.new_dynsys, core.del_dynsys)
         if handle is None:
-            if path is not None:
+            if isinstance(path, str):
                 self.load(path)
 
     core.use(None, 'dynsys_save', c_void_p, c_char_p)
@@ -5794,8 +5774,8 @@ class DynSys(HasHandle):
             二进制格式
             （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
+            make_parent(path)
             core.dynsys_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'dynsys_load', c_void_p, c_char_p)
@@ -5805,8 +5785,7 @@ class DynSys(HasHandle):
         读取序列化文件。
             根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
             _check_ipath(path, self)
             core.dynsys_load(self.handle, make_c_char_p(path))
 
@@ -6319,7 +6298,7 @@ class SpringSys(HasHandle):
     def __init__(self, path=None, handle=None):
         super(SpringSys, self).__init__(handle, core.new_springsys, core.del_springsys)
         if handle is None:
-            if path is not None:
+            if isinstance(path, str):
                 self.load(path)
 
     def __str__(self):
@@ -6367,9 +6346,9 @@ class SpringSys(HasHandle):
             二进制格式
             （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
-        if path is not None:
+        if isinstance(path, str):
             assert isinstance(path, str)
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+            make_parent(path)
             core.springsys_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'springsys_load', c_void_p, c_char_p)
@@ -6379,8 +6358,7 @@ class SpringSys(HasHandle):
         读取序列化文件。
             根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
             _check_ipath(path, self)
             core.springsys_load(self.handle, make_c_char_p(path))
 
@@ -7146,7 +7124,7 @@ class SeepageMesh(HasHandle, HasCells):
         """
         super(SeepageMesh, self).__init__(handle, core.new_seepage_mesh, core.del_seepage_mesh)
         if handle is None:
-            if path is not None:
+            if isinstance(path, str):
                 self.load(path)
 
     def __str__(self):
@@ -7173,8 +7151,8 @@ class SeepageMesh(HasHandle, HasCells):
         - .xml: XML格式（特定可读性，体积最大，读写最慢，跨平台）
         - 其他: 二进制格式（最快最小，但Windows和Linux下生成的文件不能互相读取）
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
+            make_parent(path)
             core.seepage_mesh_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'seepage_mesh_load', c_void_p, c_char_p)
@@ -7188,8 +7166,7 @@ class SeepageMesh(HasHandle, HasCells):
 
         根据扩展名确定文件格式（txt, xml, 二进制），参考save函数
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
             _check_ipath(path, self)
             core.seepage_mesh_load(self.handle, make_c_char_p(path))
 
@@ -7444,7 +7421,7 @@ class ElementMap(HasHandle):
     def __init__(self, path=None, handle=None):
         super(ElementMap, self).__init__(handle, core.new_element_map, core.del_element_map)
         if handle is None:
-            if path is not None:
+            if isinstance(path, str):
                 self.load(path)
 
     def __str__(self):
@@ -7467,8 +7444,8 @@ class ElementMap(HasHandle):
             二进制格式
             （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
+            make_parent(path)
             core.element_map_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'element_map_load', c_void_p, c_char_p)
@@ -7478,8 +7455,7 @@ class ElementMap(HasHandle):
         读取序列化文件。
             根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
             _check_ipath(path, self)
             core.element_map_load(self.handle, make_c_char_p(path))
 
@@ -7559,8 +7535,8 @@ class Groups(HasHandle):
             二进制格式
             （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
+            make_parent(path)
             core.groups_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'groups_load', c_void_p, c_char_p)
@@ -7570,8 +7546,7 @@ class Groups(HasHandle):
         读取序列化文件。
             根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
             _check_ipath(path, self)
             core.groups_load(self.handle, make_c_char_p(path))
 
@@ -7610,7 +7585,7 @@ class Seepage(HasHandle, HasCells):
             """
             super(Seepage.Reaction, self).__init__(handle, core.new_reaction, core.del_reaction)
             if handle is None:
-                if path is not None:
+                if isinstance(path, str):
                     self.load(path)
             else:
                 assert path is None
@@ -7632,8 +7607,8 @@ class Seepage(HasHandle, HasCells):
                 二进制格式
                 （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
             """
-            if path is not None:
-                assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+            if isinstance(path, str):
+                make_parent(path)
                 core.reaction_save(self.handle, make_c_char_p(path))
 
         core.use(None, 'reaction_load', c_void_p, c_char_p)
@@ -7643,8 +7618,7 @@ class Seepage(HasHandle, HasCells):
             读取序列化文件。
                 根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
             """
-            if path is not None:
-                assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+            if isinstance(path, str):
                 _check_ipath(path, self)
                 core.reaction_load(self.handle, make_c_char_p(path))
 
@@ -7920,7 +7894,7 @@ class Seepage(HasHandle, HasCells):
             super(Seepage.FluDef, self).__init__(handle, core.new_fludef, core.del_fludef)
             if handle is None:
                 # 现在，这是一个新建数据，将进行必要的初始化
-                if path is not None:
+                if isinstance(path, str):
                     self.load(path)
                 else:
                     self.den = den  # 即便给定的数据为None，也将使用(清除当前数据)
@@ -7950,8 +7924,8 @@ class Seepage(HasHandle, HasCells):
                 二进制格式
                 （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
             """
-            if path is not None:
-                assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+            if isinstance(path, str):
+                make_parent(path)
                 core.fludef_save(self.handle, make_c_char_p(path))
 
         core.use(None, 'fludef_load', c_void_p, c_char_p)
@@ -7961,8 +7935,7 @@ class Seepage(HasHandle, HasCells):
             读取序列化文件。
                 根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
             """
-            if path is not None:
-                assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+            if isinstance(path, str):
                 _check_ipath(path, self)
                 core.fludef_load(self.handle, make_c_char_p(path))
 
@@ -8223,8 +8196,8 @@ class Seepage(HasHandle, HasCells):
                 二进制格式
                 （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
             """
-            if path is not None:
-                assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+            if isinstance(path, str):
+                make_parent(path)
                 core.fluid_save(self.handle, make_c_char_p(path))
 
         core.use(None, 'fluid_load', c_void_p, c_char_p)
@@ -8234,8 +8207,7 @@ class Seepage(HasHandle, HasCells):
             读取序列化文件。
                 根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
             """
-            if path is not None:
-                assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+            if isinstance(path, str):
                 _check_ipath(path, self)
                 core.fluid_load(self.handle, make_c_char_p(path))
 
@@ -8502,7 +8474,7 @@ class Seepage(HasHandle, HasCells):
         def __init__(self, path=None, handle=None):
             super(Seepage.CellData, self).__init__(handle, core.new_seepage_cell, core.del_seepage_cell)
             if handle is None:
-                if path is not None:
+                if isinstance(path, str):
                     self.load(path)
 
         core.use(None, 'seepage_cell_save', c_void_p, c_char_p)
@@ -8522,8 +8494,8 @@ class Seepage(HasHandle, HasCells):
                 二进制格式
                 （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
             """
-            if path is not None:
-                assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+            if isinstance(path, str):
+                make_parent(path)
                 core.seepage_cell_save(self.handle, make_c_char_p(path))
 
         core.use(None, 'seepage_cell_load', c_void_p, c_char_p)
@@ -8533,8 +8505,7 @@ class Seepage(HasHandle, HasCells):
             读取序列化文件。
                 根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
             """
-            if path is not None:
-                assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+            if isinstance(path, str):
                 _check_ipath(path, self)
                 core.seepage_cell_load(self.handle, make_c_char_p(path))
 
@@ -9078,7 +9049,7 @@ class Seepage(HasHandle, HasCells):
         def __init__(self, path=None, handle=None):
             super(Seepage.FaceData, self).__init__(handle, core.new_seepage_face, core.del_seepage_face)
             if handle is None:
-                if path is not None:
+                if isinstance(path, str):
                     self.load(path)
 
         core.use(None, 'seepage_face_save', c_void_p, c_char_p)
@@ -9098,8 +9069,8 @@ class Seepage(HasHandle, HasCells):
                 二进制格式
                 （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
             """
-            if path is not None:
-                assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+            if isinstance(path, str):
+                make_parent(path)
                 core.seepage_face_save(self.handle, make_c_char_p(path))
 
         core.use(None, 'seepage_face_load', c_void_p, c_char_p)
@@ -9109,8 +9080,7 @@ class Seepage(HasHandle, HasCells):
             读取序列化文件。
                 根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
             """
-            if path is not None:
-                assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+            if isinstance(path, str):
                 _check_ipath(path, self)
                 core.seepage_face_load(self.handle, make_c_char_p(path))
 
@@ -9329,7 +9299,7 @@ class Seepage(HasHandle, HasCells):
         def __init__(self, path=None, handle=None):
             super(Seepage.Injector, self).__init__(handle, core.new_injector, core.del_injector)
             if handle is None:
-                if path is not None:
+                if isinstance(path, str):
                     self.load(path)
 
         core.use(None, 'injector_save', c_void_p, c_char_p)
@@ -9349,8 +9319,8 @@ class Seepage(HasHandle, HasCells):
                 二进制格式
                 （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
             """
-            if path is not None:
-                assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+            if isinstance(path, str):
+                make_parent(path)
                 core.injector_save(self.handle, make_c_char_p(path))
 
         core.use(None, 'injector_load', c_void_p, c_char_p)
@@ -9360,8 +9330,7 @@ class Seepage(HasHandle, HasCells):
             读取序列化文件。
                 根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
             """
-            if path is not None:
-                assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+            if isinstance(path, str):
                 _check_ipath(path, self)
                 core.injector_load(self.handle, make_c_char_p(path))
 
@@ -9720,7 +9689,7 @@ class Seepage(HasHandle, HasCells):
         super(Seepage, self).__init__(handle, core.new_seepage, core.del_seepage)
         self.__updater = None
         if handle is None:
-            if path is not None:
+            if isinstance(path, str):
                 self.load(path)
 
     def __str__(self):
@@ -9745,8 +9714,8 @@ class Seepage(HasHandle, HasCells):
             二进制格式
             （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
+            make_parent(path)
             core.seepage_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'seepage_load', c_void_p, c_char_p)
@@ -9756,8 +9725,7 @@ class Seepage(HasHandle, HasCells):
         读取序列化文件。
             根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
             _check_ipath(path, self)
             core.seepage_load(self.handle, make_c_char_p(path))
 
@@ -11732,7 +11700,7 @@ class Thermal(HasHandle):
     def __init__(self, path=None, handle=None):
         super(Thermal, self).__init__(handle, core.new_thermal, core.del_thermal)
         if handle is None:
-            if path is not None:
+            if isinstance(path, str):
                 self.load(path)
 
     def __str__(self):
@@ -11755,8 +11723,8 @@ class Thermal(HasHandle):
             二进制格式
             （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
+            make_parent(path)
             core.thermal_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'thermal_load', c_void_p, c_char_p)
@@ -11766,8 +11734,7 @@ class Thermal(HasHandle):
         读取序列化文件。
             根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
             _check_ipath(path, self)
             core.thermal_load(self.handle, make_c_char_p(path))
 
@@ -12477,7 +12444,7 @@ class InvasionPercolation(HasHandle):
             （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
         assert isinstance(path, str)
-        assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        make_parent(path)
         core.ip_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'ip_load', c_void_p, c_char_p)
@@ -12487,8 +12454,7 @@ class InvasionPercolation(HasHandle):
         读取序列化文件。
             根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
             _check_ipath(path, self)
             core.ip_load(self.handle, make_c_char_p(path))
 
@@ -13062,7 +13028,7 @@ class Dfn2(HasHandle):
     def __init__(self, path=None, handle=None):
         super(Dfn2, self).__init__(handle, core.new_dfn2d, core.del_dfn2d)
         if handle is None:
-            if path is not None:
+            if isinstance(path, str):
                 self.load(path)
 
     core.use(None, 'dfn2d_save', c_void_p, c_char_p)
@@ -13082,8 +13048,8 @@ class Dfn2(HasHandle):
             二进制格式
             （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
+            make_parent(path)
             core.dfn2d_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'dfn2d_load', c_void_p, c_char_p)
@@ -13093,8 +13059,7 @@ class Dfn2(HasHandle):
         读取序列化文件。
             根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
             _check_ipath(path, self)
             core.dfn2d_load(self.handle, make_c_char_p(path))
 
@@ -13214,8 +13179,8 @@ class Lattice3(HasHandle):
             二进制格式
             （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
+            make_parent(path)
             core.lat3_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'lat3_load', c_void_p, c_char_p)
@@ -13225,8 +13190,7 @@ class Lattice3(HasHandle):
         读取序列化文件。
             根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
             _check_ipath(path, self)
             core.lat3_load(self.handle, make_c_char_p(path))
 
@@ -13352,8 +13316,8 @@ class DDMSolution2(HasHandle):
             二进制格式
             （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
+            make_parent(path)
             core.ddm_sol2_save(self.handle, make_c_char_p(path))
 
     def load(self, path):
@@ -13361,8 +13325,7 @@ class DDMSolution2(HasHandle):
         读取序列化文件。
             根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
             core.ddm_sol2_load(self.handle, make_c_char_p(path))
 
     core.use(None, 'ddm_sol2_set_alpha', c_void_p, c_double)
@@ -13780,7 +13743,7 @@ class FractureNetwork(HasHandle):
     def __init__(self, path=None, handle=None):
         super(FractureNetwork, self).__init__(handle, core.new_frac_nt, core.del_frac_nt)
         if handle is None:
-            if path is not None:
+            if isinstance(path, str):
                 self.load(path)
 
     def __str__(self):
@@ -13804,8 +13767,8 @@ class FractureNetwork(HasHandle):
             二进制格式
             （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
+            make_parent(path)
             core.frac_nt_save(self.handle, make_c_char_p(path))
 
     core.use(None, 'frac_nt_load', c_void_p, c_char_p)
@@ -13815,8 +13778,7 @@ class FractureNetwork(HasHandle):
         读取序列化文件。
             根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
         """
-        if path is not None:
-            assert not is_chinese(path), f'You must use a pure English path while the given path is:\n\t{path}'
+        if isinstance(path, str):
             _check_ipath(path, self)
             core.frac_nt_load(self.handle, make_c_char_p(path))
 

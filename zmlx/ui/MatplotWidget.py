@@ -6,7 +6,8 @@ import matplotlib
 matplotlib.use('QtAgg')
 # 使用 matplotlib中的FigureCanvas (在使用 Qt5 Backends中 FigureCanvas继承自QtWidgets.QWidget)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from zmlx.ui.Qt import QtWidgets, QtCore, QtGui, QAction
+from zmlx.ui.Qt import QtWidgets, QtCore, QtGui
+from zmlx.ui.QtWidgets.QAction import QAction
 import matplotlib.pyplot as plt
 
 

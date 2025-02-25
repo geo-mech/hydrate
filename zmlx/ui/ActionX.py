@@ -1,5 +1,5 @@
 from zmlx.ui.Config import *
-from zmlx.ui.Qt import QAction
+from zmlx.ui.QtWidgets.QAction import QAction
 
 
 class ActionX(QAction):

@@ -1,7 +1,7 @@
 import sys
 
 from zml import core, lic, get_dir
-from zmlx.ui.Qt import QtWidgets, QtCore, has_PyQt6
+from zmlx.ui.Qt import QtWidgets, QtCore, QtName
 
 
 class About(QtWidgets.QTableWidget):
@@ -25,7 +25,7 @@ class About(QtWidgets.QTableWidget):
                 ['当前版本', f'{core.time_compile}; {core.compiler}'],
                 ['本机授权情况', f'{summary}'],
                 ['运行环境', f'Python {sys.version}'],
-                ['界面平台', 'PyQt6' if has_PyQt6 else 'PyQt5'],
+                ['界面平台', QtName],
                 ['网址', 'https://gitee.com/geomech/hydrate'],
                 ['作者', '张召彬'],
                 ['单位', '中国科学院地质与地球物理研究所'],

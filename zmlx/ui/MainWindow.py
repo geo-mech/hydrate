@@ -14,7 +14,8 @@ from zmlx.ui.ConsoleWidget import ConsoleWidget
 from zmlx.ui.GuiApi import GuiApi
 from zmlx.ui.GuiBuffer import gui
 from zmlx.ui.Label import Label
-from zmlx.ui.Qt import QtCore, has_PyQt6, QtWidgets, QtMultimedia
+from zmlx.ui.Qt import QtCore, is_PyQt6, QtWidgets
+from zmlx.ui.QtWidgets.QtMultimedia import QtMultimedia
 from zmlx.ui.TabWidget import TabWidget
 from zmlx.ui.TaskProc import TaskProc
 from zmlx.ui.VersionLabel import VersionLabel
@@ -233,7 +234,7 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         尝试刷新标题以及当前的页面
         """
-        if hasattr(self, 'titleText') and self.__title is not None:
+        if self.__title is not None:
             self.setWindowTitle(f'{self.__title}')
         else:
             self.setWindowTitle(f'WorkDir: {os.getcwd()}')
@@ -631,7 +632,7 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
         sys.stderr = win.get_output_widget()
 
         try:
-            name = 'main_window_size_PyQt6' if has_PyQt6 else 'main_window_size'
+            name = 'main_window_size_PyQt6' if is_PyQt6 else 'main_window_size'
             load_window_size(win, name)
         except Exception as err:
             print(f'Error: {err}')
@@ -643,7 +644,7 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
 
     def f2():
         try:
-            name = 'main_window_size_PyQt6' if has_PyQt6 else 'main_window_size'
+            name = 'main_window_size_PyQt6' if is_PyQt6 else 'main_window_size'
             save_window_size(win, name)
         except Exception as err:
             print(f'Error: {err}')

@@ -1,7 +1,8 @@
 import os
 
 from zmlx.ui.GuiBuffer import gui
-from zmlx.ui.Qt import QWebEngineView, QtCore
+from zmlx.ui.Qt import QtCore
+from zmlx.ui.QtWidgets.QWebEngineView import QWebEngineView
 
 
 def open_url(url: str, caption=None, on_top=None, zoom_factor=2,

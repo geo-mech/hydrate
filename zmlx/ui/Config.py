@@ -7,7 +7,8 @@ import os
 from zml import app_data, read_text, write_text
 from zmlx.alg.clamp import clamp
 from zmlx.io.json_ex import read as read_json
-from zmlx.ui.Qt import QtGui, QtCore, screen_size
+from zmlx.ui.Qt import QtGui, QtCore
+from zmlx.ui.alg.screen_size import screen_size
 
 try:
     app_data.add_path(os.path.join(os.path.dirname(__file__), 'data'))
