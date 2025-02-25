@@ -68,7 +68,8 @@ class GuiBuffer:
     def __getattr__(self, name):
         return GuiBuffer.Agent(self.get(), name)
 
-    def execute(self, func, keep_cwd=True, close_after_done=True, args=None, kwargs=None, disable_gui=False):
+    def execute(self, func, keep_cwd=True, close_after_done=True, args=None,
+                kwargs=None, disable_gui=False):
         """
         尝试在gui模式下运行给定的函数 func
         """
@@ -84,7 +85,8 @@ class GuiBuffer:
 
         try:
             from zmlx.ui.MainWindow import execute
-            return execute(fx, keep_cwd=keep_cwd, close_after_done=close_after_done)
+            return execute(fx, keep_cwd=keep_cwd,
+                           close_after_done=close_after_done)
         except Exception as err:
             print(f'call gui failed: {err}')
             return fx()
@@ -113,11 +115,9 @@ def plot(*args, **kwargs):
     """
     调用matplotlib执行绘图操作
     """
-    if 'gui_only' in kwargs:
-        if kwargs.get('gui_only'):
-            if not gui.exists():
-                return
-        kwargs.pop('gui_only')
+    gui_only = kwargs.pop('gui_only', False)
+    if gui_only and not gui.exists():
+        return
     break_point()
     gui.plot(*args, **kwargs)
 

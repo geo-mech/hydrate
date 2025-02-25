@@ -5,7 +5,7 @@ import numpy as np
 from zml import DynSys, Mesh3, ConjugateGradientSolver
 from zmlx.fem.create3 import create3
 from zmlx.fem.find_boundary import find_boundary
-from zmlx.fem.set_mas import set_mas
+from zmlx.fem.set_mass import set_mass
 from zmlx.geometry.point_distance import point_distance as get_distance
 
 
@@ -132,23 +132,23 @@ def compute_disp(mesh: Mesh3, na_dx=None, na_dy=None, na_dz=None, ba_dd=None, ba
         设置边界条件
         """
         # x
-        set_mas(_dyn, find_boundary(_dyn, n_dim=3, i_dim=0, lower=1, i_dir=0, eps=1.0e-3), bound_mas)
-        set_mas(_dyn, find_boundary(_dyn, n_dim=3, i_dim=0, lower=0, i_dir=0, eps=1.0e-3), bound_mas)
+        set_mass(_dyn, find_boundary(_dyn, n_dim=3, i_dim=0, lower=1, i_dir=0, eps=1.0e-3), bound_mas)
+        set_mass(_dyn, find_boundary(_dyn, n_dim=3, i_dim=0, lower=0, i_dir=0, eps=1.0e-3), bound_mas)
         if not bound_sym:
-            set_mas(_dyn, find_boundary(_dyn, n_dim=3, i_dim=0, lower=1, i_dir=1, eps=1.0e-3), bound_mas)
-            set_mas(_dyn, find_boundary(_dyn, n_dim=3, i_dim=0, lower=0, i_dir=1, eps=1.0e-3), bound_mas)
-            set_mas(_dyn, find_boundary(_dyn, n_dim=3, i_dim=0, lower=1, i_dir=2, eps=1.0e-3), bound_mas)
-            set_mas(_dyn, find_boundary(_dyn, n_dim=3, i_dim=0, lower=0, i_dir=2, eps=1.0e-3), bound_mas)
+            set_mass(_dyn, find_boundary(_dyn, n_dim=3, i_dim=0, lower=1, i_dir=1, eps=1.0e-3), bound_mas)
+            set_mass(_dyn, find_boundary(_dyn, n_dim=3, i_dim=0, lower=0, i_dir=1, eps=1.0e-3), bound_mas)
+            set_mass(_dyn, find_boundary(_dyn, n_dim=3, i_dim=0, lower=1, i_dir=2, eps=1.0e-3), bound_mas)
+            set_mass(_dyn, find_boundary(_dyn, n_dim=3, i_dim=0, lower=0, i_dir=2, eps=1.0e-3), bound_mas)
         # y
-        set_mas(_dyn, find_boundary(_dyn, n_dim=3, i_dim=1, lower=1, i_dir=1, eps=1.0e-3), bound_mas)
-        set_mas(_dyn, find_boundary(_dyn, n_dim=3, i_dim=1, lower=0, i_dir=1, eps=1.0e-3), bound_mas)
+        set_mass(_dyn, find_boundary(_dyn, n_dim=3, i_dim=1, lower=1, i_dir=1, eps=1.0e-3), bound_mas)
+        set_mass(_dyn, find_boundary(_dyn, n_dim=3, i_dim=1, lower=0, i_dir=1, eps=1.0e-3), bound_mas)
         if not bound_sym:
-            set_mas(_dyn, find_boundary(_dyn, n_dim=3, i_dim=1, lower=1, i_dir=0, eps=1.0e-3), bound_mas)
-            set_mas(_dyn, find_boundary(_dyn, n_dim=3, i_dim=1, lower=0, i_dir=0, eps=1.0e-3), bound_mas)
-            set_mas(_dyn, find_boundary(_dyn, n_dim=3, i_dim=1, lower=1, i_dir=2, eps=1.0e-3), bound_mas)
-            set_mas(_dyn, find_boundary(_dyn, n_dim=3, i_dim=1, lower=0, i_dir=2, eps=1.0e-3), bound_mas)
+            set_mass(_dyn, find_boundary(_dyn, n_dim=3, i_dim=1, lower=1, i_dir=0, eps=1.0e-3), bound_mas)
+            set_mass(_dyn, find_boundary(_dyn, n_dim=3, i_dim=1, lower=0, i_dir=0, eps=1.0e-3), bound_mas)
+            set_mass(_dyn, find_boundary(_dyn, n_dim=3, i_dim=1, lower=1, i_dir=2, eps=1.0e-3), bound_mas)
+            set_mass(_dyn, find_boundary(_dyn, n_dim=3, i_dim=1, lower=0, i_dir=2, eps=1.0e-3), bound_mas)
         # z
-        set_mas(_dyn, find_boundary(_dyn, n_dim=3, i_dim=2, lower=1, i_dir=2, eps=1.0e-3), bound_mas)
+        set_mass(_dyn, find_boundary(_dyn, n_dim=3, i_dim=2, lower=1, i_dir=2, eps=1.0e-3), bound_mas)
 
     assert na_dx is not None and na_dy is not None and na_dz is not None
     for node in mesh.nodes:

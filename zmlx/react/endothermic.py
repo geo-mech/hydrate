@@ -1,9 +1,5 @@
 from zmlx.alg.clamp import clamp
 
-# 231031: 将rate的默认值设置为None (在t2q为None的时候，必须设置rate)
-
-version = 231031
-
 
 def create(left, right, temp, heat, rate=None, fa_t=None, fa_c=None, l2r=True, r2l=True, p2t=None,
            t2q=None, inhibitors=None):

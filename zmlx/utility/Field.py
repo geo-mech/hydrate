@@ -25,7 +25,7 @@ class Field:
         """
         create the field. treat it as a constant field when it is not a function(__call__ not defined)
         """
-        if hasattr(value, '__call__'):
+        if callable(value):
             self.__field = value
         else:
             self.__field = Field.Constant(value)

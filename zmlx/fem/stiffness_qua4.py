@@ -5,6 +5,7 @@ Created on Sun Feb 19 15:38:08 2023
 https://calfem-for-python.readthedocs.io/en/latest/_modules/calfem/core.html#bar1s
 """
 import numpy as np
+from zmlx.fem.stiffness_triangle import stiffness as tri3
 
 
 def stiffness(x0, x1, x2, x3, y0, y1, y2, y3, E, mu):
@@ -24,45 +25,6 @@ def stiffness(x0, x1, x2, x3, y0, y1, y2, y3, E, mu):
         Ke                      element stiffness matrix (8 x 8)
 
     """
-
-    def tri3(x0, x1, x2, y0, y1, y2, E, nu):
-        """
-        """
-        ex = [x0, x1, x2]
-        ey = [y0, y1, y2]
-        te = 0.3  # (Thickness) in our case is z
-
-        # the matrix C contains the coordinates of the triangle corner nodes
-        C = np.array([
-            [1, ex[0], ey[0], 0, 0, 0],
-            [0, 0, 0, 1, ex[0], ey[0]],
-            [1, ex[1], ey[1], 0, 0, 0],
-            [0, 0, 0, 1, ex[1], ey[1]],
-            [1, ex[2], ey[2], 0, 0, 0],
-            [0, 0, 0, 1, ex[2], ey[2]]
-        ])
-
-        A = 0.5 * np.linalg.det(np.array([
-            [1, ex[0], ey[0]],
-            [1, ex[1], ey[1]],
-            [1, ex[2], ey[2]]
-        ]))
-        # Stress elastic matrix
-        Dm = E / (1 - nu ** 2) * np.array([[1, nu, 0],
-                                           [nu, 1, 0],
-                                           [0, 0, (1 - nu) / 2]])
-
-        # constant for the Constant Strain Triangle
-        B = np.array([
-            [0, 1, 0, 0, 0, 0, ],
-            [0, 0, 0, 0, 0, 1, ],
-            [0, 0, 1, 0, 1, 0, ]
-        ]) @ np.linalg.inv(C)
-
-        ke = np.transpose(B) @ Dm @ B * A * te
-
-        return ke
-
     ex = [x0, x1, x2, x3]
     ey = [y0, y1, y2, y3]
 
@@ -99,9 +61,9 @@ def stiffness(x0, x1, x2, x3, y0, y1, y2, y3, E, mu):
     aindx = np.delete(aindx, cd, 0)
     bindx = cd
 
-    Kaa = np.mat(K[np.ix_(aindx, aindx)])
-    Kab = np.mat(K[np.ix_(aindx, bindx)])
-    Kbb = np.mat(K[np.ix_(bindx, bindx)])
+    Kaa = np.asmatrix(K[np.ix_(aindx, aindx)])
+    Kab = np.asmatrix(K[np.ix_(aindx, bindx)])
+    Kbb = np.asmatrix(K[np.ix_(bindx, bindx)])
 
     K1 = Kaa - Kab * Kbb.I * Kab.T
 

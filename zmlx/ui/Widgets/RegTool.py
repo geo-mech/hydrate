@@ -30,7 +30,7 @@ class RegTool(QtWidgets.QWidget):
 
     def apply_reg(self):
         text = self.code.toPlainText()
-        if len(text) > 10:
+        if len(text) > 0:
             try:
                 code = reg(text)
                 print(code)

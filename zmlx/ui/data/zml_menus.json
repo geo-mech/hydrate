@@ -5,28 +5,25 @@
     "open.py",
     "demo.py",
     "open_cwd.py",
+    "view_cwd.py",
     "py_new.py",
     "set_demo_opath.py"
   ],
   "显示": [
     "refresh.py",
-    "cls.py",
-    "view_cwd.py",
     "memory.py",
     "timer.py",
-    "console.py",
-    "close_all_tabs.py"
+    "console.py"
   ],
-  "控制台": [
+  "操作": [
     "console_exec.py",
     "console_pause.py",
     "console_resume.py",
     "console_stop.py",
     "console_kill.py",
     "console_hide.py",
-    "console_show.py"
-  ],
-  "操作": [
+    "console_show.py",
+    "close_all_tabs.py",
     "print_tag.py",
     "play_images.py"
   ],

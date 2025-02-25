@@ -1,4 +1,4 @@
-from zmlx.ui.GuiBuffer import plot
+from zmlx.plt.plot_on_axes import plot_on_axes
 
 
 def scatter(items=None, get_val=None, x=None, y=None, z=None, c=None,
@@ -22,27 +22,22 @@ def scatter(items=None, get_val=None, x=None, y=None, z=None, c=None,
         assert get_val is not None
         c = [get_val(item) for item in items]
 
-    def on_figure(fig):
-        ax = fig.add_subplot(111, projection='3d')
-        ax.set_aspect('auto')
-        ax.set_xlabel('x/m')
-        ax.set_ylabel('y/m')
-        ax.set_zlabel('z/m')
+    def on_axes(ax):
         obj = ax.scatter(x, y, z, c=c, cmap=cmap, alpha=alpha)
-        cbar = fig.colorbar(obj, ax=ax)
+        cbar = ax.get_figure().colorbar(obj, ax=ax)
         if cb_label is not None:
             cbar.set_label(cb_label)
-    plot(on_figure, **opts)
+
+    plot_on_axes(on_axes, dim=3, **opts)
 
 
 def test_1():
     import numpy as np
-
     x = np.random.rand(100)
     y = np.random.rand(100)
     z = np.random.rand(100)
     c = np.random.rand(100)
-    scatter(x=x, y=y, z=z, c=c)
+    scatter(x=x, y=y, z=z, c=c, cb_label='value')
 
 
 if __name__ == '__main__':

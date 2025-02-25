@@ -33,14 +33,18 @@ class ImageViewer(QtWidgets.QGraphicsView):
         self.resize(1200, 900)
 
         # 隐藏滚动条
-        self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(
+            QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setHorizontalScrollBarPolicy(
+            QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         # 以鼠标所在位置为锚点进行缩放
-        self.setTransformationAnchor(QtWidgets.QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+        self.setTransformationAnchor(
+            QtWidgets.QGraphicsView.ViewportAnchor.AnchorUnderMouse)
 
         # 平滑缩放
-        self.pixmapItem.setTransformationMode(QtCore.Qt.TransformationMode.SmoothTransformation)
+        self.pixmapItem.setTransformationMode(
+            QtCore.Qt.TransformationMode.SmoothTransformation)
         self.setRenderHints(QtGui.QPainter.RenderHint.Antialiasing |
                             QtGui.QPainter.RenderHint.SmoothPixmapTransform)
 
@@ -94,7 +98,8 @@ class ImageViewer(QtWidgets.QGraphicsView):
         ratio = self.__get_scale_ratio()
         self.displayedImageSize = self.pixmap.size() * ratio
         if ratio < 1:
-            self.fitInView(self.pixmapItem, QtCore.Qt.AspectRatioMode.KeepAspectRatio)
+            self.fitInView(self.pixmapItem,
+                           QtCore.Qt.AspectRatioMode.KeepAspectRatio)
 
     def resetTransform(self):
         """
@@ -141,7 +146,8 @@ class ImageViewer(QtWidgets.QGraphicsView):
         self.displayedImageSize = self.__get_scale_ratio() * self.pixmap.size()
         self.zoomInTimes = 0
 
-    def zoom_in(self, view_anchor=QtWidgets.QGraphicsView.ViewportAnchor.AnchorUnderMouse):
+    def zoom_in(self,
+                view_anchor=QtWidgets.QGraphicsView.ViewportAnchor.AnchorUnderMouse):
         """ 放大图像 """
         if self.zoomInTimes == self.maxZoomInTimes:
             return
@@ -153,9 +159,11 @@ class ImageViewer(QtWidgets.QGraphicsView):
         self.__set_drag_enabled(self.__is_enable_drag())
 
         # 还原 anchor
-        self.setTransformationAnchor(QtWidgets.QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+        self.setTransformationAnchor(
+            QtWidgets.QGraphicsView.ViewportAnchor.AnchorUnderMouse)
 
-    def zoom_out(self, view_anchor=QtWidgets.QGraphicsView.ViewportAnchor.AnchorUnderMouse):
+    def zoom_out(self,
+                 view_anchor=QtWidgets.QGraphicsView.ViewportAnchor.AnchorUnderMouse):
         """ 缩小图像 """
         if self.zoomInTimes == 0 and not self.__is_enable_drag():
             return
@@ -188,4 +196,5 @@ class ImageViewer(QtWidgets.QGraphicsView):
         self.__set_drag_enabled(self.__is_enable_drag())
 
         # 还原 anchor
-        self.setTransformationAnchor(QtWidgets.QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+        self.setTransformationAnchor(
+            QtWidgets.QGraphicsView.ViewportAnchor.AnchorUnderMouse)

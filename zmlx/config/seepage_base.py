@@ -431,3 +431,8 @@ def get_cell_max(model: Seepage, fa, ca=None):
     ca = FloatBuffer(value=ca, is_input=False, length=model.cell_number)
     model.get_cell_max(fa=fa.pointer, buf=ca.pointer)
     return ca.data
+
+
+def set_text(model: Seepage, **kwargs):
+    for key, text in kwargs.items():
+        model.set_text(key=key, text=text)

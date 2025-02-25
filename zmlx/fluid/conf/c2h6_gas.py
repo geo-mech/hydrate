@@ -3,10 +3,11 @@ Created on Mon Jun  5 16:09:29 2023
 
 @author: Maryelin
 """
+import warnings
+
 from zml import Interp2, Seepage
 from zmlx.fluid.conf.gas_density.c2h6 import den_c2h6
 from zmlx.fluid.conf.gas_viscosity.c2h6 import gas_vis_c2h6
-import warnings
 
 
 def create(tmin=280, tmax=1000, pmin=1.0e6, pmax=40.0e6, name=None):
@@ -44,6 +45,7 @@ def create(tmin=280, tmax=1000, pmin=1.0e6, pmax=40.0e6, name=None):
 def create_flu(*args, **kwargs):
     warnings.warn('use function <create> instead', DeprecationWarning)
     return create(*args, **kwargs)
+
 
 if __name__ == '__main__':
     flu = create()

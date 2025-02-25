@@ -18,5 +18,5 @@ def gas_vis_h2(P, T):
     vis_ref = 8.411e-5
     s_ref = 97
     viscosity = vis_ref * (
-                (T / t_ref) ** (3 / 2) * ((t_ref + s_ref) / (T + s_ref)))  # Sutherlands's equation for ideal gas
+            (T / t_ref) ** (3 / 2) * ((t_ref + s_ref) / (T + s_ref)))  # Sutherlands's equation for ideal gas
     return viscosity

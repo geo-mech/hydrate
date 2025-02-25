@@ -110,7 +110,9 @@ def set_rc3(cell, rc3, keys):
     if cell is None:
         return
 
-    if not rc3_ok(rc3):  # 这样设置之后，后续再get_attr的时候，会返回None.  (这里，不修改cell的pos属性. 2023-9-21)
+    if not rc3_ok(rc3):
+        # 这样设置之后，后续再get_attr的时候，会返回None.
+        # (这里，不修改cell的pos属性. 2023-9-21)
         del_rc3(cell, keys)
         return
     else:
@@ -168,7 +170,7 @@ def __cen(x, y):
 
 def __sym(c, x):
     """
-    返回x关于中心点x的对称点
+    返回x关于中心点c的对称点
     """
     if c is not None and x is not None:
         return [c[i] * 2 - x[i] for i in range(3)]
@@ -176,15 +178,15 @@ def __sym(c, x):
 
 def get_vertexes(rc3):
     """
-    返回三维矩形4个顶点的坐标
+    返回三维矩形4个顶点的坐标.
     """
     if rc3 is None:
         return
 
-    p0 = rc3[0: 3]
+    p0 = rc3[0: 3]  # 中心点
     p1 = rc3[3: 6]
     p2 = rc3[6: 9]
-    p3 = __sym(p0, p1)
+    p3 = __sym(p0, p1)  # 对边的中心点
     p4 = __sym(p0, p2)
 
     p5 = __cen(p1, p2)

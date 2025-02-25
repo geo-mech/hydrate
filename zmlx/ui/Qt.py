@@ -1,75 +1,62 @@
-from zmlx.ui.alg.get_preferred_qt_version import get_preferred_qt_version
+import sys
 
-_version_text = get_preferred_qt_version()
-_version = None
 
-if _version is None:
-    if _version_text == 'PyQt6':
-        try:
-            from PyQt6 import QtGui, QtCore, QtWidgets
+def pyqt6_imported():
+    return 'PyQt6' in sys.modules
 
-            _version = 6
-        except:
-            pass
 
-if _version is None:
-    if _version_text == 'PyQt5':
-        try:
-            from PyQt5 import QtGui, QtCore, QtWidgets
+def pyqt5_imported():
+    return 'PyQt5' in sys.modules
 
-            _version = 5
-        except:
-            pass
 
-if _version is None:
+QtName = None
+
+if QtName is None:
+    if pyqt6_imported():  # 之前已经导入了PyQt6
+        from PyQt6 import QtGui, QtCore, QtWidgets
+
+        QtName = 'PyQt6'
+
+if QtName is None:
+    if pyqt5_imported():
+        from PyQt5 import QtGui, QtCore, QtWidgets
+
+        QtName = 'PyQt5'
+
+if QtName is None:
     try:
         from PyQt6 import QtGui, QtCore, QtWidgets
 
-        _version = 6
+        QtName = 'PyQt6'
     except:
         pass
 
-if _version is None:
+if QtName is None:
     try:
         from PyQt5 import QtGui, QtCore, QtWidgets
 
-        _version = 5
+        QtName = 'PyQt5'
     except:
         pass
 
-assert _version == 5 or _version == 6
-has_PyQt6 = _version == 6
+if QtName is None:
+    QtName = ''
 
+is_PyQt5 = QtName == 'PyQt5'
+is_PyQt6 = QtName == 'PyQt6'
+
+# QWebEngineView需要在程序正式运行之前来导入
 try:
-    if has_PyQt6:
+    if is_PyQt6:
         from PyQt6.QtWebEngineWidgets import QWebEngineView
-        from PyQt6 import QtWebEngineWidgets
+        from PyQt6.QtWebEngineCore import QWebEngineSettings
     else:
-        from PyQt5.QtWebEngineWidgets import QWebEngineView
-        from PyQt5 import QtWebEngineWidgets
-except:
+        from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings
+except Exception as e:
+    print(f'Error when import QWebEngineView: {e}')
     QWebEngineView = None
-    QtWebEngineWidgets = None
+    QWebEngineSettings = None
 
-try:
-    if has_PyQt6:
-        from PyQt6 import QtMultimedia
-    else:
-        from PyQt5 import QtMultimedia
-except:
-    QtMultimedia = None
-
-if has_PyQt6:
-    from PyQt6.QtGui import QAction
-else:
-    from PyQt5.QtWidgets import QAction
-
-if has_PyQt6:
-    def screen_size():
-        return QtWidgets.QApplication.primaryScreen().availableGeometry()
-else:
-    def screen_size():
-        return QtWidgets.QDesktopWidget().availableGeometry()
-
-__all__ = ['QtGui', 'QtCore', 'QtWidgets', 'QtMultimedia', 'QWebEngineView', 'has_PyQt6',
-           'QAction', 'screen_size']
+# 所有导出的变量
+__all__ = ['QtGui', 'QtCore', 'QtWidgets', 'is_PyQt5', 'is_PyQt6', 'QtName',
+           'QWebEngineView', 'QWebEngineSettings']

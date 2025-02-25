@@ -19,17 +19,17 @@ class GuiIterator:
             info: 返回当前模型的状态信息 (函数不接受任何参数) 可以为None
             ratio: gui绘图所占据的总的时长的比例。默认为0.2
         """
-        if hasattr(iterate, '__call__'):
+        if callable(iterate):
             self.iterate = iterate
         else:
             self.iterate = None
 
-        if hasattr(plot, '__call__'):
+        if callable(plot):
             self.plot = plot
         else:
             self.plot = None
 
-        if hasattr(info, '__call__'):
+        if callable(info):
             self.info = info
         else:
             self.info = self.time_info
@@ -72,7 +72,7 @@ class GuiIterator:
             return r
 
         gui.break_point()
-        assert 0.0 <= self.ratio < 0.5
+        assert 0.0 <= self.ratio < 0.5, f'The GuiIterator.ratio should be in [0, 0.5), but get {self.ratio}'
 
         if self.time_plot < self.time_iter * self.ratio and self.plot is not None:
             try:

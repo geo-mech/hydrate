@@ -33,9 +33,9 @@ def test(t_ini=510):
     """
     测试
     """
-    from zmlx.alg import np
+    import numpy as np
     print(f'\n\nTest when initial temperature is {t_ini}')
-    from zml import Seepage
+    from zml import Seepage, get_pointer64
 
     model = Seepage()
     cell = model.add_cell()
@@ -52,7 +52,7 @@ def test(t_ini=510):
 
     buf = np.zeros(shape=model.cell_number)
     for step in range(20):
-        model.get_reaction(0).react(model, 1.0, buf=np.get_pointer(buf))
+        model.get_reaction(0).react(model, 1.0, buf=get_pointer64(buf))
         print(
             f'{buf}:  {cell.get_fluid(0).mass}  {cell.get_fluid(1).mass}  {cell.get_fluid(2).mass}  {cell.get_fluid(0).get_attr(fa_t)}  {cell.get_fluid(1).get_attr(fa_t)}  {cell.get_fluid(2).get_attr(fa_t)}')
 

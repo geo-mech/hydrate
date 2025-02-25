@@ -27,14 +27,14 @@ class TaskProc(QtCore.QObject):
                 if task is None:
                     break
                 else:
-                    assert hasattr(task, '__call__'), 'The task is not a function'
+                    assert callable(task), 'The task is not a function'
                     task()
             except Exception as e:
                 print(f'meet error {e}')
 
     def add(self, task):
         try:
-            if hasattr(task, '__call__'):
+            if callable(task):
                 self.__tasks.put(task, block=False)
                 self.__sig_do_task.emit()
         except Exception as e:

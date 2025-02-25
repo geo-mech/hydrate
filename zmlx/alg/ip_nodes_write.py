@@ -16,8 +16,7 @@ def ip_nodes_write(ip_model, index, pointer=None, buf=None):
             buf = np.zeros(shape=ip_model.node_n, dtype=float)
         else:
             assert len(buf) == ip_model.node_n
-        if not buf.flags['C_CONTIGUOUS']:
-            buf = np.ascontiguous(buf, dtype=buf.dtype)
+        assert buf.flags['C_CONTIGUOUS']
         pointer = buf.ctypes.data_as(POINTER(c_double))
 
     if index == -1 or index == -2 or index == -3:

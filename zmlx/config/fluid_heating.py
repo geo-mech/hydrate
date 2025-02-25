@@ -1,7 +1,7 @@
 import numpy as np
 
 from zml import Seepage
-from zmlx.alg.Vector import to_numpy
+from zmlx.exts.vector import to_numpy
 from zmlx.config.seepage_base import get_dt
 from zmlx.utility.SeepageNumpy import as_numpy
 
@@ -51,6 +51,7 @@ def iterate(model: Seepage, dt=None):
         # 确定流体
         fluid = item.get('fluid')
         if not isinstance(fluid, list):
+            assert isinstance(fluid, str)
             fluid = model.find_fludef(name=fluid)
             assert isinstance(fluid, list)
 

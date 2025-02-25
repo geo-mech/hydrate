@@ -3,10 +3,12 @@
 @author: Maryelin
 """
 
+import warnings
+
 from zml import Interp2, Seepage
 from zmlx.fluid.conf.liqu_density.co2 import liq_den_co2
 from zmlx.fluid.conf.liqu_viscosity.co2 import liq_vis_co2
-import warnings
+
 
 def create(tmin=100, tmax=250, pmin=1.0e6, pmax=20.0e6, name=None):
     assert 99 < tmin < tmax < 260
@@ -40,9 +42,11 @@ def create(tmin=100, tmax=250, pmin=1.0e6, pmax=20.0e6, name=None):
 
     return Seepage.FluDef(den=create_density(), vis=create_viscosity(), specific_heat=specific_heat, name=name)
 
+
 def create_flu(*args, **kwargs):
     warnings.warn('use function <create> instead', DeprecationWarning)
     return create(*args, **kwargs)
+
 
 if __name__ == '__main__':
     flu = create_flu()

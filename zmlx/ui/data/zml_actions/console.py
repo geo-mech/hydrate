@@ -1,14 +1,6 @@
-text = '交互的Python控制台(测试)'
+text = 'Python控制台(测试)'
 on_toolbar = False
 icon = 'console'
-
-
-def enabled():
-    try:
-        from pyqtgraph.console import ConsoleWidget
-        return True
-    except:
-        return False
 
 
 def slot():

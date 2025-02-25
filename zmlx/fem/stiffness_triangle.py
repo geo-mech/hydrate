@@ -1,65 +1,13 @@
-"""
-Created on Wed Feb 15 12:00:10 2023
+import warnings
 
-@author: Maryelin
-http://mae.uta.edu/~lawrence/me5310/course_materials/me5310_notes/7_Triangular_Elements/7-2_Constant_Strain_Triangle_CST/7-2_Constant_Strain_Triangle_CST.htm
-https://calfem-for-python.readthedocs.io/en/latest/_modules/calfem/core.html#plante
-"""
-import numpy as np
+from zmlx.fem.elements.planar_strain_cst import stiffness as stiffness_cst
 
 
 def stiffness(x0, x1, x2, y0, y1, y2, E, mu):
-    """
-    Calculate the stiffness matrix for a triangular plane stress element.
-    
-    Parameters:
-    
-        ex = [x1,x2,x3]         element coordinates
-        ey = [y1,y2,y3]
-
-                                    
-        E, nu =                for constitutive matrix
-    
-    Returns:
-    
-        Ke                      element stiffness matrix (6 x 6)
-
-    """
-    ex = [x0, x1, x2]
-    ey = [y0, y1, y2]
-    te = 0.3  # (Thickness) in our case is z
-
-    # the matrix C contains the coordinates of the triangle corner nodes
-    C = np.array([
-        [1, ex[0], ey[0], 0, 0, 0],
-        [0, 0, 0, 1, ex[0], ey[0]],
-        [1, ex[1], ey[1], 0, 0, 0],
-        [0, 0, 0, 1, ex[1], ey[1]],
-        [1, ex[2], ey[2], 0, 0, 0],
-        [0, 0, 0, 1, ex[2], ey[2]]
-    ])
-
-    A = 0.5 * np.linalg.det(np.array([
-        [1, ex[0], ey[0]],
-        [1, ex[1], ey[1]],
-        [1, ex[2], ey[2]]
-    ]))
-    # Stress elastic matrix
-    Dm = E / (1 - mu ** 2) * np.array([[1, mu, 0],
-                                       [mu, 1, 0],
-                                       [0, 0, (1 - mu) / 2]])
-
-    # constant for the Constant Strain Triangle
-    B = np.array([
-        [0, 1, 0, 0, 0, 0, ],
-        [0, 0, 0, 0, 0, 1, ],
-        [0, 0, 1, 0, 1, 0, ]
-    ]) @ np.linalg.inv(C)
-
-    ke = np.transpose(B) @ Dm @ B * A * te
-    # k = [np.triu(ke)]  # to show the upper part
-
-    return ke
+    warnings.warn("stiffness is deprecated (will be removed after 2026-3-30), "
+                  "please use stiffness_cst instead",
+                  DeprecationWarning)
+    return stiffness_cst(((x0, y0), (x1, y1), (x2, y2)), E, mu, 1.0)
 
 
 if __name__ == '__main__':

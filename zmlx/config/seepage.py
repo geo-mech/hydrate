@@ -553,9 +553,9 @@ def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
                               fa_igr=fa_igr,
                               relax_factor=0.3)
 
-    # 施加cond的更新操作
-    if cond_updaters is not None:
+    if cond_updaters is not None:  # 施加cond的更新操作
         for update in cond_updaters:
+            assert callable(update), f'The update in cond_updaters must be callable. However, it is: {update}'
             update(model)
 
     # 当未禁止更新flow且流体的数量非空
@@ -594,27 +594,31 @@ def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
     # 是否禁用热力学过程
     update_ther = model.not_has_tag('disable_ther')
 
+    r2 = None
     if update_ther:
-        ca_t = model.reg_cell_key('temperature')
-        ca_mc = model.reg_cell_key('mc')
-        fa_g = model.reg_face_key('g_heat')
-        r2 = model.iterate_thermal(dt=dt, solver=solver, ca_t=ca_t,
-                                   ca_mc=ca_mc, fa_g=fa_g)
-    else:
-        r2 = None
+        ca_t = model.get_cell_key('temperature')
+        ca_mc = model.get_cell_key('mc')
+        fa_g = model.get_face_key('g_heat')
+        if ca_t is not None and ca_mc is not None and fa_g is not None:
+            r2 = model.iterate_thermal(dt=dt, solver=solver, ca_t=ca_t,
+                                       ca_mc=ca_mc, fa_g=fa_g)
 
     # 不存在禁止标识且存在流体
     exchange_heat = model.not_has_tag('disable_heat_exchange'
                                       ) and model.fludef_number > 0
 
     if exchange_heat:
-        ca_g = model.reg_cell_key('g_heat')
-        ca_t = model.reg_cell_key('temperature')
-        ca_mc = model.reg_cell_key('mc')
-        fa_t = model.reg_flu_key('temperature')
-        fa_c = model.reg_flu_key('specific_heat')
-        model.exchange_heat(dt=dt, ca_g=ca_g, ca_t=ca_t,
-                            ca_mc=ca_mc, fa_t=fa_t, fa_c=fa_c)
+        ca_g = model.get_cell_key('g_heat')
+        ca_t = model.get_cell_key('temperature')
+        ca_mc = model.get_cell_key('mc')
+        fa_t = model.get_flu_key('temperature')
+        fa_c = model.get_flu_key('specific_heat')
+        if ca_g is not None and ca_t is not None and ca_mc is not None and \
+                fa_t is not None and fa_c is not None:
+            model.exchange_heat(dt=dt, ca_g=ca_g, ca_t=ca_t, ca_mc=ca_mc,
+                                fa_t=fa_t, fa_c=fa_c)
+        else:
+            warnings.warn('model.exchange_heat failed in seepage.iterate')
 
     # 反应
     for idx in range(model.reaction_number):
@@ -704,6 +708,38 @@ def get_inited(fludefs=None, reactions=None, gravity=None, path=None,
         set_dv_relative(model, dv_relative)
 
     return model
+
+
+def add_injector(model: Seepage, data):
+    """
+    向模型中添加注入器.
+    Args:
+        model: 渗流模型
+        data: 注入器的定义
+
+    Returns:
+        None
+    """
+    if data is None:
+        return
+    elif isinstance(data, dict):
+        injector = model.add_injector(**data)
+        flu = data.get('flu')
+        if flu == 'insitu' and model.cell_number > 0 and len(injector.fid) > 0:  # 找到要注入的那个cell
+            cell_id = injector.cell_id
+            if cell_id >= model.cell_number and point_distance(injector.pos, [0, 0, 0]) < 1e10:
+                cell = model.get_nearest_cell(pos=injector.pos)
+                if point_distance(cell.pos, injector.pos) < injector.radi:
+                    cell_id = cell.index
+            if cell_id < model.cell_number:
+                # 特别注意的是，这里找到的这个cell，和injector内部工作的时候的cell，可能并不完全相同.
+                cell = model.get_cell(cell_id)
+                temp = cell.get_fluid(*injector.fid)
+                if temp is not None:
+                    injector.flu.clone(temp)
+    else:
+        for item in data:
+            add_injector(model, data=item)
 
 
 def create(mesh=None,
@@ -819,13 +855,7 @@ def create(mesh=None,
     set_model(model, igr=igr, bk_fv=bk_fv, bk_g=bk_g, **kwargs)
 
     # 添加注入点   since 24-6-20
-    if injectors is not None:
-        if isinstance(injectors, dict):
-            model.add_injector(**injectors)
-        else:
-            for item in injectors:
-                assert isinstance(item, dict)
-                model.add_injector(**item)
+    add_injector(model, data=injectors)
 
     # 添加毛管效应.
     if caps is not None:
@@ -1070,7 +1100,7 @@ def set_face(face: Seepage.Face, area=None, length=None,
     assert length > 0
 
     if perm is not None:
-        if hasattr(perm, '__call__'):
+        if callable(perm):
             # 当单独调用set_face的时候，可能会遇到这种情况
             p0 = face.get_cell(0).pos
             p1 = face.get_cell(1).pos
@@ -1092,7 +1122,7 @@ def set_face(face: Seepage.Face, area=None, length=None,
     g0 = area * perm / length
     face.cond = g0
 
-    if bk_g:
+    if bk_g:  # 备份初始时刻的cond，从而在后续可以根据gr去更新
         face.set_attr(fa.g0, g0)
 
     if heat_cond is not None:
@@ -1231,12 +1261,14 @@ def set_solve(model: Seepage, **kw):
 
 
 def solve(model=None, folder=None, fname=None, gui_mode=None,
-          close_after_done=None, solver=None,
+          close_after_done=None,
           extra_plot=None,
           show_state=True, gui_iter=None, state_hint=None,
-          slots=None,
-          save_dt=None, export_mass=True,
-          **kwargs):
+          save_dt=None, export_mass=True, time_unit='y',
+          slots=None, solver=None,
+          opt_iter=None,  # 用于在iterate的时候的额外的关键词参数.
+          **opt_solve
+          ):
     """
     求解模型，并尝试将结果保存到folder.
     """
@@ -1259,20 +1291,20 @@ def solve(model=None, folder=None, fname=None, gui_mode=None,
     # step 1. 读取求解选项
     text = model.get_text(key='solve')
     if len(text) > 0:
-        solve_options = eval(text)
+        full_solve_options = eval(text)
     else:
-        solve_options = {}
+        full_solve_options = {}
 
     # 更新
-    solve_options.update(kwargs)
+    full_solve_options.update(opt_solve)
 
     # 建立求解器
     if solver is None:  # 使用规定的精度
         solver = ConjugateGradientSolver(
-            tolerance=solve_options.get('tolerance', 1.0e-25))
+            tolerance=full_solve_options.get('tolerance', 1.0e-25))
 
     # 创建monitor(同时，还保留了之前的配置信息)
-    monitors = solve_options.get('monitor')
+    monitors = full_solve_options.get('monitor')
     if isinstance(monitors, dict):
         monitors = [monitors]
     elif monitors is None:
@@ -1283,41 +1315,31 @@ def solve(model=None, folder=None, fname=None, gui_mode=None,
                 get_t=lambda: get_time(model),
                 cell=[model.get_cell(i) for i in item.get('cell_ids')])
 
-    # 每年的秒的数量
-    seconds_year = 3600.0 * 24.0 * 365.0
-
-    # 保存间隔的范围(以秒为单位)
-    save_dy_max = solve_options.get('save_dt_max', 5 * seconds_year) / seconds_year
-    save_dy_min = solve_options.get('save_dt_min', 0.01 * seconds_year) / seconds_year
-
-    # 定义函数get_save_dy
     if save_dt is None:
-        def get_save_dy(year):
-            return clamp(year * 0.05, save_dy_min, save_dy_max)
-    else:
-        if hasattr(save_dt, '__call__'):
-            def get_save_dy(year):
-                return clamp(save_dt(year * seconds_year) / seconds_year,
-                             save_dy_min, save_dy_max)
-        else:
-            def get_save_dy(_):
-                return clamp(save_dt / seconds_year,
-                             save_dy_min, save_dy_max)
+        save_dt_min = full_solve_options.get('save_dt_min', 0.01 * SaveManager.get_unit_length(time_unit=time_unit))
+        save_dt_max = full_solve_options.get('save_dt_max', 5 * SaveManager.get_unit_length(time_unit=time_unit))
+
+        def save_dt(time):
+            return clamp(time * 0.05, save_dt_min, save_dt_max)
 
     # 执行数据的保存
     save_model = SaveManager(join_paths(folder, 'models'), save=model.save,
-                             ext='.seepage', time_unit='y',
-                             dtime=get_save_dy,
-                             get_time=lambda: get_time(model) / (3600.0 * 24.0 * 365.0),
+                             ext='.seepage',
+                             time_unit=time_unit,
+                             unit_length='auto',
+                             dtime=save_dt,
+                             get_time=lambda: get_time(model),
                              )
 
     # 打印cell
     save_cells = SaveManager(join_paths(folder, 'cells'),
                              save=lambda name: print_cells(name, model=model,
                                                            export_mass=export_mass),
-                             ext='.txt', time_unit='y',
-                             dtime=get_save_dy,
-                             get_time=lambda: get_time(model) / (3600.0 * 24.0 * 365.0),
+                             ext='.txt',
+                             time_unit=time_unit,
+                             unit_length='auto',
+                             dtime=save_dt,
+                             get_time=lambda: get_time(model),
                              )
 
     # 保存所有
@@ -1326,7 +1348,7 @@ def solve(model=None, folder=None, fname=None, gui_mode=None,
         save_cells(*args, **kw)
 
     # 用来绘图的设置(show_cells)
-    data = solve_options.get('show_cells')
+    data = full_solve_options.get('show_cells')
     if isinstance(data, dict):
         def do_show():
             show_cells(model, folder=join_paths(folder, 'figures'), **data)
@@ -1377,18 +1399,18 @@ def solve(model=None, folder=None, fname=None, gui_mode=None,
         gui_iter.plot = plot
 
     # 求解到的最大的时间
-    time_max = solve_options.get('time_max')
+    time_max = full_solve_options.get('time_max')
     if time_max is None:
-        time_forward = solve_options.get('time_forward')
+        time_forward = full_solve_options.get('time_forward')
         if time_forward is not None:
             time_max = get_time(model) + time_forward
     if time_max is None:  # 给定默认值
         time_max = 1.0e100
 
     # 求解到的最大的step
-    step_max = solve_options.get('step_max')
+    step_max = full_solve_options.get('step_max')
     if step_max is None:
-        step_forward = solve_options.get('step_forward')  # 向前迭代的步数
+        step_forward = full_solve_options.get('step_forward')  # 向前迭代的步数
         if step_forward is not None:
             step_max = get_step(model) + step_forward
     if step_max is None:  # 给定默认值
@@ -1405,13 +1427,21 @@ def solve(model=None, folder=None, fname=None, gui_mode=None,
             print(f'{state_hint}step={get_step(model)}, dt={get_dt(model, as_str=True)}, '
                   f'time={get_time(model, as_str=True)}')
 
+    # 准备iterate的参数
+    if opt_iter is None:  # 用于迭代的额外的参数
+        opt_iter = {}
+    if slots is not None:  # 优先级高于opt_iter
+        opt_iter['slots'] = slots
+    if solver is not None:  # 优先级高于opt_iter
+        opt_iter['solver'] = solver
+
     def main_loop():  # 主循环
         if folder is not None:  # 显示求解的目录
             if gui.exists():
                 gui.title(f'Solve seepage: {folder}')
 
         while get_time(model) < time_max and get_step(model) < step_max:
-            gui_iter(model, solver=solver, slots=slots)
+            gui_iter(model, **opt_iter)
             save()
 
             for item3 in monitors:  # 更新所有的监控点

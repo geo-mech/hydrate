@@ -67,10 +67,6 @@ def get_mol_mass(Nh=5.75):
     return (18.015 * Nh + 44.01) / 1.0e3
 
 
-# if __name__ == '__main__':
-#     print(get_mol_mass())
-
-
 def get_dheat(Nh=5.75):
     """
     分解1kg水合物所需要消耗的热量.
@@ -81,11 +77,6 @@ def get_dheat(Nh=5.75):
     """
     # return 394225.0  (旧版本)
     return 60.0e3 / get_mol_mass(Nh=Nh)  # 默认返回 406514.3
-
-
-#
-# if __name__ == '__main__':
-#     print(get_dheat())
 
 
 def create(gas, wat, hyd, fa_t=None, fa_c=None, dissociation=True, formation=True, Nh=5.75):
