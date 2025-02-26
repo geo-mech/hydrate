@@ -40,6 +40,7 @@ Face的属性：
     perm: face位置的渗透率
 """
 import os
+import warnings
 from collections.abc import Iterable
 
 import numpy as np
@@ -594,27 +595,31 @@ def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
     # 是否禁用热力学过程
     update_ther = model.not_has_tag('disable_ther')
 
+    r2 = None
     if update_ther:
-        ca_t = model.reg_cell_key('temperature')
-        ca_mc = model.reg_cell_key('mc')
-        fa_g = model.reg_face_key('g_heat')
-        r2 = model.iterate_thermal(dt=dt, solver=solver, ca_t=ca_t,
-                                   ca_mc=ca_mc, fa_g=fa_g)
-    else:
-        r2 = None
+        ca_t = model.get_cell_key('temperature')
+        ca_mc = model.get_cell_key('mc')
+        fa_g = model.get_face_key('g_heat')
+        if ca_t is not None and ca_mc is not None and fa_g is not None:
+            r2 = model.iterate_thermal(dt=dt, solver=solver, ca_t=ca_t,
+                                       ca_mc=ca_mc, fa_g=fa_g)
 
     # 不存在禁止标识且存在流体
     exchange_heat = model.not_has_tag('disable_heat_exchange'
                                       ) and model.fludef_number > 0
 
     if exchange_heat:
-        ca_g = model.reg_cell_key('g_heat')
-        ca_t = model.reg_cell_key('temperature')
-        ca_mc = model.reg_cell_key('mc')
-        fa_t = model.reg_flu_key('temperature')
-        fa_c = model.reg_flu_key('specific_heat')
-        model.exchange_heat(dt=dt, ca_g=ca_g, ca_t=ca_t,
-                            ca_mc=ca_mc, fa_t=fa_t, fa_c=fa_c)
+        ca_g = model.get_cell_key('g_heat')
+        ca_t = model.get_cell_key('temperature')
+        ca_mc = model.get_cell_key('mc')
+        fa_t = model.get_flu_key('temperature')
+        fa_c = model.get_flu_key('specific_heat')
+        if ca_g is not None and ca_t is not None and ca_mc is not None and \
+                fa_t is not None and fa_c is not None:
+            model.exchange_heat(dt=dt, ca_g=ca_g, ca_t=ca_t, ca_mc=ca_mc,
+                                fa_t=fa_t, fa_c=fa_c)
+        else:
+            warnings.warn('model.exchange_heat failed in seepage.iterate')
 
     # 反应
     for idx in range(model.reaction_number):

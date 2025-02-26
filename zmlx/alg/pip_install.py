@@ -3,11 +3,24 @@ import subprocess
 import sys
 
 
-def pip_install(package_name):
-    """
-    尝试使用pip来安装一个包. 其中package_name是一个字符串，包含了要安装的包的名称
+def pip_install(package_name, name=None):
+    """使用pip安装指定的Python包。
+
+    如果提供了name参数，会先检查该模块是否已存在，只有在模块不存在时才会安装package_name。
+
+    Args:
+        package_name (str): 要安装的Python包名称。
+        name (str, optional): 要检查的模块名称。如果为None，则直接安装package_name。
+
+    Returns:
+        None
     """
     try:
+        if name is not None:
+            from importlib.util import find_spec
+            if find_spec(name):
+                print(f"安装包 {package_name} 已经存在!")
+                return
         subprocess.check_call([f'{os.path.abspath(sys.executable)}',
                                '-m', 'pip', 'install',
                                package_name])

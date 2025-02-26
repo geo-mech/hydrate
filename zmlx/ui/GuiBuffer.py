@@ -113,11 +113,9 @@ def plot(*args, **kwargs):
     """
     调用matplotlib执行绘图操作
     """
-    if 'gui_only' in kwargs:
-        if kwargs.get('gui_only'):
-            if not gui.exists():
-                return
-        kwargs.pop('gui_only')
+    gui_only = kwargs.pop('gui_only', False)
+    if gui_only and not gui.exists():
+        return
     break_point()
     gui.plot(*args, **kwargs)
 

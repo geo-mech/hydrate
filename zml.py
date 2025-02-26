@@ -1614,23 +1614,6 @@ class Iterator:
             return self.__get(self.__model, ind)
 
 
-class FieldAdaptor:
-    def __getattr__(self, item):
-        warnings.warn('zml.Field will be remove after 2025-1-21. use zmlx.utility.Field.Field instead',
-                      DeprecationWarning)
-        from zmlx.utility.Field import Field
-        return getattr(Field, item)
-
-    def __call__(self, *args, **kwargs):
-        warnings.warn('zml.Field will be remove after 2025-1-21. use zmlx.utility.Field.Field instead',
-                      DeprecationWarning)
-        from zmlx.utility.Field import Field
-        return Field(*args, **kwargs)
-
-
-Field = FieldAdaptor()
-
-
 class Vector(HasHandle):
     """
     Mapping C++ class: std::vector<double>
@@ -8888,6 +8871,68 @@ class Seepage(HasHandle, HasCells):
             assert isinstance(model, Seepage)
             core.seepage_cell_set_fluid_property(self.handle, p, fa_t, fa_c, model.handle)
 
+        core.use(None, 'seepage_cell_set_fluids_by_lexpr', c_void_p, c_void_p, c_void_p)
+
+        def set_fluids_by_lexpr(self, lexpr: LinearExpr, model):
+            """ 设置此Cell中的流体
+
+            此函数将使用model中各个cell的流体，然后使用线性表达式lexpr来计算
+
+            Args:
+                lexpr (LinearExpr): 计算流体的线性表达式
+                model (Seepage): 用来拷贝流体的另外一个模型
+
+            Returns:
+                None
+            """
+            core.seepage_cell_set_fluids_by_lexpr(self.handle, lexpr.handle, model.handle)
+
+        core.use(None, 'seepage_cell_set_pore_by_lexpr', c_void_p, c_void_p, c_void_p)
+
+        def set_pore_by_lexpr(self, lexpr: LinearExpr, model):
+            """ 设置此Cell中的孔隙
+
+            此函数将使用model中各个cell的孔隙，然后使用线性表达式lexpr来计算
+
+            Args:
+                lexpr (LinearExpr): 计算pore的线性表达式
+                model (Seepage): 用来拷贝pore的另外一个模型
+
+            Returns:
+                None
+            """
+            core.seepage_cell_set_pore_by_lexpr(self.handle, lexpr.handle, model.handle)
+
+        core.use(None, 'seepage_cell_set_mass_attr_by_lexpr',
+                 c_void_p, c_size_t, c_void_p, c_void_p)
+
+        def set_mass_attr_by_lexpr(self, idx, lexpr: LinearExpr, model):
+            """ 设置此Cell中的自定义属性
+            此函数将使用model中各个cell的自定义属性，然后使用线性表达式lexpr来计算
+            Args:
+                idx (int): 自定义属性的序号
+                lexpr (LinearExpr): 计算自定义属性的线性表达式
+                model (Seepage): 用来拷贝自定义属性的另外一个模型
+            Returns:
+                None
+            """
+            core.seepage_cell_set_mass_attr_by_lexpr(self.handle, idx, lexpr.handle, model.handle)
+
+        core.use(None, 'seepage_cell_set_density_attr_by_lexpr',
+                 c_void_p, c_size_t, c_void_p, c_void_p)
+
+        def set_density_attr_by_lexpr(self, idx, lexpr: LinearExpr, model):
+            """ 设置此Cell中的自定义属性
+            此函数将使用model中各个cell的自定义属性，然后使用线性表达式lexpr来计算
+            Args:
+                idx (int): 自定义属性的序号
+                lexpr (LinearExpr): 计算自定义属性的线性表达式
+                model (Seepage): 用来拷贝自定义属性的另外一个模型
+            Returns:
+                None
+            """
+            core.seepage_cell_set_density_attr_by_lexpr(self.handle, idx, lexpr.handle, model.handle)
+
     class Cell(CellData):
         """
         Cell为控制体。一个Cell由如下几个部分组成：
@@ -10793,9 +10838,28 @@ class Seepage(HasHandle, HasCells):
         """
         if dt is None:
             return
+        if dt <= 1.0e-20:
+            return
         if thermal_model is None:  # 在模型的内部交换热量（流体和固体交换）
             assert fid is None
-            core.seepage_exchange_heat(self.handle, dt, ca_g, ca_t, ca_mc, fa_t, fa_c)
+            all_right = True
+            if ca_g is None:
+                warnings.warn('ca_g is None in Seepage.exchange_heat')
+                all_right = False
+            if ca_t is None:
+                warnings.warn('ca_t is None in Seepage.exchange_heat')
+                all_right = False
+            if ca_mc is None:
+                warnings.warn('ca_mc is None in Seepage.exchange_heat')
+                all_right = False
+            if fa_t is None:
+                warnings.warn('fa_t is None in Seepage.exchange_heat')
+                all_right = False
+            if fa_c is None:
+                warnings.warn('fa_c is None in Seepage.exchange_heat')
+                all_right = False
+            if all_right:
+                core.seepage_exchange_heat(self.handle, dt, ca_g, ca_t, ca_mc, fa_t, fa_c)
             return
         if isinstance(thermal_model, Thermal):
             if fid is None:
@@ -14105,6 +14169,7 @@ _deprecated_funcs = dict(
                                      '2025-1-21'),
     SeepageTher=__deprecated_func('zmlx.config.TherFlowConfig', 'TherFlowConfig',
                                   '2025-1-21'),
+    Field=__deprecated_func('zmlx.utility.Field', 'Field', '2025-1-21'),
 )
 
 

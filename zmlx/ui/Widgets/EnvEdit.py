@@ -98,6 +98,10 @@ class EnvEdit(QtWidgets.QTableWidget):
                      items=['', 'PyQt5', 'PyQt6'],
                      note='界面优先使用Qt版本，默认为PyQt6. 请尽量保证系统里PyQt5或者PyQt6，仅安装其中一个。'
                           '两个同时安装，可能会带来不可预知的错误'),
+                dict(label='启动时恢复上次视窗大小', key='restore_window_geometry',
+                     items=['', 'Yes', 'No'],
+                     note='默认恢复 (Yes). 注意，在多显示器的情况下，测试有的时候在副屏显示窗口的时候会失效. '
+                          '因此，建议多屏的时候，将此设置为No'),
                 ]
         self.setRowCount(len(data))
         self.setColumnCount(3)

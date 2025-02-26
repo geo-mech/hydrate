@@ -14,7 +14,7 @@ from zmlx.ui.ConsoleWidget import ConsoleWidget
 from zmlx.ui.GuiApi import GuiApi
 from zmlx.ui.GuiBuffer import gui
 from zmlx.ui.Label import Label
-from zmlx.ui.Qt import QtCore, is_PyQt6, QtWidgets
+from zmlx.ui.Qt import QtCore, QtWidgets
 from zmlx.ui.QtWidgets.QtMultimedia import QtMultimedia
 from zmlx.ui.TabWidget import TabWidget
 from zmlx.ui.TaskProc import TaskProc
@@ -207,6 +207,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.__gui_api.add_func('window', lambda: self)
         self.__gui_api.add_func('is_maximized', lambda: self.isMaximized())
         self.__gui_api.add_func('show_maximized', lambda: self.showMaximized())
+        self.__gui_api.add_func('resize', lambda *args: self.resize(*args))
+        self.__gui_api.add_func('device_pixel_ratio', self.devicePixelRatioF)
 
     def count_tabs(self):
         return self.__tab_widget.count()
@@ -254,10 +256,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def closeEvent(self, event):
         if self.__console.is_running():
-            reply = QtWidgets.QMessageBox.question(self, '退出HfUI',
-                                                   "内核似乎正在运行，确定要退出吗？",
-                                                   QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
-            if reply != QtWidgets.QMessageBox.Yes:
+            reply = QtWidgets.QMessageBox.question(
+                self, '退出HfUI',
+                "内核似乎正在运行，确定要退出吗？",
+                QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No
+            )
+            if reply != QtWidgets.QMessageBox.StandardButton.Yes:
                 event.ignore()
                 return
 
@@ -429,9 +433,10 @@ class MainWindow(QtWidgets.QMainWindow):
                                 oper=lambda x: x.set_image(fname))
 
     def exec_current(self):
-        if isinstance(self.__tab_widget.currentWidget(), CodeEdit):
-            self.__tab_widget.currentWidget().save()
-            self.__console.exec_file(self.__tab_widget.currentWidget().get_fname())
+        widget = self.__tab_widget.currentWidget()
+        if isinstance(widget, CodeEdit):
+            widget.save()
+            self.__console.exec_file(widget.get_fname())
         else:
             self.__console.exec_file()
 
@@ -606,7 +611,7 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
     if splash_fig is not None and app_data.getenv('disable_splash', default='No', ignore_empty=True) != 'Yes':
         splash = MySplashScreen()
         try:
-            rect = screen_size()
+            rect = get_current_screen_geometry(splash)
             splash_fig = splash_fig.scaled(round(rect.width() * 0.3),
                                            round(rect.height() * 0.3),
                                            QtCore.Qt.AspectRatioMode.KeepAspectRatio)
@@ -632,23 +637,11 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
         sys.stderr = win.get_output_widget()
 
         try:
-            name = 'main_window_size_PyQt6' if is_PyQt6 else 'main_window_size'
-            load_window_size(win, name)
-        except Exception as err:
-            print(f'Error: {err}')
-
-        try:
             load_window_style(win, 'zml_main.qss')
-        except Exception as err:
-            print(f'Error: {err}')
+        except Exception as styleErr:
+            print(f'Error: {styleErr}')
 
     def f2():
-        try:
-            name = 'main_window_size_PyQt6' if is_PyQt6 else 'main_window_size'
-            save_window_size(win, name)
-        except Exception as err:
-            print(f'Error: {err}')
-
         sys.stdout = sys.__stdout__
         sys.stderr = sys.__stderr__
         print('Pop Gui')
@@ -672,6 +665,9 @@ still unresolved, please contact the author (email: 'zhangzhaobin@mail.iggcas.ac
     if splash is not None:
         splash.finish(win)  # 隐藏启动界面
         splash.deleteLater()
+
+    # 必须在窗口正式显示之后，否则此函数可能会出错
+    load_window_size(win)
 
     def setup():
         """
@@ -703,15 +699,24 @@ still unresolved, please contact the author (email: 'zhangzhaobin@mail.iggcas.ac
 
     app.exec()
 
+    save_window_size(win)
     f2()
+
     if hasattr(win, 'tabs_should_be_saved'):
         save_tab_start_code(app_data.temp('tab_start_code.json'), win)
     if len(results) > 0:
         return results[0]
 
 
-def get_window() -> MainWindow:
+def get_window():
     window = app_data.get('main_window')
     if window is not None:
         assert isinstance(window, MainWindow)
         return window
+
+
+if __name__ == '__main__':
+    app = QtWidgets.QApplication(sys.argv)
+    w = MainWindow()
+    w.show()
+    sys.exit(app.exec())

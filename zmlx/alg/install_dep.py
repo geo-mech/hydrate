@@ -1,7 +1,7 @@
-from zmlx.alg.import_module import import_module
+from zmlx.alg.pip_install import pip_install
 
 
-def install_dep(show=None):
+def install_dep():
     """
     尝试安装zml运行所需要的所有的模块
     """
@@ -10,7 +10,7 @@ def install_dep(show=None):
         ('scipy', 'scipy'),
         ('matplotlib', 'matplotlib'),
     ]:
-        import_module(name=name, pip=pip, show=show)
+        pip_install(pip, name=name)
 
     from zmlx.ui.alg.get_preferred_qt_version import get_preferred_qt_version
     version = get_preferred_qt_version()
@@ -21,21 +21,21 @@ def install_dep(show=None):
             ('PyQt5', 'PyQt5'),
             ('PyQt5.QtWebEngineWidgets', 'PyQtWebEngine'),
         ]:
-            import_module(name=name, pip=pip, show=show)
+            pip_install(pip, name=name)
 
     if version == 'PyQt6':
         for name, pip in [
             ('PyQt6', 'PyQt6'),
             ('PyQt6.QtWebEngineWidgets', 'PyQt6-WebEngine'),
         ]:
-            import_module(name=name, pip=pip, show=show)
+            pip_install(pip, name=name)
 
     for name, pip in [
         ('OpenGL', 'PyOpenGL'),
         ('pyqtgraph', 'pyqtgraph'),
     ]:
-        import_module(name=name, pip=pip, show=show)
+        pip_install(pip, name=name)
 
 
 if __name__ == '__main__':
-    install_dep(print)
+    install_dep()

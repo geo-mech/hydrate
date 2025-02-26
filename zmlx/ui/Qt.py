@@ -39,5 +39,5 @@ if QtName is None:
 is_PyQt5 = QtName == 'PyQt5'
 is_PyQt6 = QtName == 'PyQt6'
 
-__all__ = ['QtGui', 'QtCore', 'QtWidgets', 'is_PyQt5', 'is_PyQt6']
+__all__ = ['QtGui', 'QtCore', 'QtWidgets', 'is_PyQt5', 'is_PyQt6', 'QtName']
 

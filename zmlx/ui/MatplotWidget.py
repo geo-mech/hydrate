@@ -3,7 +3,22 @@ import os
 
 import matplotlib
 
-matplotlib.use('QtAgg')
+has_Agg = False
+
+try:
+    if not has_Agg:
+        matplotlib.use('QtAgg')
+        has_Agg = True
+except:
+    pass
+
+try:
+    if not has_Agg:
+        matplotlib.use('Qt5Agg')
+        has_Agg = True
+except:
+    pass
+
 # 使用 matplotlib中的FigureCanvas (在使用 Qt5 Backends中 FigureCanvas继承自QtWidgets.QWidget)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from zmlx.ui.Qt import QtWidgets, QtCore, QtGui

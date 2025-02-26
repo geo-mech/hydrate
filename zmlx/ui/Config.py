@@ -7,13 +7,13 @@ import os
 from zml import app_data, read_text, write_text
 from zmlx.alg.clamp import clamp
 from zmlx.io.json_ex import read as read_json
-from zmlx.ui.Qt import QtGui, QtCore
-from zmlx.ui.alg.screen_size import screen_size
+from zmlx.ui.Qt import QtGui, QtCore, QtWidgets, is_PyQt6
+from zmlx.ui.alg.screen import get_current_screen_geometry
 
 try:
     app_data.add_path(os.path.join(os.path.dirname(__file__), 'data'))
-except Exception as e:
-    print(e)
+except:
+    pass
 
 
 def temp(name):
@@ -46,8 +46,8 @@ def find_icon_file(name):
                 filepath = os.path.join(folder, name + ext)
                 if os.path.isfile(filepath):
                     return filepath
-    except Exception as err_2:
-        print(err_2)
+    except Exception as err:
+        print(err)
 
 
 def load_pixmap(name):
@@ -65,8 +65,8 @@ def load_icon(name):
             return icon
         else:
             return QtGui.QIcon()
-    except Exception as err_2:
-        print(err_2)
+    except Exception as err:
+        print(err)
         return QtGui.QIcon()
 
 
@@ -83,8 +83,8 @@ def find_sound(name):
                 filepath = os.path.join(folder, name + ext)
                 if os.path.isfile(filepath):
                     return filepath
-    except Exception as err_2:
-        print(err_2)
+    except Exception as err:
+        print(err)
 
 
 def play_sound(name):
@@ -95,8 +95,8 @@ def play_sound(name):
             window = get_window()
             if window is not None:
                 window.play_sound(filepath)
-    except Exception as err_2:
-        print(err_2)
+    except Exception as err:
+        print(err)
 
 
 def play_click():
@@ -127,47 +127,87 @@ def load_window_style(win, name, extra=''):
     try:
         value = load(name, default='', encoding='utf-8')
         win.setStyleSheet(f'{value};{extra}')
-    except Exception as err_2:
-        print(err_2)
+    except Exception as err:
+        print(err)
 
 
-def load_window_size(win, name):
+def set_default_geometry(win: QtWidgets.QMainWindow):
     try:
+        rect = get_current_screen_geometry(win)
+        x, y, w, h = rect.x(), rect.y(), rect.width(), rect.height()
+        x += int(w / 8)
+        y += int(h / 8)
+        w = int(w * 3 / 4)
+        h = int(h * 3 / 4)
+        win.setGeometry(QtCore.QRect(x, y, w, h))
+    except:
+        pass
+
+
+def set_saved_geometry(win: QtWidgets.QMainWindow, words):
+    try:
+        if len(words) >= 4:
+            rect = get_current_screen_geometry(win)
+            w_max = rect.width()
+            h_max = rect.height()
+            w = clamp(int(words[2]), w_max * 0.3, w_max * 0.8)
+            h = clamp(int(words[3]), h_max * 0.3, h_max * 0.8)
+            x = clamp(int(words[0]), w_max * 0.02, w_max * 0.98 - w)
+            y = clamp(int(words[1]), h_max * 0.02, h_max * 0.98 - h)
+            win.setGeometry(QtCore.QRect(int(x), int(y), int(w), int(h)))
+    except:
+        pass
+
+
+def load_window_size(win: QtWidgets.QMainWindow):
+    try:
+        restore = app_data.getenv(key='restore_window_geometry',
+                                  default='Yes',
+                                  encoding='utf-8',
+                                  ignore_empty=True) != 'No'
+        if not restore:
+            set_default_geometry(win)
+            return
+        name = 'main_window_size_PyQt6' if is_PyQt6 else 'main_window_size'
         words = app_data.getenv(name, encoding='utf-8', default='').split()
-        rect = screen_size()
-        if len(words) == 3:
-            w = clamp(int(words[0]), rect.width() * 0.2, rect.width() * 0.8)
-            h = clamp(int(words[1]), rect.height() * 0.2, rect.height() * 0.8)
-            win.resize(int(w), int(h))
-            if words[2] == 'True':
-                win.showMaximized()
-        else:
-            win.resize(int(rect.width() * 0.7), int(rect.height() * 0.7))
-    except Exception as err_2:
-        print(err_2)
-        rect = screen_size()
-        win.resize(int(rect.width() * 0.7), int(rect.height() * 0.7))
+        if len(words) < 5:  # 文件错误
+            set_default_geometry(win)
+            return
+        if words[4] == 'True':  # 需要最大化显示
+            set_default_geometry(win)
+            win.showMaximized()
+            return
+        else:  # 恢复窗口
+            set_saved_geometry(win, words)
+            return
+    except:
+        set_default_geometry(win)
 
 
-def save_window_size(win, name):
+def save_window_size(win):
     try:
-        app_data.setenv(name, f'{win.width()}  {win.height()}   {win.isMaximized()}')
-    except Exception as err_2:
-        print(err_2)
+        assert isinstance(win, QtWidgets.QMainWindow)
+        name = 'main_window_size_PyQt6' if is_PyQt6 else 'main_window_size'
+        rc = win.geometry()
+        app_data.setenv(name,
+                        f'{rc.x()}  {rc.y()}  {rc.width()}  {rc.height()}  {win.isMaximized()}',
+                        encoding='utf-8')
+    except Exception as err:
+        print(err)
 
 
 def save_cwd():
     try:
         app_data.setenv('current_work_directory', os.getcwd(), encoding='utf-8')
-    except Exception as err_2:
-        print(err_2)
+    except Exception as err:
+        print(err)
 
 
 def load_cwd():
     try:
         os.chdir(app_data.getenv('current_work_directory', default=os.getcwd(), encoding='utf-8'))
-    except Exception as err_2:
-        print(err_2)
+    except Exception as err:
+        print(err)
         save_cwd()
 
 
@@ -207,8 +247,8 @@ def load_ui_text():
                 ui_text1.update(read_json(path, default={}))
             except Exception as err_3:
                 print(err_3)
-    except Exception as err_2:
-        print(err_2)
+    except Exception as err:
+        print(err)
     return ui_text1
 
 
@@ -230,8 +270,8 @@ def get_text(key):
             return texts
         else:
             return key
-    except Exception as err_2:
-        print(err_2)
+    except Exception as err:
+        print(err)
 
 
 def get_menus():
@@ -266,8 +306,7 @@ def get_action_files():
 try:
     code_in_editor = read_text(find('zml_code_in_editor.py'), encoding='utf-8',
                                default='')
-except Exception as e:
-    print(e)
+except:
     code_in_editor = ''
 
 

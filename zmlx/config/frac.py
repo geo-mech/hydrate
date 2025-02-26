@@ -2,15 +2,24 @@ from zml import FractureNetwork
 
 
 def get_fn2(network: FractureNetwork, key=None):
-    """
-    转化为可以用来绘图的fn2数据. 其中宽度为-dn，颜色由key指定
+    """将裂缝网络转换为可用于绘图的fn2数据。
 
-    参数：
-        network (FractureNetwork)：裂缝网络对象。
-        key (int)：指定颜色的属性索引，默认为 None。
+    宽度为-dn，颜色由key指定。
 
-    返回：
-        tuple：包含位置、宽度和颜色数据的元组。
+    Args:
+        network (FractureNetwork): 裂缝网络对象。
+        key (int, optional): 指定颜色的属性索引。默认为None，表示使用宽度作为颜色。
+
+    Returns:
+        tuple: 包含三个列表的元组：
+            - pos (list): 裂缝位置列表
+            - w (list): 裂缝宽度列表（值为-dn）
+            - c (list): 裂缝颜色列表，根据key的不同取值：
+                * None: 使用宽度作为颜色
+                * >=0: 使用指定属性作为颜色
+                * -1: 使用ds作为颜色
+                * -2: 使用-dn作为颜色
+                * 其他: 使用宽度作为颜色
     """
     pos = []
     w = []
