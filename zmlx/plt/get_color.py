@@ -49,8 +49,8 @@ def get_color(cmap, lr, rr, val):
         return cmap(cmap.N - 1)  # 返回颜色映射的最后一个颜色
 
     # 计算颜色索引（核心逻辑）
-    numerator = val - lr          # 分子：当前值相对于左边界的偏移量
-    denominator = rr - lr         # 分母：数值范围宽度
+    numerator = val - lr  # 分子：当前值相对于左边界的偏移量
+    denominator = rr - lr  # 分母：数值范围宽度
     safe_denominator = max(denominator, 1.0e-100)  # 防止除零错误（处理极小范围）
 
     # 线性映射公式：

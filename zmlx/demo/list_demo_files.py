@@ -1,3 +1,5 @@
+import os.path
+
 from zmlx.demo.get_path import get_path
 from zmlx.filesys.list_files import list_files
 from zmlx.ui.alg.code_config import code_config
@@ -14,14 +16,18 @@ def list_demo_files():
             continue
         cfg = code_config(path=file, encoding='utf-8')
         desc = cfg.get('desc', '')
-        if len(desc) > 0:
-            results.append([file, desc])
+        if isinstance(desc, str):
+            if len(desc) > 0:
+                results.append([file, desc])
     return results
 
 
 def test():
-    for file, desc in list_demo_files():
-        print(file, desc)
+    files = list_demo_files()
+    folder = get_path()
+    for idx in range(len(files)):
+        file, desc = files[idx]
+        print(idx, os.path.relpath(file, folder), desc)
 
 
 if __name__ == '__main__':

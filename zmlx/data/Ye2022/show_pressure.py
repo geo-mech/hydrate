@@ -2,7 +2,6 @@ from zmlx.data.Ye2022.load_txt import load_txt
 from zmlx.plt.plot2 import plot2
 
 if __name__ == '__main__':
-
     d1 = load_txt('pressure_prod.txt')
 
     x1 = d1[:, 0] / (3600 * 24)

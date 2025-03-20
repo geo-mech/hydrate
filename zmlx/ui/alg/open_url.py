@@ -1,11 +1,10 @@
 import os
 
 from zmlx.ui.GuiBuffer import gui
-from zmlx.ui.Qt import QtCore
-from zmlx.ui.QtWidgets.QWebEngineView import QWebEngineView
+from zmlx.ui.Qt import QtCore, is_PyQt6, QWebEngineView
 
 
-def open_url(url: str, caption=None, on_top=None, zoom_factor=2,
+def open_url(url: str, caption=None, on_top=None, zoom_factor=None,
              use_web_engine=None, icon=None):
     """
     显示一个htm文件
@@ -17,8 +16,8 @@ def open_url(url: str, caption=None, on_top=None, zoom_factor=2,
         try:
             from zml import app_data
             use_web_engine = app_data.getenv(key='use_web_engine',
-                                             default='No',
-                                             ignore_empty=True) == 'Yes'
+                                             default='Yes',
+                                             ignore_empty=True) != 'No'
         except:
             use_web_engine = False
 
@@ -39,7 +38,7 @@ def open_url(url: str, caption=None, on_top=None, zoom_factor=2,
             open_new_tab(url)
     else:
         def f(widget):
-            widget.page().setZoomFactor(zoom_factor)
+            widget.page().setZoomFactor(zoom_factor if zoom_factor is not None else (1 if is_PyQt6 else 1.5))
             if os.path.isfile(url):
                 widget.load(QtCore.QUrl.fromLocalFile(url))
             else:

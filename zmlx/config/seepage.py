@@ -40,7 +40,6 @@ Face的属性：
     perm: face位置的渗透率
 """
 import os
-import warnings
 from collections.abc import Iterable
 
 import numpy as np
@@ -711,6 +710,38 @@ def get_inited(fludefs=None, reactions=None, gravity=None, path=None,
     return model
 
 
+def add_injector(model: Seepage, data):
+    """
+    向模型中添加注入器.
+    Args:
+        model: 渗流模型
+        data: 注入器的定义
+
+    Returns:
+        None
+    """
+    if data is None:
+        return
+    elif isinstance(data, dict):
+        injector = model.add_injector(**data)
+        flu = data.get('flu')
+        if flu == 'insitu' and model.cell_number > 0 and len(injector.fid) > 0:  # 找到要注入的那个cell
+            cell_id = injector.cell_id
+            if cell_id >= model.cell_number and point_distance(injector.pos, [0, 0, 0]) < 1e10:
+                cell = model.get_nearest_cell(pos=injector.pos)
+                if point_distance(cell.pos, injector.pos) < injector.radi:
+                    cell_id = cell.index
+            if cell_id < model.cell_number:
+                # 特别注意的是，这里找到的这个cell，和injector内部工作的时候的cell，可能并不完全相同.
+                cell = model.get_cell(cell_id)
+                temp = cell.get_fluid(*injector.fid)
+                if temp is not None:
+                    injector.flu.clone(temp)
+    else:
+        for item in data:
+            add_injector(model, data=item)
+
+
 def create(mesh=None,
            disable_update_den=False, disable_update_vis=False,
            disable_ther=False, disable_heat_exchange=False,
@@ -824,13 +855,7 @@ def create(mesh=None,
     set_model(model, igr=igr, bk_fv=bk_fv, bk_g=bk_g, **kwargs)
 
     # 添加注入点   since 24-6-20
-    if injectors is not None:
-        if isinstance(injectors, dict):
-            model.add_injector(**injectors)
-        else:
-            for item in injectors:
-                assert isinstance(item, dict)
-                model.add_injector(**item)
+    add_injector(model, data=injectors)
 
     # 添加毛管效应.
     if caps is not None:
@@ -1075,7 +1100,7 @@ def set_face(face: Seepage.Face, area=None, length=None,
     assert length > 0
 
     if perm is not None:
-        if hasattr(perm, '__call__'):
+        if callable(perm):
             # 当单独调用set_face的时候，可能会遇到这种情况
             p0 = face.get_cell(0).pos
             p1 = face.get_cell(1).pos
@@ -1240,7 +1265,7 @@ def solve(model=None, folder=None, fname=None, gui_mode=None,
           extra_plot=None,
           show_state=True, gui_iter=None, state_hint=None,
           slots=None,
-          save_dt=None, export_mass=True,
+          save_dt=None, export_mass=True, time_unit='y',
           **kwargs):
     """
     求解模型，并尝试将结果保存到folder.
@@ -1288,41 +1313,43 @@ def solve(model=None, folder=None, fname=None, gui_mode=None,
                 get_t=lambda: get_time(model),
                 cell=[model.get_cell(i) for i in item.get('cell_ids')])
 
-    # 每年的秒的数量
-    seconds_year = 3600.0 * 24.0 * 365.0
-
-    # 保存间隔的范围(以秒为单位)
-    save_dy_max = solve_options.get('save_dt_max', 5 * seconds_year) / seconds_year
-    save_dy_min = solve_options.get('save_dt_min', 0.01 * seconds_year) / seconds_year
-
-    # 定义函数get_save_dy
-    if save_dt is None:
-        def get_save_dy(year):
-            return clamp(year * 0.05, save_dy_min, save_dy_max)
+    # 每一个保存的时间单位内的秒数
+    if time_unit == 'y':
+        seconds_in_target_unit = 3600.0 * 24.0 * 365.0
+    elif time_unit == 'd':
+        seconds_in_target_unit = 3600.0 * 24.0
     else:
-        if hasattr(save_dt, '__call__'):
-            def get_save_dy(year):
-                return clamp(save_dt(year * seconds_year) / seconds_year,
-                             save_dy_min, save_dy_max)
+        assert time_unit == 's'
+        seconds_in_target_unit = 1.0
+
+    if save_dt is None:
+        save_dt_min = solve_options.get('save_dt_min', 0.01 * seconds_in_target_unit) / seconds_in_target_unit
+        save_dt_max = solve_options.get('save_dt_max', 5 * seconds_in_target_unit) / seconds_in_target_unit
+
+        def get_save_dt_in_target_unit(time_in_target_unit):
+            return clamp(time_in_target_unit * 0.05, save_dt_min, save_dt_max)
+    else:
+        if callable(save_dt):
+            def get_save_dt_in_target_unit(time_in_target_unit):
+                return save_dt(time_in_target_unit * seconds_in_target_unit) / seconds_in_target_unit
         else:
-            def get_save_dy(_):
-                return clamp(save_dt / seconds_year,
-                             save_dy_min, save_dy_max)
+            def get_save_dt_in_target_unit(_):
+                return save_dt / seconds_in_target_unit
 
     # 执行数据的保存
     save_model = SaveManager(join_paths(folder, 'models'), save=model.save,
-                             ext='.seepage', time_unit='y',
-                             dtime=get_save_dy,
-                             get_time=lambda: get_time(model) / (3600.0 * 24.0 * 365.0),
+                             ext='.seepage', time_unit=time_unit,
+                             dtime=get_save_dt_in_target_unit,
+                             get_time=lambda: get_time(model) / seconds_in_target_unit,
                              )
 
     # 打印cell
     save_cells = SaveManager(join_paths(folder, 'cells'),
                              save=lambda name: print_cells(name, model=model,
                                                            export_mass=export_mass),
-                             ext='.txt', time_unit='y',
-                             dtime=get_save_dy,
-                             get_time=lambda: get_time(model) / (3600.0 * 24.0 * 365.0),
+                             ext='.txt', time_unit=time_unit,
+                             dtime=get_save_dt_in_target_unit,
+                             get_time=lambda: get_time(model) / seconds_in_target_unit,
                              )
 
     # 保存所有

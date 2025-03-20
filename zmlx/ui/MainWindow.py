@@ -1,3 +1,4 @@
+import datetime
 import os.path
 import sys
 import warnings
@@ -22,6 +23,7 @@ from zmlx.ui.VersionLabel import VersionLabel
 from zmlx.ui.Widgets.TextEdit import TextEdit
 from zmlx.ui.alg.show_seepage import show_seepage
 from zmlx.ui.alg.show_txt import show_txt
+from zmlx.filesys.tag import time_string
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -42,7 +44,8 @@ class MainWindow(QtWidgets.QMainWindow):
                                   '.json': [show_txt, 'Json file'],
                                   '.xml': [show_txt, 'Xml file'],
                                   '.png': [self.open_image, 'Png file'],
-                                  '.jpg': [self.open_image, 'Jpg file']
+                                  '.jpg': [self.open_image, 'Jpg file'],
+                                  '.pdf': [self.open_pdf, 'PDF file']
                                   }
 
         widget = QtWidgets.QWidget(self)
@@ -190,6 +193,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.__gui_api.add_func('open_file_by_dlg', self.open_file_by_dlg)
         self.__gui_api.add_func('open_text', self.open_text)
         self.__gui_api.add_func('open_image', self.open_image)
+        self.__gui_api.add_func('open_pdf', self.open_pdf)
         self.__gui_api.add_func('open_code', self.open_code)
         self.__gui_api.add_func('show_next', self.__tab_widget.show_next)
         self.__gui_api.add_func('show_prev', self.__tab_widget.show_prev)
@@ -209,6 +213,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.__gui_api.add_func('show_maximized', lambda: self.showMaximized())
         self.__gui_api.add_func('resize', lambda *args: self.resize(*args))
         self.__gui_api.add_func('device_pixel_ratio', self.devicePixelRatioF)
+        self.__gui_api.add_func('tab_details', self.tab_details)
 
     def count_tabs(self):
         return self.__tab_widget.count()
@@ -270,7 +275,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.refresh()
 
     def get_widget(self, the_type, caption=None, on_top=None, init=None,
-                   type_kw=None, oper=None, icon=None):
+                   type_kw=None, oper=None, icon=None, caption_color=None):
         """
         返回一个控件，其中type为类型，caption为标题，现有的控件，只有类型和标题都满足，才会返回，否则就
         创建新的控件。
@@ -300,6 +305,8 @@ class MainWindow(QtWidgets.QMainWindow):
             if icon is not None:
                 self.__tab_widget.setTabIcon(index, load_icon(icon))
             self.__tab_widget.setCurrentWidget(widget)
+            if caption_color is not None:
+                self.__tab_widget.tabBar().setTabTextColor(index, QtGui.QColor(caption_color))
             if oper is not None:
                 self.add_task(lambda: oper(widget))
             return widget
@@ -322,6 +329,8 @@ class MainWindow(QtWidgets.QMainWindow):
         return widget
 
     def show_fn2(self, filepath, **kwargs):
+        warnings.warn('gui.show_fn2 will be removed after 2026-3-5, '
+                      'please use zmlx.plt.show_fn2 instead', DeprecationWarning)
         from zmlx.ui.Widgets.Fn2Widget import Fn2Widget
         if kwargs.get('caption') is None:
             kwargs['caption'] = 'Fractures'
@@ -345,11 +354,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self.__status_bar.showMessage(*args, **kwargs)
 
     def trigger(self, name):
+        action = self.get_action(name)
+        assert action is not None, f'Error: action <{name}> not found'
+        action.trigger()
+
+    def get_action(self, name):
+        """返回给定name的菜单action"""
         action = self.__actions.get(name)
         if action is None:
             action = self.__actions.get(name + '.py')
-        assert action is not None, f'Error: action <{name}> not found'
-        action.trigger()
+        return action
 
     def cmd_title(self, title):
         self.__title = title
@@ -431,6 +445,17 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.get_widget(the_type=ImageViewer, caption=os.path.basename(fname) if caption is None else caption,
                                 on_top=on_top,
                                 oper=lambda x: x.set_image(fname))
+
+    def open_pdf(self, fname, caption=None, on_top=True):
+        """
+        打开一个pdf
+        """
+        if isinstance(fname, str):
+            if os.path.isfile(fname):
+                from zmlx.ui.Widgets.PDFViewer import PDFViewer
+                self.get_widget(the_type=PDFViewer, caption=os.path.basename(fname) if caption is None else caption,
+                                on_top=on_top,
+                                oper=lambda x: x.load_pdf(fname))
 
     def exec_current(self):
         widget = self.__tab_widget.currentWidget()
@@ -567,6 +592,11 @@ class MainWindow(QtWidgets.QMainWindow):
             if os.path.isfile(filename):
                 self.sig_play_sound.emit(filename)
 
+    def tab_details(self):
+        from zmlx.ui.Widgets.TabDetails import TabWp, TabDetails
+        self.get_widget(the_type=TabDetails, caption='标签详情', on_top=True,
+                        type_kw={'obj': TabWp(self.__tab_widget)})
+
 
 class MySplashScreen(QtWidgets.QSplashScreen):
     def mousePressEvent(self, event):
@@ -625,19 +655,30 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
 
     win = MainWindow()
 
-    temp_file = app_data.temp('console_output.txt')
-
     def f1():
-        if app_data.getenv(key='restore_console_output', default='No', ignore_empty=True) == 'Yes':
-            win.get_output_widget().load_text(temp_file)
+        try:
+            if app_data.getenv(key='restore_console_output', default='Yes', ignore_empty=True) != 'No':
+                from zmlx.filesys.get_latest_file import get_latest_file
+                from zmlx.filesys.get_size_mb import get_size_mb
+                filename = get_latest_file(app_data.root('output_history'))
+                if filename is not None:
+                    if 0 < get_size_mb(filename) < 0.5:
+                        win.get_output_widget().load_text(filename)
+        except Exception as Err:
+            print(f'Error: {Err}')
+
         app_data.space['main_window'] = win
         gui.push(win.get_gui_api())
         print(f'Push Gui: {win.get_gui_api()}')
         sys.stdout = win.get_output_widget()
         sys.stderr = win.get_output_widget()
 
+        now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+        print(f'====== {now} ====== \n')
+
         try:
-            load_window_style(win, 'zml_main.qss')
+            if app_data.getenv(key='load_window_style', default='Yes', ignore_empty=True) != 'No':
+                load_window_style(win, 'zml_main.qss')
         except Exception as styleErr:
             print(f'Error: {styleErr}')
 
@@ -647,8 +688,7 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
         print('Pop Gui')
         gui.pop()
         app_data.space['main_window'] = None
-        if app_data.getenv(key='restore_console_output', default='No', ignore_empty=True) == 'Yes':
-            win.get_output_widget().save_text(temp_file)
+        win.get_output_widget().save_text(app_data.root('output_history', f'{time_string()}.txt'))  # 保存输出历史
 
     f1()
 

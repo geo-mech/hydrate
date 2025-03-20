@@ -13,4 +13,4 @@ def enabled():
     from zmlx.ui.MainWindow import get_window
     window = get_window()
     if window is not None:
-        return window.count_tabs() > 0 and not window.is_running()
+        return window.count_tabs() > 0

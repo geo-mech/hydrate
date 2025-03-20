@@ -1,6 +1,5 @@
 tooltip = '显示工作区的中的变量'
 text = '变量'
-on_toolbar = 1
 icon = 'variables'
 
 

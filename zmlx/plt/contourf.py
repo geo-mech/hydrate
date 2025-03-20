@@ -39,6 +39,7 @@ def contourf(x=None, y=None, z=None,
     **opts : dict
         传递给底层plot函数的附加参数
     """
+
     def on_figure(fig):
         ax = fig.subplots()
         if aspect is not None:
@@ -56,6 +57,7 @@ def contourf(x=None, y=None, z=None,
         cbar = fig.colorbar(item, ax=ax)
         if clabel is not None:
             cbar.set_label(clabel)
+
     plot(on_figure, **opts)
 
 
@@ -70,4 +72,3 @@ def test():
 
 if __name__ == '__main__':
     test()
-

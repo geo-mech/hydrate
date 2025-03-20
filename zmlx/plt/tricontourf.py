@@ -21,6 +21,7 @@ def tricontourf(x=None, y=None, z=None,
     """
     利用给定的x，y，z来画一个二维的云图.
     """
+
     def on_figure(fig):
         ax = fig.subplots()
 
@@ -45,4 +46,5 @@ def tricontourf(x=None, y=None, z=None,
         cbar = fig.colorbar(item, ax=ax)
         if clabel is not None:
             cbar.set_label(clabel)
+
     plot(on_figure, **opts)

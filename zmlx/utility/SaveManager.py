@@ -26,12 +26,12 @@ class SaveManager:
 
         assert isinstance(folder, str) or folder is None
         self.folder = folder
-        if hasattr(dtime, '__call__'):
+        if callable(dtime):
             self.dtime = dtime
         else:
             self.dtime = lambda time: dtime
         self.get_time = get_time
-        assert hasattr(save, '__call__'), f'save should be a function that receive argument <path>'
+        assert callable(save), f'save should be a function that receive argument <path>'
         self.save = save
         assert isinstance(ext, str) or ext is None
         self.ext = ext

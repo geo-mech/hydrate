@@ -113,7 +113,7 @@ def show_fn2(pos=None, w=None, c=None, w_min=1, w_max=4, ipath=None, iw=4, ic=6,
             ax.plot([x0, x1],
                     [y0, y1],
                     c=get_color(cmap, cl, cr, get_c(idx)),
-                    linewidth=w_min + get_w(idx) * (w_max-w_min) / max(wr, 1.0e-10))
+                    linewidth=w_min + get_w(idx) * (w_max - w_min) / max(wr, 1.0e-10))
         # 在中心点画一个小三角形，用以显示颜色
         xc = (xl + xr) / 2
         yc = (yl + yr) / 2

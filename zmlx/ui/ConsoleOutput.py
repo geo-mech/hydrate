@@ -7,11 +7,26 @@ from zmlx.ui.TextBrowser import TextBrowser
 class ConsoleOutput(TextBrowser):
     sig_add_text = QtCore.pyqtSignal(str)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, console=None):
         super(ConsoleOutput, self).__init__(parent)
         self.__length = 0
-        self.__length_max = 1000000
+        self.__length_max = 100000
         self.sig_add_text.connect(self.__add_text)
+        self.console = console
+
+    def get_context_menu(self):
+        menu = super().get_context_menu()
+        if self.console is not None:
+            from zmlx.ui.MainWindow import get_window
+            window = get_window()
+            menu.addSeparator()
+            if self.console.is_running():
+                menu.addAction(window.get_action('console_pause'))
+                menu.addAction(window.get_action('console_resume'))
+                menu.addAction(window.get_action('console_stop'))
+            else:
+                menu.addAction(window.get_action('show_code_history'))
+        return menu
 
     def write(self, text):
         self.sig_add_text.emit(text)
@@ -19,13 +34,16 @@ class ConsoleOutput(TextBrowser):
     def flush(self):
         pass
 
-    def __add_text(self, text):
+    def __check_length(self):
         while self.__length > self.__length_max:
             fulltext = self.toPlainText()
             fulltext = fulltext[-int(len(fulltext) / 2): -1]
             self.clear()
             self.setPlainText(fulltext)
             self.__length = len(fulltext)
+
+    def __add_text(self, text):
+        self.__check_length()
         self.moveCursor(QtGui.QTextCursor.MoveOperation.End)
         self.insertPlainText(text)
         self.__length += len(text)
@@ -36,9 +54,12 @@ class ConsoleOutput(TextBrowser):
                 with open(filename, 'r') as file:
                     text = file.read()
                     self.setPlainText(text)
+                    self.__length = len(text)
+                    self.__check_length()
                     self.moveCursor(QtGui.QTextCursor.MoveOperation.End)
         except Exception as err2:
             print(err2)
+            self.setPlainText('')
 
     def save_text(self, filename):
         try:

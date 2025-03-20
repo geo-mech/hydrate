@@ -1,6 +1,7 @@
 import sys
 
-from zmlx.ui.Qt import QtCore, QtGui
+from zmlx.ui.Qt import QtCore, QtWidgets
+from zmlx.ui.Qt import QtGui
 from zmlx.ui.alg.zml_names import zml_names
 
 
@@ -162,3 +163,17 @@ class PythonHighlighter(QtGui.QSyntaxHighlighter):
             elif i > -1:  # 如果找到匹配
                 self.setCurrentBlockState(state)
                 self.setFormat(i, len(text), PythonHighlighter.Formats["string"])  # 设置格式
+
+
+class PythonEditOld(QtWidgets.QTextEdit):
+    def __init__(self, parent=None):
+        super(PythonEditOld, self).__init__(parent)
+        self.__highlighter = PythonHighlighter(self.document())
+        self.setStyleSheet('background-color: white')
+
+    def event(self, event):
+        if event.type() == QtCore.QEvent.Type.KeyPress and event.key() == QtCore.Qt.Key.Key_Tab:
+            cursor = self.textCursor()
+            cursor.insertText("    ")
+            return True
+        return QtWidgets.QTextEdit.event(self, event)

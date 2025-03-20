@@ -43,6 +43,7 @@ def plot2(data=None, *, title=None,
         当gui_only为True的时候，则只有的GUI上面绘图;
         当给定的title的时候，将在图片的顶部显示一个标题.
     """
+
     def on_figure(fig):
         """
         执行绘图
@@ -104,8 +105,8 @@ def test_1():
     z = np.cos(2.5 * x * x) + np.sin(2.5 * x * x)
     d1 = dict(
         name='tricontourf',
-          kwargs=dict(triangulation=triang, z=z, levels=30),
-          has_colorbar=True)
+        kwargs=dict(triangulation=triang, z=z, levels=30),
+        has_colorbar=True)
 
     x = np.asarray([0, 1, 0, 3, 0.5, 1.5, 2.5, 1, 2, 1.5]) + 3
     y = np.asarray([0, 0, 0, 0, 1.0, 1.0, 1.0, 2, 2, 3.0])
@@ -115,7 +116,7 @@ def test_1():
     triang = mtri.Triangulation(x, y, triangles)
     z = np.cos(2.5 * x * x) + np.sin(2.5 * x * x) + 3
     d2 = dict(name='tricontourf',
-          kwargs=dict(triangulation=triang, z=z, levels=10))
+              kwargs=dict(triangulation=triang, z=z, levels=10))
 
     x = np.linspace(0, 5, 100)
     y = np.sin(x)

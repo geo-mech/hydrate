@@ -1,40 +1,54 @@
+import sys
+
 from zmlx.alg.pip_install import pip_install
 
 
-def install_dep():
+def install_dep(show_exists=True):
     """
-    尝试安装zml运行所需要的所有的模块
+    安装计算模块运行所需要的第三方的包
     """
-    for name, pip in [
+    found_qt = False
+    if not found_qt:
+        try:
+            import PyQt6
+            found_qt = True
+            pip_install('PyQt6-WebEngine', 'PyQt6.QtWebEngineWidgets', show_exists=show_exists)
+            pip_install('pyqt6-qscintilla', 'PyQt6.Qsci', show_exists=show_exists)
+        except:
+            pass
+
+    if not found_qt:
+        try:
+            import PyQt5
+            found_qt = True
+            pip_install('PyQtWebEngine', 'PyQt5.QtWebEngineWidgets', show_exists=show_exists)
+        except:
+            pass
+
+    if not found_qt:
+        if sys.version_info >= (3, 8):
+            items = [('PyQt6', 'PyQt6'),
+                     ('PyQt6-WebEngine', 'PyQt6.QtWebEngineWidgets'),
+                     ('pyqt6-qscintilla', 'PyQt6.Qsci')
+                     ]
+        else:
+            items = [('PyQt5', 'PyQt5'),
+                     ('PyQtWebEngine', 'PyQt5.QtWebEngineWidgets')
+                     ]
+        for package_name, name in items:
+            pip_install(package_name, name=name, show_exists=show_exists)
+
+    for package_name, name in [
         ('numpy', 'numpy'),
         ('scipy', 'scipy'),
         ('matplotlib', 'matplotlib'),
-    ]:
-        pip_install(pip, name=name)
-
-    from zmlx.ui.alg.get_preferred_qt_version import get_preferred_qt_version
-    version = get_preferred_qt_version()
-    print(f'The preferred Qt Version is: {version}')
-
-    if version == 'PyQt5':
-        for name, pip in [
-            ('PyQt5', 'PyQt5'),
-            ('PyQt5.QtWebEngineWidgets', 'PyQtWebEngine'),
-        ]:
-            pip_install(pip, name=name)
-
-    if version == 'PyQt6':
-        for name, pip in [
-            ('PyQt6', 'PyQt6'),
-            ('PyQt6.QtWebEngineWidgets', 'PyQt6-WebEngine'),
-        ]:
-            pip_install(pip, name=name)
-
-    for name, pip in [
-        ('OpenGL', 'PyOpenGL'),
+        ('PyOpenGL', 'OpenGL'),
         ('pyqtgraph', 'pyqtgraph'),
+        ('pypiwin32', 'win32com'),
+        ('pywin32', 'pywintypes'),
+        ('dulwich', 'dulwich'),
     ]:
-        pip_install(pip, name=name)
+        pip_install(package_name, name=name, show_exists=show_exists)
 
 
 if __name__ == '__main__':

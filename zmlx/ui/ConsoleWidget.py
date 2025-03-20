@@ -28,7 +28,7 @@ class ConsoleWidget(QtWidgets.QWidget):
         self.splitter.setOrientation(QtCore.Qt.Orientation.Vertical)
         main_layout.addWidget(self.splitter)
 
-        self.output_widget = ConsoleOutput(self.splitter)
+        self.output_widget = ConsoleOutput(self.splitter, console=self)
         self.input_editor = CodeEdit(self.splitter)
 
         self.splitter.setStretchFactor(0, 3)
@@ -211,8 +211,8 @@ class ConsoleWidget(QtWidgets.QWidget):
         if self.thread is not None:
             reply = QtWidgets.QMessageBox.question(self, '杀死进程',
                                                    "强制结束当前进程，可能会产生不可预期的影响，是否继续?",
-                                                   QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
-            if reply == QtWidgets.QMessageBox.Yes:
+                                                   QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No)
+            if reply == QtWidgets.QMessageBox.StandardButton.Yes:
                 if self.thread is not None:
                     thread = self.thread
                     thread.sig_done.emit()

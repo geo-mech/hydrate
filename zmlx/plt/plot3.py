@@ -31,4 +31,5 @@ def test_1():
 
 if __name__ == '__main__':
     from zmlx.ui import gui
+
     gui.execute(test_1, close_after_done=False)

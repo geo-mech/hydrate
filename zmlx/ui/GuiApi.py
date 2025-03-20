@@ -93,8 +93,8 @@ class GuiApi(QtCore.QObject):
         def question(info):
             reply = QtWidgets.QMessageBox.question(parent, get_text('请选择'),
                                                    get_text(info),
-                                                   QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
-            if reply != QtWidgets.QMessageBox.Yes:
+                                                   QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No)
+            if reply != QtWidgets.QMessageBox.StandardButton.Yes:
                 return False
             else:
                 return True

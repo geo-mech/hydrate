@@ -76,7 +76,7 @@ class ActionX(QAction):
         if value is None:  # 没有定义，则默认可用
             return True
 
-        if hasattr(value, '__call__'):
+        if callable(value):
             try:
                 res = value()
                 return False if res is None else res
@@ -94,7 +94,7 @@ class ActionX(QAction):
         if value is None:
             return False
 
-        if hasattr(value, '__call__'):
+        if callable(value):
             try:
                 res = value()
                 return False if res is None else res

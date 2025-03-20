@@ -2,7 +2,7 @@ from zmlx.ui.GuiBuffer import plot
 
 
 def plotxy(x=None, y=None, ipath=None, ix=None, iy=None,
-           title=None, xlabel='x', ylabel='y', caption=None, **opts):
+           title=None, xlabel='x', ylabel='y', **opts):
     """
     绘制二维曲线图，支持数组输入和文件数据加载
 
@@ -40,19 +40,23 @@ def plotxy(x=None, y=None, ipath=None, ix=None, iy=None,
 
     def on_figure(fig):
         ax = fig.subplots()
-        if title is not None:
+        if isinstance(title, str):
             ax.set_title(title)
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel(ylabel)
+        if isinstance(xlabel, str):
+            ax.set_xlabel(xlabel)
+        if isinstance(ylabel, str):
+            ax.set_ylabel(ylabel)
         ax.plot(x, y)
-    plot(on_figure, caption=caption, **opts)
+
+    plot(on_figure, **opts)
 
 
 def test_1():
     import numpy as np
     x = np.linspace(0, 10, 100)
     y = np.sin(x)
-    plotxy(x, y, title='sin(x)', xlabel='x', ylabel='y')
+    plotxy(x, y, title='sin(x)', xlabel='x', ylabel='y',
+           caption='sin(x)')
 
 
 if __name__ == '__main__':

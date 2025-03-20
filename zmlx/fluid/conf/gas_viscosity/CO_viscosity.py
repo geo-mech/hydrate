@@ -8,9 +8,10 @@ Compounds, Knovel, 2003
 
 """
 
+
 def gas_vis_co(P, T):
     A = 23.811
     B = 0.5394
     C = -0.00015411
-    viscosity = (A + B*T + (C * (T**2))) * 1.0e-7 #pa*s
+    viscosity = (A + B * T + (C * (T ** 2))) * 1.0e-7  # pa*s
     return viscosity

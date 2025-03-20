@@ -1,18 +1,34 @@
 from zml import Dfn2
-from zmlx.ui.GuiBuffer import gui, plot
+from zmlx.ui.GuiBuffer import plot
 
 
-def show_dfn2(dfn2, **opts):
+def show_dfn2(dfn2, *,
+              aspect='equal',
+              title='The Discrete Fracture Network',
+              xlabel='x / m',
+              ylabel='y / m',
+              **opts):
     """
-    利用画线的方式显示一个二维的离散裂缝网络
+    利用画线的方式显示一个二维的离散裂缝网络. 主要用于测试.
     """
+
     def on_figure(fig):
-        ax = fig.subplots()
-        ax.set_aspect('equal')
-        ax.set_xlabel('x')
-        ax.set_ylabel('y')
-        for row in dfn2:
-            ax.plot([row[0], row[2]], [row[1], row[3]])
+        """
+        用以在fig上绘图的内核函数
+        """
+        ax = fig.subplots()  # 创建二维的坐标轴
+        if isinstance(xlabel, str):
+            ax.set_xlabel(xlabel)
+        if isinstance(ylabel, str):
+            ax.set_ylabel(ylabel)
+        if isinstance(title, str):
+            ax.set_title(title)
+        for pos in dfn2:
+            ax.plot([pos[0], pos[2]], [pos[1], pos[3]])
+        if aspect is not None:
+            ax.set_aspect(aspect)
+
+    # 执行绘图
     plot(on_figure, **opts)
 
 
@@ -28,18 +44,16 @@ def __test(angle=None, length=None,
         angle = [0, 1.5]
     dfn = Dfn2()
     if pos_range is None:
-        dfn.range = [-75, -250, 75, 250]
+        dfn.range = [-100, -100, 100, 100]
     else:
         dfn.range = pos_range
     if p21 is None:
-        p21 = 0
+        p21 = 0.2
     if lmin is None:
-        lmin = -1
+        lmin = 2
     dfn.add_frac(angles=angle, lengths=length, p21=p21, l_min=lmin)
-
-    show_dfn2([dfn.get_fracture(i) for i in range(dfn.fracture_n)], caption='Dfn2')
+    show_dfn2(dfn.get_fractures())
 
 
 if __name__ == '__main__':
-    gui.execute(lambda: __test(p21=0.2, lmin=2, pos_range=[-100, -100, 100, 100]),
-                close_after_done=False)
+    __test()

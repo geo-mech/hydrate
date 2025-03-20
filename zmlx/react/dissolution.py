@@ -85,7 +85,7 @@ def test():
     c.set_attr(0, 0.1)
 
     print(c.get_fluid(0).mass, c.get_fluid(1).get_component(0).mass, c.get_fluid(1).get_component(1).mass)
-    r = add_reaction(model, create(gas=0, gas_in_liq=(1, 1), liq=1, ca_sol=0, fa_c=fa_c, fa_t=fa_t))
+    r = add_reaction(model, create(sol=0, sol_in_liq=(1, 1), liq=1, ca_sol=0, fa_c=fa_c, fa_t=fa_t))
     for step in range(20):
         r.react(model, dt=0.1)
         print(c.get_fluid(0).mass, c.get_fluid(1).get_component(0).mass, c.get_fluid(1).get_component(1).mass)

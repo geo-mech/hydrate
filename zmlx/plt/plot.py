@@ -24,6 +24,7 @@ def plot(data=None, dim=2, create_ax=None, **opts):
     """
     执行绘图. 可以多个数据叠加绘图;
     """
+
     def on_figure(fig, cmds):
         """
         执行绘图
@@ -70,6 +71,7 @@ def plot(data=None, dim=2, create_ax=None, **opts):
             res = cmd.get('res', 'res')  # 默认为res
             if isinstance(res, str):
                 space[res] = result
+
     do_plot(kernel=lambda fig: on_figure(fig, cmds=data), **opts)
 
 
@@ -128,5 +130,5 @@ def test_1():
 
 if __name__ == '__main__':
     from zmlx.ui import gui
-    gui.execute(test_1, close_after_done=False)
 
+    gui.execute(test_1, close_after_done=False)

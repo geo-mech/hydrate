@@ -3,10 +3,11 @@
 @author: Maryelin
 """
 
+import warnings
+
 from zml import Interp2, Seepage
 from zmlx.fluid.conf.gas_density.co2 import den_co2
 from zmlx.fluid.conf.gas_viscosity.co2 import gas_vis_co2
-import warnings
 
 
 def create(tmin=200, tmax=500, pmin=1.0e6, pmax=20.0e6, name=None):

@@ -1,6 +1,7 @@
 icon = 'open'
 on_toolbar = True
 text = '打开'
+always_show = True
 
 
 def slot():

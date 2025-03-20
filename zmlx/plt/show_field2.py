@@ -19,11 +19,11 @@ def show_field2(f, xr, yr, xlabel=None, ylabel=None, clabel=None, title=None,
                 x.append(a)
                 y.append(b)
                 z.append(f(a, b))
-        if xlabel is not None:
+        if isinstance(xlabel, str):
             ax.set_xlabel(xlabel)
-        if ylabel is not None:
+        if isinstance(ylabel, str):
             ax.set_ylabel(ylabel)
-        if title is not None:
+        if isinstance(title, str):
             ax.set_title(title)
         item = ax.tricontourf(
             x, y, z,
@@ -32,7 +32,7 @@ def show_field2(f, xr, yr, xlabel=None, ylabel=None, clabel=None, title=None,
             antialiased=True
         )
         cbar = fig.colorbar(item, ax=ax)
-        if clabel is not None:
+        if isinstance(clabel, str):
             cbar.set_label(clabel)
 
     plot(on_figure, **opts)

@@ -54,7 +54,7 @@
 `pip install git+https://gitee.com/geomech/hydrate.git`
 
 #### 注：
-若[git](https://git-scm.com/)或者[pip](https://pypi.org/project/pip/)不可用，可手动安装`PyQt5或PyQt6(只安装一个), numpy, scipy, matplotlib, pyqtgraph, PyOpenGL`等依赖项，
+若[git](https://git-scm.com/)或者[pip](https://pypi.org/project/pip/)不可用，可手动安装`PyQt6, numpy, scipy, matplotlib, pyqtgraph, PyOpenGL`等依赖项，
 并将下载解压的[IGG-Hydrate](https://gitee.com/geomech/hydrate)添加到Python搜索路径. 
 
 ### 建模

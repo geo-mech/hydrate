@@ -13,4 +13,4 @@ def show_widget(widget, caption=None, use_gui=False, **kwargs):
         app = QtWidgets.QApplication(sys.argv)
         w = widget(**kwargs)
         w.show()
-        sys.exit(app.exec_())
+        sys.exit(app.exec())

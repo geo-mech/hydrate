@@ -25,7 +25,7 @@ def convert_png_to_jpg(folder_path):
 
 
 if __name__ == '__main__':
-    # 指定文件夹路径
-    folder_path = r'C:\Users\zhaob\OneDrive\MyProjects\ZNetwork\projects\zml\zmlx\ui\data\zml_icons'
-    # 调用函数将 PNG 图片转换为 JPEG 格式并删除原始 PNG 图片
+    from zmlx.ui.data.get_path import get_path
+
+    folder_path = get_path('zml_icons')
     convert_png_to_jpg(folder_path)

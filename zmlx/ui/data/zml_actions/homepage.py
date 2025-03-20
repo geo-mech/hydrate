@@ -8,7 +8,6 @@ def slot():
     from zmlx.ui.MainWindow import get_window
     get_window().start_func(lambda: open_url(url='https://gitee.com/geomech/hydrate',
                                              on_top=True,
-                                             zoom_factor=1.5,
                                              caption='IGG-Hydrate',
                                              icon='home'
                                              ))
