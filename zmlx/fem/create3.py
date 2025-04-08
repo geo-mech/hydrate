@@ -64,9 +64,9 @@ def create3(mesh, ba_E=None, ba_mu=None, ba_den=None, b_E=1.0, b_mu=0.2, b_den=1
         i0 = node_id * ndim
         i1 = i0 + 1
         i2 = i1 + 1
-        model.set_mas(i0, vm[node_id])
-        model.set_mas(i1, vm[node_id])
-        model.set_mas(i2, vm[node_id])
+        model.set_mass(i0, vm[node_id])
+        model.set_mass(i1, vm[node_id])
+        model.set_mass(i2, vm[node_id])
 
     # 修改系数(相当于组刚度矩阵)
     for index in range(model.size):  # 首先初始化

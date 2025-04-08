@@ -11,8 +11,10 @@ from zmlx.ui.Qt import QtWidgets, QtCore
 class CwdViewer(QtWidgets.QTableWidget):
     def __init__(self, parent=None):
         super(CwdViewer, self).__init__(parent)
-        self.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.Stretch)
-        self.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.horizontalHeader().setSectionResizeMode(
+            QtWidgets.QHeaderView.ResizeMode.Stretch)
+        self.setEditTriggers(
+            QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
 
         self.clicked.connect(self.item_clicked)
         self.doubleClicked.connect(self.item_double_clicked)
@@ -46,7 +48,8 @@ class CwdViewer(QtWidgets.QTableWidget):
         self.setHorizontalHeaderLabels(['名称', '类型', '大小', '修改时间'])
         for irow in range(len(data)):
             for icol in range(4):
-                self.setItem(irow, icol, QtWidgets.QTableWidgetItem(data[irow][icol]))
+                self.setItem(irow, icol,
+                             QtWidgets.QTableWidgetItem(data[irow][icol]))
 
     def refresh(self):
         cpu_t = timeit.default_timer()

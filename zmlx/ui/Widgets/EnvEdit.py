@@ -17,7 +17,8 @@ class LineEdit(QtWidgets.QLineEdit):
 
     def load(self):
         if self.key is not None:
-            self.setText(app_data.getenv(self.key, encoding='utf-8', default=''))
+            self.setText(
+                app_data.getenv(self.key, encoding='utf-8', default=''))
 
     def save(self):
         if self.key is not None:
@@ -37,12 +38,15 @@ class ComboBox(QtWidgets.QComboBox):
 
     def load(self):
         if self.key is not None:
-            self.setCurrentText(app_data.getenv(self.key, encoding='utf-8', default=''))
+            self.setCurrentText(
+                app_data.getenv(self.key, encoding='utf-8', default=''))
 
     def save(self):
         if self.key is not None:
-            app_data.setenv(key=self.key, value=self.currentText(), encoding='utf-8')
-            gui.status(f'保存成功. key = {self.key}, value = {self.currentText()}')
+            app_data.setenv(key=self.key, value=self.currentText(),
+                            encoding='utf-8')
+            gui.status(
+                f'保存成功. key = {self.key}, value = {self.currentText()}')
 
 
 class EnvEdit(QtWidgets.QTableWidget):
@@ -50,8 +54,10 @@ class EnvEdit(QtWidgets.QTableWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.Stretch)
-        self.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.horizontalHeader().setSectionResizeMode(
+            QtWidgets.QHeaderView.ResizeMode.Stretch)
+        self.setEditTriggers(
+            QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
         self.sigRefresh.connect(self.refresh)
         self.sigRefresh.emit()
 
@@ -98,7 +104,8 @@ class EnvEdit(QtWidgets.QTableWidget):
                      items=['', 'PyQt5', 'PyQt6'],
                      note='界面优先使用Qt版本，默认为PyQt6. 请尽量保证系统里PyQt5或者PyQt6，仅安装其中一个。'
                           '两个同时安装，可能会带来不可预知的错误'),
-                dict(label='启动时恢复上次视窗大小', key='restore_window_geometry',
+                dict(label='启动时恢复上次视窗大小',
+                     key='restore_window_geometry',
                      items=['', 'Yes', 'No'],
                      note='默认 Yes，即尝试恢复关闭时候的窗口大小和位置，并尽可能使得窗口位于屏幕可视区域内；'
                           '如选择No，则启动时会将窗口置于默认的位置（屏幕中央，大小大约为屏幕大小的3/4）'),
@@ -109,7 +116,8 @@ class EnvEdit(QtWidgets.QTableWidget):
         self.setRowCount(len(data))
         self.setColumnCount(3)
         self.setHorizontalHeaderLabels(['项目', '值', '备注'])
-        self.horizontalHeader().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
+        self.horizontalHeader().setSectionResizeMode(0,
+                                                     QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
 
         for i in range(len(data)):
             label = data[i].get('label')

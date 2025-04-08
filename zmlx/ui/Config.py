@@ -61,7 +61,8 @@ def load_icon(name):
         pixmap = load_pixmap(name)
         if pixmap is not None:
             icon = QtGui.QIcon()
-            icon.addPixmap(pixmap, QtGui.QIcon.Mode.Normal, QtGui.QIcon.State.Off)
+            icon.addPixmap(pixmap, QtGui.QIcon.Mode.Normal,
+                           QtGui.QIcon.State.Off)
             return icon
         else:
             return QtGui.QIcon()
@@ -121,14 +122,6 @@ def save(key, value, encoding=None):
 
 def load(key, default='', encoding=None):
     return read_text(path=find(key), default=default, encoding=encoding)
-
-
-def load_window_style(win, name, extra=''):
-    try:
-        value = load(name, default='', encoding='utf-8')
-        win.setStyleSheet(f'{value};{extra}')
-    except Exception as err:
-        print(err)
 
 
 def _intersection_area(rect1, rect2) -> int:
@@ -220,7 +213,8 @@ def _set_default_geometry(win: QtWidgets.QMainWindow, w=None, h=None):
         if h is None:
             h = int(rect.height() * 0.75)
         else:
-            h = clamp(int(h), int(rect.height() * 0.3), int(rect.height() * 0.9))
+            h = clamp(int(h), int(rect.height() * 0.3),
+                      int(rect.height() * 0.9))
         # 再根据此确定位置.
         x = rect.x() + int((rect.width() - w) / 2)
         y = rect.y() + int((rect.height() - h) / 2)
@@ -231,10 +225,12 @@ def _set_default_geometry(win: QtWidgets.QMainWindow, w=None, h=None):
 
 def _screen_geometries():
     if is_PyQt6:
-        return [screen.availableGeometry() for screen in QtWidgets.QApplication.screens()]
+        return [screen.availableGeometry() for screen in
+                QtWidgets.QApplication.screens()]
     else:  # PyQt5
         desktop = QtWidgets.QDesktopWidget()
-        return [desktop.availableGeometry(i) for i in range(desktop.screenCount())]
+        return [desktop.availableGeometry(i) for i in
+                range(desktop.screenCount())]
 
 
 def _set_saved_geometry(win: QtWidgets.QMainWindow, words):
@@ -242,17 +238,20 @@ def _set_saved_geometry(win: QtWidgets.QMainWindow, words):
         if len(words) < 4:
             _set_default_geometry(win)
         else:
-            target_rect = QtCore.QRect(int(words[0]), int(words[1]), int(words[2]), int(words[3]))
+            target_rect = QtCore.QRect(int(words[0]), int(words[1]),
+                                       int(words[2]), int(words[3]))
             target_sc = None
             for rect in _screen_geometries():
                 if target_sc is None:
                     target_sc = rect
                     continue
-                if _intersection_area(rect, target_rect) > _intersection_area(target_sc, target_rect):
+                if _intersection_area(rect, target_rect) > _intersection_area(
+                        target_sc, target_rect):
                     target_sc = rect
                     continue
             if target_sc is None:
-                _set_default_geometry(win, w=target_rect.width(), h=target_rect.height())
+                _set_default_geometry(win, w=target_rect.width(),
+                                      h=target_rect.height())
                 return
             else:
                 target_sc = _scale_rect_around_center(target_sc, 0.96)
@@ -310,7 +309,8 @@ def save_cwd():
 
 def load_cwd():
     try:
-        os.chdir(app_data.getenv('current_work_directory', default=os.getcwd(), encoding='utf-8'))
+        os.chdir(app_data.getenv('current_work_directory', default=os.getcwd(),
+                                 encoding='utf-8'))
     except Exception as err:
         print(err)
         save_cwd()
@@ -337,7 +337,8 @@ def load_priority():
     """
     应用内核的优先级。默认使用较低的优先级，以保证整个计算机运行的稳定
     """
-    return app_data.getenv('console_priority', default='LowPriority', encoding='utf-8', ignore_empty=True)
+    return app_data.getenv('console_priority', default='LowPriority',
+                           encoding='utf-8', ignore_empty=True)
 
 
 def save_priority(value):

@@ -18,9 +18,11 @@ def slot():
                 dict(package_name='chemicals', import_name='chemicals'),
                 ]
     if is_PyQt6:
-        packages.append(dict(package_name='PyQt6-WebEngine', import_name='PyQt6.QtWebEngineWidgets'))
+        packages.append(dict(package_name='PyQt6-WebEngine',
+                             import_name='PyQt6.QtWebEngineWidgets'))
     else:
-        packages.append(dict(package_name='PyQtWebEngine', import_name='PyQt5.QtWebEngineWidgets'))
+        packages.append(dict(package_name='PyQtWebEngine',
+                             import_name='PyQt5.QtWebEngineWidgets'))
     get_window().get_widget(
         the_type=PackageTable, caption='Python包管理', on_top=True,
         type_kw=dict(packages=packages))

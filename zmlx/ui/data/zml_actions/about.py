@@ -6,7 +6,7 @@ def slot():
     from zmlx.ui.window.start_func import start_func
     xx = """
 from zml import lic
-print(lic.summary)
+print(lic.desc)
 gui.show_about()
     """
     start_func(xx)

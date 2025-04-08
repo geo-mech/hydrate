@@ -1,5 +1,6 @@
 import os
 
+
 def get_latest_file(folder):
     """
     获取指定文件夹内最新修改的文件的绝对路径

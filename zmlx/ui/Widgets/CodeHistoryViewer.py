@@ -1,5 +1,8 @@
-from zmlx.ui.Qt import is_PyQt6
+import os
+
+from zmlx.io.text import read_text
 from zmlx.ui.CodeEdit import CodeEdit
+from zmlx.ui.Qt import is_PyQt6
 
 if is_PyQt6:
     from PyQt6.QtWidgets import (
@@ -12,7 +15,6 @@ else:
     )
     from PyQt5.QtCore import Qt, QFileInfo, QDateTime
 
-import os
 import glob
 
 ITEM_DATA_ROLE = Qt.ItemDataRole.UserRole if is_PyQt6 else Qt.UserRole
@@ -44,7 +46,7 @@ class CodeHistoryViewer(QWidget):
 
     def set_folder(self, folder):
         """设置目标文件夹，自动过滤.py文件"""
-        self.current_folder = folder
+        self.current_folder = os.path.abspath(folder)
         self.refresh_file_list()
 
         if self.file_list.count() > 0:
@@ -63,10 +65,11 @@ class CodeHistoryViewer(QWidget):
         sorted_files = sorted(files, key=lambda x: x[1], reverse=True)
 
         for idx, (file_path, mtime) in enumerate(sorted_files, 1):
-            filename = os.path.basename(file_path)
             time_str = QDateTime.toString(mtime, "yyyy-MM-dd hh:mm")
-
-            item = QListWidgetItem(f"{idx:02d}.\t{time_str}")
+            text = read_text(file_path, encoding='utf-8')
+            text = text[:300]
+            item = QListWidgetItem(
+                f"\n{idx:02d}.\t{time_str}\n\n{text}\n--------------\n\n")
             item.setData(ITEM_DATA_ROLE, file_path)
             self.file_list.addItem(item)
 
@@ -75,27 +78,8 @@ class CodeHistoryViewer(QWidget):
         file_path = item.data(ITEM_DATA_ROLE)
         self.code_edit.open(file_path)  # 依赖CodeEdit自身的错误处理
 
+    def console_exec(self):
+        self.code_edit.console_exec()
 
-# 保持测试代码不变（适配参数变化）
-if __name__ == '__main__':
-    from zmlx.ui.Qt import is_PyQt6
-
-    if is_PyQt6:
-        from PyQt6.QtWidgets import QApplication
-    else:
-        from PyQt5.QtWidgets import QApplication
-
-    import sys
-    import os
-
-    app = QApplication(sys.argv)
-
-    viewer = CodeHistoryViewer()
-    viewer.setMinimumSize(800, 600)
-
-    # 测试代码保持原调用方式（第二个参数会被忽略）
-    current_dir = os.path.dirname(__file__)
-    viewer.set_folder(current_dir)  # 移除了第二个"py"参数
-
-    viewer.show()
-    sys.exit(app.exec())
+    def get_start_code(self):
+        return f"""gui.show_code_history(r'{self.current_folder}')"""

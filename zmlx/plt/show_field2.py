@@ -1,14 +1,11 @@
-from zmlx.ui.GuiBuffer import plot
+from zmlx.plt.plot_on_axes import plot_on_axes
 
 
-def show_field2(f, xr, yr, xlabel=None, ylabel=None, clabel=None, title=None,
-                **opts):
+def show_field2(f, xr, yr, clabel=None, **opts):
     """
     显示一个二维的场，用于测试
     """
-
-    def on_figure(fig):
-        ax = fig.subplots()
+    def on_axes(ax):
         x = []
         y = []
         z = []
@@ -19,20 +16,27 @@ def show_field2(f, xr, yr, xlabel=None, ylabel=None, clabel=None, title=None,
                 x.append(a)
                 y.append(b)
                 z.append(f(a, b))
-        if isinstance(xlabel, str):
-            ax.set_xlabel(xlabel)
-        if isinstance(ylabel, str):
-            ax.set_ylabel(ylabel)
-        if isinstance(title, str):
-            ax.set_title(title)
         item = ax.tricontourf(
             x, y, z,
             levels=30,
             cmap='coolwarm',
             antialiased=True
         )
-        cbar = fig.colorbar(item, ax=ax)
+        cbar = ax.get_figure().colorbar(item, ax=ax)
         if isinstance(clabel, str):
             cbar.set_label(clabel)
 
-    plot(on_figure, **opts)
+    plot_on_axes(on_axes, **opts)
+
+
+def test_1():
+    from zmlx.fluid.ch4 import create
+    flu = create()
+    show_field2(flu.den, [4e6, 15e6], [274, 290], caption='den')
+    show_field2(flu.vis, [4e6, 15e6], [274, 290], caption='vis')
+
+
+if __name__ == '__main__':
+    from zmlx.ui import gui
+
+    gui.execute(test_1, close_after_done=False)

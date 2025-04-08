@@ -1,4 +1,4 @@
-from zmlx.ui.GuiBuffer import plot
+from zmlx.plt.plot_on_axes import plot_on_axes
 
 
 def _load(ipath=None, ix=None, iy=None, iz=None):
@@ -9,42 +9,27 @@ def _load(ipath=None, ix=None, iy=None, iz=None):
 
 def tricontourf(x=None, y=None, z=None,
                 ipath=None, ix=None, iy=None, iz=None,
-                title=None,
                 triangulation=None,
                 levels=20,
                 cmap='coolwarm',
-                xlabel='x',
-                ylabel='y',
                 clabel=None,
-                aspect='equal',
                 **opts):
     """
     利用给定的x，y，z来画一个二维的云图.
     """
 
-    def on_figure(fig):
-        ax = fig.subplots()
-
-        if aspect is not None:
-            ax.set_aspect(aspect)
-
-        if xlabel is not None:
-            ax.set_xlabel(xlabel)
-
-        if ylabel is not None:
-            ax.set_ylabel(ylabel)
-
-        if title is not None:
-            ax.set_title(title)
-
+    def on_axes(ax):
         args = (x, y, z) if ipath is None else _load(ipath, ix, iy, iz)
         if triangulation is None:
-            item = ax.tricontourf(*args, levels=levels, cmap=cmap, antialiased=True)
+            item = ax.tricontourf(*args, levels=levels, cmap=cmap,
+                                  antialiased=True)
         else:
-            item = ax.tricontourf(triangulation, args[2], levels=levels, cmap=cmap, antialiased=True)
+            item = ax.tricontourf(triangulation, args[2], levels=levels,
+                                  cmap=cmap, antialiased=True)
 
-        cbar = fig.colorbar(item, ax=ax)
+        cbar = ax.get_figure().colorbar(item, ax=ax)
         if clabel is not None:
             cbar.set_label(clabel)
 
-    plot(on_figure, **opts)
+    opts.setdefault('aspect', 'equal')
+    plot_on_axes(on_axes, **opts)

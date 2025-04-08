@@ -38,7 +38,9 @@ def open_url(url: str, caption=None, on_top=None, zoom_factor=None,
             open_new_tab(url)
     else:
         def f(widget):
-            widget.page().setZoomFactor(zoom_factor if zoom_factor is not None else (1 if is_PyQt6 else 1.5))
+            widget.page().setZoomFactor(
+                zoom_factor if zoom_factor is not None else (
+                    1 if is_PyQt6 else 1.5))
             if os.path.isfile(url):
                 widget.load(QtCore.QUrl.fromLocalFile(url))
             else:

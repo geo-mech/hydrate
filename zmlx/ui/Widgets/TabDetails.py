@@ -29,11 +29,13 @@ class TabDetails(QTableWidget):
         self.horizontalHeader().setSectionResizeMode(
             QHeaderView.ResizeMode.Stretch)
         self.verticalHeader().setVisible(True)
-        self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)  # 启用右键菜单
+        self.setContextMenuPolicy(
+            QtCore.Qt.ContextMenuPolicy.CustomContextMenu)  # 启用右键菜单
 
     def _connect_signals(self):
         self.cellClicked.connect(self._on_cell_clicked)
-        self.customContextMenuRequested.connect(self._show_context_menu)  # 右键菜单信号
+        self.customContextMenuRequested.connect(
+            self._show_context_menu)  # 右键菜单信号
 
     def refresh(self):
         if (not hasattr(self.obj, 'count')

@@ -1,8 +1,8 @@
-from zmlx.ui.GuiBuffer import plot
+from zmlx.plt.plot_on_axes import plot_on_axes
 
 
 def plotxy(x=None, y=None, ipath=None, ix=None, iy=None,
-           title=None, xlabel='x', ylabel='y', **opts):
+           **opts):
     """
     绘制二维曲线图，支持数组输入和文件数据加载
 
@@ -14,12 +14,6 @@ def plotxy(x=None, y=None, ipath=None, ix=None, iy=None,
         数据文件路径，要求为可被numpy.loadtxt读取的格式
     ix, iy : int, optional
         文件数据列的索引，用于指定x/y数据所在列
-    title : str, optional
-        图标题，默认不显示
-    xlabel, ylabel : str, default 'x'/'y'
-        坐标轴标签文本
-    caption : str, optional
-        在图形窗口中显示的标题
     **opts : dict
         传递给底层plot的附加参数
     """
@@ -38,17 +32,7 @@ def plotxy(x=None, y=None, ipath=None, ix=None, iy=None,
     if x is None or y is None:
         raise ValueError("必须提供x/y数据或有效文件路径")
 
-    def on_figure(fig):
-        ax = fig.subplots()
-        if isinstance(title, str):
-            ax.set_title(title)
-        if isinstance(xlabel, str):
-            ax.set_xlabel(xlabel)
-        if isinstance(ylabel, str):
-            ax.set_ylabel(ylabel)
-        ax.plot(x, y)
-
-    plot(on_figure, **opts)
+    plot_on_axes(on_axes=lambda ax: ax.plot(x, y), **opts)
 
 
 def test_1():
@@ -56,10 +40,9 @@ def test_1():
     x = np.linspace(0, 10, 100)
     y = np.sin(x)
     plotxy(x, y, title='sin(x)', xlabel='x', ylabel='y',
-           caption='sin(x)')
+           caption='sin(x)', gui_mode=True)
 
 
 if __name__ == '__main__':
-    from zmlx.ui import gui
+    test_1()
 
-    gui.execute(test_1, close_after_done=False)

@@ -6,11 +6,12 @@ icon = 'home'
 def slot():
     from zmlx.ui.alg.open_url import open_url
     from zmlx.ui.MainWindow import get_window
-    get_window().start_func(lambda: open_url(url='https://gitee.com/geomech/hydrate',
-                                             on_top=True,
-                                             caption='IGG-Hydrate',
-                                             icon='home'
-                                             ))
+    get_window().start_func(
+        lambda: open_url(url='https://gitee.com/geomech/hydrate',
+                         on_top=True,
+                         caption='IGG-Hydrate',
+                         icon='home'
+                         ))
 
 
 def enabled():

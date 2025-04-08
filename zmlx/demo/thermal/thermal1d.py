@@ -1,4 +1,4 @@
-# 1D benchmark case of heat conduction
+# 1D benchmark field of heat conduction
 """
 by 徐涛
 

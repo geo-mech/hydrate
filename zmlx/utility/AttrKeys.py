@@ -1,3 +1,5 @@
+import warnings
+
 from zmlx.io import json_ex
 
 
@@ -14,6 +16,9 @@ def add_keys(*args):
         {'x': 0, 'y': 1}
         {'x': 0, 'y': 1, 'a': 2, 'b': 3, 'c': 4}
     """
+    warnings.warn('The function zmlx.utility.AttrKeys.add_keys is deprecated '
+                  '(will be removed after 2026-3-22), '
+                  'please use zmlx.utility.AttrKeys instead.', DeprecationWarning)
 
     # Check the input
     n1 = 0

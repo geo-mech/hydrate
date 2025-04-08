@@ -3,7 +3,7 @@ icon = 'python'
 
 
 def slot():
-    from zmlx.ui.alg.code import new_code
+    from zmlx.ui.window.code import new_code
     from zmlx.ui.MainWindow import get_window
     win = get_window()
     if win is not None:

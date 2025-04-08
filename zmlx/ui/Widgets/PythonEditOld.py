@@ -159,17 +159,19 @@ class PythonHighlighter(QtGui.QSyntaxHighlighter):
                 if i == -1:  # 如果没有匹配，设置 i 为文本长度
                     i = len(text)
                     self.setCurrentBlockState(state)
-                self.setFormat(0, i + 3, PythonHighlighter.Formats["string"])  # 设置格式
+                self.setFormat(0, i + 3,
+                               PythonHighlighter.Formats["string"])  # 设置格式
             elif i > -1:  # 如果找到匹配
                 self.setCurrentBlockState(state)
-                self.setFormat(i, len(text), PythonHighlighter.Formats["string"])  # 设置格式
+                self.setFormat(i, len(text),
+                               PythonHighlighter.Formats["string"])  # 设置格式
 
 
 class PythonEditOld(QtWidgets.QTextEdit):
     def __init__(self, parent=None):
         super(PythonEditOld, self).__init__(parent)
         self.__highlighter = PythonHighlighter(self.document())
-        self.setStyleSheet('background-color: white')
+        # self.setStyleSheet('background-color: white')
 
     def event(self, event):
         if event.type() == QtCore.QEvent.Type.KeyPress and event.key() == QtCore.Qt.Key.Key_Tab:

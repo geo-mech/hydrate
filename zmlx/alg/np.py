@@ -11,8 +11,8 @@ def get_pointer(data, dtype=None):
     """
     返回指针;
     """
-    if not data.flags['C_CONTIGUOUS']:
-        data = np.ascontiguous(data, dtype=data.dtype)  # 如果不是C连续的内存，必须强制转换
+    if not data.flags.c_contiguous:
+        data = np.ascontiguousarray(data)
 
     if dtype is None:
         dtype = c_double

@@ -1,6 +1,6 @@
 ### 简介
 
-[IGG-Hydrate](https://gitee.com/geomech/hydrate):
+[**IGG-Hydrate**](https://gitee.com/geomech/hydrate):
 天然气水合物成藏/开发计算模块。用于：1、天然气水合物[成藏](https://doi.org/10.3390/w16192822)/[开发](https://doi.org/10.1016/j.apenergy.2024.122963)/[碳封存](https://doi.org/10.1021/acs.energyfuels.4c04288);
 2、页岩油[原位转化](https://doi.org/10.1016/j.petsci.2024.05.025)；3、其它流动/传热/化学/变形(THMC)耦合问题.
 
@@ -18,11 +18,11 @@
 <sup>2</sup>[中国科学院大学](https://www.ucas.ac.cn/)(北京, 101408).
 
 <sup>*</sup>联系: [zhangzhaobin@mail.iggcas.ac.cn](zhangzhaobin@mail.iggcas.ac.cn).   
-(技术问题请[新建Issue](https://gitee.com/geomech/hydrate/issues/new))
+(技术问题请[**新建Issue**](https://gitee.com/geomech/hydrate/issues/new))
 
 ### 授权
 
-免费用于学术用途; 使用前请[联系作者](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/201703/t20170306_4755492.html).
+**免费用于学术用途**; 使用前请[联系作者](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/201703/t20170306_4755492.html).
 
 ### 功能
 
@@ -45,22 +45,32 @@
 ### 环境
 
 1. Windows 10/11, x64; 安装[VC_redist.x64.exe](https://gitee.com/geomech/hydrate/attach_files);
-2. [Python](https://www.python.org/) (64位, 3.8+).
+2. 安装[git](https://git-scm.com/)
+   ：官方下载，默认安装即可（默认安装的时候会添加文件夹的右键菜单，可以取消勾选；git安装之后，建议安装辅助工具[TortoiseGit](https://tortoisegit.org/)
+   ，会添加更加好用的右键菜单）;
+3. 安装[Python](https://www.python.org/) (64位, 3.8+)，推荐[WinPython](https://gitee.com/geomech/hydrate/attach_files) (
+   绿色免安装); 推荐提前安装好 `PyQt6, numpy, scipy, matplotlib, pyqtgraph, PyOpenGL`等第三方的Python包;
 
 ### 安装
 
-推荐使用[git](https://git-scm.com/)+[pip](https://pypi.org/project/pip/)来安装/更新：
+1. 作为用户，如果只是单纯使用，可[cmd](https://blog.csdn.net/qq_43546721/article/details/131536857)执行如下命令来安装(
+   可自动处理Python的依赖项)：`python -m pip install git+https://gitee.com/geomech/hydrate.git`
+   . 注意：如果python.exe不在[PATH](https://blog.csdn.net/flame_007/article/details/106401215)
+   中，可以先[cd](https://blog.csdn.net/zdy219727/article/details/98605287)到python.exe所在的目录，再执行上述命令.
 
-`pip install git+https://gitee.com/geomech/hydrate.git`
-
-#### 注：
-若[git](https://git-scm.com/)或者[pip](https://pypi.org/project/pip/)不可用，可手动安装`PyQt6, numpy, scipy, matplotlib, pyqtgraph, PyOpenGL`等依赖项，
-并将下载解压的[IGG-Hydrate](https://gitee.com/geomech/hydrate)添加到Python搜索路径. 
+2. 如果要参与开发，或者希望更加清晰地看到源代码，请使用[git](https://git-scm.com/)
+   将代码[clone到本地](https://gitee.com/help/articles/4111#article-header0)，并添加到Python的搜索路径。
 
 ### 建模
 
-1. 参考[`zmlx/demo`](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)建模;
-2. 运行[`zml_ui.pyw`](https://gitee.com/geomech/hydrate/blob/master/zml_ui.pyw)打开界面.
+1. 参考[`zmlx/demo`](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)建模 (在此基础上，推荐向前追溯函数的实现);
+2. 运行[`zml_ui.pyw`](https://gitee.com/geomech/hydrate/blob/master/zml_ui.pyw)打开界面 (
+   首次启动时会配置Python环境，安装依赖项，因此可能耗时较长).
+
+### 编程环境 (IDE)
+
+推荐使用PyCharm集成开发环境([官网下载PyCharm Community Edition](https://www.jetbrains.com/pycharm/download)默认安装即可)
+，之后，推荐安装 MarsCode AI插件 (在PyCharm的插件管理中搜索下载)，其中集成了DeepSeek等AI工具，使用比较友好。
 
 ### 反馈
 
@@ -70,4 +80,10 @@
 
 1. 非常欢迎并感谢您成为[IGG-Hydrate](https://gitee.com/geomech/hydrate)的开发者, [git](https://git-scm.com/)会记录您的每一个贡献;
 2. 请只修改自己创建的文件(以避免冲突);
-3. 请务必熟悉[git](https://git-scm.com/).
+3. 请务必熟悉[git](https://git-scm.com/)，在[Gitee帮助中心](https://gitee.com/help#article-header0)
+   有不少git的入门资料；新手建议安装[TortoiseGit](https://tortoisegit.org/)
+   ，它会在文件管理器添加右键菜单，可以满足大部分操作;
+4. 如果直接向[IGG-Hydrate](https://gitee.com/geomech/hydrate)
+   推送代码，可能会报错（因为没有权限）；此时，可以在页面右上角，点击[**申请加入仓库**](https://gitee.com/geomech/hydrate)，成为
+   **开发者**；或者，你也可以使用[**Fork + Pull 模式**](https://help.gitee.com/base/pullrequest/Fork+Pull)
+   参与开发（这也是Gitee推荐的方式，适用于所有的开源仓库）。

@@ -49,9 +49,11 @@ class PythonEditor(QsciScintilla):
         # 自动检测主题变化
         self.app_palette = QApplication.palette()
         if is_PyQt5:
-            QApplication.instance().paletteChanged.connect(self._on_palette_changed)
+            QApplication.instance().paletteChanged.connect(
+                self._on_palette_changed)
         else:
-            QApplication.instance().paletteChanged.connect(self._on_palette_changed)
+            QApplication.instance().paletteChanged.connect(
+                self._on_palette_changed)
 
     def _is_dark_theme(self):
         # 通过背景色亮度判断是否为暗色主题
@@ -91,11 +93,14 @@ class PythonEditor(QsciScintilla):
         self.lexer.setDefaultPaper(paper)
         self.lexer.setDefaultColor(text)
         self.lexer.setColor(QColor("#008000"), QsciLexerPython.Comment)
-        self.lexer.setColor(QColor("#FF0000"), QsciLexerPython.SingleQuotedString)
-        self.lexer.setColor(QColor("#FF0000"), QsciLexerPython.DoubleQuotedString)
+        self.lexer.setColor(QColor("#FF0000"),
+                            QsciLexerPython.SingleQuotedString)
+        self.lexer.setColor(QColor("#FF0000"),
+                            QsciLexerPython.DoubleQuotedString)
         self.lexer.setColor(QColor("#0000FF"), QsciLexerPython.Keyword)
         self.lexer.setColor(QColor("#FF00FF"), QsciLexerPython.ClassName)
-        self.lexer.setColor(QColor("#FF8000"), QsciLexerPython.FunctionMethodName)
+        self.lexer.setColor(QColor("#FF8000"),
+                            QsciLexerPython.FunctionMethodName)
 
         # 设置边线颜色
         self.setEdgeColor(QColor("#E0E0E0"))
@@ -127,11 +132,14 @@ class PythonEditor(QsciScintilla):
         self.lexer.setDefaultPaper(paper)
         self.lexer.setDefaultColor(text)
         self.lexer.setColor(QColor("#608060"), QsciLexerPython.Comment)
-        self.lexer.setColor(QColor("#FF8080"), QsciLexerPython.SingleQuotedString)
-        self.lexer.setColor(QColor("#FF8080"), QsciLexerPython.DoubleQuotedString)
+        self.lexer.setColor(QColor("#FF8080"),
+                            QsciLexerPython.SingleQuotedString)
+        self.lexer.setColor(QColor("#FF8080"),
+                            QsciLexerPython.DoubleQuotedString)
         self.lexer.setColor(QColor("#CC99FF"), QsciLexerPython.Keyword)
         self.lexer.setColor(QColor("#99CCFF"), QsciLexerPython.ClassName)
-        self.lexer.setColor(QColor("#FFCC66"), QsciLexerPython.FunctionMethodName)
+        self.lexer.setColor(QColor("#FFCC66"),
+                            QsciLexerPython.FunctionMethodName)
 
         # 设置边线颜色
         self.setEdgeColor(QColor("#505050"))

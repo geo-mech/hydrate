@@ -553,9 +553,9 @@ def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
                               fa_igr=fa_igr,
                               relax_factor=0.3)
 
-    # 施加cond的更新操作
-    if cond_updaters is not None:
+    if cond_updaters is not None:  # 施加cond的更新操作
         for update in cond_updaters:
+            assert callable(update), f'The update in cond_updaters must be callable. However, it is: {update}'
             update(model)
 
     # 当未禁止更新flow且流体的数量非空
@@ -1122,7 +1122,7 @@ def set_face(face: Seepage.Face, area=None, length=None,
     g0 = area * perm / length
     face.cond = g0
 
-    if bk_g:
+    if bk_g:  # 备份初始时刻的cond，从而在后续可以根据gr去更新
         face.set_attr(fa.g0, g0)
 
     if heat_cond is not None:
@@ -1261,12 +1261,14 @@ def set_solve(model: Seepage, **kw):
 
 
 def solve(model=None, folder=None, fname=None, gui_mode=None,
-          close_after_done=None, solver=None,
+          close_after_done=None,
           extra_plot=None,
           show_state=True, gui_iter=None, state_hint=None,
-          slots=None,
           save_dt=None, export_mass=True, time_unit='y',
-          **kwargs):
+          slots=None, solver=None,
+          opt_iter=None,  # 用于在iterate的时候的额外的关键词参数.
+          **opt_solve
+          ):
     """
     求解模型，并尝试将结果保存到folder.
     """
@@ -1289,20 +1291,20 @@ def solve(model=None, folder=None, fname=None, gui_mode=None,
     # step 1. 读取求解选项
     text = model.get_text(key='solve')
     if len(text) > 0:
-        solve_options = eval(text)
+        full_solve_options = eval(text)
     else:
-        solve_options = {}
+        full_solve_options = {}
 
     # 更新
-    solve_options.update(kwargs)
+    full_solve_options.update(opt_solve)
 
     # 建立求解器
     if solver is None:  # 使用规定的精度
         solver = ConjugateGradientSolver(
-            tolerance=solve_options.get('tolerance', 1.0e-25))
+            tolerance=full_solve_options.get('tolerance', 1.0e-25))
 
     # 创建monitor(同时，还保留了之前的配置信息)
-    monitors = solve_options.get('monitor')
+    monitors = full_solve_options.get('monitor')
     if isinstance(monitors, dict):
         monitors = [monitors]
     elif monitors is None:
@@ -1313,43 +1315,31 @@ def solve(model=None, folder=None, fname=None, gui_mode=None,
                 get_t=lambda: get_time(model),
                 cell=[model.get_cell(i) for i in item.get('cell_ids')])
 
-    # 每一个保存的时间单位内的秒数
-    if time_unit == 'y':
-        seconds_in_target_unit = 3600.0 * 24.0 * 365.0
-    elif time_unit == 'd':
-        seconds_in_target_unit = 3600.0 * 24.0
-    else:
-        assert time_unit == 's'
-        seconds_in_target_unit = 1.0
-
     if save_dt is None:
-        save_dt_min = solve_options.get('save_dt_min', 0.01 * seconds_in_target_unit) / seconds_in_target_unit
-        save_dt_max = solve_options.get('save_dt_max', 5 * seconds_in_target_unit) / seconds_in_target_unit
+        save_dt_min = full_solve_options.get('save_dt_min', 0.01 * SaveManager.get_unit_length(time_unit=time_unit))
+        save_dt_max = full_solve_options.get('save_dt_max', 5 * SaveManager.get_unit_length(time_unit=time_unit))
 
-        def get_save_dt_in_target_unit(time_in_target_unit):
-            return clamp(time_in_target_unit * 0.05, save_dt_min, save_dt_max)
-    else:
-        if callable(save_dt):
-            def get_save_dt_in_target_unit(time_in_target_unit):
-                return save_dt(time_in_target_unit * seconds_in_target_unit) / seconds_in_target_unit
-        else:
-            def get_save_dt_in_target_unit(_):
-                return save_dt / seconds_in_target_unit
+        def save_dt(time):
+            return clamp(time * 0.05, save_dt_min, save_dt_max)
 
     # 执行数据的保存
     save_model = SaveManager(join_paths(folder, 'models'), save=model.save,
-                             ext='.seepage', time_unit=time_unit,
-                             dtime=get_save_dt_in_target_unit,
-                             get_time=lambda: get_time(model) / seconds_in_target_unit,
+                             ext='.seepage',
+                             time_unit=time_unit,
+                             unit_length='auto',
+                             dtime=save_dt,
+                             get_time=lambda: get_time(model),
                              )
 
     # 打印cell
     save_cells = SaveManager(join_paths(folder, 'cells'),
                              save=lambda name: print_cells(name, model=model,
                                                            export_mass=export_mass),
-                             ext='.txt', time_unit=time_unit,
-                             dtime=get_save_dt_in_target_unit,
-                             get_time=lambda: get_time(model) / seconds_in_target_unit,
+                             ext='.txt',
+                             time_unit=time_unit,
+                             unit_length='auto',
+                             dtime=save_dt,
+                             get_time=lambda: get_time(model),
                              )
 
     # 保存所有
@@ -1358,7 +1348,7 @@ def solve(model=None, folder=None, fname=None, gui_mode=None,
         save_cells(*args, **kw)
 
     # 用来绘图的设置(show_cells)
-    data = solve_options.get('show_cells')
+    data = full_solve_options.get('show_cells')
     if isinstance(data, dict):
         def do_show():
             show_cells(model, folder=join_paths(folder, 'figures'), **data)
@@ -1409,18 +1399,18 @@ def solve(model=None, folder=None, fname=None, gui_mode=None,
         gui_iter.plot = plot
 
     # 求解到的最大的时间
-    time_max = solve_options.get('time_max')
+    time_max = full_solve_options.get('time_max')
     if time_max is None:
-        time_forward = solve_options.get('time_forward')
+        time_forward = full_solve_options.get('time_forward')
         if time_forward is not None:
             time_max = get_time(model) + time_forward
     if time_max is None:  # 给定默认值
         time_max = 1.0e100
 
     # 求解到的最大的step
-    step_max = solve_options.get('step_max')
+    step_max = full_solve_options.get('step_max')
     if step_max is None:
-        step_forward = solve_options.get('step_forward')  # 向前迭代的步数
+        step_forward = full_solve_options.get('step_forward')  # 向前迭代的步数
         if step_forward is not None:
             step_max = get_step(model) + step_forward
     if step_max is None:  # 给定默认值
@@ -1437,13 +1427,21 @@ def solve(model=None, folder=None, fname=None, gui_mode=None,
             print(f'{state_hint}step={get_step(model)}, dt={get_dt(model, as_str=True)}, '
                   f'time={get_time(model, as_str=True)}')
 
+    # 准备iterate的参数
+    if opt_iter is None:  # 用于迭代的额外的参数
+        opt_iter = {}
+    if slots is not None:  # 优先级高于opt_iter
+        opt_iter['slots'] = slots
+    if solver is not None:  # 优先级高于opt_iter
+        opt_iter['solver'] = solver
+
     def main_loop():  # 主循环
         if folder is not None:  # 显示求解的目录
             if gui.exists():
                 gui.title(f'Solve seepage: {folder}')
 
         while get_time(model) < time_max and get_step(model) < step_max:
-            gui_iter(model, solver=solver, slots=slots)
+            gui_iter(model, **opt_iter)
             save()
 
             for item3 in monitors:  # 更新所有的监控点

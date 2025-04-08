@@ -51,9 +51,11 @@ class PackageTable(QtWidgets.QTableWidget):
     def setup_ui(self):
         self.setColumnCount(3)
         self.setHorizontalHeaderLabels(["包名", "状态", "操作"])
-        self.horizontalHeader().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeMode.Stretch)
+        self.horizontalHeader().setSectionResizeMode(0,
+                                                     QtWidgets.QHeaderView.ResizeMode.Stretch)
         self.verticalHeader().setVisible(False)
-        self.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.setEditTriggers(
+            QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
 
     def set_packages(self, *packages):
         self.clearContents()
@@ -71,7 +73,8 @@ class PackageTable(QtWidgets.QTableWidget):
 
             # 操作列
             button = QtWidgets.QPushButton("安装")
-            button.setCursor(QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
+            button.setCursor(
+                QtGui.QCursor(QtCore.Qt.CursorShape.PointingHandCursor))
             self.setCellWidget(row, 2, button)
 
             self.update_row_status(row)

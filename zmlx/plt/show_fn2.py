@@ -5,7 +5,7 @@
 
 from zml import is_array
 from zmlx.plt.get_color import get_color
-from zmlx.ui.GuiBuffer import gui, plot
+from zmlx.plt.plot_on_figure import plot_on_figure
 
 
 def show_fn2(pos=None, w=None, c=None, w_min=1, w_max=4, ipath=None, iw=4, ic=6,
@@ -37,7 +37,7 @@ def show_fn2(pos=None, w=None, c=None, w_min=1, w_max=4, ipath=None, iw=4, ic=6,
         ylabel (str, optional): y轴标签，默认显示'y / m'。
         xlim (tuple[float], optional): x轴显示范围(min, max)。默认为None。
         ylim (tuple[float], optional): y轴显示范围(min, max)。默认为None。
-        **opt: 传递给plot()的额外参数
+        **opt: 传递给 plot_on_figure 的额外参数
 
     Returns:
         None: 直接显示matplotlib图形，无返回值
@@ -101,6 +101,9 @@ def show_fn2(pos=None, w=None, c=None, w_min=1, w_max=4, ipath=None, iw=4, ic=6,
         from zmlx.plt.get_cm import get_cm
         cmap = get_cm(cmap)
 
+    if w_max < w_min:  # 确保w_max > w_min
+        w_max, w_min = w_min, w_max
+
     def on_figure(fig):
         ax = fig.subplots()
         ax.set_xlabel(xlabel if xlabel is not None else 'x / m')
@@ -108,12 +111,14 @@ def show_fn2(pos=None, w=None, c=None, w_min=1, w_max=4, ipath=None, iw=4, ic=6,
         if title is not None:
             ax.set_title(title)
 
+        assert w_min <= w_max, f'The w_min({w_min}) must be less than w_max({w_max}).'
         for idx in range(count):
             x0, y0, x1, y1 = pos[idx]
             ax.plot([x0, x1],
                     [y0, y1],
                     c=get_color(cmap, cl, cr, get_c(idx)),
-                    linewidth=w_min + get_w(idx) * (w_max - w_min) / max(wr, 1.0e-10))
+                    linewidth=w_min + get_w(idx) * (w_max - w_min) / max(wr,
+                                                                         1.0e-10))
         # 在中心点画一个小三角形，用以显示颜色
         xc = (xl + xr) / 2
         yc = (yl + yr) / 2
@@ -140,13 +145,12 @@ def show_fn2(pos=None, w=None, c=None, w_min=1, w_max=4, ipath=None, iw=4, ic=6,
             ax.set_aspect('equal')
 
     # 执行绘图
-    plot(on_figure, **opt)
+    plot_on_figure(on_figure, **opt)
 
 
 def test():
     from zmlx.data.example_fn2 import pos, w, c
-    gui.execute(lambda: show_fn2(pos, w, c, w_max=3, clabel='Pressure [Pa]'),
-                close_after_done=False, disable_gui=False)
+    show_fn2(pos, w, c, w_max=3, clabel='Pressure [Pa]', gui_mode=True)
 
 
 if __name__ == '__main__':

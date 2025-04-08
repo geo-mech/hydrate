@@ -8,10 +8,13 @@ class PDFViewer(QWebEngineView):
         super().__init__(parent)
         # 启用PDF支持
         if is_PyQt6:
-            self.settings().setAttribute(QWebEngineSettings.WebAttribute.PluginsEnabled, True)
-            self.settings().setAttribute(QWebEngineSettings.WebAttribute.PdfViewerEnabled, True)
+            self.settings().setAttribute(
+                QWebEngineSettings.WebAttribute.PluginsEnabled, True)
+            self.settings().setAttribute(
+                QWebEngineSettings.WebAttribute.PdfViewerEnabled, True)
         else:
-            self.settings().setAttribute(QWebEngineSettings.PluginsEnabled, True)
+            self.settings().setAttribute(QWebEngineSettings.PluginsEnabled,
+                                         True)
         if file_path is not None:
             self.load_pdf(file_path)
 

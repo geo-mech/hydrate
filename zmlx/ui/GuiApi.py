@@ -70,24 +70,34 @@ class GuiApi(QtCore.QObject):
     @staticmethod
     def get_standard(parent):
         def get_open_file_name(*args, **kwargs):
-            fpath, _ = QtWidgets.QFileDialog.getOpenFileName(parent, *get_text(args), **get_text(kwargs))
+            fpath, _ = QtWidgets.QFileDialog.getOpenFileName(parent,
+                                                             *get_text(args),
+                                                             **get_text(kwargs))
             return fpath
 
         def get_save_file_name(*args, **kwargs):
-            fpath, _ = QtWidgets.QFileDialog.getSaveFileName(parent, *get_text(args), **get_text(kwargs))
+            fpath, _ = QtWidgets.QFileDialog.getSaveFileName(parent,
+                                                             *get_text(args),
+                                                             **get_text(kwargs))
             return fpath
 
         def information(*args, **kwargs):
-            QtWidgets.QMessageBox.information(parent, *get_text(args), **get_text(kwargs))
+            QtWidgets.QMessageBox.information(parent, *get_text(args),
+                                              **get_text(kwargs))
 
         def about(*args, **kwargs):
-            QtWidgets.QMessageBox.about(parent, *get_text(args), **get_text(kwargs))
+            QtWidgets.QMessageBox.about(parent, *get_text(args),
+                                        **get_text(kwargs))
 
         def warning(*args, **kwargs):
-            QtWidgets.QMessageBox.warning(parent, *get_text(args), **get_text(kwargs))
+            QtWidgets.QMessageBox.warning(parent, *get_text(args),
+                                          **get_text(kwargs))
 
         def get_existing_directory(*args, **kwargs):
-            folder = QtWidgets.QFileDialog.getExistingDirectory(None, *get_text(args), **get_text(kwargs))
+            folder = QtWidgets.QFileDialog.getExistingDirectory(None,
+                                                                *get_text(args),
+                                                                **get_text(
+                                                                    kwargs))
             return folder
 
         def question(info):
@@ -99,7 +109,8 @@ class GuiApi(QtCore.QObject):
             else:
                 return True
 
-        return {'question': question, "information": information, "about": about, "warning": warning,
+        return {'question': question, "information": information,
+                "about": about, "warning": warning,
                 'get_open_file_name': get_open_file_name,
                 'get_save_file_name': get_save_file_name,
                 'get_existing_directory': get_existing_directory,

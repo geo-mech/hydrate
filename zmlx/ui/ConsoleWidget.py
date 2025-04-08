@@ -35,7 +35,8 @@ class ConsoleWidget(QtWidgets.QWidget):
         self.splitter.setStretchFactor(1, 1)
 
         h_layout = QtWidgets.QHBoxLayout()
-        h_layout.addItem(QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Policy.Expanding,
+        h_layout.addItem(QtWidgets.QSpacerItem(40, 20,
+                                               QtWidgets.QSizePolicy.Policy.Expanding,
                                                QtWidgets.QSizePolicy.Policy.Minimum))
 
         def add_button(text, icon, slot):
@@ -48,12 +49,15 @@ class ConsoleWidget(QtWidgets.QWidget):
 
         self.button_exec = add_button('运行', 'begin',
                                       lambda: self.exec_file(fname=None))
-        self.button_exec.setToolTip('运行此按钮上方输入框内的脚本. 如需要运行标签页的脚本，请点击工具栏的运行按钮')
+        self.button_exec.setToolTip(
+            '运行此按钮上方输入框内的脚本. 如需要运行标签页的脚本，请点击工具栏的运行按钮')
         self.button_exec.setShortcut('Ctrl+Return')
         self.button_pause = add_button('暂停', 'pause', self.pause_clicked)
         self.button_exit = add_button('终止', 'stop', self.stop_clicked)
-        self.button_exit.setToolTip('安全地终止内核的执行 (需要提前在脚本内设置break_point)')
-        h_layout.addItem(QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Policy.Expanding,
+        self.button_exit.setToolTip(
+            '安全地终止内核的执行 (需要提前在脚本内设置break_point)')
+        h_layout.addItem(QtWidgets.QSpacerItem(40, 20,
+                                               QtWidgets.QSizePolicy.Policy.Expanding,
                                                QtWidgets.QSizePolicy.Policy.Minimum))
         main_layout.addLayout(h_layout)
 
@@ -103,8 +107,9 @@ class ConsoleWidget(QtWidgets.QWidget):
             self.button_exec.setEnabled(False)
             self.button_pause.setEnabled(True)
             self.button_exit.setEnabled(True)
-            self.input_editor.setVisible(samefile(self.workspace.get('__file__'),
-                                                  self.input_editor.get_fname()))
+            self.input_editor.setVisible(
+                samefile(self.workspace.get('__file__'),
+                         self.input_editor.get_fname()))
 
     def pause_clicked(self):
         app_data.log(f'execute <pause_clicked> of {self}')
@@ -148,7 +153,8 @@ class ConsoleWidget(QtWidgets.QWidget):
             self.workspace['__file__'] = fname
             app_data.log(f'execute file: {fname}')  # since 230923
             self.start_func(lambda:
-                            exec(read_text(fname, encoding='utf-8', default=''), self.workspace))
+                            exec(read_text(fname, encoding='utf-8', default=''),
+                                 self.workspace))
 
     def start_func(self, code):
         if self.thread is not None:
@@ -186,7 +192,8 @@ class ConsoleWidget(QtWidgets.QWidget):
 
             self.time_end = timeit.default_timer()
             if self.time_beg is not None and self.time_end is not None:
-                print(f'Time used = {time2str(self.time_end - self.time_beg)}\n')
+                print(
+                    f'Time used = {time2str(self.time_end - self.time_beg)}\n')
 
             self.text_when_beg = None
             self.text_when_end = None
@@ -223,7 +230,8 @@ class ConsoleWidget(QtWidgets.QWidget):
 
     def restore_code(self):
         try:
-            self.input_editor.open(os.path.join(os.getcwd(), 'code_in_editor.py'))
+            self.input_editor.open(
+                os.path.join(os.getcwd(), 'code_in_editor.py'))
         except:
             pass
 

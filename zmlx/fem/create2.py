@@ -67,8 +67,8 @@ def create2(mesh, fa_E=None, fa_mu=None, fa_den=None, fa_h=None,
         assert 0 < vm[node_id]
         i0 = node_id * ndim
         i1 = i0 + 1
-        model.set_mas(i0, vm[node_id])
-        model.set_mas(i1, vm[node_id])
+        model.set_mass(i0, vm[node_id])
+        model.set_mass(i1, vm[node_id])
 
     # 修改系数(相当于组刚度矩阵)
     for index in range(model.size):  # 首先初始化

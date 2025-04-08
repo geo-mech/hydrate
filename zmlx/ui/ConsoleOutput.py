@@ -20,6 +20,7 @@ class ConsoleOutput(TextBrowser):
             from zmlx.ui.MainWindow import get_window
             window = get_window()
             menu.addSeparator()
+            menu.addAction(window.get_action('console_hide'))
             if self.console.is_running():
                 menu.addAction(window.get_action('console_pause'))
                 menu.addAction(window.get_action('console_resume'))

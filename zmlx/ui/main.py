@@ -3,7 +3,8 @@ def init():
         from zmlx.io.python import read_py
         from zml import app_data
         from zmlx.ui import gui
-        if app_data.getenv('restore_tabs', default='Yes', ignore_empty=True) != 'No':
+        if app_data.getenv('restore_tabs', default='Yes',
+                           ignore_empty=True) != 'No':
             filename = app_data.temp('tab_start_code.json')
             data = read_py(filename)
             for text in data:
@@ -23,18 +24,11 @@ def init():
     try:
         from zmlx.ui.MainWindow import get_window
         from zml import app_data
-        if app_data.getenv('show_readme', default='Yes', ignore_empty=True) == 'Yes':
+        if app_data.getenv('show_readme', default='Yes',
+                           ignore_empty=True) == 'Yes':
             window = get_window()
             if window.count_tabs() == 0:
                 window.trigger('readme')
-    except Exception as e:
-        print(f'Error: {e}')
-
-    try:
-        from zmlx.ui.Qt import is_PyQt5
-        if is_PyQt5:
-            from zmlx.ui import gui
-            gui.toolbar_warning(text='PyQt5已不再支持，请更新至PyQt6')
     except Exception as e:
         print(f'Error: {e}')
 
@@ -43,8 +37,6 @@ def open_gui(argv=None):
     """
     打开gui
     """
-    if argv is not None:
-        print(argv)
     from zmlx.ui.GuiBuffer import gui
     gui.execute(init, keep_cwd=False, close_after_done=False)
 

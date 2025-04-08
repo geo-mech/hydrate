@@ -4,7 +4,7 @@ from zmlx.geometry.point_distance import point_distance
 
 def face_centered(mesh, thick=1.0):
     """
-    从Mesh3来创建SeepageMesh，将Mesh3的Face作为新建SeeapgeMesh的Cell，将Mesh3的Link作为新建SeepageMesh的Face。
+    从Mesh3来创建SeepageMesh，将Mesh3的Face作为新建SeepageMesh的Cell，将Mesh3的Link作为新建SeepageMesh的Face。
         其中Mesh3中Face的厚度利用thick来给定.
 
     zzb. since 24-1-29

@@ -8,8 +8,10 @@ from zmlx.ui.Qt import QtWidgets, QtCore
 class MemViewer(QtWidgets.QTableWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.Stretch)
-        self.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.horizontalHeader().setSectionResizeMode(
+            QtWidgets.QHeaderView.ResizeMode.Stretch)
+        self.setEditTriggers(
+            QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
 
         # 添加需要忽略的键值(都显示出来会使得太乱了)
         try:
@@ -19,7 +21,8 @@ class MemViewer(QtWidgets.QTableWidget):
         except:
             self.names_ignore = set()
 
-        for item in ['MemViewer', 'PgConsole', 'main_window', 'QtWidgets', 'set_md', 'widget', 'DemoWidget']:
+        for item in ['MemViewer', 'PgConsole', 'main_window', 'QtWidgets',
+                     'set_md', 'widget', 'DemoWidget']:
             self.names_ignore.add(item)
 
         self.timer = QtCore.QTimer()
@@ -43,7 +46,8 @@ class MemViewer(QtWidgets.QTableWidget):
 
         for irow in range(len(data)):
             for icol in range(3):
-                self.setItem(irow, icol, QtWidgets.QTableWidgetItem(data[irow][icol]))
+                self.setItem(irow, icol,
+                             QtWidgets.QTableWidgetItem(data[irow][icol]))
 
     def refresh(self):
         """

@@ -12,7 +12,8 @@ class Hf2ColorMap:
         for i in range(cm.N):
             c = [float(s) for s in cm(i)]
             if len(c) >= 3:
-                colors.append(QtGui.QColor(int(c[0] * 255), int(c[1] * 255), int(c[2] * 255)))
+                colors.append(QtGui.QColor(int(c[0] * 255), int(c[1] * 255),
+                                           int(c[2] * 255)))
         return colors
 
     @staticmethod
@@ -157,7 +158,8 @@ class Hf2FracView(QtWidgets.QWidget):
 
     def fit_bounding(self):
         if self.__boundingRect is not None:
-            self.view.fitInView(self.__boundingRect, QtCore.Qt.AspectRatioMode.KeepAspectRatio)
+            self.view.fitInView(self.__boundingRect,
+                                QtCore.Qt.AspectRatioMode.KeepAspectRatio)
 
     def draw(self, data):  # Do the Draw.
         self.scene.clear()
@@ -216,26 +218,33 @@ class Hf2FracView(QtWidgets.QWidget):
             assert (len(inj) == 2)
             x = inj[0]
             y = ymin + ymax - inj[1]
-            item = self.__addEllipse(x, y, mwid * 0.01, QtGui.QPen(QtCore.Qt.red, mwid * 0.003))
+            item = self.__addEllipse(x, y, mwid * 0.01,
+                                     QtGui.QPen(QtCore.Qt.red, mwid * 0.003))
             item.setBrush(QtGui.QBrush(QtCore.Qt.green, QtCore.Qt.SolidPattern))
 
         # set the data and bounding rect
-        self.__dataRect = QtCore.QRectF(QtCore.QPointF(xmin, ymin), QtCore.QPointF(xmax, ymax))
+        self.__dataRect = QtCore.QRectF(QtCore.QPointF(xmin, ymin),
+                                        QtCore.QPointF(xmax, ymax))
         margin = mwid * 0.05
-        self.__boundingRect = self.__dataRect.adjusted(-margin, -margin, margin, margin)
+        self.__boundingRect = self.__dataRect.adjusted(-margin, -margin, margin,
+                                                       margin)
 
         # add border
-        self.scene.addRect(self.__dataRect, pen=QtGui.QPen(QtCore.Qt.darkGray, mwid * 0.001))
-        self.scene.addRect(self.__boundingRect, pen=QtGui.QPen(QtCore.Qt.yellow, mwid * 0.001))
+        self.scene.addRect(self.__dataRect,
+                           pen=QtGui.QPen(QtCore.Qt.darkGray, mwid * 0.001))
+        self.scene.addRect(self.__boundingRect,
+                           pen=QtGui.QPen(QtCore.Qt.yellow, mwid * 0.001))
 
         # add text
         self.__addText(xmin, ymin, xmax, ymax, margin, lenUnit)
 
         # adjust view
-        self.view.fitInView(self.__boundingRect, QtCore.Qt.AspectRatioMode.KeepAspectRatio)
+        self.view.fitInView(self.__boundingRect,
+                            QtCore.Qt.AspectRatioMode.KeepAspectRatio)
 
     def __addEllipse(self, x, y, r, pen):
-        return self.scene.addEllipse(QtCore.QRectF(x - r, y - r, r * 2., r * 2.), pen=pen)
+        return self.scene.addEllipse(
+            QtCore.QRectF(x - r, y - r, r * 2., r * 2.), pen=pen)
 
     def __addText(self, xmin, ymin, xmax, ymax, margin, lenUnit):
         font = QtGui.QFont("Times", 10)
@@ -250,11 +259,16 @@ class Hf2FracView(QtWidgets.QWidget):
         # right-bottom corner
         item = self.scene.addText("(%.2f, %.2f)" % (xmax, ymin), font=font)
         item.setScale(margin * 0.9 / item.boundingRect().height())
-        item.setPos(QtCore.QPointF(xmax + margin - item.mapRectToScene(item.boundingRect()).width(), ymax))
+        item.setPos(QtCore.QPointF(
+            xmax + margin - item.mapRectToScene(item.boundingRect()).width(),
+            ymax))
         # right-top corner
-        item = self.scene.addText("Length Unit = {0}".format(lenUnit), font=font)
+        item = self.scene.addText("Length Unit = {0}".format(lenUnit),
+                                  font=font)
         item.setScale(margin * 0.9 / item.boundingRect().height())
-        item.setPos(QtCore.QPointF(xmax + margin - item.mapRectToScene(item.boundingRect()).width(), ymin - margin))
+        item.setPos(QtCore.QPointF(
+            xmax + margin - item.mapRectToScene(item.boundingRect()).width(),
+            ymin - margin))
 
 
 class Fn2Widget(QtWidgets.QWidget):
@@ -286,8 +300,10 @@ class Fn2Widget(QtWidgets.QWidget):
     def set_is_sleeping(self, value):
         self.__is_sleeping = value
         if self.__is_sleeping:
-            self.fracture_view.setStyleSheet(f"background-color:{QtGui.QColor(220, 220, 220).name()}")
-            self.path_edit.setStyleSheet(f"background-color:{QtGui.QColor(220, 220, 220).name()}")
+            self.fracture_view.setStyleSheet(
+                f"background-color:{QtGui.QColor(220, 220, 220).name()}")
+            self.path_edit.setStyleSheet(
+                f"background-color:{QtGui.QColor(220, 220, 220).name()}")
         else:
             self.fracture_view.setStyleSheet('')
             self.path_edit.setStyleSheet('')
@@ -310,8 +326,10 @@ class Fn2Widget(QtWidgets.QWidget):
 
     def open_fn2_file_by_file_dialog(self):
         fpath, _ = QtWidgets.QFileDialog.getOpenFileName(self
-                                                         , "请选择要导入的裂缝文件(至少4列数据，分别是X1 Y1 X2 Y2)"
-                                                         , self.path_edit.text(),
+                                                         ,
+                                                         "请选择要导入的裂缝文件(至少4列数据，分别是X1 Y1 X2 Y2)"
+                                                         ,
+                                                         self.path_edit.text(),
                                                          "二维裂缝网络文件 (*.fn2);;文本文件 (*.txt);;All Files (*)")
         if len(fpath) > 0:
             self.set_is_sleeping(False)

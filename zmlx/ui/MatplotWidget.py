@@ -22,7 +22,6 @@ except:
 # 使用 matplotlib中的FigureCanvas (在使用 Qt5 Backends中 FigureCanvas继承自QtWidgets.QWidget)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from zmlx.ui.Qt import QtWidgets, QtCore, QtGui
-from zmlx.ui.QtWidgets.QAction import QAction
 import matplotlib.pyplot as plt
 
 
@@ -39,8 +38,6 @@ class MatplotWidget(QtWidgets.QWidget):
         self.__canvas = FigureCanvas(self.__figure)
         self.__right_menu = None
         layout.addWidget(self.__canvas)
-        self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
-        self.customContextMenuRequested.connect(self.create_right_menu)
 
     def draw(self):
         self.__canvas.draw()
@@ -49,11 +46,13 @@ class MatplotWidget(QtWidgets.QWidget):
         self.__figure.savefig(*args, **kwargs)
 
     def savefig_by_dlg(self):
-        fpath, _ = QtWidgets.QFileDialog.getSaveFileName(self, caption="请选择保存路径",
+        fpath, _ = QtWidgets.QFileDialog.getSaveFileName(self,
+                                                         caption="请选择保存路径",
                                                          directory=os.getcwd(),
                                                          filter='jpg图片(*.jpg);;所有文件(*.*)')
         if fpath is not None and len(fpath) > 0:
-            self.savefig(fname=fpath, dpi=300)
+            from zmlx.io.env import plt_export_dpi
+            self.savefig(fname=fpath, dpi=plt_export_dpi.get_value())
 
     def export_plt_figure(self):  # 接菜单命令
         self.savefig_by_dlg()
@@ -66,10 +65,10 @@ class MatplotWidget(QtWidgets.QWidget):
     def canvas(self):
         return self.__canvas
 
-    def create_right_menu(self):
-        self.__right_menu = QtWidgets.QMenu(self)
-        action = QAction(self)
-        action.setText('保存图片')
-        action.triggered.connect(self.savefig_by_dlg)
-        self.__right_menu.addAction(action)
-        self.__right_menu.popup(QtGui.QCursor.pos())
+    def contextMenuEvent(self, event):  # 右键菜单
+        from zmlx.ui.MainWindow import get_window
+        window = get_window()
+        menu = QtWidgets.QMenu(self)
+        menu.addAction(window.get_action('export_plt_figure'))
+        menu.addAction(window.get_action('set_plt_export_dpi'))
+        menu.exec(event.globalPos())

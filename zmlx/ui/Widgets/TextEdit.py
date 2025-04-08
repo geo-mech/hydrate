@@ -11,14 +11,16 @@ class TextEdit(QtWidgets.QTextEdit):
     def save(self):
         if self.__fname is not None:
             try:
-                write_text(path=self.__fname, text=self.toPlainText(), encoding='utf-8')
+                write_text(path=self.__fname, text=self.toPlainText(),
+                           encoding='utf-8')
             except:
                 pass
 
     def load(self):
         if self.__fname is not None:
             try:
-                self.setText(read_text(self.__fname, encoding='utf-8', default=''))
+                self.setText(
+                    read_text(self.__fname, encoding='utf-8', default=''))
             except:
                 pass
         else:
@@ -35,3 +37,6 @@ class TextEdit(QtWidgets.QTextEdit):
         window = app_data.get('main_window')
         if window is not None:
             window.cmd_status(f"{self.__fname}", 3000)
+
+    def get_start_code(self):
+        return f"""gui.open_text(r'{self.__fname}')"""

@@ -1,6 +1,5 @@
 text = '关闭所有页面'
 support_hide = False
-on_toolbar = True
 icon = 'close_all'
 
 

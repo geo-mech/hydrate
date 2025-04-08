@@ -1,16 +1,16 @@
 from zml import SeepageMesh
 
 
-def load_ascii(cellfile, facefile, mesh=None):
+def load_ascii(cell_file, face_file, mesh=None):
     """
-    从文件中导入几何结构。其中cellfile定义cell的信息，至少包含4列，分别为x,y,z,vol；
-    facefile定义face的性质，至少包含4裂缝，分别为cell_i0,cell_i1,area,length
+    从文件中导入几何结构。其中cell_file定义cell的信息，至少包含4列，分别为x,y,z,vol；
+    face_file定义face的性质，至少包含4裂缝，分别为cell_i0,cell_i1,area,length
     """
     if mesh is None:
         mesh = SeepageMesh()
 
     mesh.clear()
-    with open(cellfile, 'r') as file:
+    with open(cell_file, 'r') as file:
         for line in file.readlines():
             vals = [float(s) for s in line.split()]
             if len(vals) == 0:
@@ -21,7 +21,7 @@ def load_ascii(cellfile, facefile, mesh=None):
             cell.pos = [vals[i] for i in range(0, 3)]
             cell.vol = vals[3]
     cell_number = mesh.cell_number
-    with open(facefile, 'r') as file:
+    with open(face_file, 'r') as file:
         for line in file.readlines():
             words = line.split()
             if len(words) == 0:
@@ -43,16 +43,16 @@ def load_ascii(cellfile, facefile, mesh=None):
     return mesh
 
 
-def save_ascii(cellfile, facefile, mesh):
+def save_ascii(cell_file, face_file, mesh):
     """
     将当前的网格数据导出到两个文件
     """
-    with open(cellfile, 'w') as file:
+    with open(cell_file, 'w') as file:
         for cell in mesh.cells:
             for elem in cell.pos:
                 file.write('%g ' % elem)
             file.write('%g\n' % cell.vol)
-    with open(facefile, 'w') as file:
+    with open(face_file, 'w') as file:
         for face in mesh.faces:
             link = face.link
             file.write('%d %d %g %g\n' % (link[0], link[1],

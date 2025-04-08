@@ -1,25 +1,27 @@
-from zmlx.ui.alg.get_preferred_qt_version import get_preferred_qt_version
+import sys
 
-__text = get_preferred_qt_version()
+
+def pyqt6_imported():
+    return 'PyQt6' in sys.modules
+
+
+def pyqt5_imported():
+    return 'PyQt5' in sys.modules
+
+
 QtName = None
 
 if QtName is None:
-    if __text == 'PyQt6':
-        try:
-            from PyQt6 import QtGui, QtCore, QtWidgets
+    if pyqt6_imported():  # 之前已经导入了PyQt6
+        from PyQt6 import QtGui, QtCore, QtWidgets
 
-            QtName = 'PyQt6'
-        except:
-            pass
+        QtName = 'PyQt6'
 
 if QtName is None:
-    if __text == 'PyQt5':
-        try:
-            from PyQt5 import QtGui, QtCore, QtWidgets
+    if pyqt5_imported():
+        from PyQt5 import QtGui, QtCore, QtWidgets
 
-            QtName = 'PyQt5'
-        except:
-            pass
+        QtName = 'PyQt5'
 
 if QtName is None:
     try:
@@ -53,6 +55,7 @@ try:
 except Exception as e:
     print(f'Error when import QWebEngineView: {e}')
     QWebEngineView = None
+    QWebEngineSettings = None
 
 # 所有导出的变量
 __all__ = ['QtGui', 'QtCore', 'QtWidgets', 'is_PyQt5', 'is_PyQt6', 'QtName',
