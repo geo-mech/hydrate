@@ -17,6 +17,7 @@ import datetime
 import math
 import os
 import re
+import shutil
 import sys
 import timeit
 import warnings
@@ -26,7 +27,7 @@ from ctypes import (cdll, c_void_p, c_char_p, c_int, c_int64, c_bool, c_double,
 
 try:
     import numpy as np
-except:
+except ImportError:
     np = None
 
 warnings.simplefilter("default")  # Default warning display
@@ -36,40 +37,91 @@ warnings.simplefilter("default")  # Default warning display
 is_windows = os.name == 'nt'
 
 
-def get_pointer64(arr):
+def const_f64_ptr(arr):
+    """
+    对于给定的Array，返回一个POINTER(c_double)，指向它的内存地址.
+    返回的这个地址主要用于“读取”
+    Args:
+        arr: 需要获得内存地址的Array
+
+    Returns:
+        POINTER(c_double) or None: 一个只读的指针.
+    """
+    if arr is None:
+        return None
+
+    if isinstance(arr, POINTER(c_double)):
+        return arr
+
+    if isinstance(arr, c_void_p):
+        return ctypes.cast(arr, POINTER(c_double))
+
+    if isinstance(arr, Vector):
+        return arr.pointer
+
+    # 下面，处理numpy的数组
+    if np is not None:
+        arr = np.ascontiguousarray(arr, dtype=np.float64)
+        return arr.ctypes.data_as(POINTER(c_double))
+    else:
+        raise ValueError(
+            f"Can not convert to POINTER(c_double). type is {type(arr)}")
+
+
+def f64_ptr(arr):
+    """
+    对于给定的Array，返回一个POINTER(c_double)，指向它的内存地址.
+    返回的内容是可“读写”的
+    Args:
+        arr: 需要获得内存地址的Array
+
+    Returns:
+        POINTER(c_double) or None: 一个可供读写的内存地址
+    """
+    if arr is None:
+        return None
+
+    if isinstance(arr, POINTER(c_double)):
+        return arr
+
+    if isinstance(arr, c_void_p):
+        return ctypes.cast(arr, POINTER(c_double))
+
+    if isinstance(arr, Vector):
+        return arr.pointer
+
+    # 下面，处理numpy的数组
+    if np is not None:
+        assert isinstance(arr, np.ndarray), "Input must be a NumPy array"
+        assert arr.flags.c_contiguous, "Array must be C-contiguous"
+        assert arr.dtype == np.float64, \
+            f"Array dtype must be float64, but got {arr.dtype}"
+        return arr.ctypes.data_as(POINTER(c_double))
+    else:
+        raise ValueError(
+            f"Can not convert to POINTER(c_double). type is {type(arr)}")
+
+
+def get_pointer64(arr, readonly=False):
     """将NumPy数组转换为C语言双精度指针。
 
     Args:
         arr (Union[np.ndarray, Vector]): 输入数据容器，支持以下类型：
             - dtype为float64的NumPy数组
             - 包含pointer属性的Vector对象
+        readonly: 是否返回只读指针，默认为False
 
     Returns:
-        ctypes.POINTER(c_double): 指向连续内存的指针
+        POINTER(c_double) or None: 指向连续内存的指针
 
     Raises:
         ValueError: 输入类型不匹配时抛出
         AssertionError: 当NumPy数组dtype不是float64时抛出
     """
-    if isinstance(arr, Vector):
-        return arr.pointer
-
-    if np is not None:
-        # Ensure the input is a NumPy array
-        if not isinstance(arr, np.ndarray):
-            raise ValueError("Input must be a NumPy array")
-
-        # Check c_contiguous
-        assert arr.flags.c_contiguous, "Array must be C-contiguous"
-
-        # Check the data type of the array
-        assert arr.dtype == np.float64
-
-        # Convert the NumPy array to a C array
-        c_arr = np.ctypeslib.as_ctypes(arr)
-
-        # Get the pointer to the C array
-        return ctypes.cast(c_arr, ctypes.POINTER(ctypes.c_double))
+    if readonly:
+        return const_f64_ptr(arr)
+    else:
+        return f64_ptr(arr)
 
 
 class Object:
@@ -514,12 +566,10 @@ class _AppData(Object):
         folder = os.path.join(self.folder, 'temp')
         if os.path.isdir(folder):
             if len(args) == 0:
-                import shutil
                 shutil.rmtree(folder)
                 return
             path = os.path.join(folder, *args)
             if os.path.isdir(path):
-                import shutil
                 shutil.rmtree(path)
                 return
             if os.path.isfile(path):
@@ -574,6 +624,7 @@ class _AppData(Object):
                         return path
                 except:
                     pass
+        return None
 
     def find_all(self, *name, first=None):
         """查找指定文件的所有有效路径。
@@ -691,11 +742,13 @@ def load_cdll(name, *, first=None):
             return cdll.LoadLibrary(path)
         except Exception as e:
             print(f'Error load library from <{path}>. Message = {e}')
+            return None
     else:
         try:
             return cdll.LoadLibrary(name)
         except Exception as e:
             print(f'Error load library from <{name}>. Message = {e}')
+            return None
 
 
 class _NullFunction:
@@ -801,7 +854,7 @@ class DllCore:
         """
         初始化 DllCore 对象
 
-        参数:
+        Args:
             dll: 动态链接库对象
         """
         self.__err_handle = None
@@ -1507,7 +1560,10 @@ class String(HasHandle):
         Args:
             value (str): 要赋值给字符串对象的值。
         """
-        core.str_assign(self.handle, make_c_char_p(value))
+        if isinstance(value, String):
+            self.clone(value)
+        else:
+            core.str_assign(self.handle, make_c_char_p(value))
 
     core.use(c_char_p, 'str_to_char_p', c_void_p)
 
@@ -1519,6 +1575,8 @@ class String(HasHandle):
         """
         if core.dll is not None:
             return core.str_to_char_p(self.handle).decode()
+        else:
+            return None
 
     core.use(None, 'str_clone', c_void_p, c_void_p)
 
@@ -1587,7 +1645,7 @@ def fetch_m(folder=None):
         DeprecationWarning: 该函数将在 2025-8-11 之后被移除。
     """
     warnings.warn('This function will be removed after 2025-8-11',
-                  DeprecationWarning)
+                  DeprecationWarning, stacklevel=2)
     if folder is None:
         core.fetch_m(make_c_char_p(''))
     else:
@@ -1768,9 +1826,15 @@ def reg(code=None):
             try:
                 if len(code) > 0:
                     return lic.load(code)
+                else:
+                    return None
             except:
                 if lic.is_admin and len(code) > 0:
                     return lic.create(code)
+                else:
+                    return None
+        else:
+            return None
 
 
 core.use(c_double, 'test_loop', c_size_t, c_bool)
@@ -1815,19 +1879,19 @@ to {author}"""
     return info
 
 
-def get_distance(p1, p2):
+def get_distance(p0, p1):
     """计算两个点之间的距离。
 
     Args:
-        p1 (list or tuple): 第一个点的坐标。
-        p2 (list or tuple): 第二个点的坐标。
+        p0: 第一个点的坐标。
+        p1: 第二个点的坐标。
 
     Returns:
         float: 两个点之间的距离。
     """
     dist = 0.0
-    for i in range(min(len(p1), len(p2))):
-        dist += (p1[i] - p2[i]) ** 2
+    for i in range(min(len(p0), len(p1))):
+        dist += (p0[i] - p1[i]) ** 2
     return dist ** 0.5
 
 
@@ -1891,6 +1955,26 @@ def parse_fid3(fluid_id):
         return fluid_id, 99999999, 99999999
 
 
+def parse_fid(fluid_id):
+    """自动识别给定的流体 ID 为流体某个组分的 ID。
+
+    Args:
+        fluid_id: 流体 ID，可以是单个值或数组。
+
+    Returns:
+        list: 流体ID序列
+    """
+    if fluid_id is None:
+        return []
+    if is_array(fluid_id):
+        if len(fluid_id) == 1:  # 此时，它仍然可能是一个array
+            return parse_fid(fluid_id[0])
+        else:
+            return fluid_id
+    else:
+        return [fluid_id]
+
+
 def _check_ipath(path, obj=None):
     """在读取文件时检查输入的文件名。
 
@@ -1916,7 +2000,7 @@ def get_average_perm(p0, p1, get_perm, sample_dist=None, depth=0):
     Args:
         p0 (list or tuple): 第一个点的坐标。
         p1 (list or tuple): 第二个点的坐标。
-        get_perm (function): 获取渗透率或导热率的函数。
+        get_perm: 获取渗透率或导热率的函数。
         sample_dist (float, optional): 采样距离。默认为 None。
         depth (int, optional): 递归深度。默认为 0。
 
@@ -1949,20 +2033,26 @@ def get_index(index, count=None):
         int: 修正后的序号。如果无法修正，则返回 None。
     """
     if index is None:
-        return
+        return None
     if count is None:  # 此时，无法判断index是否越界
         if index >= 0:
             return index
+        else:
+            return None
     else:
         assert count >= 0
         if index >= 0:
             if index < count:
                 return index  # 0 <= index < count
+            else:
+                return None
         else:
             assert index < 0
             index += count  # index < count
             if index >= 0:
                 return index  # 0 <= index < count
+            else:
+                return None
 
 
 def __feedback():
@@ -1989,7 +2079,7 @@ def __feedback():
                     text = f1.read()
                     if city is None:
                         try:
-                            from zmlx.alg.ipinfo import get_city
+                            from zmlx.alg.sys import get_city
                             city = f' from {get_city()}'
                         except:
                             city = ''
@@ -2034,6 +2124,215 @@ def is_chinese(string):
         bool: 如果字符串包含中文字符，则返回 True；否则返回 False。
     """
     return bool(re.search('[\u4e00-\u9fff]', string))
+
+
+class FileMap(HasHandle):
+    """文件映射类，用于将文件夹及多个文件合并为单个文件（不压缩）。
+
+    支持目录结构映射、键值存取、序列化保存/加载等操作。
+    """
+    core.use(c_void_p, 'new_fmap')
+    core.use(None, 'del_fmap', c_void_p)
+
+    def __init__(self, data=None, path=None, handle=None):
+        """初始化文件映射对象。
+
+        Args:
+            data (str, optional): 初始文本内容。
+            path (str, optional): 从文件加载的路径。
+            handle: 已有的句柄。如果提供，则忽略其他参数。
+        """
+        super(FileMap, self).__init__(handle, core.new_fmap, core.del_fmap)
+        if handle is None:
+            if data is not None:
+                self.data = data
+            if isinstance(path, str):
+                self.load(path)
+
+    core.use(c_bool, 'fmap_is_dir', c_void_p)
+
+    @property
+    def is_dir(self):
+        """判断当前映射是否为目录结构。
+
+        Returns:
+            bool: 如果是目录映射返回 True，否则返回 False。
+        """
+        return core.fmap_is_dir(self.handle)
+
+    core.use(c_bool, 'fmap_has_key', c_void_p, c_char_p)
+
+    def has_key(self, key):
+        """检查指定键是否存在。
+
+        Args:
+            key (str): 要检查的键名。
+
+        Returns:
+            bool: 如果键存在返回 True，否则返回 False。
+        """
+        return core.fmap_has_key(self.handle, make_c_char_p(key))
+
+    core.use(c_void_p, 'fmap_get', c_void_p, c_char_p)
+
+    def get(self, key):
+        """获取指定键对应的子映射。
+
+        Args:
+            key (str): 要获取的键名。
+
+        Returns:
+            FileMap: 对应的子映射对象。
+
+        Note:
+            调用前必须先用 has_key 确认键存在，否则可能返回 None。
+        """
+        handle = core.fmap_get(self.handle, make_c_char_p(key))
+        if handle:
+            return FileMap(handle=handle)
+        else:
+            return None
+
+    core.use(None, 'fmap_set',
+             c_void_p, c_void_p, c_char_p)
+
+    def set(self, key, fmap):
+        """设置键值映射。
+
+        Args:
+            key (str): 要设置的键名。
+            fmap (FileMap/any): 可以是 FileMap 对象或可转换为字符串的数据。
+
+        Example:
+            # 设置文本内容
+            fmap.set('config', 'value')
+            # 设置嵌套映射
+            sub_fmap = FileMap()
+            fmap.set('subdir', sub_fmap)
+        """
+        if isinstance(fmap, FileMap):
+            core.fmap_set(self.handle, fmap.handle, make_c_char_p(key))
+        else:
+            fmap = FileMap(data=fmap)
+            core.fmap_set(self.handle, fmap.handle, make_c_char_p(key))
+
+    core.use(None, 'fmap_erase',
+             c_void_p, c_char_p)
+
+    def erase(self, key):
+        """删除指定键的映射。
+
+        Args:
+            key (str): 要删除的键名。
+        """
+        core.fmap_erase(self.handle, make_c_char_p(key))
+
+    core.use(None, 'fmap_write',
+             c_void_p, c_char_p)
+
+    def write(self, path):
+        """将映射内容提取到文件系统。
+
+        Args:
+            path (str): 目标路径。
+        """
+        core.fmap_write(self.handle, make_c_char_p(path))
+
+    core.use(None, 'fmap_read',
+             c_void_p, c_char_p)
+
+    def read(self, path):
+        """从文件系统读取内容到映射。
+
+        Args:
+            path (str): 源路径。
+        """
+        core.fmap_read(self.handle, make_c_char_p(path))
+
+    core.use(None, 'fmap_save',
+             c_void_p, c_char_p)
+
+    def save(self, path):
+        """序列化保存为二进制格式。
+
+        Args:
+            path (str): 保存路径。
+
+        Raises:
+            AssertionError: 如果尝试保存为 txt 或 xml 格式。
+        """
+        if isinstance(path, str):
+            ext = os.path.splitext(path)[-1].lower()
+            assert ext != '.txt' and ext != '.xml'
+            make_parent(path)
+            core.fmap_save(self.handle, make_c_char_p(path))
+
+    core.use(None, 'fmap_load',
+             c_void_p, c_char_p)
+
+    def load(self, path):
+        """从文件加载序列化数据。
+
+        Args:
+            path (str): 加载路径。
+        """
+        if isinstance(path, str):
+            _check_ipath(path, self)
+            core.fmap_load(self.handle, make_c_char_p(path))
+
+    core.use(c_char_p, 'fmap_get_char_p',
+             c_void_p)
+
+    @property
+    def data(self):
+        """获取文本内容。
+
+        Returns:
+            str: 解码后的字符串内容。
+        """
+        return core.fmap_get_char_p(self.handle).decode()
+
+    core.use(None, 'fmap_set_char_p',
+             c_void_p, c_char_p)
+
+    @data.setter
+    def data(self, value):
+        """设置文本内容。
+
+        Args:
+            value (any): 自动转换为字符串的内容。
+        """
+        if not isinstance(value, str):
+            value = f'{value}'
+        core.fmap_set_char_p(self.handle, make_c_char_p(value))
+
+    core.use(c_void_p, 'fmap_get_data', c_void_p)
+
+    @property
+    def buffer(self):
+        """获取二进制数据缓冲区。
+
+        Returns:
+            String: 二进制数据对象。
+        """
+        return String(handle=core.fmap_get_data(self.handle))
+
+    core.use(None, 'fmap_clone',
+             c_void_p, c_void_p)
+
+    def clone(self, other):
+        """克隆另一个文件映射对象的数据。
+
+        Args:
+            other (FileMap): 要克隆的对象。
+
+        Returns:
+            FileMap: 当前对象（支持链式调用）。
+        """
+        if other is not None:
+            assert isinstance(other, FileMap)
+            core.fmap_clone(self.handle, other.handle)
+        return self
 
 
 class Iterator:
@@ -2108,6 +2407,8 @@ class Iterator:
         """
         if ind < self.__count:
             return self.__get(self.__model, ind)
+        else:
+            return None
 
 
 class Vector(HasHandle):
@@ -2227,6 +2528,8 @@ class Vector(HasHandle):
         idx = get_index(idx, self.size)
         if idx is not None:
             return core.vf_get(self.handle, idx)
+        else:
+            return None
 
     core.use(None, 'vf_set',
              c_void_p, c_size_t, c_double)
@@ -2281,10 +2584,12 @@ class Vector(HasHandle):
         Args:
             value (float, optional): 填充值。默认为 0.0。
         """
-        p = self.pointer
-        assert p is not None
-        for i in range(self.size):
-            p[i] = value
+        count = self.size
+        if count > 0:
+            p = self.pointer
+            assert p is not None
+            for i in range(count):
+                p[i] = value
 
     def to_list(self):
         """将 Vector 转换为 Python 列表。
@@ -2292,13 +2597,11 @@ class Vector(HasHandle):
         Returns:
             list: 转换后的 Python 列表。
         """
-        if len(self) == 0:
+        count = self.size
+        if count == 0:
             return []
         p = self.pointer
-        if p is not None:
-            return [p[i] for i in range(len(self))]
-        else:
-            return []
+        return [p[i] for i in range(count)]
 
     core.use(None, 'vf_read', c_void_p, c_void_p)
 
@@ -2308,7 +2611,7 @@ class Vector(HasHandle):
         Args:
             pointer: 内存地址。
         """
-        core.vf_read(self.handle, ctypes.cast(pointer, c_void_p))
+        core.vf_read(self.handle, const_f64_ptr(pointer))
 
     core.use(None, 'vf_write', c_void_p, c_void_p)
 
@@ -2318,7 +2621,7 @@ class Vector(HasHandle):
         Args:
             pointer: 内存地址。
         """
-        core.vf_write(self.handle, ctypes.cast(pointer, c_void_p))
+        core.vf_write(self.handle, f64_ptr(pointer))
 
     def read_numpy(self, data):
         """从 NumPy 数组读取数据。
@@ -2327,9 +2630,8 @@ class Vector(HasHandle):
             data (np.ndarray): 要读取的 NumPy 数组。
         """
         if np is not None:
-            assert isinstance(data, np.ndarray)
             self.size = len(data)
-            self.read_memory(get_pointer64(data))
+            self.read_memory(data)
 
     def write_numpy(self, data):
         """将数据写入到 NumPy 数组。
@@ -2340,7 +2642,7 @@ class Vector(HasHandle):
         if np is not None:
             assert isinstance(data, np.ndarray)
             assert len(data) >= self.size
-            self.write_memory(get_pointer64(data))
+            self.write_memory(data)
 
     def to_numpy(self):
         """将 Vector 转换为 NumPy 数组。
@@ -2352,6 +2654,8 @@ class Vector(HasHandle):
             arr = np.zeros(self.size)
             self.write_numpy(arr)
             return arr
+        else:
+            return None
 
     core.use(c_void_p, 'vf_pointer', c_void_p)
 
@@ -2365,6 +2669,8 @@ class Vector(HasHandle):
         ptr = core.vf_pointer(self.handle)
         if ptr:
             return ctypes.cast(ptr, POINTER(c_double))
+        else:
+            return None
 
 
 class IntVector(HasHandle):
@@ -2465,6 +2771,8 @@ class IntVector(HasHandle):
         idx = get_index(idx, self.size)
         if idx is not None:
             return core.vi_get(self.handle, idx)
+        else:
+            return None
 
     core.use(None, 'vi_set',
              c_void_p, c_size_t, c_int64)
@@ -2499,9 +2807,11 @@ class IntVector(HasHandle):
         Args:
             value (list): 要赋值的列表。
         """
-        self.size = len(value)
-        for i in range(len(value)):
-            self[i] = value[i]
+        count = len(value)
+        self.size = count
+        p = self.pointer
+        for i in range(count):
+            p[i] = value[i]
 
     def to_list(self):
         """将 IntVector 转换为 Python 列表。
@@ -2509,10 +2819,12 @@ class IntVector(HasHandle):
         Returns:
             list: 转换后的 Python 列表。
         """
-        elements = []
-        for i in range(len(self)):
-            elements.append(self[i])
-        return elements
+        count = self.size
+        if count > 0:
+            p = self.pointer
+            return [p[i] for i in range(count)]
+        else:
+            return []
 
     core.use(c_void_p, 'vi_pointer', c_void_p)
 
@@ -2529,6 +2841,8 @@ class IntVector(HasHandle):
         ptr = core.vi_pointer(self.handle)
         if ptr:
             return ctypes.cast(ptr, POINTER(c_int64))
+        else:
+            return None
 
 
 Int64Vector = IntVector
@@ -2646,6 +2960,8 @@ class UintVector(HasHandle):
         idx = get_index(idx, self.size)
         if idx is not None:
             return core.vui_get(self.handle, idx)
+        else:
+            return None
 
     core.use(None, 'vui_set',
              c_void_p, c_size_t, c_size_t)
@@ -2675,25 +2991,30 @@ class UintVector(HasHandle):
         self[key] = value
 
     def set(self, value):
-        """将列表赋值给 UintVector。
+        """将列表赋值给 UintVector。 todo: 使用ptr接口效率更高
 
         Args:
             value (list): 要赋值的列表。
         """
-        self.size = len(value)
-        for i in range(len(value)):
-            self[i] = value[i]
+        count = len(value)
+        self.size = count
+        if count > 0:
+            p = self.pointer
+            for i in range(count):
+                p[i] = value[i]
 
     def to_list(self):
-        """将 UintVector 转换为 Python 列表。
+        """将 UintVector 转换为 Python 列表。  todo: 使用ptr接口效率更高
 
         Returns:
             list: 转换后的 Python 列表。
         """
-        elements = []
-        for i in range(len(self)):
-            elements.append(self[i])
-        return elements
+        count = self.size
+        if count > 0:
+            p = self.pointer
+            return [p[i] for i in range(count)]
+        else:
+            return []
 
     core.use(c_void_p, 'vui_pointer', c_void_p)
 
@@ -2710,6 +3031,8 @@ class UintVector(HasHandle):
         ptr = core.vui_pointer(self.handle)
         if ptr:
             return ctypes.cast(ptr, POINTER(c_size_t))
+        else:
+            return None
 
 
 class StrVector(HasHandle):
@@ -2758,8 +3081,16 @@ class StrVector(HasHandle):
         """
         return self.size
 
-    core.use(None, 'vs_get',
-             c_void_p, c_size_t, c_void_p)
+    core.use(c_void_p, 'vs_get',
+             c_void_p, c_size_t)
+
+    def get(self, idx):
+        idx = get_index(idx, self.size)
+        if idx is not None:
+            handle = core.vs_get(self.handle, idx)
+            return String(handle=handle)
+        else:
+            return None
 
     def __getitem__(self, idx):
         """获取指定索引位置的字符串。
@@ -2773,14 +3104,11 @@ class StrVector(HasHandle):
         Note:
             如果索引越界，则返回 None。
         """
-        idx = get_index(idx, self.size)
-        if idx is not None:
-            s = String()
-            core.vs_get(self.handle, idx, s.handle)
+        s = self.get(idx)
+        if s is not None:
             return s.to_str()
-
-    core.use(None, 'vs_set',
-             c_void_p, c_size_t, c_void_p)
+        else:
+            return None
 
     def __setitem__(self, idx, value):
         """设置指定索引位置的字符串。
@@ -2792,10 +3120,9 @@ class StrVector(HasHandle):
         Note:
             如果索引越界，则设置失败。
         """
-        idx = get_index(idx, self.size)
-        if idx is not None:
-            s = String(value=value)
-            core.vs_set(self.handle, idx, s.handle)
+        s = self.get(idx)
+        if s is not None:
+            s.assign(value)
 
     def set(self, value):
         """将列表赋值给 StrVector。
@@ -2803,8 +3130,9 @@ class StrVector(HasHandle):
         Args:
             value (list): 要赋值的字符串列表。
         """
-        self.size = len(value)
-        for i in range(len(value)):
+        count = len(value)
+        self.size = count
+        for i in range(count):
             self[i] = value[i]
 
     def to_list(self):
@@ -2813,10 +3141,7 @@ class StrVector(HasHandle):
         Returns:
             list: 转换后的 Python 列表。
         """
-        elements = []
-        for i in range(len(self)):
-            elements.append(self[i])
-        return elements
+        return [self[i] for i in range(len(self))]
 
 
 class PtrVector(HasHandle):
@@ -2892,6 +3217,7 @@ class PtrVector(HasHandle):
         idx = get_index(idx, self.size)
         if idx is not None:
             return core.vp_get(self.handle, idx)
+        return None
 
     core.use(None, 'vp_set',
              c_void_p, c_size_t, c_void_p)
@@ -2946,8 +3272,9 @@ class PtrVector(HasHandle):
         """
         if idx < len(self) and rtype is not None:
             handle = self[idx]
-            if handle > 0:
+            if handle:
                 return rtype(handle=handle)
+        return None
 
     def append(self, handle):
         """向指针数组尾部追加句柄。
@@ -2993,8 +3320,8 @@ class Map(HasHandle):
         super(Map, self).__init__(handle, core.new_string_double_map,
                                   core.del_string_double_map)
 
-    core.use(None, 'string_double_map_get_keys',
-             c_void_p, c_void_p)
+    core.use(c_void_p, 'string_double_map_get_keys',
+             c_void_p)
 
     @property
     def keys(self):
@@ -3003,12 +3330,12 @@ class Map(HasHandle):
         Returns:
             list: 包含所有键的列表。
         """
-        v = StrVector()
-        core.string_double_map_get_keys(self.handle, v.handle)
+        h = core.string_double_map_get_keys(self.handle)
+        v = StrVector(handle=h)
         return v.to_list()
 
     core.use(c_double, 'string_double_map_get',
-             c_void_p, c_void_p)
+             c_void_p, c_char_p)
 
     def get(self, key):
         """获取指定键对应的值。
@@ -3019,11 +3346,10 @@ class Map(HasHandle):
         Returns:
             float: 指定键对应的值。
         """
-        s = String(value=key)
-        return core.string_double_map_get(self.handle, s.handle)
+        return core.string_double_map_get(self.handle, make_c_char_p(key))
 
     core.use(None, 'string_double_map_set',
-             c_void_p, c_void_p, c_double)
+             c_void_p, c_char_p, c_double)
 
     def set(self, key, value):
         """设置指定键的值。
@@ -3032,8 +3358,7 @@ class Map(HasHandle):
             key (str): 要设置的键。
             value (float): 要设置的值。
         """
-        s = String(value=key)
-        core.string_double_map_set(self.handle, s.handle, value)
+        core.string_double_map_set(self.handle, make_c_char_p(key), value)
 
     core.use(None, 'string_double_map_clear',
              c_void_p)
@@ -3150,7 +3475,7 @@ class Matrix2(HasHandle):
         core.mat2_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
         return fmap
 
-    def from_fmap(self, fmap, fmt='binary'):
+    def from_fmap(self, fmap: FileMap, fmt='binary'):
         """从 FileMap 中读取序列化的矩阵数据。
 
         Args:
@@ -3252,6 +3577,7 @@ class Matrix2(HasHandle):
             assert key0 < self.size_0
             assert key1 < self.size_1
             return core.mat2_get(self.handle, key0, key1)
+        return None
 
     core.use(None, 'mat2_set',
              c_void_p, c_size_t, c_size_t, c_double)
@@ -3416,7 +3742,7 @@ class Matrix3(HasHandle):
         core.mat3_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
         return fmap
 
-    def from_fmap(self, fmap, fmt='binary'):
+    def from_fmap(self, fmap: FileMap, fmt='binary'):
         """从 FileMap 中读取序列化的矩阵数据。
 
         Args:
@@ -3528,6 +3854,8 @@ class Matrix3(HasHandle):
         key2 = get_index(key2, self.size_2)
         if key0 is not None and key1 is not None and key2 is not None:
             return core.mat3_get(self.handle, key0, key1, key2)
+        else:
+            return None
 
     core.use(None, 'mat3_set',
              c_void_p, c_size_t, c_size_t, c_size_t, c_double)
@@ -3676,7 +4004,7 @@ class Tensor3Matrix3(HasHandle):
         core.ts3mat3_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
         return fmap
 
-    def from_fmap(self, fmap, fmt='binary'):
+    def from_fmap(self, fmap: FileMap, fmt='binary'):
         """从 FileMap 中读取序列化的张量矩阵数据。
 
         Args:
@@ -3792,6 +4120,8 @@ class Tensor3Matrix3(HasHandle):
         if key0 is not None and key1 is not None and key2 is not None:
             return Tensor3(
                 handle=core.ts3mat3_get(self.handle, key0, key1, key2))
+        else:
+            return None
 
     def __getitem__(self, key):
         """通过元组索引获取张量元素。
@@ -3932,7 +4262,7 @@ class Interp1(HasHandle):
         core.interp1_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
         return fmap
 
-    def from_fmap(self, fmap, fmt='binary'):
+    def from_fmap(self, fmap: FileMap, fmt='binary'):
         """从 FileMap 中读取序列化的插值数据。
 
         Args:
@@ -3961,13 +4291,16 @@ class Interp1(HasHandle):
         """
         self.from_fmap(value, fmt='binary')
 
-    core.use(None, 'interp1_set_x2y',
-             c_void_p, c_void_p, c_void_p)
-    core.use(None, 'interp1_set_x2y_evenly',
-             c_void_p, c_double, c_double,
-             c_void_p)
-    core.use(None, 'interp1_set_const',
-             c_void_p, c_double)
+    core.use(None, 'interp1_set', c_void_p,
+             POINTER(c_double), c_size_t,
+             POINTER(c_double), c_size_t)
+
+    def set_xy(self, x, y):
+        """
+        设置x和y的数据
+        """
+        core.interp1_set(self.handle, const_f64_ptr(x), len(x),
+                         const_f64_ptr(y), len(y))
 
     def set(self, xmin=None, dx=None, x=None, y=None, value=None):
         """设置插值数据，支持多种初始化方式。
@@ -3985,27 +4318,17 @@ class Interp1(HasHandle):
             value (float, optional): 常数值插值。
         """
         if x is not None and y is not None:
-            if not isinstance(x, Vector):
-                x = Vector(x)
-            if not isinstance(y, Vector):
-                y = Vector(y)
-            core.interp1_set_x2y(self.handle, x.handle, y.handle)
+            self.set_xy(x, y)
             return
         if xmin is not None and dx is not None and y is not None:
-            if not isinstance(y, Vector):
-                y = Vector(y)
-            core.interp1_set_x2y_evenly(self.handle, xmin, dx, y.handle)
+            self.set_xy([xmin, xmin + dx], y)
             return
         if y is not None:
-            core.interp1_set_const(self.handle, y)
+            self.set_xy([], [y])
             return
         if value is not None:
-            core.interp1_set_const(self.handle, value)
+            self.set_xy([], [value])
             return
-
-    core.use(None, 'interp1_create',
-             c_void_p, c_double, c_double, c_double,
-             c_void_p)
 
     def create(self, xmin, dx, xmax, get_value):
         """通过回调函数创建插值数据。
@@ -4020,10 +4343,21 @@ class Interp1(HasHandle):
             需要保证 xmin < xmax 且 dx > 0。
         """
         assert xmin < xmax and dx > 0
-        kernel = CFUNCTYPE(c_double, c_double)
-        core.interp1_create(self.handle, xmin, dx, xmax, kernel(get_value))
+        n = int((xmax - xmin) / dx) + 1
+        dx = (xmax - xmin) / n
+        vx = [xmin, xmin + dx]
+        vy = [get_value(xmin + dx * i) for i in range(n)]
+        self.set_xy(vx, vy)
 
     core.use(c_bool, 'interp1_empty', c_void_p)
+
+    def is_empty(self):
+        """检查插值数据是否为空。
+
+        Returns:
+            bool: 如果插值数据为空返回 True，否则返回 False。
+        """
+        return core.interp1_empty(self.handle)
 
     @property
     def empty(self):
@@ -4032,7 +4366,7 @@ class Interp1(HasHandle):
         Returns:
             bool: 如果插值数据为空返回 True，否则返回 False。
         """
-        return core.interp1_empty(self.handle)
+        return self.is_empty()
 
     core.use(None, 'interp1_clear', c_void_p)
 
@@ -4229,7 +4563,7 @@ class Interp2(HasHandle):
         core.interp2_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
         return fmap
 
-    def from_fmap(self, fmap, fmt='binary'):
+    def from_fmap(self, fmap: FileMap, fmt='binary'):
         """从 FileMap 中读取序列化的插值数据。
 
         Args:
@@ -4301,6 +4635,14 @@ class Interp2(HasHandle):
 
     core.use(c_bool, 'interp2_empty', c_void_p)
 
+    def is_empty(self):
+        """检查插值数据是否为空。
+
+        Returns:
+            bool: 如果插值数据为空返回 True，否则返回 False。
+        """
+        return core.interp2_empty(self.handle)
+
     @property
     def empty(self):
         """检查插值数据是否为空。
@@ -4308,7 +4650,7 @@ class Interp2(HasHandle):
         Returns:
             bool: 如果插值数据为空返回 True，否则返回 False。
         """
-        return core.interp2_empty(self.handle)
+        return self.is_empty()
 
     core.use(None, 'interp2_clear', c_void_p)
 
@@ -4476,7 +4818,7 @@ class Interp3(HasHandle):
         core.interp3_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
         return fmap
 
-    def from_fmap(self, fmap, fmt='binary'):
+    def from_fmap(self, fmap: FileMap, fmt='binary'):
         """从 FileMap 中读取序列化的插值数据。
 
         Args:
@@ -4558,6 +4900,14 @@ class Interp3(HasHandle):
 
     core.use(c_bool, 'interp3_empty', c_void_p)
 
+    def is_empty(self):
+        """检查插值数据是否为空。
+
+        Returns:
+            bool: 如果插值数据为空返回 True，否则返回 False。
+        """
+        return core.interp3_empty(self.handle)
+
     @property
     def empty(self):
         """检查插值数据是否为空。
@@ -4565,7 +4915,7 @@ class Interp3(HasHandle):
         Returns:
             bool: 如果插值数据为空返回 True，否则返回 False。
         """
-        return core.interp3_empty(self.handle)
+        return self.is_empty()
 
     core.use(None, 'interp3_clear', c_void_p)
 
@@ -4673,213 +5023,6 @@ class Interp3(HasHandle):
         return result
 
 
-class FileMap(HasHandle):
-    """文件映射类，用于将文件夹及多个文件合并为单个文件（不压缩）。
-
-    支持目录结构映射、键值存取、序列化保存/加载等操作。
-    """
-    core.use(c_void_p, 'new_fmap')
-    core.use(None, 'del_fmap', c_void_p)
-
-    def __init__(self, data=None, path=None, handle=None):
-        """初始化文件映射对象。
-
-        Args:
-            data (str, optional): 初始文本内容。
-            path (str, optional): 从文件加载的路径。
-            handle: 已有的句柄。如果提供，则忽略其他参数。
-        """
-        super(FileMap, self).__init__(handle, core.new_fmap, core.del_fmap)
-        if handle is None:
-            if data is not None:
-                self.data = data
-            if isinstance(path, str):
-                self.load(path)
-
-    core.use(c_bool, 'fmap_is_dir', c_void_p)
-
-    @property
-    def is_dir(self):
-        """判断当前映射是否为目录结构。
-
-        Returns:
-            bool: 如果是目录映射返回 True，否则返回 False。
-        """
-        return core.fmap_is_dir(self.handle)
-
-    core.use(c_bool, 'fmap_has_key', c_void_p, c_char_p)
-
-    def has_key(self, key):
-        """检查指定键是否存在。
-
-        Args:
-            key (str): 要检查的键名。
-
-        Returns:
-            bool: 如果键存在返回 True，否则返回 False。
-        """
-        return core.fmap_has_key(self.handle, make_c_char_p(key))
-
-    core.use(c_void_p, 'fmap_get', c_void_p, c_char_p)
-
-    def get(self, key):
-        """获取指定键对应的子映射。
-
-        Args:
-            key (str): 要获取的键名。
-
-        Returns:
-            FileMap: 对应的子映射对象。
-
-        Note:
-            调用前必须先用 has_key 确认键存在，否则可能返回 None。
-        """
-        handle = core.fmap_get(self.handle, make_c_char_p(key))
-        if handle:
-            return FileMap(handle=handle)
-
-    core.use(None, 'fmap_set',
-             c_void_p, c_void_p, c_char_p)
-
-    def set(self, key, fmap):
-        """设置键值映射。
-
-        Args:
-            key (str): 要设置的键名。
-            fmap (FileMap/any): 可以是 FileMap 对象或可转换为字符串的数据。
-
-        Example:
-            # 设置文本内容
-            fmap.set('config', 'value')
-            # 设置嵌套映射
-            sub_fmap = FileMap()
-            fmap.set('subdir', sub_fmap)
-        """
-        if isinstance(fmap, FileMap):
-            core.fmap_set(self.handle, fmap.handle, make_c_char_p(key))
-        else:
-            fmap = FileMap(data=fmap)
-            core.fmap_set(self.handle, fmap.handle, make_c_char_p(key))
-
-    core.use(None, 'fmap_erase',
-             c_void_p, c_char_p)
-
-    def erase(self, key):
-        """删除指定键的映射。
-
-        Args:
-            key (str): 要删除的键名。
-        """
-        core.fmap_erase(self.handle, make_c_char_p(key))
-
-    core.use(None, 'fmap_write',
-             c_void_p, c_char_p)
-
-    def write(self, path):
-        """将映射内容提取到文件系统。
-
-        Args:
-            path (str): 目标路径。
-        """
-        core.fmap_write(self.handle, make_c_char_p(path))
-
-    core.use(None, 'fmap_read',
-             c_void_p, c_char_p)
-
-    def read(self, path):
-        """从文件系统读取内容到映射。
-
-        Args:
-            path (str): 源路径。
-        """
-        core.fmap_read(self.handle, make_c_char_p(path))
-
-    core.use(None, 'fmap_save',
-             c_void_p, c_char_p)
-
-    def save(self, path):
-        """序列化保存为二进制格式。
-
-        Args:
-            path (str): 保存路径。
-
-        Raises:
-            AssertionError: 如果尝试保存为 txt 或 xml 格式。
-        """
-        if isinstance(path, str):
-            ext = os.path.splitext(path)[-1].lower()
-            assert ext != '.txt' and ext != '.xml'
-            make_parent(path)
-            core.fmap_save(self.handle, make_c_char_p(path))
-
-    core.use(None, 'fmap_load',
-             c_void_p, c_char_p)
-
-    def load(self, path):
-        """从文件加载序列化数据。
-
-        Args:
-            path (str): 加载路径。
-        """
-        if isinstance(path, str):
-            _check_ipath(path, self)
-            core.fmap_load(self.handle, make_c_char_p(path))
-
-    core.use(c_char_p, 'fmap_get_char_p',
-             c_void_p)
-
-    @property
-    def data(self):
-        """获取文本内容。
-
-        Returns:
-            str: 解码后的字符串内容。
-        """
-        return core.fmap_get_char_p(self.handle).decode()
-
-    core.use(None, 'fmap_set_char_p',
-             c_void_p, c_char_p)
-
-    @data.setter
-    def data(self, value):
-        """设置文本内容。
-
-        Args:
-            value (any): 自动转换为字符串的内容。
-        """
-        if not isinstance(value, str):
-            value = f'{value}'
-        core.fmap_set_char_p(self.handle, make_c_char_p(value))
-
-    core.use(c_void_p, 'fmap_get_data', c_void_p)
-
-    @property
-    def buffer(self):
-        """获取二进制数据缓冲区。
-
-        Returns:
-            String: 二进制数据对象。
-        """
-        return String(handle=core.fmap_get_data(self.handle))
-
-    core.use(None, 'fmap_clone',
-             c_void_p, c_void_p)
-
-    def clone(self, other):
-        """克隆另一个文件映射对象的数据。
-
-        Args:
-            other (FileMap): 要克隆的对象。
-
-        Returns:
-            FileMap: 当前对象（支持链式调用）。
-        """
-        if other is not None:
-            assert isinstance(other, FileMap)
-            core.fmap_clone(self.handle, other.handle)
-        return self
-
-
 class Array2(HasHandle):
     """二维数组容器类，用于存储两个双精度浮点数。
 
@@ -4960,7 +5103,7 @@ class Array2(HasHandle):
         core.array2_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
         return fmap
 
-    def from_fmap(self, fmap, fmt='binary'):
+    def from_fmap(self, fmap: FileMap, fmt='binary'):
         """从 FileMap 中读取序列化数据。
 
         Args:
@@ -5019,6 +5162,8 @@ class Array2(HasHandle):
         dim = get_index(dim, 2)
         if dim is not None:
             return core.array2_get(self.handle, dim)
+        else:
+            return None
 
     core.use(None, 'array2_set',
              c_void_p, c_size_t, c_double)
@@ -5192,7 +5337,7 @@ class Array3(HasHandle):
         core.array3_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
         return fmap
 
-    def from_fmap(self, fmap, fmt='binary'):
+    def from_fmap(self, fmap: FileMap, fmt='binary'):
         """从 FileMap 中读取序列化数据。
 
         Args:
@@ -5251,6 +5396,8 @@ class Array3(HasHandle):
         dim = get_index(dim, 3)
         if dim is not None:
             return core.array3_get(self.handle, dim)
+        else:
+            return None
 
     core.use(None, 'array3_set',
              c_void_p, c_size_t, c_double)
@@ -5418,7 +5565,7 @@ class Tensor2(HasHandle):
         core.tensor2_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
         return fmap
 
-    def from_fmap(self, fmap, fmt='binary'):
+    def from_fmap(self, fmap: FileMap, fmt='binary'):
         """从 FileMap 中读取序列化数据。
 
         Args:
@@ -5475,6 +5622,8 @@ class Tensor2(HasHandle):
         j = get_index(key[1], 2)
         if i is not None and j is not None:
             return core.tensor2_get(self.handle, i, j)
+        else:
+            return None
 
     core.use(None, 'tensor2_set',
              c_void_p, c_size_t, c_size_t, c_double)
@@ -5781,7 +5930,7 @@ class Tensor3(HasHandle):
         core.tensor3_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
         return fmap
 
-    def from_fmap(self, fmap, fmt='binary'):
+    def from_fmap(self, fmap: FileMap, fmt='binary'):
         """从 FileMap 中读取序列化数据。
 
         Args:
@@ -5839,6 +5988,8 @@ class Tensor3(HasHandle):
         j = get_index(key[1], 3)
         if i is not None and j is not None:
             return core.tensor3_get(self.handle, i, j)
+        else:
+            return None
 
     core.use(None, 'tensor3_set',
              c_void_p, c_size_t, c_size_t, c_double)
@@ -6170,7 +6321,7 @@ class Tensor2Interp2(HasHandle):
                                        make_c_char_p(fmt))
         return fmap
 
-    def from_fmap(self, fmap, fmt='binary'):
+    def from_fmap(self, fmap: FileMap, fmt='binary'):
         """从FileMap反序列化数据。
 
         Args:
@@ -6370,7 +6521,7 @@ class Tensor3Interp3(HasHandle):
                                        make_c_char_p(fmt))
         return fmap
 
-    def from_fmap(self, fmap, fmt='binary'):
+    def from_fmap(self, fmap: FileMap, fmt='binary'):
         """从文件映射对象加载数据。
 
         Args:
@@ -6589,7 +6740,7 @@ class Coord2(HasHandle):
         core.coord2_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
         return fmap
 
-    def from_fmap(self, fmap, fmt='binary'):
+    def from_fmap(self, fmap: FileMap, fmt='binary'):
         """从文件映射加载数据。
 
         Args:
@@ -6699,12 +6850,14 @@ class Coord2(HasHandle):
             core.coord2_view_array2(self.handle, buffer.handle, coord.handle,
                                     o.handle)
             return buffer
-        if isinstance(o, Tensor2):
+        elif isinstance(o, Tensor2):
             if not isinstance(buffer, Tensor2):
                 buffer = Tensor2()
             core.coord2_view_tensor2(self.handle, buffer.handle, coord.handle,
                                      o.handle)
             return buffer
+        else:
+            return None
 
 
 class Coord3(HasHandle):
@@ -6776,7 +6929,7 @@ class Coord3(HasHandle):
         core.coord3_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
         return fmap
 
-    def from_fmap(self, fmap, fmt='binary'):
+    def from_fmap(self, fmap: FileMap, fmt='binary'):
         """从文件映射加载数据。
 
         Args:
@@ -6889,12 +7042,14 @@ class Coord3(HasHandle):
             core.coord3_view_array3(self.handle, buffer.handle, coord.handle,
                                     o.handle)
             return buffer
-        if isinstance(o, Tensor3):
+        elif isinstance(o, Tensor3):
             if not isinstance(buffer, Tensor3):
                 buffer = Tensor3()
             core.coord3_view_tensor3(self.handle, buffer.handle, coord.handle,
                                      o.handle)
             return buffer
+        else:
+            return None
 
 
 def _attr_in_range(value, *, left=None, right=None, min=None, max=None):
@@ -6905,7 +7060,7 @@ def _attr_in_range(value, *, left=None, right=None, min=None, max=None):
         warnings.warn(
             'The argument <min> of <_attr_in_range> '
             'will be removed after 2025-4-5, use <left> instead',
-            DeprecationWarning)
+            DeprecationWarning, stacklevel=2)
         assert left is None
         left = min
 
@@ -6913,7 +7068,7 @@ def _attr_in_range(value, *, left=None, right=None, min=None, max=None):
         warnings.warn(
             'The argument <max> of <_attr_in_range> '
             'will be removed after 2025-4-5, use <right> instead',
-            DeprecationWarning)
+            DeprecationWarning, stacklevel=2)
         assert right is None
         right = max
 
@@ -7045,6 +7200,8 @@ class Mesh3(HasHandle):
                 i = core.mesh3_get_node_link_id(self.model.handle, self.index,
                                                 index)
                 return self.model.get_link(i)
+            else:
+                return None
 
         core.use(c_size_t, 'mesh3_get_node_face_id',
                  c_void_p, c_size_t,
@@ -7065,6 +7222,8 @@ class Mesh3(HasHandle):
                 i = core.mesh3_get_node_face_id(self.model.handle, self.index,
                                                 index)
                 return self.model.get_face(i)
+            else:
+                return None
 
         core.use(c_size_t, 'mesh3_get_node_body_id',
                  c_void_p, c_size_t,
@@ -7085,6 +7244,8 @@ class Mesh3(HasHandle):
                 i = core.mesh3_get_node_body_id(self.model.handle, self.index,
                                                 index)
                 return self.model.get_body(i)
+            else:
+                return None
 
         @property
         def links(self):
@@ -7248,6 +7409,8 @@ class Mesh3(HasHandle):
                 i = core.mesh3_get_link_node_id(self.model.handle, self.index,
                                                 index)
                 return self.model.get_node(i)
+            else:
+                return None
 
         core.use(c_size_t, 'mesh3_get_link_face_id',
                  c_void_p, c_size_t,
@@ -7268,6 +7431,8 @@ class Mesh3(HasHandle):
                 i = core.mesh3_get_link_face_id(self.model.handle, self.index,
                                                 index)
                 return self.model.get_face(i)
+            else:
+                return None
 
         core.use(c_size_t, 'mesh3_get_link_body_id',
                  c_void_p, c_size_t,
@@ -7288,6 +7453,8 @@ class Mesh3(HasHandle):
                 i = core.mesh3_get_link_body_id(
                     self.model.handle, self.index, index)
                 return self.model.get_body(i)
+            else:
+                return None
 
         @property
         def nodes(self):
@@ -7474,6 +7641,8 @@ class Mesh3(HasHandle):
                 i = core.mesh3_get_face_node_id(self.model.handle, self.index,
                                                 index)
                 return self.model.get_node(i)
+            else:
+                return None
 
         core.use(c_size_t, 'mesh3_get_face_link_id',
                  c_void_p, c_size_t,
@@ -7494,6 +7663,8 @@ class Mesh3(HasHandle):
                 i = core.mesh3_get_face_link_id(self.model.handle, self.index,
                                                 index)
                 return self.model.get_link(i)
+            else:
+                return None
 
         core.use(c_size_t, 'mesh3_get_face_body_id',
                  c_void_p, c_size_t,
@@ -7514,6 +7685,8 @@ class Mesh3(HasHandle):
                 i = core.mesh3_get_face_body_id(
                     self.model.handle, self.index, index)
                 return self.model.get_body(i)
+            else:
+                return None
 
         @property
         def nodes(self):
@@ -7579,6 +7752,8 @@ class Mesh3(HasHandle):
                 n += 1
             if n > 0:
                 return x / n, y / n, z / n
+            else:
+                return None
 
         core.use(c_double, 'mesh3_get_face_attr',
                  c_void_p, c_size_t, c_size_t)
@@ -7709,6 +7884,8 @@ class Mesh3(HasHandle):
                 i = core.mesh3_get_body_node_id(
                     self.model.handle, self.index, index)
                 return self.model.get_node(i)
+            else:
+                return None
 
         core.use(c_size_t, 'mesh3_get_body_link_id',
                  c_void_p, c_size_t,
@@ -7729,6 +7906,8 @@ class Mesh3(HasHandle):
                 i = core.mesh3_get_body_link_id(
                     self.model.handle, self.index, index)
                 return self.model.get_link(i)
+            else:
+                return None
 
         core.use(c_size_t, 'mesh3_get_body_face_id',
                  c_void_p, c_size_t,
@@ -7749,6 +7928,8 @@ class Mesh3(HasHandle):
                 i = core.mesh3_get_body_face_id(
                     self.model.handle, self.index, index)
                 return self.model.get_face(i)
+            else:
+                return None
 
         @property
         def nodes(self):
@@ -7801,6 +7982,8 @@ class Mesh3(HasHandle):
                 n += 1
             if n > 0:
                 return x / n, y / n, z / n
+            else:
+                return None
 
         core.use(c_double, 'mesh3_get_body_volume',
                  c_void_p, c_size_t)
@@ -7894,6 +8077,11 @@ class Mesh3(HasHandle):
         if handle is None:
             if isinstance(path, str):
                 self.load(path)
+        try:
+            name = type(self).__name__
+            log(f'{name} created', tag=f'{name}_Init')
+        except:
+            pass
 
     def __str__(self):
         """
@@ -8015,6 +8203,8 @@ class Mesh3(HasHandle):
         index = get_index(index, self.node_number)
         if index is not None:
             return Mesh3.Node(self, index)
+        else:
+            return None
 
     def get_link(self, index):
         """
@@ -8029,6 +8219,8 @@ class Mesh3(HasHandle):
         index = get_index(index, self.link_number)
         if index is not None:
             return Mesh3.Link(self, index)
+        else:
+            return None
 
     def get_face(self, index):
         """
@@ -8043,6 +8235,8 @@ class Mesh3(HasHandle):
         index = get_index(index, self.face_number)
         if index is not None:
             return Mesh3.Face(self, index)
+        else:
+            return None
 
     def get_body(self, index):
         """
@@ -8057,6 +8251,8 @@ class Mesh3(HasHandle):
         index = get_index(index, self.body_number)
         if index is not None:
             return Mesh3.Body(self, index)
+        else:
+            return None
 
     @property
     def nodes(self):
@@ -8110,9 +8306,9 @@ class Mesh3(HasHandle):
         在网格中添加一个节点。
 
         Args:
-            x (float): 节点的 x 坐标。
-            y (float): 节点的 y 坐标。
-            z (float): 节点的 z 坐标。
+            x: 节点的 x 坐标。
+            y: 节点的 y 坐标。
+            z: 节点的 z 坐标。
 
         Returns:
             Node: 新添加的节点对象。
@@ -8135,11 +8331,12 @@ class Mesh3(HasHandle):
         Returns:
             Link: 新添加的线对象。
         """
-        assert len(nodes) == 2
-        for elem in nodes:
-            assert isinstance(elem, Mesh3.Node)
+        assert len(
+            nodes) == 2, f'The count of nodes must be 2, but got {len(nodes)}'
+        node_ids = [node.index if isinstance(node, Mesh3.Node) else node
+                    for node in nodes]
         index = core.mesh3_add_link(
-            self.handle, nodes[0].index, nodes[1].index)
+            self.handle, node_ids[0], node_ids[1])
         return self.get_link(index)
 
     core.use(c_size_t, 'mesh3_add_face3',
@@ -8162,18 +8359,20 @@ class Mesh3(HasHandle):
         Returns:
             Face: 新创建的面对象。
         """
-        for elem in links:
-            assert isinstance(elem, Mesh3.Link)
-        if len(links) == 3:
+        link_ids = [link.index if isinstance(link, Mesh3.Link) else link
+                    for link in links]
+        if len(link_ids) == 3:
             index = core.mesh3_add_face3(
-                self.handle, links[0].index,
-                links[1].index, links[2].index)
+                self.handle, link_ids[0],
+                link_ids[1], link_ids[2])
             return self.get_face(index)
-        if len(links) == 4:
+        elif len(link_ids) == 4:
             index = core.mesh3_add_face4(
-                self.handle, links[0].index,
-                links[1].index, links[2].index, links[3].index)
+                self.handle, link_ids[0],
+                link_ids[1], link_ids[2], link_ids[3])
             return self.get_face(index)
+        else:
+            return None
 
     core.use(c_size_t, 'mesh3_add_body4',
              c_void_p, c_size_t, c_size_t,
@@ -8193,21 +8392,23 @@ class Mesh3(HasHandle):
         Returns:
             Body: 新创建的体对象。
         """
-        for elem in faces:
-            assert isinstance(elem, Mesh3.Face)
-        if len(faces) == 4:
+        face_ids = [face.index if isinstance(face, Mesh3.Face) else face
+                    for face in faces]
+        if len(face_ids) == 4:
             index = core.mesh3_add_body4(
-                self.handle, faces[0].index,
-                faces[1].index, faces[2].index,
-                faces[3].index)
+                self.handle, face_ids[0],
+                face_ids[1], face_ids[2],
+                face_ids[3])
             return self.get_body(index)
-        if len(faces) == 6:
+        elif len(face_ids) == 6:
             index = core.mesh3_add_body6(
-                self.handle, faces[0].index,
-                faces[1].index, faces[2].index,
-                faces[3].index,
-                faces[4].index, faces[5].index)
+                self.handle, face_ids[0],
+                face_ids[1], face_ids[2],
+                face_ids[3],
+                face_ids[4], face_ids[5])
             return self.get_body(index)
+        else:
+            return None
 
     core.use(None, 'mesh3_change_view',
              c_void_p, c_void_p, c_void_p)
@@ -8503,6 +8704,8 @@ class Mesh3(HasHandle):
             index = core.mesh3_get_nearest_node_id(
                 self.handle, pos[0], pos[1], pos[2])
             return self.get_node(index)
+        else:
+            return None
 
     core.use(c_size_t, 'mesh3_get_nearest_link_id',
              c_void_p, c_double,
@@ -8522,6 +8725,8 @@ class Mesh3(HasHandle):
             index = core.mesh3_get_nearest_link_id(self.handle, pos[0], pos[1],
                                                    pos[2])
             return self.get_link(index)
+        else:
+            return None
 
     core.use(c_size_t, 'mesh3_get_nearest_face_id',
              c_void_p, c_double,
@@ -8541,6 +8746,8 @@ class Mesh3(HasHandle):
             index = core.mesh3_get_nearest_face_id(
                 self.handle, pos[0], pos[1], pos[2])
             return self.get_face(index)
+        else:
+            return None
 
     core.use(c_size_t, 'mesh3_get_nearest_body_id',
              c_void_p, c_double,
@@ -8560,6 +8767,8 @@ class Mesh3(HasHandle):
             index = core.mesh3_get_nearest_body_id(
                 self.handle, pos[0], pos[1], pos[2])
             return self.get_body(index)
+        else:
+            return None
 
     core.use(None, 'mesh3_get_loc_range',
              c_void_p, c_void_p, c_void_p)
@@ -8631,7 +8840,12 @@ class Alg:
         Note:
             基于粘性阻力与速度成正比的假设，使用指数衰减模型计算
         """
-        return core.get_velocity_after_slowdown_by_viscosity(v0, a0, time)
+        warnings.warn(
+            'deprecated and will be removed after 2026-4-24. '
+            'Use zmlx.alg.alpha.get_velocity_after_slowdown_by_viscosity instead.',
+            DeprecationWarning, stacklevel=2)
+        return core.get_velocity_after_slowdown_by_viscosity(
+            v0, a0, time)
 
     core.use(None, 'prepare_zml',
              c_char_p, c_char_p, c_char_p)
@@ -8723,7 +8937,7 @@ class LinearExpr(HasHandle):
                               make_c_char_p(fmt))
         return fmap
 
-    def from_fmap(self, fmap, fmt='binary'):
+    def from_fmap(self, fmap: FileMap, fmt='binary'):
         """
         从文件映射对象加载表达式。
 
@@ -8845,6 +9059,8 @@ class LinearExpr(HasHandle):
             index = core.lexpr_get_index(self.handle, i)
             weight = core.lexpr_get_weight(self.handle, i)
             return index, weight
+        else:
+            return None
 
     core.use(None, 'lexpr_add',
              c_void_p, c_size_t, c_double)
@@ -9071,6 +9287,11 @@ class DynSys(HasHandle):
         if handle is None:
             if isinstance(path, str):
                 self.load(path)
+        try:
+            name = type(self).__name__
+            log(f'{name} created', tag=f'{name}_Init')
+        except:
+            pass
 
     def __str__(self):
         """
@@ -9138,7 +9359,7 @@ class DynSys(HasHandle):
             self.handle, fmap.handle, make_c_char_p(fmt))
         return fmap
 
-    def from_fmap(self, fmap, fmt='binary'):
+    def from_fmap(self, fmap: FileMap, fmt='binary'):
         """
         从文件映射加载数据。
 
@@ -9220,6 +9441,8 @@ class DynSys(HasHandle):
         idx = get_index(idx, self.size)
         if idx is not None:
             return core.dynsys_get_pos(self.handle, idx)
+        else:
+            return None
 
     core.use(None, 'dynsys_set_pos',
              c_void_p, c_size_t, c_double)
@@ -9252,6 +9475,8 @@ class DynSys(HasHandle):
         idx = get_index(idx, self.size)
         if idx is not None:
             return core.dynsys_get_vel(self.handle, idx)
+        else:
+            return None
 
     core.use(None, 'dynsys_set_vel',
              c_void_p, c_size_t, c_double)
@@ -9284,6 +9509,8 @@ class DynSys(HasHandle):
         idx = get_index(idx, self.size)
         if idx is not None:
             return core.dynsys_get_mass(self.handle, idx)
+        else:
+            return None
 
     core.use(None, 'dynsys_set_mass',
              c_void_p, c_size_t, c_double)
@@ -9321,6 +9548,10 @@ class DynSys(HasHandle):
             handle = core.dynsys_get_p2f(self.handle, idx)
             if handle > 0:
                 return LinearExpr(handle=handle)
+            else:
+                return None
+        else:
+            return None
 
     core.use(c_double, 'dynsys_get_lexpr_value',
              c_void_p, c_void_p)
@@ -9344,7 +9575,7 @@ class DynSys(HasHandle):
 
 class SpringSys(HasHandle):
     """
-    质点弹簧系统模拟器，用于测试基于物理的弹性体变形。
+    质点弹簧系统模拟器，用于测试弹性体变形。
 
     Note:
         系统由以下组件构成：
@@ -9750,6 +9981,10 @@ class SpringSys(HasHandle):
                     b = virtual_nodes[1].pos
                     return (a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (
                             a[2] + b[2]) / 2
+                else:
+                    return None
+            else:
+                return None
 
         core.use(c_double, 'springsys_get_spring_attr',
                  c_void_p, c_size_t,
@@ -9917,6 +10152,11 @@ class SpringSys(HasHandle):
         if handle is None:
             if isinstance(path, str):
                 self.load(path)
+        try:
+            name = type(self).__name__
+            log(f'{name} created', tag=f'{name}_Init')
+        except:
+            pass
 
     def __str__(self):
         """
@@ -10125,6 +10365,8 @@ class SpringSys(HasHandle):
         index = get_index(index, self.node_number)
         if index is not None:
             return SpringSys.Node(self, index)
+        else:
+            return None
 
     def get_virtual_node(self, index):
         """
@@ -10139,6 +10381,8 @@ class SpringSys(HasHandle):
         index = get_index(index, self.virtual_node_number)
         if index is not None:
             return SpringSys.VirtualNode(self, index)
+        else:
+            return None
 
     def get_spring(self, index):
         """
@@ -10153,6 +10397,8 @@ class SpringSys(HasHandle):
         index = get_index(index, self.spring_number)
         if index is not None:
             return SpringSys.Spring(self, index)
+        else:
+            return None
 
     def get_damper(self, index):
         """
@@ -10167,6 +10413,8 @@ class SpringSys(HasHandle):
         index = get_index(index, self.damper_number)
         if index is not None:
             return SpringSys.Damper(self, index)
+        else:
+            return None
 
     @property
     def nodes(self):
@@ -10621,9 +10869,18 @@ class FemAlg:
              c_size_t, c_size_t)
 
     @staticmethod
-    def create2(mesh, fa_den, fa_h, face_stiffs):
-        assert isinstance(mesh, Mesh3)
-        assert isinstance(face_stiffs, Vector)
+    def create2(mesh: Mesh3, fa_den, fa_h, face_stiffs: Vector):
+        """
+        创建二维的动力学模型。 其中mesh为网格.
+        Args:
+            mesh: 网格对象，其中主要用到的是Face的数据
+            fa_den: 密度属性ID
+            fa_h: 厚度属性ID
+            face_stiffs: 所有face的刚度矩阵
+
+        Returns:
+            动力学系统对象
+        """
         dyn = DynSys()
         core.fem_alg_create2(dyn.handle, mesh.handle,
                              ctypes.cast(face_stiffs.pointer, c_void_p),
@@ -10647,23 +10904,23 @@ class FemAlg:
 
 class HasCells(Object):
     def get_pos_range(self, dim):
-        from zmlx.alg import has_cells
+        from zmlx.base import has_cells
         return has_cells.get_pos_range(self, dim)
 
     def get_cells_in_range(self, *args, **kwargs):
-        from zmlx.alg import has_cells
+        from zmlx.base import has_cells
         return has_cells.get_cells_in_range(self, *args, **kwargs)
 
     def get_cell_pos(self, *args, **kwargs):
-        from zmlx.alg import has_cells
+        from zmlx.base import has_cells
         return has_cells.get_cell_pos(self, *args, **kwargs)
 
     def get_cell_property(self, *args, **kwargs):
-        from zmlx.alg import has_cells
+        from zmlx.base import has_cells
         return has_cells.get_cell_property(self, *args, **kwargs)
 
     def plot_tricontourf(self, *args, **kwargs):
-        from zmlx.alg import has_cells
+        from zmlx.base import has_cells
         return has_cells.plot_tricontourf(self, *args, **kwargs)
 
 
@@ -11153,6 +11410,8 @@ class SeepageMesh(HasHandle, HasCells):
                     return self.model.get_cell(self.cell_i1)
                 else:
                     return self.model.get_cell(self.cell_i0)
+            else:
+                return None
 
         def cells(self):
             """
@@ -11233,6 +11492,11 @@ class SeepageMesh(HasHandle, HasCells):
         if handle is None:
             if isinstance(path, str):
                 self.load(path)
+        try:
+            name = type(self).__name__
+            log(f'{name} created', tag=f'{name}_Init')
+        except:
+            pass
 
     def __str__(self):
         """
@@ -11319,6 +11583,8 @@ class SeepageMesh(HasHandle, HasCells):
         ind = get_index(ind, self.cell_number)
         if ind is not None:
             return SeepageMesh.Cell(self, ind)
+        else:
+            return None
 
     core.use(c_size_t, 'seepage_mesh_get_nearest_cell_id',
              c_void_p,
@@ -11339,6 +11605,8 @@ class SeepageMesh(HasHandle, HasCells):
             return self.get_cell(
                 core.seepage_mesh_get_nearest_cell_id(
                     self.handle, pos[0], pos[1], pos[2]))
+        else:
+            return None
 
     core.use(c_size_t, 'seepage_mesh_get_face_n',
              c_void_p)
@@ -11378,6 +11646,8 @@ class SeepageMesh(HasHandle, HasCells):
             ind = get_index(ind, self.face_number)
             if ind is not None:
                 return SeepageMesh.Face(self, ind)
+            else:
+                return None
         else:
             assert cell_0 is not None and cell_1 is not None
             assert isinstance(cell_0, SeepageMesh.Cell)
@@ -11388,36 +11658,45 @@ class SeepageMesh(HasHandle, HasCells):
                                              cell_1.index)
             if ind < self.face_number:
                 return SeepageMesh.Face(self, ind)
+            else:
+                return None
 
     core.use(c_size_t, 'seepage_mesh_add_cell', c_void_p)
 
-    def add_cell(self):
+    def add_cell(self, *, pos=None, vol=None):
         """
         添加一个cell，并且返回这个新添加的cell
 
         Returns:
             SeepageMesh.Cell: 新添加的cell对象。
         """
-        return self.get_cell(core.seepage_mesh_add_cell(self.handle))
+        cell = self.get_cell(core.seepage_mesh_add_cell(self.handle))
+        if pos is not None:
+            cell.pos = pos
+        if vol is not None:
+            cell.vol = vol
+        return cell
 
     core.use(c_size_t, 'seepage_mesh_add_face',
              c_void_p,
              c_size_t,
              c_size_t)
 
-    def add_face(self, cell_0, cell_1):
+    def add_face(self, cell_0, cell_1, *, dist=None, area=None):
         """
         添加一个face，连接两个给定的cell
 
         Args:
             cell_0 (int | SeepageMesh.Cell): 第一个单元格。
             cell_1 (int | SeepageMesh.Cell): 第二个单元格。
+            dist: 过流距离 (m)
+            area: 过流面积 (m^2)
 
         Returns:
-            SeepageMesh.Face: 新添加的面的对象。
+            SeepageMesh.Face: 新添加的面的对象
 
         Raises:
-            AssertionError: 如果提供的cell不属于当前网格。
+            AssertionError: 如果提供的cell不属于当前网格
         """
         if isinstance(cell_0, SeepageMesh.Cell):
             assert cell_0.model.handle == self.handle
@@ -11427,8 +11706,24 @@ class SeepageMesh(HasHandle, HasCells):
             assert cell_1.model.handle == self.handle
             cell_1 = cell_1.index
 
-        return self.get_face(
-            core.seepage_mesh_add_face(self.handle, cell_0, cell_1))
+        face_n = self.face_number
+        idx = core.seepage_mesh_add_face(self.handle, cell_0, cell_1)
+        face = self.get_face(idx)
+
+        if self.face_number > face_n:   # a new face
+            assert idx == face_n
+            if area is not None:
+                face.area = area
+            if dist is None:
+                p0 = face.get_cell(0).pos
+                p1 = face.get_cell(1).pos
+                dist = get_distance(p0, p1)
+                if dist > 1.0e20 or dist < 1.0e-20:
+                    dist = None
+            if dist is not None:
+                face.dist = dist
+
+        return face
 
     @property
     def cells(self):
@@ -11476,8 +11771,8 @@ class SeepageMesh(HasHandle, HasCells):
                       'after 2025-5-27, '
                       'please use the function in '
                       'zmlx.seepage_mesh.ascii instead',
-                      DeprecationWarning)
-        from zmlx.seepage_mesh.ascii import load_ascii
+                      DeprecationWarning, stacklevel=2)
+        from zmlx.seepage_mesh.io import load_ascii
         load_ascii(*args, **kwargs, mesh=self)
 
     def save_ascii(self, *args, **kwargs):
@@ -11491,8 +11786,8 @@ class SeepageMesh(HasHandle, HasCells):
                       'after 2025-5-27, '
                       'please use the function in '
                       'zmlx.seepage_mesh.ascii instead',
-                      DeprecationWarning)
-        from zmlx.seepage_mesh.ascii import save_ascii
+                      DeprecationWarning, stacklevel=2)
+        from zmlx.seepage_mesh.io import save_ascii
         save_ascii(*args, **kwargs, mesh=self)
 
     @staticmethod
@@ -11507,8 +11802,8 @@ class SeepageMesh(HasHandle, HasCells):
                       'after 2025-5-27, '
                       'please use the function in '
                       'zmlx.seepage_mesh.load_mesh instead',
-                      DeprecationWarning)
-        from zmlx.seepage_mesh.load_mesh import load_mesh as load
+                      DeprecationWarning, stacklevel=2)
+        from zmlx.seepage_mesh.io import load_mesh as load
         return load(*args, **kwargs)
 
     @staticmethod
@@ -11522,8 +11817,8 @@ class SeepageMesh(HasHandle, HasCells):
         warnings.warn(
             'The zml.SeepageMesh.create_cube will be removed '
             'after 2025-5-27. '
-            'please use zmlx.seepage_mesh.cube.create_cube instead',
-            DeprecationWarning)
+            'please use the function create_cube from zmlx instead',
+            DeprecationWarning, stacklevel=2)
         from zmlx.seepage_mesh.cube import create_cube as create
         return create(*args, **kwargs)
 
@@ -11540,7 +11835,7 @@ class SeepageMesh(HasHandle, HasCells):
             'The zml.SeepageMesh.create_cylinder will be removed'
             ' after 2025-5-27. '
             'please use zmlx.seepage_mesh.cylinder.create_cylinder instead',
-            DeprecationWarning)
+            DeprecationWarning, stacklevel=2)
         from zmlx.seepage_mesh.cylinder import create_cylinder as create
         return create(*args, **kwargs)
 
@@ -11548,7 +11843,7 @@ class SeepageMesh(HasHandle, HasCells):
              c_void_p, c_void_p,
              c_void_p)
 
-    def find_inner_face_ids(self, cell_ids, buffer=None):
+    def find_inner_face_ids(self, cell_ids: UintVector, buffer=None):
         """
         给定多个Cell，返回这些Cell内部相互连接的Face的序号
 
@@ -11574,7 +11869,7 @@ class SeepageMesh(HasHandle, HasCells):
              c_void_p, c_void_p)
 
     @staticmethod
-    def from_mesh3(mesh3, buffer=None):
+    def from_mesh3(mesh3: Mesh3, buffer=None):
         """
         利用一个Mesh3的Body来创建Cell，Face来创建Face
 
@@ -11656,6 +11951,8 @@ class ElementMap(HasHandle):
                 w = core.element_map_related_weight(
                     self.model.handle, self.index, i)
                 return ind, w
+            else:
+                return None
 
     core.use(c_void_p, 'new_element_map')
     core.use(None, 'del_element_map', c_void_p)
@@ -11949,7 +12246,280 @@ class Seepage(HasHandle, HasCells):
         反应的速度以及反应过程中的能量变化。基于Seepage
         类模拟水合物的分解或者生成、冰的形成和融化、重油的裂解等，
         均基于此Reaction类进行定义。
+
+        反应速率q定义：
+            在单位时间内（1秒内），“反应所消耗的物质的质量（左侧物质质量的减少量）”
+                与 “在Cell中所有与此反应相关的组分的质量之和”的比值. 
+                
+            注意：
+                此定义与一般反应速率的定义不同，需要进行转换. 
+            
+        当Reaction作用到一个Cell上的时候，反应速率的计算步骤如下：
+            1. 根据Cell内流体的压力，使用p2t曲线，计算出基准温度T0。如果p2t没有定义，则
+                基准温度为0;
+            2. 遍历各个Inhibitor，如果定义了c2t曲线，则计算此Inhibitor的浓度，并使用
+                c2t曲线，计算出此Inhibitor对基准温度的影响。
+                注意：此浓度的计算是基于sol和liq的比值计算的。
+            3. 尝试读取Cell的idt属性和wdt属性，在此Cell内，T0=T0+idt属性值*wdt属性值.
+                至此，获得了经过矫正的基准温度T0;
+            4. 读取反应相关的各个组分的平均温度T，并减去基准温度T0，即得到dT=T-T0。下面，将
+                使用这个dT来计算反应速率.
+            5. 使用dT，以及t2q曲线，计算出正向反应速率q；同理，基于t2qr曲线，根据dT，计算出
+                逆向的反应速率qr. 
+            6. 遍历各个Inhibitor，如果其定义了exp，则令q=q*c^exp；如果其定义了exp_r则令
+                qr=qr*c^exp_r。 这个步骤，即使用相关组分的浓度来对正向和逆向的反应速率进行
+                必要的矫正。
+            7. 令反应速率Q=q-qr。
+            8. 遍历各个Inhibitor，如果其定义了c2q曲线，则使用c2q曲线，对反应速率Q进行矫正。
+                即Q=Q+c2q(c)。
+            9. 查看Cell是否定义了irate属性，如果定义了，则读取irate属性为此Cell内速率的倍率，
+                令Q=Q*irate属性值
+            10. 至此，得到了最终的反应速率Q。
         """
+
+        class Component:
+            """
+            组分。定义的是反应方程式中的一项。
+            """
+            def __init__(self, handle):
+                self.handle = handle
+
+            core.use(c_void_p, 'rea_comp_get_index', c_void_p)
+
+            @property
+            def index(self):
+                """
+                流体组分的序号. 长度为1到3之间的list
+                """
+                idx = UintVector(handle=core.rea_comp_get_index(self.handle))
+                return idx.to_list()
+
+            @index.setter
+            def index(self, value):
+                """
+                流体组分的序号. 长度为1到3之间的list
+                """
+                idx = UintVector(handle=core.rea_comp_get_index(self.handle))
+                idx.set(value)
+
+            core.use(c_size_t, 'rea_comp_get_fa_t', c_void_p)
+
+            @property
+            def fa_t(self):
+                """
+                组分温度属性的ID. 必须定义
+                """
+                return core.rea_comp_get_fa_t(self.handle)
+
+            core.use(None, 'rea_comp_set_fa_t',
+                     c_void_p, c_size_t)
+
+            @fa_t.setter
+            def fa_t(self, value):
+                """
+                组分温度属性的ID. 必须定义
+                """
+                core.rea_comp_set_fa_t(self.handle, value)
+
+            core.use(c_size_t, 'rea_comp_get_fa_c', c_void_p)
+
+            @property
+            def fa_c(self):
+                """
+                组分比热属性的ID. 必须定义
+                """
+                return core.rea_comp_get_fa_c(self.handle)
+
+            core.use(None, 'rea_comp_set_fa_c',
+                     c_void_p, c_size_t)
+
+            @fa_c.setter
+            def fa_c(self, value):
+                """
+                组分比热属性的ID. 必须定义
+                """
+                core.rea_comp_set_fa_c(self.handle, value)
+
+            core.use(c_double, 'rea_comp_get_weight', c_void_p)
+
+            @property
+            def weight(self):
+                """
+                组分权重。 左侧物质的权重为负值，右侧为正值. 所有左侧物质权重的加和等于-1
+                右侧物质权重的加和等于+1
+                """
+                return core.rea_comp_get_weight(self.handle)
+
+            core.use(None, 'rea_comp_set_weight',
+                     c_void_p, c_double)
+
+            @weight.setter
+            def weight(self, value):
+                """
+                组分权重
+                """
+                core.rea_comp_set_weight(self.handle, value)
+
+        class Inhibitor:
+            """
+            定义抑制剂，或者催化剂。这种物质不参与反应，但是可能会影响到反应的速率。
+            所有可以影响到反应速率的物质，在这里统一都定义为抑制剂
+            """
+            def __init__(self, handle):
+                self.handle = handle
+
+            core.use(c_void_p, 'rea_inh_get_sol', c_void_p)
+
+            @property
+            def sol(self):
+                """
+                溶质对应的ID.
+                说明：
+                    在实际计算的时候，将根据sol的质量（或者体积）除以liq的质量（或者体积）来
+                    获得溶质的浓度，并根据此浓度来矫正反应速率。
+                    具体是使用质量浓度还是体积浓度，取决于use_vol的取值。
+                    默认使用质量浓度。
+                    计算得到的溶质的浓度将会是0到1之间的数值。
+                """
+                return UintVector(
+                    handle=core.rea_inh_get_sol(self.handle)).to_list()
+
+            @sol.setter
+            def sol(self, value):
+                """
+                溶质对应的ID
+                """
+                UintVector(
+                    handle=core.rea_inh_get_sol(self.handle)).set(value)
+
+            core.use(c_void_p, 'rea_inh_get_liq', c_void_p)
+
+            @property
+            def liq(self):
+                """
+                溶液对应的ID.
+                说明：
+                    在实际计算的时候，将根据sol的质量（或者体积）除以liq的质量（或者体积）来
+                    获得溶质的浓度，并根据此浓度来矫正反应速率。
+                    具体是使用质量浓度还是体积浓度，取决于use_vol的取值。
+                    默认使用质量浓度。
+                    计算得到的溶质的浓度将会是0到1之间的数值。
+                """
+                return UintVector(
+                    handle=core.rea_inh_get_liq(self.handle)).to_list()
+
+            @liq.setter
+            def liq(self, value):
+                """
+                溶液对应的ID
+                """
+                UintVector(
+                    handle=core.rea_inh_get_liq(self.handle)).set(value)
+
+            core.use(c_void_p, 'rea_inh_get_c2t', c_void_p)
+
+            @property
+            def c2t(self):
+                """
+                溶质浓度（根据sol和liq的比值计算）对基准温度的矫正。
+                定义一条曲线，其中
+                    x为溶质的浓度 （0到1之间）
+                    y为此抑制剂对基准温度的改变。y>0则相当于提升基准温度（等价于流体温度降低）。单位为K
+                """
+                handle = core.rea_inh_get_c2t(self.handle)
+                return Interp1(handle=handle)
+
+            core.use(c_bool, 'rea_inh_get_use_vol', c_void_p)
+            core.use(None, 'rea_inh_set_use_vol',
+                     c_void_p, c_bool)
+
+            @property
+            def use_vol(self):
+                """
+                是否使用体积分数 (如果为False，则使用质量分数)。
+                    如果为True，则定义浓度c为c=sol的体积/liq的体积。
+                    否则，定义浓度c为c=sol的质量/liq的质量。
+                """
+                return core.rea_inh_get_use_vol(self.handle)
+
+            @use_vol.setter
+            def use_vol(self, value):
+                """
+                是否使用体积分数 (如果为False，则使用质量分数)
+                """
+                core.rea_inh_set_use_vol(self.handle, value)
+
+            core.use(c_void_p,'rea_inh_get_c2q', c_void_p)
+
+            @property
+            def c2q(self):
+                """
+                溶质浓度（根据sol和liq的比值计算）对反应速率矫正。
+                定义一条曲线，其中
+                    x为溶质的浓度 （0到1之间）
+                    y为此抑制剂对反应速率的影响。基于此计算的反应速率，将直接叠加在反应的速率上。
+                特别注意反应速率的定义：
+                    在单位时间内（1秒内），“反应所消耗的物质的质量（左侧物质质量的减少量）”
+                    与 “在Cell中所有与此反应相关的组分的质量之和”的比值.
+                """
+                handle = core.rea_inh_get_c2q(self.handle)
+                return Interp1(handle=handle)
+
+            core.use(c_double,'rea_inh_get_exp', c_void_p)
+
+            @property
+            def exp(self):
+                """
+                反应速率的指数（正向反应）.
+                    在使用反应的t2q计算出正向反应速率之后，将乘以c^exp，其中c为溶质的浓度。
+                    特别注意：
+                        这里浓度的定义和常规的不同，在化学反应中，一般采用mol/L这样的单位
+                        但是，这里的浓度为质量分数(或者体积分数，取决于use_vol属性是否为True)，
+                        是无量纲的量。因此，必须进行必要的转换。
+                        如果此抑制剂的浓度不会对反应的速率造成影响，则将此指数设置为0
+                注意：
+                    只有在计算正向反应速率的时候，此属性才会起作用
+                """
+                return core.rea_inh_get_exp(self.handle)
+
+            core.use(None,'rea_inh_set_exp',
+                     c_void_p, c_double)
+
+            @exp.setter
+            def exp(self, value):
+                """
+                反应速率的指数（正向反应）.
+                """
+                core.rea_inh_set_exp(self.handle, value)
+
+            core.use(c_double,'rea_inh_get_exp_r', c_void_p)
+
+            @property
+            def exp_r(self):
+                """
+                反应速率的指数(逆向)
+                    在使用反应的t2qr计算出逆向反应速率之后，将乘以c^exp_r，其中c为溶质的浓度。
+                    特别注意：
+                        这里浓度的定义和常规的不同，在化学反应中，一般采用mol/L这样的单位
+                        但是，这里的浓度为质量分数(或者体积分数，取决于use_vol属性是否为True)，
+                        是无量纲的量。因此，必须进行必要的转换。
+                        如果此抑制剂的浓度不会对反应的速率造成影响，则将此指数设置为0
+                注意：
+                    只有在计算逆向反应速率的时候，此属性才会起作用
+                """
+                return core.rea_inh_get_exp_r(self.handle)
+
+            core.use(None,'rea_inh_set_exp_r',
+                     c_void_p, c_double)
+
+            @exp_r.setter
+            def exp_r(self, value):
+                """
+                反应速率的指数(逆向)
+                """
+                core.rea_inh_set_exp_r(self.handle, value)
+
+
         core.use(c_void_p, 'new_reaction')
         core.use(None, 'del_reaction', c_void_p)
 
@@ -12033,7 +12603,7 @@ class Seepage(HasHandle, HasCells):
                                      make_c_char_p(fmt))
             return fmap
 
-        def from_fmap(self, fmap, fmt='binary'):
+        def from_fmap(self, fmap: FileMap, fmt='binary'):
             """
             从Filemap中读取序列化的数据。
 
@@ -12074,27 +12644,27 @@ class Seepage(HasHandle, HasCells):
         @property
         def heat(self):
             """
-            发生1kg物质的化学反应<1kg的左侧物质，转化为1kg的右侧物质>释放的热量，单位焦耳。
-            注意，如果反应是吸热反应，则此heat为负值。
+            反应热.
+                发生1kg物质的化学反应(1kg的左侧物质，转化为1kg的右侧物质)释放的热量，单位焦耳。
+                注意:
+                    1. 如果反应是吸热反应，则此heat为负值。
+                    2. 特别要注意单位。此heat的单位，实际为焦耳/kg，与一般的焦耳/mol不同。
 
             Returns:
-                float: 化学反应释放的热量。
+                float: 单位质量化学反应释放的热量，单位焦耳。
             """
             return core.reaction_get_dheat(self.handle)
 
         @heat.setter
         def heat(self, value):
             """
-            设置化学反应释放的热量。
-
+            反应热.
             Args:
-                value (float): 化学反应释放的热量，单位焦耳。
+                value (float): 单位质量化学反应释放的热量，单位焦耳。
             """
             core.reaction_set_dheat(self.handle, value)
 
-        # 兼容之前的接口 (_Trash)
-        # todo:
-        #   删除dheat属性. (after 2024.02.01)
+        # 兼容之前的接口 (将在2024-02-01之后移除)
         dheat = heat
 
         core.use(None, 'reaction_set_t0',
@@ -12105,11 +12675,13 @@ class Seepage(HasHandle, HasCells):
         @property
         def temp(self):
             """
-            和heat对应的参考温度，只有当反应前后的温度都等于此temp的时候，
+            和heat对应的参考温度（单位为K），只有当反应前后的温度都等于此temp的时候，
             释放的热量才可以使用heat来定义。
+            注意：
+                默认值为280.0K
 
             Returns:
-                float: 参考温度。
+                float: 参考温度。单位K
             """
             return core.reaction_get_t0(self.handle)
 
@@ -12117,69 +12689,79 @@ class Seepage(HasHandle, HasCells):
         def temp(self, value):
             """
             设置参考温度。
-
             Args:
                 value (float): 参考温度。
             """
             core.reaction_set_t0(self.handle, value)
 
-        core.use(None, 'reaction_set_p2t',
-                 c_void_p, c_void_p, c_void_p)
-
         def set_p2t(self, p, t):
             """
-            设置不同的压力下，反应可以发生的临界温度。
-
-            Args:
-                p (Vector or list): 压力向量。
-                t (Vector or list): 临界温度向量。
-
-            Notes:
-                对于吸热反应，只有当温度大于此临界温度的时候，反应才会发生；
-                对于放热反应，温度小于临界温度的时候，反应才会发生。
-                此反应目前不适用于“燃烧”这种反应（后续可能会添加支持）。
+            设置p2t，具体参考对p2t的说明
             """
-            if not isinstance(p, Vector):
-                p = Vector(p)
-            if not isinstance(t, Vector):
-                t = Vector(t)
-            core.reaction_set_p2t(self.handle, p.handle, t.handle)
-
-        core.use(None, 'reaction_set_t2q',
-                 c_void_p, c_void_p, c_void_p)
+            self.p2t.set_xy(p, t)
 
         def set_t2q(self, t, q):
             """
-            设置当温度偏离平衡温度的时候反应的速率。
-
-            Args:
-                t (Vector or list): 温度偏移量向量。
-                q (Vector or list): 反应速率向量。
-
-            Notes:
-                对于吸热反应，随着温度的增加，反应的速率应当增加；
-                对于放热反应，随着温度的降低，反应的速率降低；
-                当温度偏移量为0的时候，反应的速率为0。
-                此处，反应的速率定义为，对于1kg的物质，在1s内发生反应的质量。
+            设置t2q，具体参考对t2q的说明
             """
-            if not isinstance(t, Vector):
-                t = Vector(t)
-            if not isinstance(q, Vector):
-                q = Vector(q)
-            core.reaction_set_t2q(self.handle, t.handle, q.handle)
+            self.t2q.set_xy(t, q)
 
-        core.use(None, 'reaction_add_component',
-                 c_void_p, c_size_t, c_size_t,
-                 c_size_t,
-                 c_double, c_size_t, c_size_t)
+        core.use(c_void_p, 'reaction_get_p2t', c_void_p)
+
+        @property
+        def p2t(self):
+            """
+            不同的压力下，反应的基准温度. 单位K
+            说明：
+                在此反应定义中，反应的速率是根据温度来计算的。但是，温度总是一个相对的数值，
+                因此，才有一个基准温度的概念。而且，这个基准温度是和压力相关的。
+                比如说，1MPa下的基准温度是0度，2MPa下的基准温度是10度，那么后续计算反应
+                速率的时候，压力1MPa，温度1度的反应速率，将和压力2MPa，温度11度的反应速率相等。
+            此属性定义了一个曲线，其中：
+                自变量x: 压力（一个向量），单位是Pa
+                因变量y: 给定压力下对应的基准温度（一个向量，长度和x相等），单位是K
+            """
+            handle = core.reaction_get_p2t(self.handle)
+            return Interp1(handle=handle)
+
+        core.use(c_void_p, 'reaction_get_t2q', c_void_p)
+
+        @property
+        def t2q(self):
+            """
+            当温度偏离平衡温度的时候反应的速率（正向反应速率，此属性必须正确设置）。
+            如果定义了t2qr（逆向速率），则实际的反应速率，将是正向的速率减去逆向的速率。
+
+            定一个一条曲线，其中：
+                自变量x: 温度偏移量。单位K
+                因变量y: 反应速率。单位: 1/s。
+                    (反应的速率定义为：对于1kg的总的反应物质，在1s内，左侧物质质量的较少量)
+                    小于0的q表示反应是逆向的（右侧物质质量减少）
+                    注意这个速率后续需要根据exp以及组分的浓度来矫正
+            注意:
+                一般地，对于吸热反应，随着温度的增加，反应的速率应当增加；
+                反之，对于放热反应，随着温度的降低，反应的速率降低；
+            """
+            handle = core.reaction_get_t2q(self.handle)
+            return Interp1(handle=handle)
+
+        core.use(c_void_p, 'reaction_get_t2qr', c_void_p)
+
+        @property
+        def t2qr(self):
+            """
+            一个曲线，表示不同的温度(实际温度减去基准温度)下的逆向反应速率。参考t2q的说明。
+            """
+            handle = core.reaction_get_t2qr(self.handle)
+            return Interp1(handle=handle)
 
         def add_component(self, index, weight, fa_t, fa_c):
             """
             添加一种反应物质。
 
             Args:
-                index (int): Seepage.Cell中定义的流体组分的序号。
-                weight (float): 发生1kg的反应的时候此物质变化的质量，
+                index: Seepage.Cell中定义的流体组分的序号。
+                weight: 发生1kg的反应的时候此物质变化的质量，
                     其中左侧物质的weight为负值，右侧为正值。
                 fa_t (int): 定义流体温度的属性ID。
                 fa_c (int): 定义流体比热的属性ID。
@@ -12187,54 +12769,115 @@ class Seepage(HasHandle, HasCells):
             Raises:
                 AssertionError: 如果fa_t或fa_c为None，或者weight的绝对值大于1.00001。
             """
-            assert fa_t is not None
-            assert fa_c is not None
-            assert abs(weight) <= 1.00001
-            core.reaction_add_component(
-                self.handle, *parse_fid3(index), weight, fa_t, fa_c)
+            idx = self.component_n
+            self.component_n = idx + 1
+            comp = self.get_component(idx)
 
-        core.use(None, 'reaction_clear_components',
-                 c_void_p)
+            comp.index = parse_fid(index)
+
+            assert fa_t is not None
+            comp.fa_t = fa_t
+
+            assert fa_c is not None
+            comp.fa_c = fa_c
+
+            assert abs(weight) <= 1.00001
+            comp.weight = weight
 
         def clear_components(self):
             """
             清除所有的反应组分。
             """
-            core.reaction_clear_components(self.handle)
+            self.component_n = 0
 
-        core.use(None, 'reaction_add_inhibitor',
-                 c_void_p,
-                 c_size_t, c_size_t, c_size_t,
-                 c_size_t, c_size_t, c_size_t,
-                 c_void_p, c_void_p, c_bool)
+        core.use(c_size_t, 'reaction_get_component_n', c_void_p)
 
-        def add_inhibitor(self, sol, liq, c, t, *, use_vol=False):
+        @property
+        def component_n(self):
             """
-            添加一种抑制剂。
-
-            Args:
-                sol (int): 抑制剂对应的组分ID。
-                liq (int): 流体的组分ID。
-                c (Vector or list): 抑制剂浓度向量。
-                t (Vector or list): 化学反应平衡温度向量。
-                use_vol (bool, optional): 是否使用体积。默认为False。
+            反应组分的数量。
             """
-            if not isinstance(c, Vector):
-                c = Vector(c)
-            if not isinstance(t, Vector):
-                t = Vector(t)
-            core.reaction_add_inhibitor(self.handle, *parse_fid3(sol),
-                                        *parse_fid3(liq), c.handle, t.handle,
-                                        use_vol)
+            return core.reaction_get_component_n(self.handle)
 
-        core.use(None, 'reaction_clear_inhibitors',
-                 c_void_p)
+        core.use(None, 'reaction_set_component_n',
+                 c_void_p, c_size_t)
+
+        @component_n.setter
+        def component_n(self, value):
+            """
+            反应组分的数量。
+            """
+            core.reaction_set_component_n(self.handle, value)
+
+        core.use(c_void_p, 'reaction_get_component',
+                 c_void_p, c_size_t)
+
+        def get_component(self, idx):
+            """
+            获取指定索引的反应组分。
+            """
+            idx = get_index(idx, count=self.component_n)
+            return Seepage.Reaction.Component(
+                handle=core.reaction_get_component(self.handle, idx))
+
+        @property
+        def components(self):
+            """
+            迭代所有的组分
+            """
+            return Iterator(self, self.component_n,
+                            lambda m, ind: m.get_component(ind))
+
+        def add_inhibitor(self, *args, **kwargs):
+            warnings.warn('Reaction.add_inhibitor will be removed after 2026-5-31, '
+                          'use zmlx.react.alg.add_inhibitor instead',
+                          DeprecationWarning, stacklevel=2)
+            from zmlx.react import alg
+            return alg.add_inhibitor(self, *args, **kwargs)
 
         def clear_inhibitors(self):
             """
             清除所有的抑制剂定义。
             """
-            core.reaction_clear_inhibitors(self.handle)
+            self.inhibitor_n = 0
+
+        core.use(c_size_t, 'reaction_get_inh_n', c_void_p)
+
+        @property
+        def inhibitor_n(self):
+            """
+            抑制剂的数量。
+            """
+            return core.reaction_get_inh_n(self.handle)
+
+        core.use(None, 'reaction_set_inh_n',
+                 c_void_p, c_size_t)
+
+        @inhibitor_n.setter
+        def inhibitor_n(self, value):
+            """
+            设置抑制剂的数量。
+            """
+            core.reaction_set_inh_n(self.handle, value)
+
+        core.use(c_void_p, 'reaction_get_inh',
+                 c_void_p, c_size_t)
+
+        def get_inhibitor(self, idx):
+            """
+            获取指定索引的抑制剂。
+            """
+            idx = get_index(idx, count=self.inhibitor_n)
+            return Seepage.Reaction.Inhibitor(
+                handle=core.reaction_get_inh(self.handle, idx))
+
+        @property
+        def inhibitors(self):
+            """
+            迭代所有的抑制剂
+            """
+            return Iterator(self, self.inhibitor_n,
+                            lambda m, ind: m.get_inhibitor(ind))
 
         core.use(None, 'reaction_react',
                  c_void_p, c_void_p, c_double, c_void_p)
@@ -12270,7 +12913,7 @@ class Seepage(HasHandle, HasCells):
 
         def adjust_widghts(self):
             """
-            同adjust_weights
+            同adjust_weights （曾经单纯的拼写错误）
 
             Warnings:
                 此方法已弃用，将在2024-1-1之后移除，请使用 <adjust_weights>。
@@ -12278,7 +12921,7 @@ class Seepage(HasHandle, HasCells):
             warnings.warn(
                 'Use <adjust_weights>. <adjust_widghts> will be '
                 'removed after 2024-1-1',
-                DeprecationWarning)
+                DeprecationWarning, stacklevel=2)
             self.adjust_weights()
 
         core.use(c_double, 'reaction_get_rate',
@@ -12287,6 +12930,7 @@ class Seepage(HasHandle, HasCells):
         def get_rate(self, cell):
             """
             获得给定Cell在当前状态(温度、压力、抑制剂等条件)下的<瞬时的>反应速率。
+            此函数主要用来测试
 
             Args:
                 cell (Seepage.CellData): Seepage的CellData对象。
@@ -12304,9 +12948,10 @@ class Seepage(HasHandle, HasCells):
         @property
         def idt(self):
             """
-            Cell的属性ID。Cell的此属性用以定义反应作用到该Cell上的时候，平衡温度的调整量。
-            这允许在不同的Cell上，有不同的反应温度。
-            默认情况下，此属性不定义，则反应在各个Cell上的温度是一样的。
+            Cell的属性ID。Cell的此属性用以定义反应作用到该Cell上的时候，基准温度的调整量。
+            这允许在不同的Cell上，有不同的基准温度（而不仅仅是压力的函数）。
+            在使用p2t计算了基准温度之后，将额外附加上idt的属性值.
+            默认情况下，此属性不定义，则反应在各个Cell上的基准温度是一样的。
 
             Notes:
                 此属性为一个测试功能，当后续有更好的实现方案的时候，可能会被移除。
@@ -12334,10 +12979,9 @@ class Seepage(HasHandle, HasCells):
         @property
         def wdt(self):
             """
-            和idt配合使用。在Cell定义温度调整量的时候，
-            可以利用这个权重再对这个调整量进行（缩放）调整。
-            比如，当Cell给的温度的调整量的单位不是K的时候，
-            可以利用wdt属性来添加一个倍率。
+            和idt配合使用。在Cell定义温度调整量的时候， 可以利用这个权重再对这个调整量进行（缩放）调整。
+            比如，当Cell给的温度的调整量的单位不是K的时候， 可以利用wdt属性来添加一个倍率。
+            默认为1，即不进行缩放处理。
 
             Notes:
                 此属性为一个测试功能，当后续有更好的实现方案的时候，可能会被移除。
@@ -12350,7 +12994,7 @@ class Seepage(HasHandle, HasCells):
         @wdt.setter
         def wdt(self, value):
             """
-            设置权重。
+            设置idt的权重（缩放系数）
 
             Args:
                 value (float): 权重。
@@ -12367,8 +13011,7 @@ class Seepage(HasHandle, HasCells):
             """
             Cell的属性ID。Cell的此属性用以定义反应作用到该Cell上的时候，
             反应速率应该乘以的倍数。
-            若定义这个属性，且Cell的这个属性值小于等于0，
-            那么反应在这个Cell上将不会发生。
+            若定义这个属性，且Cell的这个属性值小于等于0，那么反应在这个Cell上将不会发生。
 
             Notes:
                 如果希望某个反应只在部分Cell上发生，则可以利用这个属性来实现。
@@ -12416,6 +13059,23 @@ class Seepage(HasHandle, HasCells):
             result = Seepage.Reaction()
             result.clone(self)
             return result
+
+        core.use(c_char_p, 'reaction_get_name', c_void_p)
+        core.use(None, 'reaction_set_name', c_void_p, c_char_p)
+
+        @property
+        def name(self):
+            """
+            反应的名字（字符串），主要用于区分不同的反应，不参与任何计算
+            """
+            return core.reaction_get_name(self.handle).decode()
+
+        @name.setter
+        def name(self, value):
+            """
+            反应的名字（字符串），主要用于区分不同的反应，不参与任何计算
+            """
+            core.reaction_set_name(self.handle, make_c_char_p(value))
 
     class FluDef(HasHandle):
         """
@@ -12525,7 +13185,7 @@ class Seepage(HasHandle, HasCells):
                 self.handle, fmap.handle, make_c_char_p(fmt))
             return fmap
 
-        def from_fmap(self, fmap, fmt='binary'):
+        def from_fmap(self, fmap: FileMap, fmt='binary'):
             """
             从Filemap中读取序列化的数据。
 
@@ -12664,8 +13324,6 @@ class Seepage(HasHandle, HasCells):
 
         core.use(c_double, 'fludef_get_specific_heat',
                  c_void_p)
-        core.use(None, 'fludef_set_specific_heat',
-                 c_void_p, c_double)
 
         @property
         def specific_heat(self):
@@ -12680,6 +13338,9 @@ class Seepage(HasHandle, HasCells):
             """
             assert self.component_number == 0
             return core.fludef_get_specific_heat(self.handle)
+
+        core.use(None, 'fludef_set_specific_heat',
+                 c_void_p, c_double)
 
         @specific_heat.setter
         def specific_heat(self, value):
@@ -12698,8 +13359,6 @@ class Seepage(HasHandle, HasCells):
 
         core.use(c_size_t, 'fludef_get_component_number',
                  c_void_p)
-        core.use(None, 'fludef_set_component_number',
-                 c_void_p, c_size_t)
 
         @property
         def component_number(self):
@@ -12710,6 +13369,9 @@ class Seepage(HasHandle, HasCells):
                 int: 流体组分的数量。
             """
             return core.fludef_get_component_number(self.handle)
+
+        core.use(None, 'fludef_set_component_number',
+                 c_void_p, c_size_t)
 
         @component_number.setter
         def component_number(self, value):
@@ -12738,18 +13400,14 @@ class Seepage(HasHandle, HasCells):
             if idx is not None:
                 return Seepage.FluDef(
                     handle=core.fludef_get_component(self.handle, idx))
-
-        core.use(None, 'fludef_clear_components',
-                 c_void_p)
+            else:
+                return None
 
         def clear_components(self):
             """
             清除所有的组分。
             """
-            core.fludef_clear_components(self.handle)
-
-        core.use(c_size_t, 'fludef_add_component',
-                 c_void_p, c_void_p)
+            self.component_number = 0
 
         def add_component(self, flu, name=None):
             """
@@ -12763,9 +13421,12 @@ class Seepage(HasHandle, HasCells):
                 int: 新添加组分的ID。
             """
             assert isinstance(flu, Seepage.FluDef)
-            idx = core.fludef_add_component(self.handle, flu.handle)
+            idx = self.component_number
+            self.component_number = idx + 1
+            temp = self.get_component(idx)
+            temp.clone(flu)
             if name is not None:
-                self.get_component(idx).name = name
+                temp.name = name
             return idx
 
         @staticmethod
@@ -12792,8 +13453,6 @@ class Seepage(HasHandle, HasCells):
                     result.add_component(Seepage.FluDef.create(x))
                 return result
 
-        core.use(None, 'fludef_set_name',
-                 c_void_p, c_char_p)
         core.use(c_char_p, 'fludef_get_name',
                  c_void_p)
 
@@ -12806,6 +13465,9 @@ class Seepage(HasHandle, HasCells):
                 str: 流体组分的名称。
             """
             return core.fludef_get_name(self.handle).decode()
+
+        core.use(None, 'fludef_set_name',
+                 c_void_p, c_char_p)
 
         @name.setter
         def name(self, value):
@@ -12960,7 +13622,7 @@ class Seepage(HasHandle, HasCells):
                 self.handle, fmap.handle, make_c_char_p(fmt))
             return fmap
 
-        def from_fmap(self, fmap, fmt='binary'):
+        def from_fmap(self, fmap: FileMap, fmt='binary'):
             """
             从Filemap中读取序列化的数据。其中fmt的取值可以为: text, xml和binary。
 
@@ -13122,7 +13784,7 @@ class Seepage(HasHandle, HasCells):
             """
             warnings.warn('FluData.is_solid will be deleted '
                           'after 2024-5-5',
-                          DeprecationWarning)
+                          DeprecationWarning, stacklevel=2)
             return self.vis >= 0.5e30
 
         core.use(c_double, 'fluid_get_attr',
@@ -13227,8 +13889,6 @@ class Seepage(HasHandle, HasCells):
 
         core.use(c_size_t, 'fluid_get_component_number',
                  c_void_p)
-        core.use(None, 'fluid_set_component_number',
-                 c_void_p, c_size_t)
 
         @property
         def component_number(self):
@@ -13240,6 +13900,9 @@ class Seepage(HasHandle, HasCells):
                 int: 流体组分的数量。
             """
             return core.fluid_get_component_number(self.handle)
+
+        core.use(None, 'fluid_set_component_number',
+                 c_void_p, c_size_t)
 
         @component_number.setter
         def component_number(self, value):
@@ -13268,6 +13931,8 @@ class Seepage(HasHandle, HasCells):
             if idx is not None:
                 return Seepage.FluData(
                     handle=core.fluid_get_component(self.handle, idx))
+            else:
+                return None
 
         core.use(None, 'fluid_clear_components',
                  c_void_p)
@@ -13443,7 +14108,7 @@ class Seepage(HasHandle, HasCells):
                                          make_c_char_p(fmt))
             return fmap
 
-        def from_fmap(self, fmap, fmt='binary'):
+        def from_fmap(self, fmap: FileMap, fmt='binary'):
             """
             从Filemap中读取序列化的数据. 其中fmt的取值可以为: text, xml和binary
 
@@ -13769,8 +14434,12 @@ class Seepage(HasHandle, HasCells):
                         for i in range(1, len(args)):
                             flu = flu.get_component(args[i])
                             if flu is None:
-                                return
+                                return None
                     return flu
+                else:
+                    return None
+            else:
+                return None
 
         @property
         def fluids(self):
@@ -13846,6 +14515,8 @@ class Seepage(HasHandle, HasCells):
             if index is not None:
                 return core.seepage_cell_get_fluid_vol_fraction(
                     self.handle, index)
+            else:
+                return None
 
         core.use(c_double, 'seepage_cell_get_attr',
                  c_void_p, c_size_t)
@@ -14204,6 +14875,8 @@ class Seepage(HasHandle, HasCells):
                 cell_id = core.seepage_get_cell_cell_id(self.model.handle,
                                                         self.index, index)
                 return self.model.get_cell(cell_id)
+            else:
+                return None
 
         def get_face(self, index):
             """
@@ -14222,6 +14895,8 @@ class Seepage(HasHandle, HasCells):
                 face_id = core.seepage_get_cell_face_id(self.model.handle,
                                                         self.index, index)
                 return self.model.get_face(face_id)
+            else:
+                return None
 
         @property
         def cells(self):
@@ -14434,7 +15109,7 @@ class Seepage(HasHandle, HasCells):
                                          make_c_char_p(fmt))
             return fmap
 
-        def from_fmap(self, fmap, fmt='binary'):
+        def from_fmap(self, fmap: FileMap, fmt='binary'):
             """
             从Filemap中读取序列化的数据. 其中fmt的取值可以为: text, xml和binary
 
@@ -14730,6 +15405,8 @@ class Seepage(HasHandle, HasCells):
                 cell_id = core.seepage_get_face_cell_id(self.model.handle,
                                                         self.index, index)
                 return self.model.get_cell(cell_id)
+            else:
+                return None
 
         @property
         def cells(self):
@@ -14782,8 +15459,10 @@ class Seepage(HasHandle, HasCells):
                 cell = cell.index
             if self.get_cell(0).index == cell:
                 return self.get_cell(1)
-            if self.get_cell(1).index == cell:
+            elif self.get_cell(1).index == cell:
                 return self.get_cell(0)
+            else:
+                return None
 
     class Injector(HasHandle):
         """
@@ -14873,7 +15552,7 @@ class Seepage(HasHandle, HasCells):
                                      make_c_char_p(fmt))
             return fmap
 
-        def from_fmap(self, fmap, fmt='binary'):
+        def from_fmap(self, fmap: FileMap, fmt='binary'):
             """
             从Filemap中读取序列化的数据。其中fmt的取值可以为: text, xml和binary
 
@@ -15048,7 +15727,7 @@ class Seepage(HasHandle, HasCells):
             """
             warnings.warn('Property Seepage.Injector.time '
                           'has been removed',
-                          DeprecationWarning)
+                          DeprecationWarning, stacklevel=2)
             return 0
 
         @time.setter
@@ -15064,7 +15743,7 @@ class Seepage(HasHandle, HasCells):
             """
             warnings.warn('Property Seepage.Injector.time '
                           'has been removed',
-                          DeprecationWarning)
+                          DeprecationWarning, stacklevel=2)
 
         core.use(c_double, 'injector_get_pos',
                  c_void_p, c_size_t)
@@ -15480,6 +16159,11 @@ class Seepage(HasHandle, HasCells):
         if handle is None:
             if isinstance(path, str):
                 self.load(path)
+        try:
+            name = type(self).__name__
+            log(f'{name} created', tag=f'{name}_Init')
+        except:
+            pass
 
     def __str__(self):
         """
@@ -15556,7 +16240,7 @@ class Seepage(HasHandle, HasCells):
                                 make_c_char_p(fmt))
         return fmap
 
-    def from_fmap(self, fmap, fmt='binary'):
+    def from_fmap(self, fmap: FileMap, fmt='binary'):
         """
         从Filemap中读取序列化的数据. 其中fmt的取值可以为: text, xml和binary
 
@@ -15767,6 +16451,8 @@ class Seepage(HasHandle, HasCells):
         index = get_index(index, self.cell_number)
         if index is not None:
             return Seepage.Cell(self, index)
+        else:
+            return None
 
     def get_face(self, index):
         """
@@ -15781,6 +16467,8 @@ class Seepage(HasHandle, HasCells):
         index = get_index(index, self.face_number)
         if index is not None:
             return Seepage.Face(self, index)
+        else:
+            return None
 
     core.use(c_void_p, 'seepage_get_inj',
              c_void_p, c_size_t)
@@ -15799,6 +16487,8 @@ class Seepage(HasHandle, HasCells):
         if index is not None:
             return Seepage.Injector(
                 handle=core.seepage_get_inj(self.handle, index))
+        else:
+            return None
 
     core.use(c_size_t, 'seepage_add_cell',
              c_void_p)
@@ -16073,6 +16763,17 @@ class Seepage(HasHandle, HasCells):
         """
         return core.seepage_get_gr_n(self.handle)
 
+    core.use(None, 'seepage_set_gr_n', c_void_p, c_size_t)
+
+    @gr_number.setter
+    def gr_number(self, value):
+        """
+        设置模型中gr的数量
+        Args:
+            value:
+        """
+        core.seepage_set_gr_n(self.handle, value)
+
     core.use(c_void_p, 'seepage_get_gr',
              c_void_p, c_size_t)
 
@@ -16089,6 +16790,7 @@ class Seepage(HasHandle, HasCells):
         idx = get_index(idx, self.gr_number)
         if idx is not None:
             return Interp1(handle=core.seepage_get_gr(self.handle, idx))
+        return None
 
     @property
     def grs(self):
@@ -16100,9 +16802,6 @@ class Seepage(HasHandle, HasCells):
         """
         return Iterator(model=self, count=self.gr_number,
                         get=lambda m, ind: m.get_gr(ind))
-
-    core.use(c_size_t, 'seepage_add_gr',
-             c_void_p, c_void_p)
 
     def add_gr(self, gr, need_id=False):
         """
@@ -16116,24 +16815,25 @@ class Seepage(HasHandle, HasCells):
             Interp1 or int: 如果 need_id 为 False，则返回添加的 gr 对象；
             否则返回添加的 gr 的 ID。
         """
-        if not isinstance(gr, Interp1):
+        idx = self.gr_number
+        self.gr_number = idx + 1
+        if isinstance(gr, Interp1):
+            self.get_gr(idx).clone(gr)
+        else:
             assert len(gr) == 2
             assert len(gr[0]) == len(gr[1])
             assert len(gr[0]) >= 2
-            gr = Interp1(x=gr[0], y=gr[1])
-        idx = core.seepage_add_gr(self.handle, gr.handle)
+            self.get_gr(idx).set_xy(gr[0], gr[1])
         if need_id:
             return idx
         else:
             return self.get_gr(idx)
 
-    core.use(None, 'seepage_clear_grs', c_void_p)
-
     def clear_grs(self):
         """
         删除模型中所有的gr
         """
-        core.seepage_clear_grs(self.handle)
+        self.gr_number = 0
 
     core.use(c_size_t, 'seepage_get_kr_n', c_void_p)
 
@@ -16288,8 +16988,10 @@ class Seepage(HasHandle, HasCells):
             Interp1: 第 index 个曲线对象，如果索引无效则返回 None。
         """
         handle = core.seepage_get_curve(self.handle, index)
-        if handle > 0:
+        if handle:
             return Interp1(handle=handle)
+        else:
+            return None
 
     core.use(None, 'seepage_set_curve',
              c_void_p, c_size_t, c_void_p)
@@ -16318,6 +17020,17 @@ class Seepage(HasHandle, HasCells):
         """
         return core.seepage_get_fludef_n(self.handle)
 
+    core.use(None, 'seepage_set_fludef_n', c_void_p, c_size_t)
+
+    @fludef_number.setter
+    def fludef_number(self, val):
+        """
+        设置模型中流体定义的数量
+        Args:
+            val (int): 要设置的流体定义数量。
+        """
+        core.seepage_set_fludef_n(self.handle, val)
+
     core.use(c_bool, 'seepage_find_fludef',
              c_void_p, c_char_p, c_void_p)
 
@@ -16340,6 +17053,7 @@ class Seepage(HasHandle, HasCells):
                                          buffer.handle)
         if found:
             return buffer.to_list()
+        return None
 
     core.use(c_void_p, 'seepage_get_fludef',
              c_void_p, c_size_t, c_size_t,
@@ -16358,13 +17072,12 @@ class Seepage(HasHandle, HasCells):
         if isinstance(key, str):
             key = self.find_fludef(key)
         if key is None:
-            return
+            return None
         handle = core.seepage_get_fludef(self.handle, *parse_fid3(key))
         if handle:
             return Seepage.FluDef(handle=handle)
-
-    core.use(c_size_t, 'seepage_add_fludef',
-             c_void_p, c_void_p)
+        else:
+            return None
 
     def add_fludef(self, fdef, need_id=False, name=None):
         """
@@ -16382,21 +17095,22 @@ class Seepage(HasHandle, HasCells):
         if not isinstance(fdef, Seepage.FluDef):
             # 此时，可能是一个list
             fdef = Seepage.FluDef.create(fdef)
-        idx = core.seepage_add_fludef(self.handle, fdef.handle)
+        idx = self.fludef_number
+        self.fludef_number = idx + 1
+        result = self.get_fludef(idx)
+        result.clone(fdef)
         if name is not None:
-            self.get_fludef(idx).name = name
+            result.name = name
         if need_id:
             return idx
         else:
-            return self.get_fludef(idx)
-
-    core.use(None, 'seepage_clear_fludefs', c_void_p)
+            return result
 
     def clear_fludefs(self):
         """
         清除所有的流体定义
         """
-        core.seepage_clear_fludefs(self.handle)
+        self.fludef_number = 0
 
     def set_fludefs(self, *args):
         """
@@ -16421,6 +17135,17 @@ class Seepage(HasHandle, HasCells):
         """
         return core.seepage_get_pc_n(self.handle)
 
+    core.use(None, 'seepage_set_pc_n', c_void_p, c_size_t)
+
+    @pc_number.setter
+    def pc_number(self, val):
+        """
+        设置模型中毛管压力曲线的数量
+        Args:
+            val (int): 要设置的毛管压力曲线数量。
+        """
+        core.seepage_set_pc_n(self.handle, val)
+
     core.use(c_void_p, 'seepage_get_pc', c_void_p, c_size_t)
 
     def get_pc(self, idx):
@@ -16433,10 +17158,11 @@ class Seepage(HasHandle, HasCells):
         Returns:
             Interp1: 序号为 idx 的毛管压力曲线对象，如果索引无效则返回 None。
         """
-        if idx < self.pc_number:
+        idx = get_index(idx, self.pc_number)
+        if idx is not None:
             return Interp1(handle=core.seepage_get_pc(self.handle, idx))
-
-    core.use(c_size_t, 'seepage_add_pc', c_void_p, c_void_p)
+        else:
+            return None
 
     def add_pc(self, data, need_id=False):
         """
@@ -16451,32 +17177,22 @@ class Seepage(HasHandle, HasCells):
             则返回添加的毛管压力曲线对象；否则返回添加的毛管压力曲线的 ID。
         """
         assert isinstance(data, Interp1)
-        idx = core.seepage_add_pc(self.handle, data.handle)
+        idx = self.pc_number
+        self.pc_number = idx + 1
+        temp = self.get_pc(idx)
+        temp.clone(data)
         if need_id:
             return idx
         else:
-            return self.get_pc(idx)
-
-    core.use(None, 'seepage_clear_pcs', c_void_p)
+            return temp
 
     def clear_pcs(self):
         """
         清除所有的毛管压力曲线
         """
-        core.seepage_clear_pcs(self.handle)
+        self.pc_number = 0
 
     core.use(c_size_t, 'seepage_get_reaction_n', c_void_p)
-
-    @property
-    def reactions(self):
-        """
-        迭代所有的反应
-
-        Returns:
-            Iterator: 包含所有反应对象的迭代器。
-        """
-        return Iterator(model=self, count=self.reaction_number,
-                        get=lambda m, ind: m.get_reaction(ind))
 
     @property
     def reaction_number(self):
@@ -16487,6 +17203,18 @@ class Seepage(HasHandle, HasCells):
             int: 模型中反应的数量。
         """
         return core.seepage_get_reaction_n(self.handle)
+
+    core.use(None,'seepage_set_reaction_n',
+             c_void_p, c_size_t)
+
+    @reaction_number.setter
+    def reaction_number(self, val):
+        """
+        设置模型中反应的数量
+        Args:
+            val (int): 要设置的反应数量。
+        """
+        core.seepage_set_reaction_n(self.handle, val)
 
     core.use(c_void_p, 'seepage_get_reaction',
              c_void_p, c_size_t)
@@ -16505,9 +17233,8 @@ class Seepage(HasHandle, HasCells):
         if idx is not None:
             return Seepage.Reaction(
                 handle=core.seepage_get_reaction(self.handle, idx))
-
-    core.use(c_size_t, 'seepage_add_reaction',
-             c_void_p, c_void_p)
+        else:
+            return None
 
     def add_reaction(self, data, need_id=False):
         """
@@ -16522,20 +17249,21 @@ class Seepage(HasHandle, HasCells):
             则返回添加的反应对象；否则返回添加的反应的 ID。
         """
         if not isinstance(data, Seepage.Reaction):
+            assert isinstance(data, dict)
+            from zmlx.react import alg
             warnings.warn(
                 'The none Seepage.Reaction type will '
-                'not be supported after 2026-2-7, '
-                'please use zmlx.react.add_reaction instead.',
-                DeprecationWarning)
-            data = self.create_reaction(**data)
-        idx = core.seepage_add_reaction(self.handle, data.handle)
-        if need_id:
-            return idx
+                'not be supported after 2026-2-7',
+                DeprecationWarning, stacklevel=2)
+            return alg.add_reaction(self, data, need_id=need_id)
         else:
-            return self.get_reaction(idx)
-
-    core.use(None, 'seepage_clear_reactions',
-             c_void_p)
+            idx = self.reaction_number
+            self.reaction_number = idx + 1
+            self.get_reaction(idx).clone(data)
+            if need_id:
+                return idx
+            else:
+                return self.get_reaction(idx)
 
     def clear_reactions(self):
         """
@@ -16544,7 +17272,7 @@ class Seepage(HasHandle, HasCells):
         Returns:
             None
         """
-        core.seepage_clear_reactions(self.handle)
+        self.reaction_number = 0
 
     core.use(None, 'seepage_remove_reaction',
              c_void_p, c_size_t)
@@ -16580,11 +17308,21 @@ class Seepage(HasHandle, HasCells):
         """
         warnings.warn(
             'zml.Seepage.Reaction.create_reaction will be '
-            'remove after 2026-2-7, '
-            'please use zmlx.react.create_reaction instead',
-            DeprecationWarning)
-        from zmlx.react.create_reaction import create_reaction as create
+            'remove after 2026-2-7',
+            DeprecationWarning, stacklevel=2)
+        from zmlx.react.alg import create_reaction as create
         return create(self, **kwargs)
+
+    @property
+    def reactions(self):
+        """
+        迭代所有的反应
+
+        Returns:
+            Iterator: 包含所有反应对象的迭代器。
+        """
+        return Iterator(model=self, count=self.reaction_number,
+                        get=lambda m, ind: m.get_reaction(ind))
 
     core.use(c_void_p, 'seepage_get_buffer',
              c_void_p, c_char_p)
@@ -16743,6 +17481,8 @@ class Seepage(HasHandle, HasCells):
         val = core.seepage_get_key(self.handle, make_c_char_p(key))
         if val < 9999:
             return val
+        else:
+            return None
 
     core.use(None, 'seepage_set_key',
              c_void_p, c_char_p, c_int64)
@@ -17011,6 +17751,8 @@ class Seepage(HasHandle, HasCells):
                 i_beg if i_beg is not None else 0,
                 i_end if i_end is not None else cell_n)
             return self.get_cell(index)
+        else:
+            return None
 
     core.use(None, 'seepage_clone',
              c_void_p, c_void_p)
@@ -17376,7 +18118,7 @@ class Seepage(HasHandle, HasCells):
                 warnings.warn(
                     'parameter <vs0> of Seepage.diffusion '
                     'will be removed after 2025-4-6',
-                    DeprecationWarning)
+                    DeprecationWarning, stacklevel=2)
                 if vs0.size > 0:
                     ps0 = vs0.pointer
                     ls0 = vs0.size
@@ -17386,7 +18128,7 @@ class Seepage(HasHandle, HasCells):
                 warnings.warn(
                     'parameter <vk> of Seepage.diffusion '
                     'will be removed after 2025-4-6',
-                    DeprecationWarning)
+                    DeprecationWarning, stacklevel=2)
                 if vk.size > 0:
                     pk = vk.pointer
                     lk = vk.size
@@ -17396,7 +18138,7 @@ class Seepage(HasHandle, HasCells):
                 warnings.warn(
                     'parameter <vg> of Seepage.diffusion '
                     'will be removed after 2025-4-6',
-                    DeprecationWarning)
+                    DeprecationWarning, stacklevel=2)
                 if vg.size > 0:
                     pg = vg.pointer
                     lg = vg.size
@@ -17406,7 +18148,7 @@ class Seepage(HasHandle, HasCells):
                 warnings.warn(
                     'parameter <vpg> of Seepage.diffusion '
                     'will be removed after 2025-4-6',
-                    DeprecationWarning)
+                    DeprecationWarning, stacklevel=2)
                 if vpg.size > 0:
                     ppg = vpg.pointer
                     lpg = vpg.size
@@ -17454,14 +18196,15 @@ class Seepage(HasHandle, HasCells):
             assert isinstance(face_groups, Groups)  # 分组
 
         # 执行扩散操作.
-        core.seepage_diffusion(self.handle, dt, *parse_fid3(fid0),
-                               *parse_fid3(fid1),
-                               ps0, ls0,
-                               pk, lk,
-                               pg, lg,
-                               ppg, lpg,
-                               ds_max,
-                               0 if face_groups is None else face_groups.handle)
+        core.seepage_diffusion(
+            self.handle, dt, *parse_fid3(fid0),
+            *parse_fid3(fid1),
+            ps0, ls0,
+            pk, lk,
+            pg, lg,
+            ppg, lpg,
+            ds_max,
+            0 if face_groups is None else face_groups.handle)
 
     core.use(None, 'seepage_heating',
              c_void_p, c_size_t, c_size_t, c_size_t,
@@ -17501,8 +18244,8 @@ class Seepage(HasHandle, HasCells):
                 曲线的横坐标是剪切力，纵轴为流动砂的浓度.
 
         Args:
-            sol_sand (int or str): 沉降的砂的Index或名称
-            flu_sand (int or str): 流动的砂的Index或名称
+            sol_sand (list or str): 沉降的砂的Index或名称
+            flu_sand (list or str): 流动的砂的Index或名称
             ca_i0 (int or str): Cell的属性ID或名称
             ca_i1 (int or str): Cell的属性ID或名称
             force (ctypes.c_void_p): 各个cell位置的单位面积孔隙表面的剪切力指针
@@ -17528,11 +18271,12 @@ class Seepage(HasHandle, HasCells):
             ca_i1 = self.get_cell_key(ca_i1)
             assert ca_i1 is not None
 
-        core.seepage_update_sand(self.handle, ca_i0, ca_i1,
-                                 *parse_fid3(sol_sand),
-                                 *parse_fid3(flu_sand),
-                                 ctypes.cast(force, c_void_p),
-                                 ctypes.cast(ratio, c_void_p))
+        core.seepage_update_sand(
+            self.handle, ca_i0, ca_i1,
+            *parse_fid3(sol_sand),
+            *parse_fid3(flu_sand),
+            ctypes.cast(force, c_void_p),
+            ctypes.cast(ratio, c_void_p))
 
     core.use(None, 'seepage_pop_fluids',
              c_void_p, c_void_p)
@@ -17805,7 +18549,7 @@ class Seepage(HasHandle, HasCells):
             index = self.get_cell_key(key=index)
             assert index is not None
         core.seepage_cells_write(self.handle,
-                                 ctypes.cast(pointer, c_void_p), index)
+                                 f64_ptr(pointer), index)
 
     core.use(None, 'seepage_cells_read',
              c_void_p, c_void_p, c_double, c_int64)
@@ -17828,7 +18572,7 @@ class Seepage(HasHandle, HasCells):
             index = self.reg_cell_key(key=index)
         if pointer is not None:
             core.seepage_cells_read(self.handle,
-                                    ctypes.cast(pointer, c_void_p),
+                                    const_f64_ptr(pointer),
                                     0, index)
         else:
             assert value is not None
@@ -17861,7 +18605,7 @@ class Seepage(HasHandle, HasCells):
         if isinstance(index, str):
             index = self.get_face_key(key=index)
             assert index is not None
-        core.seepage_faces_write(self.handle, ctypes.cast(pointer, c_void_p),
+        core.seepage_faces_write(self.handle, f64_ptr(pointer),
                                  index)
 
     core.use(None, 'seepage_faces_read',
@@ -17882,7 +18626,7 @@ class Seepage(HasHandle, HasCells):
             index = self.reg_face_key(key=index)
         if pointer is not None:
             core.seepage_faces_read(self.handle,
-                                    ctypes.cast(pointer, c_void_p),
+                                    const_f64_ptr(pointer),
                                     0, index)
         else:
             assert value is not None
@@ -17909,7 +18653,7 @@ class Seepage(HasHandle, HasCells):
             index = self.get_flu_key(key=index)
             assert index is not None
         core.seepage_fluids_write(self.handle,
-                                  ctypes.cast(pointer, c_void_p),
+                                  f64_ptr(pointer),
                                   index, *parse_fid3(fluid_id))
 
     core.use(None, 'seepage_fluids_read',
@@ -17931,7 +18675,7 @@ class Seepage(HasHandle, HasCells):
             index = self.reg_flu_key(key=index)
         if pointer is not None:
             core.seepage_fluids_read(self.handle,
-                                     ctypes.cast(pointer, c_void_p), 0, index,
+                                     const_f64_ptr(pointer), 0, index,
                                      *parse_fid3(fluid_id))
         else:
             assert value is not None
@@ -17952,8 +18696,8 @@ class Seepage(HasHandle, HasCells):
         warnings.warn(
             'Seepage.numpy will be removed after 2025-1-21. '
             'Use zmlx.utility.SeepageNumpy Instead.'
-            , DeprecationWarning)
-        from zmlx.utility.SeepageNumpy import SeepageNumpy
+            , DeprecationWarning, stacklevel=2)
+        from zmlx.base.seepage import SeepageNumpy
         return SeepageNumpy(model=self)
 
     core.use(None, 'seepage_get_cells_v0',
@@ -17989,7 +18733,7 @@ class Seepage(HasHandle, HasCells):
         warnings.warn(
             'please use function <Seepage.cells_write> '
             'and <Seepage.faces_write> instead. '
-            'Will remove after 2024-6-14', DeprecationWarning)
+            'Will remove after 2024-6-14', DeprecationWarning, stacklevel=2)
         if not isinstance(buffer, Vector):
             buffer = Vector()
         if key == 'cells_v0':
@@ -18007,6 +18751,8 @@ class Seepage(HasHandle, HasCells):
         if key == 'faces':
             core.seepage_get_faces_attr(self.handle, index, buffer.handle)
             return buffer
+        else:
+            return None
 
     def set_attrs(self, key, value=None, index=None):
         """
@@ -18023,7 +18769,7 @@ class Seepage(HasHandle, HasCells):
         warnings.warn(
             'please use function <Seepage.cells_read> '
             'and <Seepage.faces_read> instead. '
-            'will be removed after 2024-6-14', DeprecationWarning)
+            'will be removed after 2024-6-14', DeprecationWarning, stacklevel=2)
         assert isinstance(value, Vector)
         if key == 'cells':
             core.seepage_set_cells_attr(self.handle, index, value.handle)
@@ -18139,6 +18885,7 @@ class Seepage(HasHandle, HasCells):
             return buf
         else:  # 此时，buf应该为一个长度为cell_number的指针类型
             core.seepage_get_cell_flu_vel(self.handle, buf, fid, last_dt)
+            return None
 
     core.use(None, 'seepage_get_cell_gradient',
              c_void_p, c_void_p, c_void_p)
@@ -18167,6 +18914,7 @@ class Seepage(HasHandle, HasCells):
             return buf
         else:  # 此时，buf应该为一个长度为cell_number的指针类型
             core.seepage_get_cell_gradient(self.handle, buf, data)
+            return None
 
     core.use(None, 'seepage_get_cell_average',
              c_void_p, c_void_p, c_void_p)
@@ -18491,6 +19239,8 @@ class Thermal(HasHandle):
                 cell_id = core.thermal_get_cell_cell_id(self.model.handle,
                                                         self.index, index)
                 return self.model.get_cell(cell_id)
+            else:
+                return None
 
         def get_face(self, index):
             """
@@ -18507,6 +19257,8 @@ class Thermal(HasHandle):
                 face_id = core.thermal_get_cell_face_id(self.model.handle,
                                                         self.index, index)
                 return self.model.get_face(face_id)
+            else:
+                return None
 
         @property
         def cells(self):
@@ -18638,6 +19390,8 @@ class Thermal(HasHandle):
                 cell_id = core.thermal_get_face_cell_id(self.model.handle,
                                                         self.index, index)
                 return self.model.get_cell(cell_id)
+            else:
+                return None
 
         @property
         def cells(self):
@@ -18692,6 +19446,11 @@ class Thermal(HasHandle):
         if handle is None:
             if isinstance(path, str):
                 self.load(path)
+        try:
+            name = type(self).__name__
+            log(f'{name} created', tag=f'{name}_Init')
+        except:
+            pass
 
     def __str__(self):
         """
@@ -18790,6 +19549,8 @@ class Thermal(HasHandle):
         index = get_index(index, self.cell_number)
         if index is not None:
             return Thermal.Cell(self, index)
+        else:
+            return None
 
     def get_face(self, index):
         """
@@ -18804,6 +19565,8 @@ class Thermal(HasHandle):
         index = get_index(index, self.face_number)
         if index is not None:
             return Thermal.Face(self, index)
+        else:
+            return None
 
     core.use(c_size_t, 'thermal_add_cell',
              c_void_p)
@@ -19300,6 +20063,8 @@ class InvasionPercolation(HasHandle):
                 i_node = core.ip_get_node_node_id(self.model.handle, self.index,
                                                   idx)
                 return self.model.get_node(i_node)
+            else:
+                return None
 
         core.use(c_size_t, 'ip_get_node_bond_id',
                  c_void_p, c_size_t, c_size_t)
@@ -19319,6 +20084,8 @@ class InvasionPercolation(HasHandle):
                 i_bond = core.ip_get_node_bond_id(self.model.handle, self.index,
                                                   idx)
                 return self.model.get_bond(i_bond)
+            else:
+                return None
 
     class BondData(Object):
         """
@@ -19683,6 +20450,8 @@ class InvasionPercolation(HasHandle):
                 i_node = core.ip_get_bond_node_id(
                     self.model.handle, self.index, idx)
                 return self.model.get_node(i_node)
+            else:
+                return None
 
     class InjectorData(Object):
         """
@@ -19997,6 +20766,8 @@ class InvasionPercolation(HasHandle):
             bond = self.bond
             if bond is not None:
                 return bond.get_node(idx)
+            else:
+                return None
 
     core.use(c_void_p, 'new_ip')
     core.use(None, 'del_ip', c_void_p)
@@ -20011,6 +20782,11 @@ class InvasionPercolation(HasHandle):
         """
         super(InvasionPercolation, self).__init__(handle, core.new_ip,
                                                   core.del_ip)
+        try:
+            name = type(self).__name__
+            log(f'{name} created', tag=f'{name}_Init')
+        except:
+            pass
 
     def __eq__(self, rhs):
         """
@@ -20157,17 +20933,37 @@ class InvasionPercolation(HasHandle):
     def time(self, value):
         self.set_time(value)
 
-    core.use(c_size_t, 'ip_add_node', c_void_p)
+    core.use(None, 'ip_clear_nodes_and_bonds', c_void_p)
 
-    def add_node(self):
+    def clear_nodes_and_bonds(self):
+        """
+        清除模型内所有的node和bond。
+        Returns:
+            None
+        """
+        core.ip_clear_nodes_and_bonds(self.handle)
+
+    core.use(c_size_t, 'ip_add_node', c_void_p)
+    core.use(None, 'ip_add_nodes', c_void_p, c_size_t)
+
+    def add_node(self, count=None):
         """
         添加一个Node，并返回新添加的Node对象
+
+        Args:
+            count: 当需要批量添加的时候，添加的数量
 
         Returns:
             Node: 新添加的Node对象。
         """
-        index = core.ip_add_node(self.handle)
-        return self.get_node(index)
+        if count is None:
+            index = core.ip_add_node(self.handle)
+            return self.get_node(index)
+        else:
+            assert isinstance(count, int) and count >= 0
+            if count > 0:
+                core.ip_add_nodes(self.handle, count)
+            return None
 
     def get_node(self, index):
         """
@@ -20182,31 +20978,56 @@ class InvasionPercolation(HasHandle):
         index = get_index(index, self.node_n)
         if index is not None:
             return InvasionPercolation.Node(self, index)
+        else:
+            return None
 
     core.use(c_size_t, 'ip_add_bond',
              c_void_p, c_size_t, c_size_t)
+    core.use(None, 'ip_add_bonds',
+             c_void_p, c_size_t,
+             c_void_p, c_void_p, c_void_p)
 
-    def add_bond(self, node0, node1):
+    def add_bond(self, node0, node1, *,
+                 count=None, p_bond_ids=None):
         """
         添加一个Bond，来连接给定序号的两个Node。
 
         Args:
-            node0 (Node or int): 第一个节点或其索引。
-            node1 (Node or int): 第二个节点或其索引。
+            node0 (Node or int or pointer): 第一个节点或其索引。
+            node1 (Node or int or pointer): 第二个节点或其索引。
+            count: 当需要批量添加的时候，添加的数量
+            p_bond_ids: 批量添加的时候返回的bond的index
 
         Returns:
             Bond: 新添加的Bond对象。
 
         Raises:
             AssertionError: 如果节点索引超出范围或两个节点索引相同。
+
+        Note:
+            尽管node0、node1、p_bond_ids应该是int类型的指针，但是为了保持zml中接口
+            的一致性，这里仍假设它们是指向float64类型的指针。
+            批量添加的功能(2025-4-8)尚未测试
         """
-        if isinstance(node0, InvasionPercolation.Node):
-            node0 = node0.index
-        if isinstance(node1, InvasionPercolation.Node):
-            node1 = node1.index
-        assert self.node_n > node0 != node1 < self.node_n
-        index = core.ip_add_bond(self.handle, node0, node1)
-        return self.get_bond(index)
+        if count is None:
+            if isinstance(node0, InvasionPercolation.Node):
+                node0 = node0.index
+            if isinstance(node1, InvasionPercolation.Node):
+                node1 = node1.index
+            assert self.node_n > node0 != node1 < self.node_n
+            index = core.ip_add_bond(self.handle, node0, node1)
+            return self.get_bond(index)
+        else:
+            assert isinstance(count, int) and count >= 0
+            if count > 0:
+                core.ip_add_bonds(
+                    self.handle,
+                    count,
+                    const_f64_ptr(node0),
+                    const_f64_ptr(node1),
+                    0 if p_bond_ids is None else f64_ptr(p_bond_ids)
+                )
+            return None
 
     def get_bond(self, index):
         """
@@ -20221,6 +21042,8 @@ class InvasionPercolation(HasHandle):
         index = get_index(index, self.bond_n)
         if index is not None:
             return InvasionPercolation.Bond(self, index)
+        else:
+            return None
 
     core.use(c_size_t, 'ip_get_bond_id',
              c_void_p, c_size_t, c_size_t)
@@ -20287,7 +21110,7 @@ class InvasionPercolation(HasHandle):
         """
         获取模型中键（bond）的数量。
 
-        返回:
+        Returns:
             int: 模型中键的数量。
         """
         return core.ip_get_bond_n(self.handle)
@@ -20297,7 +21120,7 @@ class InvasionPercolation(HasHandle):
         """
         获取模型中键（bond）的数量。
 
-        返回:
+        Returns:
             int: 模型中键的数量。
         """
         return self.get_bond_n()
@@ -20311,7 +21134,7 @@ class InvasionPercolation(HasHandle):
         """
         获取模型内被视为“出口”的节点（Node）的数量。
 
-        返回:
+        Returns:
             int: 模型内被视为“出口”的节点的数量。
         """
         return core.ip_get_outlet_n(self.handle)
@@ -20320,10 +21143,10 @@ class InvasionPercolation(HasHandle):
         """
         设置模型内被视为“出口”的节点（Node）的数量。
 
-        参数:
+        Args:
             value (int): 要设置的“出口”节点数量，必须大于等于0。
 
-        异常:
+        Raises:
             AssertionError: 如果提供的值小于0。
         """
         assert value >= 0
@@ -20334,10 +21157,10 @@ class InvasionPercolation(HasHandle):
         """
         获取或设置模型内被视为“出口”的节点（Node）的数量。
 
-        返回:
+        Returns:
             int: 模型内被视为“出口”的节点的数量。
 
-        异常:
+        Raises:
             AssertionError: 如果设置的值小于0。
         """
         return self.get_outlet_n()
@@ -20347,10 +21170,10 @@ class InvasionPercolation(HasHandle):
         """
         设置模型内被视为“出口”的节点（Node）的数量。
 
-        参数:
+        Args:
             value (int): 要设置的“出口”节点数量，必须大于等于0。
 
-        异常:
+        Raises:
             AssertionError: 如果提供的值小于0。
         """
         self.set_outlet_n(value)
@@ -20362,11 +21185,11 @@ class InvasionPercolation(HasHandle):
         """
         设置第index个出口对应的节点（Node）的序号。
 
-        参数:
+        Args:
             index (int): 出口的索引。
             value (int): 节点的索引。
 
-        异常:
+        Raises:
             AssertionError: 如果索引无效。
         """
         index = get_index(index, self.outlet_n)
@@ -20382,27 +21205,29 @@ class InvasionPercolation(HasHandle):
         """
         获取第index个出口对应的节点（Node）的序号。
 
-        参数:
+        Args:
             index (int): 出口的索引。
 
-        返回:
+        Returns:
             int: 第index个出口对应的节点的序号，如果索引有效；否则返回None。
         """
         index = get_index(index, self.outlet_n)
         if index is not None:
             return core.ip_get_outlet(self.handle, index)
+        else:
+            return None
 
     def add_outlet(self, node_id):
         """
         添加一个出口点，并返回这个出口点的序号。
 
-        参数:
+        Args:
             node_id (int): 要添加为出口的节点的索引。
 
-        返回:
+        Returns:
             int: 新添加的出口点的序号。
 
-        异常:
+        Raises:
             AssertionError: 如果节点索引超出范围。
         """
         assert node_id < self.node_n
@@ -20418,14 +21243,14 @@ class InvasionPercolation(HasHandle):
         """
         获取两种相态ph0和ph1之间的界面张力。
 
-        参数:
+        Args:
             ph0 (int): 第一种相态，必须大于等于0。
             ph1 (int): 第二种相态，必须大于等于0且不等于ph0。
 
-        返回:
+        Returns:
             float: 两种相态之间的界面张力。
 
-        异常:
+        Raises:
             AssertionError: 如果相态索引无效。
         """
         assert 0 <= ph0 != ph1 >= 0
@@ -20438,12 +21263,12 @@ class InvasionPercolation(HasHandle):
         """
         设置两种相态ph0和ph1之间的界面张力。
 
-        参数:
+        Args:
             ph0 (int): 第一种相态，必须大于等于0。
             ph1 (int): 第二种相态，必须大于等于0且不等于ph0。
             value (float): 要设置的界面张力值，必须为正数。
 
-        异常:
+        Raises:
             AssertionError: 如果相态索引无效或界面张力值为负数。
         """
         assert 0 <= ph0 != ph1 >= 0
@@ -20457,14 +21282,14 @@ class InvasionPercolation(HasHandle):
         获取当ph0驱替ph1时，在ph0中的接触角。注意，这是一个全局设置，
         后续会被各个节点（Node）和键（Bond）内的设置覆盖。
 
-        参数:
+        Args:
             ph0 (int): 驱替相态，必须大于等于0。
             ph1 (int): 被驱替相态，必须大于等于0且不等于ph0。
 
-        返回:
+        Returns:
             float: 接触角的值。
 
-        异常:
+        Raises:
             AssertionError: 如果相态索引无效。
         """
         assert 0 <= ph0 != ph1 >= 0
@@ -20479,12 +21304,12 @@ class InvasionPercolation(HasHandle):
         设置当ph0驱替ph1时，在ph0中的接触角。注意，这是一个全局设置，
         后续会被各个节点（Node）和键（Bond）内的设置覆盖。
 
-        参数:
+        Args:
             ph0 (int): 驱替相态，必须大于等于0。
             ph1 (int): 被驱替相态，必须大于等于0且不等于ph0。
             value (float): 要设置的接触角的值。
 
-        异常:
+        Raises:
             AssertionError: 如果相态索引无效。
         """
         assert 0 <= ph0 != ph1 >= 0
@@ -20497,13 +21322,13 @@ class InvasionPercolation(HasHandle):
         """
         获取流体ph的密度。
 
-        参数:
+        Args:
             ph (int): 流体相态，必须大于等于0。
 
-        返回:
+        Returns:
             float: 流体的密度。
 
-        异常:
+        Raises:
             AssertionError: 如果相态索引无效。
         """
         assert ph >= 0
@@ -20516,14 +21341,14 @@ class InvasionPercolation(HasHandle):
         """
         设置流体ph的密度。
 
-        参数:
+        Args:
             ph (int): 流体相态，必须大于等于0。
             value (float): 要设置的流体密度值，必须为正数。
 
-        返回:
+        Returns:
             self: 返回当前对象实例。
 
-        异常:
+        Raises:
             AssertionError: 如果相态索引无效或密度值为负数。
         """
         assert ph >= 0
@@ -20537,7 +21362,7 @@ class InvasionPercolation(HasHandle):
         """
         获取重力向量。注意，这个三维向量要和节点（Node）中pos属性的含义保持一致。
 
-        返回:
+        Returns:
             list: 包含三个浮点数的列表，表示重力向量。
         """
         return [core.ip_get_gravity(self.handle, i) for i in range(3)]
@@ -20549,10 +21374,10 @@ class InvasionPercolation(HasHandle):
         """
         设置重力向量。注意，这个三维向量要和节点（Node）中pos属性的含义保持一致。
 
-        参数:
+        Args:
             value (list): 包含三个浮点数的列表，表示要设置的重力向量。
 
-        返回:
+        Returns:
             self: 返回当前对象实例。
         """
         for i in range(3):
@@ -20564,7 +21389,7 @@ class InvasionPercolation(HasHandle):
         """
         获取或设置重力向量。注意，这个三维向量要和节点（Node）中pos属性的含义保持一致。
 
-        返回:
+        Returns:
             list: 包含三个浮点数的列表，表示重力向量。
         """
         return self.get_gravity()
@@ -20574,7 +21399,7 @@ class InvasionPercolation(HasHandle):
         """
         设置重力向量。注意，这个三维向量要和节点（Node）中pos属性的含义保持一致。
 
-        参数:
+        Args:
             value (list): 包含三个浮点数的列表，表示要设置的重力向量。
         """
         self.set_gravity(value)
@@ -20588,7 +21413,7 @@ class InvasionPercolation(HasHandle):
         """
         获取模型中注入点的数量。
 
-        返回:
+        Returns:
             int: 模型中注入点的数量。
         """
         return core.ip_get_inj_n(self.handle)
@@ -20597,13 +21422,13 @@ class InvasionPercolation(HasHandle):
         """
         设置模型中注入点的数量。
 
-        参数:
+        Args:
             value (int): 要设置的注入点数量，必须大于等于0。
 
-        返回:
+        Returns:
             self: 返回当前对象实例。
 
-        异常:
+        Raises:
             AssertionError: 如果提供的值小于0。
         """
         assert value >= 0
@@ -20615,10 +21440,10 @@ class InvasionPercolation(HasHandle):
         """
         获取或设置模型中注入点的数量。
 
-        返回:
+        Returns:
             int: 模型中注入点的数量。
 
-        异常:
+        Raises:
             AssertionError: 如果设置的值小于0。
         """
         return self.get_inj_n()
@@ -20628,10 +21453,10 @@ class InvasionPercolation(HasHandle):
         """
         设置模型中注入点的数量。
 
-        参数:
+        Args:
             value (int): 要设置的注入点数量，必须大于等于0。
 
-        异常:
+        Raises:
             AssertionError: 如果提供的值小于0。
         """
         self.set_inj_n(value)
@@ -20640,27 +21465,29 @@ class InvasionPercolation(HasHandle):
         """
         返回第index个注入点。
 
-        参数:
+        Args:
             index (int): 注入点的索引。
 
-        返回:
+        Returns:
             InvasionPercolation.Injector: 第index个注入点对象，
             如果索引有效；否则返回None。
         """
         index = get_index(index, self.inj_n)
         if index is not None:
             return InvasionPercolation.Injector(self, index)
+        else:
+            return None
 
     def add_inj(self, node_id=None, phase=None, qinj=None):
         """
         添加一个注入点，并返回注入点对象。
 
-        参数:
+        Args:
             node_id (int, 可选): 注入点所在的节点索引。
             phase (int, 可选): 注入流体的相态。
             qinj (float, 可选): 注入流量。
 
-        返回:
+        Returns:
             InvasionPercolation.Injector: 新添加的注入点对象。
         """
         index = self.inj_n
@@ -20681,7 +21508,7 @@ class InvasionPercolation(HasHandle):
         """
         获取是否允许围困。当此开关为True，且出口（outlet）的数量不为0时，围困生效。
 
-        返回:
+        Returns:
             bool: 是否允许围困。
         """
         return core.ip_trap_enabled(self.handle)
@@ -20694,7 +21521,7 @@ class InvasionPercolation(HasHandle):
         """
         设置是否允许围困。当此开关为True，且出口（outlet）的数量不为0时，围困生效。
 
-        参数:
+        Args:
             value (bool): 是否允许围困。
         """
         core.ip_set_trap_enabled(self.handle, value)
@@ -20706,7 +21533,7 @@ class InvasionPercolation(HasHandle):
         """
         获取模型中操作（operation）的数量。
 
-        返回:
+        Returns:
             int: 模型中操作的数量。
         """
         return core.ip_get_oper_n(self.handle)
@@ -20716,7 +21543,7 @@ class InvasionPercolation(HasHandle):
         """
         获取模型中操作（operation）的数量。
 
-        返回:
+        Returns:
             int: 模型中操作的数量。
         """
         return self.get_oper_n()
@@ -20725,16 +21552,18 @@ class InvasionPercolation(HasHandle):
         """
         返回第idx个操作。
 
-        参数:
+        Args:
             idx (int): 操作的索引。
 
-        返回:
+        Returns:
             InvasionPercolation.InvadeOperation: 第idx个操作对象，
             如果索引有效；否则返回None。
         """
         idx = get_index(idx, self.oper_n)
         if idx is not None:
             return InvasionPercolation.InvadeOperation(self, idx)
+        else:
+            return None
 
     core.use(None, 'ip_remove_node',
              c_void_p, c_size_t)
@@ -20745,7 +21574,7 @@ class InvasionPercolation(HasHandle):
         """
         删除给定节点（Node）连接的所有键（Bond），然后删除该节点。
 
-        参数:
+        Args:
             node (InvasionPercolation.Node or int): 要删除的节点对象或其索引。
         """
         if node is None:
@@ -20760,7 +21589,7 @@ class InvasionPercolation(HasHandle):
         """
         删除给定的键（Bond）。
 
-        参数:
+        Args:
             bond (InvasionPercolation.Bond or int): 要删除的键对象或其索引。
         """
         if bond is None:
@@ -20779,13 +21608,13 @@ class InvasionPercolation(HasHandle):
         """
         返回距离给定点最近的节点（Node）。
 
-        参数:
-            pos (list): 包含三个浮点数的列表，表示点的三维坐标。
+        Args:
+            pos (list | tuple): 包含三个浮点数的列表，表示点的三维坐标。
 
-        返回:
+        Returns:
             InvasionPercolation.Node: 距离给定点最近的节点对象。
 
-        异常:
+        Raises:
             AssertionError: 如果坐标列表的长度不为3。
         """
         assert len(pos) == 3
@@ -20802,13 +21631,13 @@ class InvasionPercolation(HasHandle):
         获得给定相态（phase）的节点（Node）的位置；如果相态大于99999999，
         则返回所有节点的位置。
 
-        参数:
+        Args:
             x (Vector, 可选): 存储x坐标的向量对象。
             y (Vector, 可选): 存储y坐标的向量对象。
             z (Vector, 可选): 存储z坐标的向量对象。
             phase (int, 可选): 相态索引，默认为9999999999。
 
-        返回:
+        Returns:
             tuple: 包含三个Vector对象的元组，表示节点的x、y、z坐标。
         """
         if not isinstance(x, Vector):
@@ -20821,415 +21650,415 @@ class InvasionPercolation(HasHandle):
         return x, y, z
 
     core.use(None, 'ip_write_pos',
-             c_void_p, c_size_t, c_void_p)
+             c_void_p, c_size_t, POINTER(c_double))
 
     def write_pos(self, dim, pointer):
         """
         批量获得位置信息。
 
-        参数:
+        Args:
             dim (int): 维度。
-            pointer (ctypes.c_void_p): 指向存储位置信息的指针。
+            pointer (POINTER(c_double)): 指向存储位置信息的指针。
         """
-        core.ip_write_pos(self.handle, dim, ctypes.cast(pointer, c_void_p))
+        core.ip_write_pos(self.handle, dim, f64_ptr(pointer))
 
     core.use(None, 'ip_read_pos',
-             c_void_p, c_size_t, c_void_p)
+             c_void_p, c_size_t, POINTER(c_double))
 
     def read_pos(self, dim, pointer):
         """
         批量修改位置信息。
 
-        参数:
+        Args:
             dim (int): 维度。
-            pointer (ctypes.c_void_p): 指向存储位置信息的指针。
+            pointer (POINTER(c_double)): 指向存储位置信息的指针。
         """
-        core.ip_read_pos(self.handle, dim, ctypes.cast(pointer, c_void_p))
+        core.ip_read_pos(self.handle, dim, const_f64_ptr(pointer))
 
     core.use(None, 'ip_write_phase',
-             c_void_p, c_void_p)
+             c_void_p, POINTER(c_double))
 
     def write_phase(self, pointer):
         """
         获得相态（phase）信息，并将其写入到给定的指针。
         注意，虽然相态在模型内部的存储为int类型，但此函数使用的是double类型的指针。
 
-        参数:
-            pointer (ctypes.c_void_p): 指向存储相态信息的指针。
+        Args:
+            pointer (POINTER(c_double)): 指向存储相态信息的指针。
         """
-        core.ip_write_phase(self.handle, ctypes.cast(pointer, c_void_p))
+        core.ip_write_phase(self.handle, f64_ptr(pointer))
 
     core.use(None, 'ip_read_phase',
-             c_void_p, c_void_p)
+             c_void_p, POINTER(c_double))
 
     def read_phase(self, pointer):
         """
         从给定的指针读取相态（phase）信息并设置到模型中。
         注意，虽然相态在模型内部的存储为int类型，但此函数使用的是double类型的指针。
 
-        参数:
-            pointer (ctypes.c_void_p): 指向存储相态信息的指针。
+        Args:
+            pointer (POINTER(c_double)): 指向存储相态信息的指针。
         """
-        core.ip_read_phase(self.handle, ctypes.cast(pointer, c_void_p))
+        core.ip_read_phase(self.handle, const_f64_ptr(pointer))
 
     def nodes_write(self, *args, **kwargs):
         """
         此方法已弃用，将于2025-6-2之后移除。
 
-        参数:
+        Args:
             *args: 可变位置参数。
             **kwargs: 可变关键字参数。
 
-        返回:
+        Returns:
             调用zmlx.alg.ip_nodes_write模块的ip_nodes_write函数的结果。
         """
-        warnings.warn('remove after 2025-6-2', DeprecationWarning)
-        from zmlx.alg.ip_nodes_write import ip_nodes_write
+        warnings.warn('remove after 2025-6-2', DeprecationWarning, stacklevel=2)
+        from zmlx.base.ip import ip_nodes_write
         return ip_nodes_write(self, *args, **kwargs)
 
     core.use(None, 'ip_write_node_radi',
-             c_void_p, c_void_p)
+             c_void_p, POINTER(c_double))
 
     def write_node_radi(self, pointer):
         """
         将节点（Node）的半径数据写入到给定的指针。
 
-        参数:
-            pointer (ctypes.c_void_p): 指向存储节点半径数据的指针。
+        Args:
+            pointer (POINTER(c_double)): 指向存储节点半径数据的指针。
         """
-        core.ip_write_node_radi(self.handle, ctypes.cast(pointer, c_void_p))
+        core.ip_write_node_radi(self.handle, f64_ptr(pointer))
 
     core.use(None, 'ip_read_node_radi',
-             c_void_p, c_void_p)
+             c_void_p, POINTER(c_double))
 
     def read_node_radi(self, pointer):
         """
         从给定的指针读取节点（Node）的半径数据。
 
-        参数:
-            pointer (ctypes.c_void_p): 指向存储节点半径数据的指针。
+        Args:
+            pointer (POINTER(c_double)): 指向存储节点半径数据的指针。
         """
-        core.ip_read_node_radi(self.handle, ctypes.cast(pointer, c_void_p))
+        core.ip_read_node_radi(self.handle, const_f64_ptr(pointer))
 
     core.use(None, 'ip_write_bond_radi',
-             c_void_p, c_void_p)
+             c_void_p, POINTER(c_double))
 
     def write_bond_radi(self, pointer):
         """
         将键（Bond）的半径数据写入到给定的指针。
 
-        参数:
-            pointer (ctypes.c_void_p): 指向存储键半径数据的指针。
+        Args:
+            pointer (POINTER(c_double)): 指向存储键半径数据的指针。
         """
-        core.ip_write_bond_radi(self.handle, ctypes.cast(pointer, c_void_p))
+        core.ip_write_bond_radi(self.handle, f64_ptr(pointer))
 
     core.use(None, 'ip_read_bond_radi',
-             c_void_p, c_void_p)
+             c_void_p, POINTER(c_double))
 
     def read_bond_radi(self, pointer):
         """
         从给定的指针读取键（Bond）的半径数据。
 
-        参数:
-            pointer (ctypes.c_void_p): 指向存储键半径数据的指针。
+        Args:
+            pointer (POINTER(c_double)): 指向存储键半径数据的指针。
         """
-        core.ip_read_bond_radi(self.handle, ctypes.cast(pointer, c_void_p))
+        core.ip_read_bond_radi(self.handle, const_f64_ptr(pointer))
 
     core.use(None, 'ip_write_node_rate_invaded',
-             c_void_p, c_void_p)
+             c_void_p, POINTER(c_double))
 
     def write_node_rate_invaded(self, pointer):
         """
         将节点（Node）的侵入速率数据写入到给定的指针。
 
-        参数:
-            pointer (ctypes.c_void_p): 指向存储节点侵入速率数据的指针。
+        Args:
+            pointer (POINTER(c_double)): 指向存储节点侵入速率数据的指针。
         """
         core.ip_write_node_rate_invaded(self.handle,
-                                        ctypes.cast(pointer, c_void_p))
+                                        f64_ptr(pointer))
 
     core.use(None, 'ip_read_node_rate_invaded',
-             c_void_p, c_void_p)
+             c_void_p, POINTER(c_double))
 
     def read_node_rate_invaded(self, pointer):
         """
         从给定的指针读取节点（Node）的侵入速率数据。
 
-        参数:
-            pointer (ctypes.c_void_p): 指向存储节点侵入速率数据的指针。
+        Args:
+            pointer (POINTER(c_double)): 指向存储节点侵入速率数据的指针。
         """
         core.ip_read_node_rate_invaded(self.handle,
-                                       ctypes.cast(pointer, c_void_p))
+                                       const_f64_ptr(pointer))
 
     core.use(None, 'ip_write_node_time_invaded',
-             c_void_p, c_void_p)
+             c_void_p, POINTER(c_double))
 
     def write_node_time_invaded(self, pointer):
         """
         将节点（Node）的侵入时间数据写入到给定的指针。
 
-        参数:
-            pointer (ctypes.c_void_p): 指向存储节点侵入时间数据的指针。
+        Args:
+            pointer (POINTER(c_double)): 指向存储节点侵入时间数据的指针。
         """
         core.ip_write_node_time_invaded(self.handle,
-                                        ctypes.cast(pointer, c_void_p))
+                                        f64_ptr(pointer))
 
     core.use(None, 'ip_read_node_time_invaded',
-             c_void_p, c_void_p)
+             c_void_p, POINTER(c_double))
 
     def read_node_time_invaded(self, pointer):
         """
         从给定的指针读取节点（Node）的侵入时间数据。
 
-        参数:
-            pointer (ctypes.c_void_p): 指向存储节点侵入时间数据的指针。
+        Args:
+            pointer (POINTER(c_double)): 指向存储节点侵入时间数据的指针。
         """
         core.ip_read_node_time_invaded(self.handle,
-                                       ctypes.cast(pointer, c_void_p))
+                                       const_f64_ptr(pointer))
 
     core.use(None, 'ip_write_bond_dp0',
-             c_void_p, c_void_p)
+             c_void_p, POINTER(c_double))
 
     def write_bond_dp0(self, pointer):
         """
         将键（Bond）的dp0数据写入到给定的指针。
 
-        参数:
-            pointer (ctypes.c_void_p): 指向存储键dp0数据的指针。
+        Args:
+            pointer (POINTER(c_double)): 指向存储键dp0数据的指针。
         """
-        core.ip_write_bond_dp0(self.handle, ctypes.cast(pointer, c_void_p))
+        core.ip_write_bond_dp0(self.handle, f64_ptr(pointer))
 
     core.use(None, 'ip_read_bond_dp0',
-             c_void_p, c_void_p)
+             c_void_p, POINTER(c_double))
 
     def read_bond_dp0(self, pointer):
         """
         从给定的指针读取键（Bond）的dp0数据。
 
-        参数:
-            pointer (ctypes.c_void_p): 指向存储键dp0数据的指针。
+        Args:
+            pointer (POINTER(c_double)): 指向存储键dp0数据的指针。
         """
-        core.ip_read_bond_dp0(self.handle, ctypes.cast(pointer, c_void_p))
+        core.ip_read_bond_dp0(self.handle, const_f64_ptr(pointer))
 
     core.use(None, 'ip_write_bond_dp1',
-             c_void_p, c_void_p)
+             c_void_p, POINTER(c_double))
 
     def write_bond_dp1(self, pointer):
         """
         将键（Bond）的dp1数据写入到给定的指针。
 
-        参数:
-            pointer (ctypes.c_void_p): 指向存储键dp1数据的指针。
+        Args:
+            pointer (POINTER(c_double)): 指向存储键dp1数据的指针。
         """
-        core.ip_write_bond_dp1(self.handle, ctypes.cast(pointer, c_void_p))
+        core.ip_write_bond_dp1(self.handle, f64_ptr(pointer))
 
     core.use(None, 'ip_read_bond_dp1',
-             c_void_p, c_void_p)
+             c_void_p, POINTER(c_double))
 
     def read_bond_dp1(self, pointer):
         """
         从给定的指针读取键（Bond）的dp1数据。
 
-        参数:
-            pointer (ctypes.c_void_p): 指向存储键dp1数据的指针。
+        Args:
+            pointer (POINTER(c_double)): 指向存储键dp1数据的指针。
         """
-        core.ip_read_bond_dp1(self.handle, ctypes.cast(pointer, c_void_p))
+        core.ip_read_bond_dp1(self.handle, const_f64_ptr(pointer))
 
     core.use(None, 'ip_write_bond_tension',
              c_void_p, c_size_t, c_size_t,
-             c_void_p)
+             POINTER(c_double))
 
     def write_bond_tension(self, ph0, ph1, pointer):
         """
         将两种相态ph0和ph1之间键（Bond）的界面张力数据写入到给定的指针。
 
-        参数:
+        Args:
             ph0 (int): 第一种相态，必须大于等于0。
             ph1 (int): 第二种相态，必须大于等于0且不等于ph0。
-            pointer (ctypes.c_void_p): 指向存储界面张力数据的指针。
+            pointer (POINTER(c_double)): 指向存储界面张力数据的指针。
         """
         core.ip_write_bond_tension(self.handle, ph0, ph1,
-                                   ctypes.cast(pointer, c_void_p))
+                                   f64_ptr(pointer))
 
     core.use(None, 'ip_read_bond_tension',
              c_void_p, c_size_t, c_size_t,
-             c_void_p)
+             POINTER(c_double))
 
     def read_bond_tension(self, ph0, ph1, pointer):
         """
         从给定的指针读取两种相态ph0和ph1之间键（Bond）的界面张力数据。
 
-        参数:
+        Args:
             ph0 (int): 第一种相态，必须大于等于0。
             ph1 (int): 第二种相态，必须大于等于0且不等于ph0。
-            pointer (ctypes.c_void_p): 指向存储界面张力数据的指针。
+            pointer (POINTER(c_double)): 指向存储界面张力数据的指针。
         """
         core.ip_read_bond_tension(self.handle, ph0, ph1,
-                                  ctypes.cast(pointer, c_void_p))
+                                  const_f64_ptr(pointer))
 
     core.use(None, 'ip_write_bond_contact_angle',
              c_void_p, c_size_t, c_size_t,
-             c_void_p)
+             POINTER(c_double))
 
     def write_bond_contact_angle(self, ph0, ph1, pointer):
         """
         将两种相态ph0和ph1之间键（Bond）的接触角数据写入到给定的指针。
 
-        参数:
+        Args:
             ph0 (int): 第一种相态，必须大于等于0。
             ph1 (int): 第二种相态，必须大于等于0且不等于ph0。
-            pointer (ctypes.c_void_p): 指向存储接触角数据的指针。
+            pointer (POINTER(c_double)): 指向存储接触角数据的指针。
         """
         core.ip_write_bond_contact_angle(self.handle, ph0, ph1,
-                                         ctypes.cast(pointer, c_void_p))
+                                         f64_ptr(pointer))
 
     core.use(None, 'ip_read_bond_contact_angle',
              c_void_p, c_size_t, c_size_t,
-             c_void_p)
+             POINTER(c_double))
 
     def read_bond_contact_angle(self, ph0, ph1, pointer):
         """
         从给定的指针读取两种相态ph0和ph1之间键（Bond）的接触角数据。
 
-        参数:
+        Args:
             ph0 (int): 第一种相态，必须大于等于0。
             ph1 (int): 第二种相态，必须大于等于0且不等于ph0。
-            pointer (ctypes.c_void_p): 指向存储接触角数据的指针。
+            pointer (POINTER(c_double)): 指向存储接触角数据的指针。
         """
         core.ip_read_bond_contact_angle(self.handle, ph0, ph1,
-                                        ctypes.cast(pointer, c_void_p))
+                                        const_f64_ptr(pointer))
 
     core.use(None, 'ip_write_inj_node_id',
-             c_void_p, c_void_p)
+             c_void_p, POINTER(c_double))
 
     def write_inj_node_id(self, pointer):
         """
         将Injector的node_id写入到给定的指针
 
         Args:
-            pointer (ctypes.c_void_p): 指向存储数据的指针
+            pointer (POINTER(c_double)): 指向存储数据的指针
             
         Note:
             尽管node_id是整形数据，但是为了zml接口的一致性，这里接受的pointer仍然是
             浮点型double的指针
             since 2025-4-8  尚未测试
         """
-        core.ip_write_inj_node_id(self.handle, ctypes.cast(pointer, c_void_p))
+        core.ip_write_inj_node_id(self.handle, f64_ptr(pointer))
 
     core.use(None, 'ip_read_inj_node_id',
-             c_void_p, c_void_p)
+             c_void_p, POINTER(c_double))
 
     def read_inj_node_id(self, pointer):
         """
         从给定的指针读取Injector的node_id
 
         Args:
-            pointer (ctypes.c_void_p): 指向读取数据的指针。
+            pointer (POINTER(c_double)): 指向读取数据的指针。
             
         Note:
             尽管node_id是整形数据，但是为了zml接口的一致性，这里接受的pointer仍然是
             浮点型double的指针
             since 2025-4-8  尚未测试
         """
-        core.ip_read_inj_node_id(self.handle, ctypes.cast(pointer, c_void_p))
+        core.ip_read_inj_node_id(self.handle, const_f64_ptr(pointer))
 
     core.use(None, 'ip_write_inj_phase',
-             c_void_p, c_void_p)
+             c_void_p, POINTER(c_double))
 
     def write_inj_phase(self, pointer):
         """
         将Injector的phase写入到给定的指针
 
         Args:
-            pointer (ctypes.c_void_p): 指向存储数据的指针
+            pointer (POINTER(c_double)): 指向存储数据的指针
             
         Note:
             尽管phase是整形数据，但是为了zml接口的一致性，这里接受的pointer仍然是
             浮点型double的指针
             since 2025-4-8  尚未测试
         """
-        core.ip_write_inj_phase(self.handle, ctypes.cast(pointer, c_void_p))
+        core.ip_write_inj_phase(self.handle, f64_ptr(pointer))
 
     core.use(None, 'ip_read_inj_phase',
-             c_void_p, c_void_p)
+             c_void_p, POINTER(c_double))
 
     def read_inj_phase(self, pointer):
         """
         从给定的指针读取Injector的phase
 
         Args:
-            pointer (ctypes.c_void_p): 指向读取数据的指针。
+            pointer (POINTER(c_double)): 指向读取数据的指针。
             
         Note:
             尽管phase是整形数据，但是为了zml接口的一致性，这里接受的pointer仍然是
             浮点型double的指针
             since 2025-4-8  尚未测试
         """
-        core.ip_read_inj_phase(self.handle, ctypes.cast(pointer, c_void_p))
+        core.ip_read_inj_phase(self.handle, const_f64_ptr(pointer))
 
     core.use(None, 'ip_write_inj_q',
-             c_void_p, c_void_p)
+             c_void_p, POINTER(c_double))
 
     def write_inj_q(self, pointer):
         """
         将Injector的q写入到给定的指针
 
         Args:
-            pointer (ctypes.c_void_p): 指向存储数据的指针
+            pointer (POINTER(c_double)): 指向存储数据的指针
             
         Note:
             since 2025-4-8  尚未测试
         """
-        core.ip_write_inj_q(self.handle, ctypes.cast(pointer, c_void_p))
+        core.ip_write_inj_q(self.handle, f64_ptr(pointer))
 
     core.use(None, 'ip_read_inj_q',
-             c_void_p, c_void_p)
+             c_void_p, POINTER(c_double))
 
     def read_inj_q(self, pointer):
         """
         从给定的指针读取Injector的q
 
         Args:
-            pointer (ctypes.c_void_p): 指向读取数据的指针。
+            pointer (POINTER(c_double)): 指向读取数据的指针。
             
         Note:
             since 2025-4-8  尚未测试
         """
-        core.ip_read_inj_q(self.handle, ctypes.cast(pointer, c_void_p))
+        core.ip_read_inj_q(self.handle, const_f64_ptr(pointer))
 
     core.use(None, 'ip_write_outlet',
-             c_void_p, c_void_p)
+             c_void_p, POINTER(c_double))
 
     def write_outlet(self, pointer):
         """
         将各个Outlet对应的node_id写入到给定的指针
 
         Args:
-            pointer (ctypes.c_void_p): 指向存储数据的指针
+            pointer (POINTER(c_double)): 指向存储数据的指针
             
         Note:
             尽管node_id是整形数据，但是为了zml接口的一致性，这里接受的pointer仍然是
             浮点型double的指针
             since 2025-4-8  尚未测试
         """
-        core.ip_write_outlet(self.handle, ctypes.cast(pointer, c_void_p))
+        core.ip_write_outlet(self.handle, f64_ptr(pointer))
 
     core.use(None, 'ip_read_outlet',
-             c_void_p, c_void_p)
+             c_void_p, POINTER(c_double))
 
     def read_outlet(self, pointer):
         """
         从给定的指针读取各个Outlet对应的node_id
 
         Args:
-            pointer (ctypes.c_void_p): 指向读取数据的指针。
+            pointer (POINTER(c_double)): 指向读取数据的指针。
             
         Note:
             尽管node_id是整形数据，但是为了zml接口的一致性，这里接受的pointer仍然是
             浮点型double的指针
             since 2025-4-8  尚未测试
         """
-        core.ip_read_outlet(self.handle, ctypes.cast(pointer, c_void_p))
+        core.ip_read_outlet(self.handle, const_f64_ptr(pointer))
 
 
 class Dfn2(HasHandle):
@@ -21369,6 +22198,7 @@ class Dfn2(HasHandle):
                 lengths = Vector(value=lengths)
             core.dfn2d_randomly_add_frac(
                 self.handle, angles.handle, lengths.handle, p21, l_min)
+            return None
 
     core.use(c_size_t, 'dfn2d_get_fracture_number',
              c_void_p)
@@ -21401,6 +22231,8 @@ class Dfn2(HasHandle):
         if idx is not None:
             return [core.dfn2d_get_fracture_pos(self.handle, idx, i) for i in
                     range(4)]
+        else:
+            return None
 
     def get_fractures(self):
         """
@@ -22191,6 +23023,8 @@ class FractureNetwork(HasHandle):
             handle = core.frac_bd_get_flu(self.handle)
             if handle:
                 return LinearExpr(handle=handle)
+            else:
+                return None
 
         @flu_expr.setter
         def flu_expr(self, value):
@@ -22215,7 +23049,7 @@ class FractureNetwork(HasHandle):
             warnings.warn(
                 f'{type(self)}: flu is deprecated,'
                 f' please use flu_expr instead.',
-                DeprecationWarning)
+                DeprecationWarning, stacklevel=2)
             return self.flu_expr
 
         @flu.setter
@@ -22229,7 +23063,7 @@ class FractureNetwork(HasHandle):
             warnings.warn(
                 f'{type(self)}: flu is deprecated,'
                 f' please use flu_expr instead.',
-                DeprecationWarning)
+                DeprecationWarning, stacklevel=2)
             self.flu_expr = value
 
         @staticmethod
@@ -22312,6 +23146,8 @@ class FractureNetwork(HasHandle):
                 return self.network.get_fracture(
                     core.frac_nt_nd_get_bd_i(self.network.handle, self.index,
                                              index))
+            else:
+                return None
 
     class Fracture(FractureData):
         """
@@ -22375,6 +23211,8 @@ class FractureNetwork(HasHandle):
                     core.frac_nt_bd_get_nd_i(self.network.handle,
                                              self.index,
                                              index))
+            else:
+                return None
 
         @property
         def pos(self):
@@ -22441,6 +23279,11 @@ class FractureNetwork(HasHandle):
         if handle is None:
             if isinstance(path, str):
                 self.load(path)
+        try:
+            name = type(self).__name__
+            log(f'{name} created', tag=f'{name}_Init')
+        except:
+            pass
 
     def __str__(self):
         """
@@ -22517,7 +23360,7 @@ class FractureNetwork(HasHandle):
             self.handle, fmap.handle, make_c_char_p(fmt))
         return fmap
 
-    def from_fmap(self, fmap, fmt='binary'):
+    def from_fmap(self, fmap: FileMap, fmt='binary'):
         """
         从Filemap中读取序列化的裂缝网络数据
 
@@ -22574,6 +23417,7 @@ class FractureNetwork(HasHandle):
         index = get_index(index, self.vertex_number)
         if index is not None:
             return FractureNetwork.Vertex(self, index)
+        return None
 
     core.use(c_size_t, 'frac_nt_get_bd_n', c_void_p)
 
@@ -22600,6 +23444,8 @@ class FractureNetwork(HasHandle):
         index = get_index(index, self.fracture_number)
         if index is not None:
             return FractureNetwork.Fracture(self, index)
+        else:
+            return None
 
     core.use(c_size_t, 'frac_nt_add_nd',
              c_void_p, c_double, c_double)
@@ -22661,6 +23507,7 @@ class FractureNetwork(HasHandle):
                                   second[0], second[1],
                                   lave,
                                   0 if data is None else data.handle)
+            return None
 
     core.use(None, 'frac_nt_clear',
              c_void_p)
@@ -22724,6 +23571,7 @@ class FractureNetwork(HasHandle):
             assert isinstance(matrix, InfMatrix)
             assert self.fracture_number == matrix.size
             core.frac_nt_get_induced(self.handle, fa_xy, fa_yy, matrix.handle)
+            return None
         else:
             assert len(pos) == 2 or len(pos) == 4
             assert isinstance(sol2, DDMSolution2)
@@ -22922,7 +23770,7 @@ class FracAlg:
         warnings.warn(
             'FracAlg.update_disp will be removed after 2026-2-11, '
             'use FractureNetwork.update_disp instead',
-            DeprecationWarning)
+            DeprecationWarning, stacklevel=2)
         return network.update_disp(*args, **kwargs)
 
     @staticmethod
@@ -22930,7 +23778,7 @@ class FracAlg:
         warnings.warn(
             'FracAlg.add_frac will be removed after 2026-2-11, '
             'use FractureNetwork.add_fracture instead',
-            DeprecationWarning)
+            DeprecationWarning, stacklevel=2)
         return network.add_fracture(first=p0, second=p1, lave=lave, data=data)
 
     @staticmethod
@@ -22938,7 +23786,7 @@ class FracAlg:
         warnings.warn(
             'FracAlg.extend_tip will be removed after 2026-2-11, '
             'use FractureNetwork.extend_tip instead',
-            DeprecationWarning)
+            DeprecationWarning, stacklevel=2)
         return network.extend_tip(*args, **kwargs)
 
     @staticmethod
@@ -22946,7 +23794,7 @@ class FracAlg:
         warnings.warn(
             'FracAlg.get_induced will be removed after 2026-2-11, '
             'use FractureNetwork.get_induced instead',
-            DeprecationWarning)
+            DeprecationWarning, stacklevel=2)
         return network.get_induced(fa_xy=fa_xy, fa_yy=fa_yy, matrix=matrix)
 
     core.use(None, 'frac_alg_update_topology',
@@ -23001,7 +23849,7 @@ def main(argv: list):
             return
         if argv[1] == 'env':
             try:
-                from zmlx.alg.install_dep import install_dep
+                from zmlx.alg.sys import install_dep
                 install_dep(print)
             except Exception as e:
                 print(e)
@@ -23013,22 +23861,22 @@ def __deprecated_func(pack_name, func, date=None):
 
 
 _deprecated_funcs = dict(
-    information=__deprecated_func('zmlx.ui.GuiBuffer',
+    information=__deprecated_func('zmlx.ui.gui_buffer',
                                   'information',
                                   '2025-1-21'),
-    question=__deprecated_func('zmlx.ui.GuiBuffer',
+    question=__deprecated_func('zmlx.ui.gui_buffer',
                                'question', '2025-1-21'),
-    plot=__deprecated_func('zmlx.ui.GuiBuffer',
+    plot=__deprecated_func('zmlx.ui.gui_buffer',
                            'plot', '2025-1-21'),
-    gui=__deprecated_func('zmlx.ui.GuiBuffer',
+    gui=__deprecated_func('zmlx.ui.gui_buffer',
                           'gui', '2025-1-21'),
-    break_point=__deprecated_func('zmlx.ui.GuiBuffer',
+    break_point=__deprecated_func('zmlx.ui.gui_buffer',
                                   'break_point',
                                   '2025-1-21'),
-    breakpoint=__deprecated_func('zmlx.ui.GuiBuffer',
+    breakpoint=__deprecated_func('zmlx.ui.gui_buffer',
                                  'break_point',
                                  '2025-1-21'),
-    gui_exec=__deprecated_func('zmlx.ui.GuiBuffer',
+    gui_exec=__deprecated_func('zmlx.ui.gui_buffer',
                                'gui_exec', '2025-1-21'),
     time_string=__deprecated_func('zmlx.filesys.tag',
                                   'time_string',
@@ -23083,21 +23931,9 @@ def __getattr__(name):
     """
     当访问不存在的属性时，尝试从其他模块中导入
     """
-    import importlib
-    value = _deprecated_funcs.get(name)
-    if value is not None:
-        pack_name = value.get('pack_name')
-        func = value.get('func')
-        date = value.get('date')
-        warnings.warn(
-            f'<zml.{name}> will be removed after {date}, '
-            f'please use <{pack_name}.{func}> instead.',
-            DeprecationWarning,
-            stacklevel=2
-        )
-        mod = importlib.import_module(pack_name)
-        return getattr(mod, func)
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    from zmlx.alg.sys import get_deprecated
+    return get_deprecated(
+        name, data=_deprecated_funcs, current_pack_name='zml')
 
 
 if __name__ == "__main__":

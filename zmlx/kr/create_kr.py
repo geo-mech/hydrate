@@ -1,27 +1,9 @@
-from zmlx.alg.linspace import linspace
+from zmlx.kr.base import create_kr
 
+import zmlx.alg.sys as warnings
 
-def create_kr(srg=0.02, srw=0.2, ag=3.5, aw=4.5, count=100):
-    """
-    利用Stone模型创建气水两相的相对渗透率；
-    """
-    assert 1.0 <= ag <= 6.0
-    assert 1.0 <= aw <= 6.0
-    vs = linspace(0.0, 1.0, count)
-    kg = []
-    kw = []
-    for s in vs:
-        if s > srg:
-            k = ((s - srg) / (1 - srw)) ** ag
-            kg.append(max(min(k, 1), 0))
-        else:
-            kg.append(0)
-        if s > srw:
-            k = ((s - srw) / (1 - srw)) ** aw
-            kw.append(max(min(k, 1), 0))
-        else:
-            kw.append(0)
-    return vs, kg, kw
+warnings.warn(f'The module {__name__} is deprecated and will be removed after 2026-4-15, please import from "zmlx" instead. ',
+              DeprecationWarning, stacklevel=2)
 
 
 def _test1():
@@ -31,7 +13,7 @@ def _test1():
         print(vs[i], kg[i], kw[len(vs) - 1 - i])
 
     import numpy as np
-    from zmlx.ui.GuiBuffer import plot
+    from zmlx.ui import plot
 
     def f(fig):
         ax = fig.subplots()

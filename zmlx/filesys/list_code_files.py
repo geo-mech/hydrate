@@ -1,11 +1,12 @@
-from zmlx.filesys.list_files import list_files
+from zmlx.alg.fsys import list_code_files
 
+__all__ = ['list_code_files']
 
-def list_code_files(path=None, exts=None):
-    if exts is None:
-        return list_files(path=path, exts={'.h', '.hpp', '.c', '.cpp', '.py', '.pyw', '.m'})
-    else:
-        return list_files(path=path, exts=exts)
+import zmlx.alg.sys as warnings
+
+warnings.warn(f'The module {__name__} will be removed after 2026-4-15',
+              DeprecationWarning, stacklevel=2)
+
 
 
 if __name__ == '__main__':

@@ -5,21 +5,22 @@ icon = 'begin'
 
 
 def enabled():
-    from zmlx.ui.MainWindow import get_window
+    from zmlx.ui.main_window import get_window
     window = get_window()
     if window is not None:
         return hasattr(
             window.get_current_widget(),
             'console_exec') and not window.is_running()
+    return None
 
 
 def slot():
-    from zmlx.ui.MainWindow import get_window
+    from zmlx.ui.main_window import get_window
     getattr(get_window().get_current_widget(), 'console_exec')()
 
 
 def always_show():
-    from zmlx.ui.MainWindow import get_window
+    from zmlx.ui.main_window import get_window
     window = get_window()
     if window is None:
         return False

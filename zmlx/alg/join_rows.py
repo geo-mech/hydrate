@@ -1,17 +1,10 @@
-import numpy as np
+import zmlx.alg.sys as warnings
 
+from zml import np
+from zmlx.alg.base import join_rows
 
-def join_rows(*args):
-    """
-    堆叠具有相同列数但行数可能不同的矩阵。
-
-    参数:
-        matrices: 一个或多个NumPy矩阵。
-
-    返回:
-        堆叠后的矩阵。
-    """
-    return np.vstack(args)
+warnings.warn(f'{__name__} will be removed after 2026-4-15', DeprecationWarning,
+              stacklevel=2)
 
 
 def test():

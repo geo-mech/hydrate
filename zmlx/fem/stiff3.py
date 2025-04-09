@@ -1,6 +1,4 @@
-import numpy as np
-
-from zml import Mesh3
+from zml import Mesh3, np
 from zmlx.fem.cube2tet import cube2tet
 from zmlx.fem.elements.c3d4 import stiffness
 

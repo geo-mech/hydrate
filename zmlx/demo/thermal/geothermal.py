@@ -1,18 +1,7 @@
 # ** desc = '基于井筒换热的地热开发模拟(存在尚未发现的bug)'
 
-
-import numpy as np
-
-from zml import Seepage
-from zmlx.config import seepage
-from zmlx.filesys.join_paths import join_paths
-from zmlx.plt.plotxy import plotxy
-from zmlx.seepage_mesh.create_wellbore import create_wellbore
-from zmlx.seepage_mesh.cylinder import create_cylinder
-from zmlx.ui import gui
-from zmlx.utility.Field import Field
-from zmlx.utility.GuiIterator import GuiIterator
-from zmlx.utility.SeepageNumpy import as_numpy
+from zmlx import *
+from zmlx.seepage_mesh.wellbore import create_wellbore
 
 
 def create_well(rate_inj=None, temp_inj=None, heat_cond=2.0, dist=0.1):
@@ -40,24 +29,26 @@ def create_well(rate_inj=None, temp_inj=None, heat_cond=2.0, dist=0.1):
         temp_inj = 273.15 + 50  # 默认注入50摄氏度的水
 
     # 创建水的单相流动计算模型
-    model = seepage.create(mesh=mesh,
-                           dv_relative=0.8,
-                           dt_max=3600 * 24.0,
-                           fludefs=fludefs,
-                           porosity=1,
-                           pore_modulus=200e6,
-                           heat_cond=heat_cond,
-                           p=1e6,
-                           s=1.0,
-                           denc=1e20,  # 设置得非常大，从而确保温度不变
-                           dist=dist,  # 换热的距离
-                           temperature=temp_inj,  # 原始的温度
-                           perm=1e-11 * rate_inj / 1e-6,  # 这个应该和流量对应(当rate增大的时候，同步增大)
-                           gravity=[0, 0, 0],  # 鉴于我们虚拟单元的设置，最好将重力设置为0
-                           tags=['disable_update_den', 'disable_update_vis',
-                                 'disable_ther'],
-                           warnings_ignored={'gravity'},
-                           )
+    model = seepage.create(
+        mesh=mesh,
+        dv_relative=0.8,
+        dt_max=3600 * 24.0,
+        fludefs=fludefs,
+        porosity=1,
+        pore_modulus=200e6,
+        heat_cond=heat_cond,
+        p=1e6,
+        s=1.0,
+        denc=1e20,  # 设置得非常大，从而确保温度不变
+        dist=dist,  # 换热的距离
+        temperature=temp_inj,  # 原始的温度
+        perm=1e-11 * rate_inj / 1e-6,
+        # 这个应该和流量对应(当rate增大的时候，同步增大)
+        gravity=[0, 0, 0],  # 鉴于我们虚拟单元的设置，最好将重力设置为0
+        tags=['disable_update_den', 'disable_update_vis',
+              'disable_ther'],
+        warnings_ignored={'gravity'},
+    )
 
     # for cell in model.cells:
     #     print(cell.get_attr(model.reg_cell_key('g_heat')))
@@ -92,11 +83,11 @@ def solve_well(model, close_after_done=None, folder=None, gui_iter=None,
             title = f'time = {seepage.get_time(model, as_str=True)}'
             x = as_numpy(model).cells.x[swap]
             p = as_numpy(model).cells.pre[swap]
-            plotxy(x, p, caption='well_p', title=title)
+            plot_xy(x, p, caption='well_p', title=title)
 
             t = as_numpy(model).fluids(0).get(
                 index=model.reg_flu_key('temperature'))[swap]
-            plotxy(x, t, caption='well_T', title=title)
+            plot_xy(x, t, caption='well_T', title=title)
 
     seepage.solve(model, extra_plot=plot, close_after_done=close_after_done,
                   folder=folder, gui_iter=gui_iter, state_hint='well',
@@ -104,15 +95,17 @@ def solve_well(model, close_after_done=None, folder=None, gui_iter=None,
 
 
 def create_res(well: Seepage, heat_cond=2.0):
-    mesh = create_cylinder(x=np.linspace(0, 100, 100),
-                           r=np.linspace(0, 50, 50))
+    mesh = create_cylinder(
+        x=np.linspace(0, 100, 100),
+        r=np.linspace(0, 50, 50))
 
     # 井筒的轨迹
     swap = eval(well.get_text('swap'))
     vx = as_numpy(well).cells.x[swap]
     vy = as_numpy(well).cells.y[swap]
     vz = as_numpy(well).cells.z[swap]
-    vg = as_numpy(well).cells.get(index=well.reg_cell_key('g_heat'))[swap]  # 导热的能力
+    vg = as_numpy(well).cells.get(index=well.reg_cell_key('g_heat'))[
+        swap]  # 导热的能力
 
     i_swap = [False for _ in range(mesh.cell_number)]
     o_index = []
@@ -136,18 +129,20 @@ def create_res(well: Seepage, heat_cond=2.0):
         i_swap.append(True)  # 这些cell用来交换
         o_index.append(c2.index)
 
-    model = seepage.create(mesh=mesh,
-                           temperature=273.15 + 200.0,  # 200摄氏度
-                           denc=5.0e6,
-                           heat_cond=heat_cond,
-                           dv_relative=0.5,
-                           dt_max=3600 * 24 * 10,
-                           )
+    model = seepage.create(
+        mesh=mesh,
+        temperature=273.15 + 200.0,  # 200摄氏度
+        denc=5.0e6,
+        heat_cond=heat_cond,
+        dv_relative=0.5,
+        dt_max=3600 * 24 * 10,
+    )
 
     # 设置导热能力
     face_n0 = model.face_number - len(vx)
     for idx in range(len(vx)):
-        model.get_face(face_n0 + idx).set_attr(model.reg_face_key('g_heat'), vg[idx])
+        model.get_face(face_n0 + idx).set_attr(model.reg_face_key('g_heat'),
+                                               vg[idx])
 
     model.set_text('i_swap', i_swap)
     model.set_text('o_index', o_index)
@@ -263,11 +258,12 @@ def main(folder=None):
             vtemp.append(get_flu_t(well)[-1])
 
             # 更新功率曲线和温度曲线
-            plotxy(vtime, vpower, caption='time2power', title='Power',
-                   xlabel='Time/ year', ylabel='Power / W')
-            plotxy(vtime, vtemp, caption='time2temp', title='Outlet Temperature',
-                   xlabel='Time/ year',
-                   ylabel='Temperature / K')
+            plot_xy(vtime, vpower, caption='time2power', title='Power',
+                    xlabel='Time/ year', ylabel='Power / W')
+            plot_xy(vtime, vtemp, caption='time2temp',
+                    title='Outlet Temperature',
+                    xlabel='Time/ year',
+                    ylabel='Temperature / K')
 
     gui.execute(func=solve, close_after_done=False, disable_gui=False)
 

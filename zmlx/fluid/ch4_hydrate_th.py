@@ -3,7 +3,7 @@
 """
 
 import math
-import warnings
+import zmlx.alg.sys as warnings
 
 from zml import Seepage, Interp2
 
@@ -32,7 +32,8 @@ def create(MH, NH=6, t_min=270, t_max=290, p_min=1e6, p_max=40e6, name=None):
     def get_density(P, T):
         dP = max(p_min, min(p_max, P)) - P0
         dT = max(t_min, min(t_max, T)) - T0
-        return 1.0 / (v0 * math.exp(a1 * dT + a2 * dT ** 2 + a3 * dT ** 3 + a4 * dP))
+        return 1.0 / (v0 * math.exp(
+            a1 * dT + a2 * dT ** 2 + a3 * dT ** 3 + a4 * dP))
 
     def create_density():
         den = Interp2()
@@ -48,7 +49,7 @@ if __name__ == '__main__':
     flu = create(100)
     print(flu)
     try:
-        from zmlx.plt.show_field2 import show_field2
+        from zmlx.plt.fig2 import show_field2
 
         show_field2(flu.den, [1e6, 20e6], [270, 290])
     except:

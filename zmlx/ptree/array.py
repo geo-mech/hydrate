@@ -3,7 +3,10 @@
 """
 from io import StringIO
 
-import numpy as np
+try:
+    import numpy as np
+except ImportError:
+    np = None
 
 from zmlx.ptree.ptree import PTree
 
@@ -33,7 +36,8 @@ def _cast(data, pt):
         try:
             return np.loadtxt(StringIO(data))
         except:
-            pass
+            return None
+    return None
 
 
 def array(pt):

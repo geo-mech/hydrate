@@ -6,10 +6,10 @@ always_show = True
 
 
 def slot():
-    from zmlx.ui.MainWindow import get_window
+    from zmlx.ui.main_window import get_window
     get_window().set_cwd_by_dialog()
 
 
 def enabled():
-    from zmlx.ui.window.is_running import is_running
+    from zmlx.ui.window_functions import is_running
     return not is_running()

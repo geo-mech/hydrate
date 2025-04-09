@@ -1,13 +1,6 @@
 # ** desc = '基于Seepage类的温度场计算'
 
-import numpy as np
-
-from zml import Seepage
-from zmlx.geometry.point_distance import point_distance
-from zmlx.plt.tricontourf import tricontourf
-from zmlx.seepage_mesh.cube import create_cube
-from zmlx.ui import gui
-from zmlx.utility.SeepageNumpy import as_numpy
+from zmlx import *
 
 
 class CellAttrs:
@@ -21,16 +14,19 @@ class FaceAttrs:
 
 def create():
     model = Seepage()
-    mesh = create_cube(np.linspace(0, 100, 100), np.linspace(0, 100, 100), (-0.5, 0.5))
+    mesh = create_cube(np.linspace(0, 100, 100), np.linspace(0, 100, 100),
+                       (-0.5, 0.5))
 
     for c in mesh.cells:
         cell = model.add_cell()
         cell.pos = c.pos
-        cell.set_attr(CellAttrs.temperature, 380 if point_distance(c.pos, (0, 0, 0)) < 30 else 280)
+        cell.set_attr(CellAttrs.temperature,
+                      380 if point_distance(c.pos, (0, 0, 0)) < 30 else 280)
         cell.set_attr(CellAttrs.mc, 1.0e6 * c.vol)
 
     for f in mesh.faces:
-        face = model.add_face(model.get_cell(f.link[0]), model.get_cell(f.link[1]))
+        face = model.add_face(model.get_cell(f.link[0]),
+                              model.get_cell(f.link[1]))
         face.set_attr(FaceAttrs.g_heat, f.area * 1.0 / f.length)
 
     return model
@@ -39,13 +35,15 @@ def create():
 def show(model):
     ada = as_numpy(model)
     tricontourf(ada.cells.x, ada.cells.y,
-                ada.cells.get(CellAttrs.temperature), caption='temperature', gui_only=True)
+                ada.cells.get(CellAttrs.temperature), caption='temperature',
+                gui_only=True)
 
 
 def solve(model):
     for step in range(500):
         gui.break_point()
-        model.iterate_thermal(dt=1.0e6, ca_t=CellAttrs.temperature, ca_mc=CellAttrs.mc,
+        model.iterate_thermal(dt=1.0e6, ca_t=CellAttrs.temperature,
+                              ca_mc=CellAttrs.mc,
                               fa_g=FaceAttrs.g_heat)
         if step % 50 == 0:
             show(model)
@@ -53,7 +51,8 @@ def solve(model):
 
 
 def execute(gui_mode=True, close_after_done=False):
-    gui.execute(solve, close_after_done=close_after_done, args=(create(),), disable_gui=not gui_mode)
+    gui.execute(solve, close_after_done=close_after_done, args=(create(),),
+                disable_gui=not gui_mode)
 
 
 if __name__ == '__main__':

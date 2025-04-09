@@ -3,7 +3,7 @@
 """
 
 from zml import Seepage
-from zmlx.config.standard_slots import standard_slots
+from zmlx.config.slots import standard_slots
 
 text_key = 'step_iteration'
 
@@ -21,7 +21,8 @@ def get_settings(model: Seepage):
         return []
 
 
-def add_setting(model: Seepage, start=0, step=1, stop=999999999, name=None, args=None, kwds=None):
+def add_setting(model: Seepage, start=0, step=1, stop=999999999, name=None,
+                args=None, kwds=None):
     """
     添加设置
     """
@@ -75,9 +76,14 @@ def iterate(model: Seepage, current_step, slots):
                     if kwds is None:
                         kwds = {}
                     # 替换@model
-                    args = [model if equal(item, '@model') else item for item in args]
-                    kwds = {key: model if equal(value, '@model') else value for key, value in kwds.items()}
+                    args = [model if equal(item, '@model') else item for item in
+                            args]
+                    kwds = {key: model if equal(value, '@model') else value for
+                            key, value in kwds.items()}
                     # 替换@step
-                    args = [current_step if equal(item, '@step') else item for item in args]
-                    kwds = {key: current_step if equal(value, '@step') else value for key, value in kwds.items()}
+                    args = [current_step if equal(item, '@step') else item for
+                            item in args]
+                    kwds = {
+                        key: current_step if equal(value, '@step') else value
+                        for key, value in kwds.items()}
                     func(*args, **kwds)

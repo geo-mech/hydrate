@@ -39,174 +39,31 @@ Face的属性：
     g_heat：用于传热计算的导流系数（注意，并非热传导系数。这个系数，已经考虑了face的横截面积和长度）
     perm: face位置的渗透率
 """
-import os
 from collections.abc import Iterable
 
-import numpy as np
-
-from zml import get_average_perm, Tensor3, ConjugateGradientSolver
-from zmlx.alg.clamp import clamp
-from zmlx.alg.join_cols import join_cols
+from zml import (get_average_perm, Tensor3, ConjugateGradientSolver,
+                 make_parent)
+from zmlx.alg.fsys import join_paths, make_fname, print_tag
+from zmlx.alg.base import clamp
+from zmlx.alg.base import join_cols
+from zmlx.base.seepage import *
 from zmlx.config import (capillary, prod, fluid_heating, timer,
                          sand, step_iteration, adjust_vis)
 from zmlx.config.attr_keys import cell_keys, face_keys, flu_keys
-from zmlx.config.seepage_base import *
-from zmlx.config.standard_slots import standard_slots
-from zmlx.filesys.join_paths import join_paths
-from zmlx.filesys.make_fname import make_fname
-from zmlx.filesys.make_parent import make_parent
-from zmlx.filesys.tag import print_tag
-from zmlx.geometry.point_distance import point_distance
-from zmlx.plt.tricontourf import tricontourf
-from zmlx.react.add_reaction import add_reaction
-from zmlx.ui.GuiBuffer import gui
-from zmlx.utility.Field import Field
-from zmlx.utility.GuiIterator import GuiIterator
-from zmlx.utility.SaveManager import SaveManager
-from zmlx.utility.SeepageCellMonitor import SeepageCellMonitor
-from zmlx.utility.SeepageNumpy import as_numpy
-
-# 确保这些import不会被PyCharm优化掉
-_unused = [get_face_gradient, get_face_diff, get_face_sum, get_face_left,
-           get_face_right, get_cell_average, get_cell_max]
+from zmlx.config.slots import standard_slots
+from zmlx.geometry.base import point_distance
+from zmlx.plt.fig2 import tricontourf
+from zmlx.react.alg import add_reaction
+from zmlx.ui import gui
+from zmlx.utility.fields import Field
+from zmlx.utility.gui_iterator import GuiIterator
+from zmlx.utility.save_manager import SaveManager
+from zmlx.utility.seepage_cell_monitor import SeepageCellMonitor
 
 
-def get_cell_mask(model: Seepage, xr=None, yr=None, zr=None):
-    """
-    返回给定坐标范围内的cell的index。主要用来辅助绘图。since 2024-6-12
-
-    参数:
-    - model: Seepage 模型对象
-    - xr: x 坐标范围（可选）
-    - yr: y 坐标范围（可选）
-    - zr: z 坐标范围（可选）
-
-    返回值:
-    - 一个列表，包含给定坐标范围内的单元格索引
-
-    如果 xr、yr 或 zr 为 None，则表示该方向上没有限制
-    """
-
-    def get_(v, r):
-        """
-        辅助函数，用于判断每个坐标是否在给定范围内
-
-        参数:
-        - v: 坐标值列表
-        - r: 坐标范围（可选）
-
-        返回值:
-        - 一个列表，包含每个坐标是否在给定范围内的布尔值
-        """
-        if r is None:
-            return [True] * len(v)  # 此时为所有
-        else:
-            return [r[0] <= v[i] <= r[1] for i in range(len(v))]
-
-    # 三个方向分别的mask
-    x_mask = get_(as_numpy(model).cells.x, xr)
-    y_mask = get_(as_numpy(model).cells.y, yr)
-    z_mask = get_(as_numpy(model).cells.z, zr)
-
-    # 返回结果
-    return [x_mask[i] and y_mask[i] and z_mask[i] for i in range(len(x_mask))]
-
-
-def get_cell_pos(model: Seepage, dim, mask=None):
-    """
-    返回cell的位置向量
-
-    参数:
-    - model: Seepage 模型对象
-    - dim: 维度索引（0, 1, 2 分别对应 x, y, z 维度）
-    - mask: 可选的掩码，用于筛选特定的单元格
-
-    返回值:
-    - 一个 numpy 数组，包含给定维度上单元格的位置向量
-
-    如果 mask 为 None，则返回所有单元格的位置向量；否则，返回掩码指定的单元格的位置向量
-    """
-    assert 0 <= dim < 3
-    v = as_numpy(model).cells.get(-(dim + 1))
-    return v if mask is None else v[mask]
-
-
-def get_cell_pre(model: Seepage, mask=None):
-    """
-    返回模型中单元格的压力值。
-
-    参数:
-    - model: Seepage 模型对象
-    - mask: 可选的掩码，用于筛选特定的单元格
-
-    返回值:
-    - 一个 numpy 数组，包含模型中所有单元格的压力值。
-    - 如果提供了掩码，则返回掩码指定的单元格的压力值。
-    """
-    v = as_numpy(model).cells.pre
-    return v if mask is None else v[mask]
-
-
-def get_cell_temp(model: Seepage, mask=None):
-    """
-    返回模型中单元格的温度值。
-
-    参数:
-    - model: Seepage 模型对象
-    - mask: 可选的掩码，用于筛选特定的单元格
-
-    返回值:
-    - 一个 numpy 数组，包含模型中所有单元格的温度值。
-    - 如果提供了掩码，则返回掩码指定的单元格的温度值。
-    """
-    v = as_numpy(model).cells.get(model.get_cell_key('temperature'))
-    return v if mask is None else v[mask]
-
-
-def get_cell_fv(model: Seepage, fid=None, mask=None):
-    """
-    返回模型中单元格的流体体积。
-
-    参数:
-    - model: Seepage 模型对象
-    - fid: 流体 ID（可选），如果未提供，则返回所有流体的总体积
-    - mask: 可选的掩码，用于筛选特定的单元格
-
-    返回值:
-    - 一个 numpy 数组，包含模型中所有单元格的流体体积。
-    - 如果提供了流体 ID，则返回该流体在所有单元格中的体积。
-    - 如果提供了掩码，则返回掩码指定的单元格的流体体积。
-    """
-    if fid is None:
-        v = as_numpy(model).cells.fluid_vol
-    else:
-        v = as_numpy(model).fluids(*fid).vol
-    return v if mask is None else v[mask]
-
-
-def get_cell_fm(model: Seepage, fid=None, mask=None):
-    """
-    返回模型中单元格的流体质量。
-
-    参数:
-    - model: Seepage 模型对象
-    - fid: 流体 ID（可选），如果未提供，则返回所有流体的总质量
-    - mask: 可选的掩码，用于筛选特定的单元格
-
-    返回值:
-    - 一个 numpy 数组，包含模型中所有单元格的流体质量。
-    - 如果提供了流体 ID，则返回该流体在所有单元格中的质量。
-    - 如果提供了掩码，则返回掩码指定的单元格的流体质量。
-    """
-    if fid is None:
-        v = as_numpy(model).cells.fluid_mass
-    else:
-        v = as_numpy(model).fluids(*fid).mass
-    return v if mask is None else v[mask]
-
-
-def show_cells(model: Seepage, dim0, dim1, mask=None, show_p=True, show_t=True,
-               show_s=True, folder=None, use_mass=False, **opts):
+def show_cells(
+        model: Seepage, dim0, dim1, mask=None, show_p=True, show_t=True,
+        show_s=True, folder=None, use_mass=False, **opts):
     """
     二维绘图显示
 
@@ -240,17 +97,19 @@ def show_cells(model: Seepage, dim0, dim1, mask=None, show_p=True, show_t=True,
 
     if show_p:  # 显示压力
         v = get_cell_pre(model, mask=mask)
-        tricontourf(x, y, v, caption='pressure',
-                    fname=make_fname(year, join_paths(folder, 'pressure'),
-                                     '.jpg', 'y'),
-                    **kw)
+        tricontourf(
+            x, y, v, caption='pressure',
+            fname=make_fname(year, join_paths(folder, 'pressure'),
+                             '.jpg', 'y'),
+            **kw)
 
     if show_t:  # 显示温度
         v = get_cell_temp(model, mask=mask)
-        tricontourf(x, y, v, caption='temperature',
-                    fname=make_fname(year, join_paths(folder, 'temperature'),
-                                     '.jpg', 'y'),
-                    **kw)
+        tricontourf(
+            x, y, v, caption='temperature',
+            fname=make_fname(year, join_paths(folder, 'temperature'),
+                             '.jpg', 'y'),
+            **kw)
 
     if not isinstance(show_s, list):
         if show_s:  # 此时，显示所有组分的饱和度
@@ -270,157 +129,17 @@ def show_cells(model: Seepage, dim0, dim1, mask=None, show_p=True, show_t=True,
             fv = get(model=model, fid=idx, mask=mask)  # 流体体积
             v = fv / fv_all
             # 绘图
-            tricontourf(x, y, v, caption=name,
-                        fname=make_fname(year, join_paths(folder, name),
-                                         '.jpg', 'y'),
-                        **kw)
+            tricontourf(
+                x, y, v, caption=name,
+                fname=make_fname(year, join_paths(folder, name),
+                                 '.jpg', 'y'),
+                **kw)
 
 
-def _get_names(f_def: Seepage.FluDef):
-    """
-    返回给定流体定义的所有的组分的名字
-    :param f_def: 流体定义
-    :return: 如果f_def没有组分，则返回f_def的名字；否则，将所有组分的名字作为list返回
-    """
-    if f_def.component_number == 0:
-        return f_def.name
-    else:
-        names = []
-        for idx in range(f_def.component_number):
-            names.append(_get_names(f_def.get_component(idx)))
-        return names
-
-
-def _flatten_comp(name):
-    """
-    用在list_comp中，去除组分的结构
-
-    参数:
-    - name: 组分的名字，可以是字符串或列表
-
-    返回值:
-    - 一个列表，包含所有组分的名字，去除了嵌套结构
-
-    如果输入的是字符串，则直接返回一个包含该字符串的列表；
-    如果输入的是列表，则遍历该列表，递归地展开所有嵌套的子列表，并将结果合并成一个平面列表。
-    """
-    if isinstance(name, str):
-        return [name]
-    else:
-        assert isinstance(name, list)
-        temp = []
-        for item in name:
-            temp = temp + _flatten_comp(item)
-        return temp
-
-
-def list_comp(model: Seepage, keep_structure=True):
-    """
-    列出所有组分的名字
-    :param keep_structure: 返回的结构是否保持流体的结构 (since 2024-7-25)
-    :param model: 需要列出组分的模型
-    :return: 所有组分的名字作为list返回(注意，会维持流体和组分的组成结构)
-    """
-    names = []
-    for idx in range(model.fludef_number):
-        names.append(_get_names(model.get_fludef(idx)))
-    if keep_structure:
-        return names
-    else:
-        return _flatten_comp(names)
-
-
-def _list_comp_ids(fdef: Seepage.FluDef):
-    """
-    用在list_comp_ids中，列出组分中具有子组分的id (since 2024-7-25)
-    """
-    if fdef.component_number == 0:
-        return [[]]
-    result = []
-    for idx in range(fdef.component_number):
-        ids = _list_comp_ids(fdef.get_component(idx))
-        for item in ids:
-            result.append([idx] + item)
-    return result
-
-
-def list_comp_ids(model: Seepage):
-    """
-    列出模型中所有的流体的ID(其中每一个元素都是list)  (since 2024-7-25)
-    """
-    result = []
-    for idx in range(model.fludef_number):
-        ids = _list_comp_ids(model.get_fludef(idx))
-        for item in ids:
-            result.append([idx] + item)
-    return result
-
-
-def _pop_sat(name, table: dict):
-    """
-    从饱和度表中获取指定流体或流体组分的饱和度值。
-
-    参数:
-    - name: 流体或流体组分的名称，可以是字符串或列表。
-    - table: 饱和度表，一个字典，其中键是流体或流体组分的名称，值是对应的饱和度值。
-
-    返回值:
-    - 如果 name 是字符串，则返回该流体的饱和度值；如果 name 是列表，
-    则返回一个列表，包含每个流体组分的饱和度值。
-    - 如果指定的流体或流体组分名称不在饱和度表中，则返回默认值 0.0。
-
-    该函数首先检查 name 是否为字符串。如果是字符串，它会验证名称是否为空，
-    并从饱和度表中获取相应的饱和度值。如果 name 不在表中，它会返回默认值 0.0。
-    如果 name 是列表，函数会遍历列表中的每个元素，递归调用 _pop_sat
-    函数获取每个流体组分的饱和度值，并将这些值收集到一个列表中返回。
-    """
-    if isinstance(name, str):
-        assert len(name) > 0, 'fluid name not set'
-        return table.pop(name, 0.0)
-    else:
-        values = []
-        for item in name:
-            values.append(_pop_sat(item, table))
-        return values
-
-
-def get_sat(names, table: dict):
-    """
-    返回各个组分的饱和度数值
-    :param names: 组分的名字列表
-    :param table: 饱和度表
-    :return: 各个组分的饱和度（维持和name相同的结构，默认为0）
-    """
-    the_copy = table.copy()
-    values = _pop_sat(names, the_copy)
-    if len(the_copy) > 0:
-        assert False, (f'names not used: {list(the_copy.keys())}. '
-                       f'The required names: {names}')
-    return values
-
-
-def update_time(model: Seepage, dt=None):
-    """
-    更新模型的时间
-
-    参数:
-    - model: Seepage 模型对象
-    - dt: 要更新的时间步长，如果为 None，则使用模型当前的时间步长
-
-    返回值:
-    - 无
-
-    该函数首先检查是否提供了时间步长。如果没有提供，它会获取模型当前的时间步长。
-    然后，它将模型的时间更新为当前时间加上时间步长。
-    """
-    if dt is None:
-        dt = get_dt(model)
-    set_time(model, get_time(model) + dt)
-
-
-def get_recommended_dt(model: Seepage, previous_dt,
-                       dv_relative=0.1,
-                       using_flow=True, using_ther=True):
+def get_recommended_dt(
+        model: Seepage, previous_dt,
+        dv_relative=0.1,
+        using_flow=True, using_ther=True):
     """
     在调用了 iterate 函数之后，调用此函数，来获取更优的时间步长。
 
@@ -440,17 +159,19 @@ def get_recommended_dt(model: Seepage, previous_dt,
     """
     assert using_flow or using_ther
     if using_flow:
-        dt1 = model.get_recommended_dt(previous_dt=previous_dt,
-                                       dv_relative=dv_relative)
+        dt1 = model.get_recommended_dt(
+            previous_dt=previous_dt,
+            dv_relative=dv_relative)
     else:
         dt1 = 1.0e100
 
     if using_ther:
         ca_t = model.reg_cell_key('temperature')
         ca_mc = model.reg_cell_key('mc')
-        dt2 = model.get_recommended_dt(previous_dt=previous_dt,
-                                       dv_relative=dv_relative,
-                                       ca_t=ca_t, ca_mc=ca_mc)
+        dt2 = model.get_recommended_dt(
+            previous_dt=previous_dt,
+            dv_relative=dv_relative,
+            ca_t=ca_t, ca_mc=ca_mc)
     else:
         dt2 = 1.0e100
     return min(dt1, dt2)
@@ -459,11 +180,12 @@ def get_recommended_dt(model: Seepage, previous_dt,
 solid_buffer = Seepage.CellData()
 
 
-def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
-            fa_q=None, fa_k=None,
-            cond_updaters=None, diffusions=None,
-            react_bufs=None,
-            vis_max=None, vis_min=None, slots=None):
+def iterate(
+        model: Seepage, dt=None, solver=None, fa_s=None,
+        fa_q=None, fa_k=None,
+        cond_updaters=None, diffusions=None,
+        react_bufs=None,
+        vis_max=None, vis_min=None, slots=None):
     """
     在时间上向前迭代。其中
         dt:     时间步长,若为None，则使用自动步长
@@ -491,13 +213,15 @@ def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
     slots = temp
 
     # 执行定时器函数.
-    timer.iterate(model, t0=get_time(model), t1=get_time(model) + dt,
-                  slots=slots)
+    timer.iterate(
+        model, t0=get_time(model), t1=get_time(model) + dt,
+        slots=slots)
 
     # 执行step迭代
-    step_iteration.iterate(model=model,
-                           current_step=get_step(model),
-                           slots=slots)
+    step_iteration.iterate(
+        model=model,
+        current_step=get_step(model),
+        slots=slots)
 
     if model.not_has_tag('disable_update_den') and model.fludef_number > 0:
         fa_t = model.reg_flu_key('temperature')
@@ -518,9 +242,10 @@ def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
         assert 1.0e-10 <= vis_min <= vis_max <= 1.0e40
         ca_p = model.reg_cell_key('pre')
         fa_t = model.reg_flu_key('temperature')
-        model.update_vis(ca_p=ca_p,  # 压力属性
-                         fa_t=fa_t,  # 温度属性
-                         relax_factor=1.0, min=vis_min, max=vis_max)
+        model.update_vis(
+            ca_p=ca_p,  # 压力属性
+            fa_t=fa_t,  # 温度属性
+            relax_factor=1.0, min=vis_min, max=vis_max)
 
     if model.injector_number > 0:
         # 实施流体的注入操作.
@@ -549,13 +274,15 @@ def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
         fa_g0 = model.get_face_key('g0')
         fa_igr = model.get_face_key('igr')
         if ca_v0 is not None and fa_g0 is not None and fa_igr is not None:
-            model.update_cond(ca_v0=ca_v0, fa_g0=fa_g0,
-                              fa_igr=fa_igr,
-                              relax_factor=0.3)
+            model.update_cond(
+                ca_v0=ca_v0, fa_g0=fa_g0,
+                fa_igr=fa_igr,
+                relax_factor=0.3)
 
     if cond_updaters is not None:  # 施加cond的更新操作
         for update in cond_updaters:
-            assert callable(update), f'The update in cond_updaters must be callable. However, it is: {update}'
+            assert callable(
+                update), f'The update in cond_updaters must be callable. However, it is: {update}'
             update(model)
 
     # 当未禁止更新flow且流体的数量非空
@@ -565,10 +292,12 @@ def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
         ca_p = model.reg_cell_key('pre')
         adjust_vis.adjust(model=model)  # 备份粘性，并且尝试调整
         if model.has_tag('has_inertia'):
-            r1 = model.iterate(dt=dt, solver=solver, fa_s=fa_s,
-                               fa_q=fa_q, fa_k=fa_k, ca_p=ca_p)
+            r1 = model.iterate(
+                dt=dt, solver=solver, fa_s=fa_s,
+                fa_q=fa_q, fa_k=fa_k, ca_p=ca_p)
         else:
-            r1 = model.iterate(dt=dt, solver=solver, ca_p=ca_p)
+            r1 = model.iterate(
+                dt=dt, solver=solver, ca_p=ca_p)
         adjust_vis.restore(model=model)  # 恢复之前备份的粘性
     else:
         r1 = None
@@ -600,8 +329,9 @@ def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
         ca_mc = model.get_cell_key('mc')
         fa_g = model.get_face_key('g_heat')
         if ca_t is not None and ca_mc is not None and fa_g is not None:
-            r2 = model.iterate_thermal(dt=dt, solver=solver, ca_t=ca_t,
-                                       ca_mc=ca_mc, fa_g=fa_g)
+            r2 = model.iterate_thermal(
+                dt=dt, solver=solver, ca_t=ca_t,
+                ca_mc=ca_mc, fa_g=fa_g)
 
     # 不存在禁止标识且存在流体
     exchange_heat = model.not_has_tag('disable_heat_exchange'
@@ -615,8 +345,9 @@ def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
         fa_c = model.get_flu_key('specific_heat')
         if ca_g is not None and ca_t is not None and ca_mc is not None and \
                 fa_t is not None and fa_c is not None:
-            model.exchange_heat(dt=dt, ca_g=ca_g, ca_t=ca_t, ca_mc=ca_mc,
-                                fa_t=fa_t, fa_c=fa_c)
+            model.exchange_heat(
+                dt=dt, ca_g=ca_g, ca_t=ca_t, ca_mc=ca_mc,
+                fa_t=fa_t, fa_c=fa_c)
         else:
             warnings.warn('model.exchange_heat failed in seepage.iterate')
 
@@ -639,20 +370,22 @@ def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
         # 只要不禁用dt更新，就尝试更新dt
         if update_flow or update_ther:
             # 只有当计算了流动或者传热过程，才可以使用自动的时间步长
-            dt = get_recommended_dt(model, dt, get_dv_relative(model),
-                                    using_flow=update_flow,
-                                    using_ther=update_ther
-                                    )
+            dt = get_recommended_dt(
+                model, dt, get_dv_relative(model),
+                using_flow=update_flow,
+                using_ther=update_ther
+            )
         dt = max(get_dt_min(model), min(get_dt_max(model), dt))
         set_dt(model, dt)  # 修改dt为下一步建议使用的值
 
     return r1, r2
 
 
-def get_inited(fludefs=None, reactions=None, gravity=None, path=None,
-               time=None, dt=None, dv_relative=None,
-               dt_max=None, dt_min=None,
-               keys=None, tags=None, model_attrs=None):
+def get_inited(
+        fludefs=None, reactions=None, gravity=None, path=None,
+        time=None, dt=None, dv_relative=None,
+        dt_max=None, dt_min=None,
+        keys=None, tags=None, model_attrs=None):
     """
     创建一个模型，初始化必要的属性.
     """
@@ -725,9 +458,11 @@ def add_injector(model: Seepage, data):
     elif isinstance(data, dict):
         injector = model.add_injector(**data)
         flu = data.get('flu')
-        if flu == 'insitu' and model.cell_number > 0 and len(injector.fid) > 0:  # 找到要注入的那个cell
+        if flu == 'insitu' and model.cell_number > 0 and len(
+                injector.fid) > 0:  # 找到要注入的那个cell
             cell_id = injector.cell_id
-            if cell_id >= model.cell_number and point_distance(injector.pos, [0, 0, 0]) < 1e10:
+            if cell_id >= model.cell_number and point_distance(
+                    injector.pos, [0, 0, 0]) < 1e10:
                 cell = model.get_nearest_cell(pos=injector.pos)
                 if point_distance(cell.pos, injector.pos) < injector.radi:
                     cell_id = cell.index
@@ -742,17 +477,18 @@ def add_injector(model: Seepage, data):
             add_injector(model, data=item)
 
 
-def create(mesh=None,
-           disable_update_den=False, disable_update_vis=False,
-           disable_ther=False, disable_heat_exchange=False,
-           fludefs=None, has_solid=False, reactions=None,
-           gravity=None,
-           dt_max=None, dt_min=None, dt_ini=None, dv_relative=None,
-           gr=None, bk_fv=None, bk_g=None, caps=None,
-           keys=None, tags=None, kr=None, default_kr=None,
-           model_attrs=None, prods=None,
-           warnings_ignored=None, injectors=None, texts=None,
-           **kwargs):
+def create(
+        mesh=None,
+        disable_update_den=False, disable_update_vis=False,
+        disable_ther=False, disable_heat_exchange=False,
+        fludefs=None, has_solid=False, reactions=None,
+        gravity=None,
+        dt_max=None, dt_min=None, dt_ini=None, dv_relative=None,
+        gr=None, bk_fv=None, bk_g=None, caps=None,
+        keys=None, tags=None, kr=None, default_kr=None,
+        model_attrs=None, prods=None,
+        warnings_ignored=None, injectors=None, texts=None,
+        **kwargs):
     """
     利用给定的网格来创建一个模型.
         其中gr用来计算孔隙体积变化之后的渗透率的改变量.  gr的类型是一个Interp1.
@@ -805,11 +541,12 @@ def create(mesh=None,
     if gravity is not None:
         assert len(gravity) == 3
         model.gravity = gravity
-        if point_distance(gravity, [0, 0, -10]) > 1.0:
+        if point_distance(gravity, [0, 0, -9.8]) > 1.0:
             if 'gravity' not in warnings_ignored:
-                warnings.warn(f'In general, gravity should be [0, 0, -10], '
+                warnings.warn(f'In general, gravity should be [0, 0, -9.8], '
                               f'but here it is {gravity}, '
-                              f'please make sure this is the setting you need')
+                              f'please make sure this is the setting you need',
+                              stacklevel=2)
 
     if dt_max is not None:
         set_dt_max(model, dt_max)
@@ -854,7 +591,7 @@ def create(mesh=None,
     # 对模型的细节进行必要的配置
     set_model(model, igr=igr, bk_fv=bk_fv, bk_g=bk_g, **kwargs)
 
-    # 添加注入点   since 24-6-20
+    # 添加注入点 since 24-6-20
     add_injector(model, data=injectors)
 
     # 添加毛管效应.
@@ -906,19 +643,21 @@ def add_mesh(model: Seepage, mesh):
             cell.set_attr(ca_vol, c.vol)
 
         for f in mesh.faces:
-            face = model.add_face(model.get_cell(f.link[0] + cell_n0),
-                                  model.get_cell(f.link[1] + cell_n0))
+            face = model.add_face(
+                model.get_cell(f.link[0] + cell_n0),
+                model.get_cell(f.link[1] + cell_n0))
             face.set_attr(fa_s, f.area)
             face.set_attr(fa_l, f.length)
 
 
-def set_model(model: Seepage, porosity=0.1,
-              pore_modulus=1000e6, denc=1.0e6, dist=0.1,
-              temperature=280.0, p=None,
-              s=None, perm=1e-14, heat_cond=1.0,
-              sample_dist=None, pore_modulus_range=None,
-              igr=None, bk_fv=True,
-              bk_g=True, **ignores):
+def set_model(
+        model: Seepage, porosity=0.1,
+        pore_modulus=1000e6, denc=1.0e6, dist=0.1,
+        temperature=280.0, p=None,
+        s=None, perm=1e-14, heat_cond=1.0,
+        sample_dist=None, pore_modulus_range=None,
+        igr=None, bk_fv=True,
+        bk_g=True, **ignores):
     """
     设置模型的网格，并顺便设置其初始的状态.
     --
@@ -979,27 +718,30 @@ def set_model(model: Seepage, porosity=0.1,
             tmp = (tmp.xx + tmp.yy + tmp.zz) / 3.0
 
         # 设置cell
-        set_cell(cell, porosity=porosity(*pos),
-                 pore_modulus=pore_modulus(*pos), denc=denc(*pos),
-                 temperature=temperature(*pos),
-                 p=p(*pos), s=sat,
-                 pore_modulus_range=pore_modulus_range,
-                 dist=dist(*pos), bk_fv=bk_fv(*pos), heat_cond=tmp)
+        set_cell(
+            cell, porosity=porosity(*pos),
+            pore_modulus=pore_modulus(*pos), denc=denc(*pos),
+            temperature=temperature(*pos),
+            p=p(*pos), s=sat,
+            pore_modulus_range=pore_modulus_range,
+            dist=dist(*pos), bk_fv=bk_fv(*pos), heat_cond=tmp)
 
     for face in model.faces:
         assert isinstance(face, Seepage.Face)
         p0 = face.get_cell(0).pos
         p1 = face.get_cell(1).pos
-        set_face(face, perm=get_average_perm(p0, p1, perm, sample_dist),
-                 heat_cond=get_average_perm(p0, p1, heat_cond, sample_dist),
-                 igr=igr(*face.pos), bk_g=bk_g(*face.pos))
+        set_face(
+            face, perm=get_average_perm(p0, p1, perm, sample_dist),
+            heat_cond=get_average_perm(p0, p1, heat_cond, sample_dist),
+            igr=igr(*face.pos), bk_g=bk_g(*face.pos))
 
 
-def set_cell(cell: Seepage.Cell, pos=None, vol=None,
-             porosity=0.1, pore_modulus=1000e6,
-             denc=1.0e6, dist=0.1,
-             temperature=280.0, p=1.0, s=None,
-             pore_modulus_range=None, bk_fv=True, heat_cond=1.0):
+def set_cell(
+        cell: Seepage.Cell, pos=None, vol=None,
+        porosity=0.1, pore_modulus=1000e6,
+        denc=1.0e6, dist=0.1,
+        temperature=280.0, p=1.0, s=None,
+        pore_modulus_range=None, bk_fv=True, heat_cond=1.0):
     """
     设置Cell的初始状态.
 
@@ -1042,14 +784,15 @@ def set_cell(cell: Seepage.Cell, pos=None, vol=None,
     if isinstance(s, dict):  # 查表：应该尽量避免此语句执行，效率较低
         s = get_sat(list_comp(cell.model), s)
 
-    cell.set_ini(ca_mc=ca.mc, ca_t=ca.temperature,
-                 fa_t=fa.temperature, fa_c=fa.specific_heat,
-                 pos=pos, vol=vol, porosity=porosity,
-                 pore_modulus=pore_modulus,
-                 denc=denc,
-                 temperature=temperature, p=p, s=s,
-                 pore_modulus_range=pore_modulus_range
-                 )
+    cell.set_ini(
+        ca_mc=ca.mc, ca_t=ca.temperature,
+        fa_t=fa.temperature, fa_c=fa.specific_heat,
+        pos=pos, vol=vol, porosity=porosity,
+        pore_modulus=pore_modulus,
+        denc=denc,
+        temperature=temperature, p=p, s=s,
+        pore_modulus_range=pore_modulus_range
+    )
 
     if bk_fv:  # 备份流体体积
         cell.set_attr(ca.fv0, cell.fluid_vol)
@@ -1058,8 +801,9 @@ def set_cell(cell: Seepage.Cell, pos=None, vol=None,
     cell.set_attr(ca.g_heat, vol * heat_cond / (dist ** 2))
 
 
-def set_face(face: Seepage.Face, area=None, length=None,
-             perm=None, heat_cond=None, igr=None, bk_g=True):
+def set_face(
+        face: Seepage.Face, area=None, length=None,
+        perm=None, heat_cond=None, igr=None, bk_g=True):
     """
     对一个Face进行配置
 
@@ -1217,12 +961,14 @@ def print_cells(path, model, ca_keys=None, fa_keys=None,
         t = np.zeros(shape=v.shape)
 
     # 即将保存的数据
-    d = join_cols(cells.x, cells.y, cells.z, cells.pre, t, v, *vs,
-                  *([] if ca_keys is None else
-                    [cells.get(key) for key in ca_keys]),
-                  *([] if fa_keys is None else
-                    [as_numpy(model).fluids(*idx).get(key) for idx, key in fa_keys]),
-                  )
+    d = join_cols(
+        cells.x, cells.y, cells.z, cells.pre, t, v, *vs,
+        *([] if ca_keys is None else
+          [cells.get(key) for key in ca_keys]),
+        *([] if fa_keys is None else
+          [as_numpy(model).fluids(*idx).get(key) for idx, key in
+           fa_keys]),
+    )
 
     # 保存数据
     np.savetxt(path, d, fmt=fmt)
@@ -1243,8 +989,9 @@ def append_cells_and_faces(model: Seepage, other: Seepage):
         assert isinstance(f, Seepage.Face)
         c0 = f.get_cell(0)
         c1 = f.get_cell(1)
-        model.add_face(model.get_cell(cell_n0 + c0.index),
-                       model.get_cell(cell_n0 + c1.index), data=f)
+        model.add_face(
+            model.get_cell(cell_n0 + c0.index),
+            model.get_cell(cell_n0 + c1.index), data=f)
 
 
 def set_solve(model: Seepage, **kw):
@@ -1260,15 +1007,16 @@ def set_solve(model: Seepage, **kw):
     model.set_text(key='solve', text=options)
 
 
-def solve(model=None, folder=None, fname=None, gui_mode=None,
-          close_after_done=None,
-          extra_plot=None,
-          show_state=True, gui_iter=None, state_hint=None,
-          save_dt=None, export_mass=True, time_unit='y',
-          slots=None, solver=None,
-          opt_iter=None,  # 用于在iterate的时候的额外的关键词参数.
-          **opt_solve
-          ):
+def solve(
+        model=None, folder=None, fname=None, gui_mode=None,
+        close_after_done=None,
+        extra_plot=None,
+        show_state=True, gui_iter=None, state_hint=None,
+        save_dt=None, export_mass=True, time_unit='y',
+        slots=None, solver=None,
+        opt_iter=None,  # 用于在iterate的时候的额外的关键词参数.
+        **opt_solve
+):
     """
     求解模型，并尝试将结果保存到folder.
     """
@@ -1316,31 +1064,39 @@ def solve(model=None, folder=None, fname=None, gui_mode=None,
                 cell=[model.get_cell(i) for i in item.get('cell_ids')])
 
     if save_dt is None:
-        save_dt_min = full_solve_options.get('save_dt_min', 0.01 * SaveManager.get_unit_length(time_unit=time_unit))
-        save_dt_max = full_solve_options.get('save_dt_max', 5 * SaveManager.get_unit_length(time_unit=time_unit))
+        save_dt_min = full_solve_options.get(
+            'save_dt_min',
+            0.01 * SaveManager.get_unit_length(
+                time_unit=time_unit))
+        save_dt_max = full_solve_options.get(
+            'save_dt_max',
+            5 * SaveManager.get_unit_length(
+                time_unit=time_unit))
 
         def save_dt(time):
             return clamp(time * 0.05, save_dt_min, save_dt_max)
 
     # 执行数据的保存
-    save_model = SaveManager(join_paths(folder, 'models'), save=model.save,
-                             ext='.seepage',
-                             time_unit=time_unit,
-                             unit_length='auto',
-                             dtime=save_dt,
-                             get_time=lambda: get_time(model),
-                             )
+    save_model = SaveManager(
+        join_paths(folder, 'models'), save=model.save,
+        ext='.seepage',
+        time_unit=time_unit,
+        unit_length='auto',
+        dtime=save_dt,
+        get_time=lambda: get_time(model),
+    )
 
     # 打印cell
-    save_cells = SaveManager(join_paths(folder, 'cells'),
-                             save=lambda name: print_cells(name, model=model,
-                                                           export_mass=export_mass),
-                             ext='.txt',
-                             time_unit=time_unit,
-                             unit_length='auto',
-                             dtime=save_dt,
-                             get_time=lambda: get_time(model),
-                             )
+    save_cells = SaveManager(
+        join_paths(folder, 'cells'),
+        save=lambda name: print_cells(name, model=model,
+                                      export_mass=export_mass),
+        ext='.txt',
+        time_unit=time_unit,
+        unit_length='auto',
+        dtime=save_dt,
+        get_time=lambda: get_time(model),
+    )
 
     # 保存所有
     def save(*args, **kw):
@@ -1366,7 +1122,9 @@ def solve(model=None, folder=None, fname=None, gui_mode=None,
             plot_rate = item1.get('plot_rate')
             if plot_rate is not None:
                 for idx in plot_rate:
-                    monitor.plot_rate(index=idx, caption=f'Rate_{index}.{idx}')  # 显示生产曲线
+                    monitor.plot_rate(
+                        index=idx,
+                        caption=f'Rate_{index}.{idx}')  # 显示生产曲线
         if extra_plot is not None:  # 一些额外的，非标准的绘图操作
             if callable(extra_plot):
                 try:
@@ -1424,8 +1182,9 @@ def solve(model=None, folder=None, fname=None, gui_mode=None,
 
     def do_show_state():
         if show_state:
-            print(f'{state_hint}step={get_step(model)}, dt={get_dt(model, as_str=True)}, '
-                  f'time={get_time(model, as_str=True)}')
+            print(
+                f'{state_hint}step={get_step(model)}, dt={get_dt(model, as_str=True)}, '
+                f'time={get_time(model, as_str=True)}')
 
     # 准备iterate的参数
     if opt_iter is None:  # 用于迭代的额外的参数

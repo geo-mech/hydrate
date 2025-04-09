@@ -2,8 +2,8 @@ text = '播放图片'
 
 
 def slot():
-    from zmlx.filesys.list_files import list_files
-    from zmlx.ui.GuiBuffer import gui
+    from zmlx.alg.fsys import list_files
+    from zmlx.ui.gui_buffer import gui
 
     def task():
         files = list_files(exts=['.jpg', '.png'])

@@ -18,13 +18,14 @@ p = 10000000.0Pa, T = 500K, vis = 0.0063358958456372905Pa.s, den = 898.062894kg/
 
 """
 
-import warnings
+import zmlx.alg.sys as warnings
 from math import log, exp
 
 from zml import Interp2, Seepage
 
 
-def create(t_min=270, t_max=1000, p_min=1e6, p_max=40e6, name=None, specific_heat=None):
+def create(t_min=270, t_max=1000, p_min=1e6, p_max=40e6, name=None,
+           specific_heat=None):
     def get_density(pressure, temp):
         """
         Nourozieh, H., et al. (2015). "Density and Viscosity of Athabasca Bitumen Samples at Temperatures up to 200° C and Pressures up to 10 MPa." SPE Reservoir Evaluation & Engineering 18(03): 375-386.
@@ -63,23 +64,26 @@ def create(t_min=270, t_max=1000, p_min=1e6, p_max=40e6, name=None, specific_hea
     if specific_heat is None:
         specific_heat = 1800
 
-    return Seepage.FluDef(den=create_density(), vis=create_viscosity(), specific_heat=specific_heat, name=name)
+    return Seepage.FluDef(den=create_density(), vis=create_viscosity(),
+                          specific_heat=specific_heat, name=name)
 
 
 def create_flu(*args, **kwargs):
-    warnings.warn('use function <create> instead', DeprecationWarning)
+    warnings.warn('use function <create> instead', DeprecationWarning,
+                  stacklevel=2)
     return create(*args, **kwargs)
 
 
 if __name__ == '__main__':
     flu = create()
     print(flu)
-    for p, T in [(10e6, 280), (10e6, 300), (10e6, 350), (10e6, 400), (10e6, 500)]:
+    for p, T in [(10e6, 280), (10e6, 300), (10e6, 350), (10e6, 400),
+                 (10e6, 500)]:
         vis = flu.vis(p, T)
         den = flu.den(p, T)
         print(f'p = {p}Pa, T = {T}K, vis = {vis}Pa.s, den = {den}kg/m^3')
     try:
-        from zmlx.plt.show_field2 import show_field2
+        from zmlx.plt.fig2 import show_field2
 
         show_field2(flu.vis, [1e6, 40e6], [300, 1000])
         show_field2(flu.den, [1e6, 40e6], [300, 1000])

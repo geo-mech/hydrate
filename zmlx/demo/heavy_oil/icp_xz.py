@@ -1,14 +1,7 @@
 # ** desc = '原位转化：在xz平面二维的模型'
 
-from zmlx.alg.has_cells import get_cell_mask
-from zmlx.alg.has_cells import get_pos_range
-from zmlx.config import seepage
-from zmlx.config.icp.fludefs import create_fludefs
-from zmlx.config.icp.reactions import create_reactions
-from zmlx.demo.opath import opath
-from zmlx.kr.create_krf import create_krf
-from zmlx.seepage_mesh.add_cell_face import add_cell_face
-from zmlx.seepage_mesh.cube import create_xz
+
+from zmlx import *
 
 
 def create(years_heating=5.0, years_max=8.0, power=5e3):
@@ -78,31 +71,33 @@ def create(years_heating=5.0, years_max=8.0, power=5e3):
              }
 
     # 创建模型
-    model = seepage.create(mesh=mesh,
-                           keys=ca.get_keys(),  # 使用这里定义的key
-                           fludefs=create_fludefs(),
-                           reactions=create_reactions(temp_max=1000),
-                           porosity=get_porosity,
-                           pore_modulus=100e6,
-                           p=20e6,
-                           temperature=350.0,
-                           denc=get_denc,
-                           s=get_s,
-                           perm=get_perm,
-                           heat_cond=2.0,
-                           dist=0.2,
-                           has_solid=False,
-                           dt_max=3600.0 * 24.0 * 10.0,
-                           gravity=[0, 0, -10],
-                           gr=gr,
-                           default_kr=default_kr,
-                           injectors=injectors,
-                           prods=prods,
-                           texts={'solve': solve},
-                           )
+    model = seepage.create(
+        mesh=mesh,
+        keys=ca.get_keys(),  # 使用这里定义的key
+        fludefs=icp.create_fludefs(),
+        reactions=icp.create_reactions(temp_max=1000),
+        porosity=get_porosity,
+        pore_modulus=100e6,
+        p=20e6,
+        temperature=350.0,
+        denc=get_denc,
+        s=get_s,
+        perm=get_perm,
+        heat_cond=2.0,
+        dist=0.2,
+        has_solid=False,
+        dt_max=3600.0 * 24.0 * 10.0,
+        gravity=[0, 0, -10],
+        gr=gr,
+        default_kr=default_kr,
+        injectors=injectors,
+        prods=prods,
+        texts={'solve': solve},
+    )
     # 返回模型
     return model
 
 
 if __name__ == '__main__':
-    seepage.solve(model=create(), close_after_done=False, folder=opath('icp_xz'))
+    seepage.solve(model=create(), close_after_done=False,
+                  folder=opath('icp_xz'))

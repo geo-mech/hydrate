@@ -1,38 +1,17 @@
-from zmlx.plt.plot_on_axes import plot_on_axes
+import zmlx.alg.sys as warnings
 
+from zmlx.plt.fig3 import scatter
 
-def scatter(items=None, get_val=None, x=None, y=None, z=None, c=None,
-            get_pos=None,
-            alpha=1.0,
-            cb_label=None,
-            cmap='coolwarm',
-            **opts):
-    """
-    绘制三维的散点图
-    """
-    if x is None or y is None or z is None:
-        if get_pos is None:
-            def get_pos(item):
-                return item.pos
-        vpos = [get_pos(item) for item in items]
-        x = [pos[0] for pos in vpos]
-        y = [pos[1] for pos in vpos]
-        z = [pos[2] for pos in vpos]
-    if c is None:
-        assert get_val is not None
-        c = [get_val(item) for item in items]
-
-    def on_axes(ax):
-        obj = ax.scatter(x, y, z, c=c, cmap=cmap, alpha=alpha)
-        cbar = ax.get_figure().colorbar(obj, ax=ax)
-        if cb_label is not None:
-            cbar.set_label(cb_label)
-
-    plot_on_axes(on_axes, dim=3, **opts)
+warnings.warn(f'The modulus {__name__} is deprecated and '
+              f'will be removed after 2026-4-16, import functions directly from <zmlx> instead',
+              DeprecationWarning, stacklevel=2)
 
 
 def test_1():
-    import numpy as np
+    try:
+        import numpy as np
+    except ImportError:
+        np = None
     x = np.random.rand(100)
     y = np.random.rand(100)
     z = np.random.rand(100)

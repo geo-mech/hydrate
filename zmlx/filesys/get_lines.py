@@ -1,6 +1,10 @@
-def get_lines(path):
-    try:
-        with open(path, 'r', encoding='utf-8') as file:
-            return len(file.readlines())
-    except:
-        return 0
+from zmlx.alg.fsys import get_lines
+
+__all__ = ['get_lines']
+
+import zmlx.alg.sys as warnings
+
+warnings.warn(f'The module {__name__} will be removed after 2026-4-15',
+              DeprecationWarning, stacklevel=2)
+
+

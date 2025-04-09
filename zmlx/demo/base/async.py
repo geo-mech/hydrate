@@ -1,7 +1,6 @@
-import datetime
-import timeit
+import time
 
-from zmlx.alg.apply_async import *
+from zmlx import *
 
 
 def func(idx):

@@ -3,7 +3,7 @@ Created on Mon Jun  5 16:09:29 2023
 
 @author: Maryelin
 """
-import warnings
+import zmlx.alg.sys as warnings
 
 from zml import Interp2, Seepage
 from zmlx.fluid.conf.gas_density.c2h6 import den_c2h6
@@ -39,11 +39,13 @@ def create(tmin=280, tmax=1000, pmin=1.0e6, pmax=40.0e6, name=None):
         return vis
 
     specific_heat = 1385.43  # J/kg K
-    return Seepage.FluDef(den=create_density(), vis=create_viscosity(), specific_heat=specific_heat, name=name)
+    return Seepage.FluDef(den=create_density(), vis=create_viscosity(),
+                          specific_heat=specific_heat, name=name)
 
 
 def create_flu(*args, **kwargs):
-    warnings.warn('use function <create> instead', DeprecationWarning)
+    warnings.warn('use function <create> instead', DeprecationWarning,
+                  stacklevel=2)
     return create(*args, **kwargs)
 
 

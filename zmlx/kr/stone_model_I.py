@@ -1,7 +1,8 @@
-import numpy as np
+from zml import np
 
 
-def stone_model_I(swir, sorg, sorw, sgc, krwro, kroiw, krgro, nw, nsorw, ng, nog):
+def stone_model_I(swir, sorg, sorw, sgc, krwro, kroiw, krgro, nw, nsorw, ng,
+                  nog):
     """
     An oil-gas-water three-phase relative permeability model.
 
@@ -43,7 +44,9 @@ def stone_model_I(swir, sorg, sorw, sgc, krwro, kroiw, krgro, nw, nsorw, ng, nog
 
 if __name__ == '__main__':
     try:
-        sw, krw, sg, krg, so, kro = stone_model_I(swir=0.1, sorg=0.1, sorw=0.1, sgc=0.1, krwro=0.9, kroiw=1, krgro=0.9,
+        sw, krw, sg, krg, so, kro = stone_model_I(swir=0.1, sorg=0.1, sorw=0.1,
+                                                  sgc=0.1, krwro=0.9, kroiw=1,
+                                                  krgro=0.9,
                                                   nw=2,
                                                   nsorw=2, ng=2, nog=2)
 

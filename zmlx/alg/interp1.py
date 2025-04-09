@@ -1,16 +1,13 @@
-from scipy.interpolate import interp1d
+import zmlx.alg.sys as warnings
 
+from zmlx.alg.interp import interp1
 
-def interp1(x, y, xq, kind='linear'):
-    """
-    实施一维的插值，类似Matlab的interp1函数
-    """
-    f = interp1d(x, y, kind=kind)
-    return f(xq)
+warnings.warn(f'{__name__} will be removed after 2026-4-15', DeprecationWarning,
+              stacklevel=2)
 
 
 def _test():
-    import numpy as np
+    from zml import np
     x = np.linspace(0, 10, 100)
     y = np.sin(x)
     xq = 3

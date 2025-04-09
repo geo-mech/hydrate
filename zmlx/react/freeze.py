@@ -1,13 +1,14 @@
 from zmlx.react import melt
 
 
-def create(flu, sol, vp, vt, temp, heat, fa_t=None, fa_c=None, t2q=None, l2r=True, r2l=True):
+def create(flu, sol, vp, vt, temp, heat, fa_t=None, fa_c=None, t2q=None,
+           l2r=True, r2l=True):
     """
     创建一个从液体到固体结冰的反应，或者从气体到液体的凝结过程(默认：平衡态的反应，反应的速率给的非常大);
 
     其中：
-        当模拟结冰/融化时：iflu为液体，isol为固体；假设融化吸热
-        当模拟凝结/蒸发时：iflu为气体，isol为液体；假设蒸发吸热
+        当模拟结冰/融化时：flu为液体，sol为固体；假设融化吸热
+        当模拟凝结/蒸发时：flu为气体，sol为液体；假设蒸发吸热
 
     相变的温度和压力相关：
         vp为压力，vt温度
@@ -28,7 +29,8 @@ def create(flu, sol, vp, vt, temp, heat, fa_t=None, fa_c=None, t2q=None, l2r=Tru
         q = [-x for x in q]
         t2q = [t, q]
 
-    return melt.create(sol=sol, flu=flu, vp=vp, vt=vt, temp=temp, heat=heat,
-                       fa_t=fa_t, fa_c=fa_c, t2q=t2q,
-                       l2r=r2l, r2l=l2r,  # 和melt相比，方向改变
-                       )
+    return melt.create(
+        sol=sol, flu=flu, vp=vp, vt=vt, temp=temp, heat=heat,
+        fa_t=fa_t, fa_c=fa_c, t2q=t2q,
+        l2r=r2l, r2l=l2r,  # 和melt相比，方向改变
+    )

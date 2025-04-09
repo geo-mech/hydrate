@@ -19,8 +19,10 @@ https://chemicals.readthedocs.io/chemicals.volume.html#pure-high-pressure-liquid
 
 TEMP = (100-750)K
 """
-import chemicals  # pip install chemicals (https://chemicals.readthedocs.io/index.html#installation)
-import numpy as np
+import \
+    chemicals  # pip install chemicals (https://chemicals.readthedocs.io/index.html#installation)
+
+from zml import np
 
 
 def liq_den_c22h46(P, T):

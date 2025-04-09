@@ -1,6 +1,6 @@
 import pyqtgraph as pg
 
-from zmlx.ui.GuiBuffer import gui
+from zmlx.ui import gui
 
 __CaptionVal = [None, ]
 
@@ -9,17 +9,20 @@ def apply(oper=None, caption=None, on_top=None):
     if caption is not None:
         __CaptionVal[0] = caption
     if gui.exists() and oper is not None:
-        gui.get_widget(the_type=pg.PlotWidget, oper=oper, caption=__CaptionVal[0], on_top=on_top,
+        gui.get_widget(the_type=pg.PlotWidget, oper=oper,
+                       caption=__CaptionVal[0], on_top=on_top,
                        icon='gpu.jpg')
 
 
 def make_fn(name):
     def func(*args, caption=None, on_top=None, **kwargs):
         result = []
-        apply(oper=lambda widget: result.append(getattr(widget, name)(*args, **kwargs)),
+        apply(oper=lambda widget: result.append(
+            getattr(widget, name)(*args, **kwargs)),
               caption=caption, on_top=on_top)
         if len(result) > 0:
             return result[0]
+        return None
 
     return func
 

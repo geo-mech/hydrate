@@ -1,13 +1,12 @@
 # ** desc = '创建一个三维的DFN(竖直的裂缝)并且基于pg来显示'
 
-from zmlx.geometry.dfn_v3 import to_rc3, create_demo
+from zmlx import *
 from zmlx.pg.show_rc3 import show_rc3
-from zmlx.ui.GuiBuffer import gui
 
 
 def test():
     import random
-    rc3 = to_rc3(create_demo())
+    rc3 = dfn_v3.to_rc3(dfn_v3.create_demo())
     color = []
     alpha = []
     for _ in rc3:

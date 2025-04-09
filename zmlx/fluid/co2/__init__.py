@@ -1,5 +1,5 @@
 import os
-import warnings
+import zmlx.alg.sys as warnings
 
 from zml import Interp2
 from zmlx.config.TherFlowConfig import TherFlowConfig
@@ -13,13 +13,15 @@ def create(name=None):
     # 参考：https://baike.baidu.com/item/%E4%BA%8C%E6%B0%A7%E5%8C%96%E7%A2%B3/349143
     #
     specific_heat = 2844.8
-    return TherFlowConfig.FluProperty(den=Interp2(path=os.path.join(os.path.dirname(__file__), 'den.txt')),
-                                      vis=Interp2(path=os.path.join(os.path.dirname(__file__), 'vis.txt')),
-                                      specific_heat=specific_heat, name=name)
+    return TherFlowConfig.FluProperty(
+        den=Interp2(path=os.path.join(os.path.dirname(__file__), 'den.txt')),
+        vis=Interp2(path=os.path.join(os.path.dirname(__file__), 'vis.txt')),
+        specific_heat=specific_heat, name=name)
 
 
 def create_flu(*args, **kwargs):
-    warnings.warn('use function <create> instead', DeprecationWarning)
+    warnings.warn('use function <create> instead', DeprecationWarning,
+                  stacklevel=2)
     return create(*args, **kwargs)
 
 
@@ -27,7 +29,7 @@ if __name__ == '__main__':
     flu = create()
     print(flu)
     try:
-        from zmlx.plt.show_field2 import show_field2
+        from zmlx.plt.fig2 import show_field2
 
         show_field2(flu.den, [1e6, 20e6], [270, 290])
         show_field2(flu.vis, [1e6, 20e6], [270, 290])

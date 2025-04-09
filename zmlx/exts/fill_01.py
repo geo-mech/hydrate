@@ -8,8 +8,10 @@ import os
 
 import zml
 
-dll = ctypes.cdll.LoadLibrary(os.path.join(os.path.dirname(__file__), 'fill_01.dll'))
-dll.fill_01.argtypes = (ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_size_t)
+dll = ctypes.cdll.LoadLibrary(
+    os.path.join(os.path.dirname(__file__), 'fill_01.dll'))
+dll.fill_01.argtypes = (ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p,
+                        ctypes.c_size_t)
 
 
 def fill_01(v):
@@ -28,7 +30,8 @@ def test(count):
         t1 = timeit.default_timer()
         fill_01(v)
         t2 = timeit.default_timer()
-        print(f'cpu time. Python: {t1 - t0}s, and C++: {t2 - t1}s. Python/C++: {(t1 - t0) / (t2 - t1)}')
+        print(
+            f'cpu time. Python: {t1 - t0}s, and C++: {t2 - t1}s. Python/C++: {(t1 - t0) / (t2 - t1)}')
 
 
 if __name__ == '__main__':

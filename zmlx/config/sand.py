@@ -1,9 +1,8 @@
 """
 用于模拟砂的沉降及脱离
 """
-import numpy as np
 
-from zml import Seepage, get_pointer64
+from zml import Seepage, get_pointer64, np
 from zmlx.config.alg import settings
 from zmlx.config.alg.pressure_gradient import get_face_pressure_gradient
 
@@ -25,7 +24,8 @@ def set_settings(model: Seepage, data):
     return settings.put(model, data=data, text_key=text_key)
 
 
-def add_setting(model: Seepage, *, sol_sand, flu_sand, ca_i0, ca_i1, use_average=False):
+def add_setting(model: Seepage, *, sol_sand, flu_sand, ca_i0, ca_i1,
+                use_average=False):
     """
     添加设置
     """
@@ -72,6 +72,9 @@ def iterate(model: Seepage):
                             use_average=use_average)
 
         # 更新砂的体积
-        model.update_sand(sol_sand=sol_sand, flu_sand=flu_sand,
-                          ca_i0=ca_i0, ca_i1=ca_i1,
-                          force=get_pointer64(grad))
+        model.update_sand(
+            sol_sand=sol_sand,
+            flu_sand=flu_sand,
+            ca_i0=ca_i0, ca_i1=ca_i1,
+            force=get_pointer64(grad)
+        )

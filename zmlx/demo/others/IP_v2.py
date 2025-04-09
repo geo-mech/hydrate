@@ -3,12 +3,7 @@
 
 import random
 
-import numpy as np
-
-from zml import InvasionPercolation, get_pointer64
-from zmlx.plt.plot_on_axes import plot_on_axes
-from zmlx.seepage_mesh.cube import create_cube
-from zmlx.ui import gui
+from zmlx import *
 
 
 def create():
@@ -60,22 +55,6 @@ def create():
     return model
 
 
-def show(model):
-    def on_axes(ax):
-        x = model.nodes_write(-1)
-        y = model.nodes_write(-2)
-        v = model.nodes_write(-4)
-        mask = v < 0.5
-        ax.scatter(x[mask], y[mask], c='tab:blue', s=3, label='Water',
-                   alpha=0.2, edgecolors='none')
-        mask = [not m for m in mask]
-        ax.scatter(x[mask], y[mask], c='tab:orange', s=8, label='Oil',
-                   alpha=0.7, edgecolors='none')
-
-    plot_on_axes(on_axes, show_legend=True, grid=True, axis='equal',
-                 caption='侵入过程', gui_only=True)
-
-
 def solve(model):
     for step in range(4000):
         gui.break_point()
@@ -88,23 +67,12 @@ def solve(model):
                 print(f'({oper.get_node(0).index} -> {oper.get_node(1).index})',
                       end=', ')
             print('')
-            show(model)
+            ip.show_xy(model)
 
 
 def execute(gui_mode=True, close_after_done=False):
     model = create()
-
-    # 读取node的位置
-    x = np.zeros(shape=model.node_n)
-    y = np.zeros(shape=model.node_n)
-    model.write_pos(0, get_pointer64(x))
-    model.write_pos(1, get_pointer64(y))
-
-    # 修改x
-    x = x + y * 0.3
-    model.read_pos(0, get_pointer64(x))
-
-    # 求解
+    ip.set_x(model, ip.get_x(model) + ip.get_y(model) * 0.3)
     gui.execute(lambda: solve(model), close_after_done=close_after_done,
                 disable_gui=not gui_mode)
 

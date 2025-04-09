@@ -1,7 +1,8 @@
 import os
 from ctypes import c_void_p, c_char_p, c_int, c_bool, c_double, c_size_t
 
-from zml import (DllCore, HasHandle, load_cdll, make_c_char_p, Vector, Lattice3, UintVector, Interp1, is_array,
+from zml import (DllCore, HasHandle, load_cdll, make_c_char_p, Vector, Lattice3,
+                 UintVector, Interp1, is_array,
                  Interp3, clock, Matrix3)
 
 core = DllCore(dll=load_cdll(name='dsmc.dll',
@@ -20,7 +21,8 @@ class Molecule(HasHandle):
         """
         分子的初始化
         """
-        super(Molecule, self).__init__(handle, core.new_molecule, core.del_molecule)
+        super(Molecule, self).__init__(handle, core.new_molecule,
+                                       core.del_molecule)
         if handle is None:
             self.set(**kwargs)
 
@@ -232,23 +234,28 @@ class MoleVec(HasHandle):
         core.vmole_clear(self.handle)
 
     core.use(None, 'vmole_push_back', c_void_p, c_void_p)
-    core.use(None, 'vmole_push_back_multi', c_void_p, c_void_p, c_void_p, c_void_p, c_void_p)
+    core.use(None, 'vmole_push_back_multi', c_void_p, c_void_p, c_void_p,
+             c_void_p, c_void_p)
     core.use(None, 'vmole_push_back_other', c_void_p, c_void_p)
     core.use(None, 'vmole_push_back_other_with_tag', c_void_p, c_void_p, c_int)
 
-    def append(self, mole=None, vx=None, vy=None, vz=None, moles=None, tag=None):
+    def append(self, mole=None, vx=None, vy=None, vz=None, moles=None,
+               tag=None):
         """
         添加一个分子<或者多个分子>；当给定的一系列坐标值给定的时候，则利用mole定义的数据，以及vx,vy,vz定义的位置来添加多个分析
         """
         if mole is not None:
             assert isinstance(mole, Molecule)
-            if isinstance(vx, Vector) and isinstance(vy, Vector) and isinstance(vz, Vector):
-                core.vmole_push_back_multi(self.handle, mole.handle, vx.handle, vy.handle, vz.handle)
+            if isinstance(vx, Vector) and isinstance(vy, Vector) and isinstance(
+                    vz, Vector):
+                core.vmole_push_back_multi(self.handle, mole.handle, vx.handle,
+                                           vy.handle, vz.handle)
             else:
                 core.vmole_push_back(self.handle, mole.handle)
         if moles is not None:
             if tag is not None:
-                core.vmole_push_back_other_with_tag(self.handle, moles.handle, tag)
+                core.vmole_push_back_other_with_tag(self.handle, moles.handle,
+                                                    tag)
             else:
                 core.vmole_push_back_other(self.handle, moles.handle)
 
@@ -319,18 +326,21 @@ class MoleVec(HasHandle):
         """
         assert isinstance(lat, Lattice3)
         if isinstance(vi0, UintVector) and isinstance(vi1, UintVector):
-            core.vmole_collision(self.handle, lat.handle, vi0.handle, vi1.handle)
+            core.vmole_collision(self.handle, lat.handle, vi0.handle,
+                                 vi1.handle)
             return vi0, vi1
         else:
             core.vmole_collision(self.handle, lat.handle, 0, 0)
 
-    core.use(None, 'vmole_update_internal_energy', c_void_p, c_void_p, c_void_p, c_double)
+    core.use(None, 'vmole_update_internal_energy', c_void_p, c_void_p, c_void_p,
+             c_double)
 
     def update_internal_energy(self, vi0, vi1, dt):
         """
         利用给定的碰撞对，在碰撞对之间，施加内能和动能之间的相互转化
         """
-        core.vmole_update_internal_energy(self.handle, vi0.handle, vi1.handle, dt)
+        core.vmole_update_internal_energy(self.handle, vi0.handle, vi1.handle,
+                                          dt)
 
     core.use(None, 'vmole_rand_add', c_void_p, c_void_p, c_size_t)
 
@@ -379,9 +389,11 @@ class MoleVec(HasHandle):
         return core.vmole_erase(self.handle, reg3.handle)
 
     core.use(c_size_t, 'vmole_roll_back', c_void_p, c_void_p, c_double, c_bool)
-    core.use(c_size_t, 'vmole_roll_back_record', c_void_p, c_void_p, c_double, c_bool, c_void_p, c_double, c_double)
+    core.use(c_size_t, 'vmole_roll_back_record', c_void_p, c_void_p, c_double,
+             c_bool, c_void_p, c_double, c_double)
 
-    def roll_back(self, reg3, fmap=None, dt=None, time_span=None, parallel=True, diffuse_ratio=1.0):
+    def roll_back(self, reg3, fmap=None, dt=None, time_span=None, parallel=True,
+                  diffuse_ratio=1.0):
         """
         从给定的区域内退出. 当给定fmap的时候，将记录冲击固体的力.
         其中：
@@ -390,11 +402,13 @@ class MoleVec(HasHandle):
         """
         assert isinstance(reg3, Region3)
         if fmap is None:
-            return core.vmole_roll_back(self.handle, reg3.handle, diffuse_ratio, parallel)
+            return core.vmole_roll_back(self.handle, reg3.handle, diffuse_ratio,
+                                        parallel)
         else:
             assert isinstance(fmap, ForceMap)
             assert dt is not None and time_span is not None
-            return core.vmole_roll_back_record(self.handle, reg3.handle, diffuse_ratio, parallel,
+            return core.vmole_roll_back_record(self.handle, reg3.handle,
+                                               diffuse_ratio, parallel,
                                                fmap.handle, dt, time_span)
 
     core.use(None, 'vmole_get_mass', c_void_p, c_void_p)
@@ -462,7 +476,8 @@ class Region3(HasHandle):
     core.use(None, 'del_region3', c_void_p)
 
     def __init__(self, box=None, shape=None, value=None, handle=None):
-        super(Region3, self).__init__(handle, core.new_region3, core.del_region3)
+        super(Region3, self).__init__(handle, core.new_region3,
+                                      core.del_region3)
         if handle is None:
             if box is not None and shape is not None:
                 self.create(box, shape, value)
@@ -525,7 +540,8 @@ class Region3(HasHandle):
         return [core.region3_size(self.handle, i) for i in range(3)]
 
     core.use(c_double, 'region3_get_center', c_void_p, c_size_t, c_size_t)
-    core.use(None, 'region3_get_centers', c_void_p, c_void_p, c_void_p, c_void_p)
+    core.use(None, 'region3_get_centers', c_void_p, c_void_p, c_void_p,
+             c_void_p)
 
     def get_center(self, index=None, x=None, y=None, z=None):
         """
@@ -533,7 +549,8 @@ class Region3(HasHandle):
         """
         if index is not None:
             assert len(index) == 3
-            return [core.region3_get_center(self.handle, index[i], i) for i in range(3)]
+            return [core.region3_get_center(self.handle, index[i], i) for i in
+                    range(3)]
         else:
             if not isinstance(x, Vector):
                 x = Vector()
@@ -571,7 +588,8 @@ class Region3(HasHandle):
         assert len(index) == 3
         return core.region3_get(self.handle, *index)
 
-    core.use(None, 'region3_set', c_void_p, c_size_t, c_size_t, c_size_t, c_bool)
+    core.use(None, 'region3_set', c_void_p, c_size_t, c_size_t, c_size_t,
+             c_bool)
 
     def set(self, index, value):
         """
@@ -588,7 +606,8 @@ class Region3(HasHandle):
         """
         core.region3_fill(self.handle, value)
 
-    core.use(None, 'region3_set_cube', c_void_p, c_double, c_double, c_double, c_double, c_double, c_double, c_bool,
+    core.use(None, 'region3_set_cube', c_void_p, c_double, c_double, c_double,
+             c_double, c_double, c_double, c_bool,
              c_bool)
 
     def set_cube(self, box, value, inner=True):
@@ -674,7 +693,8 @@ class ForceMap(HasHandle):
     core.use(None, 'del_forcemap', c_void_p)
 
     def __init__(self, handle=None, path=None):
-        super(ForceMap, self).__init__(handle, core.new_forcemap, core.del_forcemap)
+        super(ForceMap, self).__init__(handle, core.new_forcemap,
+                                       core.del_forcemap)
         if handle is None:
             if path is not None:
                 self.load(path)
@@ -722,7 +742,8 @@ class ForceMap(HasHandle):
         fmap.clone(self)
         return fmap
 
-    core.use(None, 'forcemap_get_centers', c_void_p, c_void_p, c_void_p, c_void_p, c_void_p)
+    core.use(None, 'forcemap_get_centers', c_void_p, c_void_p, c_void_p,
+             c_void_p, c_void_p)
 
     def get_pos(self, reg3, x=None, y=None, z=None):
         """
@@ -735,10 +756,12 @@ class ForceMap(HasHandle):
             y = Vector()
         if z is None:
             z = Vector()
-        core.forcemap_get_centers(self.handle, reg3.handle, x.handle, y.handle, z.handle)
+        core.forcemap_get_centers(self.handle, reg3.handle, x.handle, y.handle,
+                                  z.handle)
         return x, y, z
 
-    core.use(None, 'forcemap_get_forces', c_void_p, c_void_p, c_void_p, c_void_p)
+    core.use(None, 'forcemap_get_forces', c_void_p, c_void_p, c_void_p,
+             c_void_p)
 
     def get_force(self, reg3, shear=None, normal=None):
         """
@@ -749,7 +772,8 @@ class ForceMap(HasHandle):
             shear = Vector()
         if normal is None:
             normal = Vector()
-        core.forcemap_get_forces(self.handle, reg3.handle, shear.handle, normal.handle)
+        core.forcemap_get_forces(self.handle, reg3.handle, shear.handle,
+                                 normal.handle)
         return shear, normal
 
     core.use(None, 'forcemap_erode', c_void_p, c_void_p, c_void_p, c_double,
@@ -757,7 +781,8 @@ class ForceMap(HasHandle):
              c_double,
              c_void_p, c_void_p, c_void_p)
 
-    def erode(self, reg3, strength, normal_weight=0, moles=None, dist=None, nmax=99999999,
+    def erode(self, reg3, strength, normal_weight=0, moles=None, dist=None,
+              nmax=99999999,
               strength_modify_factor=0.5,
               vx=None, vy=None, vz=None):
         """
@@ -774,12 +799,14 @@ class ForceMap(HasHandle):
         if moles is not None and dist is not None:
             assert isinstance(moles, MoleVec)
             assert dist > 0
-            core.forcemap_erode(self.handle, reg3.handle, strength.handle, normal_weight,
+            core.forcemap_erode(self.handle, reg3.handle, strength.handle,
+                                normal_weight,
                                 moles.handle, dist, nmax,
                                 strength_modify_factor,
                                 hx, hy, hz)
         else:
-            core.forcemap_erode(self.handle, reg3.handle, strength.handle, normal_weight,
+            core.forcemap_erode(self.handle, reg3.handle, strength.handle,
+                                normal_weight,
                                 0, 0, nmax,
                                 strength_modify_factor,
                                 hx, hy, hz)
@@ -817,7 +844,8 @@ class Statistic(HasHandle):
             core.stat_load(self.handle, make_c_char_p(path))
 
     core.use(None, 'stat_update_vel', c_void_p, c_void_p, c_void_p, c_double)
-    core.use(None, 'stat_update_vel_cylinder', c_void_p, c_void_p, c_void_p, c_double)
+    core.use(None, 'stat_update_vel_cylinder', c_void_p, c_void_p, c_void_p,
+             c_double)
 
     def update_vel(self, lat, moles, relax_factor, cylinder=False):
         """
@@ -828,9 +856,11 @@ class Statistic(HasHandle):
         assert isinstance(lat, Lattice3)
         assert isinstance(moles, MoleVec)
         if cylinder:
-            core.stat_update_vel_cylinder(self.handle, lat.handle, moles.handle, relax_factor)
+            core.stat_update_vel_cylinder(self.handle, lat.handle, moles.handle,
+                                          relax_factor)
         else:
-            core.stat_update_vel(self.handle, lat.handle, moles.handle, relax_factor)
+            core.stat_update_vel(self.handle, lat.handle, moles.handle,
+                                 relax_factor)
 
     core.use(None, 'stat_get_vel', c_void_p, c_void_p, c_void_p, c_void_p)
 
@@ -848,7 +878,8 @@ class Statistic(HasHandle):
         return x, y, z
 
     core.use(None, 'stat_update_den', c_void_p, c_void_p, c_void_p, c_double)
-    core.use(None, 'stat_update_den_cylinder', c_void_p, c_void_p, c_void_p, c_double)
+    core.use(None, 'stat_update_den_cylinder', c_void_p, c_void_p, c_void_p,
+             c_double)
 
     def update_den(self, lat, moles, relax_factor, cylinder=False):
         """
@@ -857,9 +888,11 @@ class Statistic(HasHandle):
         assert isinstance(lat, Lattice3)
         assert isinstance(moles, MoleVec)
         if cylinder:
-            core.stat_update_den_cylinder(self.handle, lat.handle, moles.handle, relax_factor)
+            core.stat_update_den_cylinder(self.handle, lat.handle, moles.handle,
+                                          relax_factor)
         else:
-            core.stat_update_den(self.handle, lat.handle, moles.handle, relax_factor)
+            core.stat_update_den(self.handle, lat.handle, moles.handle,
+                                 relax_factor)
 
     core.use(None, 'stat_get_den', c_void_p, c_void_p)
 
@@ -873,7 +906,8 @@ class Statistic(HasHandle):
         return buffer
 
     core.use(None, 'stat_update_pre', c_void_p, c_void_p, c_void_p, c_double)
-    core.use(None, 'stat_update_pre_cylinder', c_void_p, c_void_p, c_void_p, c_double)
+    core.use(None, 'stat_update_pre_cylinder', c_void_p, c_void_p, c_void_p,
+             c_double)
 
     def update_pre(self, lat, moles, relax_factor, cylinder=False):
         """
@@ -882,9 +916,11 @@ class Statistic(HasHandle):
         assert isinstance(lat, Lattice3)
         assert isinstance(moles, MoleVec)
         if cylinder:
-            core.stat_update_pre_cylinder(self.handle, lat.handle, moles.handle, relax_factor)
+            core.stat_update_pre_cylinder(self.handle, lat.handle, moles.handle,
+                                          relax_factor)
         else:
-            core.stat_update_pre(self.handle, lat.handle, moles.handle, relax_factor)
+            core.stat_update_pre(self.handle, lat.handle, moles.handle,
+                                 relax_factor)
 
     core.use(None, 'stat_get_pre', c_void_p, c_void_p)
 
@@ -900,7 +936,8 @@ class Statistic(HasHandle):
 
 class Dsmc:
     core.use(c_size_t, 'dsmc_update_lat', c_void_p, c_void_p, c_double)
-    core.use(c_size_t, 'dsmc_update_lat_tag', c_void_p, c_void_p, c_double, c_int)
+    core.use(c_size_t, 'dsmc_update_lat_tag', c_void_p, c_void_p, c_double,
+             c_int)
     core.use(c_size_t, 'dsmc_update_lat_cylinder', c_void_p, c_void_p, c_double)
 
     @staticmethod
@@ -917,17 +954,21 @@ class Dsmc:
         assert isinstance(moles, MoleVec)
         if tag is not None:
             assert not cylinder
-            return core.dsmc_update_lat_tag(lat3.handle, moles.handle, lat_ratio, tag)
+            return core.dsmc_update_lat_tag(lat3.handle, moles.handle,
+                                            lat_ratio, tag)
         if cylinder:
-            return core.dsmc_update_lat_cylinder(lat3.handle, moles.handle, lat_ratio)
+            return core.dsmc_update_lat_cylinder(lat3.handle, moles.handle,
+                                                 lat_ratio)
         else:
             return core.dsmc_update_lat(lat3.handle, moles.handle, lat_ratio)
 
-    core.use(None, 'dsmc_update_erosion_rate', c_void_p, c_void_p, c_void_p, c_void_p, c_double, c_double, c_double)
+    core.use(None, 'dsmc_update_erosion_rate', c_void_p, c_void_p, c_void_p,
+             c_void_p, c_double, c_double, c_double)
 
     @staticmethod
     @clock
-    def update_erosion_rate(rate, reg3, fmap, strength, normal_weight, relax_factor, rate_max):
+    def update_erosion_rate(rate, reg3, fmap, strength, normal_weight,
+                            relax_factor, rate_max):
         """
         根据受力，更新侵蚀速率. 不妨将这里的rate定义为侵蚀之后，每秒钟释放的粒子的数量.
         """
@@ -935,20 +976,24 @@ class Dsmc:
         assert isinstance(reg3, Region3)
         assert isinstance(fmap, ForceMap)
         assert isinstance(strength, Interp3)
-        core.dsmc_update_erosion_rate(rate.handle, reg3.handle, fmap.handle, strength.handle,
+        core.dsmc_update_erosion_rate(rate.handle, reg3.handle, fmap.handle,
+                                      strength.handle,
                                       normal_weight, relax_factor, rate_max)
 
-    core.use(c_double, 'dsmc_get_rate_template', c_void_p, c_void_p, c_void_p, c_void_p, c_double)
+    core.use(c_double, 'dsmc_get_rate_template', c_void_p, c_void_p, c_void_p,
+             c_void_p, c_double)
 
     @staticmethod
     @clock
-    def get_rate_template(reg3: Region3, fmap: ForceMap, strength: Interp3, normal_weight, buffer=None):
+    def get_rate_template(reg3: Region3, fmap: ForceMap, strength: Interp3,
+                          normal_weight, buffer=None):
         """
         计算富裕出来的剪切力，并且存储到rate里面.
         """
         if not isinstance(buffer, Matrix3):
             buffer = Matrix3()
-        q_sum = core.dsmc_get_rate_template(buffer.handle, reg3.handle, fmap.handle, strength.handle,
+        q_sum = core.dsmc_get_rate_template(buffer.handle, reg3.handle,
+                                            fmap.handle, strength.handle,
                                             normal_weight)
         return buffer, q_sum
 
@@ -962,7 +1007,8 @@ class Dsmc:
         """
         return core.dsmc_get_shear_sum(rate.handle, reg3.handle, fmap.handle)
 
-    core.use(None, 'dsmc_add_particles', c_void_p, c_void_p, c_void_p, c_void_p, c_double,
+    core.use(None, 'dsmc_add_particles', c_void_p, c_void_p, c_void_p, c_void_p,
+             c_double,
              c_void_p, c_double)
 
     @staticmethod
@@ -975,9 +1021,11 @@ class Dsmc:
         assert dt > 0
         assert isinstance(par, Molecule)
         assert par.tag < 0
-        core.dsmc_add_particles(moles.handle, rate.handle, reg3.handle, fmap.handle, dt, par.handle, times)
+        core.dsmc_add_particles(moles.handle, rate.handle, reg3.handle,
+                                fmap.handle, dt, par.handle, times)
 
-    core.use(None, 'dsmc_get_erosion_rate', c_void_p, c_void_p, c_void_p, c_void_p)
+    core.use(None, 'dsmc_get_erosion_rate', c_void_p, c_void_p, c_void_p,
+             c_void_p)
 
     @staticmethod
     @clock
@@ -990,7 +1038,8 @@ class Dsmc:
         assert isinstance(fmap, ForceMap)
         if not isinstance(buffer, Vector):
             buffer = Vector()
-        core.dsmc_get_erosion_rate(buffer.handle, rate.handle, fmap.handle, reg3.handle)
+        core.dsmc_get_erosion_rate(buffer.handle, rate.handle, fmap.handle,
+                                   reg3.handle)
         return buffer
 
 

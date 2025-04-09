@@ -4,8 +4,8 @@ icon = 'variables'
 
 
 def slot():
-    from zmlx.ui.MainWindow import get_window
-    from zmlx.ui.Widgets.MemViewer import MemViewer
+    from zmlx.ui.main_window import get_window
+    from zmlx.ui.widget.mem_viewer import MemViewer
     get_window().get_widget(the_type=MemViewer,
                             caption='变量',
                             on_top=True,

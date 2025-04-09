@@ -1,11 +1,6 @@
 # ** desc = '两相流，流体注入驱替'
 
-import numpy as np
-
-from zml import Seepage
-from zmlx.config import seepage
-from zmlx.seepage_mesh.cube import create_cube
-from zmlx.ui import gui
+from zmlx import *
 
 
 def create():
@@ -17,7 +12,8 @@ def create():
 
     for cell in mesh.cells:
         x, y, z = cell.pos
-        if abs(x - x0) < 0.1 or abs(x - x1) < 0.1 or abs(y - y0) < 0.1 or abs(y - y1) < 0.1:
+        if abs(x - x0) < 0.1 or abs(x - x1) < 0.1 or abs(y - y0) < 0.1 or abs(
+                y - y1) < 0.1:
             cell.vol = 1.0e8
 
     model = seepage.create(mesh, porosity=0.2, pore_modulus=100e6,
@@ -27,8 +23,10 @@ def create():
                            disable_update_vis=True,
                            disable_ther=True,
                            disable_heat_exchange=True,
-                           fludefs=[Seepage.FluDef(den=50, vis=1.0e-4, name='flu0'),
-                                    Seepage.FluDef(den=1000, vis=1.0e-3, name='flu1')]
+                           fludefs=[
+                               Seepage.FluDef(den=50, vis=1.0e-4, name='flu0'),
+                               Seepage.FluDef(den=1000, vis=1.0e-3,
+                                              name='flu1')]
                            )
 
     cell = model.get_nearest_cell((50, 50, 0))

@@ -1,5 +1,5 @@
 from zmlx.data.Ye2022.load_txt import load_txt
-from zmlx.utility.CurveData import CurveData
+from zmlx.utility.curve_data import CurveData
 
 
 def load_curve(name):

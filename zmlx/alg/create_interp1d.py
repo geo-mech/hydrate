@@ -1,18 +1,15 @@
-from scipy.interpolate import interp1d
+import zmlx.alg.sys as warnings
 
+from zmlx.alg.interp import create_interp1d
 
-def create_interp1d(d=None, x=None, y=None, **kwargs):
-    """
-    利用一个包含了两列的numpy矩阵来创建一个一维的插值体
-    """
-    if x is None or y is None:
-        x = d[:, 0]
-        y = d[:, 1]
-    return interp1d(x, y, **kwargs)
+warnings.warn(f'{__name__} will be removed after 2026-4-15, '
+              f'please import from "zmlx.alg.interp" instead',
+              DeprecationWarning,
+              stacklevel=2)
 
 
 def test():
-    import numpy as np
+    from zml import np
 
     x = np.linspace(0, 10, 100)
     y = np.sin(x)

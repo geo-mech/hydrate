@@ -1,18 +1,13 @@
-import os
+from zmlx.alg.fsys import in_directory
+
+__all__ = ['in_directory']
+
+import zmlx.alg.sys as warnings
+
+warnings.warn(f'The module {__name__} will be removed after 2026-4-15',
+              DeprecationWarning, stacklevel=2)
 
 
-def in_directory(file_name, directory):
-    """
-    判断给定的文件是否位于给定的路径或者其子目录下.
-        by GPT 3.5. @2024-7-22
-    """
-    # 获取文件的绝对路径
-    file_path = os.path.abspath(file_name)
-
-    # 获取目录的绝对路径
-    directory_path = os.path.abspath(directory)
-
-    return file_path.startswith(directory_path)
 
 
 def test():

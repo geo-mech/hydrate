@@ -10,7 +10,7 @@ todo:
 而非体积浓度 (即盐的质量，除以溶液的质量)
 """
 
-from zmlx.alg.interp1 import interp1
+from zmlx.alg.interp import interp1
 from zmlx.react.ch4_hydrate import get_p as ch4_get_p_
 from zmlx.react.ch4_hydrate import get_t as ch4_get_t_
 
@@ -23,14 +23,14 @@ vt = [0, -0.220, -0.493, -0.818, -1.194, -1.618, -2.087, -2.6,
       -7.883, -8.635, -9.396, -10.16, -10.922, -11.679]
 
 
-def get_ch4_hydrate_t(p, s=0):
+def get_ch4_hydrate_t(p, s=0.0):
     """
     在盐度为s的情况下，给定压力下的平衡温度
     """
     return ch4_get_t_(p) + interp1(x=vs, y=vt, xq=s)
 
 
-def get_ch4_hydrate_p(t, s=0):
+def get_ch4_hydrate_p(t, s=0.0):
     """
     在盐度为s的情况下，给定温度下的平衡压力
     """

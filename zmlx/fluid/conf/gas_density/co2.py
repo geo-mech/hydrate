@@ -12,7 +12,7 @@ PC=Pa
 w = adimentional
 """
 
-import numpy as np
+from zml import np
 
 
 def den_co2(P, T):

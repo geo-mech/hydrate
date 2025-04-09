@@ -1,5 +1,4 @@
 from zmlx import *
-from zmlx.utility.CapillaryEffect import CapillaryEffect
 
 mud = """0.007698294	1930020.672
 0.0441305	4270730.329
@@ -105,12 +104,16 @@ def create():
     c = TherFlowConfig()
     c.fluids = [TherFlowConfig.FluProperty(den=50, vis=1.0e-4),
                 TherFlowConfig.FluProperty(den=1000, vis=1.0e-3)]
-    model = c.create(mesh=SeepageMesh.create_cube(np.linspace(0, 100, 101), np.linspace(0, 100, 101), (-0.5, 0.5)),
-                     porosity=0.2, pore_modulus=100e6, p=1e6, temperature=280, perm=1e-14,
+    model = c.create(mesh=SeepageMesh.create_cube(np.linspace(0, 100, 101),
+                                                  np.linspace(0, 100, 101),
+                                                  (-0.5, 0.5)),
+                     porosity=0.2, pore_modulus=100e6, p=1e6, temperature=280,
+                     perm=1e-14,
                      s=get_s,
                      )
     model.set_kr(saturation=[0, 1], kr=[0, 1])
-    cap = CapillaryEffect.create(1, 0, model, get_idx, mud, sand_J, sand_K, sand_P, sand_T)
+    cap = CapillaryEffect.create(1, 0, model, get_idx, mud, sand_J, sand_K,
+                                 sand_P, sand_T)
     return model, cap
 
 
@@ -122,8 +125,10 @@ def solve(model, cap):
     x = model.numpy.cells.get(-1)
     y = model.numpy.cells.get(-2)
 
-    show(x, y, [get_idx(x[i], y[i], 0) for i in range(len(x))], caption='岩石ID')
-    show(x, y, [get_s(x[i], y[i], 0)[1] for i in range(len(x))], caption='初始饱和度')
+    show(x, y, [get_idx(x[i], y[i], 0) for i in range(len(x))],
+         caption='岩石ID')
+    show(x, y, [get_s(x[i], y[i], 0)[1] for i in range(len(x))],
+         caption='初始饱和度')
 
     for step in range(2000):
         gui.break_point()

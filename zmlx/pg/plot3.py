@@ -1,8 +1,11 @@
-import numpy as np
+try:
+    import numpy as np
+except ImportError:
+    np = None
 import pyqtgraph as pg
 import pyqtgraph.opengl as gl
 
-from zmlx.ui.GuiBuffer import gui
+from zmlx.ui import gui
 
 __Captions = [None]
 
@@ -16,7 +19,8 @@ def apply(oper=None, caption=None, on_top=None):
     if caption is not None:
         __Captions[0] = caption
     if gui.exists() and oper is not None:
-        gui.get_widget(the_type=gl.GLViewWidget, oper=oper, caption=__Captions[0], on_top=on_top,
+        gui.get_widget(the_type=gl.GLViewWidget, oper=oper,
+                       caption=__Captions[0], on_top=on_top,
                        icon='gpu.jpg')
 
 
@@ -25,6 +29,8 @@ def get_widget(caption=None, on_top=None):
     apply(oper=lambda w: widgets.append(w), caption=caption, on_top=on_top)
     if len(widgets) > 0:
         return widgets[0]
+    else:
+        return None
 
 
 def make_fn(name):
@@ -42,6 +48,8 @@ def make_fn(name):
         apply(oper=oper, caption=caption, on_top=on_top)
         if len(result) > 0:
             return result[0]
+        else:
+            return None
 
     return func
 

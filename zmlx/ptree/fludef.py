@@ -10,7 +10,7 @@ def _from_text(text, find=None, name=None):
     尝试使用预定义的流体
     """
     if text is None:
-        return
+        return None
 
     if text == '@c11h24':
         from zmlx.fluid.c11h24 import create
@@ -67,12 +67,15 @@ def _from_text(text, find=None, name=None):
                 try:
                     return Seepage.FluDef(path=fname, name=name)
                 except:
-                    pass
+                    return None
+            return None
+        return None
+    return None
 
 
 def _from_list(data, path, name=None):
     if data is None:
-        return
+        return None
     f_def = Seepage.FluDef(name=name)
     for item in data:
         f_def.add_component(fludef(as_ptree(item, path)))
@@ -98,7 +101,8 @@ def fludef(pt):
         name = pt('name', doc='The fluid name')
 
         # 尝试预定义的或者是从文件读取
-        f_def = _from_text(pt('text', doc='filename or pre-defined fluid name'), pt.find, name=name)
+        f_def = _from_text(pt('text', doc='filename or pre-defined fluid name'),
+                           pt.find, name=name)
         if f_def is not None:
             return f_def
 
@@ -108,14 +112,17 @@ def fludef(pt):
             return f_def
 
         # 尝试创建并自定义
-        f_def = Seepage.FluDef(den=interp2(pt['den']), vis=interp2(pt['vis']), name=name)
+        f_def = Seepage.FluDef(den=interp2(pt['den']), vis=interp2(pt['vis']),
+                               name=name)
 
-        specific_heat = pt('specific_heat', doc='the specific heat of the fluid')
+        specific_heat = pt('specific_heat',
+                           doc='the specific heat of the fluid')
         if specific_heat is not None:
             f_def.specific_heat = specific_heat
 
         # 返回创建的定义
         return f_def
+    return None
 
 
 def fludefs(pt):

@@ -3,8 +3,8 @@
 """
 
 import math
-import warnings
 
+import zmlx.alg.sys as warnings
 from zml import Interp2, Seepage
 
 
@@ -32,7 +32,8 @@ def create(t_min=272.0, t_max=300.0, p_min=1e6, p_max=40e6,
 
     def get_density(P, T):
         T = max(t_min, min(t_max, T))
-        return 999.8 * (1.0 + (P / 2000.0E6)) * (1.0 - 0.0002 * math.pow((T - 277.0) / 5.6, 2))
+        return 999.8 * (1.0 + (P / 2000.0E6)) * (
+                1.0 - 0.0002 * math.pow((T - 277.0) / 5.6, 2))
 
     def get_viscosity(P, T):
         T = max(t_min, min(t_max, T))
@@ -54,18 +55,20 @@ def create(t_min=272.0, t_max=300.0, p_min=1e6, p_max=40e6,
     if viscosity is not None:
         assert 1.0e-5 <= viscosity <= 1.0e-2
 
-    return Seepage.FluDef(den=create_density() if density is None else density,
-                          vis=create_viscosity() if viscosity is None else viscosity,
-                          specific_heat=specific_heat, name=name)
+    return Seepage.FluDef(
+        den=create_density() if density is None else density,
+        vis=create_viscosity() if viscosity is None else viscosity,
+        specific_heat=specific_heat, name=name)
 
 
 def create_flu(*args, **kwargs):
-    warnings.warn('use function <create> instead', DeprecationWarning)
+    warnings.warn('use function <create> instead', DeprecationWarning,
+                  stacklevel=2)
     return create(*args, **kwargs)
 
 
 def show_all():
-    from zmlx.plt.show_field2 import show_field2
+    from zmlx.plt.fig2 import show_field2
     flu = create()
     show_field2(flu.den, [4e6, 15e6], [274, 290], caption='den')
     show_field2(flu.vis, [4e6, 15e6], [274, 290], caption='vis')

@@ -1,5 +1,12 @@
-def get_center(p1, p2):
-    return [(p1[i] + p2[i]) * 0.5 for i in range(min(len(p1), len(p2)))]
+from zmlx.geometry.base import get_center
+
+__all__ = ['get_center']
+
+import zmlx.alg.sys as warnings
+
+warnings.warn(f'The module {__name__} will be removed after 2026-4-15',
+              DeprecationWarning, stacklevel=2)
+
 
 
 if __name__ == '__main__':

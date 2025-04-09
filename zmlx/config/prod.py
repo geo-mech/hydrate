@@ -3,8 +3,8 @@
 """
 
 from zml import Seepage
-from zmlx.alg.interp1 import interp1
-from zmlx.config.seepage_base import get_time
+from zmlx.alg.interp import interp1
+from zmlx.base.seepage import get_time
 
 text_key = 'prod_settings'
 
@@ -28,6 +28,7 @@ def get_settings(model: Seepage):
         data = eval(text)
         assert isinstance(data, list)
         return data
+    return None
 
 
 def set_settings(model: Seepage, data):

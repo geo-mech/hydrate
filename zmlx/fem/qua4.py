@@ -1,6 +1,6 @@
 from zml import Mesh3, LinearExpr
-from zmlx.geometry.get_center import get_center
-from zmlx.geometry.point_distance import point_distance
+from zmlx.geometry.base import get_center
+from zmlx.geometry.base import point_distance
 
 
 def create_face_xx(mesh):
@@ -23,8 +23,9 @@ def create_face_xx(mesh):
                 vl.append(node.index)
         assert len(vl) == 2 and len(vr) == 2
         # 两侧的中心距离
-        dist = point_distance(get_center(mesh.get_node(vl[0]).pos, mesh.get_node(vl[1]).pos),
-                              get_center(mesh.get_node(vr[0]).pos, mesh.get_node(vr[1]).pos))
+        dist = point_distance(
+            get_center(mesh.get_node(vl[0]).pos, mesh.get_node(vl[1]).pos),
+            get_center(mesh.get_node(vr[0]).pos, mesh.get_node(vr[1]).pos))
         # 建立一个表达式
         lex = LinearExpr()
         for node_id in vr:
@@ -62,8 +63,9 @@ def create_face_yy(mesh):
                 vl.append(node.index)
         assert len(vl) == 2 and len(vr) == 2
         # 两侧的中心距离
-        dist = point_distance(get_center(mesh.get_node(vl[0]).pos, mesh.get_node(vl[1]).pos),
-                              get_center(mesh.get_node(vr[0]).pos, mesh.get_node(vr[1]).pos))
+        dist = point_distance(
+            get_center(mesh.get_node(vl[0]).pos, mesh.get_node(vl[1]).pos),
+            get_center(mesh.get_node(vr[0]).pos, mesh.get_node(vr[1]).pos))
         # 建立一个表达式
         lex = LinearExpr()
         for node_id in vr:
@@ -101,8 +103,9 @@ def create_face_xy(mesh):
                 vl.append(node.index)
         assert len(vl) == 2 and len(vr) == 2
         # 两侧的中心距离
-        dist = point_distance(get_center(mesh.get_node(vl[0]).pos, mesh.get_node(vl[1]).pos),
-                              get_center(mesh.get_node(vr[0]).pos, mesh.get_node(vr[1]).pos))
+        dist = point_distance(
+            get_center(mesh.get_node(vl[0]).pos, mesh.get_node(vl[1]).pos),
+            get_center(mesh.get_node(vr[0]).pos, mesh.get_node(vr[1]).pos))
         # 建立一个表达式
         lex = LinearExpr()
         for node_id in vr:
@@ -126,8 +129,9 @@ def create_face_xy(mesh):
                 vl.append(node.index)
         assert len(vl) == 2 and len(vr) == 2
         # 两侧的中心距离
-        dist = point_distance(get_center(mesh.get_node(vl[0]).pos, mesh.get_node(vl[1]).pos),
-                              get_center(mesh.get_node(vr[0]).pos, mesh.get_node(vr[1]).pos))
+        dist = point_distance(
+            get_center(mesh.get_node(vl[0]).pos, mesh.get_node(vl[1]).pos),
+            get_center(mesh.get_node(vr[0]).pos, mesh.get_node(vr[1]).pos))
         # 建立一个表达式
         lex = LinearExpr()
         for node_id in vr:

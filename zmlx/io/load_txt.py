@@ -1,11 +1,15 @@
-import numpy as np
+from zmlx.io.base import load_txt
+
+__all__ = [
+    'load_txt'
+]
+
+import zmlx.alg.sys as warnings
+
+warnings.warn(f'The module {__name__} will be removed after 2026-4-15',
+              DeprecationWarning, stacklevel=2)
 
 
-def load_txt(*args, **kwargs):
-    """
-    将文本读取到list (非numpy数组)。返回值类型的不同，是这个函数和 numpy.loadtxt唯一的不同.
-    """
-    return np.loadtxt(*args, **kwargs).tolist()
 
 
 def test():

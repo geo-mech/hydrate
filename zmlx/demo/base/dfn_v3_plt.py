@@ -1,15 +1,13 @@
 # ** desc = '创建三维的DFN(竖直的裂缝)并且基于plt来显示，测试绘图的效率'
 
-from zmlx.geometry.dfn_v3 import to_rc3, create_demo
-from zmlx.plt.show_rc3 import show_rc3
-from zmlx.ui.GuiBuffer import gui
+from zmlx import *
 
 
 def test():
     import random
     for i in range(100):
         print(f'i = {i}')
-        rc3 = to_rc3(create_demo())
+        rc3 = dfn_v3.to_rc3(dfn_v3.create_demo())
         color = []
         alpha = []
         for _ in rc3:
