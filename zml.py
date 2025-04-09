@@ -801,7 +801,7 @@ class DllCore:
         """
         初始化 DllCore 对象
 
-        参数:
+        Args:
             dll: 动态链接库对象
         """
         self.__err_handle = None
@@ -20158,16 +20158,25 @@ class InvasionPercolation(HasHandle):
         self.set_time(value)
 
     core.use(c_size_t, 'ip_add_node', c_void_p)
+    core.use(None, 'ip_add_nodes', c_void_p, c_size_t)
 
-    def add_node(self):
+    def add_node(self, count=None):
         """
         添加一个Node，并返回新添加的Node对象
+
+        Args:
+            count: 当需要批量添加的时候，添加的数量
 
         Returns:
             Node: 新添加的Node对象。
         """
-        index = core.ip_add_node(self.handle)
-        return self.get_node(index)
+        if count is None:
+            index = core.ip_add_node(self.handle)
+            return self.get_node(index)
+        else:
+            assert isinstance(count, int) and count >= 0
+            if count > 0:
+                core.ip_add_nodes(self.handle, count)
 
     def get_node(self, index):
         """
@@ -20185,28 +20194,50 @@ class InvasionPercolation(HasHandle):
 
     core.use(c_size_t, 'ip_add_bond',
              c_void_p, c_size_t, c_size_t)
+    core.use(None, 'ip_add_bonds',
+             c_void_p, c_size_t,
+             c_void_p, c_void_p, c_void_p)
 
-    def add_bond(self, node0, node1):
+    def add_bond(self, node0, node1, *,
+                 count=None, p_bond_ids=None):
         """
         添加一个Bond，来连接给定序号的两个Node。
 
         Args:
-            node0 (Node or int): 第一个节点或其索引。
-            node1 (Node or int): 第二个节点或其索引。
+            node0 (Node or int or pointer): 第一个节点或其索引。
+            node1 (Node or int or pointer): 第二个节点或其索引。
+            count: 当需要批量添加的时候，添加的数量
+            p_bond_ids: 批量添加的时候返回的bond的index
 
         Returns:
             Bond: 新添加的Bond对象。
 
         Raises:
             AssertionError: 如果节点索引超出范围或两个节点索引相同。
+
+        Note:
+            尽管node0、node1、p_bond_ids应该是int类型的指针，但是为了保持zml中接口
+            的一致性，这里仍假设它们是指向float64类型的指针。
+            批量添加的功能(2025-4-8)尚未测试
         """
-        if isinstance(node0, InvasionPercolation.Node):
-            node0 = node0.index
-        if isinstance(node1, InvasionPercolation.Node):
-            node1 = node1.index
-        assert self.node_n > node0 != node1 < self.node_n
-        index = core.ip_add_bond(self.handle, node0, node1)
-        return self.get_bond(index)
+        if count is None:
+            if isinstance(node0, InvasionPercolation.Node):
+                node0 = node0.index
+            if isinstance(node1, InvasionPercolation.Node):
+                node1 = node1.index
+            assert self.node_n > node0 != node1 < self.node_n
+            index = core.ip_add_bond(self.handle, node0, node1)
+            return self.get_bond(index)
+        else:
+            assert isinstance(count, int) and count >= 0
+            if count > 0:
+                core.ip_add_bonds(
+                    self.handle,
+                    count,
+                    ctypes.cast(node0, c_void_p),
+                    ctypes.cast(node1, c_void_p),
+                    0 if p_bond_ids is None else ctypes.cast(p_bond_ids, c_void_p)
+                )
 
     def get_bond(self, index):
         """
@@ -20287,7 +20318,7 @@ class InvasionPercolation(HasHandle):
         """
         获取模型中键（bond）的数量。
 
-        返回:
+        Returns:
             int: 模型中键的数量。
         """
         return core.ip_get_bond_n(self.handle)
@@ -20297,7 +20328,7 @@ class InvasionPercolation(HasHandle):
         """
         获取模型中键（bond）的数量。
 
-        返回:
+        Returns:
             int: 模型中键的数量。
         """
         return self.get_bond_n()
@@ -20311,7 +20342,7 @@ class InvasionPercolation(HasHandle):
         """
         获取模型内被视为“出口”的节点（Node）的数量。
 
-        返回:
+        Returns:
             int: 模型内被视为“出口”的节点的数量。
         """
         return core.ip_get_outlet_n(self.handle)
@@ -20320,10 +20351,10 @@ class InvasionPercolation(HasHandle):
         """
         设置模型内被视为“出口”的节点（Node）的数量。
 
-        参数:
+        Args:
             value (int): 要设置的“出口”节点数量，必须大于等于0。
 
-        异常:
+        Raises:
             AssertionError: 如果提供的值小于0。
         """
         assert value >= 0
@@ -20334,10 +20365,10 @@ class InvasionPercolation(HasHandle):
         """
         获取或设置模型内被视为“出口”的节点（Node）的数量。
 
-        返回:
+        Returns:
             int: 模型内被视为“出口”的节点的数量。
 
-        异常:
+        Raises:
             AssertionError: 如果设置的值小于0。
         """
         return self.get_outlet_n()
@@ -20347,10 +20378,10 @@ class InvasionPercolation(HasHandle):
         """
         设置模型内被视为“出口”的节点（Node）的数量。
 
-        参数:
+        Args:
             value (int): 要设置的“出口”节点数量，必须大于等于0。
 
-        异常:
+        Raises:
             AssertionError: 如果提供的值小于0。
         """
         self.set_outlet_n(value)
@@ -20362,11 +20393,11 @@ class InvasionPercolation(HasHandle):
         """
         设置第index个出口对应的节点（Node）的序号。
 
-        参数:
+        Args:
             index (int): 出口的索引。
             value (int): 节点的索引。
 
-        异常:
+        Raises:
             AssertionError: 如果索引无效。
         """
         index = get_index(index, self.outlet_n)
@@ -20382,10 +20413,10 @@ class InvasionPercolation(HasHandle):
         """
         获取第index个出口对应的节点（Node）的序号。
 
-        参数:
+        Args:
             index (int): 出口的索引。
 
-        返回:
+        Returns:
             int: 第index个出口对应的节点的序号，如果索引有效；否则返回None。
         """
         index = get_index(index, self.outlet_n)
@@ -20396,13 +20427,13 @@ class InvasionPercolation(HasHandle):
         """
         添加一个出口点，并返回这个出口点的序号。
 
-        参数:
+        Args:
             node_id (int): 要添加为出口的节点的索引。
 
-        返回:
+        Returns:
             int: 新添加的出口点的序号。
 
-        异常:
+        Raises:
             AssertionError: 如果节点索引超出范围。
         """
         assert node_id < self.node_n
@@ -20418,14 +20449,14 @@ class InvasionPercolation(HasHandle):
         """
         获取两种相态ph0和ph1之间的界面张力。
 
-        参数:
+        Args:
             ph0 (int): 第一种相态，必须大于等于0。
             ph1 (int): 第二种相态，必须大于等于0且不等于ph0。
 
-        返回:
+        Returns:
             float: 两种相态之间的界面张力。
 
-        异常:
+        Raises:
             AssertionError: 如果相态索引无效。
         """
         assert 0 <= ph0 != ph1 >= 0
@@ -20438,12 +20469,12 @@ class InvasionPercolation(HasHandle):
         """
         设置两种相态ph0和ph1之间的界面张力。
 
-        参数:
+        Args:
             ph0 (int): 第一种相态，必须大于等于0。
             ph1 (int): 第二种相态，必须大于等于0且不等于ph0。
             value (float): 要设置的界面张力值，必须为正数。
 
-        异常:
+        Raises:
             AssertionError: 如果相态索引无效或界面张力值为负数。
         """
         assert 0 <= ph0 != ph1 >= 0
@@ -20457,14 +20488,14 @@ class InvasionPercolation(HasHandle):
         获取当ph0驱替ph1时，在ph0中的接触角。注意，这是一个全局设置，
         后续会被各个节点（Node）和键（Bond）内的设置覆盖。
 
-        参数:
+        Args:
             ph0 (int): 驱替相态，必须大于等于0。
             ph1 (int): 被驱替相态，必须大于等于0且不等于ph0。
 
-        返回:
+        Returns:
             float: 接触角的值。
 
-        异常:
+        Raises:
             AssertionError: 如果相态索引无效。
         """
         assert 0 <= ph0 != ph1 >= 0
@@ -20479,12 +20510,12 @@ class InvasionPercolation(HasHandle):
         设置当ph0驱替ph1时，在ph0中的接触角。注意，这是一个全局设置，
         后续会被各个节点（Node）和键（Bond）内的设置覆盖。
 
-        参数:
+        Args:
             ph0 (int): 驱替相态，必须大于等于0。
             ph1 (int): 被驱替相态，必须大于等于0且不等于ph0。
             value (float): 要设置的接触角的值。
 
-        异常:
+        Raises:
             AssertionError: 如果相态索引无效。
         """
         assert 0 <= ph0 != ph1 >= 0
@@ -20497,13 +20528,13 @@ class InvasionPercolation(HasHandle):
         """
         获取流体ph的密度。
 
-        参数:
+        Args:
             ph (int): 流体相态，必须大于等于0。
 
-        返回:
+        Returns:
             float: 流体的密度。
 
-        异常:
+        Raises:
             AssertionError: 如果相态索引无效。
         """
         assert ph >= 0
@@ -20516,14 +20547,14 @@ class InvasionPercolation(HasHandle):
         """
         设置流体ph的密度。
 
-        参数:
+        Args:
             ph (int): 流体相态，必须大于等于0。
             value (float): 要设置的流体密度值，必须为正数。
 
-        返回:
+        Returns:
             self: 返回当前对象实例。
 
-        异常:
+        Raises:
             AssertionError: 如果相态索引无效或密度值为负数。
         """
         assert ph >= 0
@@ -20537,7 +20568,7 @@ class InvasionPercolation(HasHandle):
         """
         获取重力向量。注意，这个三维向量要和节点（Node）中pos属性的含义保持一致。
 
-        返回:
+        Returns:
             list: 包含三个浮点数的列表，表示重力向量。
         """
         return [core.ip_get_gravity(self.handle, i) for i in range(3)]
@@ -20549,10 +20580,10 @@ class InvasionPercolation(HasHandle):
         """
         设置重力向量。注意，这个三维向量要和节点（Node）中pos属性的含义保持一致。
 
-        参数:
+        Args:
             value (list): 包含三个浮点数的列表，表示要设置的重力向量。
 
-        返回:
+        Returns:
             self: 返回当前对象实例。
         """
         for i in range(3):
@@ -20564,7 +20595,7 @@ class InvasionPercolation(HasHandle):
         """
         获取或设置重力向量。注意，这个三维向量要和节点（Node）中pos属性的含义保持一致。
 
-        返回:
+        Returns:
             list: 包含三个浮点数的列表，表示重力向量。
         """
         return self.get_gravity()
@@ -20574,7 +20605,7 @@ class InvasionPercolation(HasHandle):
         """
         设置重力向量。注意，这个三维向量要和节点（Node）中pos属性的含义保持一致。
 
-        参数:
+        Args:
             value (list): 包含三个浮点数的列表，表示要设置的重力向量。
         """
         self.set_gravity(value)
@@ -20588,7 +20619,7 @@ class InvasionPercolation(HasHandle):
         """
         获取模型中注入点的数量。
 
-        返回:
+        Returns:
             int: 模型中注入点的数量。
         """
         return core.ip_get_inj_n(self.handle)
@@ -20597,13 +20628,13 @@ class InvasionPercolation(HasHandle):
         """
         设置模型中注入点的数量。
 
-        参数:
+        Args:
             value (int): 要设置的注入点数量，必须大于等于0。
 
-        返回:
+        Returns:
             self: 返回当前对象实例。
 
-        异常:
+        Raises:
             AssertionError: 如果提供的值小于0。
         """
         assert value >= 0
@@ -20615,10 +20646,10 @@ class InvasionPercolation(HasHandle):
         """
         获取或设置模型中注入点的数量。
 
-        返回:
+        Returns:
             int: 模型中注入点的数量。
 
-        异常:
+        Raises:
             AssertionError: 如果设置的值小于0。
         """
         return self.get_inj_n()
@@ -20628,10 +20659,10 @@ class InvasionPercolation(HasHandle):
         """
         设置模型中注入点的数量。
 
-        参数:
+        Args:
             value (int): 要设置的注入点数量，必须大于等于0。
 
-        异常:
+        Raises:
             AssertionError: 如果提供的值小于0。
         """
         self.set_inj_n(value)
@@ -20640,10 +20671,10 @@ class InvasionPercolation(HasHandle):
         """
         返回第index个注入点。
 
-        参数:
+        Args:
             index (int): 注入点的索引。
 
-        返回:
+        Returns:
             InvasionPercolation.Injector: 第index个注入点对象，
             如果索引有效；否则返回None。
         """
@@ -20655,12 +20686,12 @@ class InvasionPercolation(HasHandle):
         """
         添加一个注入点，并返回注入点对象。
 
-        参数:
+        Args:
             node_id (int, 可选): 注入点所在的节点索引。
             phase (int, 可选): 注入流体的相态。
             qinj (float, 可选): 注入流量。
 
-        返回:
+        Returns:
             InvasionPercolation.Injector: 新添加的注入点对象。
         """
         index = self.inj_n
@@ -20681,7 +20712,7 @@ class InvasionPercolation(HasHandle):
         """
         获取是否允许围困。当此开关为True，且出口（outlet）的数量不为0时，围困生效。
 
-        返回:
+        Returns:
             bool: 是否允许围困。
         """
         return core.ip_trap_enabled(self.handle)
@@ -20694,7 +20725,7 @@ class InvasionPercolation(HasHandle):
         """
         设置是否允许围困。当此开关为True，且出口（outlet）的数量不为0时，围困生效。
 
-        参数:
+        Args:
             value (bool): 是否允许围困。
         """
         core.ip_set_trap_enabled(self.handle, value)
@@ -20706,7 +20737,7 @@ class InvasionPercolation(HasHandle):
         """
         获取模型中操作（operation）的数量。
 
-        返回:
+        Returns:
             int: 模型中操作的数量。
         """
         return core.ip_get_oper_n(self.handle)
@@ -20716,7 +20747,7 @@ class InvasionPercolation(HasHandle):
         """
         获取模型中操作（operation）的数量。
 
-        返回:
+        Returns:
             int: 模型中操作的数量。
         """
         return self.get_oper_n()
@@ -20725,10 +20756,10 @@ class InvasionPercolation(HasHandle):
         """
         返回第idx个操作。
 
-        参数:
+        Args:
             idx (int): 操作的索引。
 
-        返回:
+        Returns:
             InvasionPercolation.InvadeOperation: 第idx个操作对象，
             如果索引有效；否则返回None。
         """
@@ -20745,7 +20776,7 @@ class InvasionPercolation(HasHandle):
         """
         删除给定节点（Node）连接的所有键（Bond），然后删除该节点。
 
-        参数:
+        Args:
             node (InvasionPercolation.Node or int): 要删除的节点对象或其索引。
         """
         if node is None:
@@ -20760,7 +20791,7 @@ class InvasionPercolation(HasHandle):
         """
         删除给定的键（Bond）。
 
-        参数:
+        Args:
             bond (InvasionPercolation.Bond or int): 要删除的键对象或其索引。
         """
         if bond is None:
@@ -20779,13 +20810,13 @@ class InvasionPercolation(HasHandle):
         """
         返回距离给定点最近的节点（Node）。
 
-        参数:
-            pos (list): 包含三个浮点数的列表，表示点的三维坐标。
+        Args:
+            pos (list | tuple): 包含三个浮点数的列表，表示点的三维坐标。
 
-        返回:
+        Returns:
             InvasionPercolation.Node: 距离给定点最近的节点对象。
 
-        异常:
+        Raises:
             AssertionError: 如果坐标列表的长度不为3。
         """
         assert len(pos) == 3
@@ -20802,13 +20833,13 @@ class InvasionPercolation(HasHandle):
         获得给定相态（phase）的节点（Node）的位置；如果相态大于99999999，
         则返回所有节点的位置。
 
-        参数:
+        Args:
             x (Vector, 可选): 存储x坐标的向量对象。
             y (Vector, 可选): 存储y坐标的向量对象。
             z (Vector, 可选): 存储z坐标的向量对象。
             phase (int, 可选): 相态索引，默认为9999999999。
 
-        返回:
+        Returns:
             tuple: 包含三个Vector对象的元组，表示节点的x、y、z坐标。
         """
         if not isinstance(x, Vector):
@@ -20827,7 +20858,7 @@ class InvasionPercolation(HasHandle):
         """
         批量获得位置信息。
 
-        参数:
+        Args:
             dim (int): 维度。
             pointer (ctypes.c_void_p): 指向存储位置信息的指针。
         """
@@ -20840,7 +20871,7 @@ class InvasionPercolation(HasHandle):
         """
         批量修改位置信息。
 
-        参数:
+        Args:
             dim (int): 维度。
             pointer (ctypes.c_void_p): 指向存储位置信息的指针。
         """
@@ -20854,7 +20885,7 @@ class InvasionPercolation(HasHandle):
         获得相态（phase）信息，并将其写入到给定的指针。
         注意，虽然相态在模型内部的存储为int类型，但此函数使用的是double类型的指针。
 
-        参数:
+        Args:
             pointer (ctypes.c_void_p): 指向存储相态信息的指针。
         """
         core.ip_write_phase(self.handle, ctypes.cast(pointer, c_void_p))
@@ -20867,7 +20898,7 @@ class InvasionPercolation(HasHandle):
         从给定的指针读取相态（phase）信息并设置到模型中。
         注意，虽然相态在模型内部的存储为int类型，但此函数使用的是double类型的指针。
 
-        参数:
+        Args:
             pointer (ctypes.c_void_p): 指向存储相态信息的指针。
         """
         core.ip_read_phase(self.handle, ctypes.cast(pointer, c_void_p))
@@ -20876,11 +20907,11 @@ class InvasionPercolation(HasHandle):
         """
         此方法已弃用，将于2025-6-2之后移除。
 
-        参数:
+        Args:
             *args: 可变位置参数。
             **kwargs: 可变关键字参数。
 
-        返回:
+        Returns:
             调用zmlx.alg.ip_nodes_write模块的ip_nodes_write函数的结果。
         """
         warnings.warn('remove after 2025-6-2', DeprecationWarning)
@@ -20894,7 +20925,7 @@ class InvasionPercolation(HasHandle):
         """
         将节点（Node）的半径数据写入到给定的指针。
 
-        参数:
+        Args:
             pointer (ctypes.c_void_p): 指向存储节点半径数据的指针。
         """
         core.ip_write_node_radi(self.handle, ctypes.cast(pointer, c_void_p))
@@ -20906,7 +20937,7 @@ class InvasionPercolation(HasHandle):
         """
         从给定的指针读取节点（Node）的半径数据。
 
-        参数:
+        Args:
             pointer (ctypes.c_void_p): 指向存储节点半径数据的指针。
         """
         core.ip_read_node_radi(self.handle, ctypes.cast(pointer, c_void_p))
@@ -20918,7 +20949,7 @@ class InvasionPercolation(HasHandle):
         """
         将键（Bond）的半径数据写入到给定的指针。
 
-        参数:
+        Args:
             pointer (ctypes.c_void_p): 指向存储键半径数据的指针。
         """
         core.ip_write_bond_radi(self.handle, ctypes.cast(pointer, c_void_p))
@@ -20930,7 +20961,7 @@ class InvasionPercolation(HasHandle):
         """
         从给定的指针读取键（Bond）的半径数据。
 
-        参数:
+        Args:
             pointer (ctypes.c_void_p): 指向存储键半径数据的指针。
         """
         core.ip_read_bond_radi(self.handle, ctypes.cast(pointer, c_void_p))
@@ -20942,7 +20973,7 @@ class InvasionPercolation(HasHandle):
         """
         将节点（Node）的侵入速率数据写入到给定的指针。
 
-        参数:
+        Args:
             pointer (ctypes.c_void_p): 指向存储节点侵入速率数据的指针。
         """
         core.ip_write_node_rate_invaded(self.handle,
@@ -20955,7 +20986,7 @@ class InvasionPercolation(HasHandle):
         """
         从给定的指针读取节点（Node）的侵入速率数据。
 
-        参数:
+        Args:
             pointer (ctypes.c_void_p): 指向存储节点侵入速率数据的指针。
         """
         core.ip_read_node_rate_invaded(self.handle,
@@ -20968,7 +20999,7 @@ class InvasionPercolation(HasHandle):
         """
         将节点（Node）的侵入时间数据写入到给定的指针。
 
-        参数:
+        Args:
             pointer (ctypes.c_void_p): 指向存储节点侵入时间数据的指针。
         """
         core.ip_write_node_time_invaded(self.handle,
@@ -20981,7 +21012,7 @@ class InvasionPercolation(HasHandle):
         """
         从给定的指针读取节点（Node）的侵入时间数据。
 
-        参数:
+        Args:
             pointer (ctypes.c_void_p): 指向存储节点侵入时间数据的指针。
         """
         core.ip_read_node_time_invaded(self.handle,
@@ -20994,7 +21025,7 @@ class InvasionPercolation(HasHandle):
         """
         将键（Bond）的dp0数据写入到给定的指针。
 
-        参数:
+        Args:
             pointer (ctypes.c_void_p): 指向存储键dp0数据的指针。
         """
         core.ip_write_bond_dp0(self.handle, ctypes.cast(pointer, c_void_p))
@@ -21006,7 +21037,7 @@ class InvasionPercolation(HasHandle):
         """
         从给定的指针读取键（Bond）的dp0数据。
 
-        参数:
+        Args:
             pointer (ctypes.c_void_p): 指向存储键dp0数据的指针。
         """
         core.ip_read_bond_dp0(self.handle, ctypes.cast(pointer, c_void_p))
@@ -21018,7 +21049,7 @@ class InvasionPercolation(HasHandle):
         """
         将键（Bond）的dp1数据写入到给定的指针。
 
-        参数:
+        Args:
             pointer (ctypes.c_void_p): 指向存储键dp1数据的指针。
         """
         core.ip_write_bond_dp1(self.handle, ctypes.cast(pointer, c_void_p))
@@ -21030,7 +21061,7 @@ class InvasionPercolation(HasHandle):
         """
         从给定的指针读取键（Bond）的dp1数据。
 
-        参数:
+        Args:
             pointer (ctypes.c_void_p): 指向存储键dp1数据的指针。
         """
         core.ip_read_bond_dp1(self.handle, ctypes.cast(pointer, c_void_p))
@@ -21043,7 +21074,7 @@ class InvasionPercolation(HasHandle):
         """
         将两种相态ph0和ph1之间键（Bond）的界面张力数据写入到给定的指针。
 
-        参数:
+        Args:
             ph0 (int): 第一种相态，必须大于等于0。
             ph1 (int): 第二种相态，必须大于等于0且不等于ph0。
             pointer (ctypes.c_void_p): 指向存储界面张力数据的指针。
@@ -21059,7 +21090,7 @@ class InvasionPercolation(HasHandle):
         """
         从给定的指针读取两种相态ph0和ph1之间键（Bond）的界面张力数据。
 
-        参数:
+        Args:
             ph0 (int): 第一种相态，必须大于等于0。
             ph1 (int): 第二种相态，必须大于等于0且不等于ph0。
             pointer (ctypes.c_void_p): 指向存储界面张力数据的指针。
@@ -21075,7 +21106,7 @@ class InvasionPercolation(HasHandle):
         """
         将两种相态ph0和ph1之间键（Bond）的接触角数据写入到给定的指针。
 
-        参数:
+        Args:
             ph0 (int): 第一种相态，必须大于等于0。
             ph1 (int): 第二种相态，必须大于等于0且不等于ph0。
             pointer (ctypes.c_void_p): 指向存储接触角数据的指针。
@@ -21091,7 +21122,7 @@ class InvasionPercolation(HasHandle):
         """
         从给定的指针读取两种相态ph0和ph1之间键（Bond）的接触角数据。
 
-        参数:
+        Args:
             ph0 (int): 第一种相态，必须大于等于0。
             ph1 (int): 第二种相态，必须大于等于0且不等于ph0。
             pointer (ctypes.c_void_p): 指向存储接触角数据的指针。

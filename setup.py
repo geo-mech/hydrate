@@ -26,7 +26,7 @@ install_requires = [
 ]
 
 if not pyqt_installed():
-    if sys.version_info >= (3, 9):  # Python 版本大于 3.11
+    if sys.version_info >= (3, 8):  # 尽可能使用PyQt6
         install_requires.append('PyQt6')
         install_requires.append('PyQt6-WebEngine')
     else:
@@ -49,7 +49,7 @@ package_data = {
 # 使用 setup() 函数定义包的元数据
 setup(
     name='IggHydrate',  # 包名称
-    version='1.3.34',  # 包版本
+    version='1.3.35',  # 包版本
     description='IggHydrate',  # 描述
     author='Zhaobin Zhang',  # 作者名称
     author_email='zhangzhaobin@mail.iggcas.ac.cn',  # 作者邮箱
