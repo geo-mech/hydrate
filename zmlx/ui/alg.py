@@ -37,7 +37,7 @@ def paint_image(widget, pixmap):
     if pixmap is None or widget is None:
         return
     try:
-        from zmlx.ui.qt import QtGui, QtCore
+        from zmlx.ui.pyqt import QtGui, QtCore
         width = widget.rect().width()
         height = widget.rect().height()
         if pixmap.width() / pixmap.height() > width / height:
@@ -98,7 +98,7 @@ def get_preferred_qt_version(check_exists=False):
 
 def get_current_screen_geometry(window):
     """获取窗口所在显示器的尺寸"""
-    from zmlx.ui.qt import QtWidgets, is_PyQt6
+    from zmlx.ui.pyqt import QtWidgets, is_PyQt6
     if is_PyQt6:
         screen = window.screen() if window else None
         if screen:
@@ -117,13 +117,13 @@ def show_seepage(filepath):
 
 
 def v_spacer():
-    from zmlx.ui.qt import QtWidgets
+    from zmlx.ui.pyqt import QtWidgets
     return QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Policy.Minimum,
                                  QtWidgets.QSizePolicy.Policy.Expanding)
 
 
 def h_spacer():
-    from zmlx.ui.qt import QtWidgets
+    from zmlx.ui.pyqt import QtWidgets
     return QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Policy.Expanding,
                                  QtWidgets.QSizePolicy.Policy.Minimum)
 
@@ -135,7 +135,7 @@ def open_url(url: str, caption=None, on_top=None, zoom_factor=None,
     """
     import os
     from zmlx.ui.gui_buffer import gui
-    from zmlx.ui.qt import QtCore, is_PyQt6, QWebEngineView
+    from zmlx.ui.pyqt import QtCore, is_PyQt6, QWebEngineView
 
     if not isinstance(url, str):
         return
@@ -192,7 +192,7 @@ def show_widget(widget, caption=None, use_gui=False, **kwargs):
                     close_after_done=False)
     else:
         import sys
-        from zmlx.ui.qt import QtWidgets
+        from zmlx.ui.pyqt import QtWidgets
         app = QtWidgets.QApplication(sys.argv)
         w = widget(**kwargs)
         w.show()

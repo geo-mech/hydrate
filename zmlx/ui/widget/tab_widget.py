@@ -1,6 +1,6 @@
 from zml import app_data
 from zmlx.ui.alg import create_action
-from zmlx.ui.qt import QtWidgets, QtCore
+from zmlx.ui.pyqt import QtWidgets, QtCore
 
 
 def set_position(widget):

@@ -14,7 +14,7 @@ from zmlx.ui.widget.console_widget import ConsoleWidget
 from zmlx.ui.gui_api import GuiApi
 from zmlx.ui.gui_buffer import gui
 from zmlx.ui.widget.my_label import Label
-from zmlx.ui.qt import QtCore, QtWidgets, is_PyQt5
+from zmlx.ui.pyqt import QtCore, QtWidgets, is_PyQt5
 from zmlx.ui.widget.multimedia import QtMultimedia
 from zmlx.ui.widget.tab_widget import TabWidget
 from zmlx.ui.task_proc import TaskProc

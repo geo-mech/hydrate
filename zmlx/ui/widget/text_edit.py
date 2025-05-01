@@ -1,5 +1,5 @@
 from zml import read_text, write_text, app_data
-from zmlx.ui.qt import QtWidgets
+from zmlx.ui.pyqt import QtWidgets
 
 
 class TextEdit(QtWidgets.QTextEdit):

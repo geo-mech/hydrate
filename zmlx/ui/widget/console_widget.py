@@ -9,7 +9,7 @@ from zmlx.ui.widget.code_edit import CodeEdit
 from zmlx.ui.widget.console_output import ConsoleOutput
 from zmlx.ui.widget.console_thread import ConsoleThread
 from zmlx.ui.gui_buffer import gui
-from zmlx.ui.qt import QtWidgets
+from zmlx.ui.pyqt import QtWidgets
 from zmlx.ui.shared_value import SharedValue
 
 

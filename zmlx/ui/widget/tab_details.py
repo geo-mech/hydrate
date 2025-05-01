@@ -1,4 +1,4 @@
-from zmlx.ui.qt import is_PyQt6, QtCore, QtWidgets
+from zmlx.ui.pyqt import is_PyQt6, QtCore, QtWidgets
 
 if is_PyQt6:
     from PyQt6.QtWidgets import (QApplication, QTableWidget, QTableWidgetItem,

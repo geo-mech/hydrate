@@ -1,6 +1,6 @@
 from zml import write_text, app_data
 from zmlx.ui.alg import create_action
-from zmlx.ui.qt import QtWidgets
+from zmlx.ui.pyqt import QtWidgets
 
 
 class TextBrowser(QtWidgets.QTextBrowser):

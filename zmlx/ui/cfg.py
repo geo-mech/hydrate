@@ -8,7 +8,7 @@ from zml import app_data, read_text, write_text
 from zmlx import clamp
 from zmlx.io.json_ex import read as read_json
 from zmlx.ui.alg import get_current_screen_geometry
-from zmlx.ui.qt import QtGui, QtCore, QtWidgets, is_PyQt6
+from zmlx.ui.pyqt import QtGui, QtCore, QtWidgets, is_PyQt6
 
 try:
     app_data.add_path(os.path.join(os.path.dirname(__file__), 'data'))

@@ -1,7 +1,7 @@
 from matplotlib import cm
 
 from zmlx.ui.cfg import *
-from zmlx.ui.qt import QtWidgets
+from zmlx.ui.pyqt import QtWidgets
 from zmlx.ui.widget.graphics_view import GraphicsView
 
 

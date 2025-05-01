@@ -6,7 +6,7 @@ from zml import read_text, write_text, app_data
 from zmlx.alg.fsys import time_string
 from zmlx.ui.alg import create_action
 from zmlx.ui.cfg import code_in_editor
-from zmlx.ui.qt import QtWidgets, QtName, is_PyQt6
+from zmlx.ui.pyqt import QtWidgets, QtName, is_PyQt6
 
 PythonEditor = None
 use_QSci = False

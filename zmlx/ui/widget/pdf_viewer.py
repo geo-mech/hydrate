@@ -1,6 +1,6 @@
 import os.path
 
-from zmlx.ui.qt import is_PyQt6, QWebEngineView, QWebEngineSettings, QtCore
+from zmlx.ui.pyqt import is_PyQt6, QWebEngineView, QWebEngineSettings, QtCore
 
 
 class PDFViewer(QWebEngineView):

@@ -1,5 +1,5 @@
 from zml import app_data
-from zmlx.ui.qt import QtWidgets
+from zmlx.ui.pyqt import QtWidgets
 
 
 class Label(QtWidgets.QLabel):

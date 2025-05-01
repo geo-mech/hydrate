@@ -65,7 +65,7 @@ def new_code():
     from zmlx.ui.main_window import get_window
     window = get_window()
     if window is not None:
-        from zmlx.ui.qt import QtWidgets
+        from zmlx.ui.pyqt import QtWidgets
         import os
         fname, _ = QtWidgets.QFileDialog.getSaveFileName(window,
                                                          caption='新建.py脚本',

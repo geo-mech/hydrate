@@ -1,4 +1,4 @@
-from zmlx.ui.qt import QtCore
+from zmlx.ui.pyqt import QtCore
 
 
 class SharedValue:

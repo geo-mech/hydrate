@@ -1,7 +1,7 @@
 import sys
 
-from zmlx.ui.qt import QtCore, QtWidgets
-from zmlx.ui.qt import QtGui
+from zmlx.ui.pyqt import QtCore, QtWidgets
+from zmlx.ui.pyqt import QtGui
 
 
 def zml_names():

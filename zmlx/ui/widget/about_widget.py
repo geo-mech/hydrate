@@ -1,7 +1,7 @@
 import sys
 
 from zml import core, lic, get_dir
-from zmlx.ui.qt import QtWidgets, QtCore, QtName, QWebEngineView
+from zmlx.ui.pyqt import QtWidgets, QtCore, QtName, QWebEngineView
 
 
 class About(QtWidgets.QTableWidget):

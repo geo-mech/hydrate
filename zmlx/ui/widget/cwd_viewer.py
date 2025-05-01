@@ -5,7 +5,7 @@ import timeit
 from zml import app_data
 from zmlx.alg.utils import clamp
 from zmlx.alg.to_string import fsize2str
-from zmlx.ui.qt import QtWidgets, QtCore
+from zmlx.ui.pyqt import QtWidgets, QtCore
 
 
 class CwdViewer(QtWidgets.QTableWidget):

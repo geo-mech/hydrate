@@ -2,7 +2,7 @@
 https://www.45fan.com/article.php?aid=1CUo8mPtEy1JGp5Y
 """
 
-from zmlx.ui.qt import QtCore, QtGui, QtWidgets
+from zmlx.ui.pyqt import QtCore, QtGui, QtWidgets
 
 
 class ImageViewer(QtWidgets.QGraphicsView):

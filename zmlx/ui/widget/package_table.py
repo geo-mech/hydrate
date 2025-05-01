@@ -1,7 +1,7 @@
 import subprocess
 import sys
 
-from zmlx.ui.qt import QtWidgets, QtCore, QtGui
+from zmlx.ui.pyqt import QtWidgets, QtCore, QtGui
 
 
 class InstallThread(QtCore.QThread):

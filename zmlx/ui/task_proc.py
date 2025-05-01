@@ -1,6 +1,6 @@
 from queue import Queue
 
-from zmlx.ui.qt import QtCore
+from zmlx.ui.pyqt import QtCore
 
 
 class TaskProc(QtCore.QObject):

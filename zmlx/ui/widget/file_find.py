@@ -2,7 +2,7 @@ import sys
 
 from zml import app_data
 from zmlx.alg.search_paths import choose_path
-from zmlx.ui.qt import QtWidgets
+from zmlx.ui.pyqt import QtWidgets
 
 
 class FileFind(QtWidgets.QWidget):

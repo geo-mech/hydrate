@@ -1,6 +1,6 @@
 from zml import app_data
 from zmlx.ui import gui
-from zmlx.ui.qt import QtWidgets, QtCore
+from zmlx.ui.pyqt import QtWidgets, QtCore
 
 
 class LineEdit(QtWidgets.QLineEdit):

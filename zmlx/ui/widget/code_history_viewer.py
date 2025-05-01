@@ -2,7 +2,7 @@ import os
 
 from zmlx.io.text import read_text
 from zmlx.ui.widget.code_edit import CodeEdit
-from zmlx.ui.qt import is_PyQt6
+from zmlx.ui.pyqt import is_PyQt6
 
 if is_PyQt6:
     from PyQt6.QtWidgets import (

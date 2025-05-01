@@ -1,4 +1,4 @@
-from zmlx.ui.qt import is_PyQt6
+from zmlx.ui.pyqt import is_PyQt6
 
 try:
     if is_PyQt6:

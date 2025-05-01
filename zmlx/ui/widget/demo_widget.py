@@ -3,7 +3,7 @@ import os
 from zml import app_data
 from zmlx.demo.list_demo_files import list_demo_files
 from zmlx.demo.path import get_path
-from zmlx.ui.qt import QtWidgets
+from zmlx.ui.pyqt import QtWidgets
 
 
 class DemoWidget(QtWidgets.QTableWidget):

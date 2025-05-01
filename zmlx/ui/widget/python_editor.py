@@ -1,4 +1,4 @@
-from zmlx.ui.qt import is_PyQt6, is_PyQt5
+from zmlx.ui.pyqt import is_PyQt6, is_PyQt5
 
 if is_PyQt6:
     from PyQt6.Qsci import QsciScintilla, QsciLexerPython

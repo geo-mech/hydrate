@@ -1,4 +1,4 @@
-from zmlx.ui.qt import QtWidgets, QtGui
+from zmlx.ui.pyqt import QtWidgets, QtGui
 
 
 class GraphicsView(QtWidgets.QGraphicsView):

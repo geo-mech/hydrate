@@ -1,6 +1,6 @@
 import os
 
-from zmlx.ui.qt import QtCore, QtGui
+from zmlx.ui.pyqt import QtCore, QtGui
 from zmlx.ui.widget.text_browser import TextBrowser
 
 

@@ -1,3 +1,3 @@
-from zmlx.ui.qt import QWebEngineView
+from zmlx.ui.pyqt import QWebEngineView
 
 __all__ = ['QWebEngineView']
