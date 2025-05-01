@@ -1,9 +1,12 @@
 import random
 
-import numpy as np
+try:
+    import numpy as np
+except Exception as e:
+    print(e)
+    np = None
 
-from zmlx.alg.clamp import clamp
-from zmlx.alg.linspace import linspace
+from zmlx.alg.utils import clamp, linspace
 from zmlx.geometry.dfn2 import dfn2
 from zmlx.geometry.rect_3d import from_v3
 from zmlx.geometry.rect_v3 import intersected, get_area

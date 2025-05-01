@@ -1,4 +1,4 @@
-from zmlx.alg.clamp import clamp
+from zmlx.alg.utils import clamp
 
 
 def get_color(cmap, lr, rr, val):

@@ -1,11 +1,14 @@
-import random
+from zmlx.alg.sys import srand
 
-from zml import set_srand
+__all__ = ['srand']
+
+import warnings
+
+warnings.warn(f'{__name__} will be removed after 2026-4-15', DeprecationWarning,
+              stacklevel=2)
+
+from zmlx.alg.sys import log_deprecated
+
+log_deprecated(__name__)
 
 
-def srand(seed):
-    """
-    设置Python和zml内核的随机数种子.  2023-9-25
-    """
-    random.seed(seed)
-    set_srand(seed)

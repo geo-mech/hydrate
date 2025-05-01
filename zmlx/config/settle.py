@@ -5,17 +5,16 @@
 2024-4-3
 """
 import warnings
-from ctypes import c_double
 
 import numpy as np
 
-from zml import Seepage
-from zmlx.alg.np import get_pointer
-from zmlx.config.seepage import get_face_sum, get_face_diff, get_face_left, get_face_right
-from zmlx.utility.SeepageNumpy import as_numpy
+from zml import Seepage, get_pointer64
+from zmlx.config.seepage import get_face_sum, get_face_diff, get_face_left, \
+    get_face_right
+from zmlx.utility.seepage_numpy import as_numpy
 
 warnings.warn(f'<{__file__}> will be removed after 2025-4-13',
-              DeprecationWarning)
+              DeprecationWarning, stacklevel=2)
 
 
 def get_face_density_diff(model: Seepage, fid0, fid1):
@@ -24,7 +23,8 @@ def get_face_density_diff(model: Seepage, fid0, fid1):
     """
     ca = as_numpy(model).fluids(fid1).den - as_numpy(model).fluids(fid0).den
     fa = np.zeros(shape=model.face_number, dtype=float)
-    get_face_sum(model, ca=get_pointer(ca), fa=get_pointer(fa))
+    get_face_sum(
+        model, ca=get_pointer64(ca, readonly=True), fa=get_pointer64(fa))
     return fa / 2
 
 
@@ -34,7 +34,8 @@ def get_face_gra(model: Seepage):
     """
     ca = as_numpy(model).cells.g_pos
     fa = np.zeros(shape=model.face_number, dtype=float)
-    get_face_diff(model, ca=get_pointer(ca), fa=get_pointer(fa))
+    get_face_diff(
+        model, ca=get_pointer64(ca, readonly=True), fa=get_pointer64(fa))
     return fa
 
 
@@ -46,11 +47,13 @@ def get_face_fv(model: Seepage, fid0, gra):
 
     # 左侧的流体0
     fa0 = np.zeros(shape=model.face_number, dtype=float)
-    get_face_left(model, ca=get_pointer(ca0), fa=get_pointer(fa0))
+    get_face_left(
+        model, ca=get_pointer64(ca0, readonly=True), fa=get_pointer64(fa0))
 
     # 右侧的流体0
     fa1 = np.zeros(shape=model.face_number, dtype=float)
-    get_face_right(model, ca=get_pointer(ca0), fa=get_pointer(fa1))
+    get_face_right(
+        model, ca=get_pointer64(ca0, readonly=True), fa=get_pointer64(fa1))
 
     # 根据重力，获取上游的流体0体积
     fa = np.zeros(shape=model.face_number, dtype=float)
@@ -83,6 +86,6 @@ def iterate(model: Seepage, dt: float, fid0=None, fid1=None, rate=1.0):
     # 应用重力扩散过程
     if fid0 is not None and fid1 is not None:
         model.diffusion(dt * rate, fid0=fid0, fid1=fid1,
-                        pg=get_pointer(cond, c_double), lg=len(cond),
-                        ppg=get_pointer(gra, c_double), lpg=len(gra),
+                        pg=get_pointer64(cond), lg=len(cond),
+                        ppg=get_pointer64(gra), lpg=len(gra),
                         ds_max=0.2)

@@ -1,32 +1,18 @@
-"""
-用以交换mesh的坐标，从而实现不同的方向的模拟。
+from zmlx.seepage_mesh.edit import swap_yz, swap_xy, swap_xz
+__all__ = [
+    'swap_yz',
+    'swap_xy',
+    'swap_xz'
+]
 
-since 2025-2-6
-"""
+import warnings
 
-
-def swap_yz(mesh):
-    """
-    交换y和z坐标
-    """
-    for cell in mesh.cells:
-        x, y, z = cell.pos
-        cell.pos = [x, z, y]
+warnings.warn(f'The modulus {__name__} is deprecated (use zmlx.seepage_mesh.edit) and '
+              f'will be removed after 2026-4-16',
+              DeprecationWarning, stacklevel=2)
 
 
-def swap_xz(mesh):
-    """
-    交换x和z坐标
-    """
-    for cell in mesh.cells:
-        x, y, z = cell.pos
-        cell.pos = [z, y, x]
+from zmlx.alg.sys import log_deprecated
 
+log_deprecated(__name__)
 
-def swap_xy(mesh):
-    """
-    交换x和y坐标
-    """
-    for cell in mesh.cells:
-        x, y, z = cell.pos
-        cell.pos = [y, x, z]

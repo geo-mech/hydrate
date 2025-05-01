@@ -1,14 +1,15 @@
-from scipy.interpolate import interp1d
+import warnings
+
+from zmlx.alg.interp import create_interp1d
+
+warnings.warn(f'{__name__} will be removed after 2026-4-15', DeprecationWarning,
+              stacklevel=2)
+
+from zmlx.alg.sys import log_deprecated
+
+log_deprecated(__name__)
 
 
-def create_interp1d(d=None, x=None, y=None, **kwargs):
-    """
-    利用一个包含了两列的numpy矩阵来创建一个一维的插值体
-    """
-    if x is None or y is None:
-        x = d[:, 0]
-        y = d[:, 1]
-    return interp1d(x, y, **kwargs)
 
 
 def test():

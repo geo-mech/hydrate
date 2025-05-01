@@ -10,7 +10,7 @@ todo:
 而非体积浓度 (即盐的质量，除以溶液的质量)
 """
 
-from zmlx.alg.interp1 import interp1
+from zmlx.alg.interp import interp1
 from zmlx.react.ch4_hydrate import get_p as ch4_get_p_
 from zmlx.react.ch4_hydrate import get_t as ch4_get_t_
 

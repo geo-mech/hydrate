@@ -1,5 +1,5 @@
 from zml import Seepage
-from zmlx.filesys.path import *
+from zmlx.alg.fsys import *
 from zmlx.ptree.ptree import PTree, as_ptree
 
 

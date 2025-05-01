@@ -1,17 +1,11 @@
-import numpy as np
-
-from zml import Seepage, Tensor3
-from zmlx.alg.clamp import clamp
-from zmlx.config import seepage
-from zmlx.demo.opath import opath
-from zmlx.seepage_mesh.cube import create_cube
+from zmlx import *
 
 
 def create():
     # 创建规则的Mesh
-    mesh = create_cube(x=np.linspace(0, 100, 200),
+    mesh = create_cube(x=linspace(0, 100, 200),
                        y=(-0.5, 0.5),
-                       z=np.linspace(-20, 30, 100))
+                       z=linspace(-20, 30, 100))
 
     # 实际的cell的中心点的坐标的范围
     x0, x1 = mesh.get_pos_range(0)

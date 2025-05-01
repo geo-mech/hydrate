@@ -1,11 +1,17 @@
-from zml import Seepage
-from zmlx.react.create_reaction import create_reaction
+from zmlx.react.alg import add_reaction
+
+__all__ = [
+    'add_reaction'
+]
+import warnings
+
+warnings.warn(f'The modulus {__name__} is deprecated and '
+              f'will be removed after 2026-4-16, please '
+              f'import from zmlx instead',
+              DeprecationWarning, stacklevel=2)
+
+from zmlx.alg.sys import log_deprecated
+
+log_deprecated(__name__)
 
 
-def add_reaction(model: Seepage, data, need_id=False):
-    """
-    添加一个反应
-    """
-    if not isinstance(data, Seepage.Reaction):
-        data = create_reaction(model, **data)
-    return model.add_reaction(data=data, need_id=need_id)

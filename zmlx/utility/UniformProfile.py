@@ -1,48 +1,15 @@
-import os
+import warnings
 
-import numpy as np
-from scipy.interpolate import interp1d
-
-from zmlx.alg.join_cols import join_cols
-
-
-class UniformProfile:
-    """
-    生成一个均匀的分布，并且利用文件来缓存数据
-    """
-
-    def __init__(self, fname, *, xlim=None, ylim=None, count=100):
-        if os.path.isfile(fname):
-            dat = np.loadtxt(fname)
-            x, y = dat[:, 0], dat[:, 1]
-        else:
-            if xlim is None:
-                x0, x1 = 0, 1
-            else:
-                x0, x1 = xlim
-            if ylim is None:
-                y0, y1 = 0, 1
-            else:
-                y0, y1 = ylim
-            x = np.linspace(x0, x1, count)
-            y = np.random.uniform(low=y0, high=y1, size=x.size)
-            np.savetxt(fname, join_cols(x, y))
-        self.x0 = np.min(x)
-        self.x1 = np.max(x)
-        self.data = interp1d(x, y)
-
-    def __call__(self, x):
-        return self.data(x)
+warnings.warn(f'The modulus {__name__} is deprecated and '
+              f'will be removed after 2026-4-16',
+              DeprecationWarning, stacklevel=2)
 
 
-def _test():
-    from zml import app_data
-    f = UniformProfile(xlim=[0, 10], ylim=[2, 3], fname=app_data.temp('uniform_profile.txt'))
-    x = np.linspace(1, 3, 5)
-    y = f(x)
-    print(f'x = {x}')
-    print(f'y = {y}')
+from zmlx.alg.sys import log_deprecated
+
+log_deprecated(__name__)
 
 
-if __name__ == '__main__':
-    _test()
+from zmlx.utility.fields import *
+
+__all__ = ['UniformProfile']

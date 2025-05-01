@@ -1,14 +1,14 @@
-import os
+from zmlx.alg.fsys import get_last_file
+__all__ = ['get_last_file']
+
+import warnings
+
+warnings.warn(f'The module {__name__} will be removed after 2026-4-15',
+              DeprecationWarning, stacklevel=2)
 
 
-def get_last_file(folder):
-    """
-    返回给定文件夹中的最后一个文件（按照文件名，利用字符串默认的对比，从小到大排序）
-    """
-    if not os.path.isdir(folder):
-        return
-    files = os.listdir(folder)
-    if len(files) == 0:
-        return
-    else:
-        return os.path.join(folder, max(files))
+
+from zmlx.alg.sys import log_deprecated
+
+log_deprecated(__name__)
+

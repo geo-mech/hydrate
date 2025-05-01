@@ -1,16 +1,14 @@
-from zmlx.plt.plot_on_axes import plot_on_axes
+import warnings
 
+from zmlx.plt.fig2 import show_dfn2
 
-def show_dfn2(dfn2, **opts):
-    """
-    利用画线的方式显示一个二维的离散裂缝网络. 主要用于测试.
-    """
+warnings.warn(f'The modulus {__name__} is deprecated and '
+              f'will be removed after 2026-4-16',
+              DeprecationWarning, stacklevel=2)
 
-    def on_axes(ax):
-        for pos in dfn2:
-            ax.plot([pos[0], pos[2]], [pos[1], pos[3]])
+from zmlx.alg.sys import log_deprecated
 
-    plot_on_axes(on_axes, **opts)
+log_deprecated(__name__)
 
 
 def __test():

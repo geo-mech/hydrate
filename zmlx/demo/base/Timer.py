@@ -2,8 +2,7 @@
 
 from time import sleep
 
-from zml import timer, clock
-from zmlx.ui.GuiBuffer import gui
+from zmlx import *
 
 
 # 利用zml.clock修饰的函数在调用的时候会被自动纳入计时

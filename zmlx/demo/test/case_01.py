@@ -1,19 +1,13 @@
 # ** desc = '显示1维的，根据达西定量所计算出来的压力场'
 
-import numpy as np
-
-from zml import Seepage
-from zmlx.config import seepage
-from zmlx.fluid import h2o
-from zmlx.plt.plotxy import plotxy
-from zmlx.seepage_mesh.cube import create_cube
-from zmlx.utility.SeepageNumpy import as_numpy
+from zmlx import *
 
 
 def create():
-    mesh = create_cube(x=np.linspace(-25, 25, 50),
-                       y=[-0.5, 0.5],
-                       z=[-0.5, 0.5])
+    mesh = create_cube(
+        x=np.linspace(-25, 25, 50),
+        y=[-0.5, 0.5],
+        z=[-0.5, 0.5])
     x_min, x_max = mesh.get_pos_range(0)
 
     def get_fai(x, y, z):
@@ -22,20 +16,22 @@ def create():
     def get_p(x, y, z):
         return 3e6 if x < 0 else 1e6
 
-    model = seepage.create(mesh=mesh,
-                           dv_relative=0.2,
-                           fludefs=[h2o.create(name='h2o',
-                                               density=1000.0,
-                                               viscosity=1.0e-3)],
-                           porosity=get_fai,
-                           pore_modulus=200e6,
-                           p=get_p,
-                           s=1.0,
-                           perm=1e-14
-                           )
-    seepage.set_solve(model,
-                      time_max=3600 * 24 * 30
-                      )
+    model = seepage.create(
+        mesh=mesh,
+        dv_relative=0.2,
+        fludefs=[h2o.create(name='h2o',
+                            density=1000.0,
+                            viscosity=1.0e-3)],
+        porosity=get_fai,
+        pore_modulus=200e6,
+        p=get_p,
+        s=1.0,
+        perm=1e-14
+    )
+    seepage.set_solve(
+        model,
+        time_max=3600 * 24 * 30
+    )
     return model
 
 
@@ -47,7 +43,8 @@ def show_model(model: Seepage):
 
 def main():
     model = create()
-    seepage.solve(model, close_after_done=False, extra_plot=lambda: show_model(model))
+    seepage.solve(model, close_after_done=False,
+                  extra_plot=lambda: show_model(model))
 
 
 if __name__ == '__main__':

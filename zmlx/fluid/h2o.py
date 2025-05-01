@@ -60,12 +60,12 @@ def create(t_min=272.0, t_max=300.0, p_min=1e6, p_max=40e6,
 
 
 def create_flu(*args, **kwargs):
-    warnings.warn('use function <create> instead', DeprecationWarning)
+    warnings.warn('use function <create> instead', DeprecationWarning, stacklevel=2)
     return create(*args, **kwargs)
 
 
 def show_all():
-    from zmlx.plt.show_field2 import show_field2
+    from zmlx.plt.fig2 import show_field2
     flu = create()
     show_field2(flu.den, [4e6, 15e6], [274, 290], caption='den')
     show_field2(flu.vis, [4e6, 15e6], [274, 290], caption='vis')

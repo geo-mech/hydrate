@@ -3,7 +3,7 @@ tooltip = '设置demo中的项目运行的时候输出数据的文件夹，如�
 
 
 def slot():
-    from zmlx.ui.GuiBuffer import gui
+    from zmlx.ui.gui_buffer import gui
     from zmlx.demo.opath import set_output, opath
     if gui.exists():
         root = opath()
@@ -17,8 +17,8 @@ def slot():
 
 
 def enabled():
-    from zmlx.ui.MainWindow import get_window
-    from zmlx.ui.Widgets.Demo import DemoWidget
+    from zmlx.ui.main_window import get_window
+    from zmlx.ui.widget.demo_widget import DemoWidget
     window = get_window()
     if window is None:
         return False

@@ -1,11 +1,15 @@
-import numpy as np
+from zmlx.geometry.utils import point_distance
+__all__ = ['point_distance']
+
+import warnings
+
+warnings.warn(f'The module {__name__} will be removed after 2026-4-15',
+              DeprecationWarning, stacklevel=2)
 
 
-def point_distance(p1, p2):
-    """
-    Returns the distance between two points
-    """
-    return np.linalg.norm(np.asarray(p1) - np.asarray(p2))
+from zmlx.alg.sys import log_deprecated
+
+log_deprecated(__name__)
 
 
 if __name__ == '__main__':

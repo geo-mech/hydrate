@@ -3,7 +3,7 @@
 """
 
 from zml import Seepage
-from zmlx.config.standard_slots import standard_slots
+from zmlx.config.slots import standard_slots
 
 text_key = 'timers'
 
@@ -71,9 +71,12 @@ def iterate(model: Seepage, t0, t1, slots):
                 if kwds is None:
                     kwds = {}
                 # 替换@model
-                args = [model if equal(item, '@model') else item for item in args]
-                kwds = {key: model if equal(value, '@model') else value for key, value in kwds.items()}
+                args = [model if equal(item, '@model') else item for item in
+                        args]
+                kwds = {key: model if equal(value, '@model') else value for
+                        key, value in kwds.items()}
                 # 替换@time
                 args = [time if equal(item, '@time') else item for item in args]
-                kwds = {key: time if equal(value, '@time') else value for key, value in kwds.items()}
+                kwds = {key: time if equal(value, '@time') else value for
+                        key, value in kwds.items()}
                 func(*args, **kwds)

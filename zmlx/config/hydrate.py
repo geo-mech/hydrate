@@ -4,11 +4,11 @@
 import warnings
 
 from zml import Seepage, log
-from zmlx.alg.time2str import time2str
+from zmlx.alg.fsys import join_paths
+from zmlx.alg.fsys import make_fname
+from zmlx.alg.to_string import time2str
 from zmlx.config import seepage
 from zmlx.config.TherFlowConfig import TherFlowConfig
-from zmlx.filesys.join_paths import join_paths
-from zmlx.filesys.make_fname import make_fname
 from zmlx.fluid.ch4 import create as create_ch4
 from zmlx.fluid.ch4_hydrate import create as create_ch4_hydrate
 from zmlx.fluid.co2 import create as create_co2
@@ -16,8 +16,8 @@ from zmlx.fluid.co2_hydrate import create as create_co2_hydrate
 from zmlx.fluid.h2o import create as create_h2o
 from zmlx.fluid.h2o_gas import create as create_h2o_gas
 from zmlx.fluid.h2o_ice import create as create_h2o_ice
-from zmlx.kr.create_krf import create_krf
-from zmlx.plt.tricontourf import tricontourf
+from zmlx.kr.pre_defines import create_krf
+from zmlx.plt.fig2 import tricontourf
 from zmlx.react import ch4_hydrate as ch4_hydrate_react
 from zmlx.react import co2_hydrate as co2_hydrate_react
 from zmlx.react import dissolution
@@ -26,9 +26,9 @@ from zmlx.react import vapor as vapor_react
 from zmlx.react.alpha.salinity import data as salinity_c2t
 from zmlx.react.inh import add_inh
 from zmlx.ui import gui
-from zmlx.utility.CapillaryEffect import CapillaryEffect
-from zmlx.utility.LinearField import LinearField
-from zmlx.utility.SeepageNumpy import as_numpy
+from zmlx.utility.capillary_effect import CapillaryEffect
+from zmlx.utility.fields import LinearField
+from zmlx.utility.seepage_numpy import as_numpy
 
 
 def create_fludefs(has_co2=False,
@@ -712,4 +712,7 @@ def create(*args, **kwargs):
     """
         deprecated!!!
     """
+    warnings.warn(
+        'The function hydrate.create is deprecated (remove after 2024-12-01)',
+        DeprecationWarning, stacklevel=2)
     return Config(*args, **kwargs)

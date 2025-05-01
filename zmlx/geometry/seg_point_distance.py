@@ -1,35 +1,15 @@
-from zmlx.geometry.point_distance import point_distance as get_point_distance
-from zmlx.geometry.triangle_area import triangle_area
+from zmlx.geometry.utils import seg_point_distance
+__all__ = ['seg_point_distance']
+
+import warnings
+
+warnings.warn(f'The module {__name__} will be removed after 2026-4-15',
+              DeprecationWarning, stacklevel=2)
 
 
-def seg_point_distance(seg, point):
-    """
-    返回线段<由两个点定义>和一个点之间的距离
-    """
-    assert len(seg) == 2, 'The segment should be defined by two points'
+from zmlx.alg.sys import log_deprecated
 
-    a = get_point_distance(seg[0], point)
-    b = get_point_distance(seg[1], point)
-    c = get_point_distance(seg[0], seg[1])
-
-    if c <= 0:
-        return a
-
-    s = triangle_area(a, b, c)
-    assert s >= 0
-
-    h = s * 2.0 / c
-    if h > a:
-        h = a
-    if h > b:
-        h = b
-
-    if a * a - h * h >= c * c:
-        return b
-    if b * b - h * h >= c * c:
-        return a
-    else:
-        return h
+log_deprecated(__name__)
 
 
 if __name__ == '__main__':

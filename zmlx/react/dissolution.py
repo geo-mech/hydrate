@@ -1,7 +1,7 @@
 import warnings
 
 from zml import Seepage
-from zmlx.react.add_reaction import add_reaction
+from zmlx.react.alg import add_reaction
 
 
 def create(*, sol=None, sol_in_liq=None, liq=None, ca_sol=None, rate=1.0, fa_t=None, fa_c=None,
@@ -21,12 +21,12 @@ def create(*, sol=None, sol_in_liq=None, liq=None, ca_sol=None, rate=1.0, fa_t=N
     # 这个模块，最初是模拟气体的溶解。现在推广到一般的溶解过程，因此，修改参数的名字.
     if sol is None:
         if gas is not None:
-            warnings.warn('The argument "gas" will be removed after 2025-4-14', DeprecationWarning)
+            warnings.warn('The argument "gas" will be removed after 2025-4-14', DeprecationWarning, stacklevel=2)
             sol = gas
 
     if sol_in_liq is None:
         if gas_in_liq is not None:
-            warnings.warn('The argument "gas_in_liq" will be removed after 2025-4-14', DeprecationWarning)
+            warnings.warn('The argument "gas_in_liq" will be removed after 2025-4-14', DeprecationWarning, stacklevel=2)
             sol_in_liq = gas_in_liq
 
     assert 0 < rate

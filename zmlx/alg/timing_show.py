@@ -1,17 +1,16 @@
 import time
-import timeit
+import warnings
+
+from zmlx.alg.sys import timing_show
+
+warnings.warn(f'{__name__} will be removed after 2026-4-15', DeprecationWarning,
+              stacklevel=2)
+
+from zmlx.alg.sys import log_deprecated
+
+log_deprecated(__name__)
 
 
-def timing_show(key, func, *args, **kwargs):
-    """
-    执行函数，并且显示执行的耗时. 主要用于模型初始化过程中，显示那些耗时的操作
-    """
-    print(f'{key} ... ', end='')
-    t_beg = timeit.default_timer()
-    res = func(*args, **kwargs)
-    t_end = timeit.default_timer()
-    print(' succeed. time used = %.2f s' % (t_end - t_beg))
-    return res
 
 
 def test():

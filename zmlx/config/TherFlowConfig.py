@@ -1,8 +1,8 @@
 import warnings
 
 from zml import Object, Seepage, get_average_perm, Reaction, log
-from zmlx.utility.AttrKeys import AttrKeys
-from zmlx.utility.Field import Field
+from zmlx.utility.attr_keys import AttrKeys
+from zmlx.utility.fields import Field
 
 
 class TherFlowConfig(Object):
@@ -16,7 +16,8 @@ class TherFlowConfig(Object):
         """
         给定流体属性进行初始化. 给定的参数应该为流体属性定义(或者多个流体组成的混合物)、或者是化学反应的定义
         """
-        warnings.warn('please use zmlx.config.seepage instead', DeprecationWarning)
+        warnings.warn('please use zmlx.config.seepage instead',
+                      DeprecationWarning, stacklevel=2)
         log('DeprecationWarning: TherFlowConfig', tag='tag_240306')
 
         self.fluids = []
@@ -26,10 +27,13 @@ class TherFlowConfig(Object):
         self.flu_keys = AttrKeys('specific_heat', 'temperature')
         # fv0: 初始时刻的流体体积<流体体积的参考值>
         # vol: 网格的几何体积。这个体积乘以孔隙度，就等于孔隙体积
-        self.cell_keys = AttrKeys('mc', 'temperature', 'g_heat', 'pre', 'vol', 'fv0')
+        self.cell_keys = AttrKeys('mc', 'temperature', 'g_heat', 'pre', 'vol',
+                                  'fv0')
         # g0：初始时刻的导流系数<当流体体积为fv0的时候的导流系数>
-        self.face_keys = AttrKeys('g_heat', 'area', 'length', 'g0', 'perm', 'igr')
-        self.model_keys = AttrKeys('dt', 'time', 'step', 'dv_relative', 'dt_min', 'dt_max')
+        self.face_keys = AttrKeys('g_heat', 'area', 'length', 'g0', 'perm',
+                                  'igr')
+        self.model_keys = AttrKeys('dt', 'time', 'step', 'dv_relative',
+                                   'dt_min', 'dt_max')
         # 用于更新流体的导流系数
         self.krf = None
         # 定义一些开关
@@ -223,7 +227,8 @@ class TherFlowConfig(Object):
         """
         return len(self.fluids)
 
-    def set_cell(self, cell, pos=None, vol=None, porosity=0.1, pore_modulus=1000e6, denc=1.0e6, dist=0.1,
+    def set_cell(self, cell, pos=None, vol=None, porosity=0.1,
+                 pore_modulus=1000e6, denc=1.0e6, dist=0.1,
                  temperature=280.0, p=1.0, s=None, pore_modulus_range=None):
         """
         设置Cell的初始状态.
@@ -239,8 +244,10 @@ class TherFlowConfig(Object):
             vol = cell.get_attr(self.cell_keys['vol'])
             assert vol is not None
 
-        cell.set_ini(ca_mc=self.cell_keys['mc'], ca_t=self.cell_keys['temperature'],
-                     fa_t=self.flu_keys['temperature'], fa_c=self.flu_keys['specific_heat'],
+        cell.set_ini(ca_mc=self.cell_keys['mc'],
+                     ca_t=self.cell_keys['temperature'],
+                     fa_t=self.flu_keys['temperature'],
+                     fa_c=self.flu_keys['specific_heat'],
                      pos=pos, vol=vol, porosity=porosity,
                      pore_modulus=pore_modulus,
                      denc=denc,
@@ -250,7 +257,8 @@ class TherFlowConfig(Object):
         cell.set_attr(self.cell_keys['fv0'], cell.fluid_vol)
         cell.set_attr(self.cell_keys['g_heat'], vol / (dist ** 2))
 
-    def set_face(self, face, area=None, length=None, perm=None, heat_cond=None, igr=None):
+    def set_face(self, face, area=None, length=None, perm=None, heat_cond=None,
+                 igr=None):
         """
         对一个Face进行配置
         """
@@ -285,7 +293,8 @@ class TherFlowConfig(Object):
         if igr is not None:
             face.set_attr(self.face_keys['igr'], igr)
 
-    def set_model(self, model, porosity=0.1, pore_modulus=1000e6, denc=1.0e6, dist=0.1,
+    def set_model(self, model, porosity=0.1, pore_modulus=1000e6, denc=1.0e6,
+                  dist=0.1,
                   temperature=280.0, p=None, s=None, perm=1e-14, heat_cond=1.0,
                   sample_dist=None, pore_modulus_range=None, igr=None):
         """
@@ -326,16 +335,21 @@ class TherFlowConfig(Object):
         for cell in model.cells:
             assert isinstance(cell, Seepage.Cell)
             pos = cell.pos
-            self.set_cell(cell, porosity=porosity(*pos), pore_modulus=pore_modulus(*pos), denc=denc(*pos),
+            self.set_cell(cell, porosity=porosity(*pos),
+                          pore_modulus=pore_modulus(*pos), denc=denc(*pos),
                           temperature=temperature(*pos), p=p(*pos), s=s(*pos),
-                          pore_modulus_range=pore_modulus_range, dist=dist(*pos))
+                          pore_modulus_range=pore_modulus_range,
+                          dist=dist(*pos))
 
         for face in model.faces:
             assert isinstance(face, Seepage.Face)
             p0 = face.get_cell(0).pos
             p1 = face.get_cell(1).pos
-            self.set_face(face, perm=get_average_perm(p0, p1, perm, sample_dist),
-                          heat_cond=get_average_perm(p0, p1, heat_cond, sample_dist), igr=igr(*face.pos))
+            self.set_face(face,
+                          perm=get_average_perm(p0, p1, perm, sample_dist),
+                          heat_cond=get_average_perm(p0, p1, heat_cond,
+                                                     sample_dist),
+                          igr=igr(*face.pos))
 
     def add_cell(self, model, *args, **kwargs):
         """
@@ -372,7 +386,8 @@ class TherFlowConfig(Object):
                 cell.set_attr(ca_vol, c.vol)
 
             for f in mesh.faces:
-                face = model.add_face(model.get_cell(f.link[0] + cell_n0), model.get_cell(f.link[1] + cell_n0))
+                face = model.add_face(model.get_cell(f.link[0] + cell_n0),
+                                      model.get_cell(f.link[1] + cell_n0))
                 face.set_attr(fa_s, f.area)
                 face.set_attr(fa_l, f.length)
 
@@ -533,7 +548,8 @@ class TherFlowConfig(Object):
     def set_dt_max(self, model, value):
         model.set_attr(self.model_keys['dt_max'], value)
 
-    def iterate(self, model, dt=None, solver=None, fa_s=None, fa_q=None, fa_k=None):
+    def iterate(self, model, dt=None, solver=None, fa_s=None, fa_q=None,
+                fa_k=None):
         """
         在时间上向前迭代。其中
             dt:     时间步长,若为None，则使用自动步长
@@ -550,10 +566,12 @@ class TherFlowConfig(Object):
         assert dt is not None, 'You must set dt before iterate'
 
         if model.not_has_tag('disable_update_den') and model.fludef_number > 0:
-            model.update_den(relax_factor=0.3, fa_t=self.flu_keys['temperature'])
+            model.update_den(relax_factor=0.3,
+                             fa_t=self.flu_keys['temperature'])
 
         if model.not_has_tag('disable_update_vis') and model.fludef_number > 0:
-            model.update_vis(ca_p=self.cell_keys['pre'], fa_t=self.flu_keys['temperature'],
+            model.update_vis(ca_p=self.cell_keys['pre'],
+                             fa_t=self.flu_keys['temperature'],
                              relax_factor=1.0, min=1.0e-7, max=1.0)
 
         if model.injector_number > 0:
@@ -569,7 +587,9 @@ class TherFlowConfig(Object):
             # 此时，各个Face的导流系数是可变的(根据流体的体积来修改)
             # 注意：
             #   在建模的时候，务必要设置Cell的fv0属性，Face的g0属性和igr属性，并且，在model中，应该有相应的gr和igr对应
-            model.update_cond(ca_v0=self.cell_keys['fv0'], fa_g0=self.face_keys['g0'], fa_igr=self.face_keys['igr'],
+            model.update_cond(ca_v0=self.cell_keys['fv0'],
+                              fa_g0=self.face_keys['g0'],
+                              fa_igr=self.face_keys['igr'],
                               relax_factor=0.3)
 
         # 施加cond的更新操作
@@ -577,13 +597,16 @@ class TherFlowConfig(Object):
             update(model)
 
         # 当未禁止更新flow且流体的数量非空
-        update_flow = model.not_has_tag('disable_flow') and model.fludef_number > 0
+        update_flow = model.not_has_tag(
+            'disable_flow') and model.fludef_number > 0
 
         if update_flow:
             if model.has_tag('has_inertia'):
-                r1 = model.iterate(dt=dt, solver=solver, fa_s=fa_s, fa_q=fa_q, fa_k=fa_k, ca_p=self.cell_keys['pre'])
+                r1 = model.iterate(dt=dt, solver=solver, fa_s=fa_s, fa_q=fa_q,
+                                   fa_k=fa_k, ca_p=self.cell_keys['pre'])
             else:
-                r1 = model.iterate(dt=dt, solver=solver, ca_p=self.cell_keys['pre'])
+                r1 = model.iterate(dt=dt, solver=solver,
+                                   ca_p=self.cell_keys['pre'])
         else:
             r1 = None
 
@@ -598,13 +621,16 @@ class TherFlowConfig(Object):
         update_ther = model.not_has_tag('disable_ther')
 
         if update_ther:
-            r2 = model.iterate_thermal(dt=dt, solver=solver, ca_t=self.cell_keys['temperature'],
-                                       ca_mc=self.cell_keys['mc'], fa_g=self.face_keys['g_heat'])
+            r2 = model.iterate_thermal(dt=dt, solver=solver,
+                                       ca_t=self.cell_keys['temperature'],
+                                       ca_mc=self.cell_keys['mc'],
+                                       fa_g=self.face_keys['g_heat'])
         else:
             r2 = None
 
         # 不存在禁止标识且存在流体
-        exchange_heat = model.not_has_tag('disable_heat_exchange') and model.fludef_number > 0
+        exchange_heat = model.not_has_tag(
+            'disable_heat_exchange') and model.fludef_number > 0
 
         if exchange_heat:
             model.exchange_heat(dt=dt, ca_g=self.cell_keys['g_heat'],
@@ -626,7 +652,8 @@ class TherFlowConfig(Object):
             # 只要不禁用dt更新，就尝试更新dt
             if update_flow or update_ther:
                 # 只有当计算了流动或者传热过程，才可以使用自动的时间步长
-                dt = self.get_recommended_dt(model, dt, self.get_dv_relative(model),
+                dt = self.get_recommended_dt(model, dt,
+                                             self.get_dv_relative(model),
                                              using_flow=update_flow,
                                              using_ther=update_ther
                                              )
@@ -635,38 +662,43 @@ class TherFlowConfig(Object):
 
         return r1, r2
 
-    def get_recommended_dt(self, model, previous_dt, dv_relative=0.1, using_flow=True, using_ther=True):
+    def get_recommended_dt(self, model, previous_dt, dv_relative=0.1,
+                           using_flow=True, using_ther=True):
         """
         在调用了iterate函数之后，调用此函数，来获取更优的时间步长.
         """
         assert using_flow or using_ther
         if using_flow:
-            dt1 = model.get_recommended_dt(previous_dt=previous_dt, dv_relative=dv_relative)
+            dt1 = model.get_recommended_dt(previous_dt=previous_dt,
+                                           dv_relative=dv_relative)
         else:
             dt1 = 1.0e100
 
         if using_ther:
-            dt2 = model.get_recommended_dt(previous_dt=previous_dt, dv_relative=dv_relative,
-                                           ca_t=self.cell_keys['temperature'], ca_mc=self.cell_keys['mc'])
+            dt2 = model.get_recommended_dt(previous_dt=previous_dt,
+                                           dv_relative=dv_relative,
+                                           ca_t=self.cell_keys['temperature'],
+                                           ca_mc=self.cell_keys['mc'])
         else:
             dt2 = 1.0e100
         return min(dt1, dt2)
 
     def to_fmap(self, *args, **kwargs):
         warnings.warn('<TherFlowConfig.to_fmap> will be removed after 2024-5-5',
-                      DeprecationWarning)
+                      DeprecationWarning, stacklevel=2)
 
     def from_fmap(self, *args, **kwargs):
-        warnings.warn('<TherFlowConfig.from_fmap> will be removed after 2024-5-5',
-                      DeprecationWarning)
+        warnings.warn(
+            '<TherFlowConfig.from_fmap> will be removed after 2024-5-5',
+            DeprecationWarning, stacklevel=2)
 
     def save(self, *args, **kwargs):
         warnings.warn('<TherFlowConfig.save> will be removed after 2024-5-5',
-                      DeprecationWarning)
+                      DeprecationWarning, stacklevel=2)
 
     def load(self, *args, **kwargs):
         warnings.warn('<TherFlowConfig.load> will be removed after 2024-5-5',
-                      DeprecationWarning)
+                      DeprecationWarning, stacklevel=2)
 
     def update_g0(self, model, fa_g0=None, fa_k=None, fa_s=None, fa_l=None):
         """

@@ -20,7 +20,7 @@ def modify_perm(vdisc3, seepage, fa_k, ca_fp, da_pc, da_k):
         后续将移除.
     """
     warnings.warn('Disc3.face_ids is modified when modify_perm. function remove after 2024-9-21',
-                  DeprecationWarning)
+                  DeprecationWarning, stacklevel=2)
     assert isinstance(seepage, Seepage)
     core.vdisc3_modify_perm(vdisc3.handle, seepage.handle, fa_k, ca_fp, da_pc, da_k)
 
@@ -152,7 +152,7 @@ class Disc3(HasHandle):
         """
         在渗流计算的时候，此圆盘经过所有的Cell的Id. 在Disc3中存储这些ID不是好的设计，后续此属性会移除.
         """
-        warnings.warn('Disc3.cell_ids will be removed after 2024-10-13', DeprecationWarning)
+        warnings.warn('Disc3.cell_ids will be removed after 2024-10-13', DeprecationWarning, stacklevel=2)
         return UintVector(handle=core.disc3_get_cell_ids(self.handle))
 
     core.use(c_void_p, 'disc3_get_face_ids', c_void_p)
@@ -162,7 +162,7 @@ class Disc3(HasHandle):
         """
         在渗流计算的时候，此圆盘经过所有的Cell的Id. 在Disc3中存储这些ID不是好的设计，后续此属性会移除.
         """
-        warnings.warn('Disc3.face_ids will be removed after 2024-10-13', DeprecationWarning)
+        warnings.warn('Disc3.face_ids will be removed after 2024-10-13', DeprecationWarning, stacklevel=2)
         return UintVector(handle=core.disc3_get_face_ids(self.handle))
 
     core.use(c_double, 'disc3_get_attr', c_void_p, c_size_t)

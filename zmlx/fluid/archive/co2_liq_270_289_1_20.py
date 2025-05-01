@@ -20,7 +20,7 @@ def show():
     flu = Seepage.FluDef(path='co2_liq_270_289_1_20.txt')
     print(flu)
     try:
-        from zmlx.plt.show_field2 import show_field2
+        from zmlx.plt.fig2 import show_field2
         show_field2(flu.den, xr=[p_min, p_max], yr=[t_min, t_max])
         show_field2(flu.vis, xr=[p_min, p_max], yr=[t_min, t_max])
     except:

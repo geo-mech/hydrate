@@ -1,7 +1,7 @@
 import numpy as np
 
 from zmlx.data.Ye2022.load_txt import load_txt
-from zmlx.plt.plot2 import plot2
+from zmlx.plt.fig2 import plot2
 
 if __name__ == '__main__':
     # 绝对渗透率

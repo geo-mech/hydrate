@@ -67,7 +67,7 @@ def create(t_min=270, t_max=1000, p_min=1e6, p_max=40e6, name=None, specific_hea
 
 
 def create_flu(*args, **kwargs):
-    warnings.warn('use function <create> instead', DeprecationWarning)
+    warnings.warn('use function <create> instead', DeprecationWarning, stacklevel=2)
     return create(*args, **kwargs)
 
 
@@ -79,7 +79,7 @@ if __name__ == '__main__':
         den = flu.den(p, T)
         print(f'p = {p}Pa, T = {T}K, vis = {vis}Pa.s, den = {den}kg/m^3')
     try:
-        from zmlx.plt.show_field2 import show_field2
+        from zmlx.plt.fig2 import show_field2
 
         show_field2(flu.vis, [1e6, 40e6], [300, 1000])
         show_field2(flu.den, [1e6, 40e6], [300, 1000])

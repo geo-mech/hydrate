@@ -1,5 +1,5 @@
 from zmlx.fluid.nist.co2 import create
-from zmlx.plt.show_field2 import show_field2
+from zmlx.plt.fig2 import show_field2
 from zmlx.ui import gui
 
 

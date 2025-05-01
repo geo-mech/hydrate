@@ -1,5 +1,7 @@
 """
 文件系统相关的操作
+
+注意：
+    本模块处于deprecated的状态，将在未来的版本中移除。
 """
 
-from zmlx.filesys.tag import print_tag

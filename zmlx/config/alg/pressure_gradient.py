@@ -3,7 +3,7 @@
 """
 
 from zml import Seepage, get_pointer64 as pointer
-from zmlx.utility.SeepageNumpy import as_numpy
+from zmlx.utility.seepage_numpy import as_numpy
 
 
 def get_face_pressure_gradient(model: Seepage, fluid=None):

@@ -1,16 +1,18 @@
-import os
+from zmlx.alg.fsys import first_only
 
-from zmlx.ui.GuiBuffer import gui
+import warnings
+
+warnings.warn(f'The module {__name__} will be removed after 2026-4-15',
+              DeprecationWarning, stacklevel=2)
 
 
-def first_only(path='please_delete_this_file_before_run'):
-    """
-    when it is executed for the second time, an exception is given to ensure that the result is not easily overwritten
-    """
-    if os.path.exists(path):
-        y = gui.question('Warning: The existed data will be Over-Written. continue? ')
-        if not y:
-            assert False
-    else:
-        with open(path, 'w') as file:
-            file.write('\n')
+
+from zmlx.alg.sys import log_deprecated
+
+log_deprecated(__name__)
+
+
+__all__ = ['first_only']
+
+
+

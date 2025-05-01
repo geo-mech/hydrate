@@ -1,11 +1,14 @@
-from zml import is_array
+import warnings
 
+from zmlx.alg.utils import make_index
 
-def make_index(index):
-    if is_array(index):
-        return index
-    else:
-        return index,
+warnings.warn(f'{__name__} will be removed after 2026-4-15', DeprecationWarning,
+              stacklevel=2)
+
+from zmlx.alg.sys import log_deprecated
+
+log_deprecated(__name__)
+
 
 
 if __name__ == '__main__':

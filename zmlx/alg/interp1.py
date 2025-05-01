@@ -1,12 +1,15 @@
-from scipy.interpolate import interp1d
+import warnings
+
+from zmlx.alg.interp import interp1
+
+warnings.warn(f'{__name__} will be removed after 2026-4-15', DeprecationWarning,
+              stacklevel=2)
+
+from zmlx.alg.sys import log_deprecated
+
+log_deprecated(__name__)
 
 
-def interp1(x, y, xq, kind='linear'):
-    """
-    实施一维的插值，类似Matlab的interp1函数
-    """
-    f = interp1d(x, y, kind=kind)
-    return f(xq)
 
 
 def _test():

@@ -30,7 +30,7 @@ def create(name=None, den=1112.0, specific_heat=2190.0):
 
 
 def create_flu(*args, **kwargs):
-    warnings.warn('use function <create> instead', DeprecationWarning)
+    warnings.warn('use function <create> instead', DeprecationWarning, stacklevel=2)
     return create(*args, **kwargs)
 
 

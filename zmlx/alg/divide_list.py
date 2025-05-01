@@ -1,31 +1,15 @@
-def divide_list(lst, n):
-    # 计算列表长度
-    total_elements = len(lst)
-    # 使用整除得到每个子列表的基本元素数量
-    base_size = total_elements // n
-    # 使用取余得到剩余的元素数量
-    remainder = total_elements % n
+import warnings
 
-    # 初始化结果列表
-    result = []
-    # 初始化当前索引
-    start_index = 0
+from zmlx.alg.utils import divide_list
 
-    # 循环创建子列表
-    for i in range(n):
-        # 确定当前子列表的大小，前remainder个子列表会多一个元素
-        if i < remainder:
-            end_index = start_index + base_size + 1
-        else:
-            end_index = start_index + base_size
-            # 切片操作获取子列表
-        sub_list = lst[start_index:end_index]
-        # 将子列表添加到结果列表中
-        result.append(sub_list)
-        # 更新下一个子列表的起始索引
-        start_index = end_index
+warnings.warn(f'The module {__name__} will be removed after 2026-4-15',
+              DeprecationWarning, stacklevel=2)
 
-    return result
+from zmlx.alg.sys import log_deprecated
+
+log_deprecated(__name__)
+
+
 
 
 def test1():

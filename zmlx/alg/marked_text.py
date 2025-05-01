@@ -20,7 +20,9 @@ def get_value(text, start_marker, end_marker):
     if len(matches) == 0:
         return None
     elif len(matches) > 1:
-        raise ValueError("Multiple matches found between '{}' and '{}'".format(start_marker, end_marker))
+        raise ValueError(
+            "Multiple matches found between '{}' and '{}'".format(start_marker,
+                                                                  end_marker))
     else:
         return matches[0]
 
@@ -44,20 +46,26 @@ def set_value(text, start_marker, end_marker, new_value):
 
     # 校验匹配数量
     if len(matches) == 0:
-        raise ValueError("No match found between '{}' and '{}'".format(start_marker, end_marker))
+        raise ValueError(
+            "No match found between '{}' and '{}'".format(start_marker,
+                                                          end_marker))
     elif len(matches) > 1:
-        raise ValueError("Multiple matches found between '{}' and '{}'".format(start_marker, end_marker))
+        raise ValueError(
+            "Multiple matches found between '{}' and '{}'".format(start_marker,
+                                                                  end_marker))
 
     # 替换唯一匹配的内容
     replaced_text = re.sub(
         pattern,
-        re.escape(start_marker) + re.escape(new_value) + re.escape(end_marker),  # 避免 new_value 含特殊字符干扰
+        re.escape(start_marker) + re.escape(new_value) + re.escape(end_marker),
+        # 避免 new_value 含特殊字符干扰
         text,
         count=1  # 只替换第一个匹配（逻辑上此时只有一个匹配）
     )
 
     # 恢复 before 和 after 的原始字符（非转义形式）
-    replaced_text = replaced_text.replace(re.escape(start_marker), start_marker, 1)
+    replaced_text = replaced_text.replace(re.escape(start_marker), start_marker,
+                                          1)
     replaced_text = replaced_text.replace(re.escape(end_marker), end_marker, 1)
 
     return replaced_text

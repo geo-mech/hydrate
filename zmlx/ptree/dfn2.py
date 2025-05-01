@@ -3,7 +3,7 @@ import os
 import numpy as np
 
 from zml import Dfn2
-from zmlx.geometry.point_distance import point_distance
+from zmlx.geometry.utils import point_distance
 from zmlx.ptree.array import array
 from zmlx.ptree.box import box2
 from zmlx.ptree.ptree import PTree, as_ptree

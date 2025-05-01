@@ -39,32 +39,33 @@ Face的属性：
     g_heat：用于传热计算的导流系数（注意，并非热传导系数。这个系数，已经考虑了face的横截面积和长度）
     perm: face位置的渗透率
 """
-import os
 from collections.abc import Iterable
 
-import numpy as np
+try:
+    import numpy as np
+except Exception as e:
+    print(e)
+    np = None
 
 from zml import get_average_perm, Tensor3, ConjugateGradientSolver
-from zmlx.alg.clamp import clamp
-from zmlx.alg.join_cols import join_cols
+from zml import make_parent
+from zmlx.alg.fsys import join_paths, make_fname, print_tag
+from zmlx.alg.utils import clamp
+from zmlx.alg.utils import join_cols
+from zmlx.base.seepage import *
 from zmlx.config import (capillary, prod, fluid_heating, timer,
                          sand, step_iteration, adjust_vis)
 from zmlx.config.attr_keys import cell_keys, face_keys, flu_keys
-from zmlx.config.seepage_base import *
-from zmlx.config.standard_slots import standard_slots
-from zmlx.filesys.join_paths import join_paths
-from zmlx.filesys.make_fname import make_fname
-from zmlx.filesys.make_parent import make_parent
-from zmlx.filesys.tag import print_tag
-from zmlx.geometry.point_distance import point_distance
-from zmlx.plt.tricontourf import tricontourf
-from zmlx.react.add_reaction import add_reaction
-from zmlx.ui.GuiBuffer import gui
-from zmlx.utility.Field import Field
-from zmlx.utility.GuiIterator import GuiIterator
-from zmlx.utility.SaveManager import SaveManager
-from zmlx.utility.SeepageCellMonitor import SeepageCellMonitor
-from zmlx.utility.SeepageNumpy import as_numpy
+from zmlx.config.slots import standard_slots
+from zmlx.geometry.utils import point_distance
+from zmlx.plt.fig2 import tricontourf
+from zmlx.react.alg import add_reaction
+from zmlx.ui import gui
+from zmlx.utility.fields import Field
+from zmlx.utility.gui_iterator import GuiIterator
+from zmlx.utility.save_manager import SaveManager
+from zmlx.utility.seepage_cell_monitor import SeepageCellMonitor
+from zmlx.utility.seepage_numpy import as_numpy
 
 # 确保这些import不会被PyCharm优化掉
 _unused = [get_face_gradient, get_face_diff, get_face_sum, get_face_left,
@@ -555,7 +556,8 @@ def iterate(model: Seepage, dt=None, solver=None, fa_s=None,
 
     if cond_updaters is not None:  # 施加cond的更新操作
         for update in cond_updaters:
-            assert callable(update), f'The update in cond_updaters must be callable. However, it is: {update}'
+            assert callable(
+                update), f'The update in cond_updaters must be callable. However, it is: {update}'
             update(model)
 
     # 当未禁止更新flow且流体的数量非空
@@ -725,9 +727,12 @@ def add_injector(model: Seepage, data):
     elif isinstance(data, dict):
         injector = model.add_injector(**data)
         flu = data.get('flu')
-        if flu == 'insitu' and model.cell_number > 0 and len(injector.fid) > 0:  # 找到要注入的那个cell
+        if flu == 'insitu' and model.cell_number > 0 and len(
+                injector.fid) > 0:  # 找到要注入的那个cell
             cell_id = injector.cell_id
-            if cell_id >= model.cell_number and point_distance(injector.pos, [0, 0, 0]) < 1e10:
+            if cell_id >= model.cell_number and point_distance(injector.pos,
+                                                               [0, 0,
+                                                                0]) < 1e10:
                 cell = model.get_nearest_cell(pos=injector.pos)
                 if point_distance(cell.pos, injector.pos) < injector.radi:
                     cell_id = cell.index
@@ -809,7 +814,8 @@ def create(mesh=None,
             if 'gravity' not in warnings_ignored:
                 warnings.warn(f'In general, gravity should be [0, 0, -10], '
                               f'but here it is {gravity}, '
-                              f'please make sure this is the setting you need')
+                              f'please make sure this is the setting you need',
+                              stacklevel=2)
 
     if dt_max is not None:
         set_dt_max(model, dt_max)
@@ -1221,7 +1227,8 @@ def print_cells(path, model, ca_keys=None, fa_keys=None,
                   *([] if ca_keys is None else
                     [cells.get(key) for key in ca_keys]),
                   *([] if fa_keys is None else
-                    [as_numpy(model).fluids(*idx).get(key) for idx, key in fa_keys]),
+                    [as_numpy(model).fluids(*idx).get(key) for idx, key in
+                     fa_keys]),
                   )
 
     # 保存数据
@@ -1316,8 +1323,12 @@ def solve(model=None, folder=None, fname=None, gui_mode=None,
                 cell=[model.get_cell(i) for i in item.get('cell_ids')])
 
     if save_dt is None:
-        save_dt_min = full_solve_options.get('save_dt_min', 0.01 * SaveManager.get_unit_length(time_unit=time_unit))
-        save_dt_max = full_solve_options.get('save_dt_max', 5 * SaveManager.get_unit_length(time_unit=time_unit))
+        save_dt_min = full_solve_options.get('save_dt_min',
+                                             0.01 * SaveManager.get_unit_length(
+                                                 time_unit=time_unit))
+        save_dt_max = full_solve_options.get('save_dt_max',
+                                             5 * SaveManager.get_unit_length(
+                                                 time_unit=time_unit))
 
         def save_dt(time):
             return clamp(time * 0.05, save_dt_min, save_dt_max)
@@ -1366,7 +1377,8 @@ def solve(model=None, folder=None, fname=None, gui_mode=None,
             plot_rate = item1.get('plot_rate')
             if plot_rate is not None:
                 for idx in plot_rate:
-                    monitor.plot_rate(index=idx, caption=f'Rate_{index}.{idx}')  # 显示生产曲线
+                    monitor.plot_rate(index=idx,
+                                      caption=f'Rate_{index}.{idx}')  # 显示生产曲线
         if extra_plot is not None:  # 一些额外的，非标准的绘图操作
             if callable(extra_plot):
                 try:
@@ -1424,8 +1436,9 @@ def solve(model=None, folder=None, fname=None, gui_mode=None,
 
     def do_show_state():
         if show_state:
-            print(f'{state_hint}step={get_step(model)}, dt={get_dt(model, as_str=True)}, '
-                  f'time={get_time(model, as_str=True)}')
+            print(
+                f'{state_hint}step={get_step(model)}, dt={get_dt(model, as_str=True)}, '
+                f'time={get_time(model, as_str=True)}')
 
     # 准备iterate的参数
     if opt_iter is None:  # 用于迭代的额外的参数

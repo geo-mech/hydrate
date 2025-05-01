@@ -1,44 +1,16 @@
-from zmlx.plt.plot_on_axes import plot_on_axes
+import warnings
+
 import numpy as np
 
+from zmlx.plt.fig2 import trimesh
 
-def trimesh(triangles, points, line_width=1.0, **opts):
-    """
-    调用plot_on_axes，使用Matplotlib绘制二维三角形网格.
+warnings.warn(f'The modulus {__name__} is deprecated and '
+              f'will be removed after 2026-4-16',
+              DeprecationWarning, stacklevel=2)
 
-    Args:
-        line_width: 绘制三角形的时候，线条的宽度 (默认为1.0)
-        triangles: 三角形的索引，形状为(N, 3). 或者是一个list，且list的每一个元素的长度都是3
-        points: 顶点坐标，形状为(N, 2). 或者是一个list，且list的每一个元素的长度都是2
-        **opts: 传递给plot_on_axes的参数，主要包括:
-            caption(str): 在界面绘图的时候的标签 （默认为untitled）
-            clear(bool): 是否清除界面上之前的axes （默认清除）
-            on_top (bool): 是否将标签页当到最前面显示 (默认为否)
+from zmlx.alg.sys import log_deprecated
 
-    Note:
-        此函数主要用于测试显示二维三角形网格的结构，类似与Matlab的trimesh函数，主要画出
-        三角形的边，并且为了显示得更加清晰，边的颜色是随机的。
-    """
-
-    def on_axes(ax):
-        edges = set()
-        for tri in triangles:
-            assert len(tri) == 3, f'The size of tri must be 3, but got: ({tri})'
-            for i in range(3):
-                a, b = tri[i], tri[(i + 1) % 3]
-                if a > b:
-                    a, b = b, a
-                edges.add((a, b))
-        # 绘制每条边
-        for a, b in edges:
-            x = [points[a][0], points[b][0]]
-            y = [points[a][1], points[b][1]]
-            color = np.random.rand(3)  # 生成随机RGB颜色
-            ax.plot(x, y, color=color, linewidth=line_width)
-
-    # 设置默认的坐标轴比例为等比例，用户可通过opts覆盖
-    opts.setdefault('aspect', 'equal')
-    plot_on_axes(on_axes=on_axes, dim=2, **opts)
+log_deprecated(__name__)
 
 
 def generate_test_mesh(rows=15, cols=15, noise=0.01):

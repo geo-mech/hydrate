@@ -1,8 +1,13 @@
+import warnings
+
 from zml import is_chinese
 
-if __name__ == '__main__':
-    ret1 = is_chinese("刘亦菲222")
-    print(ret1)
+warnings.warn(f'The module {__name__} will be removed after 2026-4-15',
+              DeprecationWarning, stacklevel=2)
 
-    ret2 = is_chinese("123")
-    print(ret2)
+__all__ = ['is_chinese']
+
+from zmlx.alg.sys import log_deprecated
+
+log_deprecated(__name__)
+

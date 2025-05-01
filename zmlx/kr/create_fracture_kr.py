@@ -1,17 +1,22 @@
-from zmlx.alg.linspace import linspace
+from zmlx.kr.pre_defines import create_fracture_kr
+__all__ = ['create_fracture_kr']
+
+import warnings
+
+warnings.warn(f'The module {__name__} will be removed after 2026-4-15',
+              DeprecationWarning, stacklevel=2)
+
+from zmlx.alg.sys import log_deprecated
+
+log_deprecated(__name__)
 
 
-def create_fracture_kr():
-    """
-    立方定律，导流的能力和裂缝开度的3次方成正比
-    """
-    vs = linspace(0.0, 10.0, 1000)
-    kr = [s ** 3 for s in vs]
-    return vs, kr
+
+
 
 
 if __name__ == '__main__':
-    from zmlx.plt.plotxy import plotxy
+    from zmlx.plt.fig2 import plotxy
 
     x, y = create_fracture_kr()
     plotxy(x, y)

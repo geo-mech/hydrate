@@ -4,8 +4,8 @@ menu = '设置'
 
 def slot():
     from zmlx.io.env import plt_export_dpi
-    from zmlx.ui.Qt import QtWidgets
-    from zmlx.ui.MainWindow import get_window
+    from zmlx.ui.qt import QtWidgets
+    from zmlx.ui.main_window import get_window
 
     number, ok = QtWidgets.QInputDialog.getDouble(
         get_window(),

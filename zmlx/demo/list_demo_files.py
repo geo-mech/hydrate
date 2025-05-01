@@ -1,8 +1,8 @@
 import os.path
 
-from zmlx.demo.get_path import get_path
-from zmlx.filesys.list_files import list_files
-from zmlx.ui.alg.code_config import code_config
+from zmlx.alg.fsys import list_files
+from zmlx.alg.utils import code_config
+from zmlx.demo.path import get_path
 
 
 def list_demo_files():

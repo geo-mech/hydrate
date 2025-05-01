@@ -1,32 +1,15 @@
-import glob
+import warnings
 
-import cv2  # python -m pip install opencv-python
+from zmlx.alg.image import make_video
+
+warnings.warn(f'The module {__name__} will be removed after 2026-4-15',
+              DeprecationWarning, stacklevel=2)
+
+from zmlx.alg.sys import log_deprecated
+
+log_deprecated(__name__)
 
 
-def make_video(video_name, image_folder, fps=30, img_ext='.jpg'):
-    """
-    将给定文件夹中的给定扩展名的图片合成一个视频.
-    """
-    # 获取图片列表
-    images = [img for img in glob.glob(f"{image_folder}/*{img_ext}")]
-
-    # 按文件名排序，确保图片按正确顺序添加
-    images.sort()
-
-    # 获取一张图片以获取视频尺寸
-    frame = cv2.imread(images[0])
-    height, width, layers = frame.shape
-
-    # 定义视频编码器和输出视频
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # 定义编码器
-    video = cv2.VideoWriter(video_name, fourcc, fps, (width, height))
-
-    for image in images:
-        print(image)
-        video.write(cv2.imread(image))
-
-    # 释放视频文件
-    video.release()
 
 
 def test():

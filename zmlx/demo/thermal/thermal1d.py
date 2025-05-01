@@ -14,11 +14,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.special import erf
 
-from zml import Seepage
-from zmlx.plt.plotxy import plotxy
-from zmlx.seepage_mesh.cube import create_cube
-from zmlx.ui import gui
-from zmlx.utility.SeepageNumpy import as_numpy
+from zmlx import Seepage, plotxy, create_cube_seepage_mesh as create_cube, gui, \
+    as_numpy
 
 
 class CellAttrs:
@@ -43,11 +40,13 @@ def create():
         cell.set_attr(CellAttrs.temperature,
                       373.15 if abs(x - x0) < 1e-3 else 273.15)
         # 设置比热容 和 密度
-        cell.set_attr(CellAttrs.mc, 1.0e20 * c.vol if abs(x - x0) < 1e-3 else 2640 * 754.4 * c.vol)
+        cell.set_attr(CellAttrs.mc, 1.0e20 * c.vol if abs(
+            x - x0) < 1e-3 else 2640 * 754.4 * c.vol)
 
     for f in mesh.faces:
         # 高温高压测试结果 热导率为1.69 W/(K·m)
-        face = model.add_face(model.get_cell(f.link[0]), model.get_cell(f.link[1]))
+        face = model.add_face(model.get_cell(f.link[0]),
+                              model.get_cell(f.link[1]))
         face.set_attr(FaceAttrs.g_heat, f.area * 1.69 / f.length)
 
     return model
@@ -55,8 +54,10 @@ def create():
 
 def show(model, step, folder_name):
     ada = as_numpy(model)
-    plotxy(ada.cells.x, ada.cells.get(CellAttrs.temperature), caption='temperature', gui_only=True)
-    np.savetxt(f'{folder_name}/{step:05d}.txt', np.column_stack((ada.cells.x, ada.cells.get(CellAttrs.temperature))))
+    plotxy(ada.cells.x, ada.cells.get(CellAttrs.temperature),
+           caption='temperature', gui_only=True)
+    np.savetxt(f'{folder_name}/{step:05d}.txt', np.column_stack(
+        (ada.cells.x, ada.cells.get(CellAttrs.temperature))))
 
 
 def solve(model, folder_name):
@@ -64,7 +65,8 @@ def solve(model, folder_name):
 
     for step in range(5001):
         gui.break_point()
-        model.iterate_thermal(dt=dt, ca_t=CellAttrs.temperature, ca_mc=CellAttrs.mc,
+        model.iterate_thermal(dt=dt, ca_t=CellAttrs.temperature,
+                              ca_mc=CellAttrs.mc,
                               fa_g=FaceAttrs.g_heat)
         if (step * dt) % (500 * 24 * 3600) < dt:
             show(model, step, folder_name)
@@ -72,7 +74,8 @@ def solve(model, folder_name):
 
 
 def execute(gui_mode=False, close_after_done=False):
-    gui.execute(solve, close_after_done=close_after_done, args=(create(), folder_name), disable_gui=not gui_mode)
+    gui.execute(solve, close_after_done=close_after_done,
+                args=(create(), folder_name), disable_gui=not gui_mode)
 
 
 def plt_compr(folder_name):
@@ -104,7 +107,8 @@ def plt_compr(folder_name):
     for i in [1, 2, 3, 4, 5, 6]:
         d = np.loadtxt(os.path.join(folder, names[i]))
         print(os.path.join(folder, names[i]))
-        ax.plot(d[::step, 0], d[::step, 1] - 273.15, 'o', markersize=3, c=colors[i - 1])
+        ax.plot(d[::step, 0], d[::step, 1] - 273.15, 'o', markersize=3,
+                c=colors[i - 1])
 
     ax.set(xlim=(0, 100), ylim=(0, 100))
     ax.legend(frameon=False)

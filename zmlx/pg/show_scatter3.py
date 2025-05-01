@@ -1,6 +1,6 @@
 import warnings
 
-from zmlx.geometry.point_distance import point_distance
+from zmlx.geometry.utils import point_distance
 from zmlx.pg.colormap import coolwarm
 from zmlx.pg.get_color import get_color
 from zmlx.pg.plot3 import *

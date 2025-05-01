@@ -1,7 +1,7 @@
 from zml import Mesh3
 
 
-def cube2tet(body, to_local=False):
+def cube2tet(body: Mesh3.Body, to_local=False):
     """
     将1个六面体分成5个4面体. 其中的body为Mesh3的一个体(Mesh3.Body). 返回5个list，其中每个list包含
     4个元素，分别为四面体4个顶点对应的node的ID。如果to_local，则返回Body中的node的ID，否则，返回
@@ -10,7 +10,6 @@ def cube2tet(body, to_local=False):
     剖分方法参考：
         https://forum.taichi-lang.cn/t/topic/4378
     """
-    assert isinstance(body, Mesh3.Body)
     assert body.node_number == 8
     assert body.link_number == 12
     assert body.face_number == 6

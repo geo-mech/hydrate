@@ -2,7 +2,7 @@ import numpy as np
 import pyqtgraph as pg
 import pyqtgraph.opengl as gl
 
-from zmlx.ui.GuiBuffer import gui
+from zmlx.ui import gui
 
 __Captions = [None]
 
@@ -25,6 +25,8 @@ def get_widget(caption=None, on_top=None):
     apply(oper=lambda w: widgets.append(w), caption=caption, on_top=on_top)
     if len(widgets) > 0:
         return widgets[0]
+    else:
+        return None
 
 
 def make_fn(name):
@@ -42,6 +44,8 @@ def make_fn(name):
         apply(oper=oper, caption=caption, on_top=on_top)
         if len(result) > 0:
             return result[0]
+        else:
+            return None
 
     return func
 

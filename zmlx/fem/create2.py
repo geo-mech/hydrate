@@ -27,13 +27,13 @@ def create2(mesh, fa_E=None, fa_mu=None, fa_den=None, fa_h=None,
 
     # 生成face属性的接口函数.
     assert 1.0e-6 <= f_E <= 1.0e20
-    get_f_E = attr_getter(index=fa_E, min=1.0e-6, max=1.0e20, default=f_E)
+    get_f_E = attr_getter(index=fa_E, left=1.0e-6, right=1.0e20, default=f_E)
     assert 0.01 <= f_mu <= 0.49
-    get_f_mu = attr_getter(index=fa_mu, min=0.01, max=0.49, default=f_mu)
+    get_f_mu = attr_getter(index=fa_mu, left=0.01, right=0.49, default=f_mu)
     assert 1.0e-8 <= f_den <= 1.0e8
-    get_f_den = attr_getter(index=fa_den, min=1.0e-8, max=1.0e8, default=f_den)
+    get_f_den = attr_getter(index=fa_den, left=1.0e-8, right=1.0e8, default=f_den)
     assert 0.0 <= f_h <= 1.0e20
-    get_f_h = attr_getter(index=fa_h, min=0.0, max=1.0e20, default=f_h)
+    get_f_h = attr_getter(index=fa_h, left=0.0, right=1.0e20, default=f_h)
 
     # 维度
     ndim = 2

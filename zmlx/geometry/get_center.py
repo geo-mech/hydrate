@@ -1,6 +1,15 @@
-def get_center(p1, p2):
-    return [(p1[i] + p2[i]) * 0.5 for i in range(min(len(p1), len(p2)))]
+from zmlx.geometry.utils import get_center
+__all__ = ['get_center']
 
+import warnings
+
+warnings.warn(f'The module {__name__} will be removed after 2026-4-15',
+              DeprecationWarning, stacklevel=2)
+
+
+from zmlx.alg.sys import log_deprecated
+
+log_deprecated(__name__)
 
 if __name__ == '__main__':
     print(get_center(p1=(0, 0, 0), p2=(1, 0, 0)))

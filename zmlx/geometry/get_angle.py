@@ -1,11 +1,15 @@
-import math
+from zmlx.geometry.utils import get_angle
+__all__ = ['get_angle']
+
+import warnings
+
+warnings.warn(f'The module {__name__} will be removed after 2026-4-15',
+              DeprecationWarning, stacklevel=2)
 
 
-def get_angle(x, y):
-    """
-    返回点（x,y）对应的弧度（与x轴正方向的夹角，范围[-π, π]）
-    """
-    return math.atan2(y, x)
+from zmlx.alg.sys import log_deprecated
+
+log_deprecated(__name__)
 
 
 def test():

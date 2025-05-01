@@ -1,42 +1,16 @@
 import unittest
+import warnings
+
+from zmlx.alg.utils import is_sorted
+
+warnings.warn(f'{__name__} will be removed after 2026-4-15', DeprecationWarning,
+              stacklevel=2)
+
+from zmlx.alg.sys import log_deprecated
+
+log_deprecated(__name__)
 
 
-def less(x, y):
-    """
-    比较两个数的大小
-
-    参数:
-    x: 要比较的第一个数。
-    y: 要比较的第二个数。
-
-    返回:
-    bool: 如果 x 小于 y，则返回 True，否则返回 False。
-    """
-    return x < y
-
-
-def is_sorted(vx, compare=None):
-    """
-    检查列表是否已排序
-
-    参数:
-    vx (list): 要检查的列表。
-    compare (function, 可选): 用于比较列表元素的函数。如果未提供，则使用默认的小于比较。
-
-    返回:
-    bool: 如果列表已排序则返回 True，否则返回 False。
-
-    异常:
-    ValueError: 如果 compare 参数不是一个函数。
-    """
-    if compare is not None and not callable(compare):
-        raise ValueError("compare should be a function")
-    if compare is None:
-        compare = less
-    for i in range(len(vx) - 1):
-        if not compare(vx[i], vx[i + 1]):
-            return False
-    return True
 
 
 class TestIsSorted(unittest.TestCase):

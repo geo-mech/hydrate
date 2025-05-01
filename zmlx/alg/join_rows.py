@@ -1,17 +1,17 @@
+import warnings
+
 import numpy as np
 
+from zmlx.alg.utils import join_rows
 
-def join_rows(*args):
-    """
-    堆叠具有相同列数但行数可能不同的矩阵。
+warnings.warn(f'{__name__} will be removed after 2026-4-15', DeprecationWarning,
+              stacklevel=2)
 
-    参数:
-        matrices: 一个或多个NumPy矩阵。
+from zmlx.alg.sys import log_deprecated
 
-    返回:
-        堆叠后的矩阵。
-    """
-    return np.vstack(args)
+log_deprecated(__name__)
+
+
 
 
 def test():

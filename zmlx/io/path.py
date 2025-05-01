@@ -1,12 +1,8 @@
 import os
 import warnings
 
-from zml import app_data, get_dir
-from zmlx.alg.is_chinese import is_chinese
-from zmlx.filesys.in_directory import in_directory
-from zmlx.filesys.join_paths import join_paths
-from zmlx.filesys.make_dirs import make_dirs
-from zmlx.filesys.make_parent import make_parent
+from zml import app_data, get_dir, is_chinese, make_parent, make_dirs
+from zmlx.alg.fsys import in_directory, join_paths
 
 
 def get_path(*args, tag=None, key=None):

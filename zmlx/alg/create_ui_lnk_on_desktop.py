@@ -1,12 +1,14 @@
-def create_ui_lnk_on_desktop(name='IGG-Hydrate.lnk'):
-    from zmlx.alg.create_shortcut import create_shortcut
-    from zmlx import get_path
-    from zmlx.alg.get_pythonw_path import get_pythonw_path
-    from zmlx.alg.get_desktop_path import get_desktop_path
-    create_shortcut(get_pythonw_path(),
-                    get_desktop_path(name),
-                    arguments=get_path('..', 'zml_ui.pyw')
-                    )
+import warnings
+
+from zmlx.alg.sys import create_ui_lnk_on_desktop
+
+warnings.warn(f'{__name__} will be removed after 2026-4-15', DeprecationWarning,
+              stacklevel=2)
+
+from zmlx.alg.sys import log_deprecated
+
+log_deprecated(__name__)
+
 
 
 if __name__ == '__main__':

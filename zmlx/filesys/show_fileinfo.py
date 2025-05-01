@@ -1,15 +1,12 @@
-import time
+from zmlx.alg.fsys import show_fileinfo
+__all__ = ['show_fileinfo']
 
-from zmlx.filesys.path import getatime, getmtime, isfile, getsize_str
+import warnings
+
+warnings.warn(f'The module {__name__} will be removed after 2026-4-15',
+              DeprecationWarning, stacklevel=2)
 
 
-def show_fileinfo(filepath):
-    try:
-        if isfile(filepath):
-            print(f'File   Path: {filepath}')
-            print(f'File   Size: {getsize_str(filepath)}')
-            print(f'Access Time: {time.ctime(getatime(filepath))}')
-            print(f'Modify Time: {time.ctime(getmtime(filepath))}')
-            print('\n\n')
-    except:
-        pass
+from zmlx.alg.sys import log_deprecated
+
+log_deprecated(__name__)

@@ -16,13 +16,13 @@ def init():
         print(f'Error: {e}')
 
     try:
-        from zmlx.ui.MainWindow import get_window
+        from zmlx.ui.main_window import get_window
         setattr(get_window(), 'tabs_should_be_saved', 1)
     except Exception as e:
         print(f'Error: {e}')
 
     try:
-        from zmlx.ui.MainWindow import get_window
+        from zmlx.ui.main_window import get_window
         from zml import app_data
         if app_data.getenv('show_readme', default='Yes',
                            ignore_empty=True) == 'Yes':
@@ -37,7 +37,7 @@ def open_gui(argv=None):
     """
     打开gui
     """
-    from zmlx.ui.GuiBuffer import gui
+    from zmlx.ui.gui_buffer import gui
     gui.execute(init, keep_cwd=False, close_after_done=False)
 
 

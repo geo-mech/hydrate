@@ -1,12 +1,15 @@
 """
 用于管理毛管压力驱动下的流动
 """
-import numpy as np
+try:
+    import numpy as np
+except Exception as e:
+    print(e)
+    np = None
 
-from zml import Vector, Seepage, Interp1
-from zmlx.alg.np import get_pointer
-from zmlx.config.seepage_base import get_face_sum, get_face_diff, get_dt
-from zmlx.utility.SeepageNumpy import as_numpy
+from zml import Vector, Seepage, Interp1, get_pointer64
+from zmlx.base.seepage import get_face_sum, get_face_diff, get_dt
+from zmlx.utility.seepage_numpy import as_numpy
 
 vs0 = Vector()
 vk = Vector()
@@ -67,7 +70,8 @@ def get_face_density_diff(model: Seepage, fid0, fid1):
     """
     ca = as_numpy(model).fluids(fid0).den - as_numpy(model).fluids(fid1).den
     fa = np.zeros(shape=model.face_number, dtype=float)
-    get_face_sum(model, ca=get_pointer(ca), fa=get_pointer(fa))
+    get_face_sum(
+        model, ca=get_pointer64(ca, readonly=True), fa=get_pointer64(fa))
     return fa / 2
 
 
@@ -77,7 +81,8 @@ def get_face_gra(model: Seepage):
     """
     ca = as_numpy(model).cells.g_pos
     fa = np.zeros(shape=model.face_number, dtype=float)
-    get_face_diff(model, ca=get_pointer(ca), fa=get_pointer(fa))
+    get_face_diff(model, ca=get_pointer64(ca, readonly=True),
+                  fa=get_pointer64(fa))
     return fa
 
 
@@ -108,8 +113,9 @@ def iterate(model: Seepage, dt=None, fid0=None, fid1=None,
 
         # 重力
         if gravity is not None and gravity > 0:
-            g = get_face_gra(model) * get_face_density_diff(model, fid0, fid1) * gravity
-            ppg = get_pointer(g)
+            g = get_face_gra(model) * get_face_density_diff(model, fid0,
+                                                            fid1) * gravity
+            ppg = get_pointer64(g)
             lpg = len(g)
         else:
             ppg = 0
@@ -212,7 +218,8 @@ def s2p(text):
     """
     根据文本来创建从饱和度到毛管压力的插值
     """
-    vv = [[float(w) for w in line.split()] for line in text.splitlines() if len(line) > 2]
+    vv = [[float(w) for w in line.split()] for line in text.splitlines() if
+          len(line) > 2]
     s = [v[0] for v in vv]
     p = [v[1] for v in vv]
     assert len(s) == len(p) and len(s) >= 2

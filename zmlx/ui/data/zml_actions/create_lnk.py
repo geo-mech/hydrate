@@ -3,5 +3,5 @@ menu = '帮助'
 
 
 def slot():
-    from zmlx.alg.create_ui_lnk_on_desktop import create_ui_lnk_on_desktop
+    from zmlx.alg.sys import create_ui_lnk_on_desktop
     create_ui_lnk_on_desktop()

@@ -179,7 +179,8 @@ if __name__ == "__main__":
     y_data = [0, 0, 1, 1, 0, 0, 1, 1]
     z_data = [0, 0, 0, 0, 1, 1, 1, 1]
     # 构造一个简单的标量场，比如 p = x + 2y + 3z
-    p_data = [x_i + 2 * y_i + 3 * z_i for x_i, y_i, z_i in zip(x_data, y_data, z_data)]
+    p_data = [x_i + 2 * y_i + 3 * z_i for x_i, y_i, z_i in
+              zip(x_data, y_data, z_data)]
 
     # 计算梯度
     gradients = compute_pressure_gradient_3D(x_data, y_data, z_data, p_data)

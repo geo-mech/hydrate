@@ -6,7 +6,7 @@ from zmlx.fem.elements.planar_strain_cst import stiffness as stiffness_cst
 def stiffness(x0, x1, x2, y0, y1, y2, E, mu):
     warnings.warn("stiffness is deprecated (will be removed after 2026-3-30), "
                   "please use stiffness_cst instead",
-                  DeprecationWarning)
+                  DeprecationWarning, stacklevel=2)
     return stiffness_cst(((x0, y0), (x1, y1), (x2, y2)), E, mu, 1.0)
 
 

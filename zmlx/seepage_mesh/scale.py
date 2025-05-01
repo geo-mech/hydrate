@@ -1,25 +1,15 @@
-from zml import SeepageMesh
+from zmlx.seepage_mesh.edit import scale
+__all__ = [
+    'scale'
+]
 
+import warnings
 
-def scale(mesh: SeepageMesh, factor: float, on_pos=True, on_area=True, on_vol=True, on_dist=True):
-    """
-    对渗流的网格进行缩放.
-    """
-    if on_pos or on_vol:
-        for cell in mesh.cells:
-            assert isinstance(cell, SeepageMesh.Cell)
-            if on_pos:
-                pos = [v * factor for v in cell.pos]
-                cell.pos = pos
-            if on_vol:
-                cell.vol *= factor ** 3
+warnings.warn(f'The modulus {__name__} is deprecated (use zmlx.seepage_mesh.edit) and '
+              f'will be removed after 2026-4-16',
+              DeprecationWarning, stacklevel=2)
 
-    if on_area or on_dist:
-        for face in mesh.faces:
-            assert isinstance(face, SeepageMesh.Face)
-            if on_area:
-                face.area *= factor ** 2
-            if on_dist:
-                face.dist *= factor
+from zmlx.alg.sys import log_deprecated
 
-    return mesh
+log_deprecated(__name__)
+

@@ -1,16 +1,15 @@
-from zml import SeepageMesh
-from zmlx.seepage_mesh.ascii import load_ascii
+from zmlx.seepage_mesh.io import load_mesh
+__all__ = [
+    'load_mesh'
+]
 
+import warnings
 
-def load_mesh(cell_file=None, face_file=None, path=None):
-    """
-    从文件中读取Mesh文件
-    """
-    mesh = SeepageMesh()
-    if path is not None:
-        assert cell_file is None and face_file is None
-        mesh.load(path)
-    else:
-        assert cell_file is not None and face_file is not None
-        load_ascii(cell_file, face_file, mesh=mesh)
-    return mesh
+warnings.warn(f'The modulus {__name__} is deprecated (use zmlx.seepage_mesh.io) and '
+              f'will be removed after 2026-4-16',
+              DeprecationWarning, stacklevel=2)
+
+from zmlx.alg.sys import log_deprecated
+
+log_deprecated(__name__)
+

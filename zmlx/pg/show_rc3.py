@@ -6,9 +6,9 @@
 import warnings
 
 from zml import is_array
-from zmlx.alg.clamp import clamp
+from zmlx.alg.utils import clamp
 from zmlx.geometry import rect_3d as rect3
-from zmlx.geometry.point_distance import point_distance as get_distance
+from zmlx.geometry.utils import point_distance as get_distance
 from zmlx.pg.colormap import coolwarm
 from zmlx.pg.get_color import get_color
 from zmlx.pg.plot3 import *

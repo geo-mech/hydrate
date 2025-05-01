@@ -22,11 +22,11 @@ def create3(mesh, ba_E=None, ba_mu=None, ba_den=None, b_E=1.0, b_mu=0.2, b_den=1
 
     # 生成body属性的接口函数.
     assert 1.0e-6 <= b_E <= 1.0e20
-    get_b_E = attr_getter(index=ba_E, min=1.0e-6, max=1.0e20, default=b_E)
+    get_b_E = attr_getter(index=ba_E, left=1.0e-6, right=1.0e20, default=b_E)
     assert 0.01 <= b_mu <= 0.49
-    get_b_mu = attr_getter(index=ba_mu, min=0.01, max=0.49, default=b_mu)
+    get_b_mu = attr_getter(index=ba_mu, left=0.01, right=0.49, default=b_mu)
     assert 1.0e-8 <= b_den <= 1.0e8
-    get_b_den = attr_getter(index=ba_den, min=1.0e-8, max=1.0e8, default=b_den)
+    get_b_den = attr_getter(index=ba_den, left=1.0e-8, right=1.0e8, default=b_den)
 
     # 维度
     ndim = 3

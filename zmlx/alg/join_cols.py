@@ -1,19 +1,14 @@
-import numpy as np
+from zmlx.alg.utils import join_cols
 
-from zml import Vector
+__all__ = ['join_cols']
+
+import warnings
+
+warnings.warn(f'{__name__} will be removed after 2026-4-15', DeprecationWarning,
+              stacklevel=2)
+
+from zmlx.alg.sys import log_deprecated
+
+log_deprecated(__name__)
 
 
-def join_cols(*args):
-    """
-    将给定的多个vector作为列来合并成为一个np的矩阵
-    """
-    cols = []
-    for v in args:
-        if isinstance(v, Vector):
-            a = np.zeros(shape=(v.size, 1), dtype=float)
-            v.write_numpy(a)
-            cols.append(a)
-        else:
-            v = np.reshape(np.asarray(v), (-1, 1))
-            cols.append(v)
-    return np.hstack(cols)

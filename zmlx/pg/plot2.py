@@ -1,6 +1,6 @@
 import pyqtgraph as pg
 
-from zmlx.ui.GuiBuffer import gui
+from zmlx.ui import gui
 
 __CaptionVal = [None, ]
 

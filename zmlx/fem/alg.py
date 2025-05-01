@@ -4,9 +4,9 @@ import numpy as np
 
 from zml import DynSys, Mesh3, ConjugateGradientSolver
 from zmlx.fem.create3 import create3
-from zmlx.fem.find_boundary import find_boundary
+from zmlx.fem.boundary import find_boundary
 from zmlx.fem.set_mass import set_mass
-from zmlx.geometry.point_distance import point_distance as get_distance
+from zmlx.geometry.utils import point_distance as get_distance
 
 
 def _test1():
@@ -163,7 +163,7 @@ def compute_disp(mesh: Mesh3, na_dx=None, na_dy=None, na_dz=None, ba_dd=None, ba
     if top_stress is None and top_pressure is not None:
         top_stress = top_pressure
         warnings.warn('The keyword <top_pressure> will not be used, use <top_stress> instead',
-                      DeprecationWarning)
+                      DeprecationWarning, stacklevel=2)
 
     if top_stress is not None and ba_E0 is not None and ba_E1 is not None:
         show('E0, E1 and top_pressure set, will computed disp by the changed of E')
@@ -302,7 +302,7 @@ def _test2():
             z.append(node.pos[2])
             v.append(node.get_attr(2))
     print(x)
-    from zmlx.plt.tricontourf import tricontourf
+    from zmlx.plt.fig2 import tricontourf
     tricontourf(x, z, v)
 
 

@@ -1,11 +1,9 @@
 import os
 
-from zml import app_data
-from zmlx.ui.GuiBuffer import gui
-
 
 def get_paths():
     try:
+        from zml import app_data
         paths = []
         for line in app_data.getenv(key='path', default='').splitlines():
             line = line.strip()
@@ -25,12 +23,14 @@ def add_path(paths, path):
 
 def save_paths(paths):
     try:
+        from zml import app_data
         app_data.setenv('path', '\n'.join(paths))
     except:
         pass
 
 
 def choose_path():
+    from zmlx.ui import gui
     if not gui.exists():
         return
     folder = gui.get_existing_directory('请选择文件夹', os.getcwd())
@@ -39,6 +39,7 @@ def choose_path():
             paths = get_paths()
             add_path(paths, folder)
             save_paths(paths)
-            gui.information('成功', f'成功添加了搜索路径: \n<{folder}> \n\n下次启动软件时生效!')
+            gui.information('成功',
+                            f'成功添加了搜索路径: \n<{folder}> \n\n下次启动软件时生效!')
         except Exception as e:
             print(e)

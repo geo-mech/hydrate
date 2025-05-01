@@ -1,15 +1,6 @@
 # ** desc = '流体在毛管力驱动下的流动'
 
-import numpy as np
-
-from zml import Seepage
-from zmlx.config import capillary
-from zmlx.config import seepage
-from zmlx.geometry.point_distance import point_distance
-from zmlx.plt.tricontourf import tricontourf
-from zmlx.seepage_mesh.cube import create_cube
-from zmlx.ui import gui
-from zmlx.utility.SeepageNumpy import as_numpy
+from zmlx import *
 
 mud = """0.007698294	1930020.672
 0.0441305	4270730.329
@@ -138,8 +129,10 @@ def solve(model: Seepage):
     x = md.cells.get(-1)
     y = md.cells.get(-2)
 
-    show(x, y, [get_idx(x[i], y[i], 0) for i in range(len(x))], caption='岩石ID')
-    show(x, y, [get_s(x[i], y[i], 0)[1] for i in range(len(x))], caption='初始饱和度')
+    show(x, y, [get_idx(x[i], y[i], 0) for i in range(len(x))],
+         caption='岩石ID')
+    show(x, y, [get_s(x[i], y[i], 0)[1] for i in range(len(x))],
+         caption='初始饱和度')
 
     for step in range(2000):
         gui.break_point()

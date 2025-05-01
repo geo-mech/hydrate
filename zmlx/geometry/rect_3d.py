@@ -6,12 +6,10 @@
 张召彬 2023-6-21
 """
 
-from zmlx.geometry.point_distance import point_distance as get_distance
+from zmlx.geometry.utils import point_distance as get_distance
 from zmlx.geometry.rect_v3 import get_area as v3_area, intersected as v3_intersected
 
-__all__ = ['from_v3', 'to_v3', 'get_rc3', 'set_rc3', 'get_v3', 'set_v3', 'get_cent', 'get_area', 'v3_area',
-           'get_vertexes', 'v3_intersected']
-
+__unused = [v3_area, v3_intersected]
 
 def from_v3(v3, multiple=False):
     """

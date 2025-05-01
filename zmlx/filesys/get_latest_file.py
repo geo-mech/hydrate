@@ -1,36 +1,18 @@
-import os
+from zmlx.alg.fsys import get_latest_file
+__all__ = [
+    'get_latest_file'
+]
+
+import warnings
+
+warnings.warn(f'The module {__name__} will be removed after 2026-4-15',
+              DeprecationWarning, stacklevel=2)
 
 
-def get_latest_file(folder):
-    """
-    获取指定文件夹内最新修改的文件的绝对路径
+from zmlx.alg.sys import log_deprecated
 
-    参数：
-        folder (str): 目标文件夹路径
-
-    返回：
-        str|None: 最新文件的绝对路径，异常时返回None
-    """
-    try:
-        if not os.path.isdir(folder):
-            return None
-
-        latest_time = 0
-        latest_path = None
-
-        for entry in os.listdir(folder):
-            full_path = os.path.join(folder, entry)
-            if os.path.isfile(full_path):
-                file_time = os.path.getmtime(full_path)
-                if file_time > latest_time:
-                    latest_time = file_time
-                    latest_path = full_path
-
-        return os.path.abspath(latest_path) if latest_path else None
-
-    except:
-        return None
-
+log_deprecated(__name__)
 
 if __name__ == '__main__':
+    import os
     print(get_latest_file(os.path.dirname(__file__)))

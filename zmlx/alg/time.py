@@ -1,5 +1,14 @@
-def year_to_seconds(year):
-    """
-    将年转化为秒
-    """
-    return 365.0 * 24.0 * 3600.0 * year
+from zmlx.alg.utils import year_to_seconds
+
+__all__ = ['year_to_seconds']
+
+import warnings
+
+warnings.warn(f'The {__name__} will be removed after 2026-4-17',
+              DeprecationWarning, stacklevel=2)
+
+from zmlx.alg.sys import log_deprecated
+
+log_deprecated(__name__)
+
+

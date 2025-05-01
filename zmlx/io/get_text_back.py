@@ -1,19 +1,18 @@
-def get_text_back(filename, max_length=None):
-    try:
-        # 添加errors参数处理解码问题
-        with open(filename, 'r', encoding='utf-8', errors='ignore') as file:
-            if max_length is None:
-                return file.read()
+from zmlx.io.utils import get_text_back
+__all__ = ['get_text_back']
 
-            file.seek(0, 2)
-            file_size = file.tell()
-            start_pos = max(0, file_size - max_length)
-            file.seek(start_pos)
-            return file.read()[-max_length:]
+import warnings
 
-    except Exception as e:
-        print(f"Error reading file: {str(e)}")
-        return None
+warnings.warn(f'The module {__name__} will be removed after 2026-4-15',
+              DeprecationWarning, stacklevel=2)
+
+from zmlx.alg.sys import log_deprecated
+
+log_deprecated(__name__)
+
+
+
+
 
 if __name__ == '__main__':
     print(get_text_back(__file__, max_length=200))

@@ -1,32 +1,15 @@
-from zml import read_text
+import warnings
+
+from zmlx.alg.utils import code_config
+
+warnings.warn(f'{__name__} will be removed after 2026-4-15', DeprecationWarning,
+              stacklevel=2)
+
+from zmlx.alg.sys import log_deprecated
+
+log_deprecated(__name__)
 
 
-def code_config(path=None, encoding=None, text=None):
-    """
-    获取脚本中的配置信息.
-    """
-    try:
-        if text is None:
-            text = read_text(path=path,
-                             encoding='utf-8' if encoding is None else encoding,
-                             default=None)
-        config = {}
-        if text is not None:
-            code = ""
-            for line in text.splitlines():
-                line = line.strip()
-                if len(line) >= 4:
-                    if line[0: 4] == '# **':
-                        code += line[4:].strip() + '\n'
-            if len(code) > 0:
-                try:
-                    exec(code, None, config)
-                except Exception as e:
-                    print(e)
-        return config
-    except Exception as e2:
-        print(e2)
-        return {}
 
 
 def test():

@@ -600,7 +600,7 @@ class InfManager2(HasHandle):
             非常硬的约束，也是后续计算裂缝的dn和ds的时候的边界条件.
         """
         warnings.warn('please use FractureNetwork2.update_boundary instead',
-                      DeprecationWarning)
+                      DeprecationWarning, stacklevel=2)
         if isinstance(seepage, Seepage):
             if fh is None:
                 fh = -1  # Now, using the fracture height defined in fracture.

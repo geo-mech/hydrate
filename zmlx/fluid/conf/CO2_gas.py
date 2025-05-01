@@ -44,7 +44,7 @@ def create(tmin=200, tmax=500, pmin=1.0e6, pmax=20.0e6, name=None):
 
 
 def create_flu(*args, **kwargs):
-    warnings.warn('use function <create> instead', DeprecationWarning)
+    warnings.warn('use function <create> instead', DeprecationWarning, stacklevel=2)
     return create(*args, **kwargs)
 
 

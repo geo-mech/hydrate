@@ -1,11 +1,15 @@
-def triangle_area(a, b, c):
-    """
-    get the area of a triangle by the length of its edge.
-        see: http://baike.baidu.com/view/1279.htm
-    """
-    p = (a + b + c) / 2
-    p = p * (p - a) * (p - b) * (p - c)
-    return p ** 0.5 if p > 0 else 0
+from zmlx.geometry.utils import triangle_area
+__all__ = ['triangle_area', ]
+
+import warnings
+
+warnings.warn(f'The module {__name__} will be removed after 2026-4-15',
+              DeprecationWarning, stacklevel=2)
+
+
+from zmlx.alg.sys import log_deprecated
+
+log_deprecated(__name__)
 
 
 if __name__ == '__main__':

@@ -1,32 +1,14 @@
-from zmlx.plt.plot_on_axes import plot_on_axes
+import warnings
 
+from zmlx.plt.fig2 import show_field2
 
-def show_field2(f, xr, yr, clabel=None, **opts):
-    """
-    显示一个二维的场，用于测试
-    """
-    def on_axes(ax):
-        x = []
-        y = []
-        z = []
-        va = [xr[0] + (xr[1] - xr[0]) * i * 0.01 for i in range(101)]
-        vb = [yr[0] + (yr[1] - yr[0]) * i * 0.01 for i in range(101)]
-        for a in va:
-            for b in vb:
-                x.append(a)
-                y.append(b)
-                z.append(f(a, b))
-        item = ax.tricontourf(
-            x, y, z,
-            levels=30,
-            cmap='coolwarm',
-            antialiased=True
-        )
-        cbar = ax.get_figure().colorbar(item, ax=ax)
-        if isinstance(clabel, str):
-            cbar.set_label(clabel)
+warnings.warn(f'The modulus {__name__} is deprecated and '
+              f'will be removed after 2026-4-16',
+              DeprecationWarning, stacklevel=2)
 
-    plot_on_axes(on_axes, **opts)
+from zmlx.alg.sys import log_deprecated
+
+log_deprecated(__name__)
 
 
 def test_1():

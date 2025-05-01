@@ -1,20 +1,14 @@
 # ** desc = '测试：纵向二维。浮力作用下气体运移成藏过程模拟'
 
-
-import numpy as np
-
-from zml import get_distance
-from zmlx.config import seepage
-from zmlx.fluid.ch4 import create as create_ch4
-from zmlx.fluid.h2o import create as create_h2o
-from zmlx.seepage_mesh.cube import create_cube
+from zmlx import *
 
 
 def create():
-    mesh = create_cube(x=np.linspace(0, 300, 150),
-                       y=(-0.5, 0.5),
-                       z=np.linspace(-500, 0, 250)
-                       )
+    mesh = create_cube(
+        x=linspace(0, 300, 150),
+        y=(-0.5, 0.5),
+        z=linspace(-500, 0, 250)
+    )
 
     def get_t(x, y, z):
         return 278 + 22.15 - 0.0443 * z
@@ -42,20 +36,22 @@ def create():
         else:
             return 1.0e-15
 
-    model = seepage.create(mesh, porosity=0.1, pore_modulus=100e6,
-                           denc=get_denc, dist=0.1,
-                           temperature=get_t, p=get_p, s=get_s,
-                           perm=get_k, heat_cond=2.0,
-                           fludefs=[create_ch4(name='ch4'),
-                                    create_h2o(name='h2o')],
-                           dt_max=3600 * 24, gravity=(0, 0, -10))
+    model = seepage.create(
+        mesh, porosity=0.1, pore_modulus=100e6,
+        denc=get_denc, dist=0.1,
+        temperature=get_t, p=get_p, s=get_s,
+        perm=get_k, heat_cond=2.0,
+        fludefs=[create_ch4(name='ch4'),
+                 create_h2o(name='h2o')],
+        dt_max=3600 * 24, gravity=(0, 0, -10))
 
     # 用于求解的选项
-    model.set_text(key='solve',
-                   text={'show_cells': {'dim0': 0, 'dim1': 2},
-                         'step_max': 10000,
-                         }
-                   )
+    model.set_text(
+        key='solve',
+        text={'show_cells': {'dim0': 0, 'dim1': 2},
+              'step_max': 10000,
+              }
+    )
 
     return model
 

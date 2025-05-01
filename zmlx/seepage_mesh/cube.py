@@ -1,7 +1,11 @@
-import numpy as np
+try:
+    import numpy as np
+except Exception as e:
+    print(e)
+    np = None
 
 from zml import SeepageMesh
-from zmlx.alg.is_sorted import is_sorted
+from zmlx.alg.utils import is_sorted
 
 
 def create_cube(x=(-0.5, 0.5), y=(-0.5, 0.5), z=(-0.5, 0.5), boxes=None,

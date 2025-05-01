@@ -1,12 +1,6 @@
 # ** desc = '砂浓度计算(正在测试，尚未完成)'
 
-import numpy as np
-
-from zml import Seepage, Interp1
-from zmlx.config import seepage, sand
-from zmlx.plt.tricontourf import tricontourf
-from zmlx.seepage_mesh.cube import create_cube
-from zmlx.utility.SeepageNumpy import as_numpy
+from zmlx import *
 
 
 def create():
@@ -15,11 +9,14 @@ def create():
                        z=[0, 1])
 
     # 所有的流体的定义
-    fludefs = [Seepage.FluDef.create(defs=[Seepage.FluDef(den=1000, vis=0.001, specific_heat=1000, name='h2o'),
-                                           Seepage.FluDef(den=1000, vis=0.001, specific_heat=1000, name='flu_sand')],
-                                     name='flu'),
-               Seepage.FluDef(den=1000, vis=1e30, specific_heat=1000, name='sol_sand')
-               ]
+    fludefs = [Seepage.FluDef.create(defs=[
+        Seepage.FluDef(den=1000, vis=0.001, specific_heat=1000, name='h2o'),
+        Seepage.FluDef(den=1000, vis=0.001, specific_heat=1000,
+                       name='flu_sand')],
+        name='flu'),
+        Seepage.FluDef(den=1000, vis=1e30, specific_heat=1000,
+                       name='sol_sand')
+    ]
 
     x_min, x_max = mesh.get_pos_range(0)
     y_min, y_max = mesh.get_pos_range(0)
@@ -77,9 +74,9 @@ def create():
         if abs(x - x_min) > 0.1 or abs(y - y_min) > 0.1:
             cell.set_attr(index=idx, value=1)
 
-    sand.add_setting(model,
-                     sol_sand='sol_sand', flu_sand='flu_sand',
-                     ca_i0='i0', ca_i1='i1')
+    sand_config.add_setting(model,
+                            sol_sand='sol_sand', flu_sand='flu_sand',
+                            ca_i0='i0', ca_i1='i1')
 
     return model
 
@@ -87,13 +84,13 @@ def create():
 def show_gradient(model: Seepage):
     x = as_numpy(model).cells.x
     y = as_numpy(model).cells.y
-    v = sand.get_gradient(model, fluid=[0])
+    v = sand_config.get_gradient(model, fluid=[0])
     tricontourf(x, y, v, caption='gradient')
 
 
 def update_sand(*args, **kwargs):
     print('my update sand')
-    sand.iterate(*args, **kwargs)
+    sand_config.iterate(*args, **kwargs)
 
 
 def test_1():

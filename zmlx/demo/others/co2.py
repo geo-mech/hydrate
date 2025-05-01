@@ -1,9 +1,7 @@
 # ** desc = '水平井注入，浮力作用下气体运移、水合物成藏过程模拟(co2)'
 
-from zmlx.config import hydrate, seepage
-from zmlx.kr.create_kr import create_kr
-from zmlx.kr.create_krf import create_krf
-from zmlx.seepage_mesh.cube import create_cube
+
+from zmlx import *
 
 
 def create_xz_half(x_max=300.0, depth=300.0, height=100.0,
@@ -141,7 +139,8 @@ def create(mass_rate=50.0 / (3600.0 * 24.0), years_inj=20,
 
     # 用于界面绘图的选项
     solve = {'show_cells': {'dim0': 0, 'dim1': 2,
-                            'show_s': ['ch4', 'ch4_hydrate', 'co2', 'co2_in_liq',
+                            'show_s': ['ch4', 'ch4_hydrate', 'co2',
+                                       'co2_in_liq',
                                        'co2_hydrate', 'inh'],
                             'use_mass': True
                             },

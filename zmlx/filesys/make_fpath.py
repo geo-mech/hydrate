@@ -1,19 +1,14 @@
-import os
+from zmlx.alg.fsys import make_fpath
+__all__ = ['make_fpath']
 
-from zmlx.filesys.make_dirs import make_dirs
+import warnings
+
+warnings.warn(f'The module {__name__} will be removed after 2026-4-15',
+              DeprecationWarning, stacklevel=2)
 
 
-def make_fpath(folder, step=None, ext='.txt', name=None):
-    """
-    Returns a filename to output data, and ensures that the folder exists
-    """
-    assert isinstance(folder, str)
-    if not os.path.exists(folder):
-        make_dirs(folder)
-    else:
-        assert os.path.isdir(folder)
-    assert step is not None or name is not None
-    if step is not None:
-        return os.path.join(folder, f'{step:010d}{ext}')
-    if name is not None:
-        return os.path.join(folder, name)
+from zmlx.alg.sys import log_deprecated
+
+log_deprecated(__name__)
+
+

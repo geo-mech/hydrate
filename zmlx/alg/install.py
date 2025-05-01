@@ -1,20 +1,14 @@
-import os
-import sys
+from zmlx.alg.sys import add_pth_file as install
+
+__all__ = ['install']
+
+import warnings
+
+warnings.warn(f'{__name__} will be removed after 2026-4-15', DeprecationWarning,
+              stacklevel=2)
+
+from zmlx.alg.sys import log_deprecated
+
+log_deprecated(__name__)
 
 
-def install(name, folder):
-    """
-    Add the current folder to python's search path
-    """
-    pth = os.path.join(os.path.dirname(sys.executable), name)
-    if not os.path.isdir(folder):
-        return
-    if os.path.isfile(pth):
-        with open(pth, 'r') as file:
-            text = file.read()
-            if os.path.isdir(text):
-                if os.path.samefile(folder, text):
-                    return
-    with open(pth, 'w') as file:
-        file.write(folder)
-    print(f"Succeed Installed: '{folder}' \n       --> '{pth}'")

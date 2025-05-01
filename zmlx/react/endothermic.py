@@ -1,4 +1,4 @@
-from zmlx.alg.clamp import clamp
+from zmlx.alg.utils import clamp
 
 
 def create(left, right, temp, heat, rate=None, fa_t=None, fa_c=None, l2r=True, r2l=True, p2t=None,

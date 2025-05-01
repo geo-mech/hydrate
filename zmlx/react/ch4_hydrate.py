@@ -4,7 +4,7 @@
 
 import zmlx.react.hydrate as hydrate
 from zml import Interp1
-from zmlx.alg.interp1 import interp1
+from zmlx.alg.interp import interp1
 
 # 温度压力曲线：取自Tough+Hydrate的手册
 vt = [148.714, 154.578, 159.889, 166.418, 174.827, 183.458, 192.199, 200.277, 207.026, 213.887, 222.739, 231.259,

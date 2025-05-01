@@ -1,16 +1,15 @@
-from zmlx.filesys.get_lines import get_lines
-from zmlx.filesys.list_code_files import list_code_files
-from zmlx.ui.GuiBuffer import gui
+from zmlx.alg.fsys import count_lines
+
+import warnings
+
+warnings.warn(f'The module {__name__} will be removed after 2026-4-15',
+              DeprecationWarning, stacklevel=2)
 
 
-def count_lines(path=None, exts=None):
-    lines = 0
-    for path in list_code_files(path=path, exts=exts):
-        n = get_lines(path)
-        lines += n
-        print(f'{path}: {n}')
-        gui.break_point()
-    print(f'\n\nAll lines is: {lines}')
+from zmlx.alg.sys import log_deprecated
+
+log_deprecated(__name__)
+
 
 
 if __name__ == '__main__':

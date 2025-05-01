@@ -1,26 +1,15 @@
-import http.client
-import json
+import warnings
+
+from zmlx.alg.sys import get_ipinfo, get_city
+
+warnings.warn(f'{__name__} will be removed after 2026-4-15', DeprecationWarning,
+              stacklevel=2)
+
+from zmlx.alg.sys import log_deprecated
+
+log_deprecated(__name__)
 
 
-def get_ipinfo():
-    """
-    返回当前主机的IP信息
-    """
-    conn = http.client.HTTPSConnection("ipinfo.io")
-    conn.request("GET", "/json")
-    response = conn.getresponse()
-    data = response.read().decode()
-    conn.close()
-    info = json.loads(data)
-    return info
-
-
-def get_city():
-    """
-    获得当前主机的位置(具体到城市)
-    """
-    info = get_ipinfo()
-    return info.get('city', 'error') + ', ' + info.get('country', 'error')
 
 
 def _test():
@@ -34,7 +23,8 @@ def _test():
     region = info.get('region')
     country = info.get('country')
 
-    print(f"IP: {ip}, Location: {location}, City: {city}, Region: {region}, Country: {country}")
+    print(
+        f"IP: {ip}, Location: {location}, City: {city}, Region: {region}, Country: {country}")
 
 
 if __name__ == '__main__':

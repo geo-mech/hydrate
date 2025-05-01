@@ -1,11 +1,15 @@
-def mean(*args):
-    """
-    计算给定的各个参数的平均值
-    """
-    n = len(args)
-    if n > 0:
-        return sum(args) / n
+from zmlx.alg.utils import mean
+
+__all__ = ['mean']
+
+import warnings
+
+warnings.warn(
+    f'The {__name__} will be removed after 2026-4-17, please import from zmlx instead.',
+    DeprecationWarning, stacklevel=2)
+
+from zmlx.alg.sys import log_deprecated
+
+log_deprecated(__name__)
 
 
-if __name__ == '__main__':
-    print(mean(1, 2))

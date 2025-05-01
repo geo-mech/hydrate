@@ -1,6 +1,6 @@
 import numpy as np
 
-from zmlx.filesys.first_only import first_only
+from zmlx.alg.fsys import first_only
 
 
 def add_z_offset(fname, dz):

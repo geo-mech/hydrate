@@ -2,7 +2,7 @@ import numpy as np
 
 
 def stiffness(nodes, E, mu, thickness=1.0):
-    """计算平面应力状态下常应变三角形单元的刚度矩阵
+    """计算平面应力状态下常应变三角形单元的刚度矩阵(适用于无限薄的二维问题)
 
     Args:
         nodes (list, tuple): 长度为3的列表，每个元素是包含两个float的列表或元组，表示节点的坐标。
