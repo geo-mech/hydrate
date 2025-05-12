@@ -1,6 +1,9 @@
 import warnings
 
-import numpy as np
+try:
+    import numpy as np
+except ImportError:
+    np = None
 
 from zmlx.plt.fig2 import trimesh
 

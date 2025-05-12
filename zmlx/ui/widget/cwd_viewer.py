@@ -3,8 +3,7 @@ import time
 import timeit
 
 from zml import app_data
-from zmlx.alg.utils import clamp
-from zmlx.alg.to_string import fsize2str
+from zmlx.alg.utils import fsize2str, clamp
 from zmlx.ui.pyqt import QtWidgets, QtCore
 
 
@@ -46,6 +45,8 @@ class CwdViewer(QtWidgets.QTableWidget):
         self.setRowCount(len(data))
         self.setColumnCount(4)
         self.setHorizontalHeaderLabels(['名称', '类型', '大小', '修改时间'])
+        self.horizontalHeader().setSectionResizeMode(
+            0, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
         for irow in range(len(data)):
             for icol in range(4):
                 self.setItem(irow, icol,

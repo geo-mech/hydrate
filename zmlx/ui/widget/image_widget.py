@@ -45,8 +45,9 @@ class ImageViewer(QtWidgets.QGraphicsView):
         # 平滑缩放
         self.pixmapItem.setTransformationMode(
             QtCore.Qt.TransformationMode.SmoothTransformation)
-        self.setRenderHints(QtGui.QPainter.RenderHint.Antialiasing |
-                            QtGui.QPainter.RenderHint.SmoothPixmapTransform)
+        self.setRenderHints(
+            QtGui.QPainter.RenderHint.Antialiasing |
+            QtGui.QPainter.RenderHint.SmoothPixmapTransform)
 
         # 设置场景
         self.graphicsScene.addItem(self.pixmapItem)

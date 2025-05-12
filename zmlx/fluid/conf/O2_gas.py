@@ -9,9 +9,8 @@ https://www.engineeringtoolbox.com/oxygen-d_978.html
 import warnings
 
 import matplotlib.pyplot as plt
-import numpy as np
 
-from zml import Interp2, Seepage
+from zml import Interp2, Seepage, np
 from zmlx.fluid.conf.gas_density.O2_density import *
 from zmlx.fluid.conf.gas_viscosity.O2_viscosity import *
 
@@ -45,11 +44,13 @@ def create(tmin=280, tmax=700, pmin=1.0e6, pmax=20.0e6, name=None):
         return vis
 
     specific_heat = 1090  # J/kg K
-    return Seepage.FluDef(den=create_density(), vis=create_viscosity(), specific_heat=specific_heat, name=name)
+    return Seepage.FluDef(den=create_density(), vis=create_viscosity(),
+                          specific_heat=specific_heat, name=name)
 
 
 def create_flu(*args, **kwargs):
-    warnings.warn('use function <create> instead', DeprecationWarning, stacklevel=2)
+    warnings.warn('use function <create> instead', DeprecationWarning,
+                  stacklevel=2)
     return create(*args, **kwargs)
 
 
@@ -74,7 +75,8 @@ if __name__ == '__main__':
 
     # Gráficos de superficie para la densidad
     plt.figure(figsize=(8, 6))
-    cp_density = plt.contourf(P_grid / 1e6, T_grid, density_grid, cmap='coolwarm')
+    cp_density = plt.contourf(P_grid / 1e6, T_grid, density_grid,
+                              cmap='coolwarm')
     plt.title('Densidad del Oxígeno')
     plt.xlabel('Presión (MPa)')
     plt.ylabel('Temperatura (K)')
@@ -83,7 +85,8 @@ if __name__ == '__main__':
 
     # Gráficos de superficie para la viscosidad
     plt.figure(figsize=(8, 6))
-    cp_viscosity = plt.contourf(P_grid / 1e6, T_grid, viscosity_grid, cmap='coolwarm')
+    cp_viscosity = plt.contourf(P_grid / 1e6, T_grid, viscosity_grid,
+                                cmap='coolwarm')
     plt.title('Viscosidad del Oxígeno')
     plt.xlabel('Presión (MPa)')
     plt.ylabel('Temperatura (K)')

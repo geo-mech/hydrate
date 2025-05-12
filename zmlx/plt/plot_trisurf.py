@@ -12,7 +12,10 @@ log_deprecated(__name__)
 
 
 def test_1():
-    import numpy as np
+    try:
+        import numpy as np
+    except ImportError:
+        np = None
     # 生成 x 和 y 坐标
     x = np.linspace(-5, 5, 30)
     y = np.linspace(-5, 5, 30)

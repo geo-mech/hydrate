@@ -14,6 +14,7 @@ def clone(repo_url, local_path):
         return repo
     except pygit2.GitError as e:
         print(f"克隆仓库失败：{str(e)}")
+        return None
 
 
 def update(local_path):

@@ -1,8 +1,6 @@
 import math
 
-import numpy as np
-
-from zml import Mesh3
+from zml import Mesh3, np
 
 
 def create_ring(vr, angle_step=math.pi / 20.0, z=0.0):
@@ -32,8 +30,10 @@ def create_ring(vr, angle_step=math.pi / 20.0, z=0.0):
         for ir in range(len(vr) - 1):
             n00 = mesh.get_node(node_ids[ia][ir])
             n01 = mesh.get_node(node_ids[ia][ir + 1])
-            n10 = mesh.get_node(node_ids[ia + 1 if ia + 1 < len(node_ids) else 0][ir])
-            n11 = mesh.get_node(node_ids[ia + 1 if ia + 1 < len(node_ids) else 0][ir + 1])
+            n10 = mesh.get_node(
+                node_ids[ia + 1 if ia + 1 < len(node_ids) else 0][ir])
+            n11 = mesh.get_node(
+                node_ids[ia + 1 if ia + 1 < len(node_ids) else 0][ir + 1])
             mesh.add_face(links=[mesh.add_link([n00, n10]),
                                  mesh.add_link([n00, n01]),
                                  mesh.add_link([n11, n10]),

@@ -11,11 +11,10 @@ todo:
 import os
 
 import matplotlib.pyplot as plt
-import numpy as np
 from scipy.special import erf
 
 from zmlx import Seepage, plotxy, create_cube_seepage_mesh as create_cube, gui, \
-    as_numpy
+    as_numpy, np
 
 
 class CellAttrs:

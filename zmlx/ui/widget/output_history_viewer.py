@@ -2,10 +2,10 @@ import os
 import sys
 
 from zml import app_data
+from zmlx.ui.pyqt import is_pyqt6
 from zmlx.ui.widget.console_output import ConsoleOutput
-from zmlx.ui.pyqt import is_PyQt6
 
-if is_PyQt6:
+if is_pyqt6:
     from PyQt6.QtWidgets import (
         QWidget, QHBoxLayout, QListWidget, QListWidgetItem
     )
@@ -18,7 +18,7 @@ else:
 
 import glob
 
-ITEM_DATA_ROLE = Qt.ItemDataRole.UserRole if is_PyQt6 else Qt.UserRole
+ITEM_DATA_ROLE = Qt.ItemDataRole.UserRole if is_pyqt6 else Qt.UserRole
 
 
 class OutputHistoryViewer(QWidget):
@@ -93,7 +93,7 @@ class OutputHistoryViewer(QWidget):
 
 # 使用示例
 if __name__ == '__main__':
-    if is_PyQt6:
+    if is_pyqt6:
         from PyQt6.QtWidgets import QApplication
     else:
         from PyQt5.QtWidgets import QApplication

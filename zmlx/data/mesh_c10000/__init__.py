@@ -29,7 +29,8 @@ def get_mesh3(z=0):
         mesh.add_node(x[idx], y[idx], z=z)
 
     for t in tri:
-        links = [mesh.add_link([mesh.get_node(t[i]), mesh.get_node(t[j])]) for (i, j) in [(0, 1), (1, 2), (2, 0)]]
+        links = [mesh.add_link([mesh.get_node(t[i]), mesh.get_node(t[j])]) for
+                 (i, j) in [(0, 1), (1, 2), (2, 0)]]
         mesh.add_face(links=links)
 
     return mesh

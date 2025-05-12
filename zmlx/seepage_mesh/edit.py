@@ -16,7 +16,7 @@ def add_cell_face(mesh: SeepageMesh, *, offset, pos=None, cell=None, vol=1.0,
         cell = mesh.get_nearest_cell(pos=pos)
 
     if cell is None:
-        return
+        return None
 
     index = cell.index  # 需要去连接的cell的id，提前找到，避免后续找到新添加的cell
     pos = cell.pos
@@ -35,7 +35,8 @@ def add_cell_face(mesh: SeepageMesh, *, offset, pos=None, cell=None, vol=1.0,
     return index
 
 
-def scale(mesh: SeepageMesh, factor: float, on_pos=True, on_area=True, on_vol=True, on_dist=True):
+def scale(mesh: SeepageMesh, factor: float, on_pos=True, on_area=True,
+          on_vol=True, on_dist=True):
     """
     对渗流的网格进行缩放.
     """

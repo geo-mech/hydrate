@@ -9,8 +9,6 @@ from zmlx.alg.sys import log_deprecated
 
 log_deprecated(__name__)
 
-
-
 if __name__ == '__main__':
     if len(sys.argv) >= 2:
         key = sys.argv[1]

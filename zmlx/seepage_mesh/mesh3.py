@@ -36,7 +36,8 @@ def face_centered(mesh, thick=1.0):
                 face1 = link.get_face(i1)
                 dist1 = point_distance(face1.pos, pos)
                 dist = dist0 + dist1  # 总的流动距离
-                fac = res.add_face(res.get_cell(face0.index), res.get_cell(face1.index))
+                fac = res.add_face(res.get_cell(face0.index),
+                                   res.get_cell(face1.index))
                 fac.area = area
                 fac.length = dist
 
@@ -45,7 +46,8 @@ def face_centered(mesh, thick=1.0):
 
 
 def test():
-    mesh3 = Mesh3.create_cube(x1=-20, y1=-20, z1=0, x2=20, y2=20, z2=0, dx=1, dy=1, dz=1)
+    mesh3 = Mesh3.create_cube(x1=-20, y1=-20, z1=0, x2=20, y2=20, z2=0, dx=1,
+                              dy=1, dz=1)
     print(mesh3)
 
     mes = face_centered(mesh=mesh3, thick=1)

@@ -10,8 +10,6 @@ from zmlx.alg.sys import log_deprecated
 log_deprecated(__name__)
 
 
-
-
 def test():
     # 设置图片文件夹和输出视频文件名
     image_folder = r'D:\MyData\co2\base\inh'  # 替换为你的图片文件夹路径

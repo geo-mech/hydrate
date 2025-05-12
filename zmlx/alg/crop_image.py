@@ -10,8 +10,6 @@ from zmlx.alg.sys import log_deprecated
 log_deprecated(__name__)
 
 
-
-
 def test():
     output_image_path = "output.jpg"  # 输出图像的路径
     input_image_path = "input.jpg"  # 输入图像的路径

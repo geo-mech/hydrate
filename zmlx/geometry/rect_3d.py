@@ -6,10 +6,12 @@
 张召彬 2023-6-21
 """
 
+from zmlx.geometry.rect_v3 import get_area as v3_area, \
+    intersected as v3_intersected
 from zmlx.geometry.utils import point_distance as get_distance
-from zmlx.geometry.rect_v3 import get_area as v3_area, intersected as v3_intersected
 
 __unused = [v3_area, v3_intersected]
+
 
 def from_v3(v3, multiple=False):
     """
@@ -66,7 +68,8 @@ def get_rc3(cell, keys):
     rc3 = cell.pos  # 必须确保cell的坐标是矩形的中心点.
     for i in (keys.x1, keys.y1, keys.z1,
               keys.x2, keys.y2, keys.z2):
-        v = cell.get_attr(i, min=-1.0e10, max=1.0e10, default_val=None)  # 只取 [-1.0e10, 1.0e10] 范围的数据. 2023-9-21
+        v = cell.get_attr(i, min=-1.0e10, max=1.0e10,
+                          default_val=None)  # 只取 [-1.0e10, 1.0e10] 范围的数据. 2023-9-21
         if v is None:
             return
         else:

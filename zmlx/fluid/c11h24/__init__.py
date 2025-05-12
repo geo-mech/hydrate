@@ -6,14 +6,16 @@ from zml import Interp2, Seepage
 def create(name=None, specific_heat=None):
     if specific_heat is None:
         specific_heat = 2157.82  # J/kg K
-    return Seepage.FluDef(den=Interp2(path=os.path.join(os.path.dirname(__file__), 'den.txt')),
-                          vis=Interp2(path=os.path.join(os.path.dirname(__file__), 'vis.txt')),
-                          specific_heat=specific_heat, name=name)
+    return Seepage.FluDef(
+        den=Interp2(path=os.path.join(os.path.dirname(__file__), 'den.txt')),
+        vis=Interp2(path=os.path.join(os.path.dirname(__file__), 'vis.txt')),
+        specific_heat=specific_heat, name=name)
 
 
 def create_flu(*args, **kwargs):
     import warnings
-    warnings.warn('use function <create> instead', DeprecationWarning, stacklevel=2)
+    warnings.warn('use function <create> instead', DeprecationWarning,
+                  stacklevel=2)
     return create(*args, **kwargs)
 
 

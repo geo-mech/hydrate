@@ -12,7 +12,3 @@ warnings.warn(f'The module {__name__} is deprecated (remove after 2026-4-15), '
 from zmlx.alg.sys import log_deprecated
 
 log_deprecated(__name__)
-
-
-
-

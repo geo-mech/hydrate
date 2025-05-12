@@ -3,7 +3,8 @@ from zmlx.alg.utils import linspace
 from zmlx.geometry.utils import point_distance
 
 
-def dfn2(data=None, *, xr=None, yr=None, p21=None, l_min=None, angles=None, lengths=None, ar=None, lr=None, **ignores):
+def dfn2(data=None, *, xr=None, yr=None, p21=None, l_min=None, angles=None,
+         lengths=None, ar=None, lr=None, **ignores):
     """
     创建二维的dfn. 返回一个list，此list的每一个元素都是长度为4的list (格式为 x0  y0  x1  y1).
 
@@ -15,7 +16,8 @@ def dfn2(data=None, *, xr=None, yr=None, p21=None, l_min=None, angles=None, leng
     if data is not None:
         fractures = []
         for item in data:
-            kw = dict(xr=xr, yr=yr, p21=p21, l_min=l_min, angles=angles, lengths=lengths, ar=ar, lr=lr)
+            kw = dict(xr=xr, yr=yr, p21=p21, l_min=l_min, angles=angles,
+                      lengths=lengths, ar=ar, lr=lr)
             kw.update(item)
             fractures = fractures + dfn2(**kw)
         return fractures
@@ -58,7 +60,8 @@ def get_length(fracture):
     """
     获取裂缝的长度。 fracture是一个长度为4的list，格式为 x0  y0  x1  y1
     """
-    return point_distance((fracture[0], fracture[1]), (fracture[2], fracture[3]))
+    return point_distance((fracture[0], fracture[1]),
+                          (fracture[2], fracture[3]))
 
 
 def get_center(fracture):

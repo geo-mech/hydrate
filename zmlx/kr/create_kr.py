@@ -1,4 +1,5 @@
 from zmlx.kr.pre_defines import create_kr
+
 __all__ = ['create_kr']
 
 import warnings
@@ -9,11 +10,6 @@ warnings.warn(f'The module {__name__} will be removed after 2026-4-15',
 from zmlx.alg.sys import log_deprecated
 
 log_deprecated(__name__)
-
-
-
-
-
 
 
 def _test1():

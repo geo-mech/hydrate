@@ -292,7 +292,7 @@ def getsize_str(filename):
     """
     将文件的大小，显示为字符串
     """
-    from zmlx.alg.to_string import fsize2str
+    from zmlx.alg.utils import fsize2str
     return fsize2str(getsize(filename))
 
 
@@ -371,7 +371,7 @@ def _do_convert(i_path, o_path, convert=None, keep_file=True, create_data=None,
     """
     执行转化过程. 返回是否成功
     """
-    from zmlx.alg.to_string import time2str
+    from zmlx.alg.utils import time2str
     succeed = False
     try:
         if convert is not None:
@@ -417,7 +417,7 @@ def change_fmt(convert=None, ext=None, path=None, keywords=None, keep_file=True,
     修改数据的格式。其中给定的函数<convert>将接受两个参数，分别为输入和输出的路径
     """
     from zmlx.alg.multi_proc import apply_async, create_async
-    from zmlx.alg.to_string import time2str
+    from zmlx.alg.utils import time2str
     if ext is None:
         print('You must set the new file extension')
         return

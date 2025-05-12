@@ -1,12 +1,8 @@
-import warnings
-
-from zml import make_dirs, make_parent
-from io import StringIO
 import os
-try:
-    import numpy as np
-except ImportError:
-    np = None
+import warnings
+from io import StringIO
+
+from zml import make_dirs, make_parent, np
 
 
 def load_txt(*args, **kwargs):
@@ -38,7 +34,8 @@ def append_file(filename, text):
             with open(make_parent(filename), 'a') as file:
                 file.write(text)
     except Exception as err:
-        warnings.warn(f'meet exception in append_file. filename={filename}. error={err}')
+        warnings.warn(
+            f'meet exception in append_file. filename={filename}. error={err}')
 
 
 def get_text_back(filename, max_length=None):
@@ -86,4 +83,3 @@ class TaskFolder:
             return make_parent(join_paths(self.folder, *args))
         else:
             return self.folder
-

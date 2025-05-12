@@ -1,6 +1,5 @@
 from zml import app_data
 
-
 key = 'plt_export_dpi'
 
 
@@ -26,4 +25,3 @@ def test():
 
 if __name__ == '__main__':
     test()
-

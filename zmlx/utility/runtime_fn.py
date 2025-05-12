@@ -26,8 +26,10 @@ class RuntimeFunc:
         except Exception as e:
             warnings.warn(
                 f'meet error when import "{self.func_name}" from "{self.pack_name}". error = "{e}"')
+            return None
 
     def __call__(self, *args, **kwargs):
         f = self.get_func()
         if f is not None:
             return f(*args, **kwargs)
+        return None

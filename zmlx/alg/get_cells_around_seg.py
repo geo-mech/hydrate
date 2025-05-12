@@ -11,5 +11,3 @@ warnings.warn('The module zmlx.alg.get_cells_around_seg is deprecated '
 from zmlx.alg.sys import log_deprecated
 
 log_deprecated(__name__)
-
-

@@ -2,6 +2,7 @@
 基于Matplotlib的二维绘图
 """
 from zmlx.plt.fig2 import plot2
+
 version = 250401
 
 
@@ -10,7 +11,10 @@ def test_1():
     测试
     """
     import matplotlib.tri as mtri
-    import numpy as np
+    try:
+        import numpy as np
+    except ImportError:
+        np = None
 
     x = np.asarray([0, 1, 0, 3, 0.5, 1.5, 2.5, 1, 2, 1.5])
     y = np.asarray([0, 0, 0, 0, 1.0, 1.0, 1.0, 2, 2, 3.0])

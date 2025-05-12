@@ -1,15 +1,8 @@
 """
 用于管理毛管压力驱动下的流动
 """
-try:
-    import numpy as np
-except Exception as e:
-    print(e)
-    np = None
-
-from zml import Vector, Seepage, Interp1, get_pointer64
-from zmlx.base.seepage import get_face_sum, get_face_diff, get_dt
-from zmlx.utility.seepage_numpy import as_numpy
+from zml import Vector, Seepage, Interp1, get_pointer64, np
+from zmlx.base.seepage import get_face_sum, get_face_diff, get_dt, as_numpy
 
 vs0 = Vector()
 vk = Vector()

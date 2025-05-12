@@ -28,6 +28,7 @@ def get_settings(model: Seepage):
         data = eval(text)
         assert isinstance(data, list)
         return data
+    return None
 
 
 def set_settings(model: Seepage, data):

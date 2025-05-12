@@ -11,14 +11,14 @@ _deprecated_funcs = dict(
 
 
 def __getattr__(name):
-    return get(name, data=_deprecated_funcs, current_pack_name='zmlx.filesys.opath')
+    return get(name, data=_deprecated_funcs,
+               current_pack_name='zmlx.filesys.opath')
 
 
 import warnings
 
 warnings.warn(f'The module {__name__} will be removed after 2026-4-15',
               DeprecationWarning, stacklevel=2)
-
 
 from zmlx.alg.sys import log_deprecated
 

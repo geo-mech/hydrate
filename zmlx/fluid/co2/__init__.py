@@ -13,13 +13,15 @@ def create(name=None):
     # 参考：https://baike.baidu.com/item/%E4%BA%8C%E6%B0%A7%E5%8C%96%E7%A2%B3/349143
     #
     specific_heat = 2844.8
-    return TherFlowConfig.FluProperty(den=Interp2(path=os.path.join(os.path.dirname(__file__), 'den.txt')),
-                                      vis=Interp2(path=os.path.join(os.path.dirname(__file__), 'vis.txt')),
-                                      specific_heat=specific_heat, name=name)
+    return TherFlowConfig.FluProperty(
+        den=Interp2(path=os.path.join(os.path.dirname(__file__), 'den.txt')),
+        vis=Interp2(path=os.path.join(os.path.dirname(__file__), 'vis.txt')),
+        specific_heat=specific_heat, name=name)
 
 
 def create_flu(*args, **kwargs):
-    warnings.warn('use function <create> instead', DeprecationWarning, stacklevel=2)
+    warnings.warn('use function <create> instead', DeprecationWarning,
+                  stacklevel=2)
     return create(*args, **kwargs)
 
 

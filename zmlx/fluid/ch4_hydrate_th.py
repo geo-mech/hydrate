@@ -32,7 +32,8 @@ def create(MH, NH=6, t_min=270, t_max=290, p_min=1e6, p_max=40e6, name=None):
     def get_density(P, T):
         dP = max(p_min, min(p_max, P)) - P0
         dT = max(t_min, min(t_max, T)) - T0
-        return 1.0 / (v0 * math.exp(a1 * dT + a2 * dT ** 2 + a3 * dT ** 3 + a4 * dP))
+        return 1.0 / (v0 * math.exp(
+            a1 * dT + a2 * dT ** 2 + a3 * dT ** 3 + a4 * dP))
 
     def create_density():
         den = Interp2()

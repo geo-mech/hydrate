@@ -20,7 +20,8 @@ def write_py(path, data=None, **kwargs):
             file.write(f'{data}')
 
 
-def read_py(path=None, data=None, encoding='utf-8', globals=None, text=None, key=None):
+def read_py(path=None, data=None, encoding='utf-8', globals=None, text=None,
+            key=None):
     """
     Read data from .py format. For specific format, refer to the description of the write_py function
     """

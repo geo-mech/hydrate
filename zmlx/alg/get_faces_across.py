@@ -11,5 +11,3 @@ warnings.warn('The modulus get_faces_across is deprecated '
 from zmlx.alg.sys import log_deprecated
 
 log_deprecated(__name__)
-
-

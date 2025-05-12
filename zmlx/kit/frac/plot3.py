@@ -1,8 +1,8 @@
-from zmlx.plt.fig3 import show_rc3
-from zmlx.kit.frac.rc3 import get_rc3
 from zml import Seepage
+from zmlx.base.seepage import as_numpy
 from zmlx.base.seepage import get_time
-from zmlx.utility.seepage_numpy import as_numpy
+from zmlx.kit.frac.rc3 import get_rc3
+from zmlx.plt.fig3 import show_rc3
 
 
 def show_pressure(flow: Seepage, **opts):

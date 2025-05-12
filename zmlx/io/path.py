@@ -29,25 +29,25 @@ def get_path(*args, tag=None, key=None):
 
     if root is None:
         # warnings.warn(f'The root is None. (key={key})')
-        return
+        return None
 
     if is_chinese(root):
         warnings.warn(f'The root contains Chinese. key={key}, root = {root}')
-        return
+        return None
 
     # 检查根目录是否存在需要的tag
     if tag is not None:
         f_name = os.path.join(root, tag)
         if not os.path.isfile(f_name):
             warnings.warn(f'The required tag file not exists: {f_name}')
-            return
+            return None
 
     # 找到所需要的路径
     if len(args) > 0:
         for arg in args:
             if is_chinese(arg):
                 warnings.warn(f'String contains Chinese. args = {args}')
-                return
+                return None
         path = join_paths(root, *args)
     else:
         path = root
@@ -55,6 +55,7 @@ def get_path(*args, tag=None, key=None):
     # 因为是输出目录，因此创建必要的文件夹.
     if not in_directory(path, os.path.join(get_dir(), 'zmlx')):  # 确保不在脚本目录内输出.
         return make_parent(path)
+    return None
 
 
 def set_path(folder=None, tag=None, key=None):
@@ -68,7 +69,8 @@ def set_path(folder=None, tag=None, key=None):
     # 转化为绝对路径，这很重要
     folder = os.path.abspath(folder)
 
-    assert not is_chinese(folder), f'Error: folder contains Chinese. folder = {folder}'
+    assert not is_chinese(
+        folder), f'Error: folder contains Chinese. folder = {folder}'
 
     # 尝试创建目录
     if not os.path.isdir(folder):

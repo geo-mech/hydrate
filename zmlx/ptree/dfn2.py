@@ -1,8 +1,6 @@
 import os
 
-import numpy as np
-
-from zml import Dfn2
+from zml import Dfn2, np
 from zmlx.geometry.utils import point_distance
 from zmlx.ptree.array import array
 from zmlx.ptree.box import box2

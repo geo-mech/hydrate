@@ -10,8 +10,6 @@ from zmlx.alg.sys import log_deprecated
 
 log_deprecated(__name__)
 
-
-
 if __name__ == '__main__':
     if len(sys.argv) == 3:
         py2pyc(ipath=sys.argv[1], opath=sys.argv[2])

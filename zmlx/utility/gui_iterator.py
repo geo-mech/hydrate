@@ -1,8 +1,7 @@
 import timeit
 import warnings
 
-from zmlx.alg.to_string import time2str
-from zmlx.alg.utils import clamp
+from zmlx.alg.utils import time2str, clamp
 from zmlx.ui import gui
 
 
@@ -61,7 +60,7 @@ class GuiIterator:
         调用iterate，并可能自动调用绘图操作. 返回 iterate执行的结果.
         """
         if self.iterate is None:  # 此时不需要迭代
-            return
+            return None
 
         assert self.iterate is not None
         t, r = GuiIterator.timing(lambda: self.iterate(*args, **kwargs))

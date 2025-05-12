@@ -25,7 +25,8 @@ def create(t_min=270, t_max=290, p_min=1e6, p_max=40e6, name=None):
     def get_density(P, T):
         T = max(t_min, min(t_max, T))
         P = max(p_min, min(p_max, P))
-        return (0.016042 * P / (8.314 * T)) * (1.0 + 0.025 * P / 1.0E6 - 0.000645 * math.pow(P / 1.0E6, 2))
+        return (0.016042 * P / (8.314 * T)) * (
+                1.0 + 0.025 * P / 1.0E6 - 0.000645 * math.pow(P / 1.0E6, 2))
 
     def get_viscosity(P, T):
         T = max(t_min, min(t_max, T))
@@ -47,11 +48,13 @@ def create(t_min=270, t_max=290, p_min=1e6, p_max=40e6, name=None):
     else:
         # 之前随手写的，错了
         specific_heat = 1000.0
-    return Seepage.FluDef(den=create_density(), vis=create_viscosity(), specific_heat=specific_heat, name=name)
+    return Seepage.FluDef(den=create_density(), vis=create_viscosity(),
+                          specific_heat=specific_heat, name=name)
 
 
 def create_flu(*args, **kwargs):
-    warnings.warn('use function <create> instead', DeprecationWarning, stacklevel=2)
+    warnings.warn('use function <create> instead', DeprecationWarning,
+                  stacklevel=2)
     return create(*args, **kwargs)
 
 

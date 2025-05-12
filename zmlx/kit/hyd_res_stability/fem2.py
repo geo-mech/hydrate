@@ -1,9 +1,9 @@
 # ** desc = '二维有限元模型(两个三角形有两个顶点固定，另外两个顶点振动过程)'
 
 from zmlx import *
+from zmlx.fem.boundary import find_boundary
 from zmlx.fem.compute_face_stiff2 import compute_face_stiff2
 from zmlx.mesh.triangle import layered_triangles
-from zmlx.fem.boundary import find_boundary
 
 face_keys = AttrKeys()
 
@@ -40,10 +40,12 @@ def create(mesh):
         face_stiffs=face_stiffs)
 
     # 增大质量，以确保位置不变
-    indexes = find_boundary(model, n_dim=2, i_dim=1, lower=1, i_dir=0, eps=1.0e-4)
+    indexes = find_boundary(model, n_dim=2, i_dim=1, lower=1, i_dir=0,
+                            eps=1.0e-4)
     for idx in indexes:
         model.set_mass(idx, 1.0e20)
-    indexes = find_boundary(model, n_dim=2, i_dim=1, lower=1, i_dir=1, eps=1.0e-4)
+    indexes = find_boundary(model, n_dim=2, i_dim=1, lower=1, i_dir=1,
+                            eps=1.0e-4)
     for idx in indexes:
         model.set_mass(idx, 1.0e20)
 

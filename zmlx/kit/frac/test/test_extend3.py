@@ -4,14 +4,14 @@
 
 from zml import DDMSolution2, InfMatrix, Tensor2
 from zmlx import AttrKeys
+from zmlx.config.seepage import set_dt, get_dt, solve
+from zmlx.fluid.ch4 import create as create_ch4
 from zmlx.kit.frac.create_flow import create_flow
 from zmlx.kit.frac.extend import extend
 from zmlx.kit.frac.network import create_network
+from zmlx.kit.frac.plot3 import show_pressure as show_pressure3d
 from zmlx.kit.frac.update_cond import update_cond
 from zmlx.kit.frac.update_fractures import update_fractures
-from zmlx.config.seepage import set_dt, get_dt, solve
-from zmlx.fluid.ch4 import create as create_ch4
-from zmlx.kit.frac.plot3 import show_pressure as show_pressure3d
 from zmlx.ui import gui
 
 

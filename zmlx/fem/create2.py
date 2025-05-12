@@ -31,7 +31,8 @@ def create2(mesh, fa_E=None, fa_mu=None, fa_den=None, fa_h=None,
     assert 0.01 <= f_mu <= 0.49
     get_f_mu = attr_getter(index=fa_mu, left=0.01, right=0.49, default=f_mu)
     assert 1.0e-8 <= f_den <= 1.0e8
-    get_f_den = attr_getter(index=fa_den, left=1.0e-8, right=1.0e8, default=f_den)
+    get_f_den = attr_getter(index=fa_den, left=1.0e-8, right=1.0e8,
+                            default=f_den)
     assert 0.0 <= f_h <= 1.0e20
     get_f_h = attr_getter(index=fa_h, left=0.0, right=1.0e20, default=f_h)
 

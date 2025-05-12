@@ -1,8 +1,8 @@
 from zml import FractureNetwork, Seepage
+from zmlx.base.seepage import as_numpy
 from zmlx.base.seepage import get_time
 from zmlx.kit.frac import get_fn2
 from zmlx.plt.fig2 import show_fn2
-from zmlx.utility.seepage_numpy import as_numpy
 
 
 def show_ds(network, **opts):

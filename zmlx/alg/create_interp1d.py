@@ -10,10 +10,8 @@ from zmlx.alg.sys import log_deprecated
 log_deprecated(__name__)
 
 
-
-
 def test():
-    import numpy as np
+    from zml import np
 
     x = np.linspace(0, 10, 100)
     y = np.sin(x)

@@ -27,10 +27,9 @@ except Exception as err:
 
 ########################################
 # alg
-# from zmlx.alg.has_module import has_numpy, has_matplotlib  # Remove since 2025-4-18
-from zmlx.alg.to_string import time2str, mass2str, fsize2str
+# from zmlx.alg.has_module import has_numpy, has_matplotlib # Remove since 2025-4-18
 # from zmlx.alg.sys import get_latest_version  # Remove since 2025-4-30
-from zmlx.alg.utils import clamp, linspace
+from zmlx.alg.utils import clamp, linspace, time2str, mass2str, fsize2str
 from zmlx.alg.multi_proc import create_async, apply_async
 from zmlx.alg.sbatch import sbatch
 from zmlx.alg.fsys import first_only, print_tag, join_paths, make_fname
@@ -52,7 +51,8 @@ from zmlx.config import capillary
 
 ########################################
 # data
-from zmlx.data.mesh_c10000 import get_face_centered_seepage_mesh as create_c10000
+from zmlx.data.mesh_c10000 import \
+    get_face_centered_seepage_mesh as create_c10000
 
 ########################################
 # demo
@@ -81,7 +81,6 @@ from zmlx.fluid.h2o_gas import create as create_h2o_gas
 from zmlx.fluid.h2o_ice import create as create_h2o_ice
 from zmlx.fluid import h2o
 from zmlx.fluid.alg import from_data, from_file
-
 
 ########################################
 # geometry
@@ -140,18 +139,18 @@ from zmlx.ui import (gui, information, question,
                      plot as do_plot, plot, break_point, gui_exec)
 from zmlx.ui.main import open_gui
 
-
 ########################################
 # utility
 from zmlx.utility.fields import Field, LinearField
 from zmlx.utility.attr_keys import AttrKeys, add_keys
 from zmlx.utility.runtime_fn import RuntimeFunc
-from zmlx.utility.seepage_numpy import as_numpy
+from zmlx.base.seepage import as_numpy
 from zmlx.utility.gui_iterator import GuiIterator
 from zmlx.utility.pressure_controller import PressureController
 from zmlx.utility.save_manager import SaveManager
 from zmlx.utility.seepage_cell_monitor import SeepageCellMonitor
 from zmlx.utility.capillary_effect import CapillaryEffect
+
 
 ########################################
 # 其它
@@ -161,7 +160,9 @@ def get_path(*args):
     """
     return make_parent(join_paths(os.path.dirname(__file__), *args))
 
+
 import zml
+
 __unused = [zml]
 
 ########################################

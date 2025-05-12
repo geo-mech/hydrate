@@ -1,10 +1,9 @@
 import timeit
 
-from zmlx.alg.utils import clamp
-from zmlx.alg.to_string import time2str
 from zml import make_parent
-from zmlx.ui.pyqt import QtWidgets, QtCore
 from zml import timer
+from zmlx.alg.utils import time2str, clamp
+from zmlx.ui.pyqt import QtWidgets, QtCore
 
 
 class TimerViewer(QtWidgets.QTableWidget):
@@ -47,6 +46,8 @@ class TimerViewer(QtWidgets.QTableWidget):
         self.setColumnCount(4)
         self.setHorizontalHeaderLabels(
             ['名称', '调用次数', '总耗时', '单次耗时'])
+        self.horizontalHeader().setSectionResizeMode(
+            0, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
 
         for irow in range(len(data)):
             for icol in range(4):

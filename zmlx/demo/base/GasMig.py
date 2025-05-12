@@ -85,7 +85,7 @@ def solve(config, model, folder=None):
                        ext='.seepage', time_unit='y',
                        dtime=lambda time: min(5.0, max(0.1, time * 0.1)),
                        get_time=lambda: config.get_time(model) / (
-                                   3600 * 24 * 365),
+                               3600 * 24 * 365),
                        )
 
     for step in range(10000):

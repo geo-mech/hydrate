@@ -1,4 +1,3 @@
-
 def is_running():
     from zmlx.ui.main_window import get_window
     window = get_window()
@@ -67,10 +66,11 @@ def new_code():
     if window is not None:
         from zmlx.ui.pyqt import QtWidgets
         import os
-        fname, _ = QtWidgets.QFileDialog.getSaveFileName(window,
-                                                         caption='新建.py脚本',
-                                                         directory=os.getcwd(),
-                                                         filter='Python File (*.py);;')
+        fname, _ = QtWidgets.QFileDialog.getSaveFileName(
+            window,
+            caption='新建.py脚本',
+            directory=os.getcwd(),
+            filter='Python File (*.py);;')
         edit_code(fname)
 
 
@@ -79,4 +79,3 @@ def exec_code_in_editing():
     window = get_window()
     if window is not None:
         window.exec_current()
-

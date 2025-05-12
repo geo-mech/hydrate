@@ -12,7 +12,10 @@ log_deprecated(__name__)
 
 
 def test_1():
-    import numpy as np
+    try:
+        import numpy as np
+    except ImportError:
+        np = None
     x = np.random.rand(100)
     y = np.random.rand(100)
     z = np.random.rand(100)

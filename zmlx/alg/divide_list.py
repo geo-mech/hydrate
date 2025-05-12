@@ -10,8 +10,6 @@ from zmlx.alg.sys import log_deprecated
 log_deprecated(__name__)
 
 
-
-
 def test1():
     # 示例用法
     original_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]

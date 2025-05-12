@@ -1,13 +1,7 @@
-from ctypes import c_double, POINTER
-
-try:
-    import numpy as np
-except Exception as e:
-    print(e)
-    np = None
+from zml import c_double, POINTER, np, Vector
 
 
-def read_numpy(vec, data):
+def read_numpy(vec: Vector, data):
     """
     读取给定的numpy数组的数据
     """
@@ -16,7 +10,7 @@ def read_numpy(vec, data):
     vec.read_memory(data.ctypes.data_as(POINTER(c_double)))
 
 
-def write_numpy(vec, data):
+def write_numpy(vec: Vector, data):
     """
     将数据写入到numpy数组，必须保证给定的numpy数组的长度和self一致
     """
@@ -25,7 +19,7 @@ def write_numpy(vec, data):
     return data
 
 
-def to_numpy(vec):
+def to_numpy(vec: Vector):
     """
     将这个Vector转化为一个numpy的数组
     """

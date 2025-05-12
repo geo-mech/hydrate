@@ -12,7 +12,7 @@ PC=Pa
 w = adimentional
 """
 "Redlich-kwong EOS"
-import numpy as np
+from zml import np
 
 
 def den_c2h6(P, T):

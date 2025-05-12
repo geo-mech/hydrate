@@ -1,13 +1,13 @@
 import os.path
 
-from zmlx.ui.pyqt import is_PyQt6, QWebEngineView, QWebEngineSettings, QtCore
+from zmlx.ui.pyqt import is_pyqt6, QWebEngineView, QWebEngineSettings, QtCore
 
 
 class PDFViewer(QWebEngineView):
     def __init__(self, parent=None, file_path=None):
         super().__init__(parent)
         # 启用PDF支持
-        if is_PyQt6:
+        if is_pyqt6:
             self.settings().setAttribute(
                 QWebEngineSettings.WebAttribute.PluginsEnabled, True)
             self.settings().setAttribute(

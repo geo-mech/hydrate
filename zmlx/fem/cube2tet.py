@@ -53,7 +53,8 @@ def cube2tet(body: Mesh3.Body, to_local=False):
 
 
 if __name__ == '__main__':
-    mesh = Mesh3.create_cube(x1=0, y1=0, z1=0, x2=2, y2=1, z2=1, dx=1, dy=1, dz=1)
+    mesh = Mesh3.create_cube(x1=0, y1=0, z1=0, x2=2, y2=1, z2=1, dx=1, dy=1,
+                             dz=1)
     print(mesh)
     tets = cube2tet(mesh.get_body(1), to_local=True)
     print(tets)

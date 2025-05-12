@@ -1,6 +1,6 @@
 def create_action(parent, text, icon=None, slot=None):
     from zmlx.ui.cfg import load_icon
-    from zmlx.ui.widget.action import QAction
+    from zmlx.ui.pyqt import QAction
     ac = QAction(text, parent)
     if icon is not None:
         ac.setIcon(load_icon(icon))
@@ -95,14 +95,15 @@ def get_preferred_qt_version(check_exists=False):
         return 'PyQt5'
 
 
-
 def get_current_screen_geometry(window):
     """获取窗口所在显示器的尺寸"""
-    from zmlx.ui.pyqt import QtWidgets, is_PyQt6
-    if is_PyQt6:
+    from zmlx.ui.pyqt import QtWidgets, is_pyqt6
+    if is_pyqt6:
         screen = window.screen() if window else None
         if screen:
             return screen.availableGeometry()
+        else:
+            return None
     else:
         desktop = QtWidgets.QDesktopWidget()
         return desktop.availableGeometry(desktop.screenNumber(window))
@@ -135,7 +136,7 @@ def open_url(url: str, caption=None, on_top=None, zoom_factor=None,
     """
     import os
     from zmlx.ui.gui_buffer import gui
-    from zmlx.ui.pyqt import QtCore, is_PyQt6, QWebEngineView
+    from zmlx.ui.pyqt import QtCore, is_pyqt6, QWebEngineView
 
     if not isinstance(url, str):
         return
@@ -168,7 +169,7 @@ def open_url(url: str, caption=None, on_top=None, zoom_factor=None,
         def f(widget):
             widget.page().setZoomFactor(
                 zoom_factor if zoom_factor is not None else (
-                    1 if is_PyQt6 else 1.5))
+                    1 if is_pyqt6 else 1.5))
             if os.path.isfile(url):
                 widget.load(QtCore.QUrl.fromLocalFile(url))
             else:
@@ -197,4 +198,3 @@ def show_widget(widget, caption=None, use_gui=False, **kwargs):
         w = widget(**kwargs)
         w.show()
         sys.exit(app.exec())
-

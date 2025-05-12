@@ -12,8 +12,10 @@ from zml import Interp1
 from zmlx.alg.interp import interp1
 
 # 温度
-vt = [265, 273.25, 274.33, 275.6, 276.12, 276.63, 277.34, 278.09, 279.32, 280.02,
-      280.64, 281.25, 281.86, 282.19, 282.53, 282.81, 283.14, 283.38, 283.67, 284.01,
+vt = [265, 273.25, 274.33, 275.6, 276.12, 276.63, 277.34, 278.09, 279.32,
+      280.02,
+      280.64, 281.25, 281.86, 282.19, 282.53, 282.81, 283.14, 283.38, 283.67,
+      284.01,
       284.2, 284.44]
 
 # 压力
@@ -79,7 +81,8 @@ def get_dheat(Nh=5.75):
     return 60.0e3 / get_mol_mass(Nh=Nh)  # 默认返回 406514.3
 
 
-def create(gas, wat, hyd, fa_t=None, fa_c=None, dissociation=True, formation=True, Nh=5.75):
+def create(gas, wat, hyd, fa_t=None, fa_c=None, dissociation=True,
+           formation=True, Nh=5.75):
     """
     创建一个水合物反应(平衡态的反应，反应的速率给的非常大)
     by 张召彬

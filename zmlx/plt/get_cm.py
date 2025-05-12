@@ -11,5 +11,3 @@ warnings.warn(f'The modulus {__name__} is deprecated and '
 from zmlx.alg.sys import log_deprecated
 
 log_deprecated(__name__)
-
-

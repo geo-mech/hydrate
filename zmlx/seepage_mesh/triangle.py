@@ -13,7 +13,8 @@ def split_triangles(vertexes: list, triangles: list):
     lnk_ids = {}
     # 添加各个边的中心点 (并且获得点的id)
     for triangle in t2:
-        for lk in [(triangle[0], triangle[1]), (triangle[0], triangle[2]), (triangle[1], triangle[2])]:
+        for lk in [(triangle[0], triangle[1]), (triangle[0], triangle[2]),
+                   (triangle[1], triangle[2])]:
             p0 = v2[lk[0]]
             p1 = v2[lk[1]]
             lnk_ids[lk] = len(v2)
@@ -72,7 +73,8 @@ def create(x0, y0, x1, y1, x2, y2, n_max=None, n_split=None):
     for i, j, k in t:
         link_ids = []
         for i0, i1 in [(i, j), (j, k), (i, k)]:
-            link = mesh3.add_link(nodes=[mesh3.get_node(i0), mesh3.get_node(i1)])
+            link = mesh3.add_link(
+                nodes=[mesh3.get_node(i0), mesh3.get_node(i1)])
             link_ids.append(link.index)
         links = [mesh3.get_link(i) for i in link_ids]
         mesh3.add_face(links=links)

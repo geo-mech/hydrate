@@ -13,5 +13,3 @@ warnings.warn('The zmlx.alg.list_fludefs module is deprecated, '
 from zmlx.alg.sys import log_deprecated
 
 log_deprecated(__name__)
-
-

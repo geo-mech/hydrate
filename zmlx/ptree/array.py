@@ -3,7 +3,10 @@
 """
 from io import StringIO
 
-import numpy as np
+try:
+    import numpy as np
+except ImportError:
+    np = None
 
 from zmlx.ptree.ptree import PTree
 

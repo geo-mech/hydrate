@@ -93,4 +93,3 @@ def add_reaction(model: Seepage, data, need_id=False):
     if not isinstance(data, Seepage.Reaction):
         data = create_reaction(model, **data)
     return model.add_reaction(data=data, need_id=need_id)
-

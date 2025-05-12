@@ -8,7 +8,7 @@ from zml import app_data, read_text, write_text
 from zmlx import clamp
 from zmlx.io.json_ex import read as read_json
 from zmlx.ui.alg import get_current_screen_geometry
-from zmlx.ui.pyqt import QtGui, QtCore, QtWidgets, is_PyQt6
+from zmlx.ui.pyqt import QtGui, QtCore, QtWidgets, is_pyqt6
 
 try:
     app_data.add_path(os.path.join(os.path.dirname(__file__), 'data'))
@@ -46,14 +46,19 @@ def find_icon_file(name):
                 filepath = os.path.join(folder, name + ext)
                 if os.path.isfile(filepath):
                     return filepath
+                return None
+            return None
+        return None
     except Exception as err:
         print(err)
+        return None
 
 
 def load_pixmap(name):
     filepath = find_icon_file(name)
     if filepath is not None:
         return QtGui.QPixmap(filepath)
+    return None
 
 
 def load_icon(name):
@@ -84,8 +89,11 @@ def find_sound(name):
                 filepath = os.path.join(folder, name + ext)
                 if os.path.isfile(filepath):
                     return filepath
+            return None
+        return None
     except Exception as err:
         print(err)
+        return None
 
 
 def play_sound(name):
@@ -224,7 +232,7 @@ def _set_default_geometry(win: QtWidgets.QMainWindow, w=None, h=None):
 
 
 def _screen_geometries():
-    if is_PyQt6:
+    if is_pyqt6:
         return [screen.availableGeometry() for screen in
                 QtWidgets.QApplication.screens()]
     else:  # PyQt5
@@ -272,7 +280,7 @@ def load_window_size(win: QtWidgets.QMainWindow):
         if not restore:
             _set_default_geometry(win)
             return
-        name = 'main_window_size_PyQt6' if is_PyQt6 else 'main_window_size'
+        name = 'main_window_size_PyQt6' if is_pyqt6 else 'main_window_size'
         words = app_data.getenv(name, encoding='utf-8', default='').split()
         if len(words) < 5:  # 文件错误
             _set_default_geometry(win)
@@ -291,7 +299,7 @@ def load_window_size(win: QtWidgets.QMainWindow):
 def save_window_size(win):
     try:
         assert isinstance(win, QtWidgets.QMainWindow)
-        name = 'main_window_size_PyQt6' if is_PyQt6 else 'main_window_size'
+        name = 'main_window_size_PyQt6' if is_pyqt6 else 'main_window_size'
         rc = win.geometry()
         app_data.setenv(name,
                         f'{rc.x()}  {rc.y()}  {rc.width()}  {rc.height()}  {win.isMaximized()}',

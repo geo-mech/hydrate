@@ -11,7 +11,7 @@ Tc= K
 PC=Pa
 w = adimentional
 """
-import numpy as np
+from zml import np
 
 
 def den_h2(P, T):

@@ -116,8 +116,8 @@ class EnvEdit(QtWidgets.QTableWidget):
         self.setRowCount(len(data))
         self.setColumnCount(3)
         self.setHorizontalHeaderLabels(['项目', '值', '备注'])
-        self.horizontalHeader().setSectionResizeMode(0,
-                                                     QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
+        self.horizontalHeader().setSectionResizeMode(
+            0, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
 
         for i in range(len(data)):
             label = data[i].get('label')

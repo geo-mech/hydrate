@@ -43,6 +43,8 @@ class MemViewer(QtWidgets.QTableWidget):
         self.setRowCount(len(data))
         self.setColumnCount(3)
         self.setHorizontalHeaderLabels(['名称', '值', '类型'])
+        self.horizontalHeader().setSectionResizeMode(
+            0, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
 
         for irow in range(len(data)):
             for icol in range(3):

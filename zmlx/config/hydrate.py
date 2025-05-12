@@ -6,7 +6,8 @@ import warnings
 from zml import Seepage, log
 from zmlx.alg.fsys import join_paths
 from zmlx.alg.fsys import make_fname
-from zmlx.alg.to_string import time2str
+from zmlx.alg.utils import time2str
+from zmlx.base.seepage import as_numpy
 from zmlx.config import seepage
 from zmlx.config.TherFlowConfig import TherFlowConfig
 from zmlx.fluid.ch4 import create as create_ch4
@@ -28,7 +29,6 @@ from zmlx.react.inh import add_inh
 from zmlx.ui import gui
 from zmlx.utility.capillary_effect import CapillaryEffect
 from zmlx.utility.fields import LinearField
-from zmlx.utility.seepage_numpy import as_numpy
 
 
 def create_fludefs(has_co2=False,

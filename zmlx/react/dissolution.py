@@ -4,7 +4,8 @@ from zml import Seepage
 from zmlx.react.alg import add_reaction
 
 
-def create(*, sol=None, sol_in_liq=None, liq=None, ca_sol=None, rate=1.0, fa_t=None, fa_c=None,
+def create(*, sol=None, sol_in_liq=None, liq=None, ca_sol=None, rate=1.0,
+           fa_t=None, fa_c=None,
            gas=None, gas_in_liq=None):
     """
     创建物质 <比如盐或者气体> 在液体中中的溶解反应 <可逆的过程>，溶解度由ca_sol指定，且和温度压力无关;
@@ -21,12 +22,15 @@ def create(*, sol=None, sol_in_liq=None, liq=None, ca_sol=None, rate=1.0, fa_t=N
     # 这个模块，最初是模拟气体的溶解。现在推广到一般的溶解过程，因此，修改参数的名字.
     if sol is None:
         if gas is not None:
-            warnings.warn('The argument "gas" will be removed after 2025-4-14', DeprecationWarning, stacklevel=2)
+            warnings.warn('The argument "gas" will be removed after 2025-4-14',
+                          DeprecationWarning, stacklevel=2)
             sol = gas
 
     if sol_in_liq is None:
         if gas_in_liq is not None:
-            warnings.warn('The argument "gas_in_liq" will be removed after 2025-4-14', DeprecationWarning, stacklevel=2)
+            warnings.warn(
+                'The argument "gas_in_liq" will be removed after 2025-4-14',
+                DeprecationWarning, stacklevel=2)
             sol_in_liq = gas_in_liq
 
     assert 0 < rate
@@ -53,7 +57,8 @@ def create(*, sol=None, sol_in_liq=None, liq=None, ca_sol=None, rate=1.0, fa_t=N
     # 溶解度增大1，则teq降低1e8，则T-teq升高1e8，q增大，促进溶解
     # 设置当<虚拟>温度升高的时候，促进溶解
     return {'components': [dict(kind=sol, weight=-1.0, fa_t=fa_t, fa_c=fa_c),
-                           dict(kind=sol_in_liq, weight=1.0, fa_t=fa_t, fa_c=fa_c)], 'temp': 280, 'heat': 0,
+                           dict(kind=sol_in_liq, weight=1.0, fa_t=fa_t,
+                                fa_c=fa_c)], 'temp': 280, 'heat': 0,
             'p2t': ([0, 1e8], [280, 280]),
             'inhibitors': [dict(sol=sol_in_liq, liq=liq, c=[0, 1], t=[0, 1e8])],
             'idt': ca_sol,  # 可以是一个属性字符串，后续添加的时候去注册
@@ -84,11 +89,14 @@ def test():
 
     c.set_attr(0, 0.1)
 
-    print(c.get_fluid(0).mass, c.get_fluid(1).get_component(0).mass, c.get_fluid(1).get_component(1).mass)
-    r = add_reaction(model, create(sol=0, sol_in_liq=(1, 1), liq=1, ca_sol=0, fa_c=fa_c, fa_t=fa_t))
+    print(c.get_fluid(0).mass, c.get_fluid(1).get_component(0).mass,
+          c.get_fluid(1).get_component(1).mass)
+    r = add_reaction(model, create(sol=0, sol_in_liq=(1, 1), liq=1, ca_sol=0,
+                                   fa_c=fa_c, fa_t=fa_t))
     for step in range(20):
         r.react(model, dt=0.1)
-        print(c.get_fluid(0).mass, c.get_fluid(1).get_component(0).mass, c.get_fluid(1).get_component(1).mass)
+        print(c.get_fluid(0).mass, c.get_fluid(1).get_component(0).mass,
+              c.get_fluid(1).get_component(1).mass)
 
 
 if __name__ == '__main__':

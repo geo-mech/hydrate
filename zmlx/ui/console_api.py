@@ -63,6 +63,7 @@ class ConsoleApi:
             return cmd(*args, **kwargs)
         else:
             print(f'function: {name}(args={args}, kwargs={kwargs})')
+            return None
 
 
 console = ConsoleApi()

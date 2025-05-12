@@ -1,16 +1,16 @@
 import timeit
 
-from zmlx.alg.to_string import time2str
 from zmlx.alg.fsys import samefile
+from zmlx.alg.utils import time2str
 from zmlx.ui.alg import add_code_history
 from zmlx.ui.break_point import BreakPoint
 from zmlx.ui.cfg import *
-from zmlx.ui.widget.code_edit import CodeEdit
-from zmlx.ui.widget.console_output import ConsoleOutput
-from zmlx.ui.widget.console_thread import ConsoleThread
 from zmlx.ui.gui_buffer import gui
 from zmlx.ui.pyqt import QtWidgets
 from zmlx.ui.shared_value import SharedValue
+from zmlx.ui.widget.code_edit import CodeEdit
+from zmlx.ui.widget.console_output import ConsoleOutput
+from zmlx.ui.widget.console_thread import ConsoleThread
 
 
 class ConsoleWidget(QtWidgets.QWidget):

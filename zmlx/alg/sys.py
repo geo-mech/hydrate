@@ -25,7 +25,6 @@ def log_deprecated(name):
     log(f'The deprecated used: {name}', tag=f'{name}.deprecated_used')
 
 
-
 def type_assert(o, dtype):
     """
     类型断言
@@ -461,5 +460,3 @@ def srand(seed):
 
     random.seed(seed)
     set_srand(seed)
-
-

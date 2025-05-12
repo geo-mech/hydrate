@@ -1,7 +1,8 @@
 from zmlx.alg.utils import clamp
 
 
-def create(left, right, temp, heat, rate=None, fa_t=None, fa_c=None, l2r=True, r2l=True, p2t=None,
+def create(left, right, temp, heat, rate=None, fa_t=None, fa_c=None, l2r=True,
+           r2l=True, p2t=None,
            t2q=None, inhibitors=None):
     """
     创建吸热的化学反应（以及其逆过程）。其中左侧的物质转化为右侧的物质会吸收热量。温度的升高会促使这种反应的发生.

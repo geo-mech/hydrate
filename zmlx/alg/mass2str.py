@@ -1,4 +1,4 @@
-from zmlx.alg.to_string import mass2str
+from zmlx.alg.utils import mass2str
 
 __all__ = ['mass2str']
 
@@ -10,5 +10,3 @@ warnings.warn(f'{__file__} will be removed after 2026-4-15', DeprecationWarning,
 from zmlx.alg.sys import log_deprecated
 
 log_deprecated(__name__)
-
-

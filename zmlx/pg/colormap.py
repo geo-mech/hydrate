@@ -1,6 +1,9 @@
 import warnings
 
-import numpy as np
+try:
+    import numpy as np
+except ImportError:
+    np = None
 import pyqtgraph as pg
 import pyqtgraph.colormap as pgc
 

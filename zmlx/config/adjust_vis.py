@@ -7,7 +7,7 @@
 """
 
 from zml import Seepage
-from zmlx.utility.seepage_numpy import as_numpy
+from zmlx.base.seepage import as_numpy
 
 text_key = 'adjust_vis'
 

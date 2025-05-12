@@ -12,5 +12,3 @@ __all__ = ['read_numpy', 'write_numpy', 'to_numpy']
 from zmlx.alg.sys import log_deprecated
 
 log_deprecated(__name__)
-
-

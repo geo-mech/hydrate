@@ -6,7 +6,7 @@ menu = '设置'
 def slot():
     from zmlx.ui.main_window import get_window
     from zmlx.ui.widget.package_table import PackageTable
-    from zmlx.ui.pyqt import is_PyQt6
+    from zmlx.ui.pyqt import is_pyqt6
 
     packages = [dict(package_name='numpy', import_name='numpy'),
                 dict(package_name='scipy', import_name='scipy'),
@@ -17,7 +17,7 @@ def slot():
                 dict(package_name='pywin32', import_name='pywintypes'),
                 dict(package_name='chemicals', import_name='chemicals'),
                 ]
-    if is_PyQt6:
+    if is_pyqt6:
         packages.append(dict(package_name='PyQt6-WebEngine',
                              import_name='PyQt6.QtWebEngineWidgets'))
     else:

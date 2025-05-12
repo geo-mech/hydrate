@@ -11,8 +11,6 @@ from zmlx.alg.sys import log_deprecated
 log_deprecated(__name__)
 
 
-
-
 class TestIsSorted(unittest.TestCase):
 
     def test_sorted_list(self):

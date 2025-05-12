@@ -1,10 +1,4 @@
-try:
-    import numpy as np
-except Exception as e:
-    print(e)
-    np = None
-
-from zml import Interp2, Seepage
+from zml import Interp2, Seepage, np
 from zmlx.utility.interp import Interp2 as Interpolator
 
 

@@ -1,10 +1,10 @@
 import os
 
 from zmlx.io.text import read_text
+from zmlx.ui.pyqt import is_pyqt6
 from zmlx.ui.widget.code_edit import CodeEdit
-from zmlx.ui.pyqt import is_PyQt6
 
-if is_PyQt6:
+if is_pyqt6:
     from PyQt6.QtWidgets import (
         QWidget, QHBoxLayout, QListWidget, QListWidgetItem
     )
@@ -17,7 +17,7 @@ else:
 
 import glob
 
-ITEM_DATA_ROLE = Qt.ItemDataRole.UserRole if is_PyQt6 else Qt.UserRole
+ITEM_DATA_ROLE = Qt.ItemDataRole.UserRole if is_pyqt6 else Qt.UserRole
 
 
 class CodeHistoryViewer(QWidget):

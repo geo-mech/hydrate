@@ -1,7 +1,7 @@
 from zml import FractureNetwork
+from zmlx.config.seepage import create as create_seepage_model
 from zmlx.kit.frac import layer as layer_alg
 from zmlx.kit.frac.create_seepage_mesh import create_seepage_mesh
-from zmlx.config.seepage import create as create_seepage_model
 
 
 def create_flow(

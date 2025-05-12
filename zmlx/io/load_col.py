@@ -1,4 +1,5 @@
 from zmlx.io.utils import load_col
+
 __all__ = ['load_col']
 
 import warnings
@@ -9,11 +10,6 @@ warnings.warn(f'The module {__name__} will be removed after 2026-4-15',
 from zmlx.alg.sys import log_deprecated
 
 log_deprecated(__name__)
-
-
-
-
-
 
 
 def test():

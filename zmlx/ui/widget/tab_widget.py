@@ -93,6 +93,7 @@ class TabWidget(QtWidgets.QTabWidget):
                 if text != self.tabText(i):
                     continue
             return widget
+        return None
 
     def show_next(self):
         if self.count() > 1:

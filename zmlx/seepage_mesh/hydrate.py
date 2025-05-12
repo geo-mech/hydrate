@@ -1,5 +1,4 @@
-import numpy as np
-
+from zml import np
 from zmlx.seepage_mesh.cube import create_cube
 
 
@@ -66,4 +65,5 @@ def create_xz(x_max, z_min, z_max, dx, dz, upper=0, lower=0):
 
 
 if __name__ == '__main__':
-    print(create_xz(x_max=50, z_min=-100, z_max=0, dx=1, dz=1, upper=30, lower=30))
+    print(create_xz(x_max=50, z_min=-100, z_max=0, dx=1, dz=1, upper=30,
+                    lower=30))

@@ -1,7 +1,7 @@
 import os
 
-from zmlx.alg.fsys import join_paths
 from zml import make_parent
+from zmlx.alg.fsys import join_paths
 
 
 def get_path(*args):

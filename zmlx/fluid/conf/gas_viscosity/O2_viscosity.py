@@ -15,5 +15,6 @@ def vis_o2(P, T):
     vis_ref = 1.919e-5
     s_ref = 139
     viscosity = vis_ref * (
-                (T / t_ref) ** (3 / 2) * ((t_ref + s_ref) / (T + s_ref)))  # Sutherlands's equation for ideal gas
+            (T / t_ref) ** (3 / 2) * ((t_ref + s_ref) / (
+            T + s_ref)))  # Sutherlands's equation for ideal gas
     return viscosity

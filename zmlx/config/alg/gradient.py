@@ -3,8 +3,9 @@
 todo:
     宇轩补全.
 """
-import numpy as np
 from scipy.spatial import Delaunay
+
+from zml import np
 
 
 def compute_pressure_gradient_2D(x, y, p):

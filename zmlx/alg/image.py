@@ -1,26 +1,30 @@
+"""
+图像相关的工具函数
+"""
 import os
+import warnings
 
-from zml import make_parent
+from zml import make_parent, np
 
 try:
     from PIL import Image
-except ImportError:
+except ImportError as err:
     Image = None
-try:
-    import numpy as np
-except ImportError:
-    np = None
+    warnings.warn(f'{err}', ImportWarning)
+
 try:
     from scipy.interpolate import NearestNDInterpolator
-except ImportError:
+except ImportError as err:
     NearestNDInterpolator = None
+    warnings.warn(f'{err}', ImportWarning)
 
 import glob
 
 try:
     import cv2  # python -m pip install opencv-python
-except ImportError:
+except ImportError as err:
     cv2 = None
+    warnings.warn(f'{err}', ImportWarning)
 
 
 def make_video(video_name, image_folder, fps=30, img_ext='.jpg'):
@@ -125,7 +129,7 @@ def get_data(img_name, map_name, vmin=0, vmax=1):
     Since 2023-12-17. by ZZB
     """
     if not os.path.isfile(img_name) or not os.path.isfile(map_name):
-        return
+        return None
     image = np.array(Image.open(img_name))
     assert 1 <= image.shape[2] <= 4
     points = [image[:, :, i] for i in range(image.shape[2])]
@@ -138,7 +142,7 @@ def _create_cm(name):
     读取colormap，并作为NearestNDInterpolator返回
     """
     if not os.path.isfile(name):
-        return
+        return None
     image = np.array(Image.open(name))
     rows, cols, dims = image.shape
     assert 1 <= dims <= 4

@@ -1,10 +1,8 @@
 import warnings
 
-import numpy as np
-
-from zml import DynSys, Mesh3, ConjugateGradientSolver
-from zmlx.fem.create3 import create3
+from zml import DynSys, Mesh3, ConjugateGradientSolver, np
 from zmlx.fem.boundary import find_boundary
+from zmlx.fem.create3 import create3
 from zmlx.fem.set_mass import set_mass
 from zmlx.geometry.utils import point_distance as get_distance
 
@@ -103,10 +101,12 @@ def add_body_pressure(dyn: DynSys, mesh: Mesh3, body_id, pressure):
         add_face_force(dyn, mesh, face.index, force)
 
 
-def compute_disp(mesh: Mesh3, na_dx=None, na_dy=None, na_dz=None, ba_dd=None, ba_dp=None,
+def compute_disp(mesh: Mesh3, na_dx=None, na_dy=None, na_dz=None, ba_dd=None,
+                 ba_dp=None,
                  ba_E0=None, ba_E1=None, ba_mu=None, gravity=-10.0, dt=1.0e3,
                  top_stress=None, top_pressure=None,
-                 tolerance=1.0e-20, show=print, bound_mas=1.0e20, bound_sym=True):
+                 tolerance=1.0e-20, show=print, bound_mas=1.0e20,
+                 bound_sym=True):
     """
     计算各个Node的位移，并且存储在Node属性里面. 其中：
         na_dx, na_dy和na_dz为Node的属性，用来存储计算的结果（各个Node的位移）;
@@ -132,23 +132,44 @@ def compute_disp(mesh: Mesh3, na_dx=None, na_dy=None, na_dz=None, ba_dd=None, ba
         设置边界条件
         """
         # x
-        set_mass(_dyn, find_boundary(_dyn, n_dim=3, i_dim=0, lower=1, i_dir=0, eps=1.0e-3), bound_mas)
-        set_mass(_dyn, find_boundary(_dyn, n_dim=3, i_dim=0, lower=0, i_dir=0, eps=1.0e-3), bound_mas)
+        set_mass(_dyn, find_boundary(_dyn, n_dim=3, i_dim=0, lower=1, i_dir=0,
+                                     eps=1.0e-3), bound_mas)
+        set_mass(_dyn, find_boundary(_dyn, n_dim=3, i_dim=0, lower=0, i_dir=0,
+                                     eps=1.0e-3), bound_mas)
         if not bound_sym:
-            set_mass(_dyn, find_boundary(_dyn, n_dim=3, i_dim=0, lower=1, i_dir=1, eps=1.0e-3), bound_mas)
-            set_mass(_dyn, find_boundary(_dyn, n_dim=3, i_dim=0, lower=0, i_dir=1, eps=1.0e-3), bound_mas)
-            set_mass(_dyn, find_boundary(_dyn, n_dim=3, i_dim=0, lower=1, i_dir=2, eps=1.0e-3), bound_mas)
-            set_mass(_dyn, find_boundary(_dyn, n_dim=3, i_dim=0, lower=0, i_dir=2, eps=1.0e-3), bound_mas)
+            set_mass(_dyn,
+                     find_boundary(_dyn, n_dim=3, i_dim=0, lower=1, i_dir=1,
+                                   eps=1.0e-3), bound_mas)
+            set_mass(_dyn,
+                     find_boundary(_dyn, n_dim=3, i_dim=0, lower=0, i_dir=1,
+                                   eps=1.0e-3), bound_mas)
+            set_mass(_dyn,
+                     find_boundary(_dyn, n_dim=3, i_dim=0, lower=1, i_dir=2,
+                                   eps=1.0e-3), bound_mas)
+            set_mass(_dyn,
+                     find_boundary(_dyn, n_dim=3, i_dim=0, lower=0, i_dir=2,
+                                   eps=1.0e-3), bound_mas)
         # y
-        set_mass(_dyn, find_boundary(_dyn, n_dim=3, i_dim=1, lower=1, i_dir=1, eps=1.0e-3), bound_mas)
-        set_mass(_dyn, find_boundary(_dyn, n_dim=3, i_dim=1, lower=0, i_dir=1, eps=1.0e-3), bound_mas)
+        set_mass(_dyn, find_boundary(_dyn, n_dim=3, i_dim=1, lower=1, i_dir=1,
+                                     eps=1.0e-3), bound_mas)
+        set_mass(_dyn, find_boundary(_dyn, n_dim=3, i_dim=1, lower=0, i_dir=1,
+                                     eps=1.0e-3), bound_mas)
         if not bound_sym:
-            set_mass(_dyn, find_boundary(_dyn, n_dim=3, i_dim=1, lower=1, i_dir=0, eps=1.0e-3), bound_mas)
-            set_mass(_dyn, find_boundary(_dyn, n_dim=3, i_dim=1, lower=0, i_dir=0, eps=1.0e-3), bound_mas)
-            set_mass(_dyn, find_boundary(_dyn, n_dim=3, i_dim=1, lower=1, i_dir=2, eps=1.0e-3), bound_mas)
-            set_mass(_dyn, find_boundary(_dyn, n_dim=3, i_dim=1, lower=0, i_dir=2, eps=1.0e-3), bound_mas)
+            set_mass(_dyn,
+                     find_boundary(_dyn, n_dim=3, i_dim=1, lower=1, i_dir=0,
+                                   eps=1.0e-3), bound_mas)
+            set_mass(_dyn,
+                     find_boundary(_dyn, n_dim=3, i_dim=1, lower=0, i_dir=0,
+                                   eps=1.0e-3), bound_mas)
+            set_mass(_dyn,
+                     find_boundary(_dyn, n_dim=3, i_dim=1, lower=1, i_dir=2,
+                                   eps=1.0e-3), bound_mas)
+            set_mass(_dyn,
+                     find_boundary(_dyn, n_dim=3, i_dim=1, lower=0, i_dir=2,
+                                   eps=1.0e-3), bound_mas)
         # z
-        set_mass(_dyn, find_boundary(_dyn, n_dim=3, i_dim=2, lower=1, i_dir=2, eps=1.0e-3), bound_mas)
+        set_mass(_dyn, find_boundary(_dyn, n_dim=3, i_dim=2, lower=1, i_dir=2,
+                                     eps=1.0e-3), bound_mas)
 
     assert na_dx is not None and na_dy is not None and na_dz is not None
     for node in mesh.nodes:
@@ -162,11 +183,13 @@ def compute_disp(mesh: Mesh3, na_dx=None, na_dy=None, na_dz=None, ba_dd=None, ba
 
     if top_stress is None and top_pressure is not None:
         top_stress = top_pressure
-        warnings.warn('The keyword <top_pressure> will not be used, use <top_stress> instead',
-                      DeprecationWarning, stacklevel=2)
+        warnings.warn(
+            'The keyword <top_pressure> will not be used, use <top_stress> instead',
+            DeprecationWarning, stacklevel=2)
 
     if top_stress is not None and ba_E0 is not None and ba_E1 is not None:
-        show('E0, E1 and top_pressure set, will computed disp by the changed of E')
+        show(
+            'E0, E1 and top_pressure set, will computed disp by the changed of E')
         assert top_stress >= 0
         # 计算z的最大值 (用以寻找顶面)
         z_max = -1.0e100
@@ -191,10 +214,12 @@ def compute_disp(mesh: Mesh3, na_dx=None, na_dy=None, na_dz=None, ba_dd=None, ba
 
         def add_top_pressure(_dyn):
             for face in top_faces:
-                add_face_force(_dyn, mesh, face.index, [0, 0, -top_stress * face.area])
+                add_face_force(_dyn, mesh, face.index,
+                               [0, 0, -top_stress * face.area])
 
         # 计算在原始状态下的位移
-        dyn = create3(mesh=mesh, ba_E=ba_E0, ba_mu=ba_mu, ba_den=None, b_E=200e6, b_mu=0.2, b_den=2000.0)
+        dyn = create3(mesh=mesh, ba_E=ba_E0, ba_mu=ba_mu, ba_den=None,
+                      b_E=200e6, b_mu=0.2, b_den=2000.0)
         set_bound(dyn)
         add_top_pressure(dyn)
 
@@ -203,7 +228,8 @@ def compute_disp(mesh: Mesh3, na_dx=None, na_dy=None, na_dz=None, ba_dd=None, ba
         show('pos0 computed (under E0)')
 
         # 计算刚度折减之后的位移
-        dyn = create3(mesh=mesh, ba_E=ba_E1, ba_mu=ba_mu, ba_den=None, b_E=200e6, b_mu=0.2, b_den=2000.0)
+        dyn = create3(mesh=mesh, ba_E=ba_E1, ba_mu=ba_mu, ba_den=None,
+                      b_E=200e6, b_mu=0.2, b_den=2000.0)
         set_bound(dyn)
         add_top_pressure(dyn)
 
@@ -217,13 +243,16 @@ def compute_disp(mesh: Mesh3, na_dx=None, na_dy=None, na_dz=None, ba_dd=None, ba
             assert isinstance(node, Mesh3.Node)
             for i in range(3):
                 idx = node.index * 3 + i
-                node.set_attr(attr_ids[i], node.get_attr(attr_ids[i]) + pos1[idx] - pos0[idx])
+                node.set_attr(attr_ids[i],
+                              node.get_attr(attr_ids[i]) + pos1[idx] - pos0[
+                                  idx])
         show('Disp by dE obtained')
 
     if ba_E1 is not None and (ba_dp is not None or ba_dd is not None):
         show('Will compute the disp by dp and dd')
 
-        dyn = create3(mesh=mesh, ba_E=ba_E1, ba_mu=ba_mu, ba_den=None, b_E=200e6, b_mu=0.2, b_den=2000.0)
+        dyn = create3(mesh=mesh, ba_E=ba_E1, ba_mu=ba_mu, ba_den=None,
+                      b_E=200e6, b_mu=0.2, b_den=2000.0)
         show(f'dyn created: {dyn}')
 
         set_bound(dyn)
@@ -257,7 +286,9 @@ def compute_disp(mesh: Mesh3, na_dx=None, na_dy=None, na_dz=None, ba_dd=None, ba
             assert isinstance(node, Mesh3.Node)
             for i in range(3):
                 idx = node.index * 3 + i
-                node.set_attr(attr_ids[i], node.get_attr(attr_ids[i]) + dyn.get_pos(idx) - node.pos[i])
+                node.set_attr(attr_ids[i],
+                              node.get_attr(attr_ids[i]) + dyn.get_pos(idx) -
+                              node.pos[i])
         show('disp by dp and dd added')
 
     show('Add done')
@@ -278,7 +309,8 @@ def _test2():
     # 设置属性
     for body in mesh.bodies:
         assert isinstance(body, Mesh3.Body)
-        body.set_attr(ba_dd, 100 if get_distance(body.pos, [0, 0, 0]) < 5 else 0)
+        body.set_attr(ba_dd,
+                      100 if get_distance(body.pos, [0, 0, 0]) < 5 else 0)
         body.set_attr(ba_dp, 0)
         body.set_attr(ba_E0, 200e6)
         body.set_attr(ba_E1, 200e6)
@@ -288,7 +320,8 @@ def _test2():
     na_dx = 0
     na_dy = 1
     na_dz = 2
-    compute_disp(mesh, na_dx=na_dx, na_dy=na_dy, na_dz=na_dz, ba_dd=ba_dd, ba_dp=ba_dp,
+    compute_disp(mesh, na_dx=na_dx, na_dy=na_dy, na_dz=na_dz, ba_dd=ba_dd,
+                 ba_dp=ba_dp,
                  ba_E0=ba_E0, ba_E1=ba_E1, ba_mu=ba_mu, top_stress=1e6)
 
     # 读取中间一个切面，并且绘图

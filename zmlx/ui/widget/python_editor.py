@@ -1,6 +1,6 @@
-from zmlx.ui.pyqt import is_PyQt6, is_PyQt5
+from zmlx.ui.pyqt import is_pyqt6, is_pyqt5
 
-if is_PyQt6:
+if is_pyqt6:
     from PyQt6.Qsci import QsciScintilla, QsciLexerPython
     from PyQt6.QtGui import QColor, QPalette
     from PyQt6.QtWidgets import QApplication
@@ -48,7 +48,7 @@ class PythonEditor(QsciScintilla):
 
         # 自动检测主题变化
         self.app_palette = QApplication.palette()
-        if is_PyQt5:
+        if is_pyqt5:
             QApplication.instance().paletteChanged.connect(
                 self._on_palette_changed)
         else:

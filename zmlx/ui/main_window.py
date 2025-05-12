@@ -4,20 +4,19 @@ import sys
 import warnings
 
 import zml
-from zml import is_chinese
+from zml import is_chinese, lic, core
 from zmlx.alg.fsys import has_permission, samefile, show_fileinfo, time_string
-from zmlx.ui.widget.action_x import ActionX, QAction
 from zmlx.ui.alg import show_seepage
 from zmlx.ui.cfg import *
-from zmlx.ui.widget.code_edit import CodeEdit
-from zmlx.ui.widget.console_widget import ConsoleWidget
 from zmlx.ui.gui_api import GuiApi
 from zmlx.ui.gui_buffer import gui
-from zmlx.ui.widget.my_label import Label
-from zmlx.ui.pyqt import QtCore, QtWidgets, is_PyQt5
-from zmlx.ui.widget.multimedia import QtMultimedia
-from zmlx.ui.widget.tab_widget import TabWidget
+from zmlx.ui.pyqt import QtCore, QtWidgets, is_pyqt5, QtMultimedia
 from zmlx.ui.task_proc import TaskProc
+from zmlx.ui.widget.action_x import ActionX, QAction
+from zmlx.ui.widget.code_edit import CodeEdit
+from zmlx.ui.widget.console_widget import ConsoleWidget
+from zmlx.ui.widget.my_label import Label
+from zmlx.ui.widget.tab_widget import TabWidget
 from zmlx.ui.widget.version_label import VersionLabel
 from zmlx.ui.window_functions import show_txt
 
@@ -294,7 +293,7 @@ class MainWindow(QtWidgets.QMainWindow):
             if self.__tab_widget.count() >= 200:
                 print(f'The current number of tabs has reached '
                       f'the maximum allowed')
-                return None # 为了稳定性，不允许标签页太多
+                return None  # 为了稳定性，不允许标签页太多
             if type_kw is None:
                 type_kw = {}
             if set_parent:
@@ -596,8 +595,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def check_license(self):
         try:
-            from zml import lic
+            while core.has_log():
+                core.pop_log()
             if not lic.valid:
+                while core.has_log():
+                    print(core.pop_log())
+                print('\n\n')
                 self.toolbar_warning(
                     '此电脑未授权，请确保: 1、使用最新版；2、本机联网!')
         except Exception as err:
@@ -606,8 +609,10 @@ class MainWindow(QtWidgets.QMainWindow):
     def show_about(self):
         from zmlx.ui.widget.about_widget import About
         self.check_license()
-        self.get_widget(the_type=About, caption='关于', on_top=True,
-                        icon='info')
+        self.get_widget(
+            the_type=About, caption='关于', on_top=True,
+            icon='info', type_kw=dict(lic_desc=lic.desc)
+        )
 
     def play_sound(self, filename):
         """
@@ -701,7 +706,7 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
     win = MainWindow()
 
     try:
-        if is_PyQt5:
+        if is_pyqt5:
             win.toolbar_warning(text='PyQt5已不再支持，请更新至PyQt6')
     except:
         pass

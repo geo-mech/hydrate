@@ -11,7 +11,5 @@ from zmlx.alg.sys import log_deprecated
 
 log_deprecated(__name__)
 
-
-
 if __name__ == '__main__':
     install_dep()

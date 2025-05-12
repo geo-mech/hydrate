@@ -1,9 +1,9 @@
 """
 处理三角形网格相关的算法
 """
-from zml import Mesh3
-import numpy as np
 from scipy.spatial import Delaunay
+
+from zml import Mesh3, np
 
 
 def get_triangles(nodes):
@@ -66,13 +66,13 @@ def layered_triangles(x_min, x_max, nx, y_min, y_max, ny, as_mesh=False):
 
     dx = (x_max - x_min) / nx
     x1 = np.linspace(x_min, x_max, nx + 1)
-    x2 = np.linspace(x_min-dx/2, x_max+dx/2, nx + 2)
+    x2 = np.linspace(x_min - dx / 2, x_max + dx / 2, nx + 2)
     x2[0] = x_min
     x2[-1] = x_max
 
     nodes = []
     idx = 0
-    for y in np.linspace(y_min, y_max, ny+1):
+    for y in np.linspace(y_min, y_max, ny + 1):
         if idx % 2 == 0:
             p = [(x, y) for x in x1]
         else:

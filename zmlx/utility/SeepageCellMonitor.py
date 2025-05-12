@@ -8,7 +8,6 @@ from zmlx.alg.sys import log_deprecated
 
 log_deprecated(__name__)
 
-
 from zmlx.utility.seepage_cell_monitor import *
 
 __all__ = ['SeepageCellMonitor']

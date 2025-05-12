@@ -1,12 +1,6 @@
 from ctypes import c_double, POINTER
 
-try:
-    import numpy as np
-except Exception as e:
-    print(e)
-    np = None
-
-from zml import InvasionPercolation, get_pointer64
+from zml import InvasionPercolation, get_pointer64, np
 from zmlx.plt.on_axes import plot_on_axes
 
 

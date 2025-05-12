@@ -37,11 +37,13 @@ def create(name=None):
     den = 2590  # kg/m3 Longmaxi FM (Baoyun Zhao 2021)
     vis = 1.0e30
     specific_heat = 829  # J/ Kg K # Longmaxi Fm. Xiang etal, 2020
-    return Seepage.FluDef(den=den, vis=vis, specific_heat=specific_heat, name=name)
+    return Seepage.FluDef(den=den, vis=vis, specific_heat=specific_heat,
+                          name=name)
 
 
 def create_flu(*args, **kwargs):
-    warnings.warn('use function <create> instead', DeprecationWarning, stacklevel=2)
+    warnings.warn('use function <create> instead', DeprecationWarning,
+                  stacklevel=2)
     return create(*args, **kwargs)
 
 

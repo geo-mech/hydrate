@@ -1,5 +1,4 @@
-import numpy as np
-
+from zml import np
 from zmlx.data.Ye2022.load_txt import load_txt
 from zmlx.plt.fig2 import plot2
 

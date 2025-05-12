@@ -1,6 +1,9 @@
+"""
+插值相关的函数
+"""
 try:
     from scipy.interpolate import interp1d
-except Exception as e:
+except ImportError as e:
     print(e)
     interp1d = None
 

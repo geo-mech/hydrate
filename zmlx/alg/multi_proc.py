@@ -1,3 +1,6 @@
+"""
+多进程计算相关的函数.
+"""
 import multiprocessing
 import time
 

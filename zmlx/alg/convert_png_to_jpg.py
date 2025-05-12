@@ -9,8 +9,6 @@ from zmlx.alg.sys import log_deprecated
 
 log_deprecated(__name__)
 
-
-
 if __name__ == '__main__':
     from zmlx.ui.data.path import get_path
 

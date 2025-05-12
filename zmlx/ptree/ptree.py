@@ -24,7 +24,8 @@ class _Adaptor:
         """
         保存到文件
         """
-        if self.write is not None and self.path is not None and not self.data.get('readonly', False):
+        if self.write is not None and self.path is not None and not self.data.get(
+                'readonly', False):
             self.write(self.path, self.data)
 
     def get(self, *args):
@@ -190,7 +191,8 @@ class PTree:
         if exists(filename):
             return filename
 
-        my_dir = dirname(self.ada.path) if isdir(dirname(self.ada.path)) else None  # 文件所在文件夹
+        my_dir = dirname(self.ada.path) if isdir(
+            dirname(self.ada.path)) else None  # 文件所在文件夹
 
         path = join(my_dir, filename)
         if exists(path):
@@ -222,7 +224,8 @@ class PTree:
         if not isinstance(root, str):
             root = None
         if root is None:
-            my_dir = dirname(self.ada.path) if isdir(dirname(self.ada.path)) else None  # 文件所在文件夹
+            my_dir = dirname(self.ada.path) if isdir(
+                dirname(self.ada.path)) else None  # 文件所在文件夹
             root = my_dir if my_dir is not None else os.getcwd()
         path = join(root, *args)
         if path is not None:
@@ -233,7 +236,8 @@ def _open_json(filename):
     """
     将Json文件作为一个PTree来使用
     """
-    return PTree(ada=_Adaptor(data=None, path=filename, read=read_json, write=write_json))
+    return PTree(ada=_Adaptor(data=None, path=filename, read=read_json,
+                              write=write_json))
 
 
 def _open_py(filename):
@@ -243,9 +247,11 @@ def _open_py(filename):
     from zmlx.io.python import read_py, write_py
 
     def read(path):
-        return read_py(path=path, data={}, encoding='utf-8', globals=None, text=None, key=None)
+        return read_py(path=path, data={}, encoding='utf-8', globals=None,
+                       text=None, key=None)
 
-    return PTree(ada=_Adaptor(data=None, path=filename, read=read, write=write_py))
+    return PTree(
+        ada=_Adaptor(data=None, path=filename, read=read, write=write_py))
 
 
 def open_pt(filename):

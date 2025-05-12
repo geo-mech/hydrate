@@ -3,7 +3,8 @@ from zml import *
 core = DllCore(dll=load_cdll(name='heavy_oil.dll',
                              first=os.path.dirname(__file__)))
 
-core.use(None, 'vdisc3_modify_perm', c_void_p, c_void_p, c_size_t, c_size_t, c_size_t, c_size_t)
+core.use(None, 'vdisc3_modify_perm', c_void_p, c_void_p, c_size_t, c_size_t,
+         c_size_t, c_size_t)
 
 
 def modify_perm(vdisc3, seepage, fa_k, ca_fp, da_pc, da_k):
@@ -19,10 +20,12 @@ def modify_perm(vdisc3, seepage, fa_k, ca_fp, da_pc, da_k):
         这个函数在运行的过程中，除了修改渗透率之外，还会修改圆盘的face_ids这个属性，这样的涉及其实是很不好的.
         后续将移除.
     """
-    warnings.warn('Disc3.face_ids is modified when modify_perm. function remove after 2024-9-21',
-                  DeprecationWarning, stacklevel=2)
+    warnings.warn(
+        'Disc3.face_ids is modified when modify_perm. function remove after 2024-9-21',
+        DeprecationWarning, stacklevel=2)
     assert isinstance(seepage, Seepage)
-    core.vdisc3_modify_perm(vdisc3.handle, seepage.handle, fa_k, ca_fp, da_pc, da_k)
+    core.vdisc3_modify_perm(vdisc3.handle, seepage.handle, fa_k, ca_fp, da_pc,
+                            da_k)
 
 
 class Disc3(HasHandle):
@@ -75,7 +78,8 @@ class Disc3(HasHandle):
         """
         core.disc3_set_radi(self.handle, value)
 
-    core.use(None, 'disc3_create', c_void_p, c_double, c_double, c_double, c_double, c_double, c_double)
+    core.use(None, 'disc3_create', c_void_p, c_double, c_double, c_double,
+             c_double, c_double, c_double)
 
     @staticmethod
     def create(x, y, z, direction, angle, r, buffer=None):
@@ -87,12 +91,16 @@ class Disc3(HasHandle):
         core.disc3_create(buffer.handle, x, y, z, direction, angle, r)
         return buffer
 
-    core.use(c_bool, 'disc3_get_intersection', c_void_p, c_void_p, c_void_p, c_void_p)
-    core.use(c_bool, 'disc3_get_intersection_with_segment', c_void_p, c_void_p, c_double, c_double, c_double,
+    core.use(c_bool, 'disc3_get_intersection', c_void_p, c_void_p, c_void_p,
+             c_void_p)
+    core.use(c_bool, 'disc3_get_intersection_with_segment', c_void_p, c_void_p,
+             c_double, c_double, c_double,
              c_double, c_double, c_double)
-    core.use(c_bool, 'disc3_get_intersection_with_xoy', c_void_p, c_void_p, c_void_p, c_void_p)
+    core.use(c_bool, 'disc3_get_intersection_with_xoy', c_void_p, c_void_p,
+             c_void_p, c_void_p)
 
-    def get_intersection(self, other=None, p1=None, p2=None, buffer=None, coord=None):
+    def get_intersection(self, other=None, p1=None, p2=None, buffer=None,
+                         coord=None):
         """
         返回交线/交点
         """
@@ -102,7 +110,8 @@ class Disc3(HasHandle):
                 p1 = Array3()
             if not isinstance(p2, Array3):
                 p2 = Array3()
-            if core.disc3_get_intersection_with_xoy(self.handle, coord.handle, p1.handle, p2.handle):
+            if core.disc3_get_intersection_with_xoy(self.handle, coord.handle,
+                                                    p1.handle, p2.handle):
                 return p1, p2
             else:
                 return
@@ -112,13 +121,17 @@ class Disc3(HasHandle):
                 p1 = Array3()
             if not isinstance(p2, Array3):
                 p2 = Array3()
-            if core.disc3_get_intersection(self.handle, other.handle, p1.handle, p2.handle):
+            if core.disc3_get_intersection(self.handle, other.handle, p1.handle,
+                                           p2.handle):
                 return p1, p2
         else:
             # 返回和线段的交点
             if not isinstance(buffer, Array3):
                 buffer = Array3()
-            if core.disc3_get_intersection_with_segment(self.handle, buffer.handle, p1[0], p1[1], p1[2], p2[0], p2[1],
+            if core.disc3_get_intersection_with_segment(self.handle,
+                                                        buffer.handle, p1[0],
+                                                        p1[1], p1[2], p2[0],
+                                                        p2[1],
                                                         p2[2]):
                 return buffer
 
@@ -152,7 +165,8 @@ class Disc3(HasHandle):
         """
         在渗流计算的时候，此圆盘经过所有的Cell的Id. 在Disc3中存储这些ID不是好的设计，后续此属性会移除.
         """
-        warnings.warn('Disc3.cell_ids will be removed after 2024-10-13', DeprecationWarning, stacklevel=2)
+        warnings.warn('Disc3.cell_ids will be removed after 2024-10-13',
+                      DeprecationWarning, stacklevel=2)
         return UintVector(handle=core.disc3_get_cell_ids(self.handle))
 
     core.use(c_void_p, 'disc3_get_face_ids', c_void_p)
@@ -162,7 +176,8 @@ class Disc3(HasHandle):
         """
         在渗流计算的时候，此圆盘经过所有的Cell的Id. 在Disc3中存储这些ID不是好的设计，后续此属性会移除.
         """
-        warnings.warn('Disc3.face_ids will be removed after 2024-10-13', DeprecationWarning, stacklevel=2)
+        warnings.warn('Disc3.face_ids will be removed after 2024-10-13',
+                      DeprecationWarning, stacklevel=2)
         return UintVector(handle=core.disc3_get_face_ids(self.handle))
 
     core.use(c_double, 'disc3_get_attr', c_void_p, c_size_t)
@@ -284,9 +299,11 @@ class Disc3Vec(HasHandle):
         if index < len(self):
             return Disc3(handle=core.vdisc3_get(self.handle, index))
 
-    core.use(None, 'vdisc3_create_mesh', c_void_p, c_void_p, c_size_t, c_size_t, c_size_t, c_size_t)
+    core.use(None, 'vdisc3_create_mesh', c_void_p, c_void_p, c_size_t, c_size_t,
+             c_size_t, c_size_t)
 
-    def create_mesh(self, count=20, da=99999999, na=99999999, fa=99999999, buffer=None):
+    def create_mesh(self, count=20, da=99999999, na=99999999, fa=99999999,
+                    buffer=None):
         """
         生成用于显示该圆盘的三角形网格
         da:

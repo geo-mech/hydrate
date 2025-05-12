@@ -40,3 +40,4 @@ class FrameRateCtrl:
         """
         if self.last_time is not None and self.this_time is not None:
             return 1.0 / max(1.0e-5, self.this_time - self.last_time)
+        return None

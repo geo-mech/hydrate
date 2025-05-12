@@ -1,5 +1,5 @@
-from zmlx.alg.utils import linspace
 from zml import Interp1
+from zmlx.alg.utils import linspace
 
 
 def create_fracture_kr():
@@ -34,7 +34,8 @@ def create_kr(srg=0.02, srw=0.2, ag=3.5, aw=4.5, count=100):
     return vs, kg, kw
 
 
-def create_krf(faic=0.2, n=2.0, as_interp=False, k_max=1.0, s_max=1.0, count=100):
+def create_krf(faic=0.2, n=2.0, as_interp=False, k_max=1.0, s_max=1.0,
+               count=100):
     """
     当部分孔隙空间被水合物占据的时候，计算流体渗透率的折减. 其中faic为临界孔隙度和原始孔隙度的比值;
     返回：

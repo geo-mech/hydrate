@@ -10,8 +10,6 @@ from zmlx.alg.sys import log_deprecated
 log_deprecated(__name__)
 
 
-
-
 def test():
     text = """
     # ** desc = 'The description'

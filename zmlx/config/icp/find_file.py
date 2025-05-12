@@ -6,7 +6,7 @@ def find_by_day(folder, day):
     从文件夹中找到给定day的文件.
     """
     if not os.path.isdir(folder):
-        return
+        return None
 
     # 遍历
     name_nearest = None
@@ -20,6 +20,8 @@ def find_by_day(folder, day):
     # 返回
     if name_nearest is not None:
         return os.path.join(folder, name_nearest)
+    else:
+        return None
 
 
 def find_by_year(folder, year):

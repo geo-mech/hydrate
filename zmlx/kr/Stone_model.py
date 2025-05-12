@@ -1,4 +1,7 @@
-import numpy as np
+try:
+    import numpy as np
+except ImportError:
+    np = None
 
 
 def stone(sirg=0.02, sirw=0.2):

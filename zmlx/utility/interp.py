@@ -1,7 +1,6 @@
 try:
     import numpy as np
-except Exception as e:
-    print(e)
+except ImportError:
     np = None
 
 try:

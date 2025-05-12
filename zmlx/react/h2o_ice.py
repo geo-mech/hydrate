@@ -1,7 +1,8 @@
 from zmlx.react import melt
 
 
-def create(flu, sol, fa_t=None, fa_c=None, temp=273.15, heat=336000.0, enable_melt=True, enable_freeze=True):
+def create(flu, sol, fa_t=None, fa_c=None, temp=273.15, heat=336000.0,
+           enable_melt=True, enable_freeze=True):
     """
     创建水冰融化的反应（以及其逆过程）
     """

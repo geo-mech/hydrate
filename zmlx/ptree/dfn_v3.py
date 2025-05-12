@@ -21,7 +21,8 @@ def dfn_v3(pt, box=None):
     if isinstance(pt.data, list):
         fractures = []
         for item in pt.data:
-            fractures = fractures + dfn_v3(as_ptree(copy.deepcopy(item), path=pt.path), box=box)
+            fractures = fractures + dfn_v3(
+                as_ptree(copy.deepcopy(item), path=pt.path), box=box)
         return fractures
 
     if box is None:
@@ -29,7 +30,8 @@ def dfn_v3(pt, box=None):
 
     assert len(box) == 6
 
-    if abs(box[0] - box[3]) * abs(box[1] - box[4]) * abs(box[2] - box[5]) < 1.0e-15:
+    if abs(box[0] - box[3]) * abs(box[1] - box[4]) * abs(
+            box[2] - box[5]) < 1.0e-15:
         print('volume too small')
         return []
 
@@ -45,14 +47,16 @@ def dfn_v3(pt, box=None):
         return []
     assert len(heights) > 0
 
-    fractures = from_segs(segs=segs, z_min=box[2], z_max=box[5], heights=heights)
+    fractures = from_segs(segs=segs, z_min=box[2], z_max=box[5],
+                          heights=heights)
     if pt('remove_small', doc='Remove the small fractures'):
         return remove_small(fractures)
     else:
         return fractures
 
 
-def create_option(p21=0.0, a0=-0.5, a1=0.5, l0=10.0, l1=20.0, h0=5.0, h1=10.0, remove_small=True, l_min=0.2):
+def create_option(p21=0.0, a0=-0.5, a1=0.5, l0=10.0, l1=20.0, h0=5.0, h1=10.0,
+                  remove_small=True, l_min=0.2):
     """
     生成一个创建创建dfn的参数选项
     """
@@ -70,7 +74,8 @@ def create_option(p21=0.0, a0=-0.5, a1=0.5, l0=10.0, l1=20.0, h0=5.0, h1=10.0, r
 
 def test():
     pt = PTree()
-    pt.data = create_option(p21=1.0, a0=0, a1=0.4, l0=5, l1=10, h0=5, h1=10, remove_small=True) + create_option(
+    pt.data = create_option(p21=1.0, a0=0, a1=0.4, l0=5, l1=10, h0=5, h1=10,
+                            remove_small=True) + create_option(
         p21=1.0, a0=1, a1=1.4, l0=5, l1=10, h0=5, h1=10, remove_small=True)
     fractures = dfn_v3(pt, box=[0, 0, 0, 30, 30, 30])
     for f in fractures:

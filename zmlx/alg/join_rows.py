@@ -1,7 +1,6 @@
 import warnings
 
-import numpy as np
-
+from zml import np
 from zmlx.alg.utils import join_rows
 
 warnings.warn(f'{__name__} will be removed after 2026-4-15', DeprecationWarning,
@@ -10,8 +9,6 @@ warnings.warn(f'{__name__} will be removed after 2026-4-15', DeprecationWarning,
 from zmlx.alg.sys import log_deprecated
 
 log_deprecated(__name__)
-
-
 
 
 def test():

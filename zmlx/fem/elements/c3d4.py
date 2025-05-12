@@ -1,4 +1,4 @@
-import numpy as np
+from zml import np
 
 
 def stiffness(nodes, E, mu):

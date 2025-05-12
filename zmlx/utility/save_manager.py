@@ -53,6 +53,7 @@ class SaveManager:
         elif unit_length == 'auto':
             self.unit_length = SaveManager.get_unit_length(time_unit)
         else:
+            assert isinstance(unit_length, (int, float))
             assert unit_length > 0.0
             self.unit_length = unit_length  # 时间单位的数值(秒数)，在生成文件名的时候会使用到.
 

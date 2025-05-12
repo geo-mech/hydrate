@@ -1,18 +1,368 @@
 """
-渗流类的一些基础的接口。注意，此模块不依赖其它顶层的模块。此模块存在的意义，是为了
-config中的其它模块调用。
-
-此模块中定义的所有的功能，都会被import到seepage模块中。
-
-如果在config之外使用，则请直接使用seepage模块。
+渗流类Seepage的一些基础的接口。注意，此模块不依赖其它顶层的模块。
 """
 import ctypes
 import os
 import warnings
 from ctypes import c_void_p
 
-from zml import Seepage, Vector, is_array
-from zmlx.alg.to_string import time2str
+from zml import Seepage, Vector, is_array, get_pointer64, np
+from zmlx.alg.utils import time2str
+
+
+class SeepageNumpy:
+    """
+    用以Seepage类和Numpy之间交换数据的适配器
+    """
+
+    class Cells:
+        """
+        用以批量读取或者设置Cells的属性
+        """
+
+        def __init__(self, model):
+            assert isinstance(model, Seepage)
+            self.model = model
+
+        def get(self, index, buf=None):
+            """
+            Cell属性。index的含义参考 Seepage.cells_write
+            """
+            if np is not None:
+                if buf is None:
+                    buf = np.zeros(shape=self.model.cell_number, dtype=float)
+                else:
+                    assert len(buf) == self.model.cell_number
+                self.model.cells_write(
+                    pointer=get_pointer64(buf),
+                    index=index)
+                return buf
+            return None
+
+        def set(self, index, buf):
+            """
+            Cell属性。index的含义参考 Seepage.cells_write
+            """
+            if not is_array(buf):
+                self.model.cells_read(value=buf, index=index)
+                return
+            else:
+                assert len(buf) == self.model.cell_number
+                self.model.cells_read(
+                    pointer=get_pointer64(buf, readonly=True),
+                    index=index)
+
+        def get_attr(self, *args, **kwargs):
+            return self.get(*args, **kwargs)
+
+        def set_attr(self, *args, **kwargs):
+            return self.set(*args, **kwargs)
+
+        @property
+        def x(self):
+            """
+            各个Cell的x坐标
+            """
+            return self.get(-1)
+
+        @x.setter
+        def x(self, value):
+            """
+            各个Cell的x坐标
+            """
+            self.set(-1, value)
+
+        @property
+        def y(self):
+            """
+            各个Cell的y坐标
+            """
+            return self.get(-2)
+
+        @y.setter
+        def y(self, value):
+            """
+            各个Cell的y坐标
+            """
+            self.set(-2, value)
+
+        @property
+        def z(self):
+            """
+            各个Cell的z坐标
+            """
+            return self.get(-3)
+
+        @z.setter
+        def z(self, value):
+            """
+            各个Cell的z坐标
+            """
+            self.set(-3, value)
+
+        @property
+        def v0(self):
+            """
+            各个Cell的v0属性(孔隙的v0，参考Cell定义)
+            """
+            return self.get(-4)
+
+        @v0.setter
+        def v0(self, value):
+            self.set(-4, value)
+
+        @property
+        def k(self):
+            """
+            各个Cell的k属性(孔隙的k，参考Cell定义)
+            """
+            return self.get(-5)
+
+        @k.setter
+        def k(self, value):
+            self.set(-5, value)
+
+        @property
+        def g_pos(self):
+            """
+            inner_prod(gravity, pos)
+            """
+            return self.get(-6)
+
+        @property
+        def fluid_mass(self):
+            """
+            所有流体的总的质量<只读>
+            """
+            return self.get(-10)
+
+        @property
+        def fluid_vol(self):
+            """
+            所有流体的总的体积<只读>
+            """
+            return self.get(-11)
+
+        @property
+        def pre(self):
+            """
+            流体的压力(根据总的体积和孔隙弹性来计算)
+            """
+            return self.get(-12)
+
+    class Faces:
+        """
+        用以批量读取或者设置Faces的属性
+        """
+
+        def __init__(self, model):
+            assert isinstance(model, Seepage)
+            assert np is not None
+            self.model = model
+
+        def get(self, index, buf=None):
+            """
+            读取各个Face的属性
+            """
+            if np is not None:
+                if buf is None:
+                    buf = np.zeros(shape=self.model.face_number, dtype=float)
+                else:
+                    assert len(buf) == self.model.face_number
+                self.model.faces_write(
+                    pointer=get_pointer64(buf),
+                    index=index)
+                return buf
+            return None
+
+        def set(self, index, buf):
+            """
+            设置各个Face的属性
+            """
+            if not is_array(buf):
+                self.model.faces_read(value=buf, index=index)
+                return
+            else:
+                assert len(buf) == self.model.face_number
+                self.model.faces_read(
+                    pointer=get_pointer64(buf, readonly=True),
+                    index=index)
+
+        def get_attr(self, *args, **kwargs):
+            return self.get(*args, **kwargs)
+
+        def set_attr(self, *args, **kwargs):
+            return self.set(*args, **kwargs)
+
+        @property
+        def cond(self):
+            """
+            各个Face位置的导流系数
+            """
+            return self.get(-1)
+
+        @cond.setter
+        def cond(self, value):
+            """
+            各个Face位置的导流系数
+            """
+            self.set(-1, value)
+
+        @property
+        def dr(self):
+            return self.get(-2)
+
+        @dr.setter
+        def dr(self, value):
+            self.set(-2, value)
+
+        def get_dv(self, index=None, buf=None):
+            """
+            上一次迭代经过Face流体的体积.
+            """
+            if index is None:
+                return self.get(-19, buf=buf)
+            else:
+                assert 0 <= index < 9, f'index = {index} is not permitted'
+                return self.get(-10 - index, buf=buf)
+
+        @property
+        def dist(self):
+            """
+            face两侧的cell的距离
+            """
+            return self.get(-3)
+
+        @property
+        def gravity(self):
+            """
+            重力的分量与face两侧Cell距离的乘积. inner_prod(gravity, cell1.pos - cell0.pos)
+            """
+            return self.get(-4)
+
+    class Fluids:
+        """
+        用以批量读取或者设置某一种流体的属性
+        """
+
+        def __init__(self, model, fluid_id):
+            assert isinstance(model, Seepage)
+            assert np is not None
+            self.model = model
+            if isinstance(fluid_id, str):
+                fluid_id = self.model.find_fludef(name=fluid_id)
+                assert fluid_id is not None
+                assert len(fluid_id) > 0
+            self.fluid_id = fluid_id
+
+        def get(self, index, buf=None):
+            """
+            返回属性
+            """
+            if np is not None:
+                if buf is None:
+                    buf = np.zeros(shape=self.model.cell_number, dtype=float)
+                else:
+                    assert len(buf) == self.model.cell_number
+                self.model.fluids_write(
+                    fluid_id=self.fluid_id, index=index,
+                    pointer=get_pointer64(buf))
+                return buf
+            return None
+
+        def set(self, index, buf):
+            """
+            设置属性
+            """
+            if not is_array(buf):
+                self.model.fluids_read(
+                    fluid_id=self.fluid_id, value=buf,
+                    index=index)
+                return
+            else:
+                assert len(buf) == self.model.cell_number
+                self.model.fluids_read(
+                    fluid_id=self.fluid_id, index=index,
+                    pointer=get_pointer64(buf, readonly=True))
+
+        def get_attr(self, *args, **kwargs):
+            return self.get(*args, **kwargs)
+
+        def set_attr(self, *args, **kwargs):
+            return self.set(*args, **kwargs)
+
+        @property
+        def mass(self):
+            """
+            流体质量
+            """
+            return self.get(-1)
+
+        @mass.setter
+        def mass(self, value):
+            self.set(-1, value)
+
+        @property
+        def den(self):
+            """
+            流体密度
+            """
+            return self.get(-2)
+
+        @den.setter
+        def den(self, value):
+            self.set(-2, value)
+
+        @property
+        def vol(self):
+            """
+            流体体积
+            """
+            return self.get(-3)
+
+        @vol.setter
+        def vol(self, value):
+            self.set(-3, value)
+
+        @property
+        def vis(self):
+            """
+            流体粘性系数
+            """
+            return self.get(-4)
+
+        @vis.setter
+        def vis(self, value):
+            self.set(-4, value)
+
+    def __init__(self, model):
+        self.model = model
+
+    @property
+    def cells(self):
+        return SeepageNumpy.Cells(model=self.model)
+
+    @property
+    def faces(self):
+        return SeepageNumpy.Faces(model=self.model)
+
+    def fluids(self, *fluid_id):
+        """
+        返回给定流体或者组分的属性适配器
+        """
+        if len(fluid_id) == 1:
+            if isinstance(fluid_id[0], str):
+                return SeepageNumpy.Fluids(
+                    model=self.model,
+                    fluid_id=fluid_id[0])
+        return SeepageNumpy.Fluids(model=self.model, fluid_id=fluid_id)
+
+
+def as_numpy(model):
+    """
+    返回利用numpy来读写属性的接口
+    """
+    return SeepageNumpy(model)
 
 
 def get_attr(model: Seepage, key, default_val=None, cast=None,
@@ -148,6 +498,25 @@ def set_time(model: Seepage, value):
         ValueError: 当输入值小于0时会触发警告（通过底层set_attr实现）
     """
     set_attr(model, 'time', value)
+
+
+def update_time(model: Seepage, dt=None):
+    """
+    更新模型的时间
+
+    参数:
+    - model: Seepage 模型对象
+    - dt: 要更新的时间步长，如果为 None，则使用模型当前的时间步长
+
+    返回值:
+    - 无
+
+    该函数首先检查是否提供了时间步长。如果没有提供，它会获取模型当前的时间步长。
+    然后，它将模型的时间更新为当前时间加上时间步长。
+    """
+    if dt is None:
+        dt = get_dt(model)
+    set_time(model, get_time(model) + dt)
 
 
 def get_step(model: Seepage):
@@ -508,3 +877,260 @@ def txt2seepage(path=None, processes=None):
         path=path, ext='.seepage', keywords=['.txt', 'models'],
         keep_file=False, create_data=Seepage,
         processes=processes)
+
+
+def _get_names(f_def: Seepage.FluDef):
+    """
+    返回给定流体定义的所有的组分的名字
+    :param f_def: 流体定义
+    :return: 如果f_def没有组分，则返回f_def的名字；否则，将所有组分的名字作为list返回
+    """
+    if f_def.component_number == 0:
+        return f_def.name
+    else:
+        names = []
+        for idx in range(f_def.component_number):
+            names.append(_get_names(f_def.get_component(idx)))
+        return names
+
+
+def _flatten_comp(name):
+    """
+    用在list_comp中，去除组分的结构
+
+    参数:
+    - name: 组分的名字，可以是字符串或列表
+
+    返回值:
+    - 一个列表，包含所有组分的名字，去除了嵌套结构
+
+    如果输入的是字符串，则直接返回一个包含该字符串的列表；
+    如果输入的是列表，则遍历该列表，递归地展开所有嵌套的子列表，并将结果合并成一个平面列表。
+    """
+    if isinstance(name, str):
+        return [name]
+    else:
+        assert isinstance(name, list)
+        temp = []
+        for item in name:
+            temp = temp + _flatten_comp(item)
+        return temp
+
+
+def list_comp(model: Seepage, keep_structure=True):
+    """
+    列出所有组分的名字
+    :param keep_structure: 返回的结构是否保持流体的结构 (since 2024-7-25)
+    :param model: 需要列出组分的模型
+    :return: 所有组分的名字作为list返回(注意，会维持流体和组分的组成结构)
+    """
+    names = []
+    for idx in range(model.fludef_number):
+        names.append(_get_names(model.get_fludef(idx)))
+    if keep_structure:
+        return names
+    else:
+        return _flatten_comp(names)
+
+
+def _list_comp_ids(fdef: Seepage.FluDef):
+    """
+    用在list_comp_ids中，列出组分中具有子组分的id (since 2024-7-25)
+    """
+    if fdef.component_number == 0:
+        return [[]]
+    result = []
+    for idx in range(fdef.component_number):
+        ids = _list_comp_ids(fdef.get_component(idx))
+        for item in ids:
+            result.append([idx] + item)
+    return result
+
+
+def list_comp_ids(model: Seepage):
+    """
+    列出模型中所有的流体的ID(其中每一个元素都是list)  (since 2024-7-25)
+    """
+    result = []
+    for idx in range(model.fludef_number):
+        ids = _list_comp_ids(model.get_fludef(idx))
+        for item in ids:
+            result.append([idx] + item)
+    return result
+
+
+def get_cell_mask(model: Seepage, xr=None, yr=None, zr=None):
+    """
+    返回给定坐标范围内的cell的index。主要用来辅助绘图。since 2024-6-12
+
+    参数:
+    - model: Seepage 模型对象
+    - xr: x 坐标范围（可选）
+    - yr: y 坐标范围（可选）
+    - zr: z 坐标范围（可选）
+
+    返回值:
+    - 一个列表，包含给定坐标范围内的单元格索引
+
+    如果 xr、yr 或 zr 为 None，则表示该方向上没有限制
+    """
+
+    def get_(v, r):
+        """
+        辅助函数，用于判断每个坐标是否在给定范围内
+
+        参数:
+        - v: 坐标值列表
+        - r: 坐标范围（可选）
+
+        返回值:
+        - 一个列表，包含每个坐标是否在给定范围内的布尔值
+        """
+        if r is None:
+            return [True] * len(v)  # 此时为所有
+        else:
+            return [r[0] <= v[i] <= r[1] for i in range(len(v))]
+
+    # 三个方向分别的mask
+    x_mask = get_(as_numpy(model).cells.x, xr)
+    y_mask = get_(as_numpy(model).cells.y, yr)
+    z_mask = get_(as_numpy(model).cells.z, zr)
+
+    # 返回结果
+    return [x_mask[i] and y_mask[i] and z_mask[i] for i in range(len(x_mask))]
+
+
+def get_cell_pos(model: Seepage, dim, mask=None):
+    """
+    返回cell的位置向量
+
+    参数:
+    - model: Seepage 模型对象
+    - dim: 维度索引（0, 1, 2 分别对应 x, y, z 维度）
+    - mask: 可选的掩码，用于筛选特定的单元格
+
+    返回值:
+    - 一个 numpy 数组，包含给定维度上单元格的位置向量
+
+    如果 mask 为 None，则返回所有单元格的位置向量；否则，返回掩码指定的单元格的位置向量
+    """
+    assert 0 <= dim < 3
+    v = as_numpy(model).cells.get(-(dim + 1))
+    return v if mask is None else v[mask]
+
+
+def get_cell_pre(model: Seepage, mask=None):
+    """
+    返回模型中单元格的压力值。
+
+    参数:
+    - model: Seepage 模型对象
+    - mask: 可选的掩码，用于筛选特定的单元格
+
+    返回值:
+    - 一个 numpy 数组，包含模型中所有单元格的压力值。
+    - 如果提供了掩码，则返回掩码指定的单元格的压力值。
+    """
+    v = as_numpy(model).cells.pre
+    return v if mask is None else v[mask]
+
+
+def get_cell_temp(model: Seepage, mask=None):
+    """
+    返回模型中单元格的温度值。
+
+    参数:
+    - model: Seepage 模型对象
+    - mask: 可选的掩码，用于筛选特定的单元格
+
+    返回值:
+    - 一个 numpy 数组，包含模型中所有单元格的温度值。
+    - 如果提供了掩码，则返回掩码指定的单元格的温度值。
+    """
+    v = as_numpy(model).cells.get(model.get_cell_key('temperature'))
+    return v if mask is None else v[mask]
+
+
+def get_cell_fv(model: Seepage, fid=None, mask=None):
+    """
+    返回模型中单元格的流体体积。
+
+    参数:
+    - model: Seepage 模型对象
+    - fid: 流体 ID（可选），如果未提供，则返回所有流体的总体积
+    - mask: 可选的掩码，用于筛选特定的单元格
+
+    返回值:
+    - 一个 numpy 数组，包含模型中所有单元格的流体体积。
+    - 如果提供了流体 ID，则返回该流体在所有单元格中的体积。
+    - 如果提供了掩码，则返回掩码指定的单元格的流体体积。
+    """
+    if fid is None:
+        v = as_numpy(model).cells.fluid_vol
+    else:
+        v = as_numpy(model).fluids(*fid).vol
+    return v if mask is None else v[mask]
+
+
+def get_cell_fm(model: Seepage, fid=None, mask=None):
+    """
+    返回模型中单元格的流体质量。
+
+    参数:
+    - model: Seepage 模型对象
+    - fid: 流体 ID（可选），如果未提供，则返回所有流体的总质量
+    - mask: 可选的掩码，用于筛选特定的单元格
+
+    返回值:
+    - 一个 numpy 数组，包含模型中所有单元格的流体质量。
+    - 如果提供了流体 ID，则返回该流体在所有单元格中的质量。
+    - 如果提供了掩码，则返回掩码指定的单元格的流体质量。
+    """
+    if fid is None:
+        v = as_numpy(model).cells.fluid_mass
+    else:
+        v = as_numpy(model).fluids(*fid).mass
+    return v if mask is None else v[mask]
+
+
+def _pop_sat(name, table: dict):
+    """
+    从饱和度表中获取指定流体或流体组分的饱和度值。
+
+    参数:
+    - name: 流体或流体组分的名称，可以是字符串或列表。
+    - table: 饱和度表，一个字典，其中键是流体或流体组分的名称，值是对应的饱和度值。
+
+    返回值:
+    - 如果 name 是字符串，则返回该流体的饱和度值；如果 name 是列表，
+    则返回一个列表，包含每个流体组分的饱和度值。
+    - 如果指定的流体或流体组分名称不在饱和度表中，则返回默认值 0.0。
+
+    该函数首先检查 name 是否为字符串。如果是字符串，它会验证名称是否为空，
+    并从饱和度表中获取相应的饱和度值。如果 name 不在表中，它会返回默认值 0.0。
+    如果 name 是列表，函数会遍历列表中的每个元素，递归调用 _pop_sat
+    函数获取每个流体组分的饱和度值，并将这些值收集到一个列表中返回。
+    """
+    if isinstance(name, str):
+        assert len(name) > 0, 'fluid name not set'
+        return table.pop(name, 0.0)
+    else:
+        values = []
+        for item in name:
+            values.append(_pop_sat(item, table))
+        return values
+
+
+def get_sat(names, table: dict):
+    """
+    返回各个组分的饱和度数值
+    :param names: 组分的名字列表
+    :param table: 饱和度表
+    :return: 各个组分的饱和度（维持和name相同的结构，默认为0）
+    """
+    the_copy = table.copy()
+    values = _pop_sat(names, the_copy)
+    if len(the_copy) > 0:
+        assert False, (f'names not used: {list(the_copy.keys())}. '
+                       f'The required names: {names}')
+    return values

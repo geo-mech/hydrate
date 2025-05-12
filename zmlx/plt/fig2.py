@@ -1,10 +1,4 @@
-try:
-    import numpy as np
-except Exception as e:
-    print(e)
-    np = None
-
-from zml import is_array
+from zml import is_array, np
 from zmlx.plt.cmap import get_cm, get_color
 from zmlx.plt.on_axes import plot_on_axes
 from zmlx.plt.on_figure import plot_on_figure
@@ -66,7 +60,10 @@ def plotxy(x=None, y=None, ipath=None, ix=None, iy=None,
     """
     # 文件数据加载处理
     if ipath is not None:
-        import numpy as np
+        try:
+            import numpy as np
+        except ImportError:
+            np = None
         try:
             data = np.loadtxt(ipath, dtype=float)
             # 自动处理列索引（当未指定时默认0/1列）
@@ -136,7 +133,10 @@ def tricontourf(x=None, y=None, z=None,
     """
 
     def _load(ipath=None, ix=None, iy=None, iz=None):
-        import numpy as np
+        try:
+            import numpy as np
+        except ImportError:
+            np = None
         data = np.loadtxt(ipath, float)
         return data[:, ix], data[:, iy], data[:, iz]
 
@@ -201,7 +201,10 @@ def show_fn2(pos=None, w=None, c=None, w_min=1, w_max=4, ipath=None, iw=4, ic=6,
     """
     if pos is None or w is None or c is None:
         if ipath is not None:
-            import numpy as np
+            try:
+                import numpy as np
+            except ImportError:
+                np = None
             d = np.loadtxt(ipath)
             pos = d[:, 0: 4]
             w = d[:, iw]
@@ -343,7 +346,10 @@ def tricontourf_(ax, x=None, y=None, z=None, ipath=None, ix=None, iy=None,
     利用给定的x，y，z来画一个二维的云图
     """
     if ipath is not None:
-        import numpy as np
+        try:
+            import numpy as np
+        except ImportError:
+            np = None
         data = np.loadtxt(ipath, float)
         if ix is not None:
             x = data[:, ix]

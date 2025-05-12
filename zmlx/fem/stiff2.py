@@ -1,6 +1,6 @@
 from zml import Mesh3
-from zmlx.fem.stiffness_qua4 import stiffness as qua4_stiff
 from zmlx.fem.elements.planar_strain_cst import stiffness as triangle_stiff
+from zmlx.fem.stiffness_qua4 import stiffness as qua4_stiff
 
 
 def stiff2(face: Mesh3.Face, E, mu, h=1.0):

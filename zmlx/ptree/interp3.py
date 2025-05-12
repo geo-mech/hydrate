@@ -1,9 +1,8 @@
-import numpy as np
 from scipy.interpolate import NearestNDInterpolator, LinearNDInterpolator
 
-from zml import Interp3
-from zmlx.alg.utils import join_cols
+from zml import Interp3, np
 from zmlx.alg.fsys import *
+from zmlx.alg.utils import join_cols
 from zmlx.ptree.array import array
 from zmlx.ptree.box import box3
 from zmlx.ptree.ptree import PTree
@@ -20,7 +19,8 @@ def create_linear(box, size, x, y, z, v, rescale=True):
     points = join_cols(x, y, z)
     values = v
     try:
-        f1 = LinearNDInterpolator(points, values, rescale=rescale, fill_value=np.nan)
+        f1 = LinearNDInterpolator(points, values, rescale=rescale,
+                                  fill_value=np.nan)
     except:
         def f1(*args):
             return np.nan
@@ -44,7 +44,8 @@ def create_linear(box, size, x, y, z, v, rescale=True):
     f = Interp3()
     f.create(xmin=box[0], dx=(box[3] - box[0]) / size[0], xmax=box[3],
              ymin=box[1], dy=(box[4] - box[1]) / size[1], ymax=box[4],
-             zmin=box[2], dz=(box[5] - box[2]) / size[2], zmax=box[5], get_value=get_value)
+             zmin=box[2], dz=(box[5] - box[2]) / size[2], zmax=box[5],
+             get_value=get_value)
     return f
 
 
@@ -94,7 +95,8 @@ def interp3(pt):
                      'This is useful if some of the input dimensions have '
                      'incommensurable units and differ by many orders of magnitude.')
 
-    return create_linear(box=box, size=size, x=x, y=y, z=z, v=v, rescale=rescale if rescale is not None else False)
+    return create_linear(box=box, size=size, x=x, y=y, z=z, v=v,
+                         rescale=rescale if rescale is not None else False)
 
 
 def test():

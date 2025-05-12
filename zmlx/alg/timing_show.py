@@ -11,8 +11,6 @@ from zmlx.alg.sys import log_deprecated
 log_deprecated(__name__)
 
 
-
-
 def test():
     timing_show('test1', time.sleep, 1)
     timing_show('test2', time.sleep, 2)

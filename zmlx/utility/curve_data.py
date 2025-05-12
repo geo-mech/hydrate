@@ -1,9 +1,8 @@
 import os
 
-import numpy as np
 from scipy.interpolate import interp1d
 
-from zml import is_array
+from zml import is_array, np
 from zmlx.alg.utils import clamp
 
 

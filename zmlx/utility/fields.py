@@ -2,14 +2,12 @@ import os
 
 try:
     import numpy as np
-except Exception as e:
-    print(e)
+except ImportError:
     np = None
 
 try:
     from scipy.interpolate import interp1d
-except Exception as e:
-    print(e)
+except ImportError as e:
     interp1d = None
 
 from zmlx.alg.utils import join_cols
@@ -31,7 +29,7 @@ class LinearField:
 
     def __call__(self, x, y, z):
         return self.v0 + (x - self.x0) * self.dx + (y - self.y0) * self.dy + (
-                    z - self.z0) * self.dz
+                z - self.z0) * self.dz
 
 
 class Field:

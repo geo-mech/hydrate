@@ -1,11 +1,6 @@
 import warnings
 
-from zml import is_array, Seepage
-
-try:
-    import numpy as np
-except:
-    np = None
+from zml import is_array, Seepage, np
 
 
 def _get_mass(item):
@@ -83,11 +78,11 @@ class SeepageCellMonitor:
         返回当前时刻，各个组分的产出的速率(质量速率)
         """
         if len(self.vm) == 0:
-            return
+            return None
 
         count = len(self.vm[0])
         if count < 2:
-            return
+            return None
 
         # 最后一步记录的产出量
         dm = [max(self.vm[i][-1] - self.vm[i][-2], 0.0) for i in
@@ -117,6 +112,7 @@ class SeepageCellMonitor:
         except Exception as err:
             warnings.warn(
                 f'meet exception when call function <{self.get_prod}>, err = <{err}>')
+            return None
 
     def get_rate(self, index=None):
         """
@@ -134,6 +130,7 @@ class SeepageCellMonitor:
         except Exception as err:
             warnings.warn(
                 f'meet exception <{err}> when call function <{self.get_rate}>')
+            return None
 
     def save(self, path):
         """

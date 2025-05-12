@@ -17,6 +17,7 @@ import datetime
 import math
 import os
 import re
+import shutil
 import sys
 import timeit
 import warnings
@@ -26,7 +27,7 @@ from ctypes import (cdll, c_void_p, c_char_p, c_int, c_int64, c_bool, c_double,
 
 try:
     import numpy as np
-except:
+except ImportError:
     np = None
 
 warnings.simplefilter("default")  # Default warning display
@@ -44,8 +45,11 @@ def const_f64_ptr(arr):
         arr: 需要获得内存地址的Array
 
     Returns:
-        POINTER(c_double): 一个只读的指针.
+        POINTER(c_double) or None: 一个只读的指针.
     """
+    if arr is None:
+        return None
+
     if isinstance(arr, POINTER(c_double)):
         return arr
 
@@ -72,8 +76,11 @@ def f64_ptr(arr):
         arr: 需要获得内存地址的Array
 
     Returns:
-        POINTER(c_double): 一个可供读写的内存地址
+        POINTER(c_double) or None: 一个可供读写的内存地址
     """
+    if arr is None:
+        return None
+
     if isinstance(arr, POINTER(c_double)):
         return arr
 
@@ -105,7 +112,7 @@ def get_pointer64(arr, readonly=False):
         readonly: 是否返回只读指针，默认为False
 
     Returns:
-        POINTER(c_double): 指向连续内存的指针
+        POINTER(c_double) or None: 指向连续内存的指针
 
     Raises:
         ValueError: 输入类型不匹配时抛出
@@ -559,12 +566,10 @@ class _AppData(Object):
         folder = os.path.join(self.folder, 'temp')
         if os.path.isdir(folder):
             if len(args) == 0:
-                import shutil
                 shutil.rmtree(folder)
                 return
             path = os.path.join(folder, *args)
             if os.path.isdir(path):
-                import shutil
                 shutil.rmtree(path)
                 return
             if os.path.isfile(path):
@@ -8272,9 +8277,10 @@ class Mesh3(HasHandle):
         Returns:
             Link: 新添加的线对象。
         """
-        assert len(nodes) == 2, f'The count of nodes must be 2, but got {len(nodes)}'
+        assert len(
+            nodes) == 2, f'The count of nodes must be 2, but got {len(nodes)}'
         node_ids = [node.index if isinstance(node, Mesh3.Node) else node
-                   for node in nodes]
+                    for node in nodes]
         index = core.mesh3_add_link(
             self.handle, node_ids[0], node_ids[1])
         return self.get_link(index)
@@ -16773,10 +16779,10 @@ class Seepage(HasHandle, HasCells):
             则返回添加的反应对象；否则返回添加的反应的 ID。
         """
         if not isinstance(data, Seepage.Reaction):
+            assert isinstance(data, dict)
             warnings.warn(
                 'The none Seepage.Reaction type will '
-                'not be supported after 2026-2-7, '
-                'please use zmlx.react.add_reaction instead.',
+                'not be supported after 2026-2-7',
                 DeprecationWarning, stacklevel=2)
             data = self.create_reaction(**data)
         idx = core.seepage_add_reaction(self.handle, data.handle)
@@ -16831,10 +16837,9 @@ class Seepage(HasHandle, HasCells):
         """
         warnings.warn(
             'zml.Seepage.Reaction.create_reaction will be '
-            'remove after 2026-2-7, '
-            'please use zmlx.react.create_reaction instead',
+            'remove after 2026-2-7',
             DeprecationWarning, stacklevel=2)
-        from zmlx.react.create_reaction import create_reaction as create
+        from zmlx.react.alg import create_reaction as create
         return create(self, **kwargs)
 
     core.use(c_void_p, 'seepage_get_buffer',
@@ -17709,14 +17714,15 @@ class Seepage(HasHandle, HasCells):
             assert isinstance(face_groups, Groups)  # 分组
 
         # 执行扩散操作.
-        core.seepage_diffusion(self.handle, dt, *parse_fid3(fid0),
-                               *parse_fid3(fid1),
-                               ps0, ls0,
-                               pk, lk,
-                               pg, lg,
-                               ppg, lpg,
-                               ds_max,
-                               0 if face_groups is None else face_groups.handle)
+        core.seepage_diffusion(
+            self.handle, dt, *parse_fid3(fid0),
+            *parse_fid3(fid1),
+            ps0, ls0,
+            pk, lk,
+            pg, lg,
+            ppg, lpg,
+            ds_max,
+            0 if face_groups is None else face_groups.handle)
 
     core.use(None, 'seepage_heating',
              c_void_p, c_size_t, c_size_t, c_size_t,
@@ -18208,7 +18214,7 @@ class Seepage(HasHandle, HasCells):
             'Seepage.numpy will be removed after 2025-1-21. '
             'Use zmlx.utility.SeepageNumpy Instead.'
             , DeprecationWarning, stacklevel=2)
-        from zmlx.utility.seepage_numpy import SeepageNumpy
+        from zmlx.base.seepage import SeepageNumpy
         return SeepageNumpy(model=self)
 
     core.use(None, 'seepage_get_cells_v0',

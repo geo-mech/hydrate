@@ -41,14 +41,8 @@ Face的属性：
 """
 from collections.abc import Iterable
 
-try:
-    import numpy as np
-except Exception as e:
-    print(e)
-    np = None
-
-from zml import get_average_perm, Tensor3, ConjugateGradientSolver
-from zml import make_parent
+from zml import (get_average_perm, Tensor3, ConjugateGradientSolver,
+                 make_parent)
 from zmlx.alg.fsys import join_paths, make_fname, print_tag
 from zmlx.alg.utils import clamp
 from zmlx.alg.utils import join_cols
@@ -65,145 +59,6 @@ from zmlx.utility.fields import Field
 from zmlx.utility.gui_iterator import GuiIterator
 from zmlx.utility.save_manager import SaveManager
 from zmlx.utility.seepage_cell_monitor import SeepageCellMonitor
-from zmlx.utility.seepage_numpy import as_numpy
-
-# 确保这些import不会被PyCharm优化掉
-_unused = [get_face_gradient, get_face_diff, get_face_sum, get_face_left,
-           get_face_right, get_cell_average, get_cell_max]
-
-
-def get_cell_mask(model: Seepage, xr=None, yr=None, zr=None):
-    """
-    返回给定坐标范围内的cell的index。主要用来辅助绘图。since 2024-6-12
-
-    参数:
-    - model: Seepage 模型对象
-    - xr: x 坐标范围（可选）
-    - yr: y 坐标范围（可选）
-    - zr: z 坐标范围（可选）
-
-    返回值:
-    - 一个列表，包含给定坐标范围内的单元格索引
-
-    如果 xr、yr 或 zr 为 None，则表示该方向上没有限制
-    """
-
-    def get_(v, r):
-        """
-        辅助函数，用于判断每个坐标是否在给定范围内
-
-        参数:
-        - v: 坐标值列表
-        - r: 坐标范围（可选）
-
-        返回值:
-        - 一个列表，包含每个坐标是否在给定范围内的布尔值
-        """
-        if r is None:
-            return [True] * len(v)  # 此时为所有
-        else:
-            return [r[0] <= v[i] <= r[1] for i in range(len(v))]
-
-    # 三个方向分别的mask
-    x_mask = get_(as_numpy(model).cells.x, xr)
-    y_mask = get_(as_numpy(model).cells.y, yr)
-    z_mask = get_(as_numpy(model).cells.z, zr)
-
-    # 返回结果
-    return [x_mask[i] and y_mask[i] and z_mask[i] for i in range(len(x_mask))]
-
-
-def get_cell_pos(model: Seepage, dim, mask=None):
-    """
-    返回cell的位置向量
-
-    参数:
-    - model: Seepage 模型对象
-    - dim: 维度索引（0, 1, 2 分别对应 x, y, z 维度）
-    - mask: 可选的掩码，用于筛选特定的单元格
-
-    返回值:
-    - 一个 numpy 数组，包含给定维度上单元格的位置向量
-
-    如果 mask 为 None，则返回所有单元格的位置向量；否则，返回掩码指定的单元格的位置向量
-    """
-    assert 0 <= dim < 3
-    v = as_numpy(model).cells.get(-(dim + 1))
-    return v if mask is None else v[mask]
-
-
-def get_cell_pre(model: Seepage, mask=None):
-    """
-    返回模型中单元格的压力值。
-
-    参数:
-    - model: Seepage 模型对象
-    - mask: 可选的掩码，用于筛选特定的单元格
-
-    返回值:
-    - 一个 numpy 数组，包含模型中所有单元格的压力值。
-    - 如果提供了掩码，则返回掩码指定的单元格的压力值。
-    """
-    v = as_numpy(model).cells.pre
-    return v if mask is None else v[mask]
-
-
-def get_cell_temp(model: Seepage, mask=None):
-    """
-    返回模型中单元格的温度值。
-
-    参数:
-    - model: Seepage 模型对象
-    - mask: 可选的掩码，用于筛选特定的单元格
-
-    返回值:
-    - 一个 numpy 数组，包含模型中所有单元格的温度值。
-    - 如果提供了掩码，则返回掩码指定的单元格的温度值。
-    """
-    v = as_numpy(model).cells.get(model.get_cell_key('temperature'))
-    return v if mask is None else v[mask]
-
-
-def get_cell_fv(model: Seepage, fid=None, mask=None):
-    """
-    返回模型中单元格的流体体积。
-
-    参数:
-    - model: Seepage 模型对象
-    - fid: 流体 ID（可选），如果未提供，则返回所有流体的总体积
-    - mask: 可选的掩码，用于筛选特定的单元格
-
-    返回值:
-    - 一个 numpy 数组，包含模型中所有单元格的流体体积。
-    - 如果提供了流体 ID，则返回该流体在所有单元格中的体积。
-    - 如果提供了掩码，则返回掩码指定的单元格的流体体积。
-    """
-    if fid is None:
-        v = as_numpy(model).cells.fluid_vol
-    else:
-        v = as_numpy(model).fluids(*fid).vol
-    return v if mask is None else v[mask]
-
-
-def get_cell_fm(model: Seepage, fid=None, mask=None):
-    """
-    返回模型中单元格的流体质量。
-
-    参数:
-    - model: Seepage 模型对象
-    - fid: 流体 ID（可选），如果未提供，则返回所有流体的总质量
-    - mask: 可选的掩码，用于筛选特定的单元格
-
-    返回值:
-    - 一个 numpy 数组，包含模型中所有单元格的流体质量。
-    - 如果提供了流体 ID，则返回该流体在所有单元格中的质量。
-    - 如果提供了掩码，则返回掩码指定的单元格的流体质量。
-    """
-    if fid is None:
-        v = as_numpy(model).cells.fluid_mass
-    else:
-        v = as_numpy(model).fluids(*fid).mass
-    return v if mask is None else v[mask]
 
 
 def show_cells(model: Seepage, dim0, dim1, mask=None, show_p=True, show_t=True,
@@ -241,17 +96,19 @@ def show_cells(model: Seepage, dim0, dim1, mask=None, show_p=True, show_t=True,
 
     if show_p:  # 显示压力
         v = get_cell_pre(model, mask=mask)
-        tricontourf(x, y, v, caption='pressure',
-                    fname=make_fname(year, join_paths(folder, 'pressure'),
-                                     '.jpg', 'y'),
-                    **kw)
+        tricontourf(
+            x, y, v, caption='pressure',
+            fname=make_fname(year, join_paths(folder, 'pressure'),
+                             '.jpg', 'y'),
+            **kw)
 
     if show_t:  # 显示温度
         v = get_cell_temp(model, mask=mask)
-        tricontourf(x, y, v, caption='temperature',
-                    fname=make_fname(year, join_paths(folder, 'temperature'),
-                                     '.jpg', 'y'),
-                    **kw)
+        tricontourf(
+            x, y, v, caption='temperature',
+            fname=make_fname(year, join_paths(folder, 'temperature'),
+                             '.jpg', 'y'),
+            **kw)
 
     if not isinstance(show_s, list):
         if show_s:  # 此时，显示所有组分的饱和度
@@ -271,152 +128,11 @@ def show_cells(model: Seepage, dim0, dim1, mask=None, show_p=True, show_t=True,
             fv = get(model=model, fid=idx, mask=mask)  # 流体体积
             v = fv / fv_all
             # 绘图
-            tricontourf(x, y, v, caption=name,
-                        fname=make_fname(year, join_paths(folder, name),
-                                         '.jpg', 'y'),
-                        **kw)
-
-
-def _get_names(f_def: Seepage.FluDef):
-    """
-    返回给定流体定义的所有的组分的名字
-    :param f_def: 流体定义
-    :return: 如果f_def没有组分，则返回f_def的名字；否则，将所有组分的名字作为list返回
-    """
-    if f_def.component_number == 0:
-        return f_def.name
-    else:
-        names = []
-        for idx in range(f_def.component_number):
-            names.append(_get_names(f_def.get_component(idx)))
-        return names
-
-
-def _flatten_comp(name):
-    """
-    用在list_comp中，去除组分的结构
-
-    参数:
-    - name: 组分的名字，可以是字符串或列表
-
-    返回值:
-    - 一个列表，包含所有组分的名字，去除了嵌套结构
-
-    如果输入的是字符串，则直接返回一个包含该字符串的列表；
-    如果输入的是列表，则遍历该列表，递归地展开所有嵌套的子列表，并将结果合并成一个平面列表。
-    """
-    if isinstance(name, str):
-        return [name]
-    else:
-        assert isinstance(name, list)
-        temp = []
-        for item in name:
-            temp = temp + _flatten_comp(item)
-        return temp
-
-
-def list_comp(model: Seepage, keep_structure=True):
-    """
-    列出所有组分的名字
-    :param keep_structure: 返回的结构是否保持流体的结构 (since 2024-7-25)
-    :param model: 需要列出组分的模型
-    :return: 所有组分的名字作为list返回(注意，会维持流体和组分的组成结构)
-    """
-    names = []
-    for idx in range(model.fludef_number):
-        names.append(_get_names(model.get_fludef(idx)))
-    if keep_structure:
-        return names
-    else:
-        return _flatten_comp(names)
-
-
-def _list_comp_ids(fdef: Seepage.FluDef):
-    """
-    用在list_comp_ids中，列出组分中具有子组分的id (since 2024-7-25)
-    """
-    if fdef.component_number == 0:
-        return [[]]
-    result = []
-    for idx in range(fdef.component_number):
-        ids = _list_comp_ids(fdef.get_component(idx))
-        for item in ids:
-            result.append([idx] + item)
-    return result
-
-
-def list_comp_ids(model: Seepage):
-    """
-    列出模型中所有的流体的ID(其中每一个元素都是list)  (since 2024-7-25)
-    """
-    result = []
-    for idx in range(model.fludef_number):
-        ids = _list_comp_ids(model.get_fludef(idx))
-        for item in ids:
-            result.append([idx] + item)
-    return result
-
-
-def _pop_sat(name, table: dict):
-    """
-    从饱和度表中获取指定流体或流体组分的饱和度值。
-
-    参数:
-    - name: 流体或流体组分的名称，可以是字符串或列表。
-    - table: 饱和度表，一个字典，其中键是流体或流体组分的名称，值是对应的饱和度值。
-
-    返回值:
-    - 如果 name 是字符串，则返回该流体的饱和度值；如果 name 是列表，
-    则返回一个列表，包含每个流体组分的饱和度值。
-    - 如果指定的流体或流体组分名称不在饱和度表中，则返回默认值 0.0。
-
-    该函数首先检查 name 是否为字符串。如果是字符串，它会验证名称是否为空，
-    并从饱和度表中获取相应的饱和度值。如果 name 不在表中，它会返回默认值 0.0。
-    如果 name 是列表，函数会遍历列表中的每个元素，递归调用 _pop_sat
-    函数获取每个流体组分的饱和度值，并将这些值收集到一个列表中返回。
-    """
-    if isinstance(name, str):
-        assert len(name) > 0, 'fluid name not set'
-        return table.pop(name, 0.0)
-    else:
-        values = []
-        for item in name:
-            values.append(_pop_sat(item, table))
-        return values
-
-
-def get_sat(names, table: dict):
-    """
-    返回各个组分的饱和度数值
-    :param names: 组分的名字列表
-    :param table: 饱和度表
-    :return: 各个组分的饱和度（维持和name相同的结构，默认为0）
-    """
-    the_copy = table.copy()
-    values = _pop_sat(names, the_copy)
-    if len(the_copy) > 0:
-        assert False, (f'names not used: {list(the_copy.keys())}. '
-                       f'The required names: {names}')
-    return values
-
-
-def update_time(model: Seepage, dt=None):
-    """
-    更新模型的时间
-
-    参数:
-    - model: Seepage 模型对象
-    - dt: 要更新的时间步长，如果为 None，则使用模型当前的时间步长
-
-    返回值:
-    - 无
-
-    该函数首先检查是否提供了时间步长。如果没有提供，它会获取模型当前的时间步长。
-    然后，它将模型的时间更新为当前时间加上时间步长。
-    """
-    if dt is None:
-        dt = get_dt(model)
-    set_time(model, get_time(model) + dt)
+            tricontourf(
+                x, y, v, caption=name,
+                fname=make_fname(year, join_paths(folder, name),
+                                 '.jpg', 'y'),
+                **kw)
 
 
 def get_recommended_dt(model: Seepage, previous_dt,
@@ -860,7 +576,7 @@ def create(mesh=None,
     # 对模型的细节进行必要的配置
     set_model(model, igr=igr, bk_fv=bk_fv, bk_g=bk_g, **kwargs)
 
-    # 添加注入点   since 24-6-20
+    # 添加注入点 since 24-6-20
     add_injector(model, data=injectors)
 
     # 添加毛管效应.

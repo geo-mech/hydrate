@@ -7,7 +7,8 @@ from zmlx.fem.attr_getter import attr_getter
 from zmlx.fem.stiff2 import stiff2
 
 
-def compute_face_stiff2(mesh: Mesh3, face_node_n=4, fa_E=None, fa_mu=None, fa_h=None,
+def compute_face_stiff2(mesh: Mesh3, face_node_n=4, fa_E=None, fa_mu=None,
+                        fa_h=None,
                         f_E=1.0, f_mu=0.2, f_h=1.0):
     """
     计算face的单元刚度，并且存储.

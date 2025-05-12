@@ -7,7 +7,8 @@ from zmlx.fem.attr_getter import attr_getter
 from zmlx.fem.stiff3 import stiff3
 
 
-def create3(mesh, ba_E=None, ba_mu=None, ba_den=None, b_E=1.0, b_mu=0.2, b_den=1.0):
+def create3(mesh, ba_E=None, ba_mu=None, ba_den=None, b_E=1.0, b_mu=0.2,
+            b_den=1.0):
     """
     创建3维的动力学模型。 其中mesh为网格.
 
@@ -26,7 +27,8 @@ def create3(mesh, ba_E=None, ba_mu=None, ba_den=None, b_E=1.0, b_mu=0.2, b_den=1
     assert 0.01 <= b_mu <= 0.49
     get_b_mu = attr_getter(index=ba_mu, left=0.01, right=0.49, default=b_mu)
     assert 1.0e-8 <= b_den <= 1.0e8
-    get_b_den = attr_getter(index=ba_den, left=1.0e-8, right=1.0e8, default=b_den)
+    get_b_den = attr_getter(index=ba_den, left=1.0e-8, right=1.0e8,
+                            default=b_den)
 
     # 维度
     ndim = 3

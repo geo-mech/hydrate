@@ -34,5 +34,3 @@ __all__ = ['deprecated_func', 'get', 'create']
 from zmlx.alg.sys import log_deprecated
 
 log_deprecated(__name__)
-
-

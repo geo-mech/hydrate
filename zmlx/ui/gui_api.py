@@ -66,6 +66,10 @@ class GuiApi(QtCore.QObject):
                 f = self.funcs.get(args[0])
                 if f is not None:
                     return f(*args[1:], **kwargs)
+                else:
+                    return None
+        else:
+            return None
 
     @staticmethod
     def get_standard(parent):

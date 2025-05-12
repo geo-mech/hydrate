@@ -1,11 +1,6 @@
 import random
 
-try:
-    import numpy as np
-except Exception as e:
-    print(e)
-    np = None
-
+from zml import np
 from zmlx.alg.utils import clamp, linspace
 from zmlx.geometry.dfn2 import dfn2
 from zmlx.geometry.rect_3d import from_v3
@@ -67,7 +62,8 @@ def dfn_v3(data=None, **opt):
         return []
 
     # 生成裂缝数据
-    fractures = from_segs(dfn2(**opt), z_min=zr[0], z_max=zr[1], heights=heights)
+    fractures = from_segs(dfn2(**opt), z_min=zr[0], z_max=zr[1],
+                          heights=heights)
 
     if opt.get('remove_small', False):
         return remove_small(fractures)
@@ -75,7 +71,8 @@ def dfn_v3(data=None, **opt):
         return fractures
 
 
-def create_fractures(box=None, p21=None, angles=None, lengths=None, heights=None, l_min=None):
+def create_fractures(box=None, p21=None, angles=None, lengths=None,
+                     heights=None, l_min=None):
     """
     创建一个拟三维的DFN: 裂缝面都垂直于x-y平面.  返回的裂缝数据的格式为： x0, y0, z0, x1, y1, z1
     --
@@ -106,7 +103,8 @@ def create_fractures(box=None, p21=None, angles=None, lengths=None, heights=None
     assert len(box) == 6
     x_min, y_min, z_min, x_max, y_max, z_max = box
 
-    return dfn_v3(xr=[x_min, x_max], yr=[y_min, y_max], zr=[z_min, z_max], p21=p21, angles=angles,
+    return dfn_v3(xr=[x_min, x_max], yr=[y_min, y_max], zr=[z_min, z_max],
+                  p21=p21, angles=angles,
                   lengths=lengths, heights=heights, l_min=l_min)
 
 
@@ -148,7 +146,8 @@ def save_c14(path, fractures):
     """
     with open(path, 'w') as file:
         for x0, y0, z0, x1, y1, z1 in fractures:
-            file.write(f'{x0} {x0} {x1} {x1} {y0} {y0} {y1} {y1} {z0} {z1} {z0} {z1} 0 0\n')
+            file.write(
+                f'{x0} {x0} {x1} {x1} {y0} {y0} {y1} {y1} {z0} {z1} {z0} {z1} 0 0\n')
 
 
 def __cen(x, y):

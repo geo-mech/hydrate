@@ -1,6 +1,9 @@
 import time
 
-import numpy as np
+try:
+    import numpy as np
+except ImportError:
+    np = None
 
 from zmlx.pg.plot2 import *
 
@@ -16,7 +19,8 @@ def test2():
 
 
 def test3():
-    plot(np.random.normal(size=100), pen=(200, 200, 200), symbolBrush=(255, 0, 0), symbolPen='w')
+    plot(np.random.normal(size=100), pen=(200, 200, 200),
+         symbolBrush=(255, 0, 0), symbolPen='w')
 
 
 def test4():
@@ -34,7 +38,8 @@ def test5():
     mask = x > 1e-15
     x = x[mask]
     y = y[mask]
-    p5.setData(x, y, pen=None, symbol='t', symbolPen=None, symbolSize=55, symbolBrush=(100, 100, 255, 50))
+    p5.setData(x, y, pen=None, symbol='t', symbolPen=None, symbolSize=55,
+               symbolBrush=(100, 100, 255, 50))
     set_label('left', "Y Axis", units='A')
     set_label('bottom', "Y Axis", units='s')
     set_log_mode(x=True, y=False)
@@ -48,13 +53,15 @@ def test6():
         gui.break_point()
         curve.setData(data[ptr % 10])
         if ptr == 0:
-            enable_auto_range('xy', False)  # stop auto-scaling after the first data set is plotted
+            enable_auto_range('xy',
+                              False)  # stop auto-scaling after the first data set is plotted
         ptr += 1
         time.sleep(0.01)
 
 
 def test7():
-    y = np.sin(np.linspace(0, 10, 1000)) + np.random.normal(size=1000, scale=0.1)
+    y = np.sin(np.linspace(0, 10, 1000)) + np.random.normal(size=1000,
+                                                            scale=0.1)
     plot(y, fillLevel=-0.3, brush=(50, 50, 200, 100))
     show_axis('bottom', False)
 
@@ -81,19 +88,22 @@ def test10():
     plt2 = plot(caption='B')
 
     # make interesting distribution of values
-    vals = np.hstack([np.random.normal(size=500), np.random.normal(size=260, loc=4)])
+    vals = np.hstack(
+        [np.random.normal(size=500), np.random.normal(size=260, loc=4)])
 
     # compute standard histogram
     y, x = np.histogram(vals, bins=np.linspace(-3, 8, 40))
 
     # Using stepMode="center" causes the plot to draw two lines for each sample.
     # notice that len(x) == len(y)+1
-    plt1.setData(x, y, stepMode="center", fillLevel=0, fillOutline=True, brush=(0, 0, 255, 150))
+    plt1.setData(x, y, stepMode="center", fillLevel=0, fillOutline=True,
+                 brush=(0, 0, 255, 150))
 
     # Now draw all points as a nicely-spaced scatter plot
     y = pg.pseudoScatter(vals, spacing=0.15)
     # plt2.plot(vals, y, pen=None, symbol='o', symbolSize=5)
-    plt2.setData(vals, y, pen=None, symbol='o', symbolSize=5, symbolPen=(255, 255, 255, 200),
+    plt2.setData(vals, y, pen=None, symbol='o', symbolSize=5,
+                 symbolPen=(255, 255, 255, 200),
                  symbolBrush=(0, 0, 255, 150))
 
 

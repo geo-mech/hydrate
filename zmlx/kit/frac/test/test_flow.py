@@ -1,8 +1,8 @@
 import math
 
+from zmlx.geometry.dfn2 import dfn2
 from zmlx.kit.frac.create_flow import create_flow
 from zmlx.kit.frac.network import create_network
-from zmlx.geometry.dfn2 import dfn2
 from zmlx.kit.frac.plot2 import show_pressure
 
 

@@ -6,7 +6,7 @@ from zml import read_text, write_text, app_data
 from zmlx.alg.fsys import time_string
 from zmlx.ui.alg import create_action
 from zmlx.ui.cfg import code_in_editor
-from zmlx.ui.pyqt import QtWidgets, QtName, is_PyQt6
+from zmlx.ui.pyqt import QtWidgets, qt_name, is_pyqt6
 
 PythonEditor = None
 use_QSci = False
@@ -17,7 +17,7 @@ if PythonEditor is None:
 
         use_QSci = True
     except Exception as e:
-        print(f'Error: {e}. Please install QScintilla for {QtName}')
+        print(f'Error: {e}. Please install QScintilla for {qt_name}')
 
 if PythonEditor is None:
     try:
@@ -48,7 +48,7 @@ class CodeEdit(PythonEditor):
         menu.addSeparator()
         menu.addAction(
             create_action(self, "运行", 'begin', self.console_exec))
-        if not use_QSci and is_PyQt6:  # 尝试添加安装Qsci的动作
+        if not use_QSci and is_pyqt6:  # 尝试添加安装Qsci的动作
 
             def install_qsci():
                 from zmlx.alg.sys import pip_install

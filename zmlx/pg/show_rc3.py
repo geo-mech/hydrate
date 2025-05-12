@@ -112,23 +112,28 @@ def show_rc3(rc3, color=None, alpha=None, cmap=None, caption=None, on_top=None,
 
     widget = get_widget(caption=caption, on_top=on_top)
     if widget is None:
-        warnings.warn(f'The widget is None. caption = {caption}, on_top = {on_top}')
+        warnings.warn(
+            f'The widget is None. caption = {caption}, on_top = {on_top}')
         return
 
     if hasattr(widget, 'mesh_1'):
-        widget.mesh_1.setMeshData(vertexes=vertexes, faces=faces, faceColors=colors,
+        widget.mesh_1.setMeshData(vertexes=vertexes, faces=faces,
+                                  faceColors=colors,
                                   smooth=False)
         if reset_dist:
-            set_distance(get_distance([x_min, y_min, z_min], [x_max, y_max, z_max]))
+            set_distance(
+                get_distance([x_min, y_min, z_min], [x_max, y_max, z_max]))
         if reset_cent:
-            set_center([(x_min + x_max) / 2, (y_min + y_max) / 2, (z_min + z_max) / 2])
+            set_center(
+                [(x_min + x_max) / 2, (y_min + y_max) / 2, (z_min + z_max) / 2])
     else:
         widget.mesh_1 = Mesh(vertexes=vertexes, faces=faces, faceColors=colors,
                              smooth=False)
         widget.mesh_1.setGLOptions('opaque' if gl_option is None else gl_option)
         add_item(widget.mesh_1)
         set_distance(get_distance([x_min, y_min, z_min], [x_max, y_max, z_max]))
-        set_center([(x_min + x_max) / 2, (y_min + y_max) / 2, (z_min + z_max) / 2])
+        set_center(
+            [(x_min + x_max) / 2, (y_min + y_max) / 2, (z_min + z_max) / 2])
 
     box = [[x_min, y_min, z_min], [x_max, y_max, z_max]]
     if print_box:

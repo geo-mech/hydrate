@@ -9,5 +9,6 @@ def create(left, right, temp, heat, rate, fa_t=None, fa_c=None):
     """
     return endothermic.create(left=[(left, 1), ],
                               right=right,
-                              temp=temp, heat=heat, rate=rate, fa_t=fa_t, fa_c=fa_c,
+                              temp=temp, heat=heat, rate=rate, fa_t=fa_t,
+                              fa_c=fa_c,
                               l2r=True, r2l=False, p2t=None, t2q=None)

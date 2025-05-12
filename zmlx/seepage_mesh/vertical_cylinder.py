@@ -1,9 +1,7 @@
 """
 竖直方向的圆柱网格.
 """
-import numpy as np
-
-from zml import SeepageMesh
+from zml import SeepageMesh, np
 from zmlx.seepage_mesh.cylinder import create_cylinder
 
 
@@ -43,4 +41,5 @@ def create_hydrate_res(z_bottom, z0, z1, z_top, r_max, grid):
 
 
 if __name__ == '__main__':
-    print(create_hydrate_res(z_bottom=-100, z0=-70, z1=-30, z_top=0, r_max=60, grid=2))
+    print(create_hydrate_res(z_bottom=-100, z0=-70, z1=-30, z_top=0, r_max=60,
+                             grid=2))

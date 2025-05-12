@@ -1,10 +1,4 @@
-try:
-    import numpy as np
-except Exception as e:
-    print(e)
-    np = None
-
-from zml import SeepageMesh
+from zml import SeepageMesh, np
 from zmlx.alg.utils import is_sorted
 
 

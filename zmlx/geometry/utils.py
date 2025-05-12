@@ -1,8 +1,8 @@
 import math
+
 try:
     import numpy as np
-except Exception as e:
-    print(e)
+except ImportError:
     np = None
 
 
@@ -38,7 +38,8 @@ def point_distance(p1, p2):
     """
     Returns the distance between two points
     """
-    return np.linalg.norm(np.asarray(p1, dtype=np.float64) - np.asarray(p2, dtype=np.float64))
+    return np.linalg.norm(
+        np.asarray(p1, dtype=np.float64) - np.asarray(p2, dtype=np.float64))
 
 
 def seg_intersection(ax, ay, bx, by, cx, cy, dx, dy):
@@ -135,4 +136,3 @@ def triangle_area(a, b, c):
     p = (a + b + c) / 2
     p = p * (p - a) * (p - b) * (p - c)
     return p ** 0.5 if p > 0 else 0
-

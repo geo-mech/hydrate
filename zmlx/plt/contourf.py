@@ -11,10 +11,11 @@ from zmlx.alg.sys import log_deprecated
 log_deprecated(__name__)
 
 
-
-
 def test():
-    import numpy as np
+    try:
+        import numpy as np
+    except ImportError:
+        np = None
     x = np.linspace(-5, 5, 30)
     y = np.linspace(-5, 5, 30)
     x, y = np.meshgrid(x, y)

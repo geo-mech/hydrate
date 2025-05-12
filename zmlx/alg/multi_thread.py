@@ -1,3 +1,6 @@
+"""
+多线程计算相关的函数
+"""
 import threading
 
 

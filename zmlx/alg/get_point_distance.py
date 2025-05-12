@@ -12,5 +12,3 @@ warnings.warn('The modulus get_point_distance is deprecated '
 from zmlx.alg.sys import log_deprecated
 
 log_deprecated(__name__)
-
-

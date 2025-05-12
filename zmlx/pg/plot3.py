@@ -1,4 +1,7 @@
-import numpy as np
+try:
+    import numpy as np
+except ImportError:
+    np = None
 import pyqtgraph as pg
 import pyqtgraph.opengl as gl
 
@@ -16,7 +19,8 @@ def apply(oper=None, caption=None, on_top=None):
     if caption is not None:
         __Captions[0] = caption
     if gui.exists() and oper is not None:
-        gui.get_widget(the_type=gl.GLViewWidget, oper=oper, caption=__Captions[0], on_top=on_top,
+        gui.get_widget(the_type=gl.GLViewWidget, oper=oper,
+                       caption=__Captions[0], on_top=on_top,
                        icon='gpu.jpg')
 
 

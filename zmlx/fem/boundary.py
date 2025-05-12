@@ -30,7 +30,8 @@ def find_boundary(dyn: DynSys, n_dim, i_dim, lower, i_dir, eps=None):
     pos = 1.0e100 if lower else -1.0e100
     idx = i_dim
     while idx < size:
-        pos = min(pos, dyn.get_pos(idx)) if lower else max(pos, dyn.get_pos(idx))
+        pos = min(pos, dyn.get_pos(idx)) if lower else max(pos,
+                                                           dyn.get_pos(idx))
         idx += n_dim
 
     if eps is None:

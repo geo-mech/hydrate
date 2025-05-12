@@ -1,7 +1,8 @@
 from zmlx.react import endothermic
 
 
-def create(sol, flu, temp, heat, fa_t=None, fa_c=None, vp=None, vt=None, t2q=None, l2r=True, r2l=True):
+def create(sol, flu, temp, heat, fa_t=None, fa_c=None, vp=None, vt=None,
+           t2q=None, l2r=True, r2l=True):
     """
     创建一个物质融化（或者气化、升华）的反应
     """

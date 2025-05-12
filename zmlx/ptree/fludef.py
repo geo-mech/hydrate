@@ -98,7 +98,8 @@ def fludef(pt):
         name = pt('name', doc='The fluid name')
 
         # 尝试预定义的或者是从文件读取
-        f_def = _from_text(pt('text', doc='filename or pre-defined fluid name'), pt.find, name=name)
+        f_def = _from_text(pt('text', doc='filename or pre-defined fluid name'),
+                           pt.find, name=name)
         if f_def is not None:
             return f_def
 
@@ -108,9 +109,11 @@ def fludef(pt):
             return f_def
 
         # 尝试创建并自定义
-        f_def = Seepage.FluDef(den=interp2(pt['den']), vis=interp2(pt['vis']), name=name)
+        f_def = Seepage.FluDef(den=interp2(pt['den']), vis=interp2(pt['vis']),
+                               name=name)
 
-        specific_heat = pt('specific_heat', doc='the specific heat of the fluid')
+        specific_heat = pt('specific_heat',
+                           doc='the specific heat of the fluid')
         if specific_heat is not None:
             f_def.specific_heat = specific_heat
 

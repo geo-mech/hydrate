@@ -4,13 +4,7 @@
 import warnings
 from ctypes import c_double, POINTER
 
-try:
-    import numpy as np
-except Exception as e:
-    print(e)
-    np = None
-
-from zml import get_pointer64
+from zml import get_pointer64, np
 
 
 def get_pointer(data, dtype=None):

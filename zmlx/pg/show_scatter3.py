@@ -6,7 +6,8 @@ from zmlx.pg.get_color import get_color
 from zmlx.pg.plot3 import *
 
 
-def show_scatter3(pos=None, size=None, color=None, alpha=None, pxMode=True, cmap=None, caption=None, on_top=None,
+def show_scatter3(pos=None, size=None, color=None, alpha=None, pxMode=True,
+                  cmap=None, caption=None, on_top=None,
                   reset_dist=True, reset_cent=True, box=None):
     """
     显示三维的散点(仅仅在gui模式下执行).
@@ -38,8 +39,10 @@ def show_scatter3(pos=None, size=None, color=None, alpha=None, pxMode=True, cmap
         color = 1
 
     assert color is not None
-    if len(np.shape(color)) != 2:  # 真正最终使用的color是一个N行4列的二位数组。当发现给定的数据不是二维的时候，则利用colormap来创建
-        warnings.warn('The given color is not 2d Array (n*4). Will compute color by colormap and this is Slow!')
+    if len(np.shape(
+            color)) != 2:  # 真正最终使用的color是一个N行4列的二位数组。当发现给定的数据不是二维的时候，则利用colormap来创建
+        warnings.warn(
+            'The given color is not 2d Array (n*4). Will compute color by colormap and this is Slow!')
         if len(np.shape(color)) == 0:
             color = np.ones(shape=count, dtype=float) * color
 
@@ -82,25 +85,33 @@ def show_scatter3(pos=None, size=None, color=None, alpha=None, pxMode=True, cmap
 
     widget = get_widget(caption=caption, on_top=on_top)
     if widget is None:
-        warnings.warn(f'The widget is None. caption = {caption}, on_top = {on_top}')
+        warnings.warn(
+            f'The widget is None. caption = {caption}, on_top = {on_top}')
         return
 
     if hasattr(widget, 'scatter_1'):
         widget.scatter_1.setData(pos=pos, color=color, size=size, pxMode=pxMode)
         if reset_dist:
-            set_distance(point_distance([x_min, y_min, z_min], [x_max, y_max, z_max]) * 1.5)
+            set_distance(point_distance([x_min, y_min, z_min],
+                                        [x_max, y_max, z_max]) * 1.5)
         if reset_cent:
-            set_center([(x_min + x_max) / 2, (y_min + y_max) / 2, (z_min + z_max) / 2])
+            set_center(
+                [(x_min + x_max) / 2, (y_min + y_max) / 2, (z_min + z_max) / 2])
     else:
-        widget.scatter_1 = Scatter(pos=pos, color=color, size=size, pxMode=pxMode)
+        widget.scatter_1 = Scatter(pos=pos, color=color, size=size,
+                                   pxMode=pxMode)
         add_item(widget.scatter_1)
-        set_distance(point_distance([x_min, y_min, z_min], [x_max, y_max, z_max]) * 1.5)
-        set_center([(x_min + x_max) / 2, (y_min + y_max) / 2, (z_min + z_max) / 2])
+        set_distance(
+            point_distance([x_min, y_min, z_min], [x_max, y_max, z_max]) * 1.5)
+        set_center(
+            [(x_min + x_max) / 2, (y_min + y_max) / 2, (z_min + z_max) / 2])
 
     if hasattr(widget, 'line_1'):
-        add_box([x_min, y_min, z_min], [x_max, y_max, z_max], line=widget.line_1, antialias=True)
+        add_box([x_min, y_min, z_min], [x_max, y_max, z_max],
+                line=widget.line_1, antialias=True)
     else:
-        widget.line_1 = add_box([x_min, y_min, z_min], [x_max, y_max, z_max], antialias=True)
+        widget.line_1 = add_box([x_min, y_min, z_min], [x_max, y_max, z_max],
+                                antialias=True)
 
 
 def demo(count=1000):

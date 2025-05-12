@@ -43,7 +43,7 @@ def install_dep(show_exists=True):
                         show_exists=show_exists)
             pip_install('pyqt6-qscintilla', 'PyQt6.Qsci',
                         show_exists=show_exists)
-        except:
+        except ImportError:
             pass
 
     if not found_qt:
@@ -52,7 +52,7 @@ def install_dep(show_exists=True):
             found_qt = True
             pip_install('PyQtWebEngine', 'PyQt5.QtWebEngineWidgets',
                         show_exists=show_exists)
-        except:
+        except ImportError:
             pass
 
     if not found_qt:

@@ -11,10 +11,11 @@ from zmlx.alg.sys import log_deprecated
 log_deprecated(__name__)
 
 
-
-
 def test_1():
-    import numpy as np
+    try:
+        import numpy as np
+    except ImportError:
+        np = None
     x = np.linspace(0, 10, 100)
     y = np.sin(x)
     plotxy(x, y, title='sin(x)', xlabel='x', ylabel='y',
