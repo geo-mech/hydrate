@@ -34,7 +34,7 @@ def test_1():
                 model.set_vel(idx, 0)
             x = list(range(model.size))
             y = [model.get_pos(idx) for idx in range(model.size)]
-            plotxy(x, y)
+            plot_xy(x, y)
 
             for idx in range(4, 6):
                 force = (model.get_pos(idx + 1) - model.get_pos(idx)) * 0.95

@@ -29,7 +29,7 @@ except Exception as err:
 # alg
 # from zmlx.alg.has_module import has_numpy, has_matplotlib # Remove since 2025-4-18
 # from zmlx.alg.sys import get_latest_version  # Remove since 2025-4-30
-from zmlx.alg.utils import clamp, linspace, time2str, mass2str, fsize2str
+from zmlx.alg.base import clamp, linspace, time2str, mass2str, fsize2str
 from zmlx.alg.multi_proc import create_async, apply_async
 from zmlx.alg.sbatch import sbatch
 from zmlx.alg.fsys import first_only, print_tag, join_paths, make_fname
@@ -40,6 +40,7 @@ from zmlx.alg import fsys, fsys as path
 from zmlx.base import ip, has_cells
 from zmlx.base.has_cells import get_cell_mask
 from zmlx.base.has_cells import get_pos_range
+from zmlx.base.seepage import as_numpy, SeepageNumpy
 
 ########################################
 # config
@@ -58,7 +59,7 @@ from zmlx.data.mesh_c10000 import \
 # demo
 
 ########################################
-# kit
+# project
 
 ########################################
 # exts
@@ -85,10 +86,10 @@ from zmlx.fluid.alg import from_data, from_file
 ########################################
 # geometry
 from zmlx.geometry import dfn2, dfn_v3, rect_3d, rect_v3
-from zmlx.geometry.utils import (get_angle, get_center, get_seg_angle,
-                                 seg_intersection, triangle_area,
-                                 point_distance, seg_point_distance,
-                                 get_norm)
+from zmlx.geometry.base import (get_angle, get_center, get_seg_angle,
+                                seg_intersection, triangle_area,
+                                point_distance, seg_point_distance,
+                                get_norm)
 
 ########################################
 # io
@@ -96,8 +97,8 @@ from zmlx.io.path import get_path as opath
 
 ########################################
 # kr
-from zmlx.kr.pre_defines import create_kr
-from zmlx.kr.pre_defines import create_krf
+from zmlx.kr.base import create_kr
+from zmlx.kr.base import create_krf
 
 ########################################
 # mesh
@@ -109,7 +110,7 @@ from zmlx.kr.pre_defines import create_krf
 # plt
 from zmlx.plt.on_figure import plot_on_figure
 from zmlx.plt.on_axes import plot_on_axes
-from zmlx.plt.fig2 import (plotxy, show_dfn2, show_field2, show_fn2,
+from zmlx.plt.fig2 import (plot_xy, plotxy, show_dfn2, show_field2, show_fn2,
                            tricontourf, trimesh, contourf, plot2)
 from zmlx.plt.fig3 import plot_trisurf, scatter, show_rc3
 
@@ -144,7 +145,6 @@ from zmlx.ui.main import open_gui
 from zmlx.utility.fields import Field, LinearField
 from zmlx.utility.attr_keys import AttrKeys, add_keys
 from zmlx.utility.runtime_fn import RuntimeFunc
-from zmlx.base.seepage import as_numpy
 from zmlx.utility.gui_iterator import GuiIterator
 from zmlx.utility.pressure_controller import PressureController
 from zmlx.utility.save_manager import SaveManager

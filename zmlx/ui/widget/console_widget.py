@@ -1,7 +1,7 @@
 import timeit
 
 from zmlx.alg.fsys import samefile
-from zmlx.alg.utils import time2str
+from zmlx.alg.base import time2str
 from zmlx.ui.alg import add_code_history
 from zmlx.ui.break_point import BreakPoint
 from zmlx.ui.cfg import *

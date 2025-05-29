@@ -1,12 +1,10 @@
-from zmlx.alg.utils import time2str
+from zmlx.alg.base import time2str
 
 __all__ = ['time2str']
 
-import warnings
+import zmlx.alg.sys as warnings
 
-warnings.warn(f'{__file__} will be removed after 2026-4-15', DeprecationWarning,
-              stacklevel=2)
-
-from zmlx.alg.sys import log_deprecated
-
-log_deprecated(__name__)
+warnings.warn(
+    f'{__name__} will be removed after 2026-4-15, please from zmlx import timestr instead. ',
+    DeprecationWarning,
+    stacklevel=2)

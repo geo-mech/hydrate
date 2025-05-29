@@ -10,6 +10,7 @@ def enabled():
     if window is not None:
         return hasattr(window.get_current_widget(),
                        'export_plt_figure') and not window.is_running()
+    return None
 
 
 def slot():

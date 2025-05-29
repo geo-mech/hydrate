@@ -10,7 +10,7 @@ try:
 except ImportError as e:
     interp1d = None
 
-from zmlx.alg.utils import join_cols
+from zmlx.alg.base import join_cols
 
 
 class LinearField:

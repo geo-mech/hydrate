@@ -1,18 +1,16 @@
-from zmlx.kr.pre_defines import create_fracture_kr
+from zmlx.kr.base import create_fracture_kr
 
 __all__ = ['create_fracture_kr']
 
-import warnings
+import zmlx.alg.sys as warnings
 
 warnings.warn(f'The module {__name__} will be removed after 2026-4-15',
               DeprecationWarning, stacklevel=2)
 
-from zmlx.alg.sys import log_deprecated
 
-log_deprecated(__name__)
 
 if __name__ == '__main__':
-    from zmlx.plt.fig2 import plotxy
+    from zmlx.plt.fig2 import plot_xy
 
     x, y = create_fracture_kr()
-    plotxy(x, y)
+    plot_xy(x, y)

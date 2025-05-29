@@ -36,7 +36,8 @@ def _cast(data, pt):
         try:
             return np.loadtxt(StringIO(data))
         except:
-            pass
+            return None
+    return None
 
 
 def array(pt):

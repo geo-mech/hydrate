@@ -26,22 +26,23 @@ def create():
         return 1.0 if abs(y) < 2 else 0.0
 
     # 关键词
-    kw = hydrate.create_kwargs(has_co2=True,  # 添加co2
-                               gravity=[0, 0, 0],
-                               dt_min=1.0e-4,
-                               dt_max=10,
-                               dv_relative=1,
-                               mesh=mesh,
-                               porosity=0.3,
-                               pore_modulus=100e6,
-                               denc=denc,
-                               temperature=273.15 + 3.0,
-                               p=1e6,
-                               s=get_s,
-                               perm=1.0e-14,
-                               dist=0.001,
-                               heat_cond=heat_cond,
-                               )
+    kw = hydrate.create_kwargs(
+        has_co2=True,  # 添加co2
+        gravity=[0, 0, 0],
+        dt_min=1.0e-4,
+        dt_max=10,
+        dv_relative=1,
+        mesh=mesh,
+        porosity=0.3,
+        pore_modulus=100e6,
+        denc=denc,
+        temperature=273.15 + 3.0,
+        p=1e6,
+        s=get_s,
+        perm=1.0e-14,
+        dist=0.001,
+        heat_cond=heat_cond,
+    )
     model = seepage.create(**kw,
                            warnings_ignored={'gravity'})
 
@@ -54,13 +55,14 @@ def create():
         ))
 
     # 用于solve的选项
-    model.set_text(key='solve',
-                   text={'show_cells': {'dim0': 0,
-                                        'dim1': 2
-                                        },
-                         'time_max': 10 * 3600,
-                         }
-                   )
+    model.set_text(
+        key='solve',
+        text={'show_cells': {'dim0': 0,
+                             'dim1': 2
+                             },
+              'time_max': 10 * 3600,
+              }
+    )
     # 返回模型
     return model
 

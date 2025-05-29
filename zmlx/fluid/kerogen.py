@@ -1,4 +1,4 @@
-import warnings
+import zmlx.alg.sys as warnings
 
 from zml import Seepage
 
@@ -20,9 +20,10 @@ def create_flu_v0():
     """
     den = 1500
     specific_heat = 2000
-    return Seepage.FluDef(den=den,
-                          vis=1.0e30,
-                          specific_heat=specific_heat)
+    return Seepage.FluDef(
+        den=den,
+        vis=1.0e30,
+        specific_heat=specific_heat)
 
 
 def create(name=None):
@@ -37,8 +38,9 @@ def create(name=None):
     den = 2590  # kg/m3 Longmaxi FM (Baoyun Zhao 2021)
     vis = 1.0e30
     specific_heat = 829  # J/ Kg K # Longmaxi Fm. Xiang etal, 2020
-    return Seepage.FluDef(den=den, vis=vis, specific_heat=specific_heat,
-                          name=name)
+    return Seepage.FluDef(
+        den=den, vis=vis, specific_heat=specific_heat,
+        name=name)
 
 
 def create_flu(*args, **kwargs):

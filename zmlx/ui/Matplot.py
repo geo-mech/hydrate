@@ -4,11 +4,9 @@ from zmlx.plt.fig3 import scatter
 
 __all__ = ['scatter', 'tricontourf', 'plotxy']
 
-import warnings
+import zmlx.alg.sys as warnings
 
 warnings.warn('zmlx.ui.Matplot will be deleted after 2026-3-5. '
               'Use zmlx.plt instead', DeprecationWarning, stacklevel=2)
 
-from zmlx.alg.sys import log_deprecated
 
-log_deprecated(__name__)

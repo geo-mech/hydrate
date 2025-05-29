@@ -10,6 +10,7 @@ def enabled():
     if window is not None:
         console = window.get_console()
         return console.isVisible()
+    return None
 
 
 def slot():

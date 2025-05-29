@@ -1560,7 +1560,10 @@ class String(HasHandle):
         Args:
             value (str): 要赋值给字符串对象的值。
         """
-        core.str_assign(self.handle, make_c_char_p(value))
+        if isinstance(value, String):
+            self.clone(value)
+        else:
+            core.str_assign(self.handle, make_c_char_p(value))
 
     core.use(c_char_p, 'str_to_char_p', c_void_p)
 
@@ -1876,19 +1879,19 @@ to {author}"""
     return info
 
 
-def get_distance(p1, p2):
+def get_distance(p0, p1):
     """计算两个点之间的距离。
 
     Args:
-        p1 (list or tuple): 第一个点的坐标。
-        p2 (list or tuple): 第二个点的坐标。
+        p0: 第一个点的坐标。
+        p1: 第二个点的坐标。
 
     Returns:
         float: 两个点之间的距离。
     """
     dist = 0.0
-    for i in range(min(len(p1), len(p2))):
-        dist += (p1[i] - p2[i]) ** 2
+    for i in range(min(len(p0), len(p1))):
+        dist += (p0[i] - p1[i]) ** 2
     return dist ** 0.5
 
 
@@ -1952,6 +1955,26 @@ def parse_fid3(fluid_id):
         return fluid_id, 99999999, 99999999
 
 
+def parse_fid(fluid_id):
+    """自动识别给定的流体 ID 为流体某个组分的 ID。
+
+    Args:
+        fluid_id: 流体 ID，可以是单个值或数组。
+
+    Returns:
+        list: 流体ID序列
+    """
+    if fluid_id is None:
+        return []
+    if is_array(fluid_id):
+        if len(fluid_id) == 1:  # 此时，它仍然可能是一个array
+            return parse_fid(fluid_id[0])
+        else:
+            return fluid_id
+    else:
+        return [fluid_id]
+
+
 def _check_ipath(path, obj=None):
     """在读取文件时检查输入的文件名。
 
@@ -1977,7 +2000,7 @@ def get_average_perm(p0, p1, get_perm, sample_dist=None, depth=0):
     Args:
         p0 (list or tuple): 第一个点的坐标。
         p1 (list or tuple): 第二个点的坐标。
-        get_perm (function): 获取渗透率或导热率的函数。
+        get_perm: 获取渗透率或导热率的函数。
         sample_dist (float, optional): 采样距离。默认为 None。
         depth (int, optional): 递归深度。默认为 0。
 
@@ -2561,10 +2584,12 @@ class Vector(HasHandle):
         Args:
             value (float, optional): 填充值。默认为 0.0。
         """
-        p = self.pointer
-        assert p is not None
-        for i in range(self.size):
-            p[i] = value
+        count = self.size
+        if count > 0:
+            p = self.pointer
+            assert p is not None
+            for i in range(count):
+                p[i] = value
 
     def to_list(self):
         """将 Vector 转换为 Python 列表。
@@ -2572,13 +2597,11 @@ class Vector(HasHandle):
         Returns:
             list: 转换后的 Python 列表。
         """
-        if len(self) == 0:
+        count = self.size
+        if count == 0:
             return []
         p = self.pointer
-        if p is not None:
-            return [p[i] for i in range(len(self))]
-        else:
-            return []
+        return [p[i] for i in range(count)]
 
     core.use(None, 'vf_read', c_void_p, c_void_p)
 
@@ -2784,9 +2807,11 @@ class IntVector(HasHandle):
         Args:
             value (list): 要赋值的列表。
         """
-        self.size = len(value)
-        for i in range(len(value)):
-            self[i] = value[i]
+        count = len(value)
+        self.size = count
+        p = self.pointer
+        for i in range(count):
+            p[i] = value[i]
 
     def to_list(self):
         """将 IntVector 转换为 Python 列表。
@@ -2794,10 +2819,12 @@ class IntVector(HasHandle):
         Returns:
             list: 转换后的 Python 列表。
         """
-        elements = []
-        for i in range(len(self)):
-            elements.append(self[i])
-        return elements
+        count = self.size
+        if count > 0:
+            p = self.pointer
+            return [p[i] for i in range(count)]
+        else:
+            return []
 
     core.use(c_void_p, 'vi_pointer', c_void_p)
 
@@ -2964,25 +2991,30 @@ class UintVector(HasHandle):
         self[key] = value
 
     def set(self, value):
-        """将列表赋值给 UintVector。
+        """将列表赋值给 UintVector。 todo: 使用ptr接口效率更高
 
         Args:
             value (list): 要赋值的列表。
         """
-        self.size = len(value)
-        for i in range(len(value)):
-            self[i] = value[i]
+        count = len(value)
+        self.size = count
+        if count > 0:
+            p = self.pointer
+            for i in range(count):
+                p[i] = value[i]
 
     def to_list(self):
-        """将 UintVector 转换为 Python 列表。
+        """将 UintVector 转换为 Python 列表。  todo: 使用ptr接口效率更高
 
         Returns:
             list: 转换后的 Python 列表。
         """
-        elements = []
-        for i in range(len(self)):
-            elements.append(self[i])
-        return elements
+        count = self.size
+        if count > 0:
+            p = self.pointer
+            return [p[i] for i in range(count)]
+        else:
+            return []
 
     core.use(c_void_p, 'vui_pointer', c_void_p)
 
@@ -2999,6 +3031,8 @@ class UintVector(HasHandle):
         ptr = core.vui_pointer(self.handle)
         if ptr:
             return ctypes.cast(ptr, POINTER(c_size_t))
+        else:
+            return None
 
 
 class StrVector(HasHandle):
@@ -3047,8 +3081,16 @@ class StrVector(HasHandle):
         """
         return self.size
 
-    core.use(None, 'vs_get',
-             c_void_p, c_size_t, c_void_p)
+    core.use(c_void_p, 'vs_get',
+             c_void_p, c_size_t)
+
+    def get(self, idx):
+        idx = get_index(idx, self.size)
+        if idx is not None:
+            handle = core.vs_get(self.handle, idx)
+            return String(handle=handle)
+        else:
+            return None
 
     def __getitem__(self, idx):
         """获取指定索引位置的字符串。
@@ -3062,16 +3104,11 @@ class StrVector(HasHandle):
         Note:
             如果索引越界，则返回 None。
         """
-        idx = get_index(idx, self.size)
-        if idx is not None:
-            s = String()
-            core.vs_get(self.handle, idx, s.handle)
+        s = self.get(idx)
+        if s is not None:
             return s.to_str()
         else:
             return None
-
-    core.use(None, 'vs_set',
-             c_void_p, c_size_t, c_void_p)
 
     def __setitem__(self, idx, value):
         """设置指定索引位置的字符串。
@@ -3083,10 +3120,9 @@ class StrVector(HasHandle):
         Note:
             如果索引越界，则设置失败。
         """
-        idx = get_index(idx, self.size)
-        if idx is not None:
-            s = String(value=value)
-            core.vs_set(self.handle, idx, s.handle)
+        s = self.get(idx)
+        if s is not None:
+            s.assign(value)
 
     def set(self, value):
         """将列表赋值给 StrVector。
@@ -3094,8 +3130,9 @@ class StrVector(HasHandle):
         Args:
             value (list): 要赋值的字符串列表。
         """
-        self.size = len(value)
-        for i in range(len(value)):
+        count = len(value)
+        self.size = count
+        for i in range(count):
             self[i] = value[i]
 
     def to_list(self):
@@ -3104,10 +3141,7 @@ class StrVector(HasHandle):
         Returns:
             list: 转换后的 Python 列表。
         """
-        elements = []
-        for i in range(len(self)):
-            elements.append(self[i])
-        return elements
+        return [self[i] for i in range(len(self))]
 
 
 class PtrVector(HasHandle):
@@ -3183,6 +3217,7 @@ class PtrVector(HasHandle):
         idx = get_index(idx, self.size)
         if idx is not None:
             return core.vp_get(self.handle, idx)
+        return None
 
     core.use(None, 'vp_set',
              c_void_p, c_size_t, c_void_p)
@@ -3285,8 +3320,8 @@ class Map(HasHandle):
         super(Map, self).__init__(handle, core.new_string_double_map,
                                   core.del_string_double_map)
 
-    core.use(None, 'string_double_map_get_keys',
-             c_void_p, c_void_p)
+    core.use(c_void_p, 'string_double_map_get_keys',
+             c_void_p)
 
     @property
     def keys(self):
@@ -3295,12 +3330,12 @@ class Map(HasHandle):
         Returns:
             list: 包含所有键的列表。
         """
-        v = StrVector()
-        core.string_double_map_get_keys(self.handle, v.handle)
+        h = core.string_double_map_get_keys(self.handle)
+        v = StrVector(handle=h)
         return v.to_list()
 
     core.use(c_double, 'string_double_map_get',
-             c_void_p, c_void_p)
+             c_void_p, c_char_p)
 
     def get(self, key):
         """获取指定键对应的值。
@@ -3311,11 +3346,10 @@ class Map(HasHandle):
         Returns:
             float: 指定键对应的值。
         """
-        s = String(value=key)
-        return core.string_double_map_get(self.handle, s.handle)
+        return core.string_double_map_get(self.handle, make_c_char_p(key))
 
     core.use(None, 'string_double_map_set',
-             c_void_p, c_void_p, c_double)
+             c_void_p, c_char_p, c_double)
 
     def set(self, key, value):
         """设置指定键的值。
@@ -3324,8 +3358,7 @@ class Map(HasHandle):
             key (str): 要设置的键。
             value (float): 要设置的值。
         """
-        s = String(value=key)
-        core.string_double_map_set(self.handle, s.handle, value)
+        core.string_double_map_set(self.handle, make_c_char_p(key), value)
 
     core.use(None, 'string_double_map_clear',
              c_void_p)
@@ -3544,6 +3577,7 @@ class Matrix2(HasHandle):
             assert key0 < self.size_0
             assert key1 < self.size_1
             return core.mat2_get(self.handle, key0, key1)
+        return None
 
     core.use(None, 'mat2_set',
              c_void_p, c_size_t, c_size_t, c_double)
@@ -4257,13 +4291,16 @@ class Interp1(HasHandle):
         """
         self.from_fmap(value, fmt='binary')
 
-    core.use(None, 'interp1_set_x2y',
-             c_void_p, c_void_p, c_void_p)
-    core.use(None, 'interp1_set_x2y_evenly',
-             c_void_p, c_double, c_double,
-             c_void_p)
-    core.use(None, 'interp1_set_const',
-             c_void_p, c_double)
+    core.use(None, 'interp1_set', c_void_p,
+             POINTER(c_double), c_size_t,
+             POINTER(c_double), c_size_t)
+
+    def set_xy(self, x, y):
+        """
+        设置x和y的数据
+        """
+        core.interp1_set(self.handle, const_f64_ptr(x), len(x),
+                         const_f64_ptr(y), len(y))
 
     def set(self, xmin=None, dx=None, x=None, y=None, value=None):
         """设置插值数据，支持多种初始化方式。
@@ -4281,27 +4318,17 @@ class Interp1(HasHandle):
             value (float, optional): 常数值插值。
         """
         if x is not None and y is not None:
-            if not isinstance(x, Vector):
-                x = Vector(x)
-            if not isinstance(y, Vector):
-                y = Vector(y)
-            core.interp1_set_x2y(self.handle, x.handle, y.handle)
+            self.set_xy(x, y)
             return
         if xmin is not None and dx is not None and y is not None:
-            if not isinstance(y, Vector):
-                y = Vector(y)
-            core.interp1_set_x2y_evenly(self.handle, xmin, dx, y.handle)
+            self.set_xy([xmin, xmin + dx], y)
             return
         if y is not None:
-            core.interp1_set_const(self.handle, y)
+            self.set_xy([], [y])
             return
         if value is not None:
-            core.interp1_set_const(self.handle, value)
+            self.set_xy([], [value])
             return
-
-    core.use(None, 'interp1_create',
-             c_void_p, c_double, c_double, c_double,
-             c_void_p)
 
     def create(self, xmin, dx, xmax, get_value):
         """通过回调函数创建插值数据。
@@ -4316,10 +4343,21 @@ class Interp1(HasHandle):
             需要保证 xmin < xmax 且 dx > 0。
         """
         assert xmin < xmax and dx > 0
-        kernel = CFUNCTYPE(c_double, c_double)
-        core.interp1_create(self.handle, xmin, dx, xmax, kernel(get_value))
+        n = int((xmax - xmin) / dx) + 1
+        dx = (xmax - xmin) / n
+        vx = [xmin, xmin + dx]
+        vy = [get_value(xmin + dx * i) for i in range(n)]
+        self.set_xy(vx, vy)
 
     core.use(c_bool, 'interp1_empty', c_void_p)
+
+    def is_empty(self):
+        """检查插值数据是否为空。
+
+        Returns:
+            bool: 如果插值数据为空返回 True，否则返回 False。
+        """
+        return core.interp1_empty(self.handle)
 
     @property
     def empty(self):
@@ -4328,7 +4366,7 @@ class Interp1(HasHandle):
         Returns:
             bool: 如果插值数据为空返回 True，否则返回 False。
         """
-        return core.interp1_empty(self.handle)
+        return self.is_empty()
 
     core.use(None, 'interp1_clear', c_void_p)
 
@@ -4597,6 +4635,14 @@ class Interp2(HasHandle):
 
     core.use(c_bool, 'interp2_empty', c_void_p)
 
+    def is_empty(self):
+        """检查插值数据是否为空。
+
+        Returns:
+            bool: 如果插值数据为空返回 True，否则返回 False。
+        """
+        return core.interp2_empty(self.handle)
+
     @property
     def empty(self):
         """检查插值数据是否为空。
@@ -4604,7 +4650,7 @@ class Interp2(HasHandle):
         Returns:
             bool: 如果插值数据为空返回 True，否则返回 False。
         """
-        return core.interp2_empty(self.handle)
+        return self.is_empty()
 
     core.use(None, 'interp2_clear', c_void_p)
 
@@ -4854,6 +4900,14 @@ class Interp3(HasHandle):
 
     core.use(c_bool, 'interp3_empty', c_void_p)
 
+    def is_empty(self):
+        """检查插值数据是否为空。
+
+        Returns:
+            bool: 如果插值数据为空返回 True，否则返回 False。
+        """
+        return core.interp3_empty(self.handle)
+
     @property
     def empty(self):
         """检查插值数据是否为空。
@@ -4861,7 +4915,7 @@ class Interp3(HasHandle):
         Returns:
             bool: 如果插值数据为空返回 True，否则返回 False。
         """
-        return core.interp3_empty(self.handle)
+        return self.is_empty()
 
     core.use(None, 'interp3_clear', c_void_p)
 
@@ -11740,7 +11794,7 @@ class SeepageMesh(HasHandle, HasCells):
         warnings.warn(
             'The zml.SeepageMesh.create_cube will be removed '
             'after 2025-5-27. '
-            'please use zmlx.seepage_mesh.cube.create_cube instead',
+            'please use the function create_cube from zmlx instead',
             DeprecationWarning, stacklevel=2)
         from zmlx.seepage_mesh.cube import create_cube as create
         return create(*args, **kwargs)
@@ -12170,6 +12224,197 @@ class Seepage(HasHandle, HasCells):
         类模拟水合物的分解或者生成、冰的形成和融化、重油的裂解等，
         均基于此Reaction类进行定义。
         """
+
+        class Component:
+            def __init__(self, handle):
+                self.handle = handle
+
+            core.use(c_void_p, 'rea_comp_get_index', c_void_p)
+
+            @property
+            def index(self):
+                """
+                流体组分的序号
+                """
+                idx = UintVector(handle=core.rea_comp_get_index(self.handle))
+                return idx.to_list()
+
+            @index.setter
+            def index(self, value):
+                """
+                流体组分的序号
+                """
+                idx = UintVector(handle=core.rea_comp_get_index(self.handle))
+                idx.set(value)
+
+            core.use(c_size_t, 'rea_comp_get_fa_t', c_void_p)
+
+            @property
+            def fa_t(self):
+                """
+                组分温度属性的ID
+                """
+                return core.rea_comp_get_fa_t(self.handle)
+
+            core.use(None, 'rea_comp_set_fa_t', c_void_p, c_size_t)
+
+            @fa_t.setter
+            def fa_t(self, value):
+                """
+                组分温度属性的ID
+                """
+                core.rea_comp_set_fa_t(self.handle, value)
+
+            core.use(c_size_t, 'rea_comp_get_fa_c', c_void_p)
+
+            @property
+            def fa_c(self):
+                """
+                组分比热属性的ID
+                """
+                return core.rea_comp_get_fa_c(self.handle)
+
+            core.use(None, 'rea_comp_set_fa_c', c_void_p, c_size_t)
+
+            @fa_c.setter
+            def fa_c(self, value):
+                """
+                组分比热属性的ID
+                """
+                core.rea_comp_set_fa_c(self.handle, value)
+
+            core.use(c_double, 'rea_comp_get_weight', c_void_p)
+
+            @property
+            def weight(self):
+                """
+                组分权重
+                """
+                return core.rea_comp_get_weight(self.handle)
+
+            core.use(None, 'rea_comp_set_weight', c_void_p, c_double)
+
+            @weight.setter
+            def weight(self, value):
+                """
+                组分权重
+                """
+                core.rea_comp_set_weight(self.handle, value)
+
+        class Inhibitor:
+            def __init__(self, handle):
+                self.handle = handle
+
+            core.use(c_void_p, 'rea_inh_get_sol', c_void_p)
+
+            @property
+            def sol(self):
+                """
+                溶质对应的ID
+                """
+                return UintVector(
+                    handle=core.rea_inh_get_sol(self.handle)).to_list()
+
+            @sol.setter
+            def sol(self, value):
+                """
+                溶质对应的ID
+                """
+                UintVector(
+                    handle=core.rea_inh_get_sol(self.handle)).set(value)
+
+            core.use(c_void_p, 'rea_inh_get_liq', c_void_p)
+
+            @property
+            def liq(self):
+                """
+                溶液对应的ID
+                """
+                return UintVector(
+                    handle=core.rea_inh_get_liq(self.handle)).to_list()
+
+            @liq.setter
+            def liq(self, value):
+                """
+                溶液对应的ID
+                """
+                UintVector(
+                    handle=core.rea_inh_get_liq(self.handle)).set(value)
+
+            core.use(c_void_p, 'rea_inh_get_c2t', c_void_p)
+
+            @property
+            def c2t(self):
+                """
+                溶质浓度与平衡温度的关系
+                """
+                handle = core.rea_inh_get_c2t(self.handle)
+                return Interp1(handle=handle)
+
+            core.use(c_bool, 'rea_inh_get_use_vol', c_void_p)
+            core.use(None, 'rea_inh_set_use_vol', c_void_p, c_bool)
+
+            @property
+            def use_vol(self):
+                """
+                是否使用体积分数 (如果为False，则使用质量分数)
+                """
+                return core.rea_inh_get_use_vol(self.handle)
+
+            @use_vol.setter
+            def use_vol(self, value):
+                """
+                是否使用体积分数 (如果为False，则使用质量分数)
+                """
+                core.rea_inh_set_use_vol(self.handle, value)
+
+            core.use(c_void_p,'rea_inh_get_c2q', c_void_p)
+
+            @property
+            def c2q(self):
+                """
+                从质量分数到反应速率的插值函数
+                """
+                handle = core.rea_inh_get_c2q(self.handle)
+                return Interp1(handle=handle)
+
+            core.use(c_double,'rea_inh_get_exp', c_void_p)
+
+            @property
+            def exp(self):
+                """
+                反应速率的指数
+                """
+                return core.rea_inh_get_exp(self.handle)
+
+            core.use(None,'rea_inh_set_exp', c_void_p, c_double)
+
+            @exp.setter
+            def exp(self, value):
+                """
+                反应速率的指数
+                """
+                core.rea_inh_set_exp(self.handle, value)
+
+            core.use(c_double,'rea_inh_get_exp_r', c_void_p)
+
+            @property
+            def exp_r(self):
+                """
+                反应速率的指数(逆向)
+                """
+                return core.rea_inh_get_exp_r(self.handle)
+
+            core.use(None,'rea_inh_set_exp_r', c_void_p, c_double)
+
+            @exp_r.setter
+            def exp_r(self, value):
+                """
+                反应速率的指数(逆向)
+                """
+                core.rea_inh_set_exp_r(self.handle, value)
+
+
         core.use(c_void_p, 'new_reaction')
         core.use(None, 'del_reaction', c_void_p)
 
@@ -12343,9 +12588,6 @@ class Seepage(HasHandle, HasCells):
             """
             core.reaction_set_t0(self.handle, value)
 
-        core.use(None, 'reaction_set_p2t',
-                 c_void_p, c_void_p, c_void_p)
-
         def set_p2t(self, p, t):
             """
             设置不同的压力下，反应可以发生的临界温度。
@@ -12359,14 +12601,7 @@ class Seepage(HasHandle, HasCells):
                 对于放热反应，温度小于临界温度的时候，反应才会发生。
                 此反应目前不适用于“燃烧”这种反应（后续可能会添加支持）。
             """
-            if not isinstance(p, Vector):
-                p = Vector(p)
-            if not isinstance(t, Vector):
-                t = Vector(t)
-            core.reaction_set_p2t(self.handle, p.handle, t.handle)
-
-        core.use(None, 'reaction_set_t2q',
-                 c_void_p, c_void_p, c_void_p)
+            self.p2t.set_xy(p, t)
 
         def set_t2q(self, t, q):
             """
@@ -12382,23 +12617,44 @@ class Seepage(HasHandle, HasCells):
                 当温度偏移量为0的时候，反应的速率为0。
                 此处，反应的速率定义为，对于1kg的物质，在1s内发生反应的质量。
             """
-            if not isinstance(t, Vector):
-                t = Vector(t)
-            if not isinstance(q, Vector):
-                q = Vector(q)
-            core.reaction_set_t2q(self.handle, t.handle, q.handle)
+            self.t2q.set_xy(t, q)
 
-        core.use(None, 'reaction_add_component',
-                 c_void_p, c_size_t, c_size_t,
-                 c_size_t,
-                 c_double, c_size_t, c_size_t)
+        core.use(c_void_p, 'reaction_get_p2t', c_void_p)
+
+        @property
+        def p2t(self):
+            """
+            从压力到平衡温度的映射
+            """
+            handle = core.reaction_get_p2t(self.handle)
+            return Interp1(handle=handle)
+
+        core.use(c_void_p, 'reaction_get_t2q', c_void_p)
+
+        @property
+        def t2q(self):
+            """
+            从温度偏移量到反应速率的映射
+            """
+            handle = core.reaction_get_t2q(self.handle)
+            return Interp1(handle=handle)
+
+        core.use(c_void_p, 'reaction_get_t2qr', c_void_p)
+
+        @property
+        def t2qr(self):
+            """
+            从温度偏移量到反应速率的映射 （逆向反应）
+            """
+            handle = core.reaction_get_t2qr(self.handle)
+            return Interp1(handle=handle)
 
         def add_component(self, index, weight, fa_t, fa_c):
             """
             添加一种反应物质。
 
             Args:
-                index (int): Seepage.Cell中定义的流体组分的序号。
+                index: Seepage.Cell中定义的流体组分的序号。
                 weight (float): 发生1kg的反应的时候此物质变化的质量，
                     其中左侧物质的weight为负值，右侧为正值。
                 fa_t (int): 定义流体温度的属性ID。
@@ -12407,26 +12663,62 @@ class Seepage(HasHandle, HasCells):
             Raises:
                 AssertionError: 如果fa_t或fa_c为None，或者weight的绝对值大于1.00001。
             """
-            assert fa_t is not None
-            assert fa_c is not None
-            assert abs(weight) <= 1.00001
-            core.reaction_add_component(
-                self.handle, *parse_fid3(index), weight, fa_t, fa_c)
+            idx = self.component_n
+            self.component_n = idx + 1
+            comp = self.get_component(idx)
 
-        core.use(None, 'reaction_clear_components',
-                 c_void_p)
+            comp.index = parse_fid(index)
+
+            assert fa_t is not None
+            comp.fa_t = fa_t
+
+            assert fa_c is not None
+            comp.fa_c = fa_c
+
+            assert abs(weight) <= 1.00001
+            comp.weight = weight
 
         def clear_components(self):
             """
             清除所有的反应组分。
             """
-            core.reaction_clear_components(self.handle)
+            self.component_n = 0
 
-        core.use(None, 'reaction_add_inhibitor',
-                 c_void_p,
-                 c_size_t, c_size_t, c_size_t,
-                 c_size_t, c_size_t, c_size_t,
-                 c_void_p, c_void_p, c_bool)
+        core.use(c_size_t, 'reaction_get_component_n', c_void_p)
+
+        @property
+        def component_n(self):
+            """
+            反应组分的数量。
+            """
+            return core.reaction_get_component_n(self.handle)
+
+        core.use(None, 'reaction_set_component_n', c_void_p, c_size_t)
+
+        @component_n.setter
+        def component_n(self, value):
+            """
+            设置反应组分的数量。
+            """
+            core.reaction_set_component_n(self.handle, value)
+
+        core.use(c_void_p, 'reaction_get_component', c_void_p, c_size_t)
+
+        def get_component(self, idx):
+            """
+            获取指定索引的反应组分。
+            """
+            idx = get_index(idx, count=self.component_n)
+            return Seepage.Reaction.Component(
+                handle=core.reaction_get_component(self.handle, idx))
+
+        @property
+        def components(self):
+            """
+            迭代所有的组分
+            """
+            return Iterator(self, self.component_n,
+                            lambda m, ind: m.get_component(ind))
 
         def add_inhibitor(self, sol, liq, c, t, *, use_vol=False):
             """
@@ -12439,22 +12731,55 @@ class Seepage(HasHandle, HasCells):
                 t (Vector or list): 化学反应平衡温度向量。
                 use_vol (bool, optional): 是否使用体积。默认为False。
             """
-            if not isinstance(c, Vector):
-                c = Vector(c)
-            if not isinstance(t, Vector):
-                t = Vector(t)
-            core.reaction_add_inhibitor(self.handle, *parse_fid3(sol),
-                                        *parse_fid3(liq), c.handle, t.handle,
-                                        use_vol)
-
-        core.use(None, 'reaction_clear_inhibitors',
-                 c_void_p)
+            idx = self.inhibitor_n
+            self.inhibitor_n = idx + 1
+            inh = self.get_inhibitor(idx)
+            inh.sol = parse_fid(sol)
+            inh.liq = parse_fid(liq)
+            inh.c2t.set_xy(c, t)
+            inh.use_vol = use_vol
 
         def clear_inhibitors(self):
             """
             清除所有的抑制剂定义。
             """
-            core.reaction_clear_inhibitors(self.handle)
+            self.inhibitor_n = 0
+
+        core.use(c_size_t, 'reaction_get_inh_n', c_void_p)
+
+        @property
+        def inhibitor_n(self):
+            """
+            抑制剂的数量。
+            """
+            return core.reaction_get_inh_n(self.handle)
+
+        core.use(None, 'reaction_set_inh_n', c_void_p, c_size_t)
+
+        @inhibitor_n.setter
+        def inhibitor_n(self, value):
+            """
+            设置抑制剂的数量。
+            """
+            core.reaction_set_inh_n(self.handle, value)
+
+        core.use(c_void_p, 'reaction_get_inh', c_void_p, c_size_t)
+
+        def get_inhibitor(self, idx):
+            """
+            获取指定索引的抑制剂。
+            """
+            idx = get_index(idx, count=self.inhibitor_n)
+            return Seepage.Reaction.Inhibitor(
+                handle=core.reaction_get_inh(self.handle, idx))
+
+        @property
+        def inhibitors(self):
+            """
+            迭代所有的抑制剂
+            """
+            return Iterator(self, self.inhibitor_n,
+                            lambda m, ind: m.get_inhibitor(ind))
 
         core.use(None, 'reaction_react',
                  c_void_p, c_void_p, c_double, c_void_p)
@@ -12636,6 +12961,17 @@ class Seepage(HasHandle, HasCells):
             result = Seepage.Reaction()
             result.clone(self)
             return result
+
+        core.use(c_char_p, 'reaction_get_name', c_void_p)
+        core.use(None, 'reaction_set_name', c_void_p, c_char_p)
+
+        @property
+        def name(self):
+            return core.reaction_get_name(self.handle).decode()
+
+        @name.setter
+        def name(self, value):
+            core.reaction_set_name(self.handle, make_c_char_p(value))
 
     class FluDef(HasHandle):
         """
@@ -13993,7 +14329,7 @@ class Seepage(HasHandle, HasCells):
                         for i in range(1, len(args)):
                             flu = flu.get_component(args[i])
                             if flu is None:
-                                return
+                                return None
                     return flu
                 else:
                     return None
@@ -16338,6 +16674,7 @@ class Seepage(HasHandle, HasCells):
         idx = get_index(idx, self.gr_number)
         if idx is not None:
             return Interp1(handle=core.seepage_get_gr(self.handle, idx))
+        return None
 
     @property
     def grs(self):
@@ -16591,6 +16928,7 @@ class Seepage(HasHandle, HasCells):
                                          buffer.handle)
         if found:
             return buffer.to_list()
+        return None
 
     core.use(c_void_p, 'seepage_get_fludef',
              c_void_p, c_size_t, c_size_t,
@@ -17762,8 +18100,8 @@ class Seepage(HasHandle, HasCells):
                 曲线的横坐标是剪切力，纵轴为流动砂的浓度.
 
         Args:
-            sol_sand (int or str): 沉降的砂的Index或名称
-            flu_sand (int or str): 流动的砂的Index或名称
+            sol_sand (list or str): 沉降的砂的Index或名称
+            flu_sand (list or str): 流动的砂的Index或名称
             ca_i0 (int or str): Cell的属性ID或名称
             ca_i1 (int or str): Cell的属性ID或名称
             force (ctypes.c_void_p): 各个cell位置的单位面积孔隙表面的剪切力指针
@@ -17789,11 +18127,12 @@ class Seepage(HasHandle, HasCells):
             ca_i1 = self.get_cell_key(ca_i1)
             assert ca_i1 is not None
 
-        core.seepage_update_sand(self.handle, ca_i0, ca_i1,
-                                 *parse_fid3(sol_sand),
-                                 *parse_fid3(flu_sand),
-                                 ctypes.cast(force, c_void_p),
-                                 ctypes.cast(ratio, c_void_p))
+        core.seepage_update_sand(
+            self.handle, ca_i0, ca_i1,
+            *parse_fid3(sol_sand),
+            *parse_fid3(flu_sand),
+            ctypes.cast(force, c_void_p),
+            ctypes.cast(ratio, c_void_p))
 
     core.use(None, 'seepage_pop_fluids',
              c_void_p, c_void_p)
@@ -22934,6 +23273,7 @@ class FractureNetwork(HasHandle):
         index = get_index(index, self.vertex_number)
         if index is not None:
             return FractureNetwork.Vertex(self, index)
+        return None
 
     core.use(c_size_t, 'frac_nt_get_bd_n', c_void_p)
 

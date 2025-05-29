@@ -7,8 +7,9 @@ def create(left, right, temp, heat, rate, fa_t=None, fa_c=None):
     rate是温度超过分解温度1度的时候，对于左侧1kg的物质，1s内能否反应的物质的质量；
     fa_t和fa_c为物质的属性ID，定义物质的温度和比热;
     """
-    return endothermic.create(left=[(left, 1), ],
-                              right=right,
-                              temp=temp, heat=heat, rate=rate, fa_t=fa_t,
-                              fa_c=fa_c,
-                              l2r=True, r2l=False, p2t=None, t2q=None)
+    return endothermic.create(
+        left=[(left, 1), ],
+        right=right,
+        temp=temp, heat=heat, rate=rate, fa_t=fa_t,
+        fa_c=fa_c,
+        l2r=True, r2l=False, p2t=None, t2q=None)

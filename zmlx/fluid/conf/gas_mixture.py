@@ -7,7 +7,7 @@ from zml import Interp2, Seepage
 from zmlx.fluid.conf.gas_density.gas_mixture_density import GAS_den
 from zmlx.fluid.conf.gas_viscosity.c2h6 import gas_vis_c2h6
 
-import warnings
+import zmlx.alg.sys as warnings
 
 "Gas Mixture"
 

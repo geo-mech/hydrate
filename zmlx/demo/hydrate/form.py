@@ -4,9 +4,10 @@ from zmlx import *
 
 
 def create():
-    mesh = create_cube(x=np.linspace(0, 300, 150),
-                       y=(-0.5, 0.5),
-                       z=np.linspace(0, 500, 250))
+    mesh = create_cube(
+        x=np.linspace(0, 300, 150),
+        y=(-0.5, 0.5),
+        z=np.linspace(0, 500, 250))
 
     def get_t(x, y, z):
         return 278 + 22.15 - 0.0443 * z
@@ -34,25 +35,27 @@ def create():
         else:
             return 1.0e-15
 
-    kw = hydrate.create_kwargs(has_inh=True,  # 存在抑制剂
-                               has_ch4_in_liq=True,  # 存在溶解气
-                               gravity=[0, 0, -10],
-                               mesh=mesh, porosity=0.1, pore_modulus=100e6,
-                               denc=get_denc, dist=0.1,
-                               temperature=get_t, p=get_p, s=get_s,
-                               perm=get_k, heat_cond=2.0
-                               )
+    kw = hydrate.create_kwargs(
+        has_inh=True,  # 存在抑制剂
+        has_ch4_in_liq=True,  # 存在溶解气
+        gravity=[0, 0, -10],
+        mesh=mesh, porosity=0.1, pore_modulus=100e6,
+        denc=get_denc, dist=0.1,
+        temperature=get_t, p=get_p, s=get_s,
+        perm=get_k, heat_cond=2.0
+    )
     model = seepage.create(**kw)
 
     # 用于求解的选项
-    model.set_text(key='solve',
-                   text=dict(
-                       show_cells=dict(
-                           dim0=0,
-                           dim1=2
-                       ),
-                       step_max=10000
-                   ))
+    model.set_text(
+        key='solve',
+        text=dict(
+            show_cells=dict(
+                dim0=0,
+                dim1=2
+            ),
+            step_max=10000
+        ))
     return model
 
 

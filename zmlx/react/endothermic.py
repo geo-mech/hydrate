@@ -1,4 +1,4 @@
-from zmlx.alg.utils import clamp
+from zmlx.alg.base import clamp
 
 
 def create(left, right, temp, heat, rate=None, fa_t=None, fa_c=None, l2r=True,
@@ -38,7 +38,7 @@ def create(left, right, temp, heat, rate=None, fa_t=None, fa_c=None, l2r=True,
     for kind, weight in left:
         assert weight > 0
         components.append({'kind': kind,
-                           'weight': clamp(abs(weight), -1.0, -1.0e-5),
+                           'weight': -clamp(abs(weight), 1.0e-5, 1.0),
                            'fa_t': fa_t, 'fa_c': fa_c})
 
     # 右侧的物质

@@ -38,7 +38,7 @@ def create():
 def show_model(model: Seepage):
     x = as_numpy(model).cells.x
     p = as_numpy(model).cells.pre
-    plotxy(x=x, y=p, xlabel='x', ylabel='p')
+    plot_xy(x=x, y=p, xlabel='x', ylabel='p')
 
 
 def main():

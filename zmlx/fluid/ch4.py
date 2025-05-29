@@ -5,7 +5,7 @@ by 张召彬
 """
 
 import math
-import warnings
+import zmlx.alg.sys as warnings
 
 from zml import Interp2, Seepage, data_version
 

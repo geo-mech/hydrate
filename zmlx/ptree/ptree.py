@@ -175,7 +175,7 @@ class PTree:
             if value is not None:
                 self.put(*keys, value)
         if value is None:
-            return
+            return None
         if cast is None:
             return value
         else:
@@ -230,6 +230,7 @@ class PTree:
         path = join(root, *args)
         if path is not None:
             return make_parent(path)
+        return None
 
 
 def _open_json(filename):
@@ -256,13 +257,15 @@ def _open_py(filename):
 
 def open_pt(filename):
     if not isinstance(filename, str):
-        return
+        return None
     ext = os.path.splitext(filename)[-1]
     if ext is not None:
         if ext.lower() == '.json':
             return _open_json(filename)
         if ext.lower() == '.py' or ext.lower() == '.pyw':
             return _open_py(filename)
+        return None
+    return None
 
 
 def as_ptree(data, path=None):

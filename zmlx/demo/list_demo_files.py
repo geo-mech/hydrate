@@ -1,7 +1,7 @@
 import os.path
 
 from zmlx.alg.fsys import list_files
-from zmlx.alg.utils import code_config
+from zmlx.alg.base import code_config
 from zmlx.demo.path import get_path
 
 

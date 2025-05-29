@@ -1,4 +1,4 @@
-import warnings
+import zmlx.alg.sys as warnings
 
 from zml import Object, Seepage, get_average_perm, Reaction, log
 from zmlx.utility.attr_keys import AttrKeys

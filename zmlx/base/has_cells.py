@@ -1,4 +1,4 @@
-from zmlx.geometry.utils import point_distance
+from zmlx.geometry.base import point_distance
 from zmlx.plt.fig2 import tricontourf
 from zmlx.ui import gui
 
@@ -38,20 +38,20 @@ def get_pos_range(model, dim):
     - dim: 维度索引（0表示x维度，1表示y维度，2表示z维度）
 
     返回:
-    - lrange: 该维度上的最小位置值
-    - rrange: 该维度上的最大位置值
+    - l_range: 该维度上的最小位置值
+    - r_range: 该维度上的最大位置值
 
     异常:
     - 断言错误: 如果模型中的单元格数量小于等于0，或者维度索引不在[0, 2]范围内
     """
     assert model.cell_number > 0
     assert 0 <= dim <= 2
-    lrange, rrange = 1e100, -1e100
+    l_range, r_range = 1e100, -1e100
     for c in model.cells:
         p = c.pos[dim]
-        lrange = min(lrange, p)
-        rrange = max(rrange, p)
-    return lrange, rrange
+        l_range = min(l_range, p)
+        r_range = max(r_range, p)
+    return l_range, r_range
 
 
 def get_cells_in_range(model, xr=None, yr=None, zr=None,

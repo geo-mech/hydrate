@@ -1,6 +1,6 @@
 from zml import Dfn2
-from zmlx.alg.utils import linspace
-from zmlx.geometry.utils import point_distance
+from zmlx.alg.base import linspace
+from zmlx.geometry.base import point_distance
 
 
 def dfn2(data=None, *, xr=None, yr=None, p21=None, l_min=None, angles=None,

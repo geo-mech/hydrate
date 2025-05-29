@@ -29,10 +29,10 @@ def _get_itp(data, get_x, get_y, get_v, dx=None, dy=None,
     创建插值，用于创建流体. 其中v_min和v_max指定了数据的有效范围，超过这个范围的数据将会被忽略.
     """
     if data is None:
-        return
+        return None
 
     if len(data) == 0:
-        return
+        return None
 
     if x_min is None:
         x_min = _get_max(data, get_x, min)
@@ -40,9 +40,9 @@ def _get_itp(data, get_x, get_y, get_v, dx=None, dy=None,
         x_max = _get_max(data, get_x, max)
 
     if x_min is None or x_max is None:
-        return
+        return None
     if x_min > x_max:
-        return
+        return None
 
     if y_min is None:
         y_min = _get_max(data, get_y, min)
@@ -50,9 +50,9 @@ def _get_itp(data, get_x, get_y, get_v, dx=None, dy=None,
         y_max = _get_max(data, get_y, max)
 
     if y_min is None or y_max is None:
-        return
+        return None
     if y_min > y_max:
-        return
+        return None
 
     vx = []
     vy = []
@@ -78,7 +78,7 @@ def _get_itp(data, get_x, get_y, get_v, dx=None, dy=None,
                 vv.append(v)
 
     if len(vx) == 0:
-        return
+        return None
 
     f = Interpolator(vx, vy, vv, rescale=True)
 
@@ -130,6 +130,7 @@ def get_density(pre, temp, flu_def: Seepage.FluDef):
 
     if data is not None:
         return data(pre, temp)
+    return None
 
 
 def get_viscosity(pre, temp, flu_def: Seepage.FluDef):
@@ -140,6 +141,7 @@ def get_viscosity(pre, temp, flu_def: Seepage.FluDef):
 
     if data is not None:
         return data(pre, temp)
+    return None
 
 
 class _Getter:
@@ -161,10 +163,11 @@ def from_file(fname, t_min=None, t_max=None, p_min=None, p_max=None, name=None,
         第四列: 粘性系数 [Pa.s]
     """
     data = np.loadtxt(fname=fname).tolist()
-    return from_data(data=data, get_t=_Getter(0), get_p=_Getter(1),
-                     get_den=_Getter(2),
-                     get_vis=_Getter(3),
-                     t_min=t_min, t_max=t_max,
-                     p_min=p_min, p_max=p_max,
-                     name=name, specific_heat=specific_heat
-                     )
+    return from_data(
+        data=data, get_t=_Getter(0), get_p=_Getter(1),
+        get_den=_Getter(2),
+        get_vis=_Getter(3),
+        t_min=t_min, t_max=t_max,
+        p_min=p_min, p_max=p_max,
+        name=name, specific_heat=specific_heat
+    )

@@ -1,7 +1,6 @@
 on_toolbar = True
 icon = 'demo'
 text = '示例'
-is_sys = True
 
 
 def slot():

@@ -90,7 +90,7 @@
 
 推荐使用PyCharm集成开发环境([官网下载PyCharm Community Edition](https://www.jetbrains.com/pycharm/download)
 默认安装即可)
-，之后，推荐安装 MarsCode AI插件 (在PyCharm的插件管理中搜索下载)
+，之后，推荐安装 [Trae AI](https://www.trae.com.cn/)插件 (在PyCharm的插件管理中搜索下载)
 ，其中集成了DeepSeek等AI工具，使用比较友好。
 
 ### 反馈

@@ -12,12 +12,13 @@ def create(gas, liq, hyd, mg, vp, vt, temp, heat, fa_t=None, fa_c=None,
     assert 0 < mg < 1, f'The mg should be in (0, 1) while it is {mg}'
     assert heat > 0
     assert dissociation or formation
-    return endothermic.create(left=[(hyd, 1.0), ],
-                              right=[(gas, mg),
-                                     (liq, 1.0 - mg)],
-                              temp=temp, heat=heat,
-                              rate=rate,
-                              fa_t=fa_t, fa_c=fa_c,
-                              l2r=dissociation,  # 允许水合物分解
-                              r2l=formation,  # 允许水合物生成
-                              p2t=[vp, vt], t2q=t2q)
+    return endothermic.create(
+        left=[(hyd, 1.0), ],
+        right=[(gas, mg),
+               (liq, 1.0 - mg)],
+        temp=temp, heat=heat,
+        rate=rate,
+        fa_t=fa_t, fa_c=fa_c,
+        l2r=dissociation,  # 允许水合物分解
+        r2l=formation,  # 允许水合物生成
+        p2t=[vp, vt], t2q=t2q)

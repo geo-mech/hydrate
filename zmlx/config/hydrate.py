@@ -1,12 +1,12 @@
 """
 用于水合物计算的配置.
 """
-import warnings
+import zmlx.alg.sys as warnings
 
 from zml import Seepage, log
 from zmlx.alg.fsys import join_paths
 from zmlx.alg.fsys import make_fname
-from zmlx.alg.utils import time2str
+from zmlx.alg.base import time2str
 from zmlx.base.seepage import as_numpy
 from zmlx.config import seepage
 from zmlx.config.TherFlowConfig import TherFlowConfig
@@ -17,7 +17,7 @@ from zmlx.fluid.co2_hydrate import create as create_co2_hydrate
 from zmlx.fluid.h2o import create as create_h2o
 from zmlx.fluid.h2o_gas import create as create_h2o_gas
 from zmlx.fluid.h2o_ice import create as create_h2o_ice
-from zmlx.kr.pre_defines import create_krf
+from zmlx.kr.base import create_krf
 from zmlx.plt.fig2 import tricontourf
 from zmlx.react import ch4_hydrate as ch4_hydrate_react
 from zmlx.react import co2_hydrate as co2_hydrate_react

@@ -13,7 +13,7 @@ import os
 import matplotlib.pyplot as plt
 from scipy.special import erf
 
-from zmlx import Seepage, plotxy, create_cube_seepage_mesh as create_cube, gui, \
+from zmlx import Seepage, plot_xy, create_cube_seepage_mesh as create_cube, gui, \
     as_numpy, np
 
 
@@ -53,8 +53,8 @@ def create():
 
 def show(model, step, folder_name):
     ada = as_numpy(model)
-    plotxy(ada.cells.x, ada.cells.get(CellAttrs.temperature),
-           caption='temperature', gui_only=True)
+    plot_xy(ada.cells.x, ada.cells.get(CellAttrs.temperature),
+            caption='temperature', gui_only=True)
     np.savetxt(f'{folder_name}/{step:05d}.txt', np.column_stack(
         (ada.cells.x, ada.cells.get(CellAttrs.temperature))))
 

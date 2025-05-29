@@ -123,21 +123,23 @@ def create():
     创建模型
     """
     # 创建一个位于xz平面内，且沿着y轴方向的厚度为1的二维网格
-    mesh = create_xz(x_max=50,  # x的最大值(x的最小值为0)
-                     z_min=-100, z_max=0,  # z坐标的范围
-                     dx=1, dz=1,  # 网格的大小
-                     upper=30,  # 上覆层的厚度
-                     lower=30  # 下伏层的厚度
-                     )
+    mesh = create_xz(
+        x_max=50,  # x的最大值(x的最小值为0)
+        z_min=-100, z_max=0,  # z坐标的范围
+        dx=1, dz=1,  # 网格的大小
+        upper=30,  # 上覆层的厚度
+        lower=30  # 下伏层的厚度
+    )
 
     # 添加虚拟的cell和face用于生产
-    add_cell_face(mesh,
-                  pos=[0, 0, -50],  # 在此处找到一个Cell与虚拟的Cell相连
-                  offset=[0, 10, 0],  # 在pos的基础上，加上此向量，得到虚拟的Cell的位置
-                  vol=1000,  # 虚拟的Cell的体积
-                  area=5,  # 虚拟Face的面积
-                  length=1  # 虚拟Face的长度 （流体流经此Face的时候流过的距离）
-                  )
+    add_cell_face(
+        mesh,
+        pos=[0, 0, -50],  # 在此处找到一个Cell与虚拟的Cell相连
+        offset=[0, 10, 0],  # 在pos的基础上，加上此向量，得到虚拟的Cell的位置
+        vol=1000,  # 虚拟的Cell的体积
+        area=5,  # 虚拟Face的面积
+        length=1  # 虚拟Face的长度 （流体流经此Face的时候流过的距离）
+    )
 
     # 找到上下范围，用以在后续定位顶底的Cell
     z_min, z_max = mesh.get_pos_range(2)
@@ -269,25 +271,26 @@ def create():
         return 1.0 if abs(y) < 2 else 0.0
 
     # 创建后续建立计算模型的关键词
-    kw = hydrate.create_kwargs(gravity=[0, 0, -10],  # 重力
-                               dt_min=1,  # 最小时间步长
-                               dt_max=24 * 3600,  # 最大时间步长
-                               dv_relative=0.1,  # 每个dt内，流体流过的网格数(用以控制dt)
-                               mesh=mesh,
-                               porosity=get_fai,  # 孔隙度
-                               pore_modulus=100e6,  # 孔隙刚度
-                               denc=denc,  # 密度和比热的乘积
-                               temperature=get_t,  # 温度
-                               p=get_p,  # 初始的流体压力
-                               s=get_s,  # 初始的饱和度
-                               perm=get_k,  # 渗透率
-                               heat_cond=heat_cond,  # 热导率
-                               prods=[{'index': mesh.cell_number - 1,
-                                       't': [0, 1e20],
-                                       # 使用t和p两个list定义一条曲线，来控制“井底流压”
-                                       'p': [3e6, 3e6]  # 此处，流体压力固定为3MPa
-                                       }]  # 用于接收产出的虚拟的Cell
-                               )
+    kw = hydrate.create_kwargs(
+        gravity=[0, 0, -10],  # 重力
+        dt_min=1,  # 最小时间步长
+        dt_max=24 * 3600,  # 最大时间步长
+        dv_relative=0.1,  # 每个dt内，流体流过的网格数(用以控制dt)
+        mesh=mesh,
+        porosity=get_fai,  # 孔隙度
+        pore_modulus=100e6,  # 孔隙刚度
+        denc=denc,  # 密度和比热的乘积
+        temperature=get_t,  # 温度
+        p=get_p,  # 初始的流体压力
+        s=get_s,  # 初始的饱和度
+        perm=get_k,  # 渗透率
+        heat_cond=heat_cond,  # 热导率
+        prods=[{'index': mesh.cell_number - 1,
+                't': [0, 1e20],
+                # 使用t和p两个list定义一条曲线，来控制“井底流压”
+                'p': [3e6, 3e6]  # 此处，流体压力固定为3MPa
+                }]  # 用于接收产出的虚拟的Cell
+    )
 
     # 根据上述关键词建立模型
     model = seepage.create(**kw)
@@ -309,23 +312,25 @@ def create():
     update_ikr(model)
 
     # 告诉模型，在后续solve的过程中，需要每隔5步来调用一次update_ikr函数
-    step_iteration.add_setting(model,
-                               step=5,
-                               name='update_ikr',
-                               args=['@model'])
+    step_iteration.add_setting(
+        model,
+        step=5,
+        name='update_ikr',
+        args=['@model'])
 
     # 用于solve的选项
-    model.set_text(key='solve',
-                   text={'monitor': {'cell_ids': [model.cell_number - 1]},
-                         # 在计算的过程中，如何绘图. 这里给出的，是zmlx.seepage.show_cells函数所需要的参数
-                         'show_cells': {'dim0': 0,
-                                        'dim1': 2,
-                                        'mask': seepage.get_cell_mask(
-                                            model=model, yr=[-1, 1])},
-                         # 求解的时间长度 (此处求解3年)
-                         'time_max': 3 * 365 * 24 * 3600,
-                         }
-                   )
+    model.set_text(
+        key='solve',
+        text={'monitor': {'cell_ids': [model.cell_number - 1]},
+              # 在计算的过程中，如何绘图. 这里给出的，是zmlx.seepage.show_cells函数所需要的参数
+              'show_cells': {'dim0': 0,
+                             'dim1': 2,
+                             'mask': seepage.get_cell_mask(
+                                 model=model, yr=[-1, 1])},
+              # 求解的时间长度 (此处求解3年)
+              'time_max': 3 * 365 * 24 * 3600,
+              }
+    )
     # 返回模型 (所有的细节，但是并不包括update_ikr函数的定义)
     return model
 

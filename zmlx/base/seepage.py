@@ -3,11 +3,11 @@
 """
 import ctypes
 import os
-import warnings
+import zmlx.alg.sys as warnings
 from ctypes import c_void_p
 
-from zml import Seepage, Vector, is_array, get_pointer64, np
-from zmlx.alg.utils import time2str
+from zml import Seepage, Vector, is_array, get_pointer64, np, Interp1
+from zmlx.alg.base import time2str
 
 
 class SeepageNumpy:
@@ -1134,3 +1134,6 @@ def get_sat(names, table: dict):
         assert False, (f'names not used: {list(the_copy.keys())}. '
                        f'The required names: {names}')
     return values
+
+
+

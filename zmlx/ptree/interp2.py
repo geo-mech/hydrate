@@ -2,7 +2,7 @@ from scipy.interpolate import NearestNDInterpolator, LinearNDInterpolator
 
 from zml import Interp2, np
 from zmlx.alg.fsys import *
-from zmlx.alg.utils import join_cols
+from zmlx.alg.base import join_cols
 from zmlx.ptree.array import array
 from zmlx.ptree.box import box2
 from zmlx.ptree.ptree import PTree
@@ -55,7 +55,7 @@ def interp2(pt):
         if isfile(fname):
             return Interp2(path=fname)
         else:
-            return
+            return None
 
     if isinstance(pt.data, (int, float)):  # 创建常量.
         return Interp2.create_const(pt.data)
@@ -63,7 +63,7 @@ def interp2(pt):
     data = array(pt['data'])
 
     if data is None:
-        return
+        return None
 
     if len(data.shape) == 1:
         if len(data) == 1:

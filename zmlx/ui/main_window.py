@@ -1,7 +1,7 @@
 import datetime
 import os.path
 import sys
-import warnings
+import zmlx.alg.sys as warnings
 
 import zml
 from zml import is_chinese, lic, core
@@ -10,10 +10,10 @@ from zmlx.ui.alg import show_seepage
 from zmlx.ui.cfg import *
 from zmlx.ui.gui_api import GuiApi
 from zmlx.ui.gui_buffer import gui
-from zmlx.ui.pyqt import QtCore, QtWidgets, is_pyqt5, QtMultimedia
+from zmlx.ui.pyqt import QtCore, QtWidgets, QtMultimedia
 from zmlx.ui.task_proc import TaskProc
 from zmlx.ui.widget.action_x import ActionX, QAction
-from zmlx.ui.widget.code_edit import CodeEdit
+from zmlx.ui.widget.code_edit import CodeEdit, use_QSci
 from zmlx.ui.widget.console_widget import ConsoleWidget
 from zmlx.ui.widget.my_label import Label
 from zmlx.ui.widget.tab_widget import TabWidget
@@ -704,12 +704,6 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
         splash = None
 
     win = MainWindow()
-
-    try:
-        if is_pyqt5:
-            win.toolbar_warning(text='PyQt5已不再支持，请更新至PyQt6')
-    except:
-        pass
 
     try:  # 在尝试调用gui执行的时候，添加代码执行历史
         if len(sys.argv) == 1:

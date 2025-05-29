@@ -2,7 +2,7 @@
 定义二氧化碳水合物的基本参数
 """
 
-import warnings
+import zmlx.alg.sys as warnings
 
 from zml import Seepage
 

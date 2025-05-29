@@ -1,4 +1,4 @@
-import warnings
+import zmlx.alg.sys as warnings
 
 from zmlx.io import json_ex
 

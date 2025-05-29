@@ -30,7 +30,7 @@ def test_1():
                 print(f'step = {step}')
                 x = list(range(model.size))
                 y = [model.get_pos(idx) for idx in range(model.size)]
-                plotxy(x, y)
+                plot_xy(x, y)
 
     gui.execute(func=solve, close_after_done=False)
 

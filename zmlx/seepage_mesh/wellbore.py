@@ -1,7 +1,7 @@
 from scipy.interpolate import interp1d
 
 from zml import SeepageMesh, np
-from zmlx.geometry.utils import point_distance
+from zmlx.geometry.base import point_distance
 
 
 def create_wellbore(trajectory, length=1.0, area=0.01):

@@ -1,5 +1,5 @@
 import importlib
-import warnings
+import zmlx.alg.sys as warnings
 
 
 class RuntimeFunc:

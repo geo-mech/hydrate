@@ -2,7 +2,7 @@
 定义甲烷水合物的基本参数
 """
 
-import warnings
+import zmlx.alg.sys as warnings
 
 from zml import data_version, Seepage
 

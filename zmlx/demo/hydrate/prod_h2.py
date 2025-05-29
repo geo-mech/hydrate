@@ -5,8 +5,9 @@ from zmlx import *
 
 
 def create():
-    mesh = create_cube(x=np.linspace(-50, 50, 100),
-                       y=np.linspace(-50, 50, 100), z=(-1, 1))
+    mesh = create_cube(
+        x=np.linspace(-50, 50, 100),
+        y=np.linspace(-50, 50, 100), z=(-1, 1))
 
     x_min, x_max = mesh.get_pos_range(0)
     y_min, y_max = mesh.get_pos_range(1)
@@ -26,23 +27,27 @@ def create():
         else:
             return {'h2o': 1, 'ch4_hydrate': 0.4}
 
-    kw = hydrate.create_kwargs(gravity=[0, 0, -10], mesh=mesh,
-                               porosity=lambda *args: 1e6 if boundary(
-                                   *args) or is_prod(*args) else 0.3,
-                               pore_modulus=100e6,
-                               denc=lambda *args: 1e20 if boundary(
-                                   *args) else 5e6,
-                               temperature=285.0,
-                               p=lambda *args: 3e6 if is_prod(*args) else 10e6,
-                               s=get_s,
-                               perm=1e-14, heat_cond=1.0,
-                               dt_min=1, dt_max=24 * 3600, dv_relative=0.1)
+    kw = hydrate.create_kwargs(
+        gravity=[0, 0, -10],
+        mesh=mesh,
+        porosity=lambda *args: 1e6 if boundary(*args) or is_prod(*args) else 0.3,
+        pore_modulus=100e6,
+        denc=lambda *args: 1e20 if boundary(*args) else 5e6,
+        temperature=285.0,
+        p=lambda *args: 3e6 if is_prod(*args) else 10e6,
+        s=get_s,
+        perm=1e-14,
+        heat_cond=1.0,
+        dt_min=1,
+        dt_max=24 * 3600,
+        dv_relative=0.1)
 
     model = seepage.create(**kw)
     # 用于solve的选项
-    model.set_text(key='solve',
-                   text={'show_cells': {'dim0': 0, 'dim1': 1}}
-                   )
+    model.set_text(
+        key='solve',
+        text={'show_cells': {'dim0': 0, 'dim1': 1}}
+    )
     return model
 
 

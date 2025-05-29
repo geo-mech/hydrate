@@ -1,4 +1,4 @@
-import warnings
+import zmlx.alg.sys as warnings
 
 from zmlx.fem.elements.c3d4 import stiffness as c3d4_stiffness
 

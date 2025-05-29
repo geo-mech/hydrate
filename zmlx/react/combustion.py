@@ -1,5 +1,5 @@
 from zmlx.react import endothermic
-from zmlx.react.add_reaction import add_reaction
+from zmlx.react.alg import add_reaction
 
 
 def create(left, right, temp, heat, rate, fa_t=None, fa_c=None):
@@ -18,16 +18,17 @@ def create(left, right, temp, heat, rate, fa_t=None, fa_c=None):
     #    这里要做的，是在实际温度低于燃点的时候，让反应的速率等于0，从而确保只有温度大于燃点，反应才可以启动.
     t = [-1e4, temp - teq, temp - teq + 1, -1, 0, 1e4]
     q = [0, 0, -rate, -rate, 0, 0]
-    return endothermic.create(left=right, right=left,  # 交换左右两侧
-                              temp=teq,  # 用于定义能量的参考温度
-                              heat=heat,  # 在参考温度下，1kg物质产生的热量
-                              rate=1,  # 无用的参数
-                              fa_t=fa_t, fa_c=fa_c,
-                              l2r=False, r2l=True,  # 仅仅允许从右侧向左侧反应
-                              p2t=([0.01e6, 100e6], [teq, teq]),
-                              # 定义燃烧能达到的最高的温度
-                              t2q=(t, q)
-                              )
+    return endothermic.create(
+        left=right, right=left,  # 交换左右两侧
+        temp=teq,  # 用于定义能量的参考温度
+        heat=heat,  # 在参考温度下，1kg物质产生的热量
+        rate=1,  # 无用的参数
+        fa_t=fa_t, fa_c=fa_c,
+        l2r=False, r2l=True,  # 仅仅允许从右侧向左侧反应
+        p2t=([0.01e6, 100e6], [teq, teq]),
+        # 定义燃烧能达到的最高的温度
+        t2q=(t, q)
+    )
 
 
 def test(t_ini=510):

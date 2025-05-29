@@ -1,4 +1,4 @@
-import warnings
+import zmlx.alg.sys as warnings
 
 from zmlx.base.vector import *
 
@@ -8,7 +8,3 @@ warnings.warn("zmlx.geometry.Vector is deprecated "
               DeprecationWarning, stacklevel=2)
 
 __all__ = ['read_numpy', 'write_numpy', 'to_numpy']
-
-from zmlx.alg.sys import log_deprecated
-
-log_deprecated(__name__)

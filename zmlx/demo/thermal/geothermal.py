@@ -83,11 +83,11 @@ def solve_well(model, close_after_done=None, folder=None, gui_iter=None,
             title = f'time = {seepage.get_time(model, as_str=True)}'
             x = as_numpy(model).cells.x[swap]
             p = as_numpy(model).cells.pre[swap]
-            plotxy(x, p, caption='well_p', title=title)
+            plot_xy(x, p, caption='well_p', title=title)
 
             t = as_numpy(model).fluids(0).get(
                 index=model.reg_flu_key('temperature'))[swap]
-            plotxy(x, t, caption='well_T', title=title)
+            plot_xy(x, t, caption='well_T', title=title)
 
     seepage.solve(model, extra_plot=plot, close_after_done=close_after_done,
                   folder=folder, gui_iter=gui_iter, state_hint='well',
@@ -95,8 +95,9 @@ def solve_well(model, close_after_done=None, folder=None, gui_iter=None,
 
 
 def create_res(well: Seepage, heat_cond=2.0):
-    mesh = create_cylinder(x=np.linspace(0, 100, 100),
-                           r=np.linspace(0, 50, 50))
+    mesh = create_cylinder(
+        x=np.linspace(0, 100, 100),
+        r=np.linspace(0, 50, 50))
 
     # 井筒的轨迹
     swap = eval(well.get_text('swap'))
@@ -128,13 +129,14 @@ def create_res(well: Seepage, heat_cond=2.0):
         i_swap.append(True)  # 这些cell用来交换
         o_index.append(c2.index)
 
-    model = seepage.create(mesh=mesh,
-                           temperature=273.15 + 200.0,  # 200摄氏度
-                           denc=5.0e6,
-                           heat_cond=heat_cond,
-                           dv_relative=0.5,
-                           dt_max=3600 * 24 * 10,
-                           )
+    model = seepage.create(
+        mesh=mesh,
+        temperature=273.15 + 200.0,  # 200摄氏度
+        denc=5.0e6,
+        heat_cond=heat_cond,
+        dv_relative=0.5,
+        dt_max=3600 * 24 * 10,
+    )
 
     # 设置导热能力
     face_n0 = model.face_number - len(vx)
@@ -256,12 +258,12 @@ def main(folder=None):
             vtemp.append(get_flu_t(well)[-1])
 
             # 更新功率曲线和温度曲线
-            plotxy(vtime, vpower, caption='time2power', title='Power',
-                   xlabel='Time/ year', ylabel='Power / W')
-            plotxy(vtime, vtemp, caption='time2temp',
-                   title='Outlet Temperature',
-                   xlabel='Time/ year',
-                   ylabel='Temperature / K')
+            plot_xy(vtime, vpower, caption='time2power', title='Power',
+                    xlabel='Time/ year', ylabel='Power / W')
+            plot_xy(vtime, vtemp, caption='time2temp',
+                    title='Outlet Temperature',
+                    xlabel='Time/ year',
+                    ylabel='Temperature / K')
 
     gui.execute(func=solve, close_after_done=False, disable_gui=False)
 

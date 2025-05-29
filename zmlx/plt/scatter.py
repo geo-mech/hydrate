@@ -1,14 +1,10 @@
-import warnings
+import zmlx.alg.sys as warnings
 
 from zmlx.plt.fig3 import scatter
 
 warnings.warn(f'The modulus {__name__} is deprecated and '
-              f'will be removed after 2026-4-16',
+              f'will be removed after 2026-4-16, import functions directly from <zmlx> instead',
               DeprecationWarning, stacklevel=2)
-
-from zmlx.alg.sys import log_deprecated
-
-log_deprecated(__name__)
 
 
 def test_1():

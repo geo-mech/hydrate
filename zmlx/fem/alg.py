@@ -1,10 +1,10 @@
-import warnings
+import zmlx.alg.sys as warnings
 
 from zml import DynSys, Mesh3, ConjugateGradientSolver, np
 from zmlx.fem.boundary import find_boundary
 from zmlx.fem.create3 import create3
 from zmlx.fem.set_mass import set_mass
-from zmlx.geometry.utils import point_distance as get_distance
+from zmlx.geometry.base import point_distance as get_distance
 
 
 def _test1():

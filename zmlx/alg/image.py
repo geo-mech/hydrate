@@ -2,8 +2,8 @@
 图像相关的工具函数
 """
 import os
-import warnings
 
+import zmlx.alg.sys as warnings
 from zml import make_parent, np
 
 try:

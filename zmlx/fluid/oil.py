@@ -18,7 +18,7 @@ p = 10000000.0Pa, T = 500K, vis = 0.0063358958456372905Pa.s, den = 898.062894kg/
 
 """
 
-import warnings
+import zmlx.alg.sys as warnings
 from math import log, exp
 
 from zml import Interp2, Seepage

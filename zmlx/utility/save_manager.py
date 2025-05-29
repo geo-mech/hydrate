@@ -1,5 +1,5 @@
 import os
-import warnings
+import zmlx.alg.sys as warnings
 
 from zmlx.alg.fsys import make_fname
 

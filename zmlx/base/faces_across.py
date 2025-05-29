@@ -1,5 +1,4 @@
-from zmlx.geometry.utils import point_distance
-from zmlx.geometry.utils import seg_point_distance
+from zmlx.geometry.base import point_distance, seg_point_distance
 
 
 def get_faces_across(model, p0, p1):

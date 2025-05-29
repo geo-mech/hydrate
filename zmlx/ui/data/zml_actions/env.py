@@ -1,6 +1,5 @@
 text = '设置env'
 dependency = """from zmlx.ui.widget.EnvEdit import EnvEdit"""
-is_sys = True
 icon = 'set'
 
 

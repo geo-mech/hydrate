@@ -4,14 +4,14 @@
 
 2024-4-3
 """
-import warnings
+import zmlx.alg.sys as warnings
 
 from zml import Seepage, get_pointer64, np
 from zmlx.base.seepage import as_numpy
 from zmlx.config.seepage import get_face_sum, get_face_diff, get_face_left, \
     get_face_right
 
-warnings.warn(f'<{__file__}> will be removed after 2025-4-13',
+warnings.warn(f'<{__name__}> will be removed after 2025-4-13',
               DeprecationWarning, stacklevel=2)
 
 

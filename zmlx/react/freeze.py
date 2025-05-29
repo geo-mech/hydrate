@@ -29,7 +29,8 @@ def create(flu, sol, vp, vt, temp, heat, fa_t=None, fa_c=None, t2q=None,
         q = [-x for x in q]
         t2q = [t, q]
 
-    return melt.create(sol=sol, flu=flu, vp=vp, vt=vt, temp=temp, heat=heat,
-                       fa_t=fa_t, fa_c=fa_c, t2q=t2q,
-                       l2r=r2l, r2l=l2r,  # 和melt相比，方向改变
-                       )
+    return melt.create(
+        sol=sol, flu=flu, vp=vp, vt=vt, temp=temp, heat=heat,
+        fa_t=fa_t, fa_c=fa_c, t2q=t2q,
+        l2r=r2l, r2l=l2r,  # 和melt相比，方向改变
+    )

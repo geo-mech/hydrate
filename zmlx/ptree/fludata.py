@@ -16,7 +16,7 @@ def fludata(pt):
             data.load(fname)
             return data
         else:
-            return  # 读取文件失败
+            return None
 
     if isinstance(pt.data, list):  # 各个组分
         data = Seepage.FluData()

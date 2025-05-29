@@ -1,5 +1,4 @@
 text = '关闭所有页面'
-support_hide = False
 icon = 'close_all'
 
 
@@ -13,3 +12,4 @@ def enabled():
     window = get_window()
     if window is not None:
         return window.count_tabs() > 0
+    return None

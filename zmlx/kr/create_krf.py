@@ -1,15 +1,13 @@
-from zmlx.kr.pre_defines import create_krf
+from zmlx.kr.base import create_krf
 
 __all__ = ['create_krf']
 
-import warnings
+import zmlx.alg.sys as warnings
 
-warnings.warn(f'The module {__name__} will be removed after 2026-4-15',
+warnings.warn(f'The module {__name__} will be removed after 2026-4-15, please import from "zmlx" instead',
               DeprecationWarning, stacklevel=2)
 
-from zmlx.alg.sys import log_deprecated
 
-log_deprecated(__name__)
 
 
 def _test1():

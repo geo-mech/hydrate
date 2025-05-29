@@ -1,5 +1,4 @@
 text = '输出历史'
-is_sys = True
 menu = '帮助'
 
 

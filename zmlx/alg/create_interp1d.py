@@ -1,13 +1,11 @@
-import warnings
+import zmlx.alg.sys as warnings
 
 from zmlx.alg.interp import create_interp1d
 
-warnings.warn(f'{__name__} will be removed after 2026-4-15', DeprecationWarning,
+warnings.warn(f'{__name__} will be removed after 2026-4-15, '
+              f'please import from "zmlx.alg.interp" instead',
+              DeprecationWarning,
               stacklevel=2)
-
-from zmlx.alg.sys import log_deprecated
-
-log_deprecated(__name__)
 
 
 def test():

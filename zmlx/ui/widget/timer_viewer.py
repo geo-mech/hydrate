@@ -2,7 +2,7 @@ import timeit
 
 from zml import make_parent
 from zml import timer
-from zmlx.alg.utils import time2str, clamp
+from zmlx.alg.base import time2str, clamp
 from zmlx.ui.pyqt import QtWidgets, QtCore
 
 

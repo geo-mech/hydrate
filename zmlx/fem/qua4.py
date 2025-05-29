@@ -1,6 +1,6 @@
 from zml import Mesh3, LinearExpr
-from zmlx.geometry.utils import get_center
-from zmlx.geometry.utils import point_distance
+from zmlx.geometry.base import get_center
+from zmlx.geometry.base import point_distance
 
 
 def create_face_xx(mesh):

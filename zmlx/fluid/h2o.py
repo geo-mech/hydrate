@@ -3,8 +3,8 @@
 """
 
 import math
-import warnings
 
+import zmlx.alg.sys as warnings
 from zml import Interp2, Seepage
 
 
@@ -55,9 +55,10 @@ def create(t_min=272.0, t_max=300.0, p_min=1e6, p_max=40e6,
     if viscosity is not None:
         assert 1.0e-5 <= viscosity <= 1.0e-2
 
-    return Seepage.FluDef(den=create_density() if density is None else density,
-                          vis=create_viscosity() if viscosity is None else viscosity,
-                          specific_heat=specific_heat, name=name)
+    return Seepage.FluDef(
+        den=create_density() if density is None else density,
+        vis=create_viscosity() if viscosity is None else viscosity,
+        specific_heat=specific_heat, name=name)
 
 
 def create_flu(*args, **kwargs):

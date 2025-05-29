@@ -1,16 +1,11 @@
-import warnings
-
 from PIL import Image
 
+import zmlx.alg.sys as warnings
 from zml import np
 from zmlx.alg.image import get_data
 
 warnings.warn(f'{__name__} will be removed after 2026-4-15', DeprecationWarning,
               stacklevel=2)
-
-from zmlx.alg.sys import log_deprecated
-
-log_deprecated(__name__)
 
 
 def test(img_name, map_name):

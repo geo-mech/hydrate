@@ -6,7 +6,7 @@
 Specific Heat of Oxigen Gas  from:
 https://www.engineeringtoolbox.com/oxygen-d_978.html
 """
-import warnings
+import zmlx.alg.sys as warnings
 
 import matplotlib.pyplot as plt
 

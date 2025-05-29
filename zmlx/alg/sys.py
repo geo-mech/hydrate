@@ -2,6 +2,7 @@
 处理系统相关的操作。后续修改的时候需要保证：
     此模块应不依赖于任何第三方模块，以及不依赖于zml
 """
+import hashlib
 import importlib
 import os
 import shutil
@@ -25,6 +26,30 @@ def log_deprecated(name):
     log(f'The deprecated used: {name}', tag=f'{name}.deprecated_used')
 
 
+def warn(message, category=None, stacklevel=1, tag=None):
+    """
+    警告，并且当tag给定的时候，则记录日志 (每天只记录一次)
+    Args:
+        tag: 记录日志的标签
+        message: 需要弹出的警告
+        category: 类别
+        stacklevel: 栈的深度
+
+    Returns:
+        None
+    """
+    warnings.warn(message=message, category=category, stacklevel=stacklevel + 1)
+    if tag is None:
+        try:
+            hash_obj = hashlib.sha256(message.encode('utf-8')).hexdigest()
+            tag = hash_obj[: 30]
+        except:
+            pass
+    if isinstance(tag, str):
+        from zml import log
+        log(text=message, tag=f'{tag}.warn')
+
+
 def type_assert(o, dtype):
     """
     类型断言
@@ -42,6 +67,14 @@ def type_assert(o, dtype):
 def timing_show(key, func, *args, **kwargs):
     """
     执行函数，并且显示执行的耗时. 主要用于模型初始化过程中，显示那些耗时的操作
+
+    Args:
+        key: 操作的名字
+        func: 操作的函数
+        *args: 操作的参数
+        **kwargs: 操作的参数
+    Returns:
+        操作的结果
     """
     print(f'{key} ... ', end='')
     t_beg = timeit.default_timer()
@@ -87,7 +120,14 @@ srun     -n 1  -c {c}  python3 """
 
 def py2pyc(ipath: str, opath: str):
     """
-    编译py文件(对于非py文件，则简单复制)
+    编译py文件(对于非py文件，则简单复制).
+
+    Args:
+        ipath: 输入的路径
+        opath: 输出的路径
+
+    Returns:
+        None
     """
 
     if os.path.isfile(ipath):  # 对于Python文件，执行编译操作;
@@ -206,6 +246,12 @@ def install_dep(show_exists=True):
 def add_pth_file(name, folder):
     """
     Add the current folder to python's search path
+
+    Args:
+        name: the name of the pth file
+        folder: the folder to add
+    Returns:
+        None
     """
     pth = os.path.join(os.path.dirname(sys.executable), name)
     if not os.path.isdir(folder):
@@ -224,6 +270,15 @@ def add_pth_file(name, folder):
 def import_module(name, package=None, field=None, pip=None, show=None):
     """
     尝试导入一个外部的模块。 如果失败，则尝试通过pip来安装，之后，重新导入
+
+    Args:
+        name: 模块的名字
+        package: 包的名字
+        field: 字段的名字
+        pip: 安装的名字
+        show: 显示的函数
+    Returns:
+        None
     """
     try:  # 首次尝试导入
         m = importlib.import_module(name=name, package=package)
@@ -250,30 +305,24 @@ def import_module(name, package=None, field=None, pip=None, show=None):
 
 
 def get_desktop_path(*args):
-    # 获取用户主目录
-    home_dir = os.path.expanduser("~")
-    # 根据不同系统生成可能的桌面路径
-    possible_desktop_names = ["Desktop", "桌面"]  # 兼容中英文系统
-    for name in possible_desktop_names:
-        desktop_path = os.path.join(home_dir, name)
-        if os.path.exists(desktop_path):
-            return os.path.join(desktop_path, *args)
-    # 如果未找到，尝试通过注册表获取（仅Windows）
-    if os.name == "nt":
-        try:
-            import winreg
-            key = winreg.OpenKey(
-                winreg.HKEY_CURRENT_USER,
-                r"Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders"
-            )
-            desktop_path = winreg.QueryValueEx(key, "Desktop")[0]
-            return os.path.join(desktop_path, *args)
-        except ImportError:
-            return None
-    raise FileNotFoundError("无法找到桌面路径")
+    """
+    返回本机Desktop文件夹的路径
+    """
+    warn(f'The zmlx.alg.sys.get_desktop_path is deprecated '
+         f'and will be removed after 2026-5-16, please use '
+         f'zmlx.alg.os.get_desktop_path instead.',
+         DeprecationWarning, stacklevel=2)
+    from zmlx.alg.os import get_desktop_path as impl
+    return impl(*args)
 
 
 def get_pythonw_path():
+    """
+    获取pythonw.exe的路径
+    Args:
+    Returns:
+        str: pythonw.exe的路径
+    """
     # 获取当前Python解释器的路径（通常是python.exe的路径）
     python_exe = sys.executable
     # 构造pythonw.exe的路径（与python.exe同目录）
@@ -289,39 +338,13 @@ def get_pythonw_path():
 
 def get_latest_version():
     """
-    返回程序的最新的版本
+    返回程序的最新的版本.
+    Returns:
+        int: 版本号
     """
     warnings.warn('function get_latest_version deprecated',
                   DeprecationWarning, stacklevel=2)
-    try:
-        try:
-            from zml import app_data
-        except:
-            app_data = None
-        if app_data is not None:
-            if app_data.has_tag_today('latest_version_checked'):
-                txt = app_data.getenv('latest_version')
-                if txt is not None:
-                    if len(txt) == 6:
-                        return int(txt)
-        url = 'https://gitee.com/geomech/hydrate'
-        from urllib.request import urlopen
-        import ssl  # using context
-        # text = '搜索如下关键词： ZmlVersion=221019 '
-        text = urlopen(url, context=ssl._create_unverified_context()
-                       ).read().decode("utf-8")
-        import re
-        result = re.findall(r'(\w+)=(\d+)', text)
-        _ver = dict(result).get('ZmlVersion')
-        if _ver is not None:
-            if app_data is not None:
-                app_data.setenv('latest_version', _ver)
-                app_data.add_tag_today('latest_version_checked')
-            return int(_ver)
-        return 100101  # default
-    except Exception as err:
-        print(err)
-        return 100101  # default
+    return 100101  # default
 
 
 def create_shortcut(target: str, path: str,
@@ -382,10 +405,21 @@ def create_shortcut(target: str, path: str,
 
 
 def create_ui_lnk_on_desktop(name='IGG-Hydrate.lnk'):
+    """
+    在桌面创建一个指向zml_ui.pyw的快捷方式
+    Args:
+        name: 快捷方式的名字
+
+    Returns:
+        None
+    """
+    from zmlx.alg.os import get_desktop_path
     from zmlx import get_path
-    create_shortcut(get_pythonw_path(), get_desktop_path(name),
-                    arguments=get_path('..', 'zml_ui.pyw')
-                    )
+    filename = get_desktop_path(name)
+    if isinstance(filename, str):
+        create_shortcut(get_pythonw_path(), filename,
+                        arguments=get_path('..', 'zml_ui.pyw')
+                        )
 
 
 def has_module(name):

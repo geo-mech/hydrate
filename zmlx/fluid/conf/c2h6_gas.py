@@ -3,7 +3,7 @@ Created on Mon Jun  5 16:09:29 2023
 
 @author: Maryelin
 """
-import warnings
+import zmlx.alg.sys as warnings
 
 from zml import Interp2, Seepage
 from zmlx.fluid.conf.gas_density.c2h6 import den_c2h6

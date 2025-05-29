@@ -3,7 +3,7 @@
 @author: Maryelin
 """
 
-import warnings
+import zmlx.alg.sys as warnings
 
 from zml import Interp2, Seepage
 from zmlx.fluid.conf.liqu_density.c2h6 import liq_den_c2h6

@@ -1,6 +1,6 @@
 from math import sqrt, pow
 
-from zmlx.alg.utils import clamp
+from zmlx.alg.base import clamp
 
 
 def get_frac_width(pos, half_length, shear_modulus, poisson_ratio,

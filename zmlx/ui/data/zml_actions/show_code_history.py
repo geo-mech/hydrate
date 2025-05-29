@@ -1,5 +1,4 @@
 text = '代码运行历史'
-is_sys = True
 menu = '帮助'
 
 

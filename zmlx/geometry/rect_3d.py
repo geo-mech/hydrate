@@ -8,7 +8,7 @@
 
 from zmlx.geometry.rect_v3 import get_area as v3_area, \
     intersected as v3_intersected
-from zmlx.geometry.utils import point_distance as get_distance
+from zmlx.geometry.base import point_distance as get_distance
 
 __unused = [v3_area, v3_intersected]
 

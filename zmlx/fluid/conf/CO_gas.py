@@ -5,7 +5,7 @@
 Specific Heat of Oxigen Gas  from:
 https://www.engineeringtoolbox.com/carbon-monoxide-d_1416.html
 """
-import warnings
+import zmlx.alg.sys as warnings
 
 from zml import Interp2, Seepage
 from zmlx.fluid.conf.gas_density.CO_density import *

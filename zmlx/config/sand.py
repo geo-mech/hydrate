@@ -72,6 +72,9 @@ def iterate(model: Seepage):
                             use_average=use_average)
 
         # 更新砂的体积
-        model.update_sand(sol_sand=sol_sand, flu_sand=flu_sand,
-                          ca_i0=ca_i0, ca_i1=ca_i1,
-                          force=get_pointer64(grad))
+        model.update_sand(
+            sol_sand=sol_sand,
+            flu_sand=flu_sand,
+            ca_i0=ca_i0, ca_i1=ca_i1,
+            force=get_pointer64(grad)
+        )

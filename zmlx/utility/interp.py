@@ -10,7 +10,7 @@ except Exception as e:
     NearestNDInterpolator = None
     LinearNDInterpolator = None
 
-from zmlx.alg.utils import join_cols
+from zmlx.alg.base import join_cols
 
 
 class Interp2:

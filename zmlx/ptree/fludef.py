@@ -10,7 +10,7 @@ def _from_text(text, find=None, name=None):
     尝试使用预定义的流体
     """
     if text is None:
-        return
+        return None
 
     if text == '@c11h24':
         from zmlx.fluid.c11h24 import create
@@ -67,12 +67,15 @@ def _from_text(text, find=None, name=None):
                 try:
                     return Seepage.FluDef(path=fname, name=name)
                 except:
-                    pass
+                    return None
+            return None
+        return None
+    return None
 
 
 def _from_list(data, path, name=None):
     if data is None:
-        return
+        return None
     f_def = Seepage.FluDef(name=name)
     for item in data:
         f_def.add_component(fludef(as_ptree(item, path)))
@@ -119,6 +122,7 @@ def fludef(pt):
 
         # 返回创建的定义
         return f_def
+    return None
 
 
 def fludefs(pt):

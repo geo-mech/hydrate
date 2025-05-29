@@ -1,5 +1,4 @@
 text = '注册'
-is_sys = True
 icon = 'reg'
 
 

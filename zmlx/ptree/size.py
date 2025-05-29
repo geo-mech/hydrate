@@ -6,9 +6,10 @@ def size(pt, ndim):
     assert isinstance(pt, PTree)
     data = array(pt)
     if data is None:
-        return
+        return None
     if len(data) >= ndim:
         return [round(data[i]) for i in range(ndim)]
+    return None
 
 
 def size2(pt):

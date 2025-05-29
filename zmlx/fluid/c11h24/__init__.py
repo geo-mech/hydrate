@@ -13,7 +13,7 @@ def create(name=None, specific_heat=None):
 
 
 def create_flu(*args, **kwargs):
-    import warnings
+    import zmlx.alg.sys as warnings
     warnings.warn('use function <create> instead', DeprecationWarning,
                   stacklevel=2)
     return create(*args, **kwargs)

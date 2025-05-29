@@ -1,5 +1,4 @@
 text = 'Python包设置'
-is_sys = True
 menu = '设置'
 
 

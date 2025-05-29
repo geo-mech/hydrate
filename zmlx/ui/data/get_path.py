@@ -1,16 +1,14 @@
 import os
-import warnings
+import zmlx.alg.sys as warnings
 
 from zml import make_parent
 from zmlx.alg.fsys import join_paths
 
 warnings.warn(
-    f'The {__file__} is deprecated, please use the "path.py" in the same folder instead. This file will be removed after 2026-4-15',
+    f'The {__name__} is deprecated, please use the "path.py" in the same folder instead. This file will be removed after 2026-4-15',
     DeprecationWarning, stacklevel=2)
 
-from zmlx.alg.sys import log_deprecated
 
-log_deprecated(__name__)
 
 
 def get_path(*args):

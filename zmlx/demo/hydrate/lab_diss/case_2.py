@@ -45,37 +45,39 @@ def create():
         return 1.0 if abs(y) < 2 else 0.0
 
     # 关键词
-    kw = hydrate.create_kwargs(gravity=[0, 0, 0],
-                               dt_min=1.0e-4,
-                               dt_max=10,
-                               dv_relative=0.1,
-                               mesh=mesh,
-                               porosity=0.3,
-                               pore_modulus=100e6,
-                               denc=denc,
-                               temperature=273.15 + 3.0,
-                               p=4e6,
-                               s=get_s,
-                               perm=1.0e-14,
-                               dist=0.001,
-                               heat_cond=heat_cond,
-                               prods=[{'index': -1,
-                                       't': [0, 1e20],
-                                       'p': [0.3e6, 0.3e6]}]
-                               )
+    kw = hydrate.create_kwargs(
+        gravity=[0, 0, 0],
+        dt_min=1.0e-4,
+        dt_max=10,
+        dv_relative=0.1,
+        mesh=mesh,
+        porosity=0.3,
+        pore_modulus=100e6,
+        denc=denc,
+        temperature=273.15 + 3.0,
+        p=4e6,
+        s=get_s,
+        perm=1.0e-14,
+        dist=0.001,
+        heat_cond=heat_cond,
+        prods=[{'index': -1,
+                't': [0, 1e20],
+                'p': [0.3e6, 0.3e6]}]
+    )
     model = seepage.create(**kw,
                            warnings_ignored={'gravity'})
 
     # 用于solve的选项
-    model.set_text(key='solve',
-                   text={'monitor': {'cell_ids': [model.cell_number - 1]},
-                         'show_cells': {'dim0': 0,
-                                        'dim1': 2,
-                                        'mask': seepage.get_cell_mask(
-                                            model=model, yr=[-1, 1])},
-                         'time_max': 3 * 24 * 3600,
-                         }
-                   )
+    model.set_text(
+        key='solve',
+        text={'monitor': {'cell_ids': [model.cell_number - 1]},
+              'show_cells': {'dim0': 0,
+                             'dim1': 2,
+                             'mask': seepage.get_cell_mask(
+                                 model=model, yr=[-1, 1])},
+              'time_max': 3 * 24 * 3600,
+              }
+    )
     # 返回模型
     return model
 

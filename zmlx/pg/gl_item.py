@@ -1,4 +1,4 @@
-import warnings
+import zmlx.alg.sys as warnings
 
 import pyqtgraph.opengl as gl
 
@@ -10,6 +10,4 @@ warnings.warn(
     'please do not use <zmlx/pg/GLItem> anymore. will be removed after 2024-6-16',
     DeprecationWarning, stacklevel=2)
 
-from zmlx.alg.sys import log_deprecated
 
-log_deprecated(__name__)

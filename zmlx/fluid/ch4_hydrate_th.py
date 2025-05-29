@@ -3,7 +3,7 @@
 """
 
 import math
-import warnings
+import zmlx.alg.sys as warnings
 
 from zml import Seepage, Interp2
 

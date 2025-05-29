@@ -1,4 +1,4 @@
-import warnings
+import zmlx.alg.sys as warnings
 
 from zmlx.fem.elements.planar_strain_cst import stiffness as stiffness_cst
 

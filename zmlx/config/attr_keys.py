@@ -1,7 +1,7 @@
 """
 用于管理Seepage的动态属性
 """
-import warnings
+import zmlx.alg.sys as warnings
 
 from zml import Seepage
 

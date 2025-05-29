@@ -11,6 +11,7 @@ def enabled():
         return hasattr(
             window.get_current_widget(),
             'console_exec') and not window.is_running()
+    return None
 
 
 def slot():

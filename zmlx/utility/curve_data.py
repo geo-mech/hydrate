@@ -3,7 +3,7 @@ import os
 from scipy.interpolate import interp1d
 
 from zml import is_array, np
-from zmlx.alg.utils import clamp
+from zmlx.alg.base import clamp
 
 
 class CurveData:

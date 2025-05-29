@@ -1,4 +1,4 @@
-import warnings
+import zmlx.alg.sys as warnings
 
 from zmlx.base.has_cells import get_nearest_cell
 

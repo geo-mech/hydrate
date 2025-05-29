@@ -3,7 +3,7 @@ import time
 import timeit
 
 from zml import app_data
-from zmlx.alg.utils import fsize2str, clamp
+from zmlx.alg.base import fsize2str, clamp
 from zmlx.ui.pyqt import QtWidgets, QtCore
 
 

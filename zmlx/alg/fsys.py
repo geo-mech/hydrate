@@ -95,10 +95,10 @@ def get_last_file(folder):
     返回给定文件夹中的最后一个文件（按照文件名，利用字符串默认的对比，从小到大排序）
     """
     if not os.path.isdir(folder):
-        return
+        return None
     files = os.listdir(folder)
     if len(files) == 0:
-        return
+        return None
     else:
         return os.path.join(folder, max(files))
 
@@ -204,7 +204,7 @@ def make_fname(time, folder=None, ext=None, unit=None):
     如果folder为None，则返回None
     """
     if folder is None:
-        return
+        return None
     name = ('%020.5f' % time).replace('.', '_')
     if unit is not None:
         name = name + unit
@@ -236,6 +236,7 @@ def make_fpath(folder, step=None, ext='.txt', name=None):
         return os.path.join(folder, f'{step:010d}{ext}')
     if name is not None:
         return os.path.join(folder, name)
+    return None
 
 
 def prepare_dir(folder, direct_del=False):
@@ -292,7 +293,7 @@ def getsize_str(filename):
     """
     将文件的大小，显示为字符串
     """
-    from zmlx.alg.utils import fsize2str
+    from zmlx.alg.base import fsize2str
     return fsize2str(getsize(filename))
 
 
@@ -371,7 +372,7 @@ def _do_convert(i_path, o_path, convert=None, keep_file=True, create_data=None,
     """
     执行转化过程. 返回是否成功
     """
-    from zmlx.alg.utils import time2str
+    from zmlx.alg.base import time2str
     succeed = False
     try:
         if convert is not None:
@@ -417,7 +418,7 @@ def change_fmt(convert=None, ext=None, path=None, keywords=None, keep_file=True,
     修改数据的格式。其中给定的函数<convert>将接受两个参数，分别为输入和输出的路径
     """
     from zmlx.alg.multi_proc import apply_async, create_async
-    from zmlx.alg.utils import time2str
+    from zmlx.alg.base import time2str
     if ext is None:
         print('You must set the new file extension')
         return
@@ -429,14 +430,15 @@ def change_fmt(convert=None, ext=None, path=None, keywords=None, keep_file=True,
         portion = os.path.splitext(file)
         assert len(portion) == 2
         opath = portion[0] + ext
-        tasks.append(create_async(func=_do_convert,
-                                  kwds={'i_path': file, 'o_path': opath,
-                                        'convert': convert,
-                                        'create_data': create_data,
-                                        'keep_file': keep_file,
-                                        'index': idx,
-                                        'count': len(files), 't_beg': t_beg
-                                        }))
+        tasks.append(create_async(
+            func=_do_convert,
+            kwds={'i_path': file, 'o_path': opath,
+                  'convert': convert,
+                  'create_data': create_data,
+                  'keep_file': keep_file,
+                  'index': idx,
+                  'count': len(files), 't_beg': t_beg
+                  }))
     is_succeed = apply_async(tasks=tasks, processes=processes)
 
     assert len(is_succeed) == len(files)

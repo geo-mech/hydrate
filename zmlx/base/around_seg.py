@@ -1,4 +1,4 @@
-from zmlx.geometry.utils import seg_point_distance as get_seg_point_distance
+from zmlx.geometry.base import seg_point_distance as get_seg_point_distance
 
 
 def get_cells_around_seg(seg, dist, model):

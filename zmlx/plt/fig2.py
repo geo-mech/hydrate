@@ -1,14 +1,17 @@
+import warnings
+
 from zml import is_array, np
 from zmlx.plt.cmap import get_cm, get_color
 from zmlx.plt.on_axes import plot_on_axes
 from zmlx.plt.on_figure import plot_on_figure
 
 
-def contourf(x=None, y=None, z=None,
-             levels=20,
-             cmap='coolwarm',
-             clabel=None,
-             **opts):
+def contourf(
+        x=None, y=None, z=None,
+        levels=20,
+        cmap='coolwarm',
+        clabel=None,
+        **opts):
     """
     绘制二维填充等高线图（云图），支持灵活的参数配置
 
@@ -26,7 +29,7 @@ def contourf(x=None, y=None, z=None,
         颜色映射名称或Colormap对象
     clabel : str, optional
         是否显示等高线标签，默认由绘图后端决定
-    **opts : dict
+    **opts :
         传递给底层plot函数的附加参数
     """
 
@@ -42,8 +45,9 @@ def contourf(x=None, y=None, z=None,
     plot_on_axes(on_axes, **opts)
 
 
-def plotxy(x=None, y=None, ipath=None, ix=None, iy=None,
-           **opts):
+def plot_xy(
+        x=None, y=None, ipath=None, ix=None, iy=None,
+        **opts):
     """
     绘制二维曲线图，支持数组输入和文件数据加载
 
@@ -55,15 +59,11 @@ def plotxy(x=None, y=None, ipath=None, ix=None, iy=None,
         数据文件路径，要求为可被numpy.loadtxt读取的格式
     ix, iy : int, optional
         文件数据列的索引，用于指定x/y数据所在列
-    **opts : dict
+    **opts :
         传递给底层plot的附加参数
     """
     # 文件数据加载处理
     if ipath is not None:
-        try:
-            import numpy as np
-        except ImportError:
-            np = None
         try:
             data = np.loadtxt(ipath, dtype=float)
             # 自动处理列索引（当未指定时默认0/1列）
@@ -77,6 +77,13 @@ def plotxy(x=None, y=None, ipath=None, ix=None, iy=None,
         raise ValueError("必须提供x/y数据或有效文件路径")
 
     plot_on_axes(on_axes=lambda ax: ax.plot(x, y), **opts)
+
+
+def plotxy(*args, **kwargs):
+    warnings.warn("plotxy is deprecated, please use plot_xy instead",
+                  DeprecationWarning,
+                  stacklevel=2)
+    plot_xy(*args, **kwargs)
 
 
 def show_dfn2(dfn2, **opts):
@@ -121,24 +128,21 @@ def show_field2(f, xr, yr, clabel=None, **opts):
     plot_on_axes(on_axes, **opts)
 
 
-def tricontourf(x=None, y=None, z=None,
-                ipath=None, ix=None, iy=None, iz=None,
-                triangulation=None,
-                levels=20,
-                cmap='coolwarm',
-                clabel=None,
-                **opts):
+def tricontourf(
+        x=None, y=None, z=None,
+        ipath=None, ix=None, iy=None, iz=None,
+        triangulation=None,
+        levels=20,
+        cmap='coolwarm',
+        clabel=None,
+        **opts):
     """
     利用给定的x，y，z来画一个二维的云图.
     """
 
-    def _load(ipath=None, ix=None, iy=None, iz=None):
-        try:
-            import numpy as np
-        except ImportError:
-            np = None
-        data = np.loadtxt(ipath, float)
-        return data[:, ix], data[:, iy], data[:, iz]
+    def _load(ipath_=None, ix_=None, iy_=None, iz_=None):
+        data = np.loadtxt(ipath_, float)
+        return data[:, ix_], data[:, iy_], data[:, iz_]
 
     def on_axes(ax):
         args = (x, y, z) if ipath is None else _load(ipath, ix, iy, iz)
@@ -157,12 +161,13 @@ def tricontourf(x=None, y=None, z=None,
     plot_on_axes(on_axes, **opts)
 
 
-def show_fn2(pos=None, w=None, c=None, w_min=1, w_max=4, ipath=None, iw=4, ic=6,
-             clabel=None, ctitle=None,
-             title=None,
-             xlabel=None, ylabel=None,
-             xlim=None, ylim=None,
-             **opt):
+def show_fn2(
+        pos=None, w=None, c=None, w_min=1, w_max=4, ipath=None, iw=4, ic=6,
+        clabel=None, ctitle=None,
+        title=None,
+        xlabel=None, ylabel=None,
+        xlim=None, ylim=None,
+        **opt):
     """显示二维裂缝网络数据。
 
     该函数支持两种数据输入方式：
@@ -201,10 +206,6 @@ def show_fn2(pos=None, w=None, c=None, w_min=1, w_max=4, ipath=None, iw=4, ic=6,
     """
     if pos is None or w is None or c is None:
         if ipath is not None:
-            try:
-                import numpy as np
-            except ImportError:
-                np = None
             d = np.loadtxt(ipath)
             pos = d[:, 0: 4]
             w = d[:, iw]
@@ -339,17 +340,14 @@ def trimesh(triangles, points, line_width=1.0, **opts):
     plot_on_axes(on_axes=on_axes, dim=2, **opts)
 
 
-def tricontourf_(ax, x=None, y=None, z=None, ipath=None, ix=None, iy=None,
-                 iz=None,
-                 triangulation=None, levels=20, cmap='coolwarm'):
+def tricontourf_(
+        ax, x=None, y=None, z=None, ipath=None, ix=None, iy=None,
+        iz=None,
+        triangulation=None, levels=20, cmap='coolwarm'):
     """
     利用给定的x，y，z来画一个二维的云图
     """
     if ipath is not None:
-        try:
-            import numpy as np
-        except ImportError:
-            np = None
         data = np.loadtxt(ipath, float)
         if ix is not None:
             x = data[:, ix]
