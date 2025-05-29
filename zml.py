@@ -12223,6 +12223,35 @@ class Seepage(HasHandle, HasCells):
         反应的速度以及反应过程中的能量变化。基于Seepage
         类模拟水合物的分解或者生成、冰的形成和融化、重油的裂解等，
         均基于此Reaction类进行定义。
+
+        反应速率q定义：
+            在单位时间内（1秒内），“反应所消耗的物质的质量（左侧物质质量的减少量）”
+                与 “在Cell中所有与此反应相关的组分的质量之和”的比值. 
+                
+            注意：
+                此定义与一般反应速率的定义不同，需要进行转换. 
+            
+        当Reaction作用到一个Cell上的时候，反应速率的计算步骤如下：
+            1. 根据Cell内流体的压力，使用p2t曲线，计算出基准温度T0。如果p2t没有定义，则
+                基准温度为0;
+            2. 遍历各个Inhibitor，如果定义了c2t曲线，则计算此Inhibitor的浓度，并使用
+                c2t曲线，计算出此Inhibitor对基准温度的影响。
+                注意：此浓度的计算是基于sol和liq的比值计算的。
+            3. 尝试读取Cell的idt属性和wdt属性，在此Cell内，T0=T0+idt属性值*wdt属性值.
+                至此，获得了经过矫正的基准温度T0;
+            4. 读取反应相关的各个组分的平均温度T，并减去基准温度T0，即得到dT=T-T0。下面，将
+                使用这个dT来计算反应速率.
+            5. 使用dT，以及t2q曲线，计算出正向反应速率q；同理，基于t2qr曲线，根据dT，计算出
+                逆向的反应速率qr. 
+            6. 遍历各个Inhibitor，如果其定义了exp，则令q=q*c^exp；如果其定义了exp_r则令
+                qr=qr*c^exp_r。 这个步骤，即使用相关组分的浓度来对正向和逆向的反应速率进行
+                必要的矫正。
+            7. 令反应速率Q=q-qr。
+            8. 遍历各个Inhibitor，如果其定义了c2q曲线，则使用c2q曲线，对反应速率Q进行矫正。
+                即Q=Q+c2q(c)。
+            9. 查看Cell是否定义了irate属性，如果定义了，则读取irate属性为此Cell内速率的倍率，
+                令Q=Q*irate属性值
+            10. 至此，得到了最终的反应速率Q。
         """
 
         class Component:
@@ -12288,7 +12317,8 @@ class Seepage(HasHandle, HasCells):
             @property
             def weight(self):
                 """
-                组分权重
+                组分权重。 左侧物质的权重为负值，右侧为正值. 所有左侧物质权重的加和等于-1
+                右侧物质权重的加和等于+1
                 """
                 return core.rea_comp_get_weight(self.handle)
 
@@ -12302,6 +12332,9 @@ class Seepage(HasHandle, HasCells):
                 core.rea_comp_set_weight(self.handle, value)
 
         class Inhibitor:
+            """
+            定义抑制剂，或者催化剂。这种物质不参与反应，但是可能会影响到反应的速率。
+            """
             def __init__(self, handle):
                 self.handle = handle
 
@@ -12310,7 +12343,10 @@ class Seepage(HasHandle, HasCells):
             @property
             def sol(self):
                 """
-                溶质对应的ID
+                溶质对应的ID.
+                在实际计算的时候，将根据sol的质量（或者体积）除以liq的质量（或者体积）来
+                获得溶质的浓度，并根据此浓度来矫正反应速率。
+                计算得到的溶质的浓度将会是0到1之间的数值。
                 """
                 return UintVector(
                     handle=core.rea_inh_get_sol(self.handle)).to_list()
@@ -12328,7 +12364,10 @@ class Seepage(HasHandle, HasCells):
             @property
             def liq(self):
                 """
-                溶液对应的ID
+                溶液对应的ID.
+                在实际计算的时候，将根据sol的质量（或者体积）除以liq的质量（或者体积）来
+                获得溶质的浓度，并根据此浓度来矫正反应速率。
+                计算得到的溶质的浓度将会是0到1之间的数值。
                 """
                 return UintVector(
                     handle=core.rea_inh_get_liq(self.handle)).to_list()
@@ -12346,7 +12385,10 @@ class Seepage(HasHandle, HasCells):
             @property
             def c2t(self):
                 """
-                溶质浓度与平衡温度的关系
+                溶质浓度（根据sol和liq的比值计算）对基准温度的矫正。
+                定义一条曲线，其中
+                    x为溶质的浓度 （0到1之间）
+                    y为此抑制剂对基准温度的改变。y>0则相当于提升基准温度（等价于流体温度降低）。单位为K
                 """
                 handle = core.rea_inh_get_c2t(self.handle)
                 return Interp1(handle=handle)
@@ -12357,7 +12399,9 @@ class Seepage(HasHandle, HasCells):
             @property
             def use_vol(self):
                 """
-                是否使用体积分数 (如果为False，则使用质量分数)
+                是否使用体积分数 (如果为False，则使用质量分数)。
+                如果为True，则定义浓度c为c=sol的体积/liq的体积。
+                否则，定义浓度c为c=sol的质量/liq的质量。
                 """
                 return core.rea_inh_get_use_vol(self.handle)
 
@@ -12365,6 +12409,8 @@ class Seepage(HasHandle, HasCells):
             def use_vol(self, value):
                 """
                 是否使用体积分数 (如果为False，则使用质量分数)
+                如果为True，则定义浓度c为c=sol的体积/liq的体积。
+                否则，定义浓度c为c=sol的质量/liq的质量。
                 """
                 core.rea_inh_set_use_vol(self.handle, value)
 
@@ -12373,7 +12419,10 @@ class Seepage(HasHandle, HasCells):
             @property
             def c2q(self):
                 """
-                从质量分数到反应速率的插值函数
+                溶质浓度（根据sol和liq的比值计算）对反应速率矫正。
+                定义一条曲线，其中
+                    x为溶质的浓度 （0到1之间）
+                    y为此抑制剂对反应速率的影响。基于此计算的反应速率，将直接叠加在反应的速率上。
                 """
                 handle = core.rea_inh_get_c2q(self.handle)
                 return Interp1(handle=handle)
@@ -12383,7 +12432,8 @@ class Seepage(HasHandle, HasCells):
             @property
             def exp(self):
                 """
-                反应速率的指数
+                反应速率的指数（正向反应）.
+                在使用反应的t2q计算出正向反应速率之后，将乘以c**exp。
                 """
                 return core.rea_inh_get_exp(self.handle)
 
@@ -12392,7 +12442,8 @@ class Seepage(HasHandle, HasCells):
             @exp.setter
             def exp(self, value):
                 """
-                反应速率的指数
+                反应速率的指数（正向反应）.
+                在使用反应的t2q计算出正向反应速率之后，将乘以c**exp。
                 """
                 core.rea_inh_set_exp(self.handle, value)
 
@@ -12402,6 +12453,7 @@ class Seepage(HasHandle, HasCells):
             def exp_r(self):
                 """
                 反应速率的指数(逆向)
+                在使用反应的t2qr计算出逆向反应速率之后，将乘以c**exp_r。
                 """
                 return core.rea_inh_get_exp_r(self.handle)
 
@@ -12411,6 +12463,7 @@ class Seepage(HasHandle, HasCells):
             def exp_r(self, value):
                 """
                 反应速率的指数(逆向)
+                在使用反应的t2qr计算出逆向反应速率之后，将乘以c**exp_r。
                 """
                 core.rea_inh_set_exp_r(self.handle, value)
 
