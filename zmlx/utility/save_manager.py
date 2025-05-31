@@ -1,6 +1,6 @@
 import os
-import zmlx.alg.sys as warnings
 
+import zmlx.alg.sys as warnings
 from zmlx.alg.fsys import make_fname
 
 
@@ -83,9 +83,10 @@ class SaveManager:
             if len(self.folder) > 0:
                 if not os.path.exists(self.folder):
                     os.makedirs(self.folder, exist_ok=True)
-        path = make_fname(time=current_t / self.unit_length, folder=self.folder,
-                          ext=self.ext,
-                          unit=self.time_unit)
+        path = make_fname(
+            time=current_t / self.unit_length, folder=self.folder,
+            ext=self.ext,
+            unit=self.time_unit)
         try:
             # 将save函数在保护中运行，确保save函数的异常不会波及全局
             if path is not None or self.always_save:

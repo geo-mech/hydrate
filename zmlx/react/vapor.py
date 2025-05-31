@@ -25,20 +25,20 @@ from math import exp
 from zmlx.react import melt
 
 
-def get_heat_need(water_T, steam_T):
+def get_heat_need(water_t, steam_t):
     """
     返回将1kg的T0温度的水加热并生成T1温度的蒸汽，所需要消耗的热量 (大约的，仅仅用于建模的时候使用)
     """
-    E1 = 4200.0 * (273.15 + 100.0 - water_T)  # 首先，加热到100摄氏度的水
+    E1 = 4200.0 * (273.15 + 100.0 - water_t)  # 首先，加热到100摄氏度的水
     E2 = 2.26e6  # 相变
-    E3 = 1850 * (steam_T - (273.15 + 100.0))  # 蒸汽继续升温
+    E3 = 1850 * (steam_t - (273.15 + 100.0))  # 蒸汽继续升温
     return E1 + E2 + E3
 
 
 def create(vap, wat, fa_t=None, fa_c=None, temp_max=None):
     """
     创建水气化成为水蒸气的反应(以及其逆过程)
-        ivap: 水蒸气的ID；iwat水的ID
+        vap: 水蒸气的ID；wat水的ID
     """
     # 使用Antoine 公式，实际上这个温度范围可能已经超过了该公式的适用范围
     if temp_max is None:

@@ -49,17 +49,17 @@ def create_p2t():
     return Interp1(x=vp, y=vt).to_evenly_spaced(300)
 
 
-def get_mg_vs_mh(Nh=6.0):
+def get_mg_vs_mh(nh=6.0):
     """
     返回1kg水合物分解之后产生的甲烷气体的质量(kg);
 
         When Nh=6, Return 0.129
         When Nh=5, Return 0.151
     """
-    return 16.0 / (18.0 * Nh + 16.0)
+    return 16.0 / (18.0 * nh + 16.0)
 
 
-def get_dheat(Nh=6.0):
+def get_dheat(nh=6.0):
     """
     分解1kg水合物所需要消耗的热量
     ---
@@ -69,18 +69,18 @@ def get_dheat(Nh=6.0):
         When Nh=6, Return 437096.77
         When Nh=5, Return 511320.75
     """
-    return (54.2e3 / 16.0E-3) * get_mg_vs_mh(Nh)
+    return (54.2e3 / 16.0E-3) * get_mg_vs_mh(nh)
 
 
 def create(gas, wat, hyd, fa_t=None, fa_c=None, dissociation=True,
-           formation=True, Nh=6.0):
+           formation=True, nh=6.0):
     """
     创建一个ch4水合物反应(平衡态的反应，反应的速率给的非常大)
     by 张召彬
     """
     return hydrate.create(
-        vp=vp, vt=vt, temp=273.15, heat=get_dheat(Nh=Nh),
-        mg=get_mg_vs_mh(Nh=Nh),
+        vp=vp, vt=vt, temp=273.15, heat=get_dheat(nh=nh),
+        mg=get_mg_vs_mh(nh=nh),
         gas=gas, liq=wat, hyd=hyd,
         fa_t=fa_t, fa_c=fa_c,
         dissociation=dissociation, formation=formation)

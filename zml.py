@@ -12773,24 +12773,12 @@ class Seepage(HasHandle, HasCells):
             return Iterator(self, self.component_n,
                             lambda m, ind: m.get_component(ind))
 
-        def add_inhibitor(self, sol, liq, c, t, *, use_vol=False):
-            """
-            添加一种抑制剂。
-
-            Args:
-                sol (int): 抑制剂对应的组分ID。
-                liq (int): 流体的组分ID。
-                c (Vector or list): 抑制剂浓度向量。
-                t (Vector or list): 化学反应平衡温度向量。
-                use_vol (bool, optional): 是否使用体积。默认为False。
-            """
-            idx = self.inhibitor_n
-            self.inhibitor_n = idx + 1
-            inh = self.get_inhibitor(idx)
-            inh.sol = parse_fid(sol)
-            inh.liq = parse_fid(liq)
-            inh.c2t.set_xy(c, t)
-            inh.use_vol = use_vol
+        def add_inhibitor(self, *args, **kwargs):
+            warnings.warn('Reaction.add_inhibitor will be removed after 2026-5-31, '
+                          'use zmlx.react.alg.add_inhibitor instead',
+                          DeprecationWarning, stacklevel=2)
+            from zmlx.react import alg
+            return alg.add_inhibitor(self, *args, **kwargs)
 
         def clear_inhibitors(self):
             """
@@ -13273,8 +13261,6 @@ class Seepage(HasHandle, HasCells):
 
         core.use(c_double, 'fludef_get_specific_heat',
                  c_void_p)
-        core.use(None, 'fludef_set_specific_heat',
-                 c_void_p, c_double)
 
         @property
         def specific_heat(self):
@@ -13289,6 +13275,9 @@ class Seepage(HasHandle, HasCells):
             """
             assert self.component_number == 0
             return core.fludef_get_specific_heat(self.handle)
+
+        core.use(None, 'fludef_set_specific_heat',
+                 c_void_p, c_double)
 
         @specific_heat.setter
         def specific_heat(self, value):
@@ -13307,8 +13296,6 @@ class Seepage(HasHandle, HasCells):
 
         core.use(c_size_t, 'fludef_get_component_number',
                  c_void_p)
-        core.use(None, 'fludef_set_component_number',
-                 c_void_p, c_size_t)
 
         @property
         def component_number(self):
@@ -13319,6 +13306,9 @@ class Seepage(HasHandle, HasCells):
                 int: 流体组分的数量。
             """
             return core.fludef_get_component_number(self.handle)
+
+        core.use(None, 'fludef_set_component_number',
+                 c_void_p, c_size_t)
 
         @component_number.setter
         def component_number(self, value):
@@ -13350,17 +13340,11 @@ class Seepage(HasHandle, HasCells):
             else:
                 return None
 
-        core.use(None, 'fludef_clear_components',
-                 c_void_p)
-
         def clear_components(self):
             """
             清除所有的组分。
             """
-            core.fludef_clear_components(self.handle)
-
-        core.use(c_size_t, 'fludef_add_component',
-                 c_void_p, c_void_p)
+            self.component_number = 0
 
         def add_component(self, flu, name=None):
             """
@@ -13374,9 +13358,12 @@ class Seepage(HasHandle, HasCells):
                 int: 新添加组分的ID。
             """
             assert isinstance(flu, Seepage.FluDef)
-            idx = core.fludef_add_component(self.handle, flu.handle)
+            idx = self.component_number
+            self.component_number = idx + 1
+            temp = self.get_component(idx)
+            temp.clone(flu)
             if name is not None:
-                self.get_component(idx).name = name
+                temp.name = name
             return idx
 
         @staticmethod
@@ -13403,8 +13390,6 @@ class Seepage(HasHandle, HasCells):
                     result.add_component(Seepage.FluDef.create(x))
                 return result
 
-        core.use(None, 'fludef_set_name',
-                 c_void_p, c_char_p)
         core.use(c_char_p, 'fludef_get_name',
                  c_void_p)
 
@@ -13417,6 +13402,9 @@ class Seepage(HasHandle, HasCells):
                 str: 流体组分的名称。
             """
             return core.fludef_get_name(self.handle).decode()
+
+        core.use(None, 'fludef_set_name',
+                 c_void_p, c_char_p)
 
         @name.setter
         def name(self, value):
@@ -13838,8 +13826,6 @@ class Seepage(HasHandle, HasCells):
 
         core.use(c_size_t, 'fluid_get_component_number',
                  c_void_p)
-        core.use(None, 'fluid_set_component_number',
-                 c_void_p, c_size_t)
 
         @property
         def component_number(self):
@@ -13851,6 +13837,9 @@ class Seepage(HasHandle, HasCells):
                 int: 流体组分的数量。
             """
             return core.fluid_get_component_number(self.handle)
+
+        core.use(None, 'fluid_set_component_number',
+                 c_void_p, c_size_t)
 
         @component_number.setter
         def component_number(self, value):
@@ -16711,6 +16700,17 @@ class Seepage(HasHandle, HasCells):
         """
         return core.seepage_get_gr_n(self.handle)
 
+    core.use(None, 'seepage_set_gr_n', c_void_p, c_size_t)
+
+    @gr_number.setter
+    def gr_number(self, value):
+        """
+        设置模型中gr的数量
+        Args:
+            value:
+        """
+        core.seepage_set_gr_n(self.handle, value)
+
     core.use(c_void_p, 'seepage_get_gr',
              c_void_p, c_size_t)
 
@@ -16740,9 +16740,6 @@ class Seepage(HasHandle, HasCells):
         return Iterator(model=self, count=self.gr_number,
                         get=lambda m, ind: m.get_gr(ind))
 
-    core.use(c_size_t, 'seepage_add_gr',
-             c_void_p, c_void_p)
-
     def add_gr(self, gr, need_id=False):
         """
         添加一个gr. 其中gr应该为Interp1类型.
@@ -16755,24 +16752,25 @@ class Seepage(HasHandle, HasCells):
             Interp1 or int: 如果 need_id 为 False，则返回添加的 gr 对象；
             否则返回添加的 gr 的 ID。
         """
-        if not isinstance(gr, Interp1):
+        idx = self.gr_number
+        self.gr_number = idx + 1
+        if isinstance(gr, Interp1):
+            self.get_gr(idx).clone(gr)
+        else:
             assert len(gr) == 2
             assert len(gr[0]) == len(gr[1])
             assert len(gr[0]) >= 2
-            gr = Interp1(x=gr[0], y=gr[1])
-        idx = core.seepage_add_gr(self.handle, gr.handle)
+            self.get_gr(idx).set_xy(gr[0], gr[1])
         if need_id:
             return idx
         else:
             return self.get_gr(idx)
 
-    core.use(None, 'seepage_clear_grs', c_void_p)
-
     def clear_grs(self):
         """
         删除模型中所有的gr
         """
-        core.seepage_clear_grs(self.handle)
+        self.gr_number = 0
 
     core.use(c_size_t, 'seepage_get_kr_n', c_void_p)
 
@@ -16959,6 +16957,17 @@ class Seepage(HasHandle, HasCells):
         """
         return core.seepage_get_fludef_n(self.handle)
 
+    core.use(None, 'seepage_set_fludef_n', c_void_p, c_size_t)
+
+    @fludef_number.setter
+    def fludef_number(self, val):
+        """
+        设置模型中流体定义的数量
+        Args:
+            val (int): 要设置的流体定义数量。
+        """
+        core.seepage_set_fludef_n(self.handle, val)
+
     core.use(c_bool, 'seepage_find_fludef',
              c_void_p, c_char_p, c_void_p)
 
@@ -17007,9 +17016,6 @@ class Seepage(HasHandle, HasCells):
         else:
             return None
 
-    core.use(c_size_t, 'seepage_add_fludef',
-             c_void_p, c_void_p)
-
     def add_fludef(self, fdef, need_id=False, name=None):
         """
         添加一个流体定义
@@ -17026,21 +17032,22 @@ class Seepage(HasHandle, HasCells):
         if not isinstance(fdef, Seepage.FluDef):
             # 此时，可能是一个list
             fdef = Seepage.FluDef.create(fdef)
-        idx = core.seepage_add_fludef(self.handle, fdef.handle)
+        idx = self.fludef_number
+        self.fludef_number = idx + 1
+        result = self.get_fludef(idx)
+        result.clone(fdef)
         if name is not None:
-            self.get_fludef(idx).name = name
+            result.name = name
         if need_id:
             return idx
         else:
-            return self.get_fludef(idx)
-
-    core.use(None, 'seepage_clear_fludefs', c_void_p)
+            return result
 
     def clear_fludefs(self):
         """
         清除所有的流体定义
         """
-        core.seepage_clear_fludefs(self.handle)
+        self.fludef_number = 0
 
     def set_fludefs(self, *args):
         """
@@ -17065,6 +17072,17 @@ class Seepage(HasHandle, HasCells):
         """
         return core.seepage_get_pc_n(self.handle)
 
+    core.use(None, 'seepage_set_pc_n', c_void_p, c_size_t)
+
+    @pc_number.setter
+    def pc_number(self, val):
+        """
+        设置模型中毛管压力曲线的数量
+        Args:
+            val (int): 要设置的毛管压力曲线数量。
+        """
+        core.seepage_set_pc_n(self.handle, val)
+
     core.use(c_void_p, 'seepage_get_pc', c_void_p, c_size_t)
 
     def get_pc(self, idx):
@@ -17077,12 +17095,11 @@ class Seepage(HasHandle, HasCells):
         Returns:
             Interp1: 序号为 idx 的毛管压力曲线对象，如果索引无效则返回 None。
         """
-        if idx < self.pc_number:
+        idx = get_index(idx, self.pc_number)
+        if idx is not None:
             return Interp1(handle=core.seepage_get_pc(self.handle, idx))
         else:
             return None
-
-    core.use(c_size_t, 'seepage_add_pc', c_void_p, c_void_p)
 
     def add_pc(self, data, need_id=False):
         """
@@ -17097,32 +17114,22 @@ class Seepage(HasHandle, HasCells):
             则返回添加的毛管压力曲线对象；否则返回添加的毛管压力曲线的 ID。
         """
         assert isinstance(data, Interp1)
-        idx = core.seepage_add_pc(self.handle, data.handle)
+        idx = self.pc_number
+        self.pc_number = idx + 1
+        temp = self.get_pc(idx)
+        temp.clone(data)
         if need_id:
             return idx
         else:
-            return self.get_pc(idx)
-
-    core.use(None, 'seepage_clear_pcs', c_void_p)
+            return temp
 
     def clear_pcs(self):
         """
         清除所有的毛管压力曲线
         """
-        core.seepage_clear_pcs(self.handle)
+        self.pc_number = 0
 
     core.use(c_size_t, 'seepage_get_reaction_n', c_void_p)
-
-    @property
-    def reactions(self):
-        """
-        迭代所有的反应
-
-        Returns:
-            Iterator: 包含所有反应对象的迭代器。
-        """
-        return Iterator(model=self, count=self.reaction_number,
-                        get=lambda m, ind: m.get_reaction(ind))
 
     @property
     def reaction_number(self):
@@ -17133,6 +17140,18 @@ class Seepage(HasHandle, HasCells):
             int: 模型中反应的数量。
         """
         return core.seepage_get_reaction_n(self.handle)
+
+    core.use(None,'seepage_set_reaction_n',
+             c_void_p, c_size_t)
+
+    @reaction_number.setter
+    def reaction_number(self, val):
+        """
+        设置模型中反应的数量
+        Args:
+            val (int): 要设置的反应数量。
+        """
+        core.seepage_set_reaction_n(self.handle, val)
 
     core.use(c_void_p, 'seepage_get_reaction',
              c_void_p, c_size_t)
@@ -17154,9 +17173,6 @@ class Seepage(HasHandle, HasCells):
         else:
             return None
 
-    core.use(c_size_t, 'seepage_add_reaction',
-             c_void_p, c_void_p)
-
     def add_reaction(self, data, need_id=False):
         """
         添加一个反应
@@ -17171,19 +17187,20 @@ class Seepage(HasHandle, HasCells):
         """
         if not isinstance(data, Seepage.Reaction):
             assert isinstance(data, dict)
+            from zmlx.react import alg
             warnings.warn(
                 'The none Seepage.Reaction type will '
                 'not be supported after 2026-2-7',
                 DeprecationWarning, stacklevel=2)
-            data = self.create_reaction(**data)
-        idx = core.seepage_add_reaction(self.handle, data.handle)
-        if need_id:
-            return idx
+            return alg.add_reaction(self, data, need_id=need_id)
         else:
-            return self.get_reaction(idx)
-
-    core.use(None, 'seepage_clear_reactions',
-             c_void_p)
+            idx = self.reaction_number
+            self.reaction_number = idx + 1
+            self.get_reaction(idx).clone(data)
+            if need_id:
+                return idx
+            else:
+                return self.get_reaction(idx)
 
     def clear_reactions(self):
         """
@@ -17192,7 +17209,7 @@ class Seepage(HasHandle, HasCells):
         Returns:
             None
         """
-        core.seepage_clear_reactions(self.handle)
+        self.reaction_number = 0
 
     core.use(None, 'seepage_remove_reaction',
              c_void_p, c_size_t)
@@ -17232,6 +17249,17 @@ class Seepage(HasHandle, HasCells):
             DeprecationWarning, stacklevel=2)
         from zmlx.react.alg import create_reaction as create
         return create(self, **kwargs)
+
+    @property
+    def reactions(self):
+        """
+        迭代所有的反应
+
+        Returns:
+            Iterator: 包含所有反应对象的迭代器。
+        """
+        return Iterator(model=self, count=self.reaction_number,
+                        get=lambda m, ind: m.get_reaction(ind))
 
     core.use(c_void_p, 'seepage_get_buffer',
              c_void_p, c_char_p)

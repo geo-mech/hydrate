@@ -34,7 +34,8 @@ class LinearField:
 
 class Field:
     """
-    Define a three-dimensional field. Make value = f(pos) return data at any position.
+    Define a three-dimensional field.
+    Make value = f(pos) return data at any position.
     where pos is the coordinate and f is an instance of Field
     """
 
@@ -57,7 +58,8 @@ class Field:
 
     def __init__(self, value):
         """
-        create the field. treat it as a constant field when it is not a function(__call__ not defined)
+        create the field. treat it as a constant field
+        when it is not a function(__call__ not defined)
         """
         if callable(value):
             self.__field = value
@@ -99,8 +101,9 @@ class UniformProfile:
 
 def _test():
     from zml import app_data
-    f = UniformProfile(xlim=[0, 10], ylim=[2, 3],
-                       fname=app_data.temp('uniform_profile.txt'))
+    f = UniformProfile(
+        xlim=[0, 10], ylim=[2, 3],
+        fname=app_data.temp('uniform_profile.txt'))
     x = np.linspace(1, 3, 5)
     y = f(x)
     print(f'x = {x}')

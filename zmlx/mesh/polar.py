@@ -34,10 +34,11 @@ def create_ring(vr, angle_step=math.pi / 20.0, z=0.0):
                 node_ids[ia + 1 if ia + 1 < len(node_ids) else 0][ir])
             n11 = mesh.get_node(
                 node_ids[ia + 1 if ia + 1 < len(node_ids) else 0][ir + 1])
-            mesh.add_face(links=[mesh.add_link([n00, n10]),
-                                 mesh.add_link([n00, n01]),
-                                 mesh.add_link([n11, n10]),
-                                 mesh.add_link([n11, n01])])
+            mesh.add_face(links=[
+                mesh.add_link([n00, n10]),
+                mesh.add_link([n00, n01]),
+                mesh.add_link([n11, n10]),
+                mesh.add_link([n11, n01])])
 
     # 完成
     return mesh

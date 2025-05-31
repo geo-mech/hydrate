@@ -35,13 +35,13 @@ def create_wellbore(trajectory, length=1.0, area=0.01):
 
     # 插值，寻找节点
     f = interp1d(vl, vx)
-    vx = f(lq)
+    vx = list(f(lq))
 
     f = interp1d(vl, vy)
-    vy = f(lq)
+    vy = list(f(lq))
 
     f = interp1d(vl, vz)
-    vz = f(lq)
+    vz = list(f(lq))
 
     # 沿着井筒的轨迹来建立模型.
     mesh = SeepageMesh()

@@ -42,8 +42,9 @@ class CapillaryEffect:
         self.vpg = Vector()
         self.vpc = []  # 包含两个部分：Cell的Ids和毛管压力曲线
         self.ds = 0.05
-        self.s2p_zero = Interp1(x=[0, 1],
-                                y=[0, 0.001])  # 用于默认的初始化，定义一个非常小的毛细管压力
+        self.s2p_zero = Interp1(
+            x=[0, 1],
+            y=[0, 0.001])  # 用于默认的初始化，定义一个非常小的毛细管压力
 
     def add_pc(self, cell_ids, s2p):
         if len(cell_ids) > 0:
@@ -57,26 +58,31 @@ class CapillaryEffect:
         assert dt > 0
 
         if self.s2p is not None:
-            model.get_linear_dpre(fid0=self.fid0, fid1=self.fid1, s2p=self.s2p,
-                                  vs0=self.vs0, vk=self.vk, ds=self.ds)
+            model.get_linear_dpre(
+                fid0=self.fid0, fid1=self.fid1, s2p=self.s2p,
+                vs0=self.vs0, vk=self.vk, ds=self.ds)
         else:
             # 初始化，避免空值的出现
             # print('init')
-            model.get_linear_dpre(fid0=self.fid0, fid1=self.fid1,
-                                  s2p=self.s2p_zero, vs0=self.vs0, vk=self.vk,
-                                  ds=self.ds)
+            model.get_linear_dpre(
+                fid0=self.fid0, fid1=self.fid1,
+                s2p=self.s2p_zero, vs0=self.vs0, vk=self.vk,
+                ds=self.ds)
 
         if len(self.vpc) > 0:
             for cell_ids, s2p in self.vpc:
                 # print(len(cell_ids))
-                model.get_linear_dpre(fid0=self.fid0, fid1=self.fid1, s2p=s2p,
-                                      vs0=self.vs0, vk=self.vk, ds=self.ds,
-                                      cell_ids=cell_ids)
+                model.get_linear_dpre(
+                    fid0=self.fid0, fid1=self.fid1, s2p=s2p,
+                    vs0=self.vs0, vk=self.vk, ds=self.ds,
+                    cell_ids=cell_ids)
 
-        model.get_cond_for_exchange(fid0=self.fid0, fid1=self.fid1,
-                                    buffer=self.vg)
-        model.diffusion(dt, fid0=self.fid0, fid1=self.fid1, vs0=self.vs0,
-                        vk=self.vk, vg=self.vg, vpg=self.vpg)
+        model.get_cond_for_exchange(
+            fid0=self.fid0, fid1=self.fid1,
+            buffer=self.vg)
+        model.diffusion(
+            dt, fid0=self.fid0, fid1=self.fid1, vs0=self.vs0,
+            vk=self.vk, vg=self.vg, vpg=self.vpg)
 
     @staticmethod
     def create(fid0, fid1, model, get_idx, *args):

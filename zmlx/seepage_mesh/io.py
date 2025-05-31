@@ -35,7 +35,8 @@ def load_ascii(cell_file, face_file, mesh=None):
             assert area > 0
             length = float(words[3])
             assert length > 0
-            face = mesh.add_face(mesh.get_cell(cell_i0), mesh.get_cell(cell_i1))
+            face = mesh.add_face(
+                mesh.get_cell(cell_i0), mesh.get_cell(cell_i1))
             if face is not None:
                 face.area = area
                 face.length = length
@@ -55,8 +56,8 @@ def save_ascii(cell_file, face_file, mesh):
     with open(face_file, 'w') as file:
         for face in mesh.faces:
             link = face.link
-            file.write('%d %d %g %g\n' % (link[0], link[1],
-                                          face.area, face.length))
+            file.write('%d %d %g %g\n' % (
+                link[0], link[1], face.area, face.length))
 
 
 def load_mesh(cell_file=None, face_file=None, path=None):

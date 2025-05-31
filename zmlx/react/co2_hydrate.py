@@ -47,7 +47,7 @@ def create_p2t():
     return Interp1(x=vp, y=vt).to_evenly_spaced(300)
 
 
-def get_mg_vs_mh(Nh=5.75):
+def get_mg_vs_mh(nh=5.75):
     """
     返回1kg水合物分解之后产生的气体的质量(kg)
 
@@ -58,18 +58,18 @@ def get_mg_vs_mh(Nh=5.75):
     """
 
     # 在上一个版本中，返回固定值0.286 (before 2024-2-17)
-    return 44.01 / (18.015 * Nh + 44.01)
+    return 44.01 / (18.015 * nh + 44.01)
 
 
-def get_mol_mass(Nh=5.75):
+def get_mol_mass(nh=5.75):
     """
     摩尔质量.
         Nh=5.75的时候，返回0.147
     """
-    return (18.015 * Nh + 44.01) / 1.0e3
+    return (18.015 * nh + 44.01) / 1.0e3
 
 
-def get_dheat(Nh=5.75):
+def get_dheat(nh=5.75):
     """
     分解1kg水合物所需要消耗的热量.
 
@@ -78,18 +78,18 @@ def get_dheat(Nh=5.75):
             Long-term viability of carbon sequestration in deep-sea sediments (的附件)
     """
     # return 394225.0  (旧版本)
-    return 60.0e3 / get_mol_mass(Nh=Nh)  # 默认返回 406514.3
+    return 60.0e3 / get_mol_mass(nh=nh)  # 默认返回 406514.3
 
 
 def create(gas, wat, hyd, fa_t=None, fa_c=None, dissociation=True,
-           formation=True, Nh=5.75):
+           formation=True, nh=5.75):
     """
     创建一个水合物反应(平衡态的反应，反应的速率给的非常大)
     by 张召彬
     """
     return hydrate.create(
-        vp=vp, vt=vt, temp=273.15, heat=get_dheat(Nh),
-        mg=get_mg_vs_mh(Nh),
+        vp=vp, vt=vt, temp=273.15, heat=get_dheat(nh),
+        mg=get_mg_vs_mh(nh),
         gas=gas, liq=wat, hyd=hyd, fa_t=fa_t, fa_c=fa_c,
         dissociation=dissociation, formation=formation)
 

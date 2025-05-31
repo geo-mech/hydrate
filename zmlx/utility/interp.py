@@ -38,13 +38,15 @@ class Interp2:
 
         # 首选的线性插值
         try:
-            self.f1 = LinearNDInterpolator(points, values, rescale=rescale,
-                                           fill_value=np.nan)
+            self.f1 = LinearNDInterpolator(
+                points, values, rescale=rescale,
+                fill_value=np.nan)
         except:
             self.f1 = None
 
         # 备选，当线性插值失败的时候，使用这个
-        self.f2 = NearestNDInterpolator(points, values, rescale=rescale)
+        self.f2 = NearestNDInterpolator(
+            points, values, rescale=rescale)
 
         # 默认值 (此时不具备默认值)
         self.value = None
@@ -97,13 +99,15 @@ class Interp3:
 
         # 首选的线性插值
         try:
-            self.f1 = LinearNDInterpolator(points, values, rescale=rescale,
-                                           fill_value=np.nan)
+            self.f1 = LinearNDInterpolator(
+                points, values, rescale=rescale,
+                fill_value=np.nan)
         except:
             self.f1 = None
 
         # 备选，当线性插值失败的时候，使用这个
-        self.f2 = NearestNDInterpolator(points, values, rescale=rescale)
+        self.f2 = NearestNDInterpolator(
+            points, values, rescale=rescale)
 
         # 默认值 (此时不具备默认值)
         self.value = None

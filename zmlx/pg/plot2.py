@@ -22,6 +22,7 @@ def make_fn(name):
               caption=caption, on_top=on_top)
         if len(result) > 0:
             return result[0]
+        return None
 
     return func
 

@@ -26,7 +26,8 @@ class Len0Updater:
 
     def _backup_len0(self, springsys):
         """
-        备份弹簧系统各个弹簧的初始的长度。接下来，当温度发生改变的时候，将根据这个初始长度，以及温度的变化量，来计算新的弹簧长度
+        备份弹簧系统各个弹簧的初始的长度。接下来，当温度发生改变的时候，
+        将根据这个初始长度，以及温度的变化量，来计算新的弹簧长度
         """
         assert isinstance(springsys, SpringSys)
         self.len0 = springsys.get_len0().to_numpy()

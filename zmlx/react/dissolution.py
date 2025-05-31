@@ -60,7 +60,9 @@ def create(*, sol=None, sol_in_liq=None, liq=None, ca_sol=None, rate=1.0,
                            dict(kind=sol_in_liq, weight=1.0, fa_t=fa_t,
                                 fa_c=fa_c)], 'temp': 280, 'heat': 0,
             'p2t': ([0, 1e8], [280, 280]),
-            'inhibitors': [dict(sol=sol_in_liq, liq=liq, c=[0, 1], t=[0, 1e8])],
+            'inhibitors': [
+                dict(sol=sol_in_liq, liq=liq, c2t=[[0, 1], [0, 1e8]])
+            ],
             'idt': ca_sol,  # 可以是一个属性字符串，后续添加的时候去注册
             'wdt': -1.0e8,
             't2q': ([-1e8, 1e8], [-rate, rate])

@@ -1,5 +1,4 @@
 from zml import SeepageMesh, np
-from zmlx.alg.base import is_sorted
 
 
 def create_cube(x=(-0.5, 0.5), y=(-0.5, 0.5), z=(-0.5, 0.5), boxes=None,
@@ -53,12 +52,13 @@ def create_cube(x=(-0.5, 0.5), y=(-0.5, 0.5), z=(-0.5, 0.5), boxes=None,
                     cell.set_attr(ca_iz, iz)
                 # 设置属性，用以定义Cell的位置的范围.
                 if boxes is not None:
-                    boxes.append([cx - dx / 2,
-                                  cy - dy / 2,
-                                  cz - dz / 2,
-                                  cx + dx / 2,
-                                  cy + dy / 2,
-                                  cz + dz / 2])
+                    boxes.append(
+                        [cx - dx / 2,
+                         cy - dy / 2,
+                         cz - dz / 2,
+                         cx + dx / 2,
+                         cy + dy / 2,
+                         cz + dz / 2])
 
     def get_id(_ix, _iy, _iz):
         """
@@ -76,8 +76,9 @@ def create_cube(x=(-0.5, 0.5), y=(-0.5, 0.5), z=(-0.5, 0.5), boxes=None,
                 i0 = get_id(ix, iy, iz)
                 i1 = get_id(ix + 1, iy, iz)
                 assert i0 < cell_n and i1 < cell_n
-                face = mesh.add_face(mesh.get_cell(i0),
-                                     mesh.get_cell(i1))
+                face = mesh.add_face(
+                    mesh.get_cell(i0),
+                    mesh.get_cell(i1))
                 assert face is not None
                 face.area = dy * dz
                 face.length = dx
@@ -91,8 +92,9 @@ def create_cube(x=(-0.5, 0.5), y=(-0.5, 0.5), z=(-0.5, 0.5), boxes=None,
                 i0 = get_id(ix, iy, iz)
                 i1 = get_id(ix, iy + 1, iz)
                 assert i0 < cell_n and i1 < cell_n
-                face = mesh.add_face(mesh.get_cell(i0),
-                                     mesh.get_cell(i1))
+                face = mesh.add_face(
+                    mesh.get_cell(i0),
+                    mesh.get_cell(i1))
                 assert face is not None
                 face.area = dx * dz
                 face.length = dy
@@ -106,8 +108,9 @@ def create_cube(x=(-0.5, 0.5), y=(-0.5, 0.5), z=(-0.5, 0.5), boxes=None,
                 i0 = get_id(ix, iy, iz)
                 i1 = get_id(ix, iy, iz + 1)
                 assert i0 < cell_n and i1 < cell_n
-                face = mesh.add_face(mesh.get_cell(i0),
-                                     mesh.get_cell(i1))
+                face = mesh.add_face(
+                    mesh.get_cell(i0),
+                    mesh.get_cell(i1))
                 assert face is not None
                 face.area = dx * dy
                 face.length = dz
@@ -179,9 +182,10 @@ def create_xy(*, x_min, dx, x_max, y_min, dy, y_max, z_min, z_max,
     - 网格间距必须大于0
     - 网格数量必须大于0
     """
-    return create_xyz(x_min=x_min, dx=dx, x_max=x_max,
-                      y_min=y_min, dy=dy, y_max=y_max,
-                      z_min=z_min, dz=1e20, z_max=z_max, **kwargs)
+    return create_xyz(
+        x_min=x_min, dx=dx, x_max=x_max,
+        y_min=y_min, dy=dy, y_max=y_max,
+        z_min=z_min, dz=1e20, z_max=z_max, **kwargs)
 
 
 def create_xz(*, x_min, dx, x_max, z_min, dz, z_max, y_min, y_max,
@@ -207,6 +211,7 @@ def create_xz(*, x_min, dx, x_max, z_min, dz, z_max, y_min, y_max,
     - 网格间距必须大于0
     - 网格数量必须大于0
     """
-    return create_xyz(x_min=x_min, dx=dx, x_max=x_max,
-                      y_min=y_min, dy=1e20, y_max=y_max,
-                      z_min=z_min, dz=dz, z_max=z_max, **kwargs)
+    return create_xyz(
+        x_min=x_min, dx=dx, x_max=x_max,
+        y_min=y_min, dy=1e20, y_max=y_max,
+        z_min=z_min, dz=dz, z_max=z_max, **kwargs)
