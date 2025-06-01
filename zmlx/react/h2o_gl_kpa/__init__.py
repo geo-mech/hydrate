@@ -1,6 +1,6 @@
 import os
 
-from zmlx.io.load_col import load_col as loadcol
+from zmlx.io.base import load_col
 from zmlx.react.freeze import create as create_freeze
 
 
@@ -11,12 +11,13 @@ def create(gas, liq, fa_t, fa_c, t2q=None):
     参考文献：Phase equilibria in the system CO2-H2O I: New equilibrium relations at low temperatures
     """
     fname = os.path.join(os.path.dirname(__file__), 'p2t_h2o_gas_liq.txt')
-    vp = loadcol(fname, 0)
-    vt = loadcol(fname, 1)
+    vp = load_col(fname, 0)
+    vt = load_col(fname, 1)
     return create_freeze(
         flu=gas, sol=liq,
         vp=vp, vt=vt,
-        temp=273.15, heat=336000.0,
+        temp=273.15,
+        heat=336000.0,
         fa_t=fa_t, fa_c=fa_c,
         t2q=t2q)
 

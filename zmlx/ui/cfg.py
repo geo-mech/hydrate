@@ -412,6 +412,8 @@ def get_action_files():
             continue
         for filename in os.listdir(path):
             name, ext = os.path.splitext(filename)
+            if filename == '__init__.py':
+                continue
             if ext == '.py':
                 files[filename] = os.path.join(path, filename)
     return files

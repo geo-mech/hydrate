@@ -15,19 +15,19 @@ def create(left, right, temp, heat, rate=None, fa_t=None, fa_c=None, l2r=True,
         fa_c：流体的比热属性
         l2r：是否允许左侧的物质转化为右侧的物质
         r2l：是否允许右侧的物质转化为左侧的物质
-        p2t：温度压力曲线。定义不同压力下的临界反应温度.
+        p2t：温度压力曲线。定义不同压力下的临界反应温度. 如果p2t没有给定，则默认使用temp作为所有压力下的临界温度.
     """
     data = {}
 
     if fa_t is None:
-        fa_t = 'temperature'
+        fa_t = 'temperature'  # 后续动态注册属性id
 
     if not isinstance(fa_t, str):
         if fa_t > 9999:
             fa_t = 'temperature'
 
     if fa_c is None:
-        fa_c = 'specific_heat'
+        fa_c = 'specific_heat'  # 后续动态注册属性id
 
     if not isinstance(fa_c, str):
         if fa_c > 9999:
@@ -48,6 +48,7 @@ def create(left, right, temp, heat, rate=None, fa_t=None, fa_c=None, l2r=True,
                            'weight': clamp(abs(weight), 1.0e-5, 1.0),
                            'fa_t': fa_t, 'fa_c': fa_c})
 
+    # 组分、权重等信息
     data['components'] = components
 
     # 参考温度

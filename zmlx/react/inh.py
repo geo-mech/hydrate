@@ -13,12 +13,12 @@ def create_inh(
             'The arguments c and t will be removed after 2026-5-30, please use c2t instead',
             DeprecationWarning, stacklevel=2)
 
-    return dict(sol=sol, liq=liq, use_vol=use_vol, c2t=c2t, c2q=c2q,
-                exp=exp, exp_r=exp_r)
+    return dict(
+        sol=sol, liq=liq, use_vol=use_vol, c2t=c2t, c2q=c2q,
+        exp=exp, exp_r=exp_r)
 
 
 def add_inh(r: dict, *args, **kwargs):
     r['inhibitors'].append(
         create_inh(*args, **kwargs)
     )
-

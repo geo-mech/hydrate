@@ -53,13 +53,15 @@ def create(vap, wat, fa_t=None, fa_c=None, temp_max=None):
     # 假设反应在373K的时候发生，那么每千克的物质，会释放
     # 大约2.26e6焦耳的热量.
     return melt.create(
-        sol=wat, flu=vap,
+        sol=wat,
+        flu=vap,
         temp=273 + 100,
         heat=2.26e6,
         fa_t=fa_t,
         fa_c=fa_c,
         vp=vp,
-        vt=vt, t2q=None)
+        vt=vt,
+        t2q=None)
 
 
 def test_1():

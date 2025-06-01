@@ -12255,6 +12255,9 @@ class Seepage(HasHandle, HasCells):
         """
 
         class Component:
+            """
+            组分。定义的是反应方程式中的一项。
+            """
             def __init__(self, handle):
                 self.handle = handle
 
@@ -12263,7 +12266,7 @@ class Seepage(HasHandle, HasCells):
             @property
             def index(self):
                 """
-                流体组分的序号
+                流体组分的序号. 长度为1到3之间的list
                 """
                 idx = UintVector(handle=core.rea_comp_get_index(self.handle))
                 return idx.to_list()
@@ -12271,7 +12274,7 @@ class Seepage(HasHandle, HasCells):
             @index.setter
             def index(self, value):
                 """
-                流体组分的序号
+                流体组分的序号. 长度为1到3之间的list
                 """
                 idx = UintVector(handle=core.rea_comp_get_index(self.handle))
                 idx.set(value)
@@ -12281,16 +12284,17 @@ class Seepage(HasHandle, HasCells):
             @property
             def fa_t(self):
                 """
-                组分温度属性的ID
+                组分温度属性的ID. 必须定义
                 """
                 return core.rea_comp_get_fa_t(self.handle)
 
-            core.use(None, 'rea_comp_set_fa_t', c_void_p, c_size_t)
+            core.use(None, 'rea_comp_set_fa_t',
+                     c_void_p, c_size_t)
 
             @fa_t.setter
             def fa_t(self, value):
                 """
-                组分温度属性的ID
+                组分温度属性的ID. 必须定义
                 """
                 core.rea_comp_set_fa_t(self.handle, value)
 
@@ -12299,16 +12303,17 @@ class Seepage(HasHandle, HasCells):
             @property
             def fa_c(self):
                 """
-                组分比热属性的ID
+                组分比热属性的ID. 必须定义
                 """
                 return core.rea_comp_get_fa_c(self.handle)
 
-            core.use(None, 'rea_comp_set_fa_c', c_void_p, c_size_t)
+            core.use(None, 'rea_comp_set_fa_c',
+                     c_void_p, c_size_t)
 
             @fa_c.setter
             def fa_c(self, value):
                 """
-                组分比热属性的ID
+                组分比热属性的ID. 必须定义
                 """
                 core.rea_comp_set_fa_c(self.handle, value)
 
@@ -12322,7 +12327,8 @@ class Seepage(HasHandle, HasCells):
                 """
                 return core.rea_comp_get_weight(self.handle)
 
-            core.use(None, 'rea_comp_set_weight', c_void_p, c_double)
+            core.use(None, 'rea_comp_set_weight',
+                     c_void_p, c_double)
 
             @weight.setter
             def weight(self, value):
@@ -12334,6 +12340,7 @@ class Seepage(HasHandle, HasCells):
         class Inhibitor:
             """
             定义抑制剂，或者催化剂。这种物质不参与反应，但是可能会影响到反应的速率。
+            所有可以影响到反应速率的物质，在这里统一都定义为抑制剂
             """
             def __init__(self, handle):
                 self.handle = handle
@@ -12344,9 +12351,12 @@ class Seepage(HasHandle, HasCells):
             def sol(self):
                 """
                 溶质对应的ID.
-                在实际计算的时候，将根据sol的质量（或者体积）除以liq的质量（或者体积）来
-                获得溶质的浓度，并根据此浓度来矫正反应速率。
-                计算得到的溶质的浓度将会是0到1之间的数值。
+                说明：
+                    在实际计算的时候，将根据sol的质量（或者体积）除以liq的质量（或者体积）来
+                    获得溶质的浓度，并根据此浓度来矫正反应速率。
+                    具体是使用质量浓度还是体积浓度，取决于use_vol的取值。
+                    默认使用质量浓度。
+                    计算得到的溶质的浓度将会是0到1之间的数值。
                 """
                 return UintVector(
                     handle=core.rea_inh_get_sol(self.handle)).to_list()
@@ -12365,9 +12375,12 @@ class Seepage(HasHandle, HasCells):
             def liq(self):
                 """
                 溶液对应的ID.
-                在实际计算的时候，将根据sol的质量（或者体积）除以liq的质量（或者体积）来
-                获得溶质的浓度，并根据此浓度来矫正反应速率。
-                计算得到的溶质的浓度将会是0到1之间的数值。
+                说明：
+                    在实际计算的时候，将根据sol的质量（或者体积）除以liq的质量（或者体积）来
+                    获得溶质的浓度，并根据此浓度来矫正反应速率。
+                    具体是使用质量浓度还是体积浓度，取决于use_vol的取值。
+                    默认使用质量浓度。
+                    计算得到的溶质的浓度将会是0到1之间的数值。
                 """
                 return UintVector(
                     handle=core.rea_inh_get_liq(self.handle)).to_list()
@@ -12394,14 +12407,15 @@ class Seepage(HasHandle, HasCells):
                 return Interp1(handle=handle)
 
             core.use(c_bool, 'rea_inh_get_use_vol', c_void_p)
-            core.use(None, 'rea_inh_set_use_vol', c_void_p, c_bool)
+            core.use(None, 'rea_inh_set_use_vol',
+                     c_void_p, c_bool)
 
             @property
             def use_vol(self):
                 """
                 是否使用体积分数 (如果为False，则使用质量分数)。
-                如果为True，则定义浓度c为c=sol的体积/liq的体积。
-                否则，定义浓度c为c=sol的质量/liq的质量。
+                    如果为True，则定义浓度c为c=sol的体积/liq的体积。
+                    否则，定义浓度c为c=sol的质量/liq的质量。
                 """
                 return core.rea_inh_get_use_vol(self.handle)
 
@@ -12409,8 +12423,6 @@ class Seepage(HasHandle, HasCells):
             def use_vol(self, value):
                 """
                 是否使用体积分数 (如果为False，则使用质量分数)
-                如果为True，则定义浓度c为c=sol的体积/liq的体积。
-                否则，定义浓度c为c=sol的质量/liq的质量。
                 """
                 core.rea_inh_set_use_vol(self.handle, value)
 
@@ -12423,6 +12435,9 @@ class Seepage(HasHandle, HasCells):
                 定义一条曲线，其中
                     x为溶质的浓度 （0到1之间）
                     y为此抑制剂对反应速率的影响。基于此计算的反应速率，将直接叠加在反应的速率上。
+                特别注意反应速率的定义：
+                    在单位时间内（1秒内），“反应所消耗的物质的质量（左侧物质质量的减少量）”
+                    与 “在Cell中所有与此反应相关的组分的质量之和”的比值.
                 """
                 handle = core.rea_inh_get_c2q(self.handle)
                 return Interp1(handle=handle)
@@ -12433,17 +12448,24 @@ class Seepage(HasHandle, HasCells):
             def exp(self):
                 """
                 反应速率的指数（正向反应）.
-                在使用反应的t2q计算出正向反应速率之后，将乘以c**exp。
+                    在使用反应的t2q计算出正向反应速率之后，将乘以c^exp，其中c为溶质的浓度。
+                    特别注意：
+                        这里浓度的定义和常规的不同，在化学反应中，一般采用mol/L这样的单位
+                        但是，这里的浓度为质量分数(或者体积分数，取决于use_vol属性是否为True)，
+                        是无量纲的量。因此，必须进行必要的转换。
+                        如果此抑制剂的浓度不会对反应的速率造成影响，则将此指数设置为0
+                注意：
+                    只有在计算正向反应速率的时候，此属性才会起作用
                 """
                 return core.rea_inh_get_exp(self.handle)
 
-            core.use(None,'rea_inh_set_exp', c_void_p, c_double)
+            core.use(None,'rea_inh_set_exp',
+                     c_void_p, c_double)
 
             @exp.setter
             def exp(self, value):
                 """
                 反应速率的指数（正向反应）.
-                在使用反应的t2q计算出正向反应速率之后，将乘以c**exp。
                 """
                 core.rea_inh_set_exp(self.handle, value)
 
@@ -12453,17 +12475,24 @@ class Seepage(HasHandle, HasCells):
             def exp_r(self):
                 """
                 反应速率的指数(逆向)
-                在使用反应的t2qr计算出逆向反应速率之后，将乘以c**exp_r。
+                    在使用反应的t2qr计算出逆向反应速率之后，将乘以c^exp_r，其中c为溶质的浓度。
+                    特别注意：
+                        这里浓度的定义和常规的不同，在化学反应中，一般采用mol/L这样的单位
+                        但是，这里的浓度为质量分数(或者体积分数，取决于use_vol属性是否为True)，
+                        是无量纲的量。因此，必须进行必要的转换。
+                        如果此抑制剂的浓度不会对反应的速率造成影响，则将此指数设置为0
+                注意：
+                    只有在计算逆向反应速率的时候，此属性才会起作用
                 """
                 return core.rea_inh_get_exp_r(self.handle)
 
-            core.use(None,'rea_inh_set_exp_r', c_void_p, c_double)
+            core.use(None,'rea_inh_set_exp_r',
+                     c_void_p, c_double)
 
             @exp_r.setter
             def exp_r(self, value):
                 """
                 反应速率的指数(逆向)
-                在使用反应的t2qr计算出逆向反应速率之后，将乘以c**exp_r。
                 """
                 core.rea_inh_set_exp_r(self.handle, value)
 
@@ -12592,27 +12621,27 @@ class Seepage(HasHandle, HasCells):
         @property
         def heat(self):
             """
-            发生1kg物质的化学反应<1kg的左侧物质，转化为1kg的右侧物质>释放的热量，单位焦耳。
-            注意，如果反应是吸热反应，则此heat为负值。
+            反应热.
+                发生1kg物质的化学反应(1kg的左侧物质，转化为1kg的右侧物质)释放的热量，单位焦耳。
+                注意:
+                    1. 如果反应是吸热反应，则此heat为负值。
+                    2. 特别要注意单位。此heat的单位，实际为焦耳/kg，与一般的焦耳/mol不同。
 
             Returns:
-                float: 化学反应释放的热量。
+                float: 单位质量化学反应释放的热量，单位焦耳。
             """
             return core.reaction_get_dheat(self.handle)
 
         @heat.setter
         def heat(self, value):
             """
-            设置化学反应释放的热量。
-
+            反应热.
             Args:
-                value (float): 化学反应释放的热量，单位焦耳。
+                value (float): 单位质量化学反应释放的热量，单位焦耳。
             """
             core.reaction_set_dheat(self.handle, value)
 
-        # 兼容之前的接口 (_Trash)
-        # todo:
-        #   删除dheat属性. (after 2024.02.01)
+        # 兼容之前的接口 (将在2024-02-01之后移除)
         dheat = heat
 
         core.use(None, 'reaction_set_t0',
@@ -12623,11 +12652,13 @@ class Seepage(HasHandle, HasCells):
         @property
         def temp(self):
             """
-            和heat对应的参考温度，只有当反应前后的温度都等于此temp的时候，
+            和heat对应的参考温度（单位为K），只有当反应前后的温度都等于此temp的时候，
             释放的热量才可以使用heat来定义。
+            注意：
+                默认值为280.0K
 
             Returns:
-                float: 参考温度。
+                float: 参考温度。单位K
             """
             return core.reaction_get_t0(self.handle)
 
@@ -12635,7 +12666,6 @@ class Seepage(HasHandle, HasCells):
         def temp(self, value):
             """
             设置参考温度。
-
             Args:
                 value (float): 参考温度。
             """
@@ -12643,32 +12673,13 @@ class Seepage(HasHandle, HasCells):
 
         def set_p2t(self, p, t):
             """
-            设置不同的压力下，反应可以发生的临界温度。
-
-            Args:
-                p (Vector or list): 压力向量。
-                t (Vector or list): 临界温度向量。
-
-            Notes:
-                对于吸热反应，只有当温度大于此临界温度的时候，反应才会发生；
-                对于放热反应，温度小于临界温度的时候，反应才会发生。
-                此反应目前不适用于“燃烧”这种反应（后续可能会添加支持）。
+            设置p2t，具体参考对p2t的说明
             """
             self.p2t.set_xy(p, t)
 
         def set_t2q(self, t, q):
             """
-            设置当温度偏离平衡温度的时候反应的速率。
-
-            Args:
-                t (Vector or list): 温度偏移量向量。
-                q (Vector or list): 反应速率向量。
-
-            Notes:
-                对于吸热反应，随着温度的增加，反应的速率应当增加；
-                对于放热反应，随着温度的降低，反应的速率降低；
-                当温度偏移量为0的时候，反应的速率为0。
-                此处，反应的速率定义为，对于1kg的物质，在1s内发生反应的质量。
+            设置t2q，具体参考对t2q的说明
             """
             self.t2q.set_xy(t, q)
 
@@ -12677,7 +12688,15 @@ class Seepage(HasHandle, HasCells):
         @property
         def p2t(self):
             """
-            从压力到平衡温度的映射
+            不同的压力下，反应的基准温度. 单位K
+            说明：
+                在此反应定义中，反应的速率是根据温度来计算的。但是，温度总是一个相对的数值，
+                因此，才有一个基准温度的概念。而且，这个基准温度是和压力相关的。
+                比如说，1MPa下的基准温度是0度，2MPa下的基准温度是10度，那么后续计算反应
+                速率的时候，压力1MPa，温度1度的反应速率，将和压力2MPa，温度11度的反应速率相等。
+            此属性定义了一个曲线，其中：
+                自变量x: 压力（一个向量），单位是Pa
+                因变量y: 给定压力下对应的基准温度（一个向量，长度和x相等），单位是K
             """
             handle = core.reaction_get_p2t(self.handle)
             return Interp1(handle=handle)
@@ -12687,7 +12706,18 @@ class Seepage(HasHandle, HasCells):
         @property
         def t2q(self):
             """
-            从温度偏移量到反应速率的映射
+            当温度偏离平衡温度的时候反应的速率（正向反应速率，此属性必须正确设置）。
+            如果定义了t2qr（逆向速率），则实际的反应速率，将是正向的速率减去逆向的速率。
+
+            定一个一条曲线，其中：
+                自变量x: 温度偏移量。单位K
+                因变量y: 反应速率。单位: 1/s。
+                    (反应的速率定义为：对于1kg的总的反应物质，在1s内，左侧物质质量的较少量)
+                    小于0的q表示反应是逆向的（右侧物质质量减少）
+                    注意这个速率后续需要根据exp以及组分的浓度来矫正
+            注意:
+                一般地，对于吸热反应，随着温度的增加，反应的速率应当增加；
+                反之，对于放热反应，随着温度的降低，反应的速率降低；
             """
             handle = core.reaction_get_t2q(self.handle)
             return Interp1(handle=handle)
@@ -12697,7 +12727,7 @@ class Seepage(HasHandle, HasCells):
         @property
         def t2qr(self):
             """
-            从温度偏移量到反应速率的映射 （逆向反应）
+            一个曲线，表示不同的温度(实际温度减去基准温度)下的逆向反应速率。参考t2q的说明。
             """
             handle = core.reaction_get_t2qr(self.handle)
             return Interp1(handle=handle)
@@ -12708,7 +12738,7 @@ class Seepage(HasHandle, HasCells):
 
             Args:
                 index: Seepage.Cell中定义的流体组分的序号。
-                weight (float): 发生1kg的反应的时候此物质变化的质量，
+                weight: 发生1kg的反应的时候此物质变化的质量，
                     其中左侧物质的weight为负值，右侧为正值。
                 fa_t (int): 定义流体温度的属性ID。
                 fa_c (int): 定义流体比热的属性ID。
@@ -12746,16 +12776,18 @@ class Seepage(HasHandle, HasCells):
             """
             return core.reaction_get_component_n(self.handle)
 
-        core.use(None, 'reaction_set_component_n', c_void_p, c_size_t)
+        core.use(None, 'reaction_set_component_n',
+                 c_void_p, c_size_t)
 
         @component_n.setter
         def component_n(self, value):
             """
-            设置反应组分的数量。
+            反应组分的数量。
             """
             core.reaction_set_component_n(self.handle, value)
 
-        core.use(c_void_p, 'reaction_get_component', c_void_p, c_size_t)
+        core.use(c_void_p, 'reaction_get_component',
+                 c_void_p, c_size_t)
 
         def get_component(self, idx):
             """
@@ -12795,7 +12827,8 @@ class Seepage(HasHandle, HasCells):
             """
             return core.reaction_get_inh_n(self.handle)
 
-        core.use(None, 'reaction_set_inh_n', c_void_p, c_size_t)
+        core.use(None, 'reaction_set_inh_n',
+                 c_void_p, c_size_t)
 
         @inhibitor_n.setter
         def inhibitor_n(self, value):
@@ -12804,7 +12837,8 @@ class Seepage(HasHandle, HasCells):
             """
             core.reaction_set_inh_n(self.handle, value)
 
-        core.use(c_void_p, 'reaction_get_inh', c_void_p, c_size_t)
+        core.use(c_void_p, 'reaction_get_inh',
+                 c_void_p, c_size_t)
 
         def get_inhibitor(self, idx):
             """
@@ -12856,7 +12890,7 @@ class Seepage(HasHandle, HasCells):
 
         def adjust_widghts(self):
             """
-            同adjust_weights
+            同adjust_weights （曾经单纯的拼写错误）
 
             Warnings:
                 此方法已弃用，将在2024-1-1之后移除，请使用 <adjust_weights>。
@@ -12873,6 +12907,7 @@ class Seepage(HasHandle, HasCells):
         def get_rate(self, cell):
             """
             获得给定Cell在当前状态(温度、压力、抑制剂等条件)下的<瞬时的>反应速率。
+            此函数主要用来测试
 
             Args:
                 cell (Seepage.CellData): Seepage的CellData对象。
@@ -12890,9 +12925,10 @@ class Seepage(HasHandle, HasCells):
         @property
         def idt(self):
             """
-            Cell的属性ID。Cell的此属性用以定义反应作用到该Cell上的时候，平衡温度的调整量。
-            这允许在不同的Cell上，有不同的反应温度。
-            默认情况下，此属性不定义，则反应在各个Cell上的温度是一样的。
+            Cell的属性ID。Cell的此属性用以定义反应作用到该Cell上的时候，基准温度的调整量。
+            这允许在不同的Cell上，有不同的基准温度（而不仅仅是压力的函数）。
+            在使用p2t计算了基准温度之后，将额外附加上idt的属性值.
+            默认情况下，此属性不定义，则反应在各个Cell上的基准温度是一样的。
 
             Notes:
                 此属性为一个测试功能，当后续有更好的实现方案的时候，可能会被移除。
@@ -12920,10 +12956,9 @@ class Seepage(HasHandle, HasCells):
         @property
         def wdt(self):
             """
-            和idt配合使用。在Cell定义温度调整量的时候，
-            可以利用这个权重再对这个调整量进行（缩放）调整。
-            比如，当Cell给的温度的调整量的单位不是K的时候，
-            可以利用wdt属性来添加一个倍率。
+            和idt配合使用。在Cell定义温度调整量的时候， 可以利用这个权重再对这个调整量进行（缩放）调整。
+            比如，当Cell给的温度的调整量的单位不是K的时候， 可以利用wdt属性来添加一个倍率。
+            默认为1，即不进行缩放处理。
 
             Notes:
                 此属性为一个测试功能，当后续有更好的实现方案的时候，可能会被移除。
@@ -12936,7 +12971,7 @@ class Seepage(HasHandle, HasCells):
         @wdt.setter
         def wdt(self, value):
             """
-            设置权重。
+            设置idt的权重（缩放系数）
 
             Args:
                 value (float): 权重。
@@ -12953,8 +12988,7 @@ class Seepage(HasHandle, HasCells):
             """
             Cell的属性ID。Cell的此属性用以定义反应作用到该Cell上的时候，
             反应速率应该乘以的倍数。
-            若定义这个属性，且Cell的这个属性值小于等于0，
-            那么反应在这个Cell上将不会发生。
+            若定义这个属性，且Cell的这个属性值小于等于0，那么反应在这个Cell上将不会发生。
 
             Notes:
                 如果希望某个反应只在部分Cell上发生，则可以利用这个属性来实现。
@@ -13008,10 +13042,16 @@ class Seepage(HasHandle, HasCells):
 
         @property
         def name(self):
+            """
+            反应的名字（字符串），主要用于区分不同的反应，不参与任何计算
+            """
             return core.reaction_get_name(self.handle).decode()
 
         @name.setter
         def name(self, value):
+            """
+            反应的名字（字符串），主要用于区分不同的反应，不参与任何计算
+            """
             core.reaction_set_name(self.handle, make_c_char_p(value))
 
     class FluDef(HasHandle):
