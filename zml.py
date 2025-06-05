@@ -11663,33 +11663,40 @@ class SeepageMesh(HasHandle, HasCells):
 
     core.use(c_size_t, 'seepage_mesh_add_cell', c_void_p)
 
-    def add_cell(self):
+    def add_cell(self, *, pos=None, vol=None):
         """
         添加一个cell，并且返回这个新添加的cell
 
         Returns:
             SeepageMesh.Cell: 新添加的cell对象。
         """
-        return self.get_cell(core.seepage_mesh_add_cell(self.handle))
+        cell = self.get_cell(core.seepage_mesh_add_cell(self.handle))
+        if pos is not None:
+            cell.pos = pos
+        if vol is not None:
+            cell.vol = vol
+        return cell
 
     core.use(c_size_t, 'seepage_mesh_add_face',
              c_void_p,
              c_size_t,
              c_size_t)
 
-    def add_face(self, cell_0, cell_1):
+    def add_face(self, cell_0, cell_1, *, dist=None, area=None):
         """
         添加一个face，连接两个给定的cell
 
         Args:
             cell_0 (int | SeepageMesh.Cell): 第一个单元格。
             cell_1 (int | SeepageMesh.Cell): 第二个单元格。
+            dist: 过流距离 (m)
+            area: 过流面积 (m^2)
 
         Returns:
-            SeepageMesh.Face: 新添加的面的对象。
+            SeepageMesh.Face: 新添加的面的对象
 
         Raises:
-            AssertionError: 如果提供的cell不属于当前网格。
+            AssertionError: 如果提供的cell不属于当前网格
         """
         if isinstance(cell_0, SeepageMesh.Cell):
             assert cell_0.model.handle == self.handle
@@ -11699,8 +11706,24 @@ class SeepageMesh(HasHandle, HasCells):
             assert cell_1.model.handle == self.handle
             cell_1 = cell_1.index
 
-        return self.get_face(
-            core.seepage_mesh_add_face(self.handle, cell_0, cell_1))
+        face_n = self.face_number
+        idx = core.seepage_mesh_add_face(self.handle, cell_0, cell_1)
+        face = self.get_face(idx)
+
+        if self.face_number > face_n:   # a new face
+            assert idx == face_n
+            if area is not None:
+                face.area = area
+            if dist is None:
+                p0 = face.get_cell(0).pos
+                p1 = face.get_cell(1).pos
+                dist = get_distance(p0, p1)
+                if dist > 1.0e20 or dist < 1.0e-20:
+                    dist = None
+            if dist is not None:
+                face.dist = dist
+
+        return face
 
     @property
     def cells(self):

@@ -75,23 +75,31 @@ def __create_reaction(model, **opts):
     if temp is not None:
         data.temp = temp
 
-    heat = opts.get('heat')  # 反应的热量（发生1kg的反应所释放的热量）
+    heat = opts.get('heat')  # 反应的热量（发生1kg的反应所释放的热量） J/kg
     if heat is not None:
         data.heat = heat
 
-    p2t = opts.get('p2t')  # 定义不同压力下的基准温度，如果没有定义，则直接使用temp属性作为基准温度
+    # 定义不同压力下的"基准温度"，如果没有定义，则直接使用temp属性作为基准温度
+    #    （1MPa基准温度0度、2MPa基准温度10度；某个位置1MPa1度，和2MPa11度对应速率就会一样）
+    #     对于溶液中的，这种和压力关系不大的，就设置特殊p2t曲线，让t常数;  p=[0, 100e6], t=[0, 0]
+    p2t = opts.get('p2t')
     if p2t is not None:
         p, t = p2t
         data.p2t.set_xy(p, t)
 
-    t2q = opts.get('t2q')  # 不同温度下的基准的正向速率 (在此基础上，后续需要根据inhibitors浓度来进行矫正)
+    # 不同温度下的基准的“正向速率” (在此基础上，后续需要根据inhibitors浓度来进行矫正);
+    #    q>0，代表反应正向；q<0，逆向的；
+    # 最原始的，假设各个浓度都是1的时候的速率。
+    t2q = opts.get('t2q')
     if t2q is not None:
-        t, q = t2q
+        t, q = t2q   # 一条曲线，x为温度，y为速率 （内部插值是线性插值，一定给足够密集的插值点，原始比较系数的插值点，要加密）
         data.t2q.set_xy(t, q)
 
-    t2qr = opts.get('t2qr')  # 逆向反应的速率 (在此基础上，后续需要根据inhibitors浓度来进行矫正)
+    # 逆向反应的速率 (在此基础上，后续需要根据inhibitors浓度来进行矫正)
+    #     q>0，代表逆应正向；q<0，正向的；
+    t2qr = opts.get('t2qr')
     if t2qr is not None:
-        t, qr = t2qr
+        t, qr = t2qr  # 一条曲线，x为温度，y为速率
         data.t2qr.set_xy(t, qr)
 
     components = opts.get('components')  # 反应的组分(反应的方程式)
@@ -102,7 +110,9 @@ def __create_reaction(model, **opts):
             if isinstance(kind, str):
                 kind = model.find_fludef(kind)
 
-            weight = comp.get('weight')  # 权重，左侧为负值，右侧为正值，且左侧权重之和等于-1，右侧权重之和等于1
+            # 权重，左侧为负值，右侧为正值，且左侧权重之和等于-1，右侧权重之和等于1
+            # 权重是质量权重
+            weight = comp.get('weight')
             assert -1.0 <= weight <= 1.0
 
             fa_t = comp.get('fa_t')  # 温度属性的ID
@@ -118,32 +128,38 @@ def __create_reaction(model, **opts):
             data.add_component(
                 index=kind, weight=weight, fa_t=fa_t, fa_c=fa_c)
 
-    inhibitors = opts.get('inhibitors')  # 抑制剂，请参考Seepage.Reaction.Inhibitor的定义和说明
+    inhibitors = opts.get('inhibitors')  # 抑制剂（催化剂），请参考Seepage.Reaction.Inhibitor的定义和说明
     if inhibitors is not None:
         assert isinstance(inhibitors, Iterable)
         for inh in inhibitors:
-            sol = inh.get('sol')   # 溶质
+            sol = inh.get('sol')   # 溶质的流体的name或者ID（优先给定name）
             if isinstance(sol, str):
                 sol = model.find_fludef(sol)
 
-            liq = inh.get('liq')  # 溶液
+            liq = inh.get('liq')  # 溶液在model的流体体系中的name或者ID（优先给定name）
             if isinstance(liq, str):
                 liq = model.find_fludef(liq)
 
-            # 是否使用体积来计算浓度
+            # 是否使用体积来计算浓度（默认是质量浓度）；
+            #    有不少化学反应，有的浓度mol/L，需要把它转化成比例（0-1之间的数）
             use_vol = inh.get('use_vol', False)
 
             # 浓度对基准温度的矫正 (x为浓度，y为温度矫正，单位是K)
+            #   c2t = c, t
+            #      c 是一列数，从小到大排列，代表浓度（根据use_vol确定是否是质量浓度还是体积浓度）
+            #      t 对对应的基准温度的调整量。比如说，p2t这个曲线，在压力1MPa，基准温度是1度；根据c2t，可能把基准温度调整2度~
+            # 基准温度提高了，相当于实际温度降低.
+            #     最初的用途：水合物模拟的时候，模拟盐度对相平衡曲线的影响。
             c2t = inh.get('c2t')
 
-            # 浓度对反应速率的矫正 (x为浓度，y为速率矫正，单位是1/s)。
+            # “催化剂”的浓度对反应速率的直接矫正 (x为浓度，y为速率矫正，单位是1/s)。
             # 反应速率的定义，请参考Seepage.Reaction的定义和注释
             c2q = inh.get('c2q')
 
-            # 对正向反应速率的矫正指数
+            # 对正向反应速率的矫正指数。 默认值是0，默认情况下不起作用
             exp = inh.get('exp')
 
-            # 对逆向反应速率的矫正指数
+            # 对逆向反应速率的矫正指数。 默认值是0，默认情况下不起作用
             exp_r = inh.get('exp_r')
 
             # 生成抑制剂数据并且添加
