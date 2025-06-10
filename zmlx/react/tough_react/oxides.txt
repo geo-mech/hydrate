@@ -1,0 +1,205 @@
+Ag2O
+     mole wt.=  231.7354 g
+     3 species in reaction
+       -2.000 H+              2.000 Ag+             1.000 H2O     
+
+Al2O3
+     mole wt.=  101.9612 g
+     3 species in reaction
+       -6.000 H+              2.000 Al+++           3.000 H2O     
+
+Am2O3
+     mole wt.=  530.1182 g
+     3 species in reaction
+       -6.000 H+              2.000 Am+++           3.000 H2O     
+
+As2O5
+     mole wt.=  229.8402 g
+     3 species in reaction
+       -3.000 H2O             2.000 AsO4---         6.000 H+      
+
+B2O3
+     mole wt.=   69.6202 g
+     2 species in reaction
+       -3.000 H2O             2.000 B(OH)3  
+
+BaO
+     mole wt.=  153.3294 g
+     3 species in reaction
+       -2.000 H+              1.000 Ba++            1.000 H2O     
+
+CaO
+     mole wt.=   56.0794 g
+     3 species in reaction
+       -2.000 H+              1.000 Ca++            1.000 H2O     
+
+Cs2O
+     mole wt.=  281.8102 g
+     3 species in reaction
+       -2.000 H+              2.000 Cs+             1.000 H2O     
+
+Cu2O
+     mole wt.=  143.0914 g
+     3 species in reaction
+       -2.000 H+              2.000 Cu+             1.000 H2O     
+
+CuO
+     mole wt.=   79.5454 g
+     3 species in reaction
+        1.000 H2O            -2.000 H+              1.000 Cu++    
+
+Eu2O3
+     mole wt.=  351.9182 g
+     3 species in reaction
+       -6.000 H+              2.000 Eu+++           3.000 H2O     
+
+Fe2O3
+     mole wt.=  159.6922 g
+     3 species in reaction
+       -6.000 H+              2.000 Fe+++           3.000 H2O     
+
+FeO
+     mole wt.=   71.8464 g
+     3 species in reaction
+       -2.000 H+              1.000 Fe++            1.000 H2O     
+
+HBr
+     mole wt.=   80.9119 g
+     2 species in reaction
+        1.000 H+              1.000 Br-     
+
+HCl(ox)
+     mole wt.=   36.4609 g
+     2 species in reaction
+        1.000 H+              1.000 Cl-     
+
+HF(ox)
+     mole wt.=   20.0063 g
+     2 species in reaction
+        1.000 H+              1.000 F-      
+
+HgO
+     mole wt.=  216.5894 g
+     3 species in reaction
+       -2.000 H+              1.000 Hg++            1.000 H2O     
+
+HI
+     mole wt.=  127.9124 g
+     2 species in reaction
+        1.000 H+              1.000 I-      
+
+K2O
+     mole wt.=   94.1960 g
+     3 species in reaction
+       -2.000 H+              2.000 K+              1.000 H2O     
+
+Li2O
+     mole wt.=   29.8814 g
+     3 species in reaction
+       -2.000 H+              2.000 Li+             1.000 H2O     
+
+MgO
+     mole wt.=   40.3044 g
+     3 species in reaction
+       -2.000 H+              1.000 Mg++            1.000 H2O     
+
+MnO
+     mole wt.=   70.9374 g
+     3 species in reaction
+       -2.000 H+              1.000 Mn++            1.000 H2O     
+
+Na2O
+     mole wt.=   61.9790 g
+     3 species in reaction
+       -2.000 H+              2.000 Na+             1.000 H2O     
+
+NiO(ox)
+     mole wt.=   74.7094 g
+     3 species in reaction
+       -2.000 H+              1.000 Ni++            1.000 H2O     
+
+NpO2(ox)
+     mole wt.=  269.0470 g
+     3 species in reaction
+       -4.000 H+              1.000 Np++++          2.000 H2O     
+
+P2O5
+     mole wt.=  141.9446 g
+     3 species in reaction
+       -3.000 H2O             2.000 HPO4--          4.000 H+      
+
+PbO
+     mole wt.=  223.1994 g
+     3 species in reaction
+       -2.000 H+              1.000 Pb++            1.000 H2O     
+
+PuO2(ox)
+     mole wt.=  275.9988 g
+     3 species in reaction
+       -4.000 H+              1.000 Pu++++          2.000 H2O     
+
+RaO
+     mole wt.=  242.0244 g
+     3 species in reaction
+       -2.000 H+              1.000 Ra++            1.000 H2O     
+
+Rb2O
+     mole wt.=  186.9334 g
+     3 species in reaction
+       -2.000 H+              2.000 Rb+             1.000 H2O     
+
+RuO2
+     mole wt.=  133.0688 g
+     2 species in reaction
+       -2.000 H+              1.000 Ru(OH)2++
+
+SeO2(ox)
+     mole wt.=  110.9588 g
+     3 species in reaction
+       -1.000 H2O             2.000 H+              1.000 SeO3--  
+
+SiO2
+     mole wt.=   60.0838 g
+     1 species in reaction
+        1.000 SiO2(aq)
+
+SnO2(ox)
+     mole wt.=  150.6888 g
+     3 species in reaction
+       -4.000 H+              2.000 H2O             1.000 Sn++++  
+
+SO3
+     mole wt.=   80.0582 g
+     3 species in reaction
+       -1.000 H2O             1.000 SO4--           2.000 H+      
+
+SrO
+     mole wt.=  103.6194 g
+     3 species in reaction
+       -2.000 H+              1.000 Sr++            1.000 H2O     
+
+TcO2
+     mole wt.=  128.9988 g
+     3 species in reaction
+        1.000 H2O             1.000 TcO++          -2.000 H+      
+
+ThO2(ox)
+     mole wt.=  264.0369 g
+     3 species in reaction
+       -4.000 H+              1.000 Th++++          2.000 H2O     
+
+U3O8
+     mole wt.=  842.0822 g
+     4 species in reaction
+       -3.000 H+              3.000 UO2+            1.500 H2O     
+         .250 O2(aq)  
+
+V2O5
+     mole wt.=  181.8798 g
+     3 species in reaction
+       -3.000 H2O             6.000 H+              2.000 VO4---  
+
+ZnO
+     mole wt.=   81.3794 g
+     3 species in reaction
+       -2.000 H+              1.000 Zn++            1.000 H2O
