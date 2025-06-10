@@ -2,13 +2,11 @@ import re
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
-from typing import List
+from typing import List, Dict
 import warnings
 
-# 单一反应检索脚本
-
 # ---------- 用户输入部分 ----------
-user_reactants = ["Mg++", "HCO3-", "H+", "Cl-"]  # 示例反应物列表
+user_reactant_pool = ["Ca++", "Mg++", "HCO3-", "H+", "OH-"]  # 多种反应物
 
 # ---------- 温度定义 ----------
 T_celsius = np.array([0, 25, 60, 100, 150, 200, 250, 300])
@@ -39,7 +37,7 @@ def extract_reaction_blocks(filepath: str):
             parts = lines[i].strip().split()
             for part in parts:
                 try:
-                    float(part)  # 检查是否为数字
+                    float(part)
                     species.append(part)
                 except ValueError:
                     species.append(part)
@@ -56,7 +54,7 @@ def extract_reaction_blocks(filepath: str):
                 logk.extend(values)
                 count += len(values)
             except ValueError:
-                break  # 非数字行跳过
+                break
             i += 1
 
         if len(logk) == 8:
@@ -68,18 +66,18 @@ def extract_reaction_blocks(filepath: str):
     return reactions
 
 
-def match_reaction(user_species: List[str], reactions):
-    user_set = set([s.replace(" ", "") for s in user_species])
+def match_all_reactions(pool: List[str], reactions: List[Dict]) -> List[Dict]:
+    pool_set = set([s.replace(" ", "") for s in pool])
+    matched = []
     for r in reactions:
         reaction_set = set([s.replace(" ", "") for s in r['species']])
-        if user_set == reaction_set:
-            return r
-    return None
+        if reaction_set.issubset(pool_set):
+            matched.append(r)
+    return matched
 
 
 def arrhenius_fit(T, log10_k):
     log10_k_arr = np.array(log10_k)
-    # 限制极端值，防止 overflow
     log10_k_arr = np.clip(log10_k_arr, -100, 100)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -93,15 +91,19 @@ def arrhenius_fit(T, log10_k):
     return A, Ea, k
 
 
-def plot_results(T, k, A, Ea, title):
+def plot_results(T, kf, kr, A, Ea, title):
     T_fit = np.linspace(min(T), max(T), 300)
-    k_fit = A * np.exp(-Ea / (8.314 * T_fit))
+    kf_fit = A * np.exp(-Ea / (8.314 * T_fit))
+    Keq = kf / kr
+    kr_fit = kf_fit / Keq.mean()  # 近似逆向反应速率
 
-    plt.figure(figsize=(8, 5))
-    plt.plot(T, k, 'o', label='Data')
-    plt.plot(T_fit, k_fit, '-', label=f'Arrhenius Fit\nA={A:.2e}, Ea={Ea/1000:.2f} kJ/mol')
+    plt.figure(figsize=(9, 6))
+    plt.plot(T, kf, 'o', label='k(T) Forward')
+    plt.plot(T_fit, kf_fit, '-', label='Arrhenius k(T)')
+    plt.plot(T, kr, 's', label='k_r(T) Reverse')
+    plt.plot(T_fit, kr_fit, '--', label='Arrhenius k_r(T)')
     plt.xlabel('Temperature (K)')
-    plt.ylabel('k (mol$^{-1}$·L·s$^{-1}$)')
+    plt.ylabel('Rate Constant k (mol$^{-1}$·L·s$^{-1}$)')
     plt.yscale('log')
     plt.title(f'Reaction: {title}')
     plt.legend()
@@ -109,20 +111,27 @@ def plot_results(T, k, A, Ea, title):
     plt.tight_layout()
     plt.show()
 
-    # 表格输出
-    print("\nTemperature (K) | k (mol⁻¹·L·s⁻¹)")
-    print("----------------|----------------------")
-    for T_val, k_val in zip(T, k):
-        print(f"{T_val:15.2f} | {k_val: .3e}")
+    print(f"\n[ {title} ]")
+    print("Temperature (K) | k(T) Forward | k_r(T) Reverse")
+    print("----------------|----------------|----------------")
+    for T_val, k1, k2 in zip(T, kf, kr):
+        print(f"{T_val:15.2f} | {k1: .3e}   | {k2: .3e}")
 
+
+def compute_reverse_k(k_forward, delta_logK):
+    logK = np.array(delta_logK)
+    K_eq = 10 ** logK
+    return k_forward / K_eq
 
 # ---------- 主程序 ----------
 file_path = "reaction data/aqueous.txt"
 reactions = extract_reaction_blocks(file_path)
-matched = match_reaction(user_reactants, reactions)
+matched_list = match_all_reactions(user_reactant_pool, reactions)
 
-if matched:
-    A, Ea, k_vals = arrhenius_fit(T_kelvin, matched['log10_k'])
-    plot_results(T_kelvin, k_vals, A, Ea, matched['title'])
+if matched_list:
+    for match in matched_list:
+        A, Ea, k_vals = arrhenius_fit(T_kelvin, match['log10_k'])
+        k_reverse = compute_reverse_k(k_vals, match['log10_k'])  # 逆反应 k = kf / K
+        plot_results(T_kelvin, k_vals, k_reverse, A, Ea, match['title'])
 else:
-    print("未找到匹配的反应。请确认输入的反应物拼写和格式是否正确。")
+    print("未找到与所提供反应物匹配的反应。请检查拼写和格式。")

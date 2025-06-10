@@ -118,7 +118,7 @@ def plot_results(T, k, A, Ea, title):
 
 
 # ---------- 主程序 ----------
-file_path = "aqueous.txt"
+file_path = "reaction data/aqueous.txt"
 reactions = extract_reaction_blocks(file_path)
 matched_list = match_all_reactions(user_reactant_pool, reactions)
 
