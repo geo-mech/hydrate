@@ -1,12 +1,13 @@
 """
 渗流类Seepage的一些基础的接口。注意，此模块不依赖其它顶层的模块。
 """
+import collections.abc
 import ctypes
 import os
-import zmlx.alg.sys as warnings
 from ctypes import c_void_p
 
-from zml import Seepage, Vector, is_array, get_pointer64, np, Interp1
+import zmlx.alg.sys as warnings
+from zml import Seepage, Vector, is_array, get_pointer64, np, Map
 from zmlx.alg.base import time2str
 
 
@@ -394,13 +395,15 @@ def get_attr(model: Seepage, key, default_val=None, cast=None,
     if isinstance(key, str):
         key = model.get_model_key(key)
     if key is not None:
-        value = model.get_attr(index=key,
-                               default_val=default_val,
-                               **valid_range)
+        value = model.get_attr(
+            index=key,
+            default_val=default_val,
+            **valid_range)
     else:
         if default_val is None:
-            warnings.warn(f'The key ({key_backup}) is None '
-                          f'and default_val is None when get_attr')
+            warnings.warn(
+                f'The key ({key_backup}) is None '
+                f'and default_val is None when get_attr')
         value = default_val
     if cast is None:
         return value
@@ -654,15 +657,20 @@ class FloatBuffer:
         pointer (ctypes.c_void_p): 指向数据的指针。
 
     Args:
-        value (Vector | array-like | ctypes.c_void_p | None): 输入的数据，可以是 Vector 对象、数组、指针或者 None。
-        is_input (bool | None): 指示数据是否为输入数据，当 value 为 None 时必须提供。
+        value (Vector | array-like | ctypes.c_void_p | None):
+            输入的数据，可以是 Vector 对象、数组、指针或者 None。
+        is_input (bool | None): 指示数据是否为输入数据，
+            当 value 为 None 时必须提供。
         length (int | None): 数据的长度，当 value 为 None 时必须提供。
 
     Raises:
         AssertionError:
-            - 当 value 为 None 时，is_input 或 length 未提供，或者 is_input 为 True。
-            - 当 value 为 Vector 时，is_input 或 length 未提供，或者 is_input 为 True 但 Vector 的大小不等于 length。
-            - 当 value 为数组时，is_input 或 length 未提供，或者 is_input 为 True 但数组长度不等于 length，或者 is_input 为 False。
+            - 当 value 为 None 时，is_input 或 length 未提供，
+                或者 is_input 为 True。
+            - 当 value 为 Vector 时，is_input 或 length 未提供，
+                或者 is_input 为 True 但 Vector 的大小不等于 length。
+            - 当 value 为数组时，is_input 或 length 未提供，
+                或者 is_input 为 True 但数组长度不等于 length，或者 is_input 为 False。
             - 当 value 为其他类型时，不是指针类型。
     """
 
@@ -723,8 +731,10 @@ def get_face_diff(model: Seepage, ca, fa=None):
 
     Args:
         model (Seepage): 渗流模型对象，用于获取单元格数量和面数量等信息。
-        ca (Union[ctypes.c_void_p, Vector]): 输入参数，表示单元格中心位置的属性值。可以是指针或者 Vector 对象。
-        fa (Optional[Union[ctypes.c_void_p, Vector]]): 输出参数，表示面位置的差异结果。可以是指针或者 Vector 对象，默认为 None。
+        ca (Union[ctypes.c_void_p, Vector]): 输入参数，
+            表示单元格中心位置的属性值。可以是指针或者 Vector 对象。
+        fa (Optional[Union[ctypes.c_void_p, Vector]]): 输出参数，
+            表示面位置的差异结果。可以是指针或者 Vector 对象，默认为 None。
 
     Returns:
         Vector: 包含各个面位置差异结果的 Vector 对象。
@@ -746,8 +756,10 @@ def get_face_sum(model: Seepage, ca, fa=None):
 
     Args:
         model (Seepage): 渗流模型对象，用于获取单元格数量和面数量等信息。
-        ca (Union[ctypes.c_void_p, Vector]): 输入参数，表示单元格中心位置的属性值。可以是指针或者 Vector 对象。
-        fa (Optional[Union[ctypes.c_void_p, Vector]]): 输出参数，表示面位置的和结果。可以是指针或者 Vector 对象，默认为 None。
+        ca (Union[ctypes.c_void_p, Vector]): 输入参数，
+            表示单元格中心位置的属性值。可以是指针或者 Vector 对象。
+        fa (Optional[Union[ctypes.c_void_p, Vector]]): 输出参数，
+            表示面位置的和结果。可以是指针或者 Vector 对象，默认为 None。
 
     Returns:
         Vector: 包含各个面位置和结果的 Vector 对象。
@@ -1068,6 +1080,8 @@ def get_cell_fv(model: Seepage, fid=None, mask=None):
     if fid is None:
         v = as_numpy(model).cells.fluid_vol
     else:
+        if isinstance(fid, str) or not isinstance(fid, collections.abc.Iterable):
+            fid = [fid]
         v = as_numpy(model).fluids(*fid).vol
     return v if mask is None else v[mask]
 
@@ -1089,6 +1103,8 @@ def get_cell_fm(model: Seepage, fid=None, mask=None):
     if fid is None:
         v = as_numpy(model).cells.fluid_mass
     else:
+        if isinstance(fid, str) or not isinstance(fid, collections.abc.Iterable):
+            fid = [fid]
         v = as_numpy(model).fluids(*fid).mass
     return v if mask is None else v[mask]
 
@@ -1136,4 +1152,151 @@ def get_sat(names, table: dict):
     return values
 
 
+def get_recommended_dt(
+        model: Seepage, previous_dt,
+        dv_relative=0.1,
+        using_flow=True, using_ther=True):
+    """
+    在调用了 iterate 函数之后，调用此函数，来获取更优的时间步长。
+
+    参数:
+    - model: Seepage 模型对象
+    - previous_dt: 之前的时间步长
+    - dv_relative: 相对体积变化率，默认为 0.1
+    - using_flow: 是否使用流动模型，默认为 True
+    - using_ther: 是否使用热模型，默认为 True
+
+    返回值:
+    - 更优的时间步长
+
+    该函数首先断言 `using_flow` 或 `using_ther` 至少有一个为真。
+    然后，根据是否使用流动模型和热模型，分别计算推荐的时间步长 `dt1` 和 `dt2`。
+    最后，返回 `dt1` 和 `dt2` 中的较小值。
+    """
+    assert using_flow or using_ther
+    if using_flow:
+        dt1 = model.get_recommended_dt(
+            previous_dt=previous_dt,
+            dv_relative=dv_relative)
+    else:
+        dt1 = 1.0e100
+
+    if using_ther:
+        ca_t = model.reg_cell_key('temperature')
+        ca_mc = model.reg_cell_key('mc')
+        dt2 = model.get_recommended_dt(
+            previous_dt=previous_dt,
+            dv_relative=dv_relative,
+            ca_t=ca_t, ca_mc=ca_mc)
+    else:
+        dt2 = 1.0e100
+    return min(dt1, dt2)
+
+
+def _get_reports(reports):
+    """
+    解析并返回计算的报告
+    """
+    results = []
+    for r in reports:
+        results.append(None if r is None else r.to_dict())
+    return results
+
+
+def parallel_update_flow(*local_kwargs, pool=None, **global_kwargs):
+    """
+    对于多个模型，并行地更新模型的流场 (如果没有给定pool，则不并行)
+    """
+    reports = []
+
+    for opts in local_kwargs:  # 执行检查
+        assert isinstance(opts, dict), f'The type of opts is not dict. Opts = {opts}'
+        kwargs = global_kwargs.copy()
+        kwargs.update(opts)
+
+        model = kwargs.pop('model')  # 此参数必须给定
+        assert isinstance(model, Seepage), f'The model is not Seepage. model = {model}'
+
+        if model.not_has_tag('disable_flow') and model.fludef_number > 0:
+            reports.append(Map())
+            model.iterate(**kwargs, pool=pool, report=reports[-1])
+        else:
+            reports.append(None)
+
+    if pool is not None:
+        pool.sync()  # 等待放入pool中的任务执行完毕
+
+    return _get_reports(reports)
+
+
+def parallel_update_thermal(*local_kwargs, pool=None, **global_kwargs):
+    """
+    对于多个模型，并行地更新模型的温度场
+    """
+    reports = []
+
+    for opts in local_kwargs:  # 执行检查
+        assert isinstance(opts, dict)
+        kwargs = global_kwargs.copy()
+        kwargs.update(opts)
+
+        model = kwargs.pop('model')
+        assert isinstance(model, Seepage)
+
+        dt = kwargs.pop('dt')
+        ca_t = kwargs.pop('ca_t')
+        ca_mc = kwargs.pop('ca_mc')
+        fa_g = kwargs.pop('fa_g')
+
+        if model.has_tag('disable_ther') or dt <= 0 or ca_t is None or ca_mc is None or fa_g is None:
+            reports.append(None)
+        else:
+            reports.append(Map())
+            model.iterate_thermal(dt=dt, ca_t=ca_t, ca_mc=ca_mc, fa_g=fa_g, pool=pool, report=reports[-1])
+
+    if pool is not None:
+        pool.sync()  # 等待放入pool中的任务执行完毕
+
+    return _get_reports(reports)
+
+
+class CellCopyTask:
+    """
+    一个在多个Seepage模型之间并行地拷贝Cell的任务
+    """
+    def __init__(self, sources=None, targets=None):
+        self._sources = None
+        self._targets = None
+        self._count = None
+        if sources is not None and targets is not None:
+            assert len(sources) == len(targets)
+            self.create(sources, targets)
+
+    def create(self, sources, targets):
+        """
+        创建拷贝任务
+        Args:
+            sources: 作为源的Cells
+            targets: 作为目标的Cells
+        """
+        assert len(sources) == len(targets)
+        self._count = len(sources)
+
+        self._sources = (ctypes.c_void_p * self._count)()
+        self._targets = (ctypes.c_void_p * self._count)()
+
+        for idx, cell in enumerate(sources):
+            self._sources[idx] = cell.handle
+        for idx, cell in enumerate(targets):
+            self._targets[idx] = cell.handle
+
+    def run(self, positive=True):
+        """
+        执行任务
+        """
+        if positive:
+            Seepage.Cell.clone_all(targets=self._targets, sources=self._sources, count=self._count)
+        else:
+            Seepage.Cell.clone_all(sources=self._targets, targets=self._sources, count=self._count)
+        return self
 

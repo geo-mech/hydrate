@@ -1,6 +1,6 @@
 from zmlx.plt.cmap import get_color
 
-__all__ = ['get_color']
+_keep = [get_color]
 
 import zmlx.alg.sys as warnings
 

@@ -1,5 +1,5 @@
-from zmlx.geometry.base import point_distance as get_distance
-from zmlx.geometry.base import seg_intersection
+from zmlx.geometry.point import point_distance as get_distance
+from zmlx.geometry.segment import seg_intersection
 
 
 def get_area(v3):

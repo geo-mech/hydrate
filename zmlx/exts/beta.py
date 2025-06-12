@@ -1,12 +1,7 @@
+"""
+尚且处于测试中的模块。在功能稳定之后，会逐步被转移到zml中。因此，这个模块，可以被视为zml模块的一个扩展（会首先导入zml中的所有内容）
+"""
 from zml import *
 
+core = DllCore(dll_obj=load_cdll(name='beta.dll', first=os.path.dirname(__file__)))
 
-# core = DllCore(dll=load_cdll(name='beta.dll',
-#                              first=os.path.dirname(__file__)))
-
-
-def update_sand(model: Seepage, *args, **kwargs):
-    model.update_sand(*args, **kwargs)
-
-# if __name__ == '__main__':
-#     print(core.time_compile)

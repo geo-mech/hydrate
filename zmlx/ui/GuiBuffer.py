@@ -8,5 +8,3 @@ __all__ = ['information', 'question', 'plot', 'break_point', 'gui_exec',
 warnings.warn(f'The module {__name__} is deprecated (remove after 2026-4-15), '
               f'please import from zmlx instead.',
               DeprecationWarning, stacklevel=2)
-
-

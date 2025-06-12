@@ -1,7 +1,7 @@
 from zml import *
 
-core = DllCore(dll=load_cdll(name='heavy_oil.dll',
-                             first=os.path.dirname(__file__)))
+core = DllCore(dll_obj=load_cdll(name='heavy_oil.dll',
+                                 first=os.path.dirname(__file__)))
 
 core.use(None, 'vdisc3_modify_perm', c_void_p, c_void_p, c_size_t, c_size_t,
          c_size_t, c_size_t)

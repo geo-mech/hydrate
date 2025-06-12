@@ -1,4 +1,4 @@
-from zmlx.geometry.base import seg_point_distance
+from zmlx.geometry.segment import seg_point_distance
 
 __all__ = ['seg_point_distance']
 

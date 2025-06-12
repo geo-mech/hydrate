@@ -128,9 +128,10 @@ def set_nodes(model: InvasionPercolation, count,
 
 def set_bonds(model: InvasionPercolation, count, node0, node1, radi=None):
     assert model.bond_n == 0
-    model.add_bond(node0=get_pointer64(node0, readonly=True),
-                   node1=get_pointer64(node1, readonly=True),
-                   count=count)
+    model.add_bond(
+        node0=get_pointer64(node0, readonly=True),
+        node1=get_pointer64(node1, readonly=True),
+        count=count)
     if radi is not None:
         model.read_bond_radi(get_pointer64(radi, readonly=True))
 
@@ -142,11 +143,14 @@ def show_xy(model: InvasionPercolation, caption='侵入过程', gui_only=True,
         y = get_y(model)
         v = get_phase(model)
         mask = v < 0.5
-        ax.scatter(x[mask], y[mask], c='tab:blue', s=3, label='Water',
-                   alpha=0.2, edgecolors='none')
+        ax.scatter(
+            x[mask], y[mask], c='tab:blue', s=3, label='Water',
+            alpha=0.2, edgecolors='none')
         mask = [not m for m in mask]
-        ax.scatter(x[mask], y[mask], c='tab:orange', s=8, label='Oil',
-                   alpha=0.7, edgecolors='none')
+        ax.scatter(
+            x[mask], y[mask], c='tab:orange', s=8, label='Oil',
+            alpha=0.7, edgecolors='none')
 
-    plot_on_axes(on_axes, show_legend=True, grid=True, axis='equal',
-                 caption=caption, gui_only=gui_only, **kwargs)
+    plot_on_axes(
+        on_axes, show_legend=True, grid=True, axis='equal',
+        caption=caption, gui_only=gui_only, **kwargs)

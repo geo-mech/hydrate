@@ -17,6 +17,10 @@ def create(*, sol=None, sol_in_liq=None, liq=None, ca_sol=None, rate=1.0,
 
     注：
         要求流体的温度在几百K的范围内, 否则可能会对定义的溶解度造成影响；
+
+    注意：
+        返回一个dict，包含了反应的所有的信息。此dict定义的data可以在
+        zmlx.react.alg.add_reaction中使用，将反应添加到Seepage中
     """
 
     # 这个模块，最初是模拟气体的溶解。现在推广到一般的溶解过程，因此，修改参数的名字.

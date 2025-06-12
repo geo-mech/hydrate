@@ -23,9 +23,10 @@ def create(name=None):
     else:
         # 之前随手写的，错了
         specific_heat = 1000.0
-    return Seepage.FluDef(den=919.7,
-                          vis=1.0e30,
-                          specific_heat=specific_heat, name=name)
+    return Seepage.FluDef(
+        den=919.7,
+        vis=1.0e30,
+        specific_heat=specific_heat, name=name)
 
 
 def create_flu(*args, **kwargs):

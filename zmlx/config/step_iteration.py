@@ -3,7 +3,7 @@
 """
 
 from zml import Seepage
-from zmlx.config.slots import standard_slots
+from zmlx.config.slots import get_slots
 
 text_key = 'step_iteration'
 
@@ -40,12 +40,7 @@ def add_setting(model: Seepage, start=0, step=1, stop=999999999, name=None,
 
 
 def iterate(model: Seepage, current_step, slots):
-    if slots is not None:
-        temp = standard_slots.copy()
-        temp.update(slots)
-        slots = temp
-    else:
-        slots = standard_slots
+    slots = get_slots(slots)
 
     settings = get_settings(model)
     if len(settings) == 0:

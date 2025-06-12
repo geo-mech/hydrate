@@ -39,6 +39,10 @@ def create(vap, wat, fa_t=None, fa_c=None, temp_max=None):
     """
     创建水气化成为水蒸气的反应(以及其逆过程)
         vap: 水蒸气的ID；wat水的ID
+
+    注意：
+        返回一个dict，包含了反应的所有的信息。此dict定义的data可以在
+        zmlx.react.alg.add_reaction中使用，将反应添加到Seepage中
     """
     # 使用Antoine 公式，实际上这个温度范围可能已经超过了该公式的适用范围
     if temp_max is None:

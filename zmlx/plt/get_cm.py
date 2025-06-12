@@ -1,6 +1,6 @@
 from zmlx.plt.cmap import get_cm
 
-__all__ = ['get_cm']
+_keep = [get_cm]
 
 import zmlx.alg.sys as warnings
 

@@ -12,8 +12,8 @@ def get_faces_across(model, p0, p1):
     cell_end = model.get_nearest_cell(pos=p1)
 
     def get_dist(cell_pos):
-        return seg_point_distance([p0, p1], cell_pos) + point_distance(cell_pos,
-                                                                       cell_end.pos)
+        return seg_point_distance([p0, p1], cell_pos) + point_distance(
+            cell_pos, cell_end.pos)
 
     face_ids = []
     while cell_beg.index != cell_end.index:  # 遍历的目标，是利用这些face建立这两个cell之间的通道.

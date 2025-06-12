@@ -1,3 +1,6 @@
+from matplotlib.colors import Colormap
+
+
 def get_color(cmap, lr, rr, val):
     """
     根据给定的颜色映射和数值范围，返回数值对应的颜色
@@ -64,7 +67,7 @@ def get_color(cmap, lr, rr, val):
     return cmap(i)
 
 
-def get_cm(name=None):
+def get_cm(name=None) -> Colormap:
     """
     根据 Matplotlib 版本自动选择最佳方法获取 Colormap
     该实现兼容 Matplotlib ≥1.4 的所有版本，并自动选择各版本推荐的最佳实践方法。

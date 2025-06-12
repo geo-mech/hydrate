@@ -2,7 +2,6 @@
 处理系统相关的操作。后续修改的时候需要保证：
     此模块应不依赖于任何第三方模块，以及不依赖于zml
 """
-import hashlib
 import importlib
 import os
 import shutil
@@ -28,9 +27,10 @@ def log_deprecated(name):
 
 def warn(message, category=None, stacklevel=1, tag=None):
     """
-    警告，并且当tag给定的时候，则记录日志 (每天只记录一次)
+    警告，并且当tag给定的时候，则记录日志 (每天只记录一次). 这个函数用于在zmlx内部，去替换warnings的warn函数，
+    实现在弹出警告的同时，还会进行必要的记录。
     Args:
-        tag: 记录日志的标签
+        tag: 记录日志的标签（非必需）。在没有tag的时候，则使用message来替代
         message: 需要弹出的警告
         category: 类别
         stacklevel: 栈的深度
@@ -40,11 +40,7 @@ def warn(message, category=None, stacklevel=1, tag=None):
     """
     warnings.warn(message=message, category=category, stacklevel=stacklevel + 1)
     if tag is None:
-        try:
-            hash_obj = hashlib.sha256(message.encode('utf-8')).hexdigest()
-            tag = hash_obj[: 30]
-        except:
-            pass
+        tag = message
     if isinstance(tag, str):
         from zml import log
         log(text=message, tag=f'{tag}.warn')
@@ -178,18 +174,35 @@ def pip_install(package_name, name=None, show_exists=True):
     Returns:
         None
     """
-    try:
-        if name is not None:
+    try:  # 尝试安装
+        if name is not None:  # 检查是否已经安装
             from importlib.util import find_spec
             if find_spec(name):
                 if show_exists:
                     print(f"安装包 {package_name} 已经存在!")
                 return
-        subprocess.check_call([f'{os.path.abspath(sys.executable)}',
-                               '-m', 'pip', 'install',
-                               package_name])
-    except subprocess.CalledProcessError as e:
-        print(f"安装包 {package_name} 失败: {e}")
+
+        proc = subprocess.Popen(
+            [sys.executable, "-m", "pip", "install", package_name],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True
+        )
+
+        # 实时读取输出
+        while True:
+            line = proc.stdout.readline()
+            if not line:
+                break
+            print(f"[{package_name}]", line.strip())
+
+        # 等待进程结束并检查返回码
+        proc.wait()
+        if proc.returncode != 0:
+            raise subprocess.CalledProcessError(proc.returncode, proc.args)
+
+    except subprocess.CalledProcessError as err:
+        print(f"安装失败({package_name}): {err}")
 
 
 def install_dep(show_exists=True):
@@ -239,6 +252,7 @@ def install_dep(show_exists=True):
         ('pypiwin32', 'win32com'),
         ('pywin32', 'pywintypes'),
         ('dulwich', 'dulwich'),
+        ('pillow', 'PIL'),
     ]:
         pip_install(package_name, name=name, show_exists=show_exists)
 
@@ -364,6 +378,10 @@ def create_shortcut(target: str, path: str,
         description (str): 快捷方式描述（可选）
     """
     try:
+        from zml import in_windows
+        if not in_windows():
+            print(f'The function create_shortcut works only for Windows')
+            return
         from pathlib import Path
         import win32com.client  # pip_install('pypiwin32')
 
@@ -414,7 +432,10 @@ def create_ui_lnk_on_desktop(name='IGG-Hydrate.lnk'):
         None
     """
     from zmlx.alg.os import get_desktop_path
-    from zmlx import get_path
+    from zmlx import get_path, in_windows
+    if not in_windows():
+        print(f'The function create_ui_lnk_on_desktop works only for Windows')
+        return
     filename = get_desktop_path(name)
     if isinstance(filename, str):
         create_shortcut(get_pythonw_path(), filename,
@@ -424,7 +445,7 @@ def create_ui_lnk_on_desktop(name='IGG-Hydrate.lnk'):
 
 def has_module(name):
     """
-    测试是否存在给定名字的库
+    测试是否存在给定名字的库(这个，可能并不是很安全的测试方法，因为在测试的时候，会导入，进而执行一些可能不是所预期的操作)
     """
     try:
         import importlib
@@ -494,3 +515,73 @@ def srand(seed):
 
     random.seed(seed)
     set_srand(seed)
+
+
+def listdir(path=None, with_file=True, with_dir=True):
+    """
+    返回给定路径下的所有的文件/文件夹的路径。和os.listdir的不同在于：
+        1. 此函数会返回文件的路径
+        2. 此函数会返回空列表，而不是抛出异常
+        3. 此函数可以接受一个列表，然后返回所有列表中路径下的文件/文件夹的路径
+    """
+    if isinstance(path, str):
+        try:
+            if not os.path.isdir(path):
+                return []
+            else:
+                result = []
+                for name in os.listdir(path):
+                    path2 = os.path.abspath(os.path.join(path, name))
+                    if (with_file and os.path.isfile(path2)) or (
+                            with_dir and os.path.isdir(path2)):
+                        result.append(path2)
+                return result
+        except Exception as err:
+            print(f'Error: \nerr = <{err}>. \npath = <{path}>\n')
+            return []
+
+    elif isinstance(path, (list, tuple)):
+        results = []
+        for p in path:
+            results.extend(listdir(p, with_file=with_file, with_dir=with_dir))
+        return results
+
+    else:
+        return []
+
+
+def unique(iterable):
+    """
+    保持顺序去除列表重复元素
+    Args:
+        iterable: 可迭代对象 (列表/元组等)
+
+    Returns:
+        list: 保持原顺序的去重后列表
+    """
+    seen = set()
+    result = []
+    for element in iterable:
+        if element not in seen:
+            seen.add(element)
+            result.append(element)
+    return result
+
+
+def first_execute(name, key=None):
+    """
+    检查给定的文件是否是第一次运行（只有在首次启动first_execute函数的时候返回True）.
+    其中name为文件的全路径。key为在app_data中存储的名字。
+    """
+    from zml import app_data
+    if name is None:
+        name = ''
+    if key is None:
+        key = 'files_executed'
+    executed = app_data.get(key, [])
+    if name in executed:
+        return False
+    else:
+        executed.append(name)
+        app_data.put(key, executed)
+        return True

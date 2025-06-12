@@ -4,16 +4,22 @@
       C++代码的Python接口（必须与 zml.dll一起使用）。
 
 环境: Windows 10/11；Python 3.7或更高版本；64位系统；
+     注：
+     另有Linux版本，如有必要可联系作者获取。
 
-依赖: numpy
+依赖: 部分功能依赖 numpy/scipy/matplotlib等.
 
-网站: https://gitee.com/geomech/hydrate
+网站: https://gitee.com/geomech/hydrate;
+    注:
+    在使用过程中遇到问题，优先在此页面"新建Issue"来反馈.
 
 作者: 张召彬 <zhangzhaobin@mail.iggcas.ac.cn>，
-     中国科学院地质与地球物理研究所
+     中国科学院地质与地球物理研究所.
 """
 import ctypes
 import datetime
+import hashlib
+import importlib
 import math
 import os
 import re
@@ -24,6 +30,7 @@ import warnings
 from collections.abc import Iterable
 from ctypes import (cdll, c_void_p, c_char_p, c_int, c_int64, c_bool, c_double,
                     c_size_t, c_uint, CFUNCTYPE, POINTER)
+from pathlib import Path
 
 try:
     import numpy as np
@@ -32,9 +39,56 @@ except ImportError:
 
 warnings.simplefilter("default")  # Default warning display
 
-# Indicates whether the system is currently Windows (both Windows
-# and Linux systems are currently supported)
-is_windows = os.name == 'nt'
+
+def in_windows():
+    """
+    判断当前是否处于Windows系统的运行环境
+    Returns:
+        bool: True表示是Windows系统，False表示不是
+    """
+    return sys.platform.startswith('win')
+
+
+def in_linux():
+    """
+    判断当前是否处于Linux系统的运行环境
+    Returns:
+        bool: True表示是Linux系统，False表示不是
+    """
+    return sys.platform.startswith('linux')
+
+
+def in_macos():
+    """
+    判断当前是否处于Mac系统
+    Returns:
+        bool: True表示是Mac系统，False表示不是
+    """
+    return sys.platform == 'darwin'
+
+
+def get_os_type():
+    """
+    返回操作系统类型字符串 (注意，zml模块仅支持 Windows和Linux两个系统，在Mac系统未测试)
+    """
+    if in_windows():
+        return 'windows'
+    elif in_linux():
+        return 'linux'
+    elif in_macos():
+        return 'macos'
+    else:
+        return 'unknown'
+
+
+# 是否是Windows系统 (注: 此常量后续弃用，请使用函数 in_windows)
+is_windows = in_windows()
+
+# 是否是Linux系统 (注: 此常量后续弃用，请使用函数 in_linux)
+is_linux = in_linux()
+
+# 是否是MacOS系统 (注: 此常量后续弃用，请使用函数 in_macos)
+is_macos = in_macos()
 
 
 def const_f64_ptr(arr):
@@ -122,6 +176,22 @@ def get_pointer64(arr, readonly=False):
         return const_f64_ptr(arr)
     else:
         return f64_ptr(arr)
+
+
+def get_hash(text, length=None):
+    """
+    计算文本的哈希值. 返回前length个字符.
+    默认返回前30个字符.
+    Args:
+        text (str): 输入文本
+        length (int, optional): 哈希值长度，默认为None
+    Returns:
+        str: 计算得到的哈希值
+    """
+    hash_obj = hashlib.sha256(text.encode('utf-8'))
+    if length is None:
+        length = 30
+    return hash_obj.hexdigest()[:length]
 
 
 class Object:
@@ -283,7 +353,7 @@ def make_parent(path):
     """确保指定文件路径的父目录存在。
 
     Args:
-        path (str): 文件路径
+        path: 文件路径
 
     Returns:
         str: 原始输入路径
@@ -351,6 +421,40 @@ def write_text(path, text, encoding=None):
             f.write(text)
 
 
+def get_user_data_dir(roaming=False):
+    """
+    获取用户数据目录(支持roaming)
+    """
+    # Windows 系统
+    if in_windows():
+        # 优先使用 LOCALAPPDATA（不可漫游）或 APPDATA（可漫游）
+        base_path_str = os.getenv(
+            "LOCALAPPDATA" if not roaming else "APPDATA", "")
+        if len(base_path_str) > 0 and os.path.exists(base_path_str):
+            base_path = Path(base_path_str)
+        else:  # 环境变量缺失时的后备方案
+            base_path = Path.home() / "AppData" / (
+                "Local" if not roaming else "Roaming")
+
+    # macOS 系统
+    elif in_macos():
+        base_path = Path.home() / "Library" / "Application Support"
+
+    # Linux/Unix 系统
+    else:
+        # 遵循 XDG Base Directory 规范
+        xdg_data_home = os.getenv("XDG_DATA_HOME", "")
+        if len(xdg_data_home) > 0:
+            base_path = Path(xdg_data_home)
+        else:
+            base_path = Path.home() / ".local" / "share"
+
+    # 创建并返回应用专属目录
+    app_dir = base_path / 'zml'
+    app_dir.mkdir(parents=True, exist_ok=True)
+    return str(app_dir)
+
+
 class _AppData(Object):
     """应用程序数据管理核心类，负责持久化存储和运行时数据管理。
 
@@ -363,32 +467,31 @@ class _AppData(Object):
     """
 
     def __init__(self):
-        """初始化应用程序数据管理系统。
-
-        自动完成：
-        1. 创建平台相关缓存目录（Windows: APPDATA，Linux: /var/tmp）
-        2. 加载自定义搜索路径配置
-        3. 初始化内存存储空间
         """
-        # cache directory
-        if is_windows:
-            self.folder = os.path.join(os.getenv("APPDATA"), 'zml')
-        else:
-            self.folder = os.path.join('/var/tmp/zml')
+        初始化应用程序数据管理系统。
+        """
+        self.__folder = get_user_data_dir(roaming=True)
 
-        make_dirs(self.folder)
+        # memory variable
+        self.__space = {}
+
         # Custom file search path
-        self.paths = []
+        self.__custom_paths = []
         try:
-            for line in self.getenv(key='path', default='').splitlines():
+            for line in self.getenv(key='path', default='').split(';'):
                 line = line.strip()
                 if os.path.isdir(line):
                     self.add_path(line)
-        except:
-            pass
+        except Exception as err:
+            warnings.warn(f'Error: {err}', stacklevel=2)
 
-        # memory variable
-        self.space = {}
+    @property
+    def folder(self):
+        return self.__folder
+
+    @property
+    def space(self):
+        return self.__space
 
     def add_path(self, path):
         """添加自定义文件搜索路径。
@@ -404,10 +507,10 @@ class _AppData(Object):
             - 仅接受有效目录路径
         """
         if os.path.isdir(path):
-            for existed in self.paths:
+            for existed in self.__custom_paths:
                 if os.path.samefile(path, existed):
                     return False
-            self.paths.append(path)
+            self.__custom_paths.append(path)
             return True
         else:
             return False
@@ -421,9 +524,8 @@ class _AppData(Object):
         Returns:
             bool: 当天已有该标签返回True，否则返回False
         """
-        path = os.path.join(
-            self.folder, 'tags',
-            datetime.datetime.now().strftime(f"%Y-%m-%d.{tag}"))
+        name = get_hash(datetime.datetime.now().strftime(f"%Y-%m-%d.{tag}"))
+        path = self.root('tags', name)
         return os.path.exists(path)
 
     def add_tag_today(self, tag):
@@ -438,19 +540,18 @@ class _AppData(Object):
             - 文件内容为空，仅通过存在性标记
         """
         try:
-            folder = os.path.join(self.folder, 'tags')
-            make_dirs(folder)
-            path = os.path.join(folder, datetime.datetime.now().strftime(
-                f"%Y-%m-%d.{tag}"))
+            name = get_hash(datetime.datetime.now().strftime(f"%Y-%m-%d.{tag}"))
+            path = self.root('tags', name)
             with open(path, 'w') as f:
                 f.write('\n')
         except:
             pass
 
-    def log(self, text):
+    def log(self, text, encoding=None):
         """记录运行时日志到日期命名的日志文件。
 
         Args:
+            encoding: 编码格式，默认为utf-8
             text (str): 要记录的日志内容
 
         Note:
@@ -459,10 +560,11 @@ class _AppData(Object):
             - 自动创建所需目录结构
         """
         try:
-            folder = os.path.join(self.folder, 'logs')
-            make_dirs(folder)
-            with open(os.path.join(folder, datetime.datetime.now().strftime(
-                    "%Y-%m-%d.log")), 'a') as f:
+            name = datetime.datetime.now().strftime("%Y-%m-%d.log")
+            path = self.root('logs', name)
+            if encoding is None:
+                encoding = 'utf-8'
+            with open(path, 'a', encoding=encoding) as f:
                 f.write(f'{datetime.datetime.now()}: \n{text}\n\n\n')
         except:
             pass
@@ -472,14 +574,16 @@ class _AppData(Object):
 
         Args:
             key (str): 环境变量名称
-            encoding (str, optional): 文件编码格式
+            encoding (str, optional): 文件编码格式，默认使用utf-8
             default (Any, optional): 默认返回值
             ignore_empty (bool): 是否将空字符串视为默认值
 
         Returns:
             Union[str, Any]: 成功读取返回字符串值，失败返回默认值
         """
-        path = os.path.join(self.folder, 'env', key)
+        path = self.root('env', key)
+        if encoding is None:
+            encoding = 'utf-8'
         res = read_text(path, encoding=encoding, default=default)
         if ignore_empty:
             if isinstance(res, str):
@@ -493,13 +597,15 @@ class _AppData(Object):
         Args:
             key (str): 环境变量名称
             value (str): 要存储的值
-            encoding (str, optional): 文件编码格式
+            encoding (str, optional): 文件编码格式，默认使用utf-8
 
         Note:
             - 变量存储在缓存目录的env子目录
             - 每个变量对应单独文件
         """
-        path = os.path.join(self.folder, 'env', key)
+        path = self.root('env', key)
+        if encoding is None:
+            encoding = 'utf-8'
         write_text(path, value, encoding=encoding)
 
     def root(self, *args):
@@ -530,7 +636,7 @@ class _AppData(Object):
             - 文件存储在缓存目录的temp子目录
             - 适合存储临时中间数据
         """
-        return make_parent(os.path.join(self.folder, 'temp', *args))
+        return self.root('temp', *args)
 
     @staticmethod
     def proj(*args):
@@ -563,7 +669,7 @@ class _AppData(Object):
             - 使用 shutil.rmtree 进行递归删除
             - 静默处理所有文件操作异常
         """
-        folder = os.path.join(self.folder, 'temp')
+        folder = self.temp()
         if os.path.isdir(folder):
             if len(args) == 0:
                 shutil.rmtree(folder)
@@ -594,13 +700,11 @@ class _AppData(Object):
             6. 自定义路径
             7. Python系统路径
         """
-        paths = [os.getcwd(), self.proj()] if first is None else [
-            first,
-            os.getcwd(),
-            self.proj()]
-        return paths + [self.folder,
-                        os.path.join(self.folder, 'temp')
-                        ] + self.paths + sys.path
+        paths = []
+        if first is not None:
+            paths.append(first)
+        paths.extend([os.getcwd(), self.proj(), self.root(), self.temp()])
+        return paths + self.__custom_paths + sys.path
 
     def find(self, *name, first=None):
         """查找指定文件的首个有效路径。
@@ -622,8 +726,8 @@ class _AppData(Object):
                     path = os.path.join(folder, *name)
                     if os.path.exists(path):
                         return path
-                except:
-                    pass
+                except Exception as err:
+                    warnings.warn(f'Meet Error: {err}')
         return None
 
     def find_all(self, *name, first=None):
@@ -741,13 +845,17 @@ def load_cdll(name, *, first=None):
             assert isinstance(path, str)
             return cdll.LoadLibrary(path)
         except Exception as e:
-            print(f'Error load library from <{path}>. Message = {e}')
+            warnings.warn(
+                f'Error load library from <{path}>. Message = {e}',
+                stacklevel=2)
             return None
     else:
         try:
             return cdll.LoadLibrary(name)
         except Exception as e:
-            print(f'Error load library from <{name}>. Message = {e}')
+            warnings.warn(
+                f'Error load library from <{name}>. Message = {e}',
+                stacklevel=2)
             return None
 
 
@@ -777,8 +885,8 @@ class _NullFunction:
             - 自动打印调用参数帮助调试
             - 保持与正常函数相同的调用接口
         """
-        print(
-            f'calling null function {self.name}(args={args}, kwargs={kwargs})')
+        info = f'calling null function {self.name}(args={args}, kwargs={kwargs})'
+        warnings.warn(info, stacklevel=2)
 
 
 def get_func(dll_obj, restype, name, *argtypes):
@@ -805,7 +913,8 @@ def get_func(dll_obj, restype, name, *argtypes):
     fn = getattr(dll_obj, name, None)
     if fn is None:
         if dll_obj is not None:
-            print(f'Warning: can not find function <{name}> in <{dll_obj}>')
+            info = f'Warning: can not find function <{name}> in <{dll_obj}>'
+            warnings.warn(info, stacklevel=2)
         return _NullFunction(name)
     if restype is not None:
         fn.restype = restype
@@ -842,41 +951,43 @@ def get_dir():
     return os.path.dirname(os.path.realpath(__file__))
 
 
-dll = load_cdll('zml.dll' if is_windows else 'zml.so.1', first=get_dir())
-
-
 class DllCore:
     """
     管理 C++ 内核中的错误、警告等
     """
 
-    def __init__(self, dll):
+    def __init__(self, dll_obj):
         """
         初始化 DllCore 对象
 
         Args:
-            dll: 动态链接库对象
+            dll_obj: 动态链接库对象
         """
         self.__err_handle = None
-        self.dll = dll
+        self.dll = dll_obj
         self._dll_funcs = {}
         self.dll_has_error = get_func(self.dll, c_bool, 'has_error')
-        self.dll_pop_error = get_func(self.dll, c_char_p, 'pop_error', c_void_p)
+        self.dll_pop_error = get_func(
+            self.dll, c_char_p, 'pop_error', c_void_p)
         self.dll_has_warning = get_func(self.dll, c_bool, 'has_warning')
-        self.dll_pop_warning = get_func(self.dll, c_char_p, 'pop_warning',
-                                        c_void_p)
+        self.dll_pop_warning = get_func(
+            self.dll, c_char_p, 'pop_warning',
+            c_void_p)
         self.dll_has_log = get_func(self.dll, c_bool, 'has_log')
-        self.dll_pop_log = get_func(self.dll, c_char_p, 'pop_log', c_void_p)
+        self.dll_pop_log = get_func(
+            self.dll, c_char_p, 'pop_log', c_void_p)
         self.use(c_size_t, 'get_log_nmax')
         self.use(None, 'set_log_nmax', c_size_t)
         self.use(c_char_p, 'get_time_compile', c_void_p)
-        self.dll_print_logs = get_func(self.dll, None, 'print_logs', c_char_p)
+        self.dll_print_logs = get_func(
+            self.dll, None, 'print_logs', c_char_p)
         self.use(c_int, 'get_version')
         self.use(c_bool, 'is_parallel_enabled')
         self.use(None, 'set_parallel_enabled', c_bool)
         self.use(c_bool, 'assert_is_void')
-        self.dll_set_error_handle = get_func(self.dll, None, 'set_error_handle',
-                                             c_void_p)
+        self.dll_set_error_handle = get_func(
+            self.dll, None, 'set_error_handle',
+            c_void_p)
         self.use(c_char_p, 'get_compiler')
 
     def has_dll(self):
@@ -1155,7 +1266,8 @@ class DllCore:
         """
         if self.has_dll():
             if self._dll_funcs.get(name) is not None:
-                print(f'Warning: function <{name}> already exists')
+                info = f'Warning: function <{name}> already exists'
+                warnings.warn(info, stacklevel=2)
             else:
                 func = get_func(self.dll, restype, name, *argtypes)
                 if func is not None:
@@ -1178,13 +1290,18 @@ class DllCore:
         return self._dll_funcs.get(name)
 
 
-core = DllCore(dll=dll)
+# 动态库对象
+dll = load_cdll('zml.dll' if in_windows() else 'zml_impl.so', first=get_dir())
+
+# 对动态库对象的进一步的封装
+core = DllCore(dll_obj=dll)
 
 # Version of the zml module (date represented by six digits)
 try:
     version = core.version
-except:
+except Exception as version_error:
     version = 110101
+    warnings.warn(f'Meet error when get version: {version_error}', stacklevel=2)
 
 
 class Timer:
@@ -1503,6 +1620,12 @@ class HasHandle(Object):
         """
         return self.__handle
 
+    def __repr__(self):
+        return f'{type(self).__name__}(handle={self.handle})'
+
+    def __str__(self):
+        return repr(self)
+
 
 class String(HasHandle):
     """管理字符串对象的类，继承自 HasHandle 类。
@@ -1524,6 +1647,9 @@ class String(HasHandle):
             if value is not None:
                 assert isinstance(value, str)
                 self.assign(value)
+
+    def __repr__(self):
+        return f"{type(self).__name__}(handle={self.handle}, str='{self.to_str()}')"
 
     def __str__(self):
         """返回字符串对象的字符串表示。
@@ -1659,13 +1785,13 @@ class License:
     该类用于管理软件的授权信息，包括获取授权信息、检查授权状态、生成授权码等功能。
     """
 
-    def __init__(self, core):
+    def __init__(self, core_obj):
         """初始化 License 对象。
 
         Args:
-            core: 核心模块对象，用于调用底层功能。
+            core_obj: 核心模块对象，用于调用底层功能。
         """
-        self.core = core
+        self.core = core_obj
         self.license_info_has_checked = False
         if self.core.has_dll():
             self.core.use(c_bool, 'lic_is_admin')
@@ -1803,7 +1929,7 @@ Thanks for using.
                 print(text)
 
 
-lic = License(core=core)
+lic = License(core_obj=core)
 
 
 def reg(code=None):
@@ -2065,10 +2191,10 @@ def __feedback():
         None
     """
     try:
-        folder_logs = os.path.join(app_data.folder, 'logs')
+        folder_logs = app_data.root('logs')
         if not os.path.isdir(folder_logs):
             return
-        folder_logs_feedback = os.path.join(app_data.folder, 'logs_feedback')
+        folder_logs_feedback = app_data.root('logs_feedback')
         make_dirs(folder_logs_feedback)
         has_feedback = set(os.listdir(folder_logs_feedback))
         date = datetime.datetime.now().strftime("%Y-%m-%d.log")
@@ -2124,6 +2250,58 @@ def is_chinese(string):
         bool: 如果字符串包含中文字符，则返回 True；否则返回 False。
     """
     return bool(re.search('[\u4e00-\u9fff]', string))
+
+
+class ThreadPool(HasHandle):
+    """
+    封装 zml::thread_pool_ty
+    """
+    core.use(c_void_p, 'new_thread_pool', c_int)
+    core.use(None, 'del_thread_pool', c_void_p)
+
+    def __init__(self, num_threads=0, handle=None):
+        """
+        创建线程池.
+        Args:
+            num_threads (int, optional): 线程数量. 默认为0. 如果给定0，则由系统自动确定线程数量。
+            handle: 已有的句柄。如果提供，则忽略其他参数。
+        """
+        super().__init__(
+            handle,
+            lambda: core.new_thread_pool(num_threads),
+            core.del_thread_pool)
+
+    core.use(None, 'thread_pool_join', c_void_p)
+
+    def join(self):
+        """
+        等待所有任务执行完毕，并且，终止线程池
+        """
+        return core.thread_pool_join(self.handle)
+
+    core.use(None, 'thread_pool_wait', c_void_p)
+
+    def wait(self):
+        """
+        等待所有任务执行完毕，并且，终止线程池
+        """
+        return core.thread_pool_wait(self.handle)
+
+    core.use(None, 'thread_pool_stop', c_void_p)
+
+    def stop(self):
+        """
+        停止线程池
+        """
+        return core.thread_pool_stop(self.handle)
+
+    core.use(None, 'thread_pool_sync', c_void_p)
+
+    def sync(self):
+        """
+        同步等待当前存在的任务 (不停止线程池，因此，线程池在后续还可以再使用)
+        """
+        return core.thread_pool_sync(self.handle)
 
 
 class FileMap(HasHandle):
@@ -2444,13 +2622,16 @@ class Vector(HasHandle):
         else:
             assert value is None and path is None and size is None
 
+    def __repr__(self):
+        return f'{type(self).__name__}(handle={self.handle}, size={self.size})'
+
     def __str__(self):
         """返回 Vector 的字符串表示。
 
         Returns:
             str: Vector 的字符串表示。
         """
-        return f'zml.Vector({self.to_list()})'
+        return f'{self.to_list()}'
 
     core.use(None, 'vf_save', c_void_p, c_char_p)
 
@@ -2693,6 +2874,9 @@ class IntVector(HasHandle):
             if value is not None:
                 self.set(value)
 
+    def __repr__(self):
+        return f'{type(self).__name__}(handle={self.handle}, size={self.size})'
+
     core.use(None, 'vi_save', c_void_p, c_char_p)
 
     def save(self, path):
@@ -2867,6 +3051,9 @@ class UintVector(HasHandle):
         if handle is None:
             if value is not None:
                 self.set(value)
+
+    def __repr__(self):
+        return f'{type(self).__name__}(handle={self.handle}, size={self.size})'
 
     core.use(None, 'vui_save', c_void_p, c_char_p)
 
@@ -3051,6 +3238,9 @@ class StrVector(HasHandle):
         """
         super(StrVector, self).__init__(handle, core.new_vs, core.del_vs)
 
+    def __repr__(self):
+        return f'{type(self).__name__}(handle={self.handle}, size={self.size})'
+
     core.use(c_size_t, 'vs_size', c_void_p)
 
     @property
@@ -3167,6 +3357,9 @@ class PtrVector(HasHandle):
         if handle is None:
             if value is not None:
                 self.set(value)
+
+    def __repr__(self):
+        return f'{type(self).__name__}(handle={self.handle}, size={self.size})'
 
     core.use(c_size_t, 'vp_size', c_void_p)
 
@@ -3415,13 +3608,16 @@ class Matrix2(HasHandle):
             if value is not None:
                 self.fill(value)
 
+    def __repr__(self):
+        return f'{type(self).__name__}(handle={self.handle}, size={self.size})'
+
     def __str__(self):
         """返回 Matrix2 的字符串表示。
 
         Returns:
             str: Matrix2 的字符串表示。
         """
-        return f'zml.Matrix2(size={self.size})'
+        return f'{type(self).__name__}(size={self.size})'
 
     core.use(None, 'mat2_save',
              c_void_p, c_char_p)
@@ -3683,13 +3879,16 @@ class Matrix3(HasHandle):
             if value is not None:
                 self.fill(value)
 
+    def __repr__(self):
+        return f'{type(self).__name__}(handle={self.handle}, size={self.size})'
+
     def __str__(self):
         """返回 Matrix3 的字符串表示。
 
         Returns:
             str: Matrix3 的字符串表示。
         """
-        return f'zml.Matrix3(size={self.size})'
+        return f'{type(self).__name__}(size={self.size})'
 
     core.use(None, 'mat3_save', c_void_p, c_char_p)
 
@@ -3951,6 +4150,9 @@ class Tensor3Matrix3(HasHandle):
         if handle is None:
             if isinstance(path, str):
                 self.load(path)
+
+    def __repr__(self):
+        return f'{type(self).__name__}(handle={self.handle}, size={self.size})'
 
     core.use(None, 'ts3mat3_save',
              c_void_p, c_char_p)
@@ -5138,7 +5340,10 @@ class Array2(HasHandle):
         Returns:
             str: 格式为 zml.Array2(x, y) 的字符串。
         """
-        return f'zml.Array2({self[0]}, {self[1]})'
+        return f'{type(self).__name__}({self[0]}, {self[1]})'
+
+    def __repr__(self):
+        return f'{type(self).__name__}(handle={self.handle}, x={self[0]}, y={self[1]})'
 
     def __len__(self):
         """获取数组长度。
@@ -5366,13 +5571,16 @@ class Array3(HasHandle):
         """
         self.from_fmap(value, fmt='binary')
 
+    def __repr__(self):
+        return f'{type(self).__name__}(handle={self.handle}, x={self[0]}, y={self[1]}, z={self[2]})'
+
     def __str__(self):
         """返回对象的字符串表示。
 
         Returns:
-            str: 格式为 zml.Array3(x, y, z) 的字符串。
+            str: 格式为 Array3(x, y, z) 的字符串。
         """
-        return f'zml.Array3({self[0]}, {self[1]}, {self[2]})'
+        return f'{type(self).__name__}({self[0]}, {self[1]}, {self[2]})'
 
     def __len__(self):
         """获取数组长度。
@@ -5594,13 +5802,16 @@ class Tensor2(HasHandle):
         """
         self.from_fmap(value, fmt='binary')
 
+    def __repr__(self):
+        return f'{type(self).__name__}(handle={self.handle}, xx={self.xx}, yy={self.yy}, xy={self.xy})'
+
     def __str__(self):
         """返回张量的字符串表示。
 
         Returns:
             str: 格式为 zml.Tensor2(xx, yy, xy) 的字符串。
         """
-        return f'zml.Tensor2({self.xx}, {self.yy}, {self.xy})'
+        return f'{type(self).__name__}({self.xx}, {self.yy}, {self.xy})'
 
     core.use(c_double, 'tensor2_get',
              c_void_p, c_size_t, c_size_t)
@@ -5959,13 +6170,18 @@ class Tensor3(HasHandle):
         """
         self.from_fmap(value, fmt='binary')
 
+    def __repr__(self):
+        return (f'{type(self).__name__}(handle={self.handle}, '
+                f'xx={self.xx}, yy={self.yy}, zz={self.zz}, '
+                f'xy={self.xy}, yz={self.yz}, zx={self.zx})')
+
     def __str__(self):
         """返回张量的字符串表示。
 
         Returns:
             str: 格式为 zml.Tensor3(xx, yy, zz, xy, yz, zx) 的字符串。
         """
-        return (f'zml.Tensor3({self.xx}, {self.yy}, {self.zz}, '
+        return (f'{type(self).__name__}({self.xx}, {self.yy}, {self.zz}, '
                 f'{self.xy}, {self.yz}, {self.zx})')
 
     core.use(c_double, 'tensor3_get',
@@ -6759,13 +6975,17 @@ class Coord2(HasHandle):
     def fmap(self, value):
         self.from_fmap(value, fmt='binary')
 
+    def __repr__(self):
+        return (f'{type(self).__name__}(handle={self.handle}, '
+                f'origin={self.origin}, xdir={self.xdir})')
+
     def __str__(self):
         """返回坐标系的字符串表示。
 
         Returns:
             str: 格式为 zml.Coord2(origin=..., xdir=...)
         """
-        return f'zml.Coord2(origin = {self.origin}, xdir = {self.xdir})'
+        return f'{type(self).__name__}(origin = {self.origin}, xdir = {self.xdir})'
 
     core.use(None, 'coord2_set',
              c_void_p, c_size_t, c_size_t)
@@ -6948,13 +7168,17 @@ class Coord3(HasHandle):
     def fmap(self, value):
         self.from_fmap(value, fmt='binary')
 
+    def __repr__(self):
+        return (f'{type(self).__name__}(handle={self.handle}, '
+                f'origin={self.origin}, xdir={self.xdir}, ydir={self.ydir})')
+
     def __str__(self):
         """获取坐标系的字符串表示。
 
         Returns:
             str: 格式为 zml.Coord3(origin=..., xdir=..., ydir=...)
         """
-        return (f'zml.Coord3(origin = {self.origin}, '
+        return (f'{type(self).__name__}(origin = {self.origin}, '
                 f'xdir = {self.xdir}, ydir = {self.ydir})')
 
     core.use(None, 'coord3_set',
@@ -8083,17 +8307,11 @@ class Mesh3(HasHandle):
         except:
             pass
 
-    def __str__(self):
-        """
-        返回 Mesh3 对象的字符串表示。
-
-        Returns:
-            str: Mesh3 对象的字符串表示。
-        """
+    def __repr__(self):
         return (
-            f'zml.Mesh3(handle = {self.handle}, '
-            f'node_n = {self.node_number}, link_n = {self.link_number}, '
-            f'face_n = {self.face_number}, body_n = {self.body_number})')
+            f'{type(self).__name__}(handle={self.handle}, '
+            f'node_n={self.node_number}, link_n={self.link_number}, '
+            f'face_n={self.face_number}, body_n={self.body_number})')
 
     core.use(None, 'mesh3_save',
              c_void_p, c_char_p)
@@ -8979,9 +9197,9 @@ class LinearExpr(HasHandle):
             s = ' + '.join(
                 [f'{self[i][1]}*x({self[i][0]})' for i in range(len(self))])
             s = s.replace('+ -', '- ')
-            return f'zml.LinearExpr({self.c} + {s})'
+            return f'{type(self).__name__}({self.c} + {s})'
         else:
-            return f'zml.LinearExpr({self.c})'
+            return f'{type(self).__name__}({self.c})'
 
     core.use(c_double, 'lexpr_get_c', c_void_p)
     core.use(None, 'lexpr_set_c',
@@ -9293,13 +9511,16 @@ class DynSys(HasHandle):
         except:
             pass
 
+    def __repr__(self):
+        return f'{type(self).__name__}(handle={self.handle}, size={self.size})'
+
     def __str__(self):
         """
         返回系统的字符串表示。
         Returns:
             str: 包含系统信息的字符串
         """
-        return f'zml.DynSys(size={self.size})'
+        return f'{type(self).__name__}(size={self.size})'
 
     core.use(None, 'dynsys_save',
              c_void_p, c_char_p)
@@ -10158,18 +10379,12 @@ class SpringSys(HasHandle):
         except:
             pass
 
-    def __str__(self):
-        """
-        返回系统状态摘要字符串。
-
-        Returns:
-            str: 包含句柄、节点数、虚拟节点数和弹簧数的描述字符串
-        """
+    def __repr__(self):
         return (
-            f'zml.SpringSys(handle = {self.handle}, '
-            f'node_n = {self.node_number}, '
-            f'virtual_node_n = {self.virtual_node_number}, '
-            f'spring_n = {self.spring_number})')
+            f'{type(self).__name__}(handle={self.handle}, '
+            f'node_n={self.node_number}, '
+            f'virtual_node_n={self.virtual_node_number}, '
+            f'spring_n={self.spring_number})')
 
     @staticmethod
     def virtual_x(node):
@@ -11498,6 +11713,12 @@ class SeepageMesh(HasHandle, HasCells):
         except:
             pass
 
+    def __repr__(self):
+        return (
+            f'{type(self).__name__}(handle={self.handle}, '
+            f'cell_n={self.cell_number}, '
+            f'face_n={self.face_number})')
+
     def __str__(self):
         """
         返回对象的字符串表示
@@ -11506,10 +11727,10 @@ class SeepageMesh(HasHandle, HasCells):
             str: 包含句柄、cell数量、face数量和总体积的字符串表示。
         """
         return (
-            f'zml.SeepageMesh(handle = {self.handle}, '
-            f'cell_n = {self.cell_number}, '
-            f'face_n = {self.face_number}, '
-            f'volume = {self.volume})')
+            f'{type(self).__name__}(handle={self.handle}, '
+            f'cell_n={self.cell_number}, '
+            f'face_n={self.face_number}, '
+            f'volume={self.volume})')
 
     core.use(None, 'seepage_mesh_save',
              c_void_p, c_char_p)
@@ -11710,7 +11931,7 @@ class SeepageMesh(HasHandle, HasCells):
         idx = core.seepage_mesh_add_face(self.handle, cell_0, cell_1)
         face = self.get_face(idx)
 
-        if self.face_number > face_n:   # a new face
+        if self.face_number > face_n:  # a new face
             assert idx == face_n
             if area is not None:
                 face.area = area
@@ -11974,14 +12195,8 @@ class ElementMap(HasHandle):
             if isinstance(path, str):
                 self.load(path)
 
-    def __str__(self):
-        """
-        返回ElementMap对象的字符串表示。
-
-        Returns:
-            str: 包含句柄和大小的字符串表示。
-        """
-        return f'zml.ElementMap(handle = {self.handle}, size = {self.size})'
+    def __repr__(self):
+        return f'{type(self).__name__}(handle={self.handle}, size={self.size})'
 
     core.use(None, 'element_map_save',
              c_void_p, c_char_p)
@@ -12239,18 +12454,16 @@ class Seepage(HasHandle, HasCells):
 
     class Reaction(HasHandle):
         """
-        定义一个化学反应。反应所需要的物质存储在Seepage.Cell中。
-        这里，所谓化学反应，是一种或者几种流体（或者流体的组分）转化为另外一种或者几种
-        流体或者组分，并吸收或者释放能量的过程。
-        这个Reaction，即定义参与反应的各种物质的比例、
-        反应的速度以及反应过程中的能量变化。基于Seepage
-        类模拟水合物的分解或者生成、冰的形成和融化、重油的裂解等，
-        均基于此Reaction类进行定义。
+        定义一个化学反应。
+
+        这里，所谓“化学反应”，是一种或者几种流体（或者流体的组分）转化为另外一种或者几种
+            流体或者组分，并吸收或者释放能量的过程。
+        这个Reaction类，定义参与反应的各种物质的比例、反应的速度以及反应过程中的能量变化。
+        基于Seepage类模拟水合物的分解或者生成、冰的形成和融化、重油的裂解等，均基于此Reaction类进行定义。
 
         反应速率q定义：
             在单位时间内（1秒内），“反应所消耗的物质的质量（左侧物质质量的减少量）”
-                与 “在Cell中所有与此反应相关的组分的质量之和”的比值. 
-                
+                与 “在Cell中所有与此反应相关的组分的质量之和”的比值.
             注意：
                 此定义与一般反应速率的定义不同，需要进行转换. 
             
@@ -12281,6 +12494,7 @@ class Seepage(HasHandle, HasCells):
             """
             组分。定义的是反应方程式中的一项。
             """
+
             def __init__(self, handle):
                 self.handle = handle
 
@@ -12365,6 +12579,7 @@ class Seepage(HasHandle, HasCells):
             定义抑制剂，或者催化剂。这种物质不参与反应，但是可能会影响到反应的速率。
             所有可以影响到反应速率的物质，在这里统一都定义为抑制剂
             """
+
             def __init__(self, handle):
                 self.handle = handle
 
@@ -12449,7 +12664,7 @@ class Seepage(HasHandle, HasCells):
                 """
                 core.rea_inh_set_use_vol(self.handle, value)
 
-            core.use(c_void_p,'rea_inh_get_c2q', c_void_p)
+            core.use(c_void_p, 'rea_inh_get_c2q', c_void_p)
 
             @property
             def c2q(self):
@@ -12465,7 +12680,7 @@ class Seepage(HasHandle, HasCells):
                 handle = core.rea_inh_get_c2q(self.handle)
                 return Interp1(handle=handle)
 
-            core.use(c_double,'rea_inh_get_exp', c_void_p)
+            core.use(c_double, 'rea_inh_get_exp', c_void_p)
 
             @property
             def exp(self):
@@ -12482,7 +12697,7 @@ class Seepage(HasHandle, HasCells):
                 """
                 return core.rea_inh_get_exp(self.handle)
 
-            core.use(None,'rea_inh_set_exp',
+            core.use(None, 'rea_inh_set_exp',
                      c_void_p, c_double)
 
             @exp.setter
@@ -12492,7 +12707,7 @@ class Seepage(HasHandle, HasCells):
                 """
                 core.rea_inh_set_exp(self.handle, value)
 
-            core.use(c_double,'rea_inh_get_exp_r', c_void_p)
+            core.use(c_double, 'rea_inh_get_exp_r', c_void_p)
 
             @property
             def exp_r(self):
@@ -12509,7 +12724,7 @@ class Seepage(HasHandle, HasCells):
                 """
                 return core.rea_inh_get_exp_r(self.handle)
 
-            core.use(None,'rea_inh_set_exp_r',
+            core.use(None, 'rea_inh_set_exp_r',
                      c_void_p, c_double)
 
             @exp_r.setter
@@ -12518,7 +12733,6 @@ class Seepage(HasHandle, HasCells):
                 反应速率的指数(逆向)
                 """
                 core.rea_inh_set_exp_r(self.handle, value)
-
 
         core.use(c_void_p, 'new_reaction')
         core.use(None, 'del_reaction', c_void_p)
@@ -12829,9 +13043,10 @@ class Seepage(HasHandle, HasCells):
                             lambda m, ind: m.get_component(ind))
 
         def add_inhibitor(self, *args, **kwargs):
-            warnings.warn('Reaction.add_inhibitor will be removed after 2026-5-31, '
-                          'use zmlx.react.alg.add_inhibitor instead',
-                          DeprecationWarning, stacklevel=2)
+            warnings.warn(
+                'Reaction.add_inhibitor will be removed after 2026-5-31, '
+                'use zmlx.react.alg.add_inhibitor instead',
+                DeprecationWarning, stacklevel=2)
             from zmlx.react import alg
             return alg.add_inhibitor(self, *args, **kwargs)
 
@@ -13122,6 +13337,18 @@ class Seepage(HasHandle, HasCells):
                     self.name = name
             else:
                 assert path is None
+
+        def __repr__(self):
+            """
+            返回一个字符串表示当前对象。
+            """
+            return f"""{type(self).__name__}(handle={self.handle}, name='{self.name}')"""
+
+        def __str__(self):
+            """
+            返回一个字符串表示当前对象。
+            """
+            return f"""{type(self).__name__}({self.name})"""
 
         core.use(None, 'fludef_save',
                  c_void_p, c_char_p)
@@ -14040,9 +14267,10 @@ class Seepage(HasHandle, HasCells):
                 path (str, optional): 用于加载数据的文件路径。默认为None。
                 handle (c_void_p, optional): 指向底层数据的句柄。默认为None。
             """
-            super(Seepage.CellData, self).__init__(handle,
-                                                   core.new_seepage_cell,
-                                                   core.del_seepage_cell)
+            super(Seepage.CellData, self).__init__(
+                handle,
+                core.new_seepage_cell,
+                core.del_seepage_cell)
             if handle is None:
                 if isinstance(path, str):
                     self.load(path)
@@ -14667,6 +14895,22 @@ class Seepage(HasHandle, HasCells):
             else:
                 core.seepage_cell_clone(self.handle, other.handle)
                 return self
+
+        core.use(None, 'seepage_cell_clone_all', POINTER(c_void_p), POINTER(c_void_p), c_size_t)
+
+        @staticmethod
+        def clone_all(targets, sources, count):
+            """
+            拷贝所有给定的Cell数据
+            Args:
+                targets: 即将被覆盖的目标Cell
+                sources: 数据来源
+                count: 需要拷贝的数量
+
+            Returns:
+                None
+            """
+            core.seepage_cell_clone_all(targets, sources, count)
 
         core.use(None, 'seepage_cell_set_fluid_components',
                  c_void_p, c_void_p)
@@ -16023,36 +16267,56 @@ class Seepage(HasHandle, HasCells):
         core.use(None, 'seepage_updater_iterate',
                  c_void_p, c_void_p, c_void_p,
                  c_double,
-                 c_size_t, c_size_t, c_size_t, c_size_t, c_void_p)
+                 c_size_t, c_size_t, c_size_t, c_size_t, c_void_p,
+                 c_void_p  # ThreadPool since 2025-7-25
+                 )
 
         def iterate(self, model, dt, fa_s=None, fa_q=None,
                     fa_k=None, ca_p=None,
-                    solver=None):
+                    solver=None, pool=None, report=None):
             """
             在时间上向前迭代。
 
             Args:
                 model: 渗流模型对象。
-                dt (float): 时间步长。
+                dt (float): 时间步长 [单位：秒]
                 fa_s (int, optional): Face自定义属性的ID，
                     代表Face的横截面积（用于计算Face内流体的受力），默认为None。
                 fa_q (int, optional): Face自定义属性的ID，
                     代表Face内流体在通量(也将在iterate中更新)，默认为None。
-                fa_k (int, optional): Face内流体的惯性系数的属性ID，
+                fa_k (int, optional): Face内流体的"惯性系数"的属性ID，
                     默认为None。
                 ca_p (int, optional): Cell的自定义属性，
                     表示Cell内流体的压力(迭代时的压力，并非按照流体体积进行计算的)，
                     默认为None。
                 solver (ConjugateGradientSolver, optional): 求解器实例，
                     默认为None。
+                pool (ThreadPool, optional): 线程池实例，
+                    默认为None。
+                report (Map, optional): 报告对象，默认为None。
+
+            Notes:
+                关于惯性：
+                    对于Face中的流体，定义其动量为
+                        momentum = m*v = k*q
+                    其中q为通过该Face的流体的速率，k是一个自定义的系数. 这个系数越大，则流体的惯性越强.
+                    另外，作用在Face上的流体的作用力为：
+                        f = dp*s
+                    其中s为横截面积. 根据动量定理，动量的变化量为
+                        m*d(v)=k*d(q)=f*d(t)
+                    以上就是在程序中考虑惯性的基本的逻辑。因此，要计算流体的惯性效应，关键是要正确设置Face的
+                    面积s和系数k这两个属性。另外，在迭代的过程中，随着face内流体的密度的变化，也应该去更新
+                    这两个属性的值.
 
             Returns:
                 dict: 包含迭代报告的字典。
             """
             lic.check_once()
+
             if solver is None:
                 self.solver = ConjugateGradientSolver(tolerance=1.0e-25)
                 solver = self.solver
+
             if fa_s is None:
                 fa_s = 1000000000
             if fa_q is None:
@@ -16061,19 +16325,41 @@ class Seepage(HasHandle, HasCells):
                 fa_k = 1000000000
             if ca_p is None:
                 ca_p = 1000000000
-            report = Map()
-            core.seepage_updater_iterate(self.handle, model.handle,
-                                         report.handle, dt,
-                                         fa_s, fa_q, fa_k, ca_p, solver.handle)
-            return report.to_dict()
+
+            if isinstance(pool, ThreadPool):  # 将任务放入线程池，然后立即返回
+                if isinstance(report, Map):
+                    h_report = report.handle
+                else:  # 由于需要在另外的线程中执行，因此，这里再创建临时缓冲区将是不安全的
+                    h_report = 0
+                core.seepage_updater_iterate(
+                    self.handle, model.handle, h_report,
+                    dt,
+                    fa_s, fa_q, fa_k, ca_p,
+                    solver.handle, pool.handle
+                )
+                return None
+
+            else:  # 此时，直接运行
+                if not isinstance(report, Map):
+                    report = Map()
+                core.seepage_updater_iterate(
+                    self.handle, model.handle, report.handle,
+                    dt,
+                    fa_s, fa_q, fa_k, ca_p,
+                    solver.handle, 0
+                )
+                return report.to_dict()
 
         core.use(None, 'seepage_updater_iterate_thermal',
                  c_void_p, c_void_p,
                  c_void_p,
                  c_size_t, c_size_t, c_size_t,
-                 c_double, c_void_p)
+                 c_double, c_void_p,
+                 c_void_p  # ThreadPool since 2025-7-25
+                 )
 
-        def iterate_thermal(self, model, dt, ca_t, ca_mc, fa_g, solver=None):
+        def iterate_thermal(self, model, dt, ca_t, ca_mc, fa_g, solver=None,
+                            pool=None, report=None):
             """
             对于此渗流模型，当定义了热传导相关的参数之后，可以作为一个热传导模型来使用。
             具体和Thermal模型类似。
@@ -16087,6 +16373,9 @@ class Seepage(HasHandle, HasCells):
                     单位时间内通过Face的热量dH = g * dT。
                 solver (ConjugateGradientSolver, optional): 求解器实例，
                     默认为None。
+                pool (ThreadPool, optional): 线程池实例，
+                    默认为None。
+                report (Map, optional): 报告对象，默认为None。
 
             Returns:
                 dict: 包含迭代报告的字典。
@@ -16094,13 +16383,31 @@ class Seepage(HasHandle, HasCells):
             if solver is None:
                 self.solver = ConjugateGradientSolver(tolerance=1.0e-25)
                 solver = self.solver
+
             lic.check_once()
-            report = Map()
-            core.seepage_updater_iterate_thermal(self.handle, model.handle,
-                                                 report.handle,
-                                                 ca_t, ca_mc, fa_g,
-                                                 dt, solver.handle)
-            return report.to_dict()
+            if isinstance(pool, ThreadPool):  # 将任务放入线程池，然后立即返回
+                if isinstance(report, Map):
+                    h_report = report.handle
+                else:  # 由于需要在另外的线程中执行，因此，这里再创建临时缓冲区将是不安全的
+                    h_report = 0
+                core.seepage_updater_iterate_thermal(
+                    self.handle, model.handle,
+                    h_report,
+                    ca_t, ca_mc, fa_g,
+                    dt, solver.handle, pool.handle
+                )
+                return None
+
+            else:  # 此时，直接运行
+                if not isinstance(report, Map):
+                    report = Map()
+                core.seepage_updater_iterate_thermal(
+                    self.handle, model.handle,
+                    report.handle,
+                    ca_t, ca_mc, fa_g,
+                    dt, solver.handle, 0
+                )
+                return report.to_dict()
 
         core.use(c_double, 'seepage_updater_get_face_relative_dv_max',
                  c_void_p)
@@ -16165,19 +16472,11 @@ class Seepage(HasHandle, HasCells):
         except:
             pass
 
-    def __str__(self):
-        """
-        返回 Seepage 对象的字符串表示形式。
-
-        Returns:
-            str: 包含句柄、单元数量、面数量和注释的字符串。
-        """
-        cell_n = self.cell_number
-        face_n = self.face_number
-        return (f"zml.Seepage(handle={self.handle},"
-                f" cell_n={cell_n}, "
-                f"face_n={face_n}, "
-                f"note='{self.get_note()}')")
+    def __repr__(self):
+        return (f'{type(self).__name__}(handle={self.handle}, '
+                f'cell_n={self.cell_number}, '
+                f'face_n={self.face_number}, '
+                f'note={self.get_note()})')
 
     core.use(None, 'seepage_save',
              c_void_p, c_char_p)
@@ -16573,6 +16872,13 @@ class Seepage(HasHandle, HasCells):
             "g_heat" is None, heat is injected according
              to the power, and "opers" is used to set
             the power of the heat injection.
+
+        举例，如果要恒定功率加热，那么，将是类似下面的调用:
+            power = 1 # 瓦特
+            model.add_injector(pos=[0, 0, 0],
+                ca_mc=model.reg_cell_key('mc'),
+                ca_t=model.reg_cell_key('temperature'),
+                value=power)
         """
         inj = self.get_injector(core.seepage_add_inj(self.handle))
         assert inj is not None
@@ -17204,7 +17510,7 @@ class Seepage(HasHandle, HasCells):
         """
         return core.seepage_get_reaction_n(self.handle)
 
-    core.use(None,'seepage_set_reaction_n',
+    core.use(None, 'seepage_set_reaction_n',
              c_void_p, c_size_t)
 
     @reaction_number.setter
@@ -18315,37 +18621,67 @@ class Seepage(HasHandle, HasCells):
         assert isinstance(buffer, Seepage.CellData)
         core.seepage_push_fluids(self.handle, buffer.handle)
 
-    def iterate(self, *args, **kwargs):
+    def iterate(self, dt, fa_s=None, fa_q=None,
+                fa_k=None, ca_p=None,
+                solver=None, pool=None, report=None):
         """
         迭代更新模型状态. 在这里，对于各个Face内流体的流动阻力，将会使用Face的cond属性，
         结合各流体的饱和度，来计算得到各个流体的流动阻力。所以，在调用此函数之前，如果
         修改了Face的cond，将会在这里直接影响到流动的过程。
 
         Args:
-            *args: 可变参数
-            **kwargs: 关键字参数
+            dt (float): 时间步长。
+            fa_s (int, optional): Face自定义属性的ID，
+                代表Face的横截面积（用于计算Face内流体的受力），默认为None。
+            fa_q (int, optional): Face自定义属性的ID，
+                代表Face内流体在通量(也将在iterate中更新)，默认为None。
+            fa_k (int, optional): Face内流体的惯性系数的属性ID，
+                默认为None。
+            ca_p (int, optional): Cell的自定义属性，
+                表示Cell内流体的压力(迭代时的压力，并非按照流体体积进行计算的)，
+                默认为None。
+            solver (ConjugateGradientSolver, optional): 求解器实例，
+                默认为None。
+            pool (ThreadPool, optional): 线程池实例，
+                默认为None。
+            report (Map, optional): 报告对象，默认为None。
 
         Returns:
             迭代结果
         """
         if self.__updater is None:
             self.__updater = Seepage.Updater()
-        return self.__updater.iterate(self, *args, **kwargs)
+        return self.__updater.iterate(
+            self, dt=dt, fa_s=fa_s, fa_q=fa_q,
+            fa_k=fa_k, ca_p=ca_p,
+            solver=solver, pool=pool, report=report)
 
-    def iterate_thermal(self, *args, **kwargs):
+    def iterate_thermal(self, dt, ca_t, ca_mc, fa_g, solver=None,
+                        pool=None, report=None):
         """
         迭代更新模型的热状态
 
         Args:
-            *args: 可变参数
-            **kwargs: 关键字参数
+            dt (float): 时间步长。
+            ca_t (int): Cell的温度属性的ID。
+            ca_mc (int): Cell范围内质量和比热的乘积。
+            fa_g (int): Face导热的通量g；
+                单位时间内通过Face的热量dH = g * dT。
+            solver (ConjugateGradientSolver, optional): 求解器实例，
+                默认为None。
+            pool (ThreadPool, optional): 线程池实例，
+                默认为None。
+            report (Map, optional): 报告对象，默认为None。
 
         Returns:
             热状态迭代结果
         """
         if self.__updater is None:
             self.__updater = Seepage.Updater()
-        return self.__updater.iterate_thermal(self, *args, **kwargs)
+        return self.__updater.iterate_thermal(
+            self, dt=dt, ca_t=ca_t, ca_mc=ca_mc, fa_g=fa_g,
+            solver=solver,
+            pool=pool, report=report)
 
     def get_recommended_dt(self, *args, **kwargs):
         """
@@ -19452,14 +19788,10 @@ class Thermal(HasHandle):
         except:
             pass
 
-    def __str__(self):
-        """
-        返回热传导模型的字符串表示
-
-        Returns:
-            str: 包含模型句柄的字符串
-        """
-        return f'zml.Thermal(handle = {self.handle})'
+    def __repr__(self):
+        return (f'{type(self).__name__}(handle={self.handle}, '
+                f'cell_n={self.cell_number}, '
+                f'face_n={self.face_number})')
 
     core.use(None, 'thermal_save',
              c_void_p, c_char_p)
@@ -19702,6 +20034,10 @@ class ConjugateGradientSolver(HasHandle):
                 self.set_tolerance(tolerance)
         else:
             assert tolerance is None
+
+    def __repr__(self):
+        return (f'{type(self).__name__}(handle={self.handle}, '
+                f'tolerance={self.get_tolerance()})')
 
     core.use(None, 'cg_sol_set_tolerance',
              c_void_p, c_double)
@@ -20812,15 +21148,9 @@ class InvasionPercolation(HasHandle):
         """
         return not (self == rhs)
 
-    def __str__(self):
-        """
-        返回IP模型的字符串表示
-
-        Returns:
-            str: 包含模型句柄、节点数量和通道数量的字符串。
-        """
-        return (f'zml.InvasionPercolation(handle = {self.handle}, '
-                f'node_n = {self.node_n}, bond_n = {self.bond_n})')
+    def __repr__(self):
+        return (f'{type(self).__name__}(handle={self.handle}, '
+                f'node_n={self.node_n}, bond_n={self.bond_n})')
 
     core.use(None, 'ip_save',
              c_void_p, c_char_p)
@@ -22291,14 +22621,14 @@ class Lattice3(HasHandle):
             if box is not None and shape is not None:
                 self.create(box, shape)
 
-    def __str__(self):
+    def __repr__(self):
         """
         返回对象的字符串表示形式
 
         Returns:
             str: 包含盒子范围、形状和大小的字符串。
         """
-        return (f'zml.Lattice3(box={self.box}, '
+        return (f'{type(self).__name__}(box={self.box}, '
                 f'shape={self.shape}, size={self.size})')
 
     core.use(None, 'lat3_save',
@@ -22489,14 +22819,8 @@ class DDMSolution2(HasHandle):
         super(DDMSolution2, self).__init__(handle, core.new_ddm_sol2,
                                            core.del_ddm_sol2)
 
-    def __str__(self):
-        """
-        返回对象的字符串表示形式
-
-        Returns:
-            str: 包含句柄、alpha、beta、剪切模量、泊松比和调整系数的字符串。
-        """
-        return (f'zml.DDMSolution2(handle={self.handle}, '
+    def __repr__(self):
+        return (f'{type(self).__name__}(handle={self.handle}, '
                 f'alpha={self.alpha}, beta={self.beta}, '
                 f'shear_modulus={self.shear_modulus / 1.0e9}GPa, '
                 f'poisson_ratio={self.poisson_ratio}, '
@@ -23285,14 +23609,8 @@ class FractureNetwork(HasHandle):
         except:
             pass
 
-    def __str__(self):
-        """
-        返回裂缝网络对象的字符串表示
-
-        Returns:
-            str: 包含裂缝网络句柄、顶点数量和裂缝单元数量的字符串
-        """
-        return (f'zml.FractureNetwork(handle={self.handle}, '
+    def __repr__(self):
+        return (f'{type(self).__name__}(handle={self.handle}, '
                 f'vertex_n={self.vertex_number}, '
                 f'fracture_n={self.fracture_number})')
 
@@ -23728,6 +24046,10 @@ class InfMatrix(HasHandle):
         if network is not None and sol2 is not None:
             self.update(network=network, sol2=sol2)
 
+    def __repr__(self):
+        return (f'{type(self).__name__}(handle={self.handle}, '
+                f'size={self.size})')
+
     core.use(c_size_t, 'frac_mat_size', c_void_p)
 
     @property
@@ -23856,85 +24178,79 @@ def main(argv: list):
         return
 
 
-def __deprecated_func(pack_name, func, date=None):
-    return dict(pack_name=pack_name, func=func, date=date)
+class LazyImport:
+    def __init__(self, module, name, deprecated_date=None):
+        self.pack = module
+        self.name = name
+        self.date = deprecated_date
+
+    def __get_origin(self):
+        warnings.warn(
+            f'function in zml will be removed after {self.date}, '
+            f'please use <{self.pack}.{self.name}> instead.',
+            DeprecationWarning,
+            stacklevel=3
+        )
+        mod = importlib.import_module(self.pack)
+        return getattr(mod, self.name, None)
+
+    def __call__(self, *args, **kwargs):
+        return self.__get_origin()(*args, **kwargs)
+
+    def __getattr__(self, *args, **kwargs):
+        return getattr(self.__get_origin(), *args, **kwargs)
 
 
-_deprecated_funcs = dict(
-    information=__deprecated_func('zmlx.ui.gui_buffer',
-                                  'information',
-                                  '2025-1-21'),
-    question=__deprecated_func('zmlx.ui.gui_buffer',
-                               'question', '2025-1-21'),
-    plot=__deprecated_func('zmlx.ui.gui_buffer',
-                           'plot', '2025-1-21'),
-    gui=__deprecated_func('zmlx.ui.gui_buffer',
-                          'gui', '2025-1-21'),
-    break_point=__deprecated_func('zmlx.ui.gui_buffer',
-                                  'break_point',
-                                  '2025-1-21'),
-    breakpoint=__deprecated_func('zmlx.ui.gui_buffer',
-                                 'break_point',
-                                 '2025-1-21'),
-    gui_exec=__deprecated_func('zmlx.ui.gui_buffer',
-                               'gui_exec', '2025-1-21'),
-    time_string=__deprecated_func('zmlx.filesys.tag',
-                                  'time_string',
-                                  '2025-1-21'),
-    is_time_string=__deprecated_func('zmlx.filesys.tag',
-                                     'is_time_string',
-                                     '2025-1-21'),
-    has_tag=__deprecated_func('zmlx.filesys.tag',
-                              'has_tag', '2025-1-21'),
-    print_tag=__deprecated_func('zmlx.filesys.tag',
-                                'print_tag', '2025-1-21'),
-    first_only=__deprecated_func('zmlx.filesys.first_only',
-                                 'first_only',
-                                 '2025-1-21'),
-    add_keys=__deprecated_func('zmlx.utility.AttrKeys',
-                               'add_keys',
-                               '2025-1-21'),
-    AttrKeys=__deprecated_func('zmlx.utility.AttrKeys',
-                               'AttrKeys',
-                               '2025-1-21'),
-    install=__deprecated_func('zmlx.alg.install',
-                              'install', '2025-1-21'),
-    prepare_dir=__deprecated_func('zmlx.filesys.prepare_dir',
-                                  'prepare_dir',
-                                  '2025-1-21'),
-    time2str=__deprecated_func('zmlx.alg.time2str',
-                               'time2str', '2025-1-21'),
-    mass2str=__deprecated_func('zmlx.alg.mass2str',
-                               'mass2str', '2025-1-21'),
-    make_fpath=__deprecated_func('zmlx.filesys.make_fpath',
-                                 'make_fpath',
-                                 '2025-1-21'),
-    get_last_file=__deprecated_func('zmlx.filesys.get_last_file',
-                                    'get_last_file',
-                                    '2025-1-21'),
-    write_py=__deprecated_func('zmlx.io.python',
-                               'write_py', '2025-1-21'),
-    read_py=__deprecated_func('zmlx.io.python',
-                              'read_py', '2025-1-21'),
-    TherFlowConfig=__deprecated_func('zmlx.config.TherFlowConfig',
-                                     'TherFlowConfig',
-                                     '2025-1-21'),
-    SeepageTher=__deprecated_func('zmlx.config.TherFlowConfig',
-                                  'TherFlowConfig',
-                                  '2025-1-21'),
-    Field=__deprecated_func('zmlx.utility.Field',
-                            'Field', '2025-1-21'),
-)
-
-
-def __getattr__(name):
-    """
-    当访问不存在的属性时，尝试从其他模块中导入
-    """
-    from zmlx.alg.sys import get_deprecated
-    return get_deprecated(
-        name, data=_deprecated_funcs, current_pack_name='zml')
-
+information = LazyImport(
+    'zmlx.ui.gui_buffer', 'information', '2025-1-21')
+question = LazyImport(
+    'zmlx.ui.gui_buffer', 'question', '2025-1-21')
+plot = LazyImport(
+    'zmlx.ui.gui_buffer', 'plot', '2025-1-21')
+gui = LazyImport(
+    'zmlx.ui.gui_buffer', 'gui', '2025-1-21')
+break_point = LazyImport(
+    'zmlx.ui.gui_buffer', 'break_point', '2025-1-21')
+breakpoint = LazyImport(
+    'zmlx.ui.gui_buffer', 'break_point', '2025-1-21')
+gui_exec = LazyImport(
+    'zmlx.ui.gui_buffer', 'gui_exec', '2025-1-21')
+time_string = LazyImport(
+    'zmlx.filesys.tag', 'time_string', '2025-1-21')
+is_time_string = LazyImport(
+    'zmlx.filesys.tag', 'is_time_string', '2025-1-21')
+has_tag = LazyImport(
+    'zmlx.filesys.tag', 'has_tag', '2025-1-21')
+print_tag = LazyImport(
+    'zmlx.filesys.tag', 'print_tag', '2025-1-21')
+first_only = LazyImport(
+    'zmlx.filesys.first_only', 'first_only', '2025-1-21')
+add_keys = LazyImport(
+    'zmlx.utility.AttrKeys', 'add_keys', '2025-1-21')
+AttrKeys = LazyImport(
+    'zmlx.utility.AttrKeys', 'AttrKeys', '2025-1-21')
+install = LazyImport(
+    'zmlx.alg.install', 'install', '2025-1-21')
+prepare_dir = LazyImport(
+    'zmlx.filesys.prepare_dir', 'prepare_dir', '2025-1-21')
+time2str = LazyImport(
+    'zmlx.alg.time2str', 'time2str', '2025-1-21')
+mass2str = LazyImport(
+    'zmlx.alg.mass2str', 'mass2str', '2025-1-21')
+make_fpath = LazyImport(
+    'zmlx.filesys.make_fpath', 'make_fpath', '2025-1-21')
+get_last_file = LazyImport(
+    'zmlx.filesys.get_last_file', 'get_last_file', '2025-1-21')
+write_py = LazyImport(
+    'zmlx.io.python', 'write_py', '2025-1-21')
+read_py = LazyImport(
+    'zmlx.io.python', 'read_py', '2025-1-21')
+TherFlowConfig = LazyImport(
+    'zmlx.config.TherFlowConfig', 'TherFlowConfig', '2025-1-21')
+SeepageTher = LazyImport(
+    'zmlx.config.TherFlowConfig', 'TherFlowConfig', '2025-1-21')
+Field = LazyImport(
+    'zmlx.utility.Field', 'Field', '2025-1-21')
 
 if __name__ == "__main__":
     main(sys.argv)

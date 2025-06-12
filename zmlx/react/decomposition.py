@@ -6,6 +6,10 @@ def create(left, right, temp, heat, rate, fa_t=None, fa_c=None):
     创建物质吸热分解的反应<不可逆的>. 其中index为待分解的物质，right为右侧物质的序号和权重，temp为分解的温度，heat为分解1kg左侧物质的耗能，
     rate是温度超过分解温度1度的时候，对于左侧1kg的物质，1s内能否反应的物质的质量；
     fa_t和fa_c为物质的属性ID，定义物质的温度和比热;
+
+    注意：
+        返回一个dict，包含了反应的所有的信息。此dict定义的data可以在
+        zmlx.react.alg.add_reaction中使用，将反应添加到Seepage中
     """
     return endothermic.create(
         left=[(left, 1), ],
