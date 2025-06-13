@@ -23,6 +23,10 @@ def create(flu, sol, vp, vt, temp, heat, fa_t=None, fa_c=None, t2q=None,
         当温度t等于0的时候，q等于0；
         当温度t小于0的时候，q大于0；
         当温度t大于0的时候，q小于0；
+
+    注意：
+        返回一个dict，包含了反应的所有的信息。此dict定义的data可以在
+        zmlx.react.alg.add_reaction中使用，将反应添加到Seepage中
     """
     if t2q is not None:
         t, q = t2q

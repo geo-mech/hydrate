@@ -75,7 +75,7 @@ class GuiBuffer:
         return GuiBuffer.Agent(self.get(), name)
 
     def execute(self, func, keep_cwd=True, close_after_done=True, args=None,
-                kwargs=None, disable_gui=False):
+                kwargs=None, disable_gui=False, run_setup=True):
         """
         尝试在gui模式下运行给定的函数 func
         """
@@ -94,7 +94,8 @@ class GuiBuffer:
         try:
             from zmlx.ui.main_window import execute
             return execute(fx, keep_cwd=keep_cwd,
-                           close_after_done=close_after_done)
+                           close_after_done=close_after_done,
+                           run_setup=run_setup)
         except Exception as err:
             print(f'call gui failed: {err}')
             return fx()

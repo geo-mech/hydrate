@@ -8,6 +8,10 @@ def create(gas, liq, hyd, mg, vp, vt, temp, heat, fa_t=None, fa_c=None,
     创建一个水合物反应<一种固体hyd和两种流体<gas, liq>之间的可逆反应>
         (默认<当t2p未指定的时候>使用rate)
     by 张召彬
+
+    注意：
+        返回一个dict，包含了反应的所有的信息。此dict定义的data可以在
+        zmlx.react.alg.add_reaction中使用，将反应添加到Seepage中
     """
     assert 0 < mg < 1, f'The mg should be in (0, 1) while it is {mg}'
     assert heat > 0

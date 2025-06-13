@@ -10,6 +10,10 @@ def create(left, right, temp, heat, rate, fa_t=None, fa_c=None):
 
     注：
         此反应目前尚未测试.
+
+    注意：
+        返回一个dict，包含了反应的所有的信息。此dict定义的data可以在
+        zmlx.react.alg.add_reaction中使用，将反应添加到Seepage中
     """
     teq = 2e3  # 定义燃烧能达到的最高的温度(类似于这个反应的平衡温度)
 

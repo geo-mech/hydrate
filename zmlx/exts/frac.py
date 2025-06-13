@@ -1,7 +1,7 @@
 from zml import *
 
-core = DllCore(dll=load_cdll(name='frac.dll',
-                             first=os.path.dirname(__file__)))
+core = DllCore(dll_obj=load_cdll(name='frac.dll',
+                                 first=os.path.dirname(__file__)))
 
 
 class Fracture2:

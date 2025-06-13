@@ -86,12 +86,17 @@ def create(gas, wat, hyd, fa_t=None, fa_c=None, dissociation=True,
     """
     创建一个水合物反应(平衡态的反应，反应的速率给的非常大)
     by 张召彬
+
+    注意：
+        返回一个dict，包含了反应的所有的信息。此dict定义的data可以在
+        zmlx.react.alg.add_reaction中使用，将反应添加到Seepage中
     """
     return hydrate.create(
         vp=vp, vt=vt, temp=273.15, heat=get_dheat(nh),
         mg=get_mg_vs_mh(nh),
         gas=gas, liq=wat, hyd=hyd, fa_t=fa_t, fa_c=fa_c,
-        dissociation=dissociation, formation=formation)
+        dissociation=dissociation, formation=formation
+    )
 
 
 if __name__ == '__main__':

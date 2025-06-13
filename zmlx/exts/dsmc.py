@@ -5,8 +5,8 @@ from zml import (DllCore, HasHandle, load_cdll, make_c_char_p, Vector, Lattice3,
                  UintVector, Interp1, is_array,
                  Interp3, clock, Matrix3)
 
-core = DllCore(dll=load_cdll(name='dsmc.dll',
-                             first=os.path.dirname(__file__)))
+core = DllCore(dll_obj=load_cdll(name='dsmc.dll',
+                                 first=os.path.dirname(__file__)))
 
 
 class Molecule(HasHandle):

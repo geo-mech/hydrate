@@ -5,6 +5,10 @@ def create(sol, flu, temp, heat, fa_t=None, fa_c=None, vp=None, vt=None,
            t2q=None, l2r=True, r2l=True):
     """
     创建一个物质融化（或者气化、升华）的反应
+
+    注意：
+        返回一个dict，包含了反应的所有的信息。此dict定义的data可以在
+        zmlx.react.alg.add_reaction中使用，将反应添加到Seepage中
     """
     if vt is None or vp is None:
         p2t = None

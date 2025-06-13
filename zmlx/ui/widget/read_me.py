@@ -1,7 +1,7 @@
 import os
 
 from zml import get_dir, read_text
-from zmlx.ui.widget.text_browser import TextBrowser
+from zmlx.ui.widget.text import TextBrowser
 
 
 class ReadMeBrowser(TextBrowser):

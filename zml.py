@@ -14,6 +14,7 @@
 """
 import ctypes
 import datetime
+import hashlib
 import math
 import os
 import re
@@ -122,6 +123,22 @@ def get_pointer64(arr, readonly=False):
         return const_f64_ptr(arr)
     else:
         return f64_ptr(arr)
+
+
+def get_hash(text, length=None):
+    """
+    计算文本的哈希值. 返回前length个字符.
+    默认返回前30个字符.
+    Args:
+        text (str): 输入文本
+        length (int, optional): 哈希值长度，默认为None
+    Returns:
+        str: 计算得到的哈希值
+    """
+    hash_obj = hashlib.sha256(text.encode('utf-8'))
+    if length is None:
+        length = 30
+    return hash_obj.hexdigest()[:length]
 
 
 class Object:
@@ -421,9 +438,8 @@ class _AppData(Object):
         Returns:
             bool: 当天已有该标签返回True，否则返回False
         """
-        path = os.path.join(
-            self.folder, 'tags',
-            datetime.datetime.now().strftime(f"%Y-%m-%d.{tag}"))
+        name = get_hash(datetime.datetime.now().strftime(f"%Y-%m-%d.{tag}"))
+        path = os.path.join(self.folder, 'tags', name)
         return os.path.exists(path)
 
     def add_tag_today(self, tag):
@@ -440,17 +456,18 @@ class _AppData(Object):
         try:
             folder = os.path.join(self.folder, 'tags')
             make_dirs(folder)
-            path = os.path.join(folder, datetime.datetime.now().strftime(
-                f"%Y-%m-%d.{tag}"))
+            name = get_hash(datetime.datetime.now().strftime(f"%Y-%m-%d.{tag}"))
+            path = os.path.join(folder, name)
             with open(path, 'w') as f:
                 f.write('\n')
         except:
             pass
 
-    def log(self, text):
+    def log(self, text, encoding=None):
         """记录运行时日志到日期命名的日志文件。
 
         Args:
+            encoding: 编码格式，默认为utf-8
             text (str): 要记录的日志内容
 
         Note:
@@ -461,8 +478,11 @@ class _AppData(Object):
         try:
             folder = os.path.join(self.folder, 'logs')
             make_dirs(folder)
-            with open(os.path.join(folder, datetime.datetime.now().strftime(
-                    "%Y-%m-%d.log")), 'a') as f:
+            path = os.path.join(folder, datetime.datetime.now().strftime(
+                    "%Y-%m-%d.log"))
+            if encoding is None:
+                encoding = 'utf-8'
+            with open(path, 'a', encoding=encoding) as f:
                 f.write(f'{datetime.datetime.now()}: \n{text}\n\n\n')
         except:
             pass
@@ -472,7 +492,7 @@ class _AppData(Object):
 
         Args:
             key (str): 环境变量名称
-            encoding (str, optional): 文件编码格式
+            encoding (str, optional): 文件编码格式，默认使用utf-8
             default (Any, optional): 默认返回值
             ignore_empty (bool): 是否将空字符串视为默认值
 
@@ -480,6 +500,8 @@ class _AppData(Object):
             Union[str, Any]: 成功读取返回字符串值，失败返回默认值
         """
         path = os.path.join(self.folder, 'env', key)
+        if encoding is None:
+            encoding = 'utf-8'
         res = read_text(path, encoding=encoding, default=default)
         if ignore_empty:
             if isinstance(res, str):
@@ -493,13 +515,15 @@ class _AppData(Object):
         Args:
             key (str): 环境变量名称
             value (str): 要存储的值
-            encoding (str, optional): 文件编码格式
+            encoding (str, optional): 文件编码格式，默认使用utf-8
 
         Note:
             - 变量存储在缓存目录的env子目录
             - 每个变量对应单独文件
         """
         path = os.path.join(self.folder, 'env', key)
+        if encoding is None:
+            encoding = 'utf-8'
         write_text(path, value, encoding=encoding)
 
     def root(self, *args):
@@ -842,41 +866,43 @@ def get_dir():
     return os.path.dirname(os.path.realpath(__file__))
 
 
-dll = load_cdll('zml.dll' if is_windows else 'zml.so.1', first=get_dir())
-
-
 class DllCore:
     """
     管理 C++ 内核中的错误、警告等
     """
 
-    def __init__(self, dll):
+    def __init__(self, dll_obj):
         """
         初始化 DllCore 对象
 
         Args:
-            dll: 动态链接库对象
+            dll_obj: 动态链接库对象
         """
         self.__err_handle = None
-        self.dll = dll
+        self.dll = dll_obj
         self._dll_funcs = {}
         self.dll_has_error = get_func(self.dll, c_bool, 'has_error')
-        self.dll_pop_error = get_func(self.dll, c_char_p, 'pop_error', c_void_p)
+        self.dll_pop_error = get_func(
+            self.dll, c_char_p, 'pop_error', c_void_p)
         self.dll_has_warning = get_func(self.dll, c_bool, 'has_warning')
-        self.dll_pop_warning = get_func(self.dll, c_char_p, 'pop_warning',
-                                        c_void_p)
+        self.dll_pop_warning = get_func(
+            self.dll, c_char_p, 'pop_warning',
+            c_void_p)
         self.dll_has_log = get_func(self.dll, c_bool, 'has_log')
-        self.dll_pop_log = get_func(self.dll, c_char_p, 'pop_log', c_void_p)
+        self.dll_pop_log = get_func(
+            self.dll, c_char_p, 'pop_log', c_void_p)
         self.use(c_size_t, 'get_log_nmax')
         self.use(None, 'set_log_nmax', c_size_t)
         self.use(c_char_p, 'get_time_compile', c_void_p)
-        self.dll_print_logs = get_func(self.dll, None, 'print_logs', c_char_p)
+        self.dll_print_logs = get_func(
+            self.dll, None, 'print_logs', c_char_p)
         self.use(c_int, 'get_version')
         self.use(c_bool, 'is_parallel_enabled')
         self.use(None, 'set_parallel_enabled', c_bool)
         self.use(c_bool, 'assert_is_void')
-        self.dll_set_error_handle = get_func(self.dll, None, 'set_error_handle',
-                                             c_void_p)
+        self.dll_set_error_handle = get_func(
+            self.dll, None, 'set_error_handle',
+            c_void_p)
         self.use(c_char_p, 'get_compiler')
 
     def has_dll(self):
@@ -1178,7 +1204,11 @@ class DllCore:
         return self._dll_funcs.get(name)
 
 
-core = DllCore(dll=dll)
+# 动态库对象
+dll = load_cdll('zml.dll' if is_windows else 'zml.so.1', first=get_dir())
+
+# 对动态库对象的进一步的封装
+core = DllCore(dll_obj=dll)
 
 # Version of the zml module (date represented by six digits)
 try:
@@ -1659,13 +1689,13 @@ class License:
     该类用于管理软件的授权信息，包括获取授权信息、检查授权状态、生成授权码等功能。
     """
 
-    def __init__(self, core):
+    def __init__(self, core_obj):
         """初始化 License 对象。
 
         Args:
-            core: 核心模块对象，用于调用底层功能。
+            core_obj: 核心模块对象，用于调用底层功能。
         """
-        self.core = core
+        self.core = core_obj
         self.license_info_has_checked = False
         if self.core.has_dll():
             self.core.use(c_bool, 'lic_is_admin')
@@ -1803,7 +1833,7 @@ Thanks for using.
                 print(text)
 
 
-lic = License(core=core)
+lic = License(core_obj=core)
 
 
 def reg(code=None):
@@ -11710,7 +11740,7 @@ class SeepageMesh(HasHandle, HasCells):
         idx = core.seepage_mesh_add_face(self.handle, cell_0, cell_1)
         face = self.get_face(idx)
 
-        if self.face_number > face_n:   # a new face
+        if self.face_number > face_n:  # a new face
             assert idx == face_n
             if area is not None:
                 face.area = area
@@ -12281,6 +12311,7 @@ class Seepage(HasHandle, HasCells):
             """
             组分。定义的是反应方程式中的一项。
             """
+
             def __init__(self, handle):
                 self.handle = handle
 
@@ -12365,6 +12396,7 @@ class Seepage(HasHandle, HasCells):
             定义抑制剂，或者催化剂。这种物质不参与反应，但是可能会影响到反应的速率。
             所有可以影响到反应速率的物质，在这里统一都定义为抑制剂
             """
+
             def __init__(self, handle):
                 self.handle = handle
 
@@ -12449,7 +12481,7 @@ class Seepage(HasHandle, HasCells):
                 """
                 core.rea_inh_set_use_vol(self.handle, value)
 
-            core.use(c_void_p,'rea_inh_get_c2q', c_void_p)
+            core.use(c_void_p, 'rea_inh_get_c2q', c_void_p)
 
             @property
             def c2q(self):
@@ -12465,7 +12497,7 @@ class Seepage(HasHandle, HasCells):
                 handle = core.rea_inh_get_c2q(self.handle)
                 return Interp1(handle=handle)
 
-            core.use(c_double,'rea_inh_get_exp', c_void_p)
+            core.use(c_double, 'rea_inh_get_exp', c_void_p)
 
             @property
             def exp(self):
@@ -12482,7 +12514,7 @@ class Seepage(HasHandle, HasCells):
                 """
                 return core.rea_inh_get_exp(self.handle)
 
-            core.use(None,'rea_inh_set_exp',
+            core.use(None, 'rea_inh_set_exp',
                      c_void_p, c_double)
 
             @exp.setter
@@ -12492,7 +12524,7 @@ class Seepage(HasHandle, HasCells):
                 """
                 core.rea_inh_set_exp(self.handle, value)
 
-            core.use(c_double,'rea_inh_get_exp_r', c_void_p)
+            core.use(c_double, 'rea_inh_get_exp_r', c_void_p)
 
             @property
             def exp_r(self):
@@ -12509,7 +12541,7 @@ class Seepage(HasHandle, HasCells):
                 """
                 return core.rea_inh_get_exp_r(self.handle)
 
-            core.use(None,'rea_inh_set_exp_r',
+            core.use(None, 'rea_inh_set_exp_r',
                      c_void_p, c_double)
 
             @exp_r.setter
@@ -12518,7 +12550,6 @@ class Seepage(HasHandle, HasCells):
                 反应速率的指数(逆向)
                 """
                 core.rea_inh_set_exp_r(self.handle, value)
-
 
         core.use(c_void_p, 'new_reaction')
         core.use(None, 'del_reaction', c_void_p)
@@ -12829,9 +12860,10 @@ class Seepage(HasHandle, HasCells):
                             lambda m, ind: m.get_component(ind))
 
         def add_inhibitor(self, *args, **kwargs):
-            warnings.warn('Reaction.add_inhibitor will be removed after 2026-5-31, '
-                          'use zmlx.react.alg.add_inhibitor instead',
-                          DeprecationWarning, stacklevel=2)
+            warnings.warn(
+                'Reaction.add_inhibitor will be removed after 2026-5-31, '
+                'use zmlx.react.alg.add_inhibitor instead',
+                DeprecationWarning, stacklevel=2)
             from zmlx.react import alg
             return alg.add_inhibitor(self, *args, **kwargs)
 
@@ -17204,7 +17236,7 @@ class Seepage(HasHandle, HasCells):
         """
         return core.seepage_get_reaction_n(self.handle)
 
-    core.use(None,'seepage_set_reaction_n',
+    core.use(None, 'seepage_set_reaction_n',
              c_void_p, c_size_t)
 
     @reaction_number.setter

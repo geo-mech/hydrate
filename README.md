@@ -36,7 +36,7 @@
 1. Windows 10/11, x64; 安装[VC_redist.x64.exe](https://gitee.com/geomech/hydrate/attach_files) (程序必要的运行的环境);
 2. 安装[git](https://git-scm.com/)：官方下载，默认安装即可（默认安装的时候会添加文件夹的右键菜单，可以取消勾选；git安装之后，建议安装辅助工具[TortoiseGit](https://tortoisegit.org/)，会添加更加好用的右键菜单）;
 3. 安装[Python](https://www.python.org/) (64位, 3.8+)，推荐[WinPython](https://gitee.com/geomech/hydrate/attach_files) (绿色免安装); 
-4. 推荐提前安装好`PyQt6, numpy, scipy, matplotlib, pyqtgraph, PyOpenGL`等第三方的Python包. <span style="color:red">(注意: 不再支持PyQt5)</span>
+4. 推荐提前安装好`PyQt6(不再支持PyQt5), numpy, scipy, matplotlib, pyqtgraph, PyOpenGL`等第三方的Python包. 
 
 ### 安装
 

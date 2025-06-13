@@ -5,7 +5,7 @@ from datetime import datetime
 from zml import read_text, write_text, app_data
 from zmlx.alg.fsys import time_string
 from zmlx.ui.alg import create_action
-from zmlx.ui.cfg import code_in_editor
+from zmlx.ui.cfg import get_default_code
 from zmlx.ui.pyqt import QtWidgets, qt_name, is_pyqt6
 
 PythonEditor = None
@@ -35,7 +35,7 @@ class CodeEdit(PythonEditor):
     def __init__(self, parent=None):
         super(CodeEdit, self).__init__(parent)
         self.__fname = None
-        self.setText(code_in_editor)
+        self.setText(get_default_code())
         self.textChanged.connect(self.save)
         self.textChanged.connect(self.show_status)
 
@@ -126,7 +126,7 @@ class CodeEdit(PythonEditor):
             try:
                 self.__fname = None
                 self.setText(
-                    read_text(fname, encoding='utf-8', default=code_in_editor))
+                    read_text(fname, encoding='utf-8', default=get_default_code()))
                 self.__fname = fname
             except Exception as err:
                 print(err)

@@ -37,8 +37,9 @@ class RegTool(QtWidgets.QWidget):
             except:
                 pass
         else:
-            QtWidgets.QMessageBox.information(self,
-                                              '提示', '请输入激活码后再试')
+            QtWidgets.QMessageBox.information(
+                self,
+                '提示', '请输入激活码后再试')
 
     @staticmethod
     def get_start_code():

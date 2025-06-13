@@ -31,7 +31,7 @@ except Exception as err:
 # from zmlx.alg.sys import get_latest_version  # Remove since 2025-4-30
 from zmlx.alg.base import clamp, linspace, time2str, mass2str, fsize2str
 from zmlx.alg.multi_proc import create_async, apply_async
-from zmlx.alg.sbatch import sbatch
+from zmlx.alg.sys import sbatch
 from zmlx.alg.fsys import first_only, print_tag, join_paths, make_fname
 from zmlx.alg import fsys, fsys as path
 

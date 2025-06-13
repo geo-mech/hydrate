@@ -54,6 +54,10 @@ def create(CaOH2, liq, CaO, fa_t=None, fa_c=None):
     Ca(OH)2 ranges from 400 to 600 ◦C, and the heat release temperature ranges from 25 ◦C to
     approximately 500 ◦C (as determined from the partial pressure of the steam involved in the reaction)
     by https://doi.org/10.3390/en16073019
+
+    注意：
+        返回一个dict，包含了反应的所有的信息。此dict定义的data可以在
+        zmlx.react.alg.add_reaction中使用，将反应添加到Seepage中
     """
     return endothermic.create(
         left=[(CaOH2, 1.0), ],

@@ -64,36 +64,64 @@ def __create_reaction(model, **opts):
         （可能需要读取model中的流体定义，以及会在model中注册属性）
     返回的是一个Seepage.Reaction对象.
     可以参考这个函数对数据的定义，来生成相关的数据.
+    特别需要注意：
+        此函数再创建Seepage.Reaction的时候，可能会修改model本身
     """
     data = Seepage.Reaction()
 
-    name = opts.get('name')   # 定义反应的名字
+    # 定义反应的名字
+    name = opts.get('name')
     if isinstance(name, str):
         data.name = name
+    else:
+        if name is not None:
+            warnings.warn(
+                f'The name of reaction should be string while now it is {name}',
+                UserWarning, stacklevel=3)
 
-    temp = opts.get('temp')  # 定义和heat对应的温度（另外，当p2t没有定义的时候，此temp将作为默认的基准温度），单位为K
+    # 定义和heat对应的温度（另外，当p2t没有定义的时候，此temp将作为默认的基准温度），单位为K
+    temp = opts.get('temp')
     if temp is not None:
         data.temp = temp
+    else:
+        warnings.warn(
+            f'The temp of reaction (name={name}) should be given while now it is None',
+            UserWarning, stacklevel=3)
 
-    heat = opts.get('heat')  # 反应的热量（发生1kg的反应所释放的热量） J/kg
+    # 反应的热量（发生1kg的反应所释放的热量） J/kg
+    heat = opts.get('heat')
     if heat is not None:
         data.heat = heat
+    else:
+        warnings.warn(
+            f'The heat of reaction (name={name}) should be given while now it is None',
+            UserWarning, stacklevel=3)
 
-    # 定义不同压力下的"基准温度"，如果没有定义，则直接使用temp属性作为基准温度
-    #    （1MPa基准温度0度、2MPa基准温度10度；某个位置1MPa1度，和2MPa11度对应速率就会一样）
-    #     对于溶液中的，这种和压力关系不大的，就设置特殊p2t曲线，让t常数;  p=[0, 100e6], t=[0, 0]
+    # 定义不同压力下的"基准温度" (如果没有定义，则直接使用temp属性作为基准温度)
+    #    （例如：1MPa基准温度0度、2MPa基准温度10度；某个位置1MPa1度，和2MPa11度对应速率就会一样）
+    #  特别地：
+    #     对于溶液中的反应，这种和压力关系不大的，就设置特殊p2t曲线，让t常数:
+    #           p=[0, 100e6], t=[0, 0]
     p2t = opts.get('p2t')
     if p2t is not None:
         p, t = p2t
         data.p2t.set_xy(p, t)
+    else:
+        warnings.warn(
+            f'The p2t of reaction (name={name}) should be given while now it is None',
+            UserWarning, stacklevel=3)
 
     # 不同温度下的基准的“正向速率” (在此基础上，后续需要根据inhibitors浓度来进行矫正);
     #    q>0，代表反应正向；q<0，逆向的；
     # 最原始的，假设各个浓度都是1的时候的速率。
     t2q = opts.get('t2q')
     if t2q is not None:
-        t, q = t2q   # 一条曲线，x为温度，y为速率 （内部插值是线性插值，一定给足够密集的插值点，原始比较系数的插值点，要加密）
+        t, q = t2q  # 一条曲线，x为温度，y为速率 （内部插值是线性插值，一定给足够密集的插值点，原始比较系数的插值点，要加密）
         data.t2q.set_xy(t, q)
+    else:
+        warnings.warn(
+            f'The t2q of reaction (name={name}) should be given while now it is None',
+            UserWarning, stacklevel=3)
 
     # 逆向反应的速率 (在此基础上，后续需要根据inhibitors浓度来进行矫正)
     #     q>0，代表逆应正向；q<0，正向的；
@@ -116,23 +144,30 @@ def __create_reaction(model, **opts):
             assert -1.0 <= weight <= 1.0
 
             fa_t = comp.get('fa_t')  # 温度属性的ID
-            assert fa_t is not None
+            if fa_t is None:
+                fa_t = 'temperature'  # 后续动态注册属性id
             if isinstance(fa_t, str):
                 fa_t = model.reg_flu_key(fa_t)
 
             fa_c = comp.get('fa_c')  # 比热属性的ID
-            assert fa_c is not None
+            if fa_c is None:
+                fa_c = 'specific_heat'  # 后续动态注册属性id
             if isinstance(fa_c, str):
                 fa_c = model.reg_flu_key(fa_c)
 
             data.add_component(
                 index=kind, weight=weight, fa_t=fa_t, fa_c=fa_c)
+    else:
+        warnings.warn(
+            f'The components of reaction (name={name}) should be given while now it is None',
+            UserWarning, stacklevel=3)
 
-    inhibitors = opts.get('inhibitors')  # 抑制剂（催化剂），请参考Seepage.Reaction.Inhibitor的定义和说明
+    # 抑制剂（催化剂），请参考Seepage.Reaction.Inhibitor的定义和说明
+    inhibitors = opts.get('inhibitors')
     if inhibitors is not None:
         assert isinstance(inhibitors, Iterable)
         for inh in inhibitors:
-            sol = inh.get('sol')   # 溶质的流体的name或者ID（优先给定name）
+            sol = inh.get('sol')  # 溶质的流体的name或者ID（优先给定name）
             if isinstance(sol, str):
                 sol = model.find_fludef(sol)
 
@@ -210,7 +245,8 @@ def create_reaction(model, **opts):
 
 def add_reaction(model: Seepage, data, need_id=False):
     """
-    添加一个反应. 当给定的data是用于创建反应的dict时，请参考__create_reaction的文档以及代码中的注释来确定data的格式
+    添加一个反应. 当给定的data是用于创建反应的dict时，请参考__create_reaction
+    的文档以及代码中的注释来确定data的格式
     """
     if not isinstance(data, Seepage.Reaction):
         data = __create_reaction(model, **data)

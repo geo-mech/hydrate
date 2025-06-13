@@ -2,7 +2,6 @@
 处理系统相关的操作。后续修改的时候需要保证：
     此模块应不依赖于任何第三方模块，以及不依赖于zml
 """
-import hashlib
 import importlib
 import os
 import shutil
@@ -40,11 +39,7 @@ def warn(message, category=None, stacklevel=1, tag=None):
     """
     warnings.warn(message=message, category=category, stacklevel=stacklevel + 1)
     if tag is None:
-        try:
-            hash_obj = hashlib.sha256(message.encode('utf-8')).hexdigest()
-            tag = hash_obj[: 30]
-        except:
-            pass
+        tag = message
     if isinstance(tag, str):
         from zml import log
         log(text=message, tag=f'{tag}.warn')

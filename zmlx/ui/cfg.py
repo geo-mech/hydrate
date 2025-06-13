@@ -46,8 +46,6 @@ def find_icon_file(name):
                 filepath = os.path.join(folder, name + ext)
                 if os.path.isfile(filepath):
                     return filepath
-                return None
-            return None
         return None
     except Exception as err:
         print(err)
@@ -89,7 +87,6 @@ def find_sound(name):
                 filepath = os.path.join(folder, name + ext)
                 if os.path.isfile(filepath):
                     return filepath
-            return None
         return None
     except Exception as err:
         print(err)
@@ -241,13 +238,15 @@ def _screen_geometries():
                 range(desktop.screenCount())]
 
 
-def _set_saved_geometry(win: QtWidgets.QMainWindow, words):
+def _set_saved_geometry(win: QtWidgets.QMainWindow, words, scale=None):
     try:
         if len(words) < 4:
             _set_default_geometry(win)
         else:
             target_rect = QtCore.QRect(int(words[0]), int(words[1]),
                                        int(words[2]), int(words[3]))
+            if scale is not None:
+                target_rect = _scale_rect_around_center(target_rect, scale)
             target_sc = None
             for rect in _screen_geometries():
                 if target_sc is None:
@@ -286,7 +285,7 @@ def load_window_size(win: QtWidgets.QMainWindow):
             _set_default_geometry(win)
             return
         if words[4] == 'True':  # 需要最大化显示
-            _set_default_geometry(win)
+            _set_saved_geometry(win, words, scale=0.75)
             win.showMaximized()
             return
         else:  # 恢复窗口
@@ -324,21 +323,19 @@ def load_cwd():
         save_cwd()
 
 
-Priorities = {'HighestPriority': QtCore.QThread.Priority.HighestPriority,
-              'HighPriority': QtCore.QThread.Priority.HighPriority,
-              'IdlePriority': QtCore.QThread.Priority.IdlePriority,
-              'InheritPriority': QtCore.QThread.Priority.InheritPriority,
-              'LowestPriority': QtCore.QThread.Priority.LowestPriority,
-              'LowPriority': QtCore.QThread.Priority.LowPriority,
-              'NormalPriority': QtCore.QThread.Priority.NormalPriority,
-              }
-
-
 def priority_value(text):
     """
     根据文本来获得优先级
     """
-    return Priorities.get(text, QtCore.QThread.Priority.LowPriority)
+    priorities = {'HighestPriority': QtCore.QThread.Priority.HighestPriority,
+                  'HighPriority': QtCore.QThread.Priority.HighPriority,
+                  'IdlePriority': QtCore.QThread.Priority.IdlePriority,
+                  'InheritPriority': QtCore.QThread.Priority.InheritPriority,
+                  'LowestPriority': QtCore.QThread.Priority.LowestPriority,
+                  'LowPriority': QtCore.QThread.Priority.LowPriority,
+                  'NormalPriority': QtCore.QThread.Priority.NormalPriority,
+                  }
+    return priorities.get(text, QtCore.QThread.Priority.LowPriority)
 
 
 def load_priority():
@@ -386,45 +383,13 @@ def get_text(key):
             return key
     except Exception as err:
         print(err)
-
-
-def get_menus():
-    """
-    返回所有预定义的菜单项目
-    """
-    menus = {}
-    for file_name in find_all('zml_menus.json'):
-        data = read_json(path=file_name, default={})
-        if isinstance(data, dict):
-            menus.update(data)
-    return menus
-
-
-def get_action_files():
-    """
-    返回所有的Action文件的路径
-    """
-    files = {}
-    for path in reversed(find_all('zml_actions')):
-        if path is None:
-            continue
-        if not os.path.isdir(path):
-            continue
-        for filename in os.listdir(path):
-            name, ext = os.path.splitext(filename)
-            if filename == '__init__.py':
-                continue
-            if ext == '.py':
-                files[filename] = os.path.join(path, filename)
-    return files
-
-
-try:
-    code_in_editor = read_text(find('zml_code_in_editor.py'), encoding='utf-8',
-                               default='')
-except:
-    code_in_editor = ''
+        return None
 
 
 def get_default_code():
-    return code_in_editor
+    try:
+        return read_text(find('zml_code_in_editor.py'),
+                         encoding='utf-8',
+                         default='')
+    except:
+        return ''

@@ -1,16 +1,103 @@
 import timeit
 
-from zmlx.alg.fsys import samefile
 from zmlx.alg.base import time2str
+from zmlx.alg.fsys import samefile
 from zmlx.ui.alg import add_code_history
 from zmlx.ui.break_point import BreakPoint
 from zmlx.ui.cfg import *
 from zmlx.ui.gui_buffer import gui
+from zmlx.ui.pyqt import QtCore
+from zmlx.ui.pyqt import QtGui
 from zmlx.ui.pyqt import QtWidgets
 from zmlx.ui.shared_value import SharedValue
 from zmlx.ui.widget.code_edit import CodeEdit
-from zmlx.ui.widget.console_output import ConsoleOutput
-from zmlx.ui.widget.console_thread import ConsoleThread
+from zmlx.ui.widget.text import TextBrowser
+
+
+class ConsoleOutput(TextBrowser):
+    sig_add_text = QtCore.pyqtSignal(str)
+
+    def __init__(self, parent=None, console=None):
+        super(ConsoleOutput, self).__init__(parent)
+        self.__length = 0
+        self.__length_max = 100000
+        self.sig_add_text.connect(self.__add_text)
+        self.console = console
+
+    def get_context_menu(self):
+        menu = super().get_context_menu()
+        if self.console is not None:
+            from zmlx.ui.main_window import get_window
+            window = get_window()
+            menu.addSeparator()
+            menu.addAction(window.get_action('console_hide'))
+            if self.console.is_running():
+                menu.addAction(window.get_action('console_pause'))
+                menu.addAction(window.get_action('console_resume'))
+                menu.addAction(window.get_action('console_stop'))
+            else:
+                menu.addAction(window.get_action('show_code_history'))
+        return menu
+
+    def write(self, text):
+        self.sig_add_text.emit(text)
+
+    def flush(self):
+        pass
+
+    def __check_length(self):
+        while self.__length > self.__length_max:
+            fulltext = self.toPlainText()
+            fulltext = fulltext[-int(len(fulltext) / 2): -1]
+            self.clear()
+            self.setPlainText(fulltext)
+            self.__length = len(fulltext)
+
+    def __add_text(self, text):
+        self.__check_length()
+        self.moveCursor(QtGui.QTextCursor.MoveOperation.End)
+        self.insertPlainText(text)
+        self.__length += len(text)
+
+    def load_text(self, filename):
+        try:
+            if os.path.isfile(filename):
+                with open(filename, 'r') as file:
+                    text = file.read()
+                    self.setPlainText(text)
+                    self.__length = len(text)
+                    self.__check_length()
+                    self.moveCursor(QtGui.QTextCursor.MoveOperation.End)
+        except Exception as err2:
+            print(err2)
+            self.setPlainText('')
+
+    def save_text(self, filename):
+        try:
+            with open(filename, 'w') as file:
+                file.write(self.toPlainText())
+        except Exception as err2:
+            print(err2)
+
+
+class ConsoleThread(QtCore.QThread):
+    sig_done = QtCore.pyqtSignal()
+    sig_err = QtCore.pyqtSignal(str)
+
+    def __init__(self, code):
+        super(ConsoleThread, self).__init__()
+        self.code = code
+        self.result = None
+
+    def run(self):
+        if self.code is not None:
+            try:
+                self.result = self.code()
+            except KeyboardInterrupt:
+                print('KeyboardInterrupt')
+            except BaseException as err:
+                self.sig_err.emit(f'{err}')
+        self.sig_done.emit()
 
 
 class ConsoleWidget(QtWidgets.QWidget):
@@ -35,9 +122,10 @@ class ConsoleWidget(QtWidgets.QWidget):
         self.splitter.setStretchFactor(1, 1)
 
         h_layout = QtWidgets.QHBoxLayout()
-        h_layout.addItem(QtWidgets.QSpacerItem(40, 20,
-                                               QtWidgets.QSizePolicy.Policy.Expanding,
-                                               QtWidgets.QSizePolicy.Policy.Minimum))
+        h_layout.addItem(QtWidgets.QSpacerItem(
+            40, 20,
+            QtWidgets.QSizePolicy.Policy.Expanding,
+            QtWidgets.QSizePolicy.Policy.Minimum))
 
         def add_button(text, icon, slot):
             button = QtWidgets.QPushButton(self)
@@ -47,8 +135,9 @@ class ConsoleWidget(QtWidgets.QWidget):
             h_layout.addWidget(button)
             return button
 
-        self.button_exec = add_button('运行', 'begin',
-                                      lambda: self.exec_file(fname=None))
+        self.button_exec = add_button(
+            '运行', 'begin',
+            lambda: self.exec_file(fname=None))
         self.button_exec.setToolTip(
             '运行此按钮上方输入框内的脚本. 如需要运行标签页的脚本，请点击工具栏的运行按钮')
         self.button_exec.setShortcut('Ctrl+Return')
@@ -56,9 +145,10 @@ class ConsoleWidget(QtWidgets.QWidget):
         self.button_exit = add_button('终止', 'stop', self.stop_clicked)
         self.button_exit.setToolTip(
             '安全地终止内核的执行 (需要提前在脚本内设置break_point)')
-        h_layout.addItem(QtWidgets.QSpacerItem(40, 20,
-                                               QtWidgets.QSizePolicy.Policy.Expanding,
-                                               QtWidgets.QSizePolicy.Policy.Minimum))
+        h_layout.addItem(QtWidgets.QSpacerItem(
+            40, 20,
+            QtWidgets.QSizePolicy.Policy.Expanding,
+            QtWidgets.QSizePolicy.Policy.Minimum))
         main_layout.addLayout(h_layout)
 
         self.kernel_err = None
@@ -66,7 +156,8 @@ class ConsoleWidget(QtWidgets.QWidget):
         self.result = None
         try:
             self.workspace = app_data.get()
-            self.workspace.update({'__name__': '__main__', 'gui': gui})
+            self.workspace.update(
+                {'__name__': '__main__', 'gui': gui})
         except Exception as err:
             print(err)
             self.workspace = {'__name__': '__main__', 'gui': gui}
@@ -152,9 +243,10 @@ class ConsoleWidget(QtWidgets.QWidget):
             self.text_when_end = 'Done'
             self.workspace['__file__'] = fname
             app_data.log(f'execute file: {fname}')  # since 230923
-            self.start_func(lambda:
-                            exec(read_text(fname, encoding='utf-8', default=''),
-                                 self.workspace))
+            self.start_func(
+                lambda:
+                exec(read_text(fname, encoding='utf-8', default=''),
+                     self.workspace))
 
     def start_func(self, code):
         if self.thread is not None:
@@ -162,7 +254,8 @@ class ConsoleWidget(QtWidgets.QWidget):
             return
         self.result = None
         if isinstance(code, str):
-            self.thread = ConsoleThread(lambda: exec(code, self.workspace))
+            self.thread = ConsoleThread(
+                lambda: exec(code, self.workspace))
         else:
             self.thread = ConsoleThread(code)
         self.thread.sig_done.connect(self.__kernel_exited)

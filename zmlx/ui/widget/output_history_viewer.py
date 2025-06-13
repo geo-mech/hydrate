@@ -3,7 +3,7 @@ import sys
 
 from zml import app_data
 from zmlx.ui.pyqt import is_pyqt6
-from zmlx.ui.widget.console_output import ConsoleOutput
+from zmlx.ui.widget.console import ConsoleOutput
 
 if is_pyqt6:
     from PyQt6.QtWidgets import (
