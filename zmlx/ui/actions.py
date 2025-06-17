@@ -3,8 +3,8 @@ import os
 from zml import app_data, read_text, lic
 from zmlx.alg.fsys import print_tag
 from zmlx.ui.alg import open_url
-from zmlx.ui.pyqt import QtWidgets, QAction
 from zmlx.ui.gui_buffer import gui
+from zmlx.ui.pyqt import QtWidgets, QAction
 
 
 class Action(QAction):
@@ -32,7 +32,6 @@ def open_cwd():
 def play_images():
     from zmlx.alg.fsys import list_files
 
-
     def task():
         files = list_files(exts=['.jpg', '.png'])
         for idx in range(len(files)):
@@ -58,9 +57,7 @@ def add_std_actions(window):
     """
     初始化内置的菜单动作
     """
-    from zmlx.ui.main_window import MainWindow
     from zmlx.alg.sys import create_ui_lnk_on_desktop
-    assert isinstance(window, MainWindow)
 
     def not_running():
         return not window.is_running()
@@ -287,7 +284,8 @@ def add_std_actions(window):
 
         dict(menu='设置', name='edit_window_style',
              text='窗口风格(qss)',
-             slot=lambda: window.open_text(app_data.temp('zml_window_style.qss'), '窗口风格')
+             slot=lambda: window.open_text(
+                 app_data.temp('zml_window_style.qss'), '窗口风格')
              ),
 
         dict(menu='设置', name='set_plt_export_dpi',

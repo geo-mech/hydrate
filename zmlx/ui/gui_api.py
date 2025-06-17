@@ -55,11 +55,14 @@ class GuiApi(QtCore.QObject):
         item.mtx.unlock()
 
     def command(self, *args, **kwargs):
-        if self.break_point is not None:
-            self.break_point.pass_only()
-            if self.flag_exit is not None:
-                if self.flag_exit.value:
-                    raise KeyboardInterrupt()
+        has_bp = kwargs.pop('break_point', False)
+        if has_bp:
+            # 存在一个断点
+            if self.break_point is not None:
+                self.break_point.pass_only()
+                if self.flag_exit is not None:
+                    if self.flag_exit.value:
+                        raise KeyboardInterrupt()
         if len(args) > 0:
             for idx in range(len(self.items)):
                 item = self.items[idx]

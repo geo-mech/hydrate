@@ -8,14 +8,14 @@ from zml import is_chinese, lic, core, app_data, read_text
 from zmlx.alg.fsys import has_permission, samefile, show_fileinfo, time_string
 from zmlx.ui.actions import Action
 from zmlx.ui.alg import show_seepage
+from zmlx.ui.gui_api import GuiApi
+from zmlx.ui.gui_buffer import gui
+from zmlx.ui.pyqt import QtCore, QtWidgets, QtMultimedia, QAction, QtGui
 from zmlx.ui.settings import (
     load_icon, find_icon_file, get_text, save_cwd,
     load_pixmap, find_sound, load_cwd, load_window_size,
     save_window_size, load,
     get_current_screen_geometry, get_env_items, get_dep_list)
-from zmlx.ui.gui_api import GuiApi
-from zmlx.ui.gui_buffer import gui
-from zmlx.ui.pyqt import QtCore, QtWidgets, QtMultimedia, QAction, QtGui
 from zmlx.ui.task_proc import TaskProc
 from zmlx.ui.widget import (
     CodeEdit, Console, Label, TabWidget, VersionLabel)
@@ -983,6 +983,14 @@ def restore_tabs(window: MainWindow):
                 except Exception as err:
                     print(err)
 
+    try:
+        if app_data.getenv('show_readme', default='Yes',
+                           ignore_empty=True) == 'Yes':
+            if gui.count_tabs() == 0:
+                gui.show_readme()
+    except Exception as err:
+        print(f'Error: {err}')
+
 
 def make_splash(app):
     splash_fig = load_pixmap('splash')
@@ -1130,12 +1138,10 @@ def execute(code=None, keep_cwd=True, close_after_done=True, run_setup=True):
 
     app = QtWidgets.QApplication(sys.argv)
     splash = make_splash(app)
-
     win = MainWindow()
     on_enter(win)
     sys.excepthook = my_exception_hook
-    if run_setup:  # 执行额外的配置文件
-        run_gui_setup_files(win)
+
     win.show()
 
     if splash is not None:
@@ -1151,21 +1157,23 @@ def execute(code=None, keep_cwd=True, close_after_done=True, run_setup=True):
     win.get_console().sig_kernel_done.connect(
         lambda: results.append(win.get_console().result))
 
-    def console_works():
+    def console_work():
         if is_chinese(zml.get_dir()):
             win.toolbar_warning('提醒：请务必将程序安装在纯英文路径下')
+        if run_setup:  # 执行额外的配置文件
+            run_gui_setup_files(win)
         # 尝试载入tab
         restore_tabs(win)
 
     if code is not None:
         def codex():
             win.get_console().time_beg = None  # 对于外部的这种调用，不显示cpu耗时
-            console_works()
+            console_work()
             return code()
 
         win.get_console().start_func(codex)
     else:
-        win.get_console().start_func(console_works)
+        win.get_console().start_func(console_work)
 
     app.exec()
 
@@ -1190,10 +1198,7 @@ def get_window():
 
 
 def test():
-    app = QtWidgets.QApplication(sys.argv)
-    w = MainWindow()
-    w.show()
-    sys.exit(app.exec())
+    execute(close_after_done=False)
 
 
 if __name__ == '__main__':

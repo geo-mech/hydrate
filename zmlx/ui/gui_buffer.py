@@ -55,7 +55,7 @@ class GuiBuffer:
         """
         添加一个断点，用于暂停以及安全地终止
         """
-        self.command()
+        self.command(break_point=True)
 
     # 函数的别名<为了兼容之前的代码>
     breakpoint = break_point
@@ -74,7 +74,7 @@ class GuiBuffer:
     def __getattr__(self, name):
         return GuiBuffer.Agent(self.get(), name)
 
-    def execute(self, func, keep_cwd=True, close_after_done=True, args=None,
+    def execute(self, func=None, keep_cwd=True, close_after_done=True, args=None,
                 kwargs=None, disable_gui=False, run_setup=True):
         """
         尝试在gui模式下运行给定的函数 func
