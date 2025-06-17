@@ -9,8 +9,9 @@ warnings.warn(f'The modulus {__name__} is deprecated and '
 
 def __test():
     from zmlx.geometry.dfn2 import dfn2
-    fractures = dfn2(lr=[10, 100], ar=[0, 1], p21=0.2, xr=[-100, 100],
-                     yr=[-100, 100], l_min=2)
+    fractures = dfn2(
+        lr=[10, 100], ar=[0, 1], p21=0.2, xr=[-100, 100],
+        yr=[-100, 100], l_min=2)
     show_dfn2(fractures)
 
 

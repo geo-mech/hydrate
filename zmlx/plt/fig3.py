@@ -14,14 +14,12 @@ def plot_trisurf(x=None, y=None, z=None,
     """
     绘制三维三角化曲面图，支持坐标轴标签和颜色映射配置
 
-    Parameters
-    ----------
-    x, y, z : array-like, 1D
-        数据点的三维坐标数组，必须为相同长度的一维数组
-    cmap : str or Colormap, default 'coolwarm'
-        曲面颜色映射，支持所有Matplotlib注册的colormap名称
-    **kwargs : dict
-        传递给底层plot_on_axes函数的附加参数
+    Args:
+        x: 数据点的三维坐标数组，必须为相同长度的一维数组
+        y: 数据点的三维坐标数组，必须为相同长度的一维数组
+        z: 数据点的三维坐标数组，必须为相同长度的一维数组
+        cmap : 曲面颜色映射，支持所有Matplotlib注册的colormap名称
+        **kwargs : 传递给底层plot_on_axes函数的附加参数
     """
 
     def on_axes(ax):

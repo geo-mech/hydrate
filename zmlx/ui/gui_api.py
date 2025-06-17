@@ -1,4 +1,4 @@
-from zmlx.ui.cfg import get_text
+from zmlx.ui.settings import get_text
 from zmlx.ui.pyqt import QtCore, QtWidgets
 
 
@@ -19,11 +19,20 @@ class GuiApi(QtCore.QObject):
             self.add_func(key, val)
 
     def add_func(self, key, func):
+        """
+        添加一个函数
+        """
         self.funcs[key] = func
         return self
 
-    def list_all(self):
-        return self.funcs.keys()
+    def list_all(self, sort=True):
+        """
+        列出所有的函数
+        """
+        names = list(self.funcs.keys())
+        if sort:
+            names.sort()
+        return names
 
     def proc(self, arg):
         assert len(arg) == 2
@@ -74,40 +83,47 @@ class GuiApi(QtCore.QObject):
     @staticmethod
     def get_standard(parent):
         def get_open_file_name(*args, **kwargs):
-            fpath, _ = QtWidgets.QFileDialog.getOpenFileName(parent,
-                                                             *get_text(args),
-                                                             **get_text(kwargs))
+            fpath, _ = QtWidgets.QFileDialog.getOpenFileName(
+                parent,
+                *get_text(args),
+                **get_text(kwargs))
             return fpath
 
         def get_save_file_name(*args, **kwargs):
-            fpath, _ = QtWidgets.QFileDialog.getSaveFileName(parent,
-                                                             *get_text(args),
-                                                             **get_text(kwargs))
+            fpath, _ = QtWidgets.QFileDialog.getSaveFileName(
+                parent,
+                *get_text(args),
+                **get_text(kwargs))
             return fpath
 
         def information(*args, **kwargs):
-            QtWidgets.QMessageBox.information(parent, *get_text(args),
-                                              **get_text(kwargs))
+            QtWidgets.QMessageBox.information(
+                parent, *get_text(args),
+                **get_text(kwargs))
 
         def about(*args, **kwargs):
-            QtWidgets.QMessageBox.about(parent, *get_text(args),
-                                        **get_text(kwargs))
+            QtWidgets.QMessageBox.about(
+                parent, *get_text(args),
+                **get_text(kwargs))
 
         def warning(*args, **kwargs):
-            QtWidgets.QMessageBox.warning(parent, *get_text(args),
-                                          **get_text(kwargs))
+            QtWidgets.QMessageBox.warning(
+                parent, *get_text(args),
+                **get_text(kwargs))
 
         def get_existing_directory(*args, **kwargs):
-            folder = QtWidgets.QFileDialog.getExistingDirectory(None,
-                                                                *get_text(args),
-                                                                **get_text(
-                                                                    kwargs))
+            folder = QtWidgets.QFileDialog.getExistingDirectory(
+                None,
+                *get_text(args),
+                **get_text(
+                    kwargs))
             return folder
 
         def question(info):
-            reply = QtWidgets.QMessageBox.question(parent, get_text('请选择'),
-                                                   get_text(info),
-                                                   QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No)
+            reply = QtWidgets.QMessageBox.question(
+                parent, get_text('请选择'),
+                get_text(info),
+                QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No)
             if reply != QtWidgets.QMessageBox.StandardButton.Yes:
                 return False
             else:

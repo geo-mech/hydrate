@@ -10,35 +10,23 @@ from zmlx.io.json_ex import read as read_json
 from zmlx.ui.alg import get_current_screen_geometry
 from zmlx.ui.pyqt import QtGui, QtCore, QtWidgets, is_pyqt6
 
-try:
-    app_data.add_path(os.path.join(os.path.dirname(__file__), 'data'))
-except:
-    pass
+
+def __add_path():
+    try:
+        app_data.add_path(os.path.join(os.path.dirname(__file__), 'data'))
+    except Exception as err:
+        print(err)
 
 
-def temp(name):
-    return app_data.temp(name)
-
-
-def get_paths():
-    return app_data.get_paths()
-
-
-def find(name):
-    return app_data.find(name)
-
-
-def find_all(name):
-    return app_data.find_all(name)
-
-
-# 默认搜索的图片扩展名
-image_exts = ['.jpg', '.png']
+__add_path()
 
 
 def find_icon_file(name):
     try:
-        for folder in reversed(find_all('zml_icons')):
+        image_exts = app_data.get('icon_exts', None)  # 默认搜索的图片扩展名
+        if image_exts is None:
+            image_exts = ['.jpg', '.png']
+        for folder in reversed(app_data.find_all('zml_icons')):
             filepath = os.path.join(folder, name)
             if os.path.isfile(filepath):
                 return filepath
@@ -64,8 +52,9 @@ def load_icon(name):
         pixmap = load_pixmap(name)
         if pixmap is not None:
             icon = QtGui.QIcon()
-            icon.addPixmap(pixmap, QtGui.QIcon.Mode.Normal,
-                           QtGui.QIcon.State.Off)
+            icon.addPixmap(
+                pixmap, QtGui.QIcon.Mode.Normal,
+                QtGui.QIcon.State.Off)
             return icon
         else:
             return QtGui.QIcon()
@@ -74,12 +63,12 @@ def load_icon(name):
         return QtGui.QIcon()
 
 
-sound_exts = ['.wav']
-
-
 def find_sound(name):
     try:
-        for folder in reversed(find_all('zml_sounds')):
+        sound_exts = app_data.get('sound_exts', None)
+        if sound_exts is None:
+            sound_exts = ['.wav']
+        for folder in reversed(app_data.find_all('zml_sounds')):
             filepath = os.path.join(folder, name)
             if os.path.isfile(filepath):
                 return filepath
@@ -122,11 +111,13 @@ def play_error():
 
 
 def save(key, value, encoding=None):
-    write_text(path=temp(key), text=f'{value}', encoding=encoding)
+    write_text(path=app_data.temp(key), text=f'{value}', encoding=encoding)
 
 
 def load(key, default='', encoding=None):
-    return read_text(path=find(key), default=default, encoding=encoding)
+    return read_text(
+        path=app_data.find(key), default=default,
+        encoding=encoding)
 
 
 def _intersection_area(rect1, rect2):
@@ -243,8 +234,10 @@ def _set_saved_geometry(win: QtWidgets.QMainWindow, words, scale=None):
         if len(words) < 4:
             _set_default_geometry(win)
         else:
-            target_rect = QtCore.QRect(int(words[0]), int(words[1]),
-                                       int(words[2]), int(words[3]))
+            target_rect = QtCore.QRect(
+                int(words[0]), int(words[1]),
+                int(words[2]), int(words[3])
+            )
             if scale is not None:
                 target_rect = _scale_rect_around_center(target_rect, scale)
             target_sc = None
@@ -257,8 +250,8 @@ def _set_saved_geometry(win: QtWidgets.QMainWindow, words, scale=None):
                     target_sc = rect
                     continue
             if target_sc is None:
-                _set_default_geometry(win, w=target_rect.width(),
-                                      h=target_rect.height())
+                _set_default_geometry(
+                    win, w=target_rect.width(), h=target_rect.height())
                 return
             else:
                 target_sc = _scale_rect_around_center(target_sc, 0.96)
@@ -272,10 +265,11 @@ def _set_saved_geometry(win: QtWidgets.QMainWindow, words, scale=None):
 
 def load_window_size(win: QtWidgets.QMainWindow):
     try:
-        restore = app_data.getenv(key='restore_window_geometry',
-                                  default='Yes',
-                                  encoding='utf-8',
-                                  ignore_empty=True) != 'No'
+        restore = app_data.getenv(
+            key='restore_window_geometry',
+            default='Yes',
+            encoding='utf-8',
+            ignore_empty=True) != 'No'
         if not restore:
             _set_default_geometry(win)
             return
@@ -300,9 +294,10 @@ def save_window_size(win):
         assert isinstance(win, QtWidgets.QMainWindow)
         name = 'main_window_size_PyQt6' if is_pyqt6 else 'main_window_size'
         rc = win.geometry()
-        app_data.setenv(name,
-                        f'{rc.x()}  {rc.y()}  {rc.width()}  {rc.height()}  {win.isMaximized()}',
-                        encoding='utf-8')
+        app_data.setenv(
+            name,
+            f'{rc.x()}  {rc.y()}  {rc.width()}  {rc.height()}  {win.isMaximized()}',
+            encoding='utf-8')
     except Exception as err:
         print(err)
 
@@ -316,8 +311,8 @@ def save_cwd():
 
 def load_cwd():
     try:
-        os.chdir(app_data.getenv('current_work_directory', default=os.getcwd(),
-                                 encoding='utf-8'))
+        os.chdir(app_data.getenv(
+            'current_work_directory', default=os.getcwd(), encoding='utf-8'))
     except Exception as err:
         print(err)
         save_cwd()
@@ -327,14 +322,15 @@ def priority_value(text):
     """
     根据文本来获得优先级
     """
-    priorities = {'HighestPriority': QtCore.QThread.Priority.HighestPriority,
-                  'HighPriority': QtCore.QThread.Priority.HighPriority,
-                  'IdlePriority': QtCore.QThread.Priority.IdlePriority,
-                  'InheritPriority': QtCore.QThread.Priority.InheritPriority,
-                  'LowestPriority': QtCore.QThread.Priority.LowestPriority,
-                  'LowPriority': QtCore.QThread.Priority.LowPriority,
-                  'NormalPriority': QtCore.QThread.Priority.NormalPriority,
-                  }
+    priorities = {
+        'HighestPriority': QtCore.QThread.Priority.HighestPriority,
+        'HighPriority': QtCore.QThread.Priority.HighPriority,
+        'IdlePriority': QtCore.QThread.Priority.IdlePriority,
+        'InheritPriority': QtCore.QThread.Priority.InheritPriority,
+        'LowestPriority': QtCore.QThread.Priority.LowestPriority,
+        'LowPriority': QtCore.QThread.Priority.LowPriority,
+        'NormalPriority': QtCore.QThread.Priority.NormalPriority,
+    }
     return priorities.get(text, QtCore.QThread.Priority.LowPriority)
 
 
@@ -342,8 +338,9 @@ def load_priority():
     """
     应用内核的优先级。默认使用较低的优先级，以保证整个计算机运行的稳定
     """
-    return app_data.getenv('console_priority', default='LowPriority',
-                           encoding='utf-8', ignore_empty=True)
+    return app_data.getenv(
+        'console_priority', default='LowPriority',
+        encoding='utf-8', ignore_empty=True)
 
 
 def save_priority(value):
@@ -353,7 +350,7 @@ def save_priority(value):
 def load_ui_text():
     ui_text1 = {}
     try:
-        for path in reversed(find_all('zml_text.json')):
+        for path in reversed(app_data.find_all('zml_text.json')):
             try:
                 ui_text1.update(read_json(path, default={}))
             except Exception as err_3:
@@ -363,13 +360,16 @@ def load_ui_text():
     return ui_text1
 
 
-ui_text = load_ui_text()
+app_data.put(key='ui_text', value=load_ui_text())
 
 
 def get_text(key):
     try:
+        __ui_text = app_data.get('ui_text', None)
+        if not isinstance(__ui_text, dict):
+            return key
         if isinstance(key, str):
-            return ui_text.get(key, key)
+            return __ui_text.get(key, key)
         if isinstance(key, list):
             return [get_text(elem) for elem in key]
         if isinstance(key, tuple):
@@ -388,8 +388,83 @@ def get_text(key):
 
 def get_default_code():
     try:
-        return read_text(find('zml_code_in_editor.py'),
-                         encoding='utf-8',
-                         default='')
-    except:
+        return read_text(
+            app_data.find('zml_code_in_editor.py'),
+            encoding='utf-8',
+            default='')
+    except Exception as err:
+        print(err)
         return ''
+
+
+def get_env_items():
+    data = app_data.get('env_items', None)
+    if isinstance(data, list):
+        return data
+    else:
+        return []
+
+
+def add_env_item(label=None, key=None, items=None, note=None):
+    if key is None:
+        return
+    env_items = get_env_items()
+    for item in env_items:
+        if item['key'] == key:
+            item.update(dict(label=label, items=items, note=note))
+            app_data.put('env_items', env_items)
+            return
+    env_items.append(dict(
+        label=label,
+        key=key,
+        items=items,
+        note=note))
+    app_data.put('env_items', env_items)
+
+
+def __env_items_init():
+    for fname in app_data.find_all('zml_env_items.json'):
+        try:
+            from zmlx.io.json_ex import read
+            data = read(fname, encoding='utf-8')
+            for item in data:
+                try:
+                    add_env_item(**item)
+                except Exception as err:
+                    print(f'Error: {err}')
+                    pass
+        except Exception as err:
+            print(f'Error: {err}')
+            pass
+
+
+# 环境变量配置的初始化
+__env_items_init()
+
+
+def __init_dep_list():
+    dep_list = []
+    for fname in app_data.find_all('zml_dep_list.json'):
+        try:
+            from zmlx.io.json_ex import read
+            data = read(fname, encoding='utf-8')
+            dep_list.extend(data)
+        except Exception as err:
+            print(f'Error: {err}')
+            pass
+    if is_pyqt6:
+        dep_list.append(dict(
+            package_name='PyQt6-WebEngine',
+            import_name='PyQt6.QtWebEngineWidgets'))
+    else:
+        dep_list.append(dict(
+            package_name='PyQtWebEngine',
+            import_name='PyQt5.QtWebEngineWidgets'))
+    app_data.put('dep_list', dep_list)
+
+
+__init_dep_list()
+
+
+def get_dep_list():
+    return app_data.get('dep_list', [])

@@ -1,13 +1,13 @@
 from zml import Mesh3
 
 
-def load_trimesh(node_file, triangle_file, i_beg=0):
+def load_trimesh(node_file, triangle_file, i_beg=0, encoding=None):
     """
     利用节点node文件（包含2或者3列，为node的位置）和三角形文件<包含三列，为三角形的编号>
     """
     mesh = Mesh3()
 
-    with open(node_file, 'r') as file:
+    with open(node_file, 'r', encoding=encoding) as file:
         for line in file.readlines():
             values = [float(w) for w in line.split()]
             if len(values) > 0:
@@ -19,7 +19,7 @@ def load_trimesh(node_file, triangle_file, i_beg=0):
                         pos.append(0)
                 mesh.add_node(*pos)
 
-    with open(triangle_file, 'r') as file:
+    with open(triangle_file, 'r', encoding=encoding) as file:
         for line in file.readlines():
             values = [float(w) for w in line.split()]
             if len(values) == 3:

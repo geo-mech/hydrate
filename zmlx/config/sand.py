@@ -29,10 +29,11 @@ def add_setting(model: Seepage, *, sol_sand, flu_sand, ca_i0, ca_i1,
     """
     添加设置
     """
-    return settings.add(model, text_key=text_key,
-                        sol_sand=sol_sand,
-                        flu_sand=flu_sand,
-                        ca_i0=ca_i0, ca_i1=ca_i1, use_average=use_average)
+    return settings.add(
+        model, text_key=text_key,
+        sol_sand=sol_sand,
+        flu_sand=flu_sand,
+        ca_i0=ca_i0, ca_i1=ca_i1, use_average=use_average)
 
 
 def get_gradient(model: Seepage, fluid=None, use_average=False):

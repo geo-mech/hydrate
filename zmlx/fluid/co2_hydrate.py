@@ -24,9 +24,10 @@ def create(name=None, den=1112.0, specific_heat=2190.0):
         之前的版本，拷贝自甲烷水合物，为2100
 
     """
-    return Seepage.FluDef(den=den,  # 之前的版本，拷贝自甲烷水合物，为919.7
-                          vis=1.0e30,
-                          specific_heat=specific_heat, name=name)
+    return Seepage.FluDef(
+        den=den,  # 之前的版本，拷贝自甲烷水合物，为919.7
+        vis=1.0e30,
+        specific_heat=specific_heat, name=name)
 
 
 def create_flu(*args, **kwargs):

@@ -7,7 +7,7 @@ def _get_max(data, get, max_):
     找到一列元素的最大值
     """
     if data is None:
-        return
+        return None
 
     result = None
     for item in data:

@@ -1,5 +1,5 @@
 def create_action(parent, text, icon=None, slot=None):
-    from zmlx.ui.cfg import load_icon
+    from zmlx.ui.settings import load_icon
     from zmlx.ui.pyqt import QAction
     ac = QAction(text, parent)
     if icon is not None:
@@ -7,6 +7,7 @@ def create_action(parent, text, icon=None, slot=None):
     else:
         ac.setIcon(load_icon('python'))
     if slot is not None:
+        assert callable(slot), 'slot must be callable'
         ac.triggered.connect(slot)
     return ac
 
@@ -51,15 +52,17 @@ def paint_image(widget, pixmap):
             y = (widget.rect().height() - height) / 2
             target = QtCore.QRect(int(x), int(y), int(fig_w), int(height))
         painter = QtGui.QPainter(widget)
-        painter.setRenderHints(QtGui.QPainter.RenderHint.Antialiasing
-                               | QtGui.QPainter.RenderHint.SmoothPixmapTransform)
+        painter.setRenderHints(
+            QtGui.QPainter.RenderHint.Antialiasing |
+            QtGui.QPainter.RenderHint.SmoothPixmapTransform)
         try:
             dpr = widget.devicePixelRatioF()
         except AttributeError:
             dpr = widget.devicePixelRatio()
-        pixmap_scaled = pixmap.scaled(target.size() * dpr,
-                                      QtCore.Qt.AspectRatioMode.KeepAspectRatio,
-                                      QtCore.Qt.TransformationMode.SmoothTransformation)
+        pixmap_scaled = pixmap.scaled(
+            target.size() * dpr,
+            QtCore.Qt.AspectRatioMode.KeepAspectRatio,
+            QtCore.Qt.TransformationMode.SmoothTransformation)
         pixmap_scaled.setDevicePixelRatio(dpr)
         painter.drawPixmap(target, pixmap_scaled)
         painter.end()
@@ -111,22 +114,22 @@ def get_current_screen_geometry(window):
 
 def show_seepage(filepath):
     from zml import Seepage
-    from zml import app_data
     model = Seepage(path=filepath)
-    app_data.put('seepage', model)
     print(model)
 
 
 def v_spacer():
     from zmlx.ui.pyqt import QtWidgets
-    return QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Policy.Minimum,
-                                 QtWidgets.QSizePolicy.Policy.Expanding)
+    return QtWidgets.QSpacerItem(
+        40, 20, QtWidgets.QSizePolicy.Policy.Minimum,
+        QtWidgets.QSizePolicy.Policy.Expanding)
 
 
 def h_spacer():
     from zmlx.ui.pyqt import QtWidgets
-    return QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Policy.Expanding,
-                                 QtWidgets.QSizePolicy.Policy.Minimum)
+    return QtWidgets.QSpacerItem(
+        40, 20, QtWidgets.QSizePolicy.Policy.Expanding,
+        QtWidgets.QSizePolicy.Policy.Minimum)
 
 
 def open_url(url: str, caption=None, on_top=None, zoom_factor=None,
@@ -144,9 +147,10 @@ def open_url(url: str, caption=None, on_top=None, zoom_factor=None,
     if use_web_engine is None:
         try:
             from zml import app_data
-            use_web_engine = app_data.getenv(key='use_web_engine',
-                                             default='Yes',
-                                             ignore_empty=True) != 'No'
+            use_web_engine = app_data.getenv(
+                key='use_web_engine',
+                default='Yes',
+                ignore_empty=True) != 'No'
         except:
             use_web_engine = False
 
@@ -178,8 +182,9 @@ def open_url(url: str, caption=None, on_top=None, zoom_factor=None,
         if icon is None:
             icon = 'web'
 
-        gui.get_widget(the_type=QWebEngineView, caption=caption, on_top=on_top,
-                       oper=f, icon=icon)
+        gui.get_widget(
+            the_type=QWebEngineView, caption=caption, on_top=on_top,
+            oper=f, icon=icon)
 
 
 def show_widget(widget, caption=None, use_gui=False, **kwargs):

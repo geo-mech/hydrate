@@ -3,10 +3,10 @@
 """
 import ctypes
 import os
-import zmlx.alg.sys as warnings
 from ctypes import c_void_p
 
-from zml import Seepage, Vector, is_array, get_pointer64, np, Interp1
+import zmlx.alg.sys as warnings
+from zml import Seepage, Vector, is_array, get_pointer64, np
 from zmlx.alg.base import time2str
 
 
@@ -394,13 +394,15 @@ def get_attr(model: Seepage, key, default_val=None, cast=None,
     if isinstance(key, str):
         key = model.get_model_key(key)
     if key is not None:
-        value = model.get_attr(index=key,
-                               default_val=default_val,
-                               **valid_range)
+        value = model.get_attr(
+            index=key,
+            default_val=default_val,
+            **valid_range)
     else:
         if default_val is None:
-            warnings.warn(f'The key ({key_backup}) is None '
-                          f'and default_val is None when get_attr')
+            warnings.warn(
+                f'The key ({key_backup}) is None '
+                f'and default_val is None when get_attr')
         value = default_val
     if cast is None:
         return value
@@ -654,15 +656,20 @@ class FloatBuffer:
         pointer (ctypes.c_void_p): 指向数据的指针。
 
     Args:
-        value (Vector | array-like | ctypes.c_void_p | None): 输入的数据，可以是 Vector 对象、数组、指针或者 None。
-        is_input (bool | None): 指示数据是否为输入数据，当 value 为 None 时必须提供。
+        value (Vector | array-like | ctypes.c_void_p | None):
+            输入的数据，可以是 Vector 对象、数组、指针或者 None。
+        is_input (bool | None): 指示数据是否为输入数据，
+            当 value 为 None 时必须提供。
         length (int | None): 数据的长度，当 value 为 None 时必须提供。
 
     Raises:
         AssertionError:
-            - 当 value 为 None 时，is_input 或 length 未提供，或者 is_input 为 True。
-            - 当 value 为 Vector 时，is_input 或 length 未提供，或者 is_input 为 True 但 Vector 的大小不等于 length。
-            - 当 value 为数组时，is_input 或 length 未提供，或者 is_input 为 True 但数组长度不等于 length，或者 is_input 为 False。
+            - 当 value 为 None 时，is_input 或 length 未提供，
+                或者 is_input 为 True。
+            - 当 value 为 Vector 时，is_input 或 length 未提供，
+                或者 is_input 为 True 但 Vector 的大小不等于 length。
+            - 当 value 为数组时，is_input 或 length 未提供，
+                或者 is_input 为 True 但数组长度不等于 length，或者 is_input 为 False。
             - 当 value 为其他类型时，不是指针类型。
     """
 
@@ -723,8 +730,10 @@ def get_face_diff(model: Seepage, ca, fa=None):
 
     Args:
         model (Seepage): 渗流模型对象，用于获取单元格数量和面数量等信息。
-        ca (Union[ctypes.c_void_p, Vector]): 输入参数，表示单元格中心位置的属性值。可以是指针或者 Vector 对象。
-        fa (Optional[Union[ctypes.c_void_p, Vector]]): 输出参数，表示面位置的差异结果。可以是指针或者 Vector 对象，默认为 None。
+        ca (Union[ctypes.c_void_p, Vector]): 输入参数，
+            表示单元格中心位置的属性值。可以是指针或者 Vector 对象。
+        fa (Optional[Union[ctypes.c_void_p, Vector]]): 输出参数，
+            表示面位置的差异结果。可以是指针或者 Vector 对象，默认为 None。
 
     Returns:
         Vector: 包含各个面位置差异结果的 Vector 对象。
@@ -746,8 +755,10 @@ def get_face_sum(model: Seepage, ca, fa=None):
 
     Args:
         model (Seepage): 渗流模型对象，用于获取单元格数量和面数量等信息。
-        ca (Union[ctypes.c_void_p, Vector]): 输入参数，表示单元格中心位置的属性值。可以是指针或者 Vector 对象。
-        fa (Optional[Union[ctypes.c_void_p, Vector]]): 输出参数，表示面位置的和结果。可以是指针或者 Vector 对象，默认为 None。
+        ca (Union[ctypes.c_void_p, Vector]): 输入参数，
+            表示单元格中心位置的属性值。可以是指针或者 Vector 对象。
+        fa (Optional[Union[ctypes.c_void_p, Vector]]): 输出参数，
+            表示面位置的和结果。可以是指针或者 Vector 对象，默认为 None。
 
     Returns:
         Vector: 包含各个面位置和结果的 Vector 对象。
@@ -1134,6 +1145,3 @@ def get_sat(names, table: dict):
         assert False, (f'names not used: {list(the_copy.keys())}. '
                        f'The required names: {names}')
     return values
-
-
-

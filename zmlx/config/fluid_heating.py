@@ -82,5 +82,5 @@ def iterate(model: Seepage, dt=None):
                     mask = t1 > temp_max
                     t1[mask] = temp_max[mask]
 
-            as_numpy(model).fluids(*fluid).set(model.reg_flu_key('temperature'),
-                                               t1)
+            as_numpy(model).fluids(*fluid).set(
+                model.reg_flu_key('temperature'), t1)

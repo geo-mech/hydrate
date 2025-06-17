@@ -83,7 +83,8 @@ def iterate(model: Seepage, dt: float, fid0=None, fid1=None, rate=1.0):
 
     # 应用重力扩散过程
     if fid0 is not None and fid1 is not None:
-        model.diffusion(dt * rate, fid0=fid0, fid1=fid1,
-                        pg=get_pointer64(cond), lg=len(cond),
-                        ppg=get_pointer64(gra), lpg=len(gra),
-                        ds_max=0.2)
+        model.diffusion(
+            dt * rate, fid0=fid0, fid1=fid1,
+            pg=get_pointer64(cond), lg=len(cond),
+            ppg=get_pointer64(gra), lpg=len(gra),
+            ds_max=0.2)

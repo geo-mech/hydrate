@@ -97,17 +97,18 @@ def iterate(model: Seepage, dt=None, fid0=None, fid1=None,
     if fid0 is not None and fid1 is not None:
         # 毛管压力
         if ca_ipc is not None:
-            model.get_linear_dpre(fid0=fid0, fid1=fid1,
-                                  ca_ipc=ca_ipc, vs0=vs0,
-                                  vk=vk, ds=ds, cell_ids=None)
+            model.get_linear_dpre(
+                fid0=fid0, fid1=fid1,
+                ca_ipc=ca_ipc, vs0=vs0,
+                vk=vk, ds=ds, cell_ids=None)
         else:
             vs0.size = 0
             vk.size = 0
 
         # 重力
         if gravity is not None and gravity > 0:
-            g = get_face_gra(model) * get_face_density_diff(model, fid0,
-                                                            fid1) * gravity
+            g = get_face_gra(model) * get_face_density_diff(
+                model, fid0, fid1) * gravity
             ppg = get_pointer64(g)
             lpg = len(g)
         else:
@@ -119,25 +120,30 @@ def iterate(model: Seepage, dt=None, fid0=None, fid1=None,
             return
 
         if ca_ipc is not None:  # 定义了毛管力
-            model.get_linear_dpre(fid0=fid0, fid1=fid1, ca_ipc=ca_ipc,
-                                  vs0=vs0, vk=vk, ds=ds, cell_ids=None)
-            model.get_cond_for_exchange(fid0=fid0, fid1=fid1,
-                                        buffer=vg)
-            model.diffusion(dt, fid0=fid0, fid1=fid1,
-                            ps0=vs0.pointer, ls0=vs0.size,
-                            pk=vk.pointer, lk=vk.size,
-                            pg=vg.pointer, lg=vg.size,
-                            ppg=ppg, lpg=lpg,
-                            ds_max=ds * 0.5)
+            model.get_linear_dpre(
+                fid0=fid0, fid1=fid1, ca_ipc=ca_ipc,
+                vs0=vs0, vk=vk, ds=ds, cell_ids=None)
+            model.get_cond_for_exchange(
+                fid0=fid0, fid1=fid1,
+                buffer=vg)
+            model.diffusion(
+                dt, fid0=fid0, fid1=fid1,
+                ps0=vs0.pointer, ls0=vs0.size,
+                pk=vk.pointer, lk=vk.size,
+                pg=vg.pointer, lg=vg.size,
+                ppg=ppg, lpg=lpg,
+                ds_max=ds * 0.5)
         else:  # 没有定义毛管力，则仅仅考虑重力的效果
             if lpg > 0:  # 可以考虑重力
                 # print(f'Iterate the Capillary By Gravity = {gravity}')
-                model.get_cond_for_exchange(fid0=fid0, fid1=fid1,
-                                            buffer=vg)  # 用来交换的g
+                model.get_cond_for_exchange(
+                    fid0=fid0, fid1=fid1,
+                    buffer=vg)  # 用来交换的g
                 assert lpg == model.face_number
-                model.diffusion(dt, fid0=fid0, fid1=fid1,
-                                pg=vg.pointer, lg=vg.size,
-                                ppg=ppg, lpg=lpg, ds_max=ds * 0.5)
+                model.diffusion(
+                    dt, fid0=fid0, fid1=fid1,
+                    pg=vg.pointer, lg=vg.size,
+                    ppg=ppg, lpg=lpg, ds_max=ds * 0.5)
     else:  # 读取设置
         settings = get_settings(model)
         for setting in settings:
@@ -202,8 +208,9 @@ def add(model: Seepage, fid0=None, fid1=None, get_idx=None, data=None,
         ca_ipc = None
 
     # 将设置添加到model
-    settings.append({'ca_ipc': ca_ipc, 'fid0': fid0, 'fid1': fid1,
-                     'gravity': gravity})
+    settings.append({
+        'ca_ipc': ca_ipc, 'fid0': fid0, 'fid1': fid1,
+        'gravity': gravity})
     set_settings(model, settings)
 
 

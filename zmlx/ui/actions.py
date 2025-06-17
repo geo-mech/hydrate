@@ -1,10 +1,10 @@
-from importlib import import_module
+import os
 
-import zml
+from zml import app_data, read_text, lic
 from zmlx.alg.fsys import print_tag
 from zmlx.ui.alg import open_url
-from zmlx.ui.cfg import *
 from zmlx.ui.pyqt import QtWidgets, QAction
+from zmlx.ui.gui_buffer import gui
 
 
 class Action(QAction):
@@ -18,59 +18,54 @@ class Action(QAction):
         更新视图
         """
         is_enabled = self.is_enabled() if callable(self.is_enabled) else True
-        is_visible = self.is_visible() if callable(self.is_visible) else is_enabled
+        is_visible = self.is_visible() if callable(
+            self.is_visible) else is_enabled
         self.setEnabled(is_enabled)
         self.setVisible(is_visible)
+
+
+def open_cwd():
+    print(f'当前工作路径：\n{os.getcwd()}\n')
+    os.startfile(os.getcwd())
+
+
+def play_images():
+    from zmlx.alg.fsys import list_files
+
+
+    def task():
+        files = list_files(exts=['.jpg', '.png'])
+        for idx in range(len(files)):
+            print(files[idx])
+            gui.open_image(files[idx], caption='播放图片',
+                           on_top=False)
+            gui.break_point()
+            gui.progress(
+                val_range=[0, len(files)], value=idx,
+                visible=True, label="Playing Figures ")
+        gui.progress(visible=False)
+
+    gui.start_func(task)
+
+
+def print_funcs():
+    cmds = list(gui.list_all())
+    for i in range(len(cmds)):
+        print(i, cmds[i])
 
 
 def add_std_actions(window):
     """
     初始化内置的菜单动作
     """
-    from zmlx.ui.widget.demo_widget import DemoWidget
     from zmlx.ui.main_window import MainWindow
     from zmlx.alg.sys import create_ui_lnk_on_desktop
     assert isinstance(window, MainWindow)
 
-    def open_cwd():
-        print(f'当前工作路径：\n{os.getcwd()}\n')
-        os.startfile(os.getcwd())
-
-    def new_code():
-        fname, _ = QtWidgets.QFileDialog.getSaveFileName(
-            window,
-            caption='新建.py脚本',
-            directory=os.getcwd(),
-            filter='Python File (*.py);;')
-        window.open_code(fname)
-
-    def show_txt(filepath):
-        try:
-            from zmlx.alg.fsys import get_size_mb, show_fileinfo
-            if get_size_mb(filepath) < 0.5:
-                window.open_text(filepath)
-            else:
-                show_fileinfo(filepath)
-        except:
-            pass
-
-    def show_widget(
-            module_name, widget_name,
-            caption=None, on_top=None,
-            oper=None, icon=None):
-        try:
-            the_type = getattr(import_module(module_name), widget_name, None)
-        except:
-            the_type = None
-        if the_type is not None:
-            window.get_widget(
-                the_type=the_type, caption=caption, on_top=on_top,
-                oper=oper, icon=icon)
-
     def not_running():
         return not window.is_running()
 
-    def exec_current():
+    def console_exec():
         f = getattr(window.get_current_widget(), 'console_exec', None)
         if callable(f):
             f()
@@ -81,47 +76,9 @@ def add_std_actions(window):
             return False
         return not c.should_pause()
 
-    def install_dep():
-        from zmlx.ui.widget.package_table import PackageTable
-        from zmlx.ui.pyqt import is_pyqt6
-
-        packages = [
-            dict(package_name='numpy', import_name='numpy'),
-            dict(package_name='scipy', import_name='scipy'),
-            dict(package_name='matplotlib',
-                 import_name='matplotlib'),
-            dict(package_name='PyOpenGL', import_name='OpenGL'),
-            dict(package_name='pyqtgraph', import_name='pyqtgraph'),
-            dict(package_name='pypiwin32', import_name='win32com'),
-            dict(package_name='pywin32', import_name='pywintypes'),
-            dict(package_name='chemicals', import_name='chemicals'),
-        ]
-        if is_pyqt6:
-            packages.append(dict(
-                package_name='PyQt6-WebEngine',
-                import_name='PyQt6.QtWebEngineWidgets'))
-        else:
-            packages.append(dict(
-                package_name='PyQtWebEngine',
-                import_name='PyQt5.QtWebEngineWidgets'))
-        window.get_widget(
-            the_type=PackageTable, caption='Python包管理', on_top=True,
-            type_kw=dict(packages=packages))
-
     def about():
-        from zml import lic
         print(lic.desc)
         window.show_about()
-
-    def set_demo_opath():
-        from zmlx.demo.opath import set_output, opath
-        root = opath()
-        name = QtWidgets.QFileDialog.getExistingDirectory(
-            window, 'Choose Demo Output Folder', root)
-        if len(name) > 0:
-            set_output(name)
-        else:
-            print(f'Current folder: {root}')
 
     def set_plt_export_dpi():
         from zmlx.io.env import plt_export_dpi
@@ -133,27 +90,7 @@ def add_std_actions(window):
         if ok:
             plt_export_dpi.set_value(number)
 
-    def play_images():
-        from zmlx.alg.fsys import list_files
-        from zmlx.ui.gui_buffer import gui
-
-        def task():
-            files = list_files(exts=['.jpg', '.png'])
-            for idx in range(len(files)):
-                print(files[idx])
-                gui.open_image(files[idx], caption='播放图片',
-                               on_top=False)
-                gui.break_point()
-                gui.progress(
-                    val_range=[0, len(files)], value=idx,
-                    visible=True, label="Playing Figures ")
-
-            gui.progress(visible=False)
-
-        gui.start_func(task)
-
     data = [
-
         dict(menu='文件', name='set_cwd', icon='open',
              tooltip='设置当前的工作路径', text='工作路径',
              slot=window.set_cwd_by_dialog,
@@ -176,18 +113,8 @@ def add_std_actions(window):
 
         dict(menu='文件', name='demo', icon='demo',
              tooltip=None, text='示例',
-             slot=lambda: show_widget(
-                 module_name='zmlx.ui.widget.demo_widget',
-                 widget_name='DemoWidget',
-                 caption='示例', on_top=True,
-                 oper=lambda w: w.refresh,
-                 icon='demo'),
+             slot=window.show_demo,
              on_toolbar=True, is_enabled=None, is_visible=lambda: True
-             ),
-
-        dict(menu='文件', name='open_cwd',
-             text='打开工作路径',
-             slot=open_cwd
              ),
 
         dict(menu='文件', name='view_cwd', icon='cwd',
@@ -198,12 +125,12 @@ def add_std_actions(window):
 
         dict(menu='文件', name='py_new', icon='python',
              text='新建Python脚本',
-             slot=new_code,
+             slot=window.new_code,
              is_enabled=not_running,
              ),
 
         dict(menu='文件', name='export_data',
-             text='导出',
+             text='导出数据',
              slot=lambda: getattr(window.get_current_widget(), 'export_data')(),
              is_enabled=lambda: hasattr(
                  window.get_current_widget(),
@@ -220,14 +147,6 @@ def add_std_actions(window):
                  'export_plt_figure') and not window.is_running(),
              ),
 
-        dict(menu='文件', name='set_demo_opath',
-             text='设置示例的数据输出',
-             slot=set_demo_opath,
-             is_enabled=lambda: isinstance(
-                 window.get_current_widget(),
-                 DemoWidget) and not window.is_running(),
-             ),
-
         dict(menu='显示', name='refresh', icon='refresh',
              text='刷新',
              slot=window.refresh
@@ -235,31 +154,17 @@ def add_std_actions(window):
 
         dict(menu='显示', name='memory', icon='variables',
              text='变量',
-             slot=lambda: show_widget(
-                 module_name='zmlx.ui.widget.mem_viewer',
-                 widget_name='MemViewer',
-                 caption='变量', on_top=True,
-                 oper=lambda w: w.refresh,
-                 icon='variables')
+             slot=window.show_memory
              ),
 
         dict(menu='显示', name='timer', icon='clock',
              tooltip='显示cpu耗时统计的结果', text='耗时',
-             slot=lambda: show_widget(
-                 module_name='zmlx.ui.widget.timer_viewer',
-                 widget_name='TimerViewer',
-                 caption='耗时', on_top=True,
-                 oper=lambda w: w.refresh,
-                 icon='clock')
+             slot=window.show_timer
              ),
 
         dict(menu='显示', name='console', icon='console',
              text='Python控制台(测试)',
-             slot=lambda: show_widget(
-                 module_name='zmlx.ui.widget.pg_console',
-                 widget_name='PgConsole',
-                 caption='Python控制台', on_top=True,
-                 icon='console')
+             slot=window.show_pg_console
              ),
 
         dict(menu='显示', name='cls', icon='clean',
@@ -267,10 +172,28 @@ def add_std_actions(window):
              slot=window.cls
              ),
 
+        dict(menu='显示', name='tab_details',
+             text='标签列表',
+             tooltip='在一个标签页内显示所有标签也的摘要，当标签特别多的时候比较有用',
+             slot=window.show_tab_details
+             ),
+
+        dict(menu='显示', name='show_code_history',
+             text='运行历史',
+             slot=lambda: window.show_code_history(
+                 folder=app_data.root('console_history'),
+                 caption='运行历史')
+             ),
+
+        dict(menu='显示', name='show_output_history',
+             text='输出历史',
+             slot=window.show_output_history,
+             ),
+
         dict(menu='操作', name='console_exec', icon='begin',
              tooltip='运行当前标签页面显示的脚本',
              text='运行',
-             slot=exec_current,
+             slot=console_exec,
              on_toolbar=True,
              is_enabled=lambda: hasattr(
                  window.get_current_widget(),
@@ -344,95 +267,66 @@ def add_std_actions(window):
 
         dict(menu='设置', name='search', icon='set',
              text='搜索路径',
-             slot=lambda: show_widget(
-                 module_name='zmlx.ui.widget.file_find',
-                 widget_name='FileFind',
-                 caption='搜索路径', on_top=True,
-                 icon='set')
+             slot=window.show_file_finder
              ),
 
         dict(menu='设置', name='env', icon='set',
-             text='设置env',
-             slot=lambda: show_widget(
-                 module_name='zmlx.ui.widget.env_edit',
-                 widget_name='EnvEdit',
-                 caption='设置Env', on_top=True,
-                 icon='set')
+             text='Env变量',
+             slot=window.show_env_edit
              ),
 
         dict(menu='设置', name='setup_files',
              text='启动文件',
-             slot=lambda: show_widget(
-                 module_name='zmlx.ui.widget.setup_files_editor',
-                 widget_name='SetupFilesEditor',
-                 caption='启动文件',
-                 on_top=True)
+             slot=window.show_setup_files_edit
              ),
 
         dict(menu='设置', name='install_dep',
-             text='Python包设置',
-             slot=install_dep
+             text='第三方包',
+             slot=window.show_package_table
              ),
 
         dict(menu='设置', name='edit_window_style',
-             text='窗口风格(qss文件)',
-             slot=lambda: show_txt(temp('zml_window_style.qss'))
+             text='窗口风格(qss)',
+             slot=lambda: window.open_text(app_data.temp('zml_window_style.qss'), '窗口风格')
              ),
 
         dict(menu='设置', name='set_plt_export_dpi',
-             text='设置导出plt图的DPI',
+             text='plt图的DPI',
              slot=set_plt_export_dpi
              ),
 
         dict(menu='帮助', name='readme', icon='info',
              text='ReadMe',
-             slot=lambda: show_widget(
-                 module_name='zmlx.ui.widget.read_me',
-                 widget_name='ReadMeBrowser',
-                 caption='ReadMe', on_top=True,
-                 icon='info'),
+             slot=window.show_readme,
              on_toolbar=True),
+
+        dict(menu='帮助', name='about',
+             text='关于',
+             icon='info',
+             slot=about,
+             is_enabled=not_running,
+             ),
 
         dict(menu='帮助', name='reg', icon='reg',
              text='注册',
-             slot=lambda: show_widget(
-                 module_name='zmlx.ui.widget.reg_tool',
-                 widget_name='RegTool',
-                 caption='注册', on_top=True,
-                 icon='reg')
+             slot=window.show_reg_tool
              ),
 
-        dict(menu='帮助', name='tab_details',
-             text='标签列表',
-             tooltip='在一个标签页内显示所有标签也的摘要，当标签特别多的时候比较有用',
-             slot=window.tab_details
+        dict(menu='帮助', name='feedback',
+             text='反馈',
+             icon='info',
+             slot=window.show_feedback,
+             is_enabled=not_running,
              ),
 
-        dict(menu='帮助', name='show_code_history',
-             text='代码运行历史',
-             slot=lambda: window.show_code_history(
-                 folder=app_data.root('console_history'),
-                 caption='代码运行历史')
-             ),
-
-        dict(menu='帮助', name='show_output_history',
-             text='输出历史',
-             slot=lambda: show_widget(
-                 module_name='zmlx.ui.widget.output_history_viewer',
-                 widget_name='OutputHistoryViewer',
-                 caption='输出历史',
-                 on_top=True,
-                 oper=lambda w: w.set_folder())
-             ),
-
-        dict(menu='帮助', name='papers',
+        dict(menu=['帮助', '打开'], name='papers',
              text='已发表文章',
              slot=lambda: open_url(
                  url="https://pan.cstcloud.cn/s/5cKaQrdFSHM",
                  use_web_engine=False)
              ),
 
-        dict(menu='帮助', name='new_issue',
+        dict(menu=['帮助', '打开'], name='new_issue',
              text='新建Issue',
              icon='issues',
              slot=lambda: open_url(
@@ -443,7 +337,7 @@ def add_std_actions(window):
              is_enabled=not_running,
              ),
 
-        dict(menu='帮助', name='iggcas',
+        dict(menu=['帮助', '打开'], name='iggcas',
              text='中科院地质地球所',
              icon='iggcas',
              slot=lambda: open_url(
@@ -455,23 +349,7 @@ def add_std_actions(window):
              is_enabled=not_running,
              ),
 
-        dict(menu='帮助', name='feedback',
-             text='反馈',
-             icon='info',
-             slot=lambda: show_widget(
-                 module_name='zmlx.ui.widget.feedback',
-                 widget_name='FeedbackWidget',
-                 caption='反馈'),
-             is_enabled=not_running,
-             ),
-
-        dict(menu='帮助', name='open_app_data',
-             text='打开AppData目录',
-             slot=lambda: os.startfile(app_data.root()),
-             is_enabled=lambda: zml.lic.is_admin
-             ),
-
-        dict(menu='帮助', name='homepage',
+        dict(menu=['帮助', '打开'], name='homepage',
              text='主页',
              icon='home',
              slot=lambda: open_url(
@@ -483,18 +361,26 @@ def add_std_actions(window):
              is_enabled=not_running,
              ),
 
-        dict(menu='帮助', name='about',
-             text='关于',
-             icon='info',
-             slot=about,
-             is_enabled=not_running,
+        dict(menu=['帮助', '打开'], name='open_cwd',
+             text='当前工作路径',
+             slot=open_cwd
+             ),
+
+        dict(menu=['帮助', '打开'], name='open_app_data',
+             text='AppData',
+             slot=lambda: os.startfile(app_data.root()),
+             is_enabled=lambda: lic.is_admin
+             ),
+
+        dict(menu=['帮助', '显示'],
+             text='gui命令列表',
+             slot=print_funcs,
              ),
 
         dict(menu='帮助', name='create_lnk',
-             text='创建桌面快捷方式',
+             text='创建快捷方式',
              slot=create_ui_lnk_on_desktop,
              ),
-
     ]
     for opt in data:
         window.add_action(**opt)
@@ -510,7 +396,8 @@ def _add_by_file(window, file):
     try:
         exec(text, {'__name__': ''}, data)
         has_error = False
-    except:
+    except Exception as err:
+        print(f'Error when parse {file}: {err}')
         has_error = True
 
     icon = data.get('icon')
@@ -537,8 +424,8 @@ def _add_by_file(window, file):
         try:
             res = window.parse_value(value)
             return False if res is None else res
-        except Exception as err:
-            print(err)
+        except Exception as e:
+            print(e)
             return False
 
     if data.get('is_visible') is None:
@@ -547,7 +434,8 @@ def _add_by_file(window, file):
         def is_visible():
             try:
                 return window.parse_value(data.get('is_visible'))
-            except:
+            except Exception as e:
+                print(f'Error when parse is_visible in {file}: {e}')
                 return True
 
     window.add_action(
@@ -562,7 +450,7 @@ def _add_by_file(window, file):
 
 def add_zml_actions(window):
     action_files = []
-    for path in reversed(find_all('zml_actions')):
+    for path in reversed(app_data.find_all('zml_actions')):
         if path is None:
             continue
         if not os.path.isdir(path):

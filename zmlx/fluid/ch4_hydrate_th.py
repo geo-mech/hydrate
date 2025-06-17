@@ -3,8 +3,8 @@
 """
 
 import math
-import zmlx.alg.sys as warnings
 
+import zmlx.alg.sys as warnings
 from zml import Seepage, Interp2
 
 
@@ -40,9 +40,10 @@ def create(MH, NH=6, t_min=270, t_max=290, p_min=1e6, p_max=40e6, name=None):
         den.create(p_min, 0.1e6, p_max, t_min, 1, t_max, get_density)
         return den
 
-    return Seepage.FluDef(den=create_density(),
-                          vis=1.0e30,
-                          specific_heat=2100.0, name=name)
+    return Seepage.FluDef(
+        den=create_density(),
+        vis=1.0e30,
+        specific_heat=2100.0, name=name)
 
 
 if __name__ == '__main__':

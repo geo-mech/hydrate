@@ -43,9 +43,9 @@ from collections.abc import Iterable
 
 from zml import (get_average_perm, Tensor3, ConjugateGradientSolver,
                  make_parent)
-from zmlx.alg.fsys import join_paths, make_fname, print_tag
 from zmlx.alg.base import clamp
 from zmlx.alg.base import join_cols
+from zmlx.alg.fsys import join_paths, make_fname, print_tag
 from zmlx.base.seepage import *
 from zmlx.config import (capillary, prod, fluid_heating, timer,
                          sand, step_iteration, adjust_vis)
@@ -99,16 +99,18 @@ def show_cells(
         v = get_cell_pre(model, mask=mask)
         tricontourf(
             x, y, v, caption='pressure',
-            fname=make_fname(year, join_paths(folder, 'pressure'),
-                             '.jpg', 'y'),
+            fname=make_fname(
+                year, join_paths(folder, 'pressure'),
+                '.jpg', 'y'),
             **kw)
 
     if show_t:  # 显示温度
         v = get_cell_temp(model, mask=mask)
         tricontourf(
             x, y, v, caption='temperature',
-            fname=make_fname(year, join_paths(folder, 'temperature'),
-                             '.jpg', 'y'),
+            fname=make_fname(
+                year, join_paths(folder, 'temperature'),
+                '.jpg', 'y'),
             **kw)
 
     if not isinstance(show_s, list):
@@ -131,8 +133,9 @@ def show_cells(
             # 绘图
             tricontourf(
                 x, y, v, caption=name,
-                fname=make_fname(year, join_paths(folder, name),
-                                 '.jpg', 'y'),
+                fname=make_fname(
+                    year, join_paths(folder, name),
+                    '.jpg', 'y'),
                 **kw)
 
 
@@ -712,7 +715,8 @@ def set_model(
         if isinstance(sat, dict):
             sat = get_sat(comp_names, sat)
 
-        # 热传导系数. todo: 当热传导系数各向异性的时候，取平均值，这可能并不是最合适的.  @2024-8-11
+        # 热传导系数.
+        # todo: 当热传导系数各向异性的时候，取平均值，这可能并不是最合适的.  @2024-8-11
         tmp = heat_cond(*pos)
         if isinstance(tmp, Tensor3):
             tmp = (tmp.xx + tmp.yy + tmp.zz) / 3.0
@@ -724,7 +728,8 @@ def set_model(
             temperature=temperature(*pos),
             p=p(*pos), s=sat,
             pore_modulus_range=pore_modulus_range,
-            dist=dist(*pos), bk_fv=bk_fv(*pos), heat_cond=tmp)
+            dist=dist(*pos), bk_fv=bk_fv(*pos), heat_cond=tmp
+        )
 
     for face in model.faces:
         assert isinstance(face, Seepage.Face)

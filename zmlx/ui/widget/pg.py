@@ -31,9 +31,5 @@ try:
             except:
                 pass
 
-        @staticmethod
-        def get_start_code():
-            return """gui.trigger('console')"""
-
 except:
     PgConsole = None

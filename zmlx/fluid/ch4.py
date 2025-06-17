@@ -5,8 +5,8 @@ by 张召彬
 """
 
 import math
-import zmlx.alg.sys as warnings
 
+import zmlx.alg.sys as warnings
 from zml import Interp2, Seepage, data_version
 
 
@@ -48,8 +48,9 @@ def create(t_min=270, t_max=290, p_min=1e6, p_max=40e6, name=None):
     else:
         # 之前随手写的，错了
         specific_heat = 1000.0
-    return Seepage.FluDef(den=create_density(), vis=create_viscosity(),
-                          specific_heat=specific_heat, name=name)
+    return Seepage.FluDef(
+        den=create_density(), vis=create_viscosity(),
+        specific_heat=specific_heat, name=name)
 
 
 def create_flu(*args, **kwargs):

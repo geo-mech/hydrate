@@ -11,9 +11,10 @@ except Exception as e:
 
 class ConsoleApi:
     def __init__(self):
-        self.__commands = dict(about=self.show_all, information=self.show_all,
-                               question=self.question, plot=self.plot,
-                               progress=self.do_nothing)
+        self.__commands = dict(
+            about=self.show_all, information=self.show_all,
+            question=self.question, plot=self.plot,
+            progress=self.do_nothing)
 
     @staticmethod
     def do_nothing(*args, **kwargs):

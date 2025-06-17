@@ -1,27 +1,5 @@
 def init():
     try:
-        from zmlx.io.python import read_py
-        from zml import app_data
-        from zmlx.ui import gui
-        if app_data.getenv('restore_tabs', default='Yes',
-                           ignore_empty=True) != 'No':
-            filename = app_data.temp('tab_start_code.json')
-            data = read_py(filename)
-            for text in data:
-                try:
-                    exec(text, {'gui': gui})
-                except Exception as err:
-                    print(err)
-    except Exception as e:
-        print(f'Error: {e}')
-
-    try:
-        from zmlx.ui.main_window import get_window
-        setattr(get_window(), 'tabs_should_be_saved', 1)
-    except Exception as e:
-        print(f'Error: {e}')
-
-    try:
         from zmlx.ui.main_window import get_window
         from zml import app_data
         if app_data.getenv('show_readme', default='Yes',

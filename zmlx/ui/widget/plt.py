@@ -22,7 +22,7 @@ except:
     pass
 
 from zmlx.ui.pyqt import QtWidgets, QAction
-from zmlx.ui.cfg import load_icon
+from zmlx.ui.settings import load_icon
 import matplotlib.pyplot as plt
 
 

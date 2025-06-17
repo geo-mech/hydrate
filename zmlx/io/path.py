@@ -1,6 +1,6 @@
 import os
-import zmlx.alg.sys as warnings
 
+import zmlx.alg.sys as warnings
 from zml import app_data, get_dir, is_chinese, make_parent, make_dirs
 from zmlx.alg.fsys import in_directory, join_paths
 
@@ -92,9 +92,10 @@ def set_path(folder=None, tag=None, key=None):
             key = 'current_work_directory'
 
         # 修改工作目录
-        app_data.setenv(key,
-                        folder,  # 这里，写入绝对路径
-                        encoding='utf-8')
+        app_data.setenv(
+            key,
+            folder,  # 这里，写入绝对路径
+            encoding='utf-8')
 
         # 显示消息
         print(f'Succeed set data path (key = {key}) to: "{folder}" ')

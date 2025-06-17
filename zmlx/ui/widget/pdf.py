@@ -1,20 +1,16 @@
 import os.path
 
-from zmlx.ui.pyqt import is_pyqt6, QWebEngineView, QWebEngineSettings, QtCore
+from zmlx.ui.pyqt import QWebEngineView, QWebEngineSettings, QtCore
 
 
 class PDFViewer(QWebEngineView):
     def __init__(self, parent=None, file_path=None):
         super().__init__(parent)
         # 启用PDF支持
-        if is_pyqt6:
-            self.settings().setAttribute(
-                QWebEngineSettings.WebAttribute.PluginsEnabled, True)
-            self.settings().setAttribute(
-                QWebEngineSettings.WebAttribute.PdfViewerEnabled, True)
-        else:
-            self.settings().setAttribute(QWebEngineSettings.PluginsEnabled,
-                                         True)
+        self.settings().setAttribute(
+            QWebEngineSettings.WebAttribute.PluginsEnabled, True)
+        self.settings().setAttribute(
+            QWebEngineSettings.WebAttribute.PdfViewerEnabled, True)
         if file_path is not None:
             self.load_pdf(file_path)
 
@@ -24,3 +20,4 @@ class PDFViewer(QWebEngineView):
             file_path = os.path.abspath(file_path)
             file_path = QtCore.QUrl.fromLocalFile(file_path).toString()
         self.load(QtCore.QUrl(file_path))
+

@@ -1,0 +1,148 @@
+[
+  {
+    "label": "\u4e3b\u754c\u9762\u6807\u7b7e\u4f4d\u7f6e",
+    "key": "TabPosition",
+    "items": [
+      "",
+      "North",
+      "East",
+      "South",
+      "West"
+    ],
+    "note": "\u9ed8\u8ba4\u5728\u9876\u90e8 North"
+  },
+  {
+    "label": "\u4e3b\u754c\u9762\u6807\u7b7e\u5f62\u72b6",
+    "key": "TabShape",
+    "items": [
+      "",
+      "Rounded",
+      "Triangular"
+    ],
+    "note": "\u9ed8\u8ba4:Rounded"
+  },
+  {
+    "label": "\u63a7\u5236\u53f0\u5185\u6838\u4f18\u5148\u7ea7",
+    "key": "console_priority",
+    "items": [
+      "",
+      "LowestPriority",
+      "LowPriority",
+      "InheritPriority",
+      "NormalPriority",
+      "HighPriority",
+      "HighestPriority"
+    ],
+    "note": "\u9ed8\u8ba4\u4e3a\u4f4e\u4f18\u5148\u7ea7 LowPriority\u3002\u63d0\u9ad8\u5185\u6838\u7684\u4f18\u5148\u7ea7\uff0c\u53ef\u80fd\u4f1a\u63d0\u9ad8\u8ba1\u7b97\u901f\u5ea6\uff0c\u4f46\u662f\u53ef\u80fd\u4f1a\u5f71\u54cd\u5230\u754c\u9762\u7684\u7a33\u5b9a\u6027\uff0c\u4ece\u800c\u9020\u6210\u5361\u987f"
+  },
+  {
+    "label": "\u662f\u5426\u7981\u7528\u8ba1\u65f6\u5668",
+    "key": "disable_timer",
+    "items": [
+      "",
+      "Yes",
+      "No"
+    ],
+    "note": "\u9ed8\u8ba4\u4e3aNo"
+  },
+  {
+    "label": "\u662f\u5426\u7981\u7528\u542f\u52a8\u753b\u9762",
+    "key": "disable_splash",
+    "items": [
+      "",
+      "Yes",
+      "No"
+    ],
+    "note": "\u9ed8\u8ba4\u4e3aNo"
+  },
+  {
+    "label": "\u4f7f\u7528WebEngine",
+    "key": "use_web_engine",
+    "items": [
+      "",
+      "Yes",
+      "No"
+    ],
+    "note": "\u9ed8\u8ba4\u4e3aYes\u3002\u5982\u679c\u4f7f\u7528WebEngine\uff0c\u5219\u5728\u9700\u8981\u6253\u5f00\u7f51\u9875\u7684\u65f6\u5019\uff0c\u4f1a\u5728\u6b64\u8f6f\u4ef6\u7684\u6807\u7b7e\u9875\u9762\u5185\u76f4\u63a5\u6253\u5f00\uff0c\u5426\u5219\uff0c\u5219\u4f1a\u8c03\u7528\u7cfb\u7edf\u7684\u6d4f\u89c8\u5668"
+  },
+  {
+    "label": "\u6062\u590d\u5173\u95ed\u65f6\u7684\u6807\u7b7e",
+    "key": "restore_tabs",
+    "items": [
+      "",
+      "Yes",
+      "No"
+    ],
+    "note": "\u9ed8\u8ba4\u4e3aYes. \u6ce8\u610f\uff0c\u5e76\u975e\u6240\u6709\u7684\u6807\u7b7e\u90fd\u652f\u6301\u6062\u590d"
+  },
+  {
+    "label": "\u542f\u52a8\u65f6\u663e\u793aReadMe",
+    "key": "show_readme",
+    "items": [
+      "",
+      "Yes",
+      "No"
+    ],
+    "note": "\u9ed8\u8ba4\u4e3aYes"
+  },
+  {
+    "label": "\u542f\u52a8\u65f6\u6062\u590d\u63a7\u5236\u53f0\u8f93\u51fa",
+    "key": "restore_console_output",
+    "items": [
+      "",
+      "Yes",
+      "No"
+    ],
+    "note": "\u9ed8\u8ba4\u4e3aYes"
+  },
+  {
+    "label": "\u542f\u52a8\u65f6\u68c0\u67e5\u6388\u6743",
+    "key": "check_lic_when_start",
+    "items": [
+      "",
+      "Yes",
+      "No"
+    ],
+    "note": "\u9ed8\u8ba4\u4e0d\u68c0\u67e5. \u68c0\u67e5\u7684\u64cd\u4f5c\u4f1a\u8017\u65f6\u8f83\u957f\uff0c\u5f71\u54cd\u542f\u52a8\u901f\u7387"
+  },
+  {
+    "label": "\u4e0d\u5411\u5f00\u53d1\u8005\u53cd\u9988",
+    "key": "disable_auto_feedback",
+    "items": [
+      "",
+      "Yes",
+      "No"
+    ],
+    "note": "\u9ed8\u8ba4\u5f00\u542f\u53cd\u9988\u3002\u5411\u8f6f\u4ef6\u5f00\u53d1\u8005\u53d1\u9001\u7a0b\u5e8f\u9519\u8bef\u7684\u4fe1\u606f\uff0c\u4ec5\u7528\u4e8e\u6539\u8fdb\u7a0b\u5e8f\u3002\u5982\u679c\u6253\u5f00\u6b64\u9009\u9879\uff0c\u5219\u4e0d\u4f1a\u5411\u5f00\u53d1\u8005\u53cd\u9988\u4efb\u4f55\u4fe1\u606f"
+  },
+  {
+    "label": "Qt\u7248\u672c",
+    "key": "Qt_version",
+    "items": [
+      "",
+      "PyQt5",
+      "PyQt6"
+    ],
+    "note": "\u754c\u9762\u4f18\u5148\u4f7f\u7528Qt\u7248\u672c\uff0c\u9ed8\u8ba4\u4e3aPyQt6. \u8bf7\u5c3d\u91cf\u4fdd\u8bc1\u7cfb\u7edf\u91ccPyQt5\u6216\u8005PyQt6\uff0c\u4ec5\u5b89\u88c5\u5176\u4e2d\u4e00\u4e2a\u3002\u4e24\u4e2a\u540c\u65f6\u5b89\u88c5\uff0c\u53ef\u80fd\u4f1a\u5e26\u6765\u4e0d\u53ef\u9884\u77e5\u7684\u9519\u8bef"
+  },
+  {
+    "label": "\u542f\u52a8\u65f6\u6062\u590d\u4e0a\u6b21\u89c6\u7a97\u5927\u5c0f",
+    "key": "restore_window_geometry",
+    "items": [
+      "",
+      "Yes",
+      "No"
+    ],
+    "note": "\u9ed8\u8ba4 Yes\uff0c\u5373\u5c1d\u8bd5\u6062\u590d\u5173\u95ed\u65f6\u5019\u7684\u7a97\u53e3\u5927\u5c0f\u548c\u4f4d\u7f6e\uff0c\u5e76\u5c3d\u53ef\u80fd\u4f7f\u5f97\u7a97\u53e3\u4f4d\u4e8e\u5c4f\u5e55\u53ef\u89c6\u533a\u57df\u5185\uff1b\u5982\u9009\u62e9No\uff0c\u5219\u542f\u52a8\u65f6\u4f1a\u5c06\u7a97\u53e3\u7f6e\u4e8e\u9ed8\u8ba4\u7684\u4f4d\u7f6e\uff08\u5c4f\u5e55\u4e2d\u592e\uff0c\u5927\u5c0f\u5927\u7ea6\u4e3a\u5c4f\u5e55\u5927\u5c0f\u76843/4\uff09"
+  },
+  {
+    "label": "\u542f\u52a8\u65f6\u8f7d\u5165\u7a97\u53e3\u7684\u98ce\u683c",
+    "key": "load_window_style",
+    "items": [
+      "",
+      "Yes",
+      "No"
+    ],
+    "note": "\u9ed8\u8ba4 Yes\uff0c\u5373\u8f7d\u5165\u9884\u5b9a\u4e49\u7684\u98ce\u683c\uff1b\u5982\u679c\u9009\u62e9No\uff0c\u5219\u4e0d\u8f7d\u5165\uff0c\u800c\u662f\u4f7f\u7528Qt\u9ed8\u8ba4\u7684\u98ce\u683c"
+  }
+]

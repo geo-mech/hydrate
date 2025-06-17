@@ -1,0 +1,34 @@
+[
+  {
+    "package_name": "numpy",
+    "import_name": "numpy"
+  },
+  {
+    "package_name": "scipy",
+    "import_name": "scipy"
+  },
+  {
+    "package_name": "matplotlib",
+    "import_name": "matplotlib"
+  },
+  {
+    "package_name": "PyOpenGL",
+    "import_name": "OpenGL"
+  },
+  {
+    "package_name": "pyqtgraph",
+    "import_name": "pyqtgraph"
+  },
+  {
+    "package_name": "pypiwin32",
+    "import_name": "win32com"
+  },
+  {
+    "package_name": "pywin32",
+    "import_name": "pywintypes"
+  },
+  {
+    "package_name": "chemicals",
+    "import_name": "chemicals"
+  }
+]

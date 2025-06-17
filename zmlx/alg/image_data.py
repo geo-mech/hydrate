@@ -28,6 +28,6 @@ def test(img_name, map_name):
 
 
 if __name__ == '__main__':
-    from zmlx.data.path import get_path
+    from zmlx.data import get_path
 
     test(get_path('cloud.png'), get_path('cm1.png'))
