@@ -55,7 +55,7 @@ class GuiBuffer:
         """
         添加一个断点，用于暂停以及安全地终止
         """
-        self.command(break_point=True)
+        self.command()
 
     # 函数的别名<为了兼容之前的代码>
     breakpoint = break_point

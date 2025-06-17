@@ -1,20 +1,28 @@
-from zmlx.ui.settings import get_text
 from zmlx.ui.pyqt import QtCore, QtWidgets
+from zmlx.ui.settings import get_text
 
 
 class GuiApi(QtCore.QObject):
-    sig_proc = QtCore.pyqtSignal(list)
+    class ItemData:
+        def __init__(self):
+            self.args = []
+            self.kwargs = {}
+            self.res = None
+            self.err = None
+            self.mtx = QtCore.QMutex()
+            self.mtx_running = QtCore.QMutex()
+
+    __sig_proc = QtCore.pyqtSignal(int)
 
     def __init__(self, parent, break_point=None, flag_exit=None):
         super(GuiApi, self).__init__(parent)
-        self.sig_proc.connect(self.proc)
+        self.__sig_proc.connect(self.__proc)
         self.break_point = break_point
         self.flag_exit = flag_exit
         self.funcs = {"add_func": self.add_func, "list_all": self.list_all}
-        self.res = None
-        self.err = None
-        self.mtx = QtCore.QMutex()
-        self.mtx_running = QtCore.QMutex()
+        self.items = []
+        for idx in range(20):  # 同时支持的调用
+            self.items.append(GuiApi.ItemData())
         for key, val in self.get_standard(parent=parent).items():
             self.add_func(key, val)
 
@@ -34,49 +42,44 @@ class GuiApi(QtCore.QObject):
             names.sort()
         return names
 
-    def proc(self, arg):
-        assert len(arg) == 2
-        args, kwargs = arg[0], arg[1]
-        if len(args) > 0:
+    def __proc(self, idx):
+        assert idx < len(self.items)
+        item = self.items[idx]
+        if len(item.args) > 0:
             try:
-                f = self.funcs.get(args[0])
-                assert f is not None, f'Function <{args[0]}> not found'
-                self.res = f(*args[1:], **kwargs)
+                f = self.funcs.get(item.args[0])
+                assert f is not None, f'gui function <{item.args[0]}> not found'
+                item.res = f(*item.args[1:], **item.kwargs)
             except Exception as err:
-                self.err = err
-        self.mtx.unlock()
+                item.err = err
+        item.mtx.unlock()
 
     def command(self, *args, **kwargs):
-        has_bp = kwargs.pop('break_point', False)
-        if has_bp:
-            # 存在一个断点
-            if self.break_point is not None:
-                self.break_point.pass_only()
-                if self.flag_exit is not None:
-                    if self.flag_exit.value:
-                        raise KeyboardInterrupt()
+        if self.break_point is not None:
+            self.break_point.pass_only()
+            if self.flag_exit is not None:
+                if self.flag_exit.value:
+                    raise KeyboardInterrupt()
         if len(args) > 0:
-            if self.mtx_running.tryLock():
-                # 普通的函数，则通过信号槽的方式调用
-                self.mtx.lock()
-                self.res = None
-                self.err = None
-                self.sig_proc.emit([args, kwargs])
-                self.mtx.lock()
-                self.mtx.unlock()
-                res = self.res
-                err = self.err
-                self.mtx_running.unlock()
-                if err is not None:
-                    raise err
-                return res
-            else:
-                # 此刻，可能是函数调用函数的情况
-                f = self.funcs.get(args[0])
-                if f is not None:
-                    return f(*args[1:], **kwargs)
-                else:
-                    return None
+            for idx in range(len(self.items)):
+                item = self.items[idx]
+                if item.mtx_running.tryLock():
+                    item.mtx.lock()
+                    item.res = None
+                    item.err = None
+                    item.args = args
+                    item.kwargs = kwargs
+                    self.__sig_proc.emit(idx)
+                    item.mtx.lock()
+                    item.mtx.unlock()
+                    res = item.res
+                    err = item.err
+                    item.mtx_running.unlock()
+                    if err is not None:
+                        raise err
+                    return res
+            print(f'Gui Command Ignored: {args}, {kwargs}')
+            return None  # 正在运行中，不允许再次调用
         else:
             return None
 

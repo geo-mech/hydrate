@@ -133,8 +133,6 @@ class MainWindow(QtWidgets.QMainWindow):
             func = getattr(self, key)
             if callable(func):
                 self.__gui_api.add_func(key, func)
-        self.__gui_api.add_func('close_all_tabs',
-                                self.__tab_widget.close_all_tabs)
         self.__gui_api.add_func('close', self.close)
         self.__gui_api.add_func('show_next', self.__tab_widget.show_next)
         self.__gui_api.add_func('show_prev', self.__tab_widget.show_prev)

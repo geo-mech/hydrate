@@ -8,7 +8,7 @@ def create_action(parent, text, icon=None, slot=None):
         ac.setIcon(load_icon('python'))
     if slot is not None:
         assert callable(slot), 'slot must be callable'
-        ac.triggered.connect(slot)
+        ac.triggered.connect(lambda: slot())  # 确保不会传入参数
     return ac
 
 
