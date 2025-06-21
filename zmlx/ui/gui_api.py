@@ -2,8 +2,65 @@ from zmlx.ui.pyqt import QtCore, QtWidgets
 from zmlx.ui.settings import get_text
 
 
+class SharedList:
+    """
+    线程安全的列表
+    """
+
+    def __init__(self, value=None):
+        self.value = value if isinstance(value, list) else []
+        self.mtx = QtCore.QMutex()
+
+    def get(self, idx):
+        self.mtx.lock()
+        res = self.value[idx]
+        self.mtx.unlock()
+        return res
+
+    def set(self, idx, value):
+        self.mtx.lock()
+        self.value[idx] = value
+        self.mtx.unlock()
+
+    def append(self, value):
+        self.mtx.lock()
+        self.value.append(value)
+        self.mtx.unlock()
+
+    def length(self):
+        self.mtx.lock()
+        res = len(self.value)
+        self.mtx.unlock()
+        return res
+
+
+class SharedDict:
+    def __init__(self, value=None):
+        self.value = value if isinstance(value, dict) else {}
+        self.mtx = QtCore.QMutex()
+
+    def get(self, key, default=None):
+        self.mtx.lock()
+        res = self.value.get(key, default)
+        self.mtx.unlock()
+        return res
+
+    def set(self, key, value):
+        self.mtx.lock()
+        self.value[key] = value
+        self.mtx.unlock()
+
+    def list_keys(self, sort=True):
+        self.mtx.lock()
+        keys = list(self.value.keys())
+        self.mtx.unlock()
+        if sort:
+            keys.sort()
+        return keys
+
+
 class GuiApi(QtCore.QObject):
-    class ItemData:
+    class Channel:
         def __init__(self):
             self.args = []
             self.kwargs = {}
@@ -19,10 +76,11 @@ class GuiApi(QtCore.QObject):
         self.__sig_proc.connect(self.__proc)
         self.break_point = break_point
         self.flag_exit = flag_exit
-        self.funcs = {"add_func": self.add_func, "list_all": self.list_all}
-        self.items = []
-        for idx in range(20):  # 同时支持的调用
-            self.items.append(GuiApi.ItemData())
+        self.funcs = SharedDict(
+            {"add_func": self.add_func, "list_all": self.list_all,
+             "channel_n": lambda: self.channels.length(),
+             })
+        self.channels = SharedList([GuiApi.Channel()])
         for key, val in self.get_standard(parent=parent).items():
             self.add_func(key, val)
 
@@ -30,21 +88,18 @@ class GuiApi(QtCore.QObject):
         """
         添加一个函数
         """
-        self.funcs[key] = func
+        self.funcs.set(key, func)
         return self
 
     def list_all(self, sort=True):
         """
         列出所有的函数
         """
-        names = list(self.funcs.keys())
-        if sort:
-            names.sort()
-        return names
+        return self.funcs.list_keys(sort=sort)
 
     def __proc(self, idx):
-        assert idx < len(self.items)
-        item = self.items[idx]
+        assert idx < self.channels.length()
+        item = self.channels.get(idx)
         if len(item.args) > 0:
             try:
                 f = self.funcs.get(item.args[0])
@@ -64,8 +119,8 @@ class GuiApi(QtCore.QObject):
                     if self.flag_exit.value:
                         raise KeyboardInterrupt()
         if len(args) > 0:
-            for idx in range(len(self.items)):
-                item = self.items[idx]
+            for idx in range(self.channels.length()):
+                item = self.channels.get(idx)
                 if item.mtx_running.tryLock():
                     item.mtx.lock()
                     item.res = None
@@ -81,8 +136,12 @@ class GuiApi(QtCore.QObject):
                     if err is not None:
                         raise err
                     return res
-            print(f'Gui Command Ignored: {args}, {kwargs}')
-            return None  # 正在运行中，不允许再次调用
+            if self.channels.length() < 20:
+                self.channels.append(GuiApi.Channel())
+                return self.command(*args, **kwargs)
+            else:
+                print(f'Gui Command Ignored: {args}, {kwargs}')
+                return None
         else:
             return None
 

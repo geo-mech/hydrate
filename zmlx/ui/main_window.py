@@ -10,7 +10,8 @@ from zmlx.ui.actions import Action
 from zmlx.ui.alg import show_seepage
 from zmlx.ui.gui_api import GuiApi
 from zmlx.ui.gui_buffer import gui
-from zmlx.ui.pyqt import QtCore, QtWidgets, QtMultimedia, QAction, QtGui
+from zmlx.ui.pyqt import (QtCore, QtWidgets, QtMultimedia, QAction, QtGui,
+                          is_pyqt6, QWebEngineView, QWebEngineSettings)
 from zmlx.ui.settings import (
     load_icon, find_icon_file, get_text, save_cwd,
     load_pixmap, find_sound, load_cwd, load_window_size,
@@ -60,13 +61,14 @@ class MainWindow(QtWidgets.QMainWindow):
         splitter.setStretchFactor(1, 0)
         h_layout.addWidget(splitter)
         self.setCentralWidget(widget)
-
         self.__title = None
+        self.__init_gui_api()  # 在成员声明了之后，第一时间初始化API
+
         if True:
             from zmlx.ui.actions import add_std_actions, add_zml_actions
+            # 注意，MainWindow尚未初始化，gui命令不可用
             add_std_actions(self)
             add_zml_actions(self)
-        self.__init_gui_api()
 
         self.sig_cwd_changed.connect(self.refresh)
         self.sig_cwd_changed.connect(self.view_cwd)
@@ -545,8 +547,10 @@ class MainWindow(QtWidgets.QMainWindow):
                     caption=caption,
                     on_top=True,
                     oper=oper, icon='python')
-                print(
-                    f'文件已打开: \n\t{fname}\n\n请点击工具栏上的<运行>按钮以运行!\n\n')
+                if app_data.getenv('show_info_after_code_open',
+                                   default='') != 'No':
+                    print(
+                        f'文件已打开: \n\t{fname}\n\n请点击工具栏上的<运行>按钮以运行!\n\n')
 
     def open_text(self, fname, caption=None):
         from zmlx.ui.widget.sys import TextFileEdit
@@ -600,22 +604,35 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         打开一个pdf
         """
-        if isinstance(fname, str):
-            if os.path.isfile(fname):
-                from zmlx.ui.widget.pdf import PDFViewer
+        assert isinstance(fname,
+                          str), f'The given fname is not a string: {fname}'
+        if not os.path.isfile(fname):
+            print(f'File not exist: {fname}')
+            return
+        if QWebEngineView is None or QWebEngineSettings is None:
+            print('QWebEngineView is not installed')
+            return
 
-                def oper(w):
-                    w.load_pdf(fname)
-                    kwds = dict(fname=fname, caption=caption, on_top=on_top)
-                    w.gui_restore = f"""gui.open_pdf(**{kwds})"""  # 用于重启
+        def oper(w):
+            kwds = dict(fname=fname, caption=caption, on_top=on_top)
+            w.gui_restore = f"""gui.open_pdf(**{kwds})"""  # 用于重启
+            w.settings().setAttribute(
+                QWebEngineSettings.WebAttribute.PluginsEnabled, True)
+            w.settings().setAttribute(
+                QWebEngineSettings.WebAttribute.PdfViewerEnabled, True)
+            if fname.startswith("file://"):
+                w.load(QtCore.QUrl(fname))
+            else:
+                w.load(QtCore.QUrl(QtCore.QUrl.fromLocalFile(
+                    os.path.abspath(fname)).toString()))
 
-                if caption is None:
-                    caption = os.path.basename(fname)
+        if caption is None:
+            caption = os.path.basename(fname)
 
-                self.get_widget(
-                    the_type=PDFViewer, caption=caption, on_top=on_top,
-                    oper=oper,
-                )
+        self.get_widget(
+            the_type=QWebEngineView, caption=caption, on_top=on_top,
+            oper=oper,
+        )
 
     def new_code(self):
         fname, _ = QtWidgets.QFileDialog.getSaveFileName(
@@ -865,7 +882,9 @@ class MainWindow(QtWidgets.QMainWindow):
                         icon='clock', oper=oper)
 
     def show_pg_console(self):
-        from zmlx.ui.widget.pg import PgConsole
+        from zmlx.ui.widget.sys import PgConsole
+        if PgConsole is None:
+            return
 
         def oper(w):
             w.gui_restore = f"""gui.show_pg_console()"""
@@ -941,55 +960,90 @@ class MainWindow(QtWidgets.QMainWindow):
             type_kw=dict(packages=get_dep_list()), oper=oper
         )
 
+    def open_url(self, url, caption=None, on_top=None, zoom_factor=None,
+                 icon=None):
+        """
+        显示一个html文件或者网址
+        """
+        if not isinstance(url, str):
+            return
+
+        if QWebEngineView is None:
+            if os.path.isfile(url):
+                os.startfile(url)
+            else:
+                from webbrowser import open_new_tab
+                open_new_tab(url)
+            return
+
+        kwds = dict(
+            url=url, caption=caption, on_top=on_top,
+            zoom_factor=zoom_factor, icon=icon
+        )
+
+        if zoom_factor is None:
+            zoom_factor = 1.0 if is_pyqt6 else 1.5
+
+        def oper(widget):
+            widget.page().setZoomFactor(zoom_factor)
+            if os.path.isfile(url):
+                widget.load(QtCore.QUrl.fromLocalFile(url))
+            else:
+                widget.load(QtCore.QUrl(url))
+            widget.gui_restore = f"""gui.open_url(**{kwds})"""
+
+        if icon is None:
+            icon = 'web'
+
+        self.get_widget(
+            the_type=QWebEngineView, caption=caption, on_top=on_top,
+            oper=oper, icon=icon)
+
 
 class MySplashScreen(QtWidgets.QSplashScreen):
     def mousePressEvent(self, event):
         pass
 
 
-def save_tabs(window: MainWindow):
-    if hasattr(window, 'tabs_should_be_saved'):
-        from zmlx.io.json_ex import write
-        data = []
-        tabs = window.get_tabs()
-        for idx in range(tabs.count()):
-            widget = tabs.widget(idx)
-            try:
-                code = getattr(widget, 'gui_restore', None)
-                if isinstance(code, str):
-                    data.append(code)
-            except:
-                pass
-
+def save_tabs(filename=None):
+    """
+    保存标签状态
+    """
+    from zmlx.io.json_ex import write as write_json
+    tabs = gui.get_tabs()
+    data = []
+    for idx in range(tabs.count()):
+        code = getattr(tabs.widget(idx), 'gui_restore', None)
+        if isinstance(code, str):
+            data.append(code)
+    if filename is None:
         filename = app_data.temp('tab_start_code.json')
-        write(filename, data)
+    write_json(filename, data)
 
 
-def restore_tabs(window: MainWindow):
-    from zmlx.io.json_ex import read
-    if app_data.getenv('restore_tabs', default='Yes',
-                       ignore_empty=True) != 'No':
-        setattr(window, 'tabs_should_be_saved', 1)
+def restore_tabs(filename=None):
+    """
+    恢复标签状态
+    """
+    if filename is None:
         filename = app_data.temp('tab_start_code.json')
-        if os.path.isfile(filename):
-            data = read(filename)
-            try:
-                os.remove(filename)
-            except Exception as err:
-                print(err)
+    if os.path.isfile(filename):
+        from zmlx.io.json_ex import read as read_json
+        data = read_json(filename)
+        try:
+            os.remove(filename)
+        except Exception as err:
+            print(err)
+        if isinstance(data, list):
             for text in data:
                 try:
-                    exec(text, {'gui': gui})
+                    space = {'gui': gui}
+                    exec(text, space)
                 except Exception as err:
                     print(err)
-
-    try:
-        if app_data.getenv('show_readme', default='Yes',
-                           ignore_empty=True) == 'Yes':
-            if gui.count_tabs() == 0:
-                gui.show_readme()
-    except Exception as err:
-        print(f'Error: {err}')
+    if app_data.getenv('show_readme', default='Yes') != 'No':
+        if gui.count_tabs() == 0:
+            gui.show_readme()
 
 
 def make_splash(app):
@@ -1121,7 +1175,7 @@ def run_gui_setup_files(win):
     app_data.put('gui_setup_logs', the_logs)
 
 
-def execute(code=None, keep_cwd=True, close_after_done=True, run_setup=True):
+def execute(code=None, keep_cwd=True, close_after_done=True):
     try:
         app_data.log(f'gui_execute. file={__file__}')
     except Exception as err:
@@ -1157,13 +1211,19 @@ def execute(code=None, keep_cwd=True, close_after_done=True, run_setup=True):
     win.get_console().sig_kernel_done.connect(
         lambda: results.append(win.get_console().result))
 
+    # 是否需要恢复标签
+    need_restore_tabs = app_data.getenv(
+        'restore_tabs', default='Yes') != 'No' and app_data.get('restore_tabs',
+                                                                False)
+
     def console_work():
         if is_chinese(zml.get_dir()):
             win.toolbar_warning('提醒：请务必将程序安装在纯英文路径下')
-        if run_setup:  # 执行额外的配置文件
+        if app_data.get('run_setup', True):  # 执行额外的配置文件
             run_gui_setup_files(win)
         # 尝试载入tab
-        restore_tabs(win)
+        if need_restore_tabs:
+            restore_tabs()
 
     if code is not None:
         def codex():
@@ -1179,7 +1239,8 @@ def execute(code=None, keep_cwd=True, close_after_done=True, run_setup=True):
 
     save_window_size(win)
     # 尝试保存tab
-    save_tabs(win)
+    if need_restore_tabs:
+        save_tabs()
     on_exit(win)
 
     if len(results) > 0:

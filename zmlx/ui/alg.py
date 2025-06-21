@@ -139,7 +139,7 @@ def open_url(url: str, caption=None, on_top=None, zoom_factor=None,
     """
     import os
     from zmlx.ui.gui_buffer import gui
-    from zmlx.ui.pyqt import QtCore, is_pyqt6, QWebEngineView
+    from zmlx.ui.pyqt import QWebEngineView
 
     if not isinstance(url, str):
         return
@@ -170,21 +170,9 @@ def open_url(url: str, caption=None, on_top=None, zoom_factor=None,
             from webbrowser import open_new_tab
             open_new_tab(url)
     else:
-        def f(widget):
-            widget.page().setZoomFactor(
-                zoom_factor if zoom_factor is not None else (
-                    1 if is_pyqt6 else 1.5))
-            if os.path.isfile(url):
-                widget.load(QtCore.QUrl.fromLocalFile(url))
-            else:
-                widget.load(QtCore.QUrl(url))
-
-        if icon is None:
-            icon = 'web'
-
-        gui.get_widget(
-            the_type=QWebEngineView, caption=caption, on_top=on_top,
-            oper=f, icon=icon)
+        gui.open_url(
+            url=url, caption=caption, on_top=on_top,
+            zoom_factor=zoom_factor, icon=icon)
 
 
 def show_widget(widget, caption=None, use_gui=False, **kwargs):

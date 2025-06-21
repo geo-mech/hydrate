@@ -4,49 +4,45 @@ import sys
 import warnings
 
 import matplotlib
-
-has_Agg = False
-
-try:
-    if not has_Agg:
-        matplotlib.use('QtAgg')
-        has_Agg = True
-except:
-    pass
-
-try:
-    if not has_Agg:
-        matplotlib.use('Qt5Agg')
-        has_Agg = True
-except:
-    pass
+import matplotlib.pyplot as plt
 
 from zmlx.ui.pyqt import QtWidgets, QAction
 from zmlx.ui.settings import load_icon
-import matplotlib.pyplot as plt
+from zmlx.ui.gui_buffer import gui
 
+for backend in ['QtAgg', 'Qt5Agg']:
+    try:
+        matplotlib.use(backend)
+        break
+    except:
+        pass
 
-# 关于matplotlib中的Figure和Axis的概念，参考：
-# https://blog.csdn.net/u010916338/article/details/105645599
 
 class MatplotWidget(QtWidgets.QWidget):
 
     def __init__(self, parent=None):
+        """
+        初始化
+        """
         super(MatplotWidget, self).__init__(parent)
-        # 使用 matplotlib中的FigureCanvas (在使用 Qt5 Backends中 FigureCanvas继承自QtWidgets.QWidget)
-        from matplotlib.backends.backend_qt5agg import \
-            FigureCanvasQTAgg as FigureCanvas
+        from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
         layout = QtWidgets.QVBoxLayout()
         self.setLayout(layout)
         self.__figure = plt.figure()
-        self.__canvas = FigureCanvas(self.__figure)
+        self.__canvas = FigureCanvasQTAgg(self.__figure)
         self.__right_menu = None
         layout.addWidget(self.__canvas)
 
     def draw(self):
+        """
+        绘图
+        """
         self.__canvas.draw()
 
     def savefig(self, *args, **kwargs):
+        """
+        保存图片
+        """
         self.__figure.savefig(*args, **kwargs)
 
     def savefig_by_dlg(self):
@@ -71,19 +67,11 @@ class MatplotWidget(QtWidgets.QWidget):
         return self.__canvas
 
     def contextMenuEvent(self, event):  # 右键菜单
-        from zmlx.ui.main_window import get_window
-        window = get_window()
-        menu = QtWidgets.QMenu(self)
-        action = QAction(self)
-        action.setText('导出')
-        action.setIcon(load_icon('matplotlib'))
-        action.triggered.connect(self.export_plt_figure)
-        menu.addAction(action)
-        if window is not None:
-            action = window.get_action('set_plt_export_dpi')
-            if action is not None:
-                menu.addAction(action)
-        menu.exec(event.globalPos())
+        if gui.exists():
+            menu = QtWidgets.QMenu(self)
+            menu.addAction(gui.get_action('set_plt_export_dpi'))
+            menu.addAction(gui.get_action('export_plt_figure'))
+            menu.exec(event.globalPos())
 
     def del_all_axes(self):
         """
@@ -106,7 +94,7 @@ class MatplotWidget(QtWidgets.QWidget):
     def plot_on_axes(
             self, on_axes, dim=2, xlabel=None, ylabel=None, zlabel=None,
             title=None, aspect=None,
-            xlim=None, ylim=None, zlim=None,
+            x_lim=None, y_lim=None, z_lim=None,
             show_legend=False, grid=None, axis=None,
             clear=True):
         """
@@ -124,9 +112,9 @@ class MatplotWidget(QtWidgets.QWidget):
             zlabel: z轴标签，当非None的时候，会设置axes.set_zlabel(zlabel) (默认为None)
             title: 标题，当非None的时候，会设置axes.set_title(title) (默认为None)
             aspect: 坐标的比例，当非None的时候，会设置axes.set_aspect(aspect) (默认为None)
-            zlim: z轴的范围，当非None的时候，会设置axes.set_zlim(zlim) (默认为None)
-            ylim: y轴的范围，当非None的时候，会设置axes.set_ylim(ylim) (默认为None)
-            xlim: x轴的范围，当非None的时候，会设置axes.set_xlim(xlim) (默认为None)
+            z_lim: z轴的范围，当非None的时候，会设置axes.set_zlim(zlim) (默认为None)
+            y_lim: y轴的范围，当非None的时候，会设置axes.set_ylim(ylim) (默认为None)
+            x_lim: x轴的范围，当非None的时候，会设置axes.set_xlim(xlim) (默认为None)
             axis: 设置axis
             grid: 是否显示网格线
             show_legend: 是否显示图例
@@ -151,12 +139,12 @@ class MatplotWidget(QtWidgets.QWidget):
                 ax.set_ylabel(ylabel)
             if zlabel is not None and dim == 3:
                 ax.set_zlabel(zlabel)
-            if xlim is not None:
-                ax.set_xlim(xlim)
-            if ylim is not None:
-                ax.set_ylim(ylim)
-            if zlim is not None and dim == 3:
-                ax.set_zlim(zlim)
+            if x_lim is not None:
+                ax.set_xlim(x_lim)
+            if y_lim is not None:
+                ax.set_ylim(y_lim)
+            if z_lim is not None and dim == 3:
+                ax.set_zlim(z_lim)
             if title is not None:
                 ax.set_title(title)
             if aspect is not None:
@@ -175,12 +163,15 @@ class MatplotWidget(QtWidgets.QWidget):
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
-    editor = MatplotWidget()
+    w = MatplotWidget()
+
     def on_axes(ax):
         ax.plot([1, 2, 3], [4, 5, 6])
-    editor.plot_on_axes(on_axes, xlabel='x', ylabel='y',
-                 title='title', clear=True)
-    editor.show()
+        ax.plot([1, 2, 3], [1, 3, 8])
+
+    w.plot_on_axes(on_axes, xlabel='x', ylabel='y',
+                        title='title', clear=True)
+    w.show()
     sys.exit(app.exec())
 
 

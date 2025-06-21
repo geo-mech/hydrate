@@ -5,9 +5,10 @@
 import os
 
 from zml import app_data, read_text, write_text
-from zmlx import clamp
+from zmlx.alg.base import clamp
 from zmlx.io.json_ex import read as read_json
 from zmlx.ui.alg import get_current_screen_geometry
+from zmlx.ui.gui_buffer import gui
 from zmlx.ui.pyqt import QtGui, QtCore, QtWidgets, is_pyqt6
 
 
@@ -86,10 +87,7 @@ def play_sound(name):
     try:
         filepath = find_sound(name)
         if filepath is not None:
-            from zmlx.ui.main_window import get_window
-            window = get_window()
-            if window is not None:
-                window.play_sound(filepath)
+            gui.play_sound(filepath)
     except Exception as err:
         print(err)
 

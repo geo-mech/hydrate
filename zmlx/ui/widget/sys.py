@@ -414,11 +414,9 @@ class CodeEdit(PythonEdit):
         if QsciScintilla is None and is_pyqt6:  # 尝试添加安装Qsci的动作
 
             def install_qsci():
-                window = app_data.get('main_window')
-                assert window is not None
-                if not window.is_running():
+                if not gui.is_running():
                     from zmlx.alg.sys import pip_install
-                    window.start_func(
+                    gui.start_func(
                         lambda: pip_install(
                             package_name='pyqt6-qscintilla',
                             name='PyQt6.Qsci'))
@@ -432,13 +430,16 @@ class CodeEdit(PythonEdit):
         folder = self._history_folder()
         if os.path.isdir(folder):
             def show_history():
-                main_window = app_data.get('main_window')
-                if main_window is not None:
-                    main_window.show_code_history(folder=folder)
+                gui.show_code_history(folder=folder)
 
             menu.addAction(
                 create_action(
                     self, "编辑历史", slot=show_history))
+
+        menu.addSeparator()
+        menu.addAction(
+            create_action(
+                self, "在主线程执行", slot=self.direct_exec))
 
         return menu
 
@@ -506,10 +507,8 @@ class CodeEdit(PythonEdit):
 
     def show_status(self):
         if isinstance(self.__fname, str):
-            main_window = app_data.get('main_window')
-            if main_window is not None:
-                main_window.cmd_status(
-                    self.__fname + f' ({self.get_mtime()})', 3000)
+            gui.cmd_status(
+                self.__fname + f' ({self.get_mtime()})', 3000)
 
     def get_fname(self):
         """
@@ -527,13 +526,26 @@ class CodeEdit(PythonEdit):
             return ''
 
     def console_exec(self):
-        main_window = app_data.get('main_window')
-        if main_window is not None:
-            try:
-                self.save()
-                main_window.exec_file(self.get_fname())
-            except Exception as err:
-                print(err)
+        try:
+            self.save()
+            gui.exec_file(self.get_fname())
+        except Exception as err:
+            print(err)
+
+    def direct_exec(self):
+        if not app_data.has_tag_today('code_direct_exec_warning_show'):
+            if gui.question('在当前线程内直接运行脚本，可能会阻塞界面，导致界面卡顿。\n'
+                            '是否继续？'):
+                app_data.add_tag_today('code_direct_exec_warning_show')
+            else:
+                return
+        try:
+            text = self.get_text()
+            space = {'__name__': '__main__', '__file__': self.__fname,
+                     'gui': gui}
+            exec(text, space)
+        except Exception as err:
+            print(err)
 
 
 class TextBrowser(QtWidgets.QTextBrowser):
@@ -558,9 +570,7 @@ class TextBrowser(QtWidgets.QTextBrowser):
 
     def enterEvent(self, event):
         if self._status is not None:
-            main_window = app_data.get('main_window')
-            if main_window is not None:
-                main_window.cmd_status(self._status, 3000)
+            gui.cmd_status(self._status, 3000)
         super().enterEvent(event)
 
     def export_data(self):
@@ -608,9 +618,7 @@ class TextFileEdit(QtWidgets.QTextEdit):
         return self.__fname
 
     def enterEvent(self, event):
-        main_window = app_data.get('main_window')
-        if main_window is not None:
-            main_window.cmd_status(f"{self.__fname}", 3000)
+        gui.cmd_status(f"{self.__fname}", 3000)
 
 
 class GraphicsView(QtWidgets.QGraphicsView):
@@ -1479,9 +1487,7 @@ class DemoView(QtWidgets.QTableWidget):
                 ext = os.path.splitext(path)[-1]
                 if ext is not None:
                     if ext.lower() == '.py' or ext.lower() == '.pyw':
-                        main_window = app_data.get('main_window')
-                        if main_window is not None:
-                            main_window.open_code(path)
+                        gui.open_code(path)
 
             if os.path.isdir(path):
                 os.startfile(path)
@@ -1566,9 +1572,7 @@ class Label(QtWidgets.QLabel):
 
     def enterEvent(self, event):
         if self._status is not None:
-            main_window = app_data.get('main_window')
-            if main_window is not None:
-                main_window.cmd_status(self._status, 3000)
+            gui.cmd_status(self._status, 3000)
         if self._style_backup is None:
             self._style_backup = self.styleSheet()
         self.setStyleSheet('border: 1px solid red;')
@@ -1596,8 +1600,7 @@ class VersionLabel(Label):
         在鼠标双击的时候，清除所有的内容
         """
         try:
-            from zmlx.ui.main_window import get_window
-            get_window().trigger('about')
+            gui.show_about()
         except Exception as err:
             print(err)
         super().mouseDoubleClickEvent(event)  # 调用父类的事件处理
@@ -1745,8 +1748,6 @@ class TabWidget(QtWidgets.QTabWidget):
             print(err)
 
     def contextMenuEvent(self, event):
-        main_window = app_data.get('main_window')
-
         # 点击的标签的索引
         tab_index = None
         for i in range(self.count()):
@@ -1755,8 +1756,11 @@ class TabWidget(QtWidgets.QTabWidget):
 
         menu = QtWidgets.QMenu(self)
         if self.count() >= 1:
-            menu.addAction(main_window.get_action('close_all_tabs'))
-            menu.addAction(main_window.get_action('tab_details'))
+            menu.addAction(gui.get_action('console_show'))
+            menu.addAction(gui.get_action('console_hide'))
+            menu.addSeparator()
+            menu.addAction(gui.get_action('close_all_tabs'))
+            menu.addAction(gui.get_action('tab_details'))
             if tab_index is not None:
                 menu.addSeparator()
                 menu.addAction(create_action(
@@ -1772,12 +1776,12 @@ class TabWidget(QtWidgets.QTabWidget):
                     slot=lambda: self._close_all_except(tab_index))
                 )
             menu.addSeparator()
-        menu.addAction(main_window.get_action('readme'))
-        menu.addAction(main_window.get_action('about'))
+        menu.addAction(gui.get_action('readme'))
+        menu.addAction(gui.get_action('about'))
         menu.addSeparator()
-        menu.addAction(main_window.get_action('open'))
-        menu.addAction(main_window.get_action('set_cwd'))
-        menu.addAction(main_window.get_action('demo'))
+        menu.addAction(gui.get_action('open'))
+        menu.addAction(gui.get_action('set_cwd'))
+        menu.addAction(gui.get_action('demo'))
         menu.exec(event.globalPos())
 
     def close_tab(self, index):
@@ -1915,9 +1919,7 @@ class CwdView(QtWidgets.QTableWidget):
             ext = os.path.splitext(fpath)[-1]
             if ext is not None:
                 if ext.lower() == '.py' or ext.lower() == '.pyw':
-                    main_window = app_data.get('main_window')
-                    if main_window is not None:
-                        main_window.open_code(fpath)
+                    gui.open_code(fpath)
 
     def item_double_clicked(self, index):
         if index.column() != 0:
@@ -1928,9 +1930,7 @@ class CwdView(QtWidgets.QTableWidget):
             fpath = os.path.dirname(os.getcwd())
         else:
             fpath = os.path.join(os.getcwd(), text)
-        main_window = app_data.get('main_window')
-        if main_window is not None:
-            main_window.open_file(fpath)
+        gui.open_file(fpath)
 
 
 class About(QtWidgets.QTableWidget):
@@ -2321,15 +2321,15 @@ class ConsoleOutput(TextBrowser):
     def get_context_menu(self):
         menu = super().get_context_menu()
         if self.console is not None:
-            main_window = app_data.get('main_window')
             menu.addSeparator()
-            menu.addAction(main_window.get_action('console_hide'))
+            menu.addAction(gui.get_action('console_hide'))
             if self.console.is_running():
-                menu.addAction(main_window.get_action('console_pause'))
-                menu.addAction(main_window.get_action('console_resume'))
-                menu.addAction(main_window.get_action('console_stop'))
+                menu.addAction(gui.get_action('console_pause'))
+                menu.addAction(gui.get_action('console_resume'))
+                menu.addAction(gui.get_action('console_stop'))
             else:
-                menu.addAction(main_window.get_action('show_code_history'))
+                menu.addAction(gui.get_action('show_code_history'))
+                menu.addAction(gui.get_action('show_output_history'))
         return menu
 
     def write(self, text):
@@ -2466,6 +2466,14 @@ class Console(QtWidgets.QWidget):
         self.flag_exit = SharedValue(False)
         self.pre_task = pre_task
         self.post_task = post_task
+
+        def set_visible():
+            if not self.isVisible():
+                self.setVisible(True)
+                self.sig_refresh.emit()
+
+        # 只要有线程启动，就显示控制台窗口
+        self.sig_kernel_started.connect(set_visible)
 
     def refresh_buttons(self):
         if self.should_pause():
@@ -2831,3 +2839,32 @@ class ImageView(QtWidgets.QGraphicsView):
         # 还原 anchor
         self.setTransformationAnchor(
             QtWidgets.QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+
+
+try:
+    from pyqtgraph.console import ConsoleWidget
+
+
+    class PgConsole(ConsoleWidget):
+        def __init__(self, parent=None):
+            text = app_data.getenv(
+                key='PgConsoleText',
+                encoding='utf-8',
+                default="""
+这是一个交互的Python控制台。请在输入框输入Python命令并开始！
+
+---
+            """)
+            code = app_data.getenv(
+                    key='PgConsoleInit',
+                    encoding='utf-8',
+                    default="from zmlx import *"
+                )
+            super().__init__(parent, namespace=app_data.space, text=text)
+            try:
+                exec(code, app_data.space)
+            except Exception as err:
+                print(err)
+
+except ImportError:
+    PgConsole = None

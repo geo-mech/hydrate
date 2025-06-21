@@ -48,10 +48,26 @@ def play_images():
 
 
 def print_funcs():
+    print('\n所有的gui函数如下: ')
     cmds = list(gui.list_all())
     for i in range(len(cmds)):
         print(i, cmds[i])
 
+
+def print_actions():
+    print('\n所有的Action名字如下: ')
+    names = gui.list_actions()
+    names.sort()
+    for i in range(len(names)):
+        print(i, names[i])
+
+def print_gui_setup_logs():
+    print('gui_setup_logs: ')
+    logs = app_data.get('gui_setup_logs')
+    idx = 0
+    for log in logs:
+        print(idx, ':\t', log)
+        idx += 1
 
 def add_std_actions(window):
     """
@@ -373,6 +389,16 @@ def add_std_actions(window):
         dict(menu=['帮助', '显示'],
              text='gui命令列表',
              slot=print_funcs,
+             ),
+
+        dict(menu=['帮助', '显示'],
+             text='action列表',
+             slot=print_actions,
+             ),
+
+        dict(menu=['帮助', '显示'],
+             text='GUI设置日志',
+             slot=print_gui_setup_logs,
              ),
 
         dict(menu='帮助', name='create_lnk',
