@@ -14,14 +14,15 @@ from zmlx.alg.base import fsize2str, time2str, clamp
 from zmlx.alg.fsys import samefile, time_string
 from zmlx.alg.search_paths import choose_path
 from zmlx.ui import gui
-from zmlx.ui.alg import add_code_history, create_action
-from zmlx.ui.break_point import BreakPoint
+from zmlx.ui.alg import (
+    add_code_history, create_action, add_exec_history,
+    get_last_exec_history)
 from zmlx.ui.pyqt import (
     QWebEngineView, is_pyqt6, QtCore, QtGui, QtWidgets, qt_name)
 from zmlx.ui.settings import (
     get_default_code, load_icon, get_text, play_error,
     load_priority, priority_value)
-from zmlx.ui.shared_value import SharedValue
+from zmlx.ui.utils import CodeFile, SharedValue, BreakPoint
 
 try:  # 尝试基于QsciScintilla实现Python编辑器
     if is_pyqt6:
@@ -1503,31 +1504,24 @@ class MemView(QtWidgets.QTableWidget):
         self.setEditTriggers(
             QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
 
-        # 添加需要忽略的键值(都显示出来会使得太乱了)
-        try:
-            space = {}
-            exec('from zmlx import *', space)
-            self.names_ignore = set(space.keys())
-        except Exception as err:
-            print(err)
-            self.names_ignore = set()
-
-        for item in ['MemViewer', 'PgConsole', 'main_window', 'qt_widget',
-                     'set_md', 'widget', 'DemoWidget']:
-            self.names_ignore.add(item)
-
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.refresh)
         self.timer.start(500)
         self.refresh()
 
     def __refresh(self):
+        names_ignored = app_data.get('names_ignored', None)
+        if names_ignored is None:
+            space = {}
+            exec('from zmlx import *', space)
+            names_ignored = set(space.keys())
+            app_data.put('names_ignored', names_ignored)
         data = []
         for key, value in app_data.space.items():
             if len(key) > 2:
                 if key[0:2] == '__':
                     continue
-            if key in self.names_ignore:
+            if key in names_ignored:
                 continue
             data.append([key, f'{value}', f'{type(value)}'])
 
@@ -2328,6 +2322,7 @@ class ConsoleOutput(TextBrowser):
                 menu.addAction(gui.get_action('console_resume'))
                 menu.addAction(gui.get_action('console_stop'))
             else:
+                menu.addAction(gui.get_action('console_start_last'))
                 menu.addAction(gui.get_action('show_code_history'))
                 menu.addAction(gui.get_action('show_output_history'))
         return menu
@@ -2381,6 +2376,9 @@ class ConsoleThread(QtCore.QThread):
         super(ConsoleThread, self).__init__()
         self.code = code
         self.result = None
+        self.post_task = None
+        self.text_end = None
+        self.time_beg = None
 
     def run(self):
         if self.code is not None:
@@ -2388,7 +2386,7 @@ class ConsoleThread(QtCore.QThread):
                 self.result = self.code()
             except KeyboardInterrupt:
                 print('KeyboardInterrupt')
-            except BaseException as err:
+            except Exception as err:
                 self.sig_err.emit(f'{err}')
         self.sig_done.emit()
 
@@ -2399,7 +2397,7 @@ class Console(QtWidgets.QWidget):
     sig_kernel_err = QtCore.pyqtSignal(str)
     sig_refresh = QtCore.pyqtSignal()
 
-    def __init__(self, parent, pre_task=None, post_task=None):
+    def __init__(self, parent):
         super(Console, self).__init__(parent)
 
         main_layout = QtWidgets.QVBoxLayout(self)
@@ -2428,16 +2426,24 @@ class Console(QtWidgets.QWidget):
             h_layout.addWidget(button)
             return button
 
+        # 开始运行
         self.button_exec = add_button(
             '运行', 'begin',
             lambda: self.exec_file(fname=None))
         self.button_exec.setToolTip(
             '运行此按钮上方输入框内的脚本. 如需要运行标签页的脚本，请点击工具栏的运行按钮')
         self.button_exec.setShortcut('Ctrl+Return')
-        self.button_pause = add_button('暂停', 'pause', self.pause_clicked)
-        self.button_exit = add_button('终止', 'stop', self.stop_clicked)
+        # 暂停/继续：两者只显示一个
+        self.button_pause = add_button(
+            '暂停', 'pause', lambda: self.set_pause(True))
+        self.button_continue = add_button(
+            '继续', 'begin', lambda: self.set_pause(False))
+        self.button_continue.setVisible(False)
+        # 终止
+        self.button_exit = add_button('终止', 'stop', self.stop)
         self.button_exit.setToolTip(
             '安全地终止内核的执行 (需要提前在脚本内设置break_point)')
+
         h_layout.addItem(QtWidgets.QSpacerItem(
             40, 20,
             QtWidgets.QSizePolicy.Policy.Expanding,
@@ -2447,25 +2453,12 @@ class Console(QtWidgets.QWidget):
         self.kernel_err = None
         self.thread = None
         self.result = None
-        try:
-            self.workspace = app_data.get()
-            self.workspace.update(
-                {'__name__': '__main__', 'gui': gui})
-        except Exception as err:
-            print(err)
-            self.workspace = {'__name__': '__main__', 'gui': gui}
-
-        self.text_when_beg = None
-        self.text_when_end = None
-        self.time_beg = None
-        self.time_end = None
-
+        if app_data.get('gui') is None:
+            app_data.put('gui', gui)
         self.restore_code()
 
         self.break_point = BreakPoint(self)
         self.flag_exit = SharedValue(False)
-        self.pre_task = pre_task
-        self.post_task = post_task
 
         def set_visible():
             if not self.isVisible():
@@ -2475,58 +2468,49 @@ class Console(QtWidgets.QWidget):
         # 只要有线程启动，就显示控制台窗口
         self.sig_kernel_started.connect(set_visible)
 
-    def refresh_buttons(self):
-        if self.should_pause():
-            self.button_pause.setText(get_text('继续'))
-            self.button_pause.setIcon(load_icon('begin'))
-            self.button_pause.setStyleSheet('background-color: #e15631; ')
-        else:
-            self.button_pause.setText(get_text('暂停'))
-            self.button_pause.setIcon(load_icon('pause'))
-            self.button_pause.setStyleSheet('')
-        if self.flag_exit.value:
-            self.button_exit.setStyleSheet('background-color: #e15631; ')
-        else:
-            self.button_exit.setStyleSheet('')
-        if self.thread is None:
-            self.button_exec.setStyleSheet('')
-            self.button_exec.setEnabled(True)
-            self.button_pause.setEnabled(False)
-            self.button_exit.setEnabled(False)
-            self.input_editor.setVisible(True)
-        else:
-            self.button_exec.setStyleSheet('background-color: #e15631; ')
-            self.button_exec.setEnabled(False)
-            self.button_pause.setEnabled(True)
-            self.button_exit.setEnabled(True)
-            self.input_editor.setVisible(
-                samefile(self.workspace.get('__file__'),
-                         self.input_editor.get_fname()))
+    def refresh_view(self):
+        running = self.is_running()
+        pause = self.get_pause()
+        self.button_exec.setEnabled(not running)
+        self.button_exec.setStyleSheet(
+            'background-color: #e15631; ' if running else '')
+        self.button_pause.setVisible(not pause)
+        self.button_pause.setEnabled(running)
+        self.button_continue.setVisible(pause)
+        self.button_continue.setEnabled(running)
+        self.button_exit.setEnabled(running)
+        self.button_exit.setStyleSheet(
+            'background-color: #e15631; ' if self.get_stop() else '')
+        self.input_editor.setVisible(
+            True if not running else samefile(
+                app_data.get('__file__', ''),
+                self.input_editor.get_fname()))
+        self.output_widget.setStyleSheet(
+            'border: 1px dashed red' if running else '')
 
-    def pause_clicked(self):
-        app_data.log(f'execute <pause_clicked> of {self}')
-        self.set_should_pause(not self.should_pause())
-
-    def should_pause(self):
+    def get_pause(self):
         return self.break_point.locked()
 
-    def set_should_pause(self, value):
-        if value != self.should_pause():
+    def set_pause(self, value):
+        if value != self.get_pause():
             if self.break_point.locked():
                 self.break_point.unlock()
             else:
                 self.break_point.lock()
             self.sig_refresh.emit()
 
-    def stop_clicked(self):
-        app_data.log(f'execute <stop_clicked> of {self}')
-        self.set_should_stop(not self.flag_exit.value)
+    def get_stop(self):
+        return self.flag_exit.get()
 
-    def set_should_stop(self, value):
-        self.flag_exit.value = value
+    def set_stop(self, value):
+        self.flag_exit.set(value)
         if value:
-            self.set_should_pause(False)
+            self.set_pause(False)
         self.sig_refresh.emit()
+
+    def stop(self):
+        app_data.log(f'execute <stop_clicked> of {self}')
+        self.set_stop(not self.get_stop())
 
     def exec_file(self, fname=None):
         if fname is None:
@@ -2535,66 +2519,92 @@ class Console(QtWidgets.QWidget):
             if fname is None:
                 return
         if os.path.isfile(fname):
-            add_code_history(fname)
-            try:
-                rel = os.path.relpath(fname)  # 当工作路径和fname不再同一个磁盘的时候，会触发异常
-                self.text_when_beg = f"Start: {fname if len(fname) < len(rel) * 2 else rel}"
-            except:
-                self.text_when_beg = f"Start: {fname}"
-            self.text_when_end = 'Done'
-            self.workspace['__file__'] = fname
-            app_data.log(f'execute file: {fname}')  # since 230923
-            self.start_func(
-                lambda:
-                exec(read_text(fname, encoding='utf-8', default=''),
-                     self.workspace))
+            self.start_func(CodeFile(fname), name='__main__')
 
-    def start_func(self, code):
-        if self.thread is not None:
+    def start_func(self, code, text_beg=None, text_end=None,
+                   post_task=None, file=None, name=None):
+        """
+        启动方程，注意，这个函数的调用不支持多线程（务必再主线程中调用）
+        """
+        if code is None:  # 清除最后一次调用的信息
+            add_exec_history(None)
+            return
+
+        if self.is_running():
             play_error()
             return
+
+        add_exec_history(dict(
+            code=code, text_beg=text_beg, text_end=text_end,
+            post_task=post_task, file=file, name=name))
+
+        if isinstance(code, CodeFile):  # 此时，执行脚本文件
+            if not code.exists():
+                add_exec_history(None)
+                return
+            file = code.abs_path()
+            code = code.get_text()
+            text_beg = f"Start: {file}"
+            text_end = 'Done'
+            add_code_history(file)  # 记录代码历史
+            app_data.log(f'execute file: {file}')  # since 230923
+
         self.result = None
+        self.kernel_err = None
+
+        app_data.space['__file__'] = file if isinstance(file, str) else ''
+        app_data.space['__name__'] = name if isinstance(name, str) else ''
+
         if isinstance(code, str):
-            self.thread = ConsoleThread(
-                lambda: exec(code, self.workspace))
+            self.thread = ConsoleThread(lambda: exec(code, app_data.space))
         else:
             self.thread = ConsoleThread(code)
+
+        self.thread.post_task = post_task
+        self.thread.text_end = text_end
         self.thread.sig_done.connect(self.__kernel_exited)
         self.thread.sig_err.connect(self.__kernel_err)
-        if self.pre_task is not None:
-            self.pre_task()
         priority = load_priority()
-        if self.text_when_beg is not None:
-            print(f'{self.text_when_beg} ({priority})')
-        self.time_beg = timeit.default_timer()
-        self.set_should_stop(False)
-        self.set_should_pause(False)
+        if text_beg is not None:
+            print(f'{text_beg} ({priority})')
+        self.thread.time_beg = timeit.default_timer()
+        self.set_stop(False)
+        self.set_pause(False)
         self.thread.start(priority_value(priority))
         self.sig_kernel_started.emit()
         self.sig_refresh.emit()
 
+    def start_last(self):
+        last_history = get_last_exec_history()
+        if last_history is not None:
+            self.start_func(**last_history)
+
     def __kernel_exited(self):
         if self.thread is not None:
-            self.result = self.thread.result
-            self.thread.result = None
-            self.thread = None
-            self.set_should_stop(False)
-            self.set_should_pause(False)
+            self.result = self.thread.result  # 首先，要获得结果
 
-            if self.text_when_end is not None:
-                print(self.text_when_end)
+            self.set_stop(False)
+            self.set_pause(False)
 
-            self.time_end = timeit.default_timer()
-            if self.time_beg is not None and self.time_end is not None:
-                print(
-                    f'Time used = {time2str(self.time_end - self.time_beg)}\n')
+            if self.thread.text_end is not None:
+                print(self.thread.text_end)
 
-            self.text_when_beg = None
-            self.text_when_end = None
-            if self.post_task is not None:
-                self.post_task()
+            time_end = timeit.default_timer()
+            if self.thread.time_beg is not None and time_end is not None:
+                t = time2str(time_end - self.thread.time_beg)
+                print(f'Time used = {t}\n')
+
+            post_task = self.thread.post_task
+            self.thread = None  # 到此未知，线程结束
+
             self.sig_kernel_done.emit()
             self.sig_refresh.emit()
+
+            try:  # 完成了所有的工作，再执行善后
+                if callable(post_task):
+                    post_task()
+            except Exception as err:
+                print(err)
 
     def __kernel_err(self, err):
         self.kernel_err = err
@@ -2853,13 +2863,12 @@ try:
                 default="""
 这是一个交互的Python控制台。请在输入框输入Python命令并开始！
 
----
-            """)
+---\n\n""")
             code = app_data.getenv(
-                    key='PgConsoleInit',
-                    encoding='utf-8',
-                    default="from zmlx import *"
-                )
+                key='PgConsoleInit',
+                encoding='utf-8',
+                default="from zmlx import *"
+            )
             super().__init__(parent, namespace=app_data.space, text=text)
             try:
                 exec(code, app_data.space)

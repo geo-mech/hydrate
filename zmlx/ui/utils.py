@@ -1,5 +1,8 @@
+import os
+from queue import Queue
+
+from zml import read_text
 from zmlx.ui.pyqt import QtCore, QtWidgets
-from zmlx.ui.settings import get_text
 
 
 class SharedList:
@@ -150,45 +153,45 @@ class GuiApi(QtCore.QObject):
         def get_open_file_name(*args, **kwargs):
             fpath, _ = QtWidgets.QFileDialog.getOpenFileName(
                 parent,
-                *get_text(args),
-                **get_text(kwargs))
+                *args,
+                **kwargs)
             return fpath
 
         def get_save_file_name(*args, **kwargs):
             fpath, _ = QtWidgets.QFileDialog.getSaveFileName(
                 parent,
-                *get_text(args),
-                **get_text(kwargs))
+                *args,
+                **kwargs)
             return fpath
 
         def information(*args, **kwargs):
             QtWidgets.QMessageBox.information(
-                parent, *get_text(args),
-                **get_text(kwargs))
+                parent, *args,
+                **kwargs)
 
         def about(*args, **kwargs):
             QtWidgets.QMessageBox.about(
-                parent, *get_text(args),
-                **get_text(kwargs))
+                parent, *args,
+                **kwargs)
 
         def warning(*args, **kwargs):
             QtWidgets.QMessageBox.warning(
-                parent, *get_text(args),
-                **get_text(kwargs))
+                parent, *args,
+                **kwargs)
 
         def get_existing_directory(*args, **kwargs):
             folder = QtWidgets.QFileDialog.getExistingDirectory(
                 None,
-                *get_text(args),
-                **get_text(
-                    kwargs))
+                *args,
+                **kwargs)
             return folder
 
         def question(info):
             reply = QtWidgets.QMessageBox.question(
-                parent, get_text('请选择'),
-                get_text(info),
-                QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No)
+                parent, '请选择',
+                info,
+                QtWidgets.QMessageBox.StandardButton.Yes |
+                QtWidgets.QMessageBox.StandardButton.No)
             if reply != QtWidgets.QMessageBox.StandardButton.Yes:
                 return False
             else:
@@ -200,3 +203,125 @@ class GuiApi(QtCore.QObject):
                 'get_save_file_name': get_save_file_name,
                 'get_existing_directory': get_existing_directory,
                 }
+
+
+class BreakPoint(QtCore.QObject):
+    __sig_unlocked = QtCore.pyqtSignal()
+    __sig_locked = QtCore.pyqtSignal()
+
+    def __init__(self, parent=None):
+        super(BreakPoint, self).__init__(parent)
+        self.__mtx = QtCore.QMutex()
+        self.__locked = SharedValue(False)
+
+    def pass_only(self):
+        self.__mtx.lock()
+        self.__mtx.unlock()
+
+    def locked(self):
+        return self.__locked.get()
+
+    def lock(self):
+        if not self.__locked.get():
+            self.__mtx.lock()
+            self.__locked.set(True)
+            self.__sig_locked.emit()
+
+    def unlock(self):
+        if self.__locked.get():
+            self.__mtx.unlock()
+            self.__locked.set(False)
+            self.__sig_unlocked.emit()
+
+
+class SharedValue:
+    def __init__(self, value=None):
+        self.__val = value
+        self.__mtx = QtCore.QMutex()
+
+    def get(self):
+        self.__mtx.lock()
+        buf = self.__val
+        self.__mtx.unlock()
+        return buf
+
+    def set(self, new_value):
+        self.__mtx.lock()
+        self.__val = new_value
+        self.__mtx.unlock()
+
+    @property
+    def value(self):
+        return self.get()
+
+    @value.setter
+    def value(self, new_value):
+        self.set(new_value)
+
+
+class TaskProc(QtCore.QObject):
+    __sig_do_task = QtCore.pyqtSignal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.__tasks = Queue()
+        self.__mtx = QtCore.QMutex()
+        self.__sig_do_task.connect(self.__do_task)
+
+    def _get_task(self):
+        """
+        弹出一个任务.
+        """
+        self.__mtx.lock()
+        try:  # 尝试从队列中弹出一个任务
+            res = self.__tasks.get(block=False)
+        except:
+            res = None
+        self.__mtx.unlock()
+        return res
+
+    def __do_task(self):
+        while True:
+            try:
+                task = self._get_task()
+                if task is None:
+                    break
+                else:
+                    assert callable(task), 'The task is not a function'
+                    task()
+            except Exception as e:
+                print(f'meet error {e}')
+
+    def add(self, task):
+        try:
+            if callable(task):
+                self.__mtx.lock()
+                self.__tasks.put(task, block=False)
+                self.__mtx.unlock()
+                self.__sig_do_task.emit()
+        except Exception as e:
+            print(f'meet error {e}')
+
+
+class CodeFile:
+    def __init__(self, fname):
+        self.fname = fname
+
+    def __str__(self):
+        return f"CodeFile({self.fname})"
+
+    def __repr__(self):
+        return str(self)
+
+    def abs_path(self):
+        if isinstance(self.fname, str):
+            return os.path.abspath(self.fname)
+        else:
+            return ''
+
+    def get_text(self):
+        return read_text(
+            self.abs_path(), encoding='utf-8', default='')
+
+    def exists(self):
+        return os.path.isfile(self.abs_path())

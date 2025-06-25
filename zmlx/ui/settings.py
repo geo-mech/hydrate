@@ -24,6 +24,8 @@ __add_path()
 
 def find_icon_file(name):
     try:
+        if os.path.isfile(name):  # 本身已经是了
+            return name
         image_exts = app_data.get('icon_exts', None)  # 默认搜索的图片扩展名
         if image_exts is None:
             image_exts = ['.jpg', '.png']
@@ -42,6 +44,8 @@ def find_icon_file(name):
 
 
 def load_pixmap(name):
+    if isinstance(name, QtGui.QPixmap):
+        return name
     filepath = find_icon_file(name)
     if filepath is not None:
         return QtGui.QPixmap(filepath)
@@ -49,6 +53,8 @@ def load_pixmap(name):
 
 
 def load_icon(name):
+    if isinstance(name, QtGui.QIcon):
+        return name
     try:
         pixmap = load_pixmap(name)
         if pixmap is not None:
@@ -66,6 +72,8 @@ def load_icon(name):
 
 def find_sound(name):
     try:
+        if os.path.isfile(name):  # 本身已经是了
+            return name
         sound_exts = app_data.get('sound_exts', None)
         if sound_exts is None:
             sound_exts = ['.wav']

@@ -479,7 +479,7 @@ class _AppData(Object):
             folder = os.path.join(self.folder, 'logs')
             make_dirs(folder)
             path = os.path.join(folder, datetime.datetime.now().strftime(
-                    "%Y-%m-%d.log"))
+                "%Y-%m-%d.log"))
             if encoding is None:
                 encoding = 'utf-8'
             with open(path, 'a', encoding=encoding) as f:
@@ -1533,6 +1533,12 @@ class HasHandle(Object):
         """
         return self.__handle
 
+    def __repr__(self):
+        return f'{type(self).__name__}(handle={self.handle})'
+
+    def __str__(self):
+        return repr(self)
+
 
 class String(HasHandle):
     """管理字符串对象的类，继承自 HasHandle 类。
@@ -1554,6 +1560,9 @@ class String(HasHandle):
             if value is not None:
                 assert isinstance(value, str)
                 self.assign(value)
+
+    def __repr__(self):
+        return f"{type(self).__name__}(handle={self.handle}, str='{self.to_str()}')"
 
     def __str__(self):
         """返回字符串对象的字符串表示。
@@ -2474,13 +2483,16 @@ class Vector(HasHandle):
         else:
             assert value is None and path is None and size is None
 
+    def __repr__(self):
+        return f'{type(self).__name__}(handle={self.handle}, size={self.size})'
+
     def __str__(self):
         """返回 Vector 的字符串表示。
 
         Returns:
             str: Vector 的字符串表示。
         """
-        return f'zml.Vector({self.to_list()})'
+        return f'{self.to_list()}'
 
     core.use(None, 'vf_save', c_void_p, c_char_p)
 
@@ -2723,6 +2735,9 @@ class IntVector(HasHandle):
             if value is not None:
                 self.set(value)
 
+    def __repr__(self):
+        return f'{type(self).__name__}(handle={self.handle}, size={self.size})'
+
     core.use(None, 'vi_save', c_void_p, c_char_p)
 
     def save(self, path):
@@ -2897,6 +2912,9 @@ class UintVector(HasHandle):
         if handle is None:
             if value is not None:
                 self.set(value)
+
+    def __repr__(self):
+        return f'{type(self).__name__}(handle={self.handle}, size={self.size})'
 
     core.use(None, 'vui_save', c_void_p, c_char_p)
 
@@ -3081,6 +3099,9 @@ class StrVector(HasHandle):
         """
         super(StrVector, self).__init__(handle, core.new_vs, core.del_vs)
 
+    def __repr__(self):
+        return f'{type(self).__name__}(handle={self.handle}, size={self.size})'
+
     core.use(c_size_t, 'vs_size', c_void_p)
 
     @property
@@ -3197,6 +3218,9 @@ class PtrVector(HasHandle):
         if handle is None:
             if value is not None:
                 self.set(value)
+
+    def __repr__(self):
+        return f'{type(self).__name__}(handle={self.handle}, size={self.size})'
 
     core.use(c_size_t, 'vp_size', c_void_p)
 
@@ -3445,13 +3469,16 @@ class Matrix2(HasHandle):
             if value is not None:
                 self.fill(value)
 
+    def __repr__(self):
+        return f'{type(self).__name__}(handle={self.handle}, size={self.size})'
+
     def __str__(self):
         """返回 Matrix2 的字符串表示。
 
         Returns:
             str: Matrix2 的字符串表示。
         """
-        return f'zml.Matrix2(size={self.size})'
+        return f'{type(self).__name__}(size={self.size})'
 
     core.use(None, 'mat2_save',
              c_void_p, c_char_p)
@@ -3713,13 +3740,16 @@ class Matrix3(HasHandle):
             if value is not None:
                 self.fill(value)
 
+    def __repr__(self):
+        return f'{type(self).__name__}(handle={self.handle}, size={self.size})'
+
     def __str__(self):
         """返回 Matrix3 的字符串表示。
 
         Returns:
             str: Matrix3 的字符串表示。
         """
-        return f'zml.Matrix3(size={self.size})'
+        return f'{type(self).__name__}(size={self.size})'
 
     core.use(None, 'mat3_save', c_void_p, c_char_p)
 
@@ -3981,6 +4011,9 @@ class Tensor3Matrix3(HasHandle):
         if handle is None:
             if isinstance(path, str):
                 self.load(path)
+
+    def __repr__(self):
+        return f'{type(self).__name__}(handle={self.handle}, size={self.size})'
 
     core.use(None, 'ts3mat3_save',
              c_void_p, c_char_p)
@@ -5168,7 +5201,10 @@ class Array2(HasHandle):
         Returns:
             str: 格式为 zml.Array2(x, y) 的字符串。
         """
-        return f'zml.Array2({self[0]}, {self[1]})'
+        return f'{type(self).__name__}({self[0]}, {self[1]})'
+
+    def __repr__(self):
+        return f'{type(self).__name__}(handle={self.handle}, x={self[0]}, y={self[1]})'
 
     def __len__(self):
         """获取数组长度。
@@ -5396,13 +5432,16 @@ class Array3(HasHandle):
         """
         self.from_fmap(value, fmt='binary')
 
+    def __repr__(self):
+        return f'{type(self).__name__}(handle={self.handle}, x={self[0]}, y={self[1]}, z={self[2]})'
+
     def __str__(self):
         """返回对象的字符串表示。
 
         Returns:
-            str: 格式为 zml.Array3(x, y, z) 的字符串。
+            str: 格式为 Array3(x, y, z) 的字符串。
         """
-        return f'zml.Array3({self[0]}, {self[1]}, {self[2]})'
+        return f'{type(self).__name__}({self[0]}, {self[1]}, {self[2]})'
 
     def __len__(self):
         """获取数组长度。
@@ -5624,13 +5663,16 @@ class Tensor2(HasHandle):
         """
         self.from_fmap(value, fmt='binary')
 
+    def __repr__(self):
+        return f'{type(self).__name__}(handle={self.handle}, xx={self.xx}, yy={self.yy}, xy={self.xy})'
+
     def __str__(self):
         """返回张量的字符串表示。
 
         Returns:
             str: 格式为 zml.Tensor2(xx, yy, xy) 的字符串。
         """
-        return f'zml.Tensor2({self.xx}, {self.yy}, {self.xy})'
+        return f'{type(self).__name__}({self.xx}, {self.yy}, {self.xy})'
 
     core.use(c_double, 'tensor2_get',
              c_void_p, c_size_t, c_size_t)
@@ -5989,13 +6031,18 @@ class Tensor3(HasHandle):
         """
         self.from_fmap(value, fmt='binary')
 
+    def __repr__(self):
+        return (f'{type(self).__name__}(handle={self.handle}, '
+                f'xx={self.xx}, yy={self.yy}, zz={self.zz}, '
+                f'xy={self.xy}, yz={self.yz}, zx={self.zx})')
+
     def __str__(self):
         """返回张量的字符串表示。
 
         Returns:
             str: 格式为 zml.Tensor3(xx, yy, zz, xy, yz, zx) 的字符串。
         """
-        return (f'zml.Tensor3({self.xx}, {self.yy}, {self.zz}, '
+        return (f'{type(self).__name__}({self.xx}, {self.yy}, {self.zz}, '
                 f'{self.xy}, {self.yz}, {self.zx})')
 
     core.use(c_double, 'tensor3_get',
@@ -6789,13 +6836,17 @@ class Coord2(HasHandle):
     def fmap(self, value):
         self.from_fmap(value, fmt='binary')
 
+    def __repr__(self):
+        return (f'{type(self).__name__}(handle={self.handle}, '
+                f'origin={self.origin}, xdir={self.xdir})')
+
     def __str__(self):
         """返回坐标系的字符串表示。
 
         Returns:
             str: 格式为 zml.Coord2(origin=..., xdir=...)
         """
-        return f'zml.Coord2(origin = {self.origin}, xdir = {self.xdir})'
+        return f'{type(self).__name__}(origin = {self.origin}, xdir = {self.xdir})'
 
     core.use(None, 'coord2_set',
              c_void_p, c_size_t, c_size_t)
@@ -6978,13 +7029,17 @@ class Coord3(HasHandle):
     def fmap(self, value):
         self.from_fmap(value, fmt='binary')
 
+    def __repr__(self):
+        return (f'{type(self).__name__}(handle={self.handle}, '
+                f'origin={self.origin}, xdir={self.xdir}, ydir={self.ydir})')
+
     def __str__(self):
         """获取坐标系的字符串表示。
 
         Returns:
             str: 格式为 zml.Coord3(origin=..., xdir=..., ydir=...)
         """
-        return (f'zml.Coord3(origin = {self.origin}, '
+        return (f'{type(self).__name__}(origin = {self.origin}, '
                 f'xdir = {self.xdir}, ydir = {self.ydir})')
 
     core.use(None, 'coord3_set',
@@ -8113,17 +8168,11 @@ class Mesh3(HasHandle):
         except:
             pass
 
-    def __str__(self):
-        """
-        返回 Mesh3 对象的字符串表示。
-
-        Returns:
-            str: Mesh3 对象的字符串表示。
-        """
+    def __repr__(self):
         return (
-            f'zml.Mesh3(handle = {self.handle}, '
-            f'node_n = {self.node_number}, link_n = {self.link_number}, '
-            f'face_n = {self.face_number}, body_n = {self.body_number})')
+            f'{type(self).__name__}(handle={self.handle}, '
+            f'node_n={self.node_number}, link_n={self.link_number}, '
+            f'face_n={self.face_number}, body_n={self.body_number})')
 
     core.use(None, 'mesh3_save',
              c_void_p, c_char_p)
@@ -9009,9 +9058,9 @@ class LinearExpr(HasHandle):
             s = ' + '.join(
                 [f'{self[i][1]}*x({self[i][0]})' for i in range(len(self))])
             s = s.replace('+ -', '- ')
-            return f'zml.LinearExpr({self.c} + {s})'
+            return f'{type(self).__name__}({self.c} + {s})'
         else:
-            return f'zml.LinearExpr({self.c})'
+            return f'{type(self).__name__}({self.c})'
 
     core.use(c_double, 'lexpr_get_c', c_void_p)
     core.use(None, 'lexpr_set_c',
@@ -9323,13 +9372,16 @@ class DynSys(HasHandle):
         except:
             pass
 
+    def __repr__(self):
+        return f'{type(self).__name__}(handle={self.handle}, size={self.size})'
+
     def __str__(self):
         """
         返回系统的字符串表示。
         Returns:
             str: 包含系统信息的字符串
         """
-        return f'zml.DynSys(size={self.size})'
+        return f'{type(self).__name__}(size={self.size})'
 
     core.use(None, 'dynsys_save',
              c_void_p, c_char_p)
@@ -10188,18 +10240,12 @@ class SpringSys(HasHandle):
         except:
             pass
 
-    def __str__(self):
-        """
-        返回系统状态摘要字符串。
-
-        Returns:
-            str: 包含句柄、节点数、虚拟节点数和弹簧数的描述字符串
-        """
+    def __repr__(self):
         return (
-            f'zml.SpringSys(handle = {self.handle}, '
-            f'node_n = {self.node_number}, '
-            f'virtual_node_n = {self.virtual_node_number}, '
-            f'spring_n = {self.spring_number})')
+            f'{type(self).__name__}(handle={self.handle}, '
+            f'node_n={self.node_number}, '
+            f'virtual_node_n={self.virtual_node_number}, '
+            f'spring_n={self.spring_number})')
 
     @staticmethod
     def virtual_x(node):
@@ -11528,6 +11574,12 @@ class SeepageMesh(HasHandle, HasCells):
         except:
             pass
 
+    def __repr__(self):
+        return (
+            f'{type(self).__name__}(handle={self.handle}, '
+            f'cell_n={self.cell_number}, '
+            f'face_n={self.face_number})')
+
     def __str__(self):
         """
         返回对象的字符串表示
@@ -11536,10 +11588,10 @@ class SeepageMesh(HasHandle, HasCells):
             str: 包含句柄、cell数量、face数量和总体积的字符串表示。
         """
         return (
-            f'zml.SeepageMesh(handle = {self.handle}, '
-            f'cell_n = {self.cell_number}, '
-            f'face_n = {self.face_number}, '
-            f'volume = {self.volume})')
+            f'{type(self).__name__}(handle={self.handle}, '
+            f'cell_n={self.cell_number}, '
+            f'face_n={self.face_number}, '
+            f'volume={self.volume})')
 
     core.use(None, 'seepage_mesh_save',
              c_void_p, c_char_p)
@@ -12004,14 +12056,8 @@ class ElementMap(HasHandle):
             if isinstance(path, str):
                 self.load(path)
 
-    def __str__(self):
-        """
-        返回ElementMap对象的字符串表示。
-
-        Returns:
-            str: 包含句柄和大小的字符串表示。
-        """
-        return f'zml.ElementMap(handle = {self.handle}, size = {self.size})'
+    def __repr__(self):
+        return f'{type(self).__name__}(handle={self.handle}, size={self.size})'
 
     core.use(None, 'element_map_save',
              c_void_p, c_char_p)
@@ -16197,19 +16243,11 @@ class Seepage(HasHandle, HasCells):
         except:
             pass
 
-    def __str__(self):
-        """
-        返回 Seepage 对象的字符串表示形式。
-
-        Returns:
-            str: 包含句柄、单元数量、面数量和注释的字符串。
-        """
-        cell_n = self.cell_number
-        face_n = self.face_number
-        return (f"zml.Seepage(handle={self.handle},"
-                f" cell_n={cell_n}, "
-                f"face_n={face_n}, "
-                f"note='{self.get_note()}')")
+    def __repr__(self):
+        return (f'{type(self).__name__}(handle={self.handle}, '
+                f'cell_n={self.cell_number}, '
+                f'face_n={self.face_number}, '
+                f'note={self.get_note()})')
 
     core.use(None, 'seepage_save',
              c_void_p, c_char_p)
@@ -19484,14 +19522,10 @@ class Thermal(HasHandle):
         except:
             pass
 
-    def __str__(self):
-        """
-        返回热传导模型的字符串表示
-
-        Returns:
-            str: 包含模型句柄的字符串
-        """
-        return f'zml.Thermal(handle = {self.handle})'
+    def __repr__(self):
+        return (f'{type(self).__name__}(handle={self.handle}, '
+                f'cell_n={self.cell_number}, '
+                f'face_n={self.face_number})')
 
     core.use(None, 'thermal_save',
              c_void_p, c_char_p)
@@ -19734,6 +19768,10 @@ class ConjugateGradientSolver(HasHandle):
                 self.set_tolerance(tolerance)
         else:
             assert tolerance is None
+
+    def __repr__(self):
+        return (f'{type(self).__name__}(handle={self.handle}, '
+                f'tolerance={self.get_tolerance()})')
 
     core.use(None, 'cg_sol_set_tolerance',
              c_void_p, c_double)
@@ -20844,15 +20882,9 @@ class InvasionPercolation(HasHandle):
         """
         return not (self == rhs)
 
-    def __str__(self):
-        """
-        返回IP模型的字符串表示
-
-        Returns:
-            str: 包含模型句柄、节点数量和通道数量的字符串。
-        """
-        return (f'zml.InvasionPercolation(handle = {self.handle}, '
-                f'node_n = {self.node_n}, bond_n = {self.bond_n})')
+    def __repr__(self):
+        return (f'{type(self).__name__}(handle={self.handle}, '
+                f'node_n={self.node_n}, bond_n={self.bond_n})')
 
     core.use(None, 'ip_save',
              c_void_p, c_char_p)
@@ -22323,14 +22355,14 @@ class Lattice3(HasHandle):
             if box is not None and shape is not None:
                 self.create(box, shape)
 
-    def __str__(self):
+    def __repr__(self):
         """
         返回对象的字符串表示形式
 
         Returns:
             str: 包含盒子范围、形状和大小的字符串。
         """
-        return (f'zml.Lattice3(box={self.box}, '
+        return (f'{type(self).__name__}(box={self.box}, '
                 f'shape={self.shape}, size={self.size})')
 
     core.use(None, 'lat3_save',
@@ -22521,14 +22553,8 @@ class DDMSolution2(HasHandle):
         super(DDMSolution2, self).__init__(handle, core.new_ddm_sol2,
                                            core.del_ddm_sol2)
 
-    def __str__(self):
-        """
-        返回对象的字符串表示形式
-
-        Returns:
-            str: 包含句柄、alpha、beta、剪切模量、泊松比和调整系数的字符串。
-        """
-        return (f'zml.DDMSolution2(handle={self.handle}, '
+    def __repr__(self):
+        return (f'{type(self).__name__}(handle={self.handle}, '
                 f'alpha={self.alpha}, beta={self.beta}, '
                 f'shear_modulus={self.shear_modulus / 1.0e9}GPa, '
                 f'poisson_ratio={self.poisson_ratio}, '
@@ -23317,14 +23343,8 @@ class FractureNetwork(HasHandle):
         except:
             pass
 
-    def __str__(self):
-        """
-        返回裂缝网络对象的字符串表示
-
-        Returns:
-            str: 包含裂缝网络句柄、顶点数量和裂缝单元数量的字符串
-        """
-        return (f'zml.FractureNetwork(handle={self.handle}, '
+    def __repr__(self):
+        return (f'{type(self).__name__}(handle={self.handle}, '
                 f'vertex_n={self.vertex_number}, '
                 f'fracture_n={self.fracture_number})')
 
@@ -23759,6 +23779,10 @@ class InfMatrix(HasHandle):
                                         core.del_frac_mat)
         if network is not None and sol2 is not None:
             self.update(network=network, sol2=sol2)
+
+    def __repr__(self):
+        return (f'{type(self).__name__}(handle={self.handle}, '
+                f'size={self.size})')
 
     core.use(c_size_t, 'frac_mat_size', c_void_p)
 

@@ -1,3 +1,6 @@
+from zml import app_data
+
+
 def create_action(parent, text, icon=None, slot=None):
     from zmlx.ui.settings import load_icon
     from zmlx.ui.pyqt import QAction
@@ -28,6 +31,26 @@ def add_code_history(fname):
                 file.write(fname)
     except:
         pass
+
+
+def add_exec_history(code):
+    key = 'console_exec_history'
+    history = app_data.get(key, [])
+    if not isinstance(history, list):
+        history = []
+    history.append(code)
+    app_data.put(key, history)
+
+
+def get_last_exec_history():
+    key = 'console_exec_history'
+    history = app_data.get(key, [])
+    if not isinstance(history, list):
+        return None
+    if len(history) > 0:
+        return history[-1]
+    else:
+        return None
 
 
 def paint_image(widget, pixmap):

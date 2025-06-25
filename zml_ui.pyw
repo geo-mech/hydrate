@@ -85,4 +85,4 @@ if __name__ == "__main__":
     install_dep(show_exists=False)  # 首先安装依赖项
     from zmlx import open_gui
 
-    open_gui()
+    open_gui(sys.argv)

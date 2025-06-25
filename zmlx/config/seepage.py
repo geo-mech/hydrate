@@ -42,7 +42,7 @@ Face的属性：
 from collections.abc import Iterable
 
 from zml import (get_average_perm, Tensor3, ConjugateGradientSolver,
-                 make_parent)
+                 make_parent, SeepageMesh)
 from zmlx.alg.base import clamp
 from zmlx.alg.base import join_cols
 from zmlx.alg.fsys import join_paths, make_fname, print_tag
@@ -592,7 +592,10 @@ def create(
         bk_g = model.gr_number > 0
 
     # 对模型的细节进行必要的配置
-    set_model(model, igr=igr, bk_fv=bk_fv, bk_g=bk_g, **kwargs)
+    set_model(
+        model,
+        mesh=mesh,  # Add mesh since 2025-6-23
+        igr=igr, bk_fv=bk_fv, bk_g=bk_g, **kwargs)
 
     # 添加注入点 since 24-6-20
     add_injector(model, data=injectors)
@@ -653,6 +656,43 @@ def add_mesh(model: Seepage, mesh):
             face.set_attr(fa_l, f.length)
 
 
+class AttrId:
+    """
+    Mesh的属性ID
+    """
+
+    def __init__(self, begin=None, end=None):
+        """
+        初始化属性ID的范围
+        """
+        self.begin = begin
+        self.end = end
+
+    def get(self, o):
+        """
+        获得属性值
+        """
+        assert self.begin is not None
+        if self.end is None:
+            return o.get_attr(self.begin)
+        else:
+            return [o.get_attr(i) for i in range(self.begin, self.end)]
+
+    def get_bool(self, o):
+        value = self.get(o)
+        if isinstance(value, list):
+            return [1.0e-10 <= abs(item) <= 1.0e10 for item in value]
+        else:
+            return 1.0e-10 <= abs(value) <= 1.0e10
+
+    def get_round(self, o):
+        value = self.get(o)
+        if isinstance(value, list):
+            return [round(item) for item in value]
+        else:
+            return round(value)
+
+
 def set_model(
         model: Seepage, porosity=0.1,
         pore_modulus=1000e6, denc=1.0e6, dist=0.1,
@@ -660,7 +700,7 @@ def set_model(
         s=None, perm=1e-14, heat_cond=1.0,
         sample_dist=None, pore_modulus_range=None,
         igr=None, bk_fv=True,
-        bk_g=True, **ignores):
+        bk_g=True, mesh=None, **ignores):
     """
     设置模型的网格，并顺便设置其初始的状态.
     --
@@ -692,18 +732,29 @@ def set_model(
         print(f'Warning: The following arguments ignored in '
               f'zmlx.config.seepage.set_model: {list(ignores.keys())}')
 
-    porosity = Field(porosity)
-    pore_modulus = Field(pore_modulus)
-    denc = Field(denc)
-    dist = Field(dist)
-    temperature = Field(temperature)
-    p = Field(p)
-    s = Field(s)
-    perm = Field(perm)
-    heat_cond = Field(heat_cond)
-    igr = Field(igr)
-    bk_fv = Field(bk_fv)
-    bk_g = Field(bk_g)
+    if mesh is not None:
+        assert isinstance(mesh, SeepageMesh)
+        assert mesh.cell_number == model.cell_number
+        assert mesh.face_number == model.face_number
+
+    def as_field(value):
+        if isinstance(value, AttrId):
+            return AttrId
+        else:
+            return Field(value)
+
+    porosity = as_field(porosity)
+    pore_modulus = as_field(pore_modulus)
+    denc = as_field(denc)
+    dist = as_field(dist)
+    temperature = as_field(temperature)
+    p = as_field(p)
+    s = as_field(s)
+    perm = as_field(perm)
+    heat_cond = as_field(heat_cond)
+    igr = as_field(igr)
+    bk_fv = as_field(bk_fv)
+    bk_g = as_field(bk_g)
 
     comp_names = list_comp(model)
 
@@ -711,34 +762,126 @@ def set_model(
         assert isinstance(cell, Seepage.Cell)
         pos = cell.pos
 
-        sat = s(*pos)
-        if isinstance(sat, dict):
-            sat = get_sat(comp_names, sat)
+        if mesh is not None:
+            mesh_c = mesh.get_cell(cell.index)
+        else:
+            mesh_c = None
 
-        # 热传导系数.
-        # todo: 当热传导系数各向异性的时候，取平均值，这可能并不是最合适的.  @2024-8-11
-        tmp = heat_cond(*pos)
-        if isinstance(tmp, Tensor3):
-            tmp = (tmp.xx + tmp.yy + tmp.zz) / 3.0
+        if isinstance(porosity, AttrId):
+            assert mesh_c is not None
+            porosity_val = porosity.get(mesh_c)
+        else:
+            porosity_val = porosity(*pos)
+
+        if isinstance(pore_modulus, AttrId):
+            assert mesh_c is not None
+            pore_modulus_val = pore_modulus.get(mesh_c)
+        else:
+            pore_modulus_val = pore_modulus(*pos)
+
+        if isinstance(denc, AttrId):
+            assert mesh_c is not None
+            denc_val = denc.get(mesh_c)
+        else:
+            denc_val = denc(*pos)
+
+        if isinstance(temperature, AttrId):
+            assert mesh_c is not None
+            temperature_val = temperature.get(mesh_c)
+        else:
+            temperature_val = temperature(*pos)
+
+        if isinstance(p, AttrId):
+            assert mesh_c is not None
+            p_val = p.get(mesh_c)
+        else:
+            p_val = p(*pos)
+
+        if isinstance(dist, AttrId):
+            assert mesh_c is not None
+            dist_val = dist.get(mesh_c)
+        else:
+            dist_val = dist(*pos)
+
+        if isinstance(bk_fv, AttrId):
+            assert mesh_c is not None
+            bk_fv_val = bk_fv.get_bool(mesh_c)
+        else:
+            bk_fv_val = bk_fv(*pos)
+
+        if isinstance(heat_cond, AttrId):
+            assert mesh_c is not None
+            heat_cond_val = heat_cond.get(mesh_c)
+        else:
+            heat_cond_val = heat_cond(*pos)
+            # todo: 当热传导系数各向异性的时候，取平均值，这可能并不是最合适的.  @2024-8-11
+            if isinstance(heat_cond_val, Tensor3):
+                heat_cond_val = (heat_cond_val.xx +
+                                 heat_cond_val.yy +
+                                 heat_cond_val.zz) / 3.0
+
+        if isinstance(s, AttrId):
+            assert mesh_c is not None
+            s_val = s.get(mesh_c)
+        else:
+            s_val = s(*pos)
+            if isinstance(s_val, dict):
+                s_val = get_sat(comp_names, s_val)
 
         # 设置cell
         set_cell(
-            cell, porosity=porosity(*pos),
-            pore_modulus=pore_modulus(*pos), denc=denc(*pos),
-            temperature=temperature(*pos),
-            p=p(*pos), s=sat,
+            cell,
+            porosity=porosity_val,
+            pore_modulus=pore_modulus_val,
+            denc=denc_val,
+            temperature=temperature_val,
+            p=p_val,
+            s=s_val,
+            dist=dist_val,
+            bk_fv=bk_fv_val,
+            heat_cond=heat_cond_val,
             pore_modulus_range=pore_modulus_range,
-            dist=dist(*pos), bk_fv=bk_fv(*pos), heat_cond=tmp
         )
 
     for face in model.faces:
         assert isinstance(face, Seepage.Face)
         p0 = face.get_cell(0).pos
         p1 = face.get_cell(1).pos
+
+        if mesh is not None:
+            mesh_f = mesh.get_face(face.index)
+        else:
+            mesh_f = None
+
+        if isinstance(perm, AttrId):
+            assert mesh_f is not None
+            perm_val = perm.get(mesh_f)
+        else:
+            perm_val = get_average_perm(p0, p1, perm, sample_dist)
+
+        if isinstance(heat_cond, AttrId):
+            assert mesh_f is not None
+            heat_cond_val = heat_cond.get(mesh_f)
+        else:
+            heat_cond_val = get_average_perm(p0, p1, heat_cond, sample_dist)
+
+        if isinstance(igr, AttrId):
+            assert mesh_f is not None
+            igr_val = igr.get_round(mesh_f)
+        else:
+            igr_val = igr(*face.pos)
+
+        if isinstance(bk_g, AttrId):
+            assert mesh_f is not None
+            bk_g_val = bk_g.get_bool(mesh_f)
+        else:
+            bk_g_val = bk_g(*face.pos)
+
         set_face(
-            face, perm=get_average_perm(p0, p1, perm, sample_dist),
-            heat_cond=get_average_perm(p0, p1, heat_cond, sample_dist),
-            igr=igr(*face.pos), bk_g=bk_g(*face.pos))
+            face, perm=perm_val,
+            heat_cond=heat_cond_val,
+            igr=igr_val, bk_g=bk_g_val
+        )
 
 
 def set_cell(

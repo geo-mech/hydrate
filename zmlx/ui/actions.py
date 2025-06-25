@@ -2,7 +2,7 @@ import os
 
 from zml import app_data, read_text, lic
 from zmlx.alg.fsys import print_tag
-from zmlx.ui.alg import open_url
+from zmlx.ui.alg import open_url, get_last_exec_history
 from zmlx.ui.gui_buffer import gui
 from zmlx.ui.pyqt import QtWidgets, QAction
 
@@ -61,6 +61,7 @@ def print_actions():
     for i in range(len(names)):
         print(i, names[i])
 
+
 def print_gui_setup_logs():
     print('gui_setup_logs: ')
     logs = app_data.get('gui_setup_logs')
@@ -68,6 +69,7 @@ def print_gui_setup_logs():
     for log in logs:
         print(idx, ':\t', log)
         idx += 1
+
 
 def add_std_actions(window):
     """
@@ -87,7 +89,7 @@ def add_std_actions(window):
         c = window.get_console()
         if not c.is_running():
             return False
-        return not c.should_pause()
+        return not c.get_pause()
 
     def about():
         print(lic.desc)
@@ -218,7 +220,7 @@ def add_std_actions(window):
              icon='pause',
              tooltip='暂停内核的执行 (需要提前在脚本内设置break_point)',
              text='暂停',
-             slot=lambda: window.get_console().pause_clicked(),
+             slot=lambda: window.get_console().set_pause(True),
              on_toolbar=True,
              is_enabled=pause_enabled,
              ),
@@ -226,15 +228,15 @@ def add_std_actions(window):
         dict(menu='操作', name='console_resume',
              icon='begin',
              tooltip=None, text='继续',
-             slot=lambda: window.get_console().pause_clicked(),
+             slot=lambda: window.get_console().set_pause(False),
              on_toolbar=True,
-             is_enabled=lambda: window.is_running() and window.get_console().should_pause(),
+             is_enabled=lambda: window.is_running() and window.get_console().get_pause(),
              ),
 
         dict(menu='操作', name='console_stop', icon='stop',
              tooltip='安全地终止内核的执行 (需要提前在脚本内设置break_point)',
              text='停止',
-             slot=lambda: window.get_console().stop_clicked(),
+             slot=lambda: window.get_console().stop(),
              on_toolbar=True,
              is_enabled=window.is_running
              ),
@@ -259,6 +261,12 @@ def add_std_actions(window):
              slot=lambda: window.get_console().setVisible(True),
              on_toolbar=True,
              is_enabled=lambda: not window.get_console().isVisible()
+             ),
+
+        dict(menu='操作', name='console_start_last',
+             text='重新执行',
+             slot=window.get_console().start_last,
+             is_enabled=lambda: not window.is_running() and get_last_exec_history() is not None,
              ),
 
         dict(menu='操作', name='close_all_tabs',
@@ -411,7 +419,7 @@ def add_std_actions(window):
 
 
 def _add_by_file(window, file):
-    from zmlx.ui.main_window import MainWindow
+    from zmlx.ui.main import MainWindow
     assert isinstance(window, MainWindow)
 
     text = read_text(path=file, encoding='utf-8',
