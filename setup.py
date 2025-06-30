@@ -3,35 +3,14 @@ import sys
 
 from setuptools import setup, find_packages
 
-
-def pyqt_installed():
-    try:
-        import PyQt5
-        return True
-    except:
-        pass
-    try:
-        import PyQt6
-        return True
-    except:
-        return False
-
-
 install_requires = [
-    'numpy',
-    'scipy',
-    'matplotlib',
-    'pyqtgraph',
-    'PyOpenGL',
+    'numpy', 'scipy', 'matplotlib',
+    'pyqtgraph', 'PyOpenGL', 'pypiwin32', 'pywin32', 'dulwich'
 ]
-
-if not pyqt_installed():
-    if sys.version_info >= (3, 8):  # 尽可能使用PyQt6
-        install_requires.append('PyQt6')
-        install_requires.append('PyQt6-WebEngine')
-    else:
-        install_requires.append('PyQt5')
-        install_requires.append('PyQtWebEngine')
+if sys.version_info >= (3, 8):  # 尽可能使用PyQt6
+    install_requires.extend(['PyQt6', 'PyQt6-WebEngine', 'pyqt6-qscintilla'])
+else:
+    install_requires.extend(['PyQt5', 'PyQtWebEngine'])
 
 # 获取当前目录路径
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -49,7 +28,7 @@ package_data = {
 # 使用 setup() 函数定义包的元数据
 setup(
     name='IggHydrate',  # 包名称
-    version='1.4.25',  # 包版本
+    version='1.4.29',  # 包版本
     description='IggHydrate',  # 描述
     author='Zhaobin Zhang',  # 作者名称
     author_email='zhangzhaobin@mail.iggcas.ac.cn',  # 作者邮箱

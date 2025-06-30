@@ -2,6 +2,7 @@ import os
 from queue import Queue
 
 from zml import read_text
+from zmlx.alg.sys import unique
 from zmlx.ui.pyqt import QtCore, QtWidgets
 
 
@@ -79,10 +80,19 @@ class GuiApi(QtCore.QObject):
         self.__sig_proc.connect(self.__proc)
         self.break_point = break_point
         self.flag_exit = flag_exit
+
+        def call(func, *args, **kwargs):
+            return func(*args, **kwargs)
+
+        def channel_n():
+            return self.channels.length()
+
         self.funcs = SharedDict(
-            {"add_func": self.add_func, "list_all": self.list_all,
-             "channel_n": lambda: self.channels.length(),
-             })
+            {
+                "add_func": self.add_func, "list_all": self.list_all,
+                "channel_n": channel_n, "call": call,
+            }
+        )
         self.channels = SharedList([GuiApi.Channel()])
         for key, val in self.get_standard(parent=parent).items():
             self.add_func(key, val)
@@ -91,6 +101,8 @@ class GuiApi(QtCore.QObject):
         """
         添加一个函数
         """
+        if self.funcs.get(key) is not None:
+            raise ValueError(f'gui function <{key}> already exists')
         self.funcs.set(key, func)
         return self
 
@@ -151,40 +163,28 @@ class GuiApi(QtCore.QObject):
     @staticmethod
     def get_standard(parent):
         def get_open_file_name(*args, **kwargs):
-            fpath, _ = QtWidgets.QFileDialog.getOpenFileName(
-                parent,
-                *args,
-                **kwargs)
-            return fpath
+            return QtWidgets.QFileDialog.getOpenFileName(
+                parent, *args, **kwargs)
 
         def get_save_file_name(*args, **kwargs):
-            fpath, _ = QtWidgets.QFileDialog.getSaveFileName(
-                parent,
-                *args,
-                **kwargs)
-            return fpath
+            return QtWidgets.QFileDialog.getSaveFileName(
+                parent, *args, **kwargs)
 
         def information(*args, **kwargs):
             QtWidgets.QMessageBox.information(
-                parent, *args,
-                **kwargs)
+                parent, *args, **kwargs)
 
         def about(*args, **kwargs):
             QtWidgets.QMessageBox.about(
-                parent, *args,
-                **kwargs)
+                parent, *args, **kwargs)
 
         def warning(*args, **kwargs):
             QtWidgets.QMessageBox.warning(
-                parent, *args,
-                **kwargs)
+                parent, *args, **kwargs)
 
         def get_existing_directory(*args, **kwargs):
-            folder = QtWidgets.QFileDialog.getExistingDirectory(
-                None,
-                *args,
-                **kwargs)
-            return folder
+            return QtWidgets.QFileDialog.getExistingDirectory(
+                parent, *args, **kwargs)
 
         def question(info):
             reply = QtWidgets.QMessageBox.question(
@@ -197,12 +197,38 @@ class GuiApi(QtCore.QObject):
             else:
                 return True
 
-        return {'question': question, "information": information,
-                "about": about, "warning": warning,
-                'get_open_file_name': get_open_file_name,
-                'get_save_file_name': get_save_file_name,
-                'get_existing_directory': get_existing_directory,
-                }
+        def get_int(*args, **kwargs):
+            return QtWidgets.QInputDialog.getInt(
+                parent, *args, **kwargs)
+
+        def get_double(*args, **kwargs):
+            return QtWidgets.QInputDialog.getDouble(
+                parent, *args, **kwargs)
+
+        def get_text(*args, **kwargs):
+            return QtWidgets.QInputDialog.getText(
+                parent, *args, **kwargs)
+
+        def get_multi_line_text(*args, **kwargs):
+            return QtWidgets.QInputDialog.getMultiLineText(
+                parent, *args, **kwargs)
+
+        def get_item(*args, **kwargs):
+            return QtWidgets.QInputDialog.getItem(
+                parent, *args, **kwargs)
+
+        return {
+            'question': question, "information": information,
+            "about": about, "warning": warning,
+            'get_open_file_name': get_open_file_name,
+            'get_save_file_name': get_save_file_name,
+            'get_existing_directory': get_existing_directory,
+            'get_int': get_int,
+            'get_double': get_double,
+            'get_text': get_text,
+            'get_multi_line_text': get_multi_line_text,
+            'get_item': get_item,
+        }
 
 
 class BreakPoint(QtCore.QObject):
@@ -325,3 +351,121 @@ class CodeFile:
 
     def exists(self):
         return os.path.isfile(self.abs_path())
+
+
+class FileHandler(QtCore.QObject):
+    """
+    管理文件处理函数
+    """
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.__funcs = {}
+        self.parent = parent
+
+    def add(self, desc, exts, func):
+        """
+        添加文件类型
+        """
+        if not isinstance(exts, (list, tuple)):
+            assert isinstance(exts, str)
+            exts = [exts]
+        assert callable(func)
+
+        exts = [e.lower() for e in exts]
+        for i in range(len(exts)):
+            assert len(exts[i]) > 0
+            if exts[i][0] != '.':
+                exts[i] = '.' + exts[i]
+
+        value = self.__funcs.get(desc, None)
+
+        if value is None:
+            self.__funcs[desc] = [exts, func]
+        else:  # 对于同样的描述，只能适用于某一个函数
+            x, y = value
+            x = unique(x + exts)
+            y = func
+            self.__funcs[desc] = [x, y]
+
+    def get(self, *, desc=None, ext=None):
+        """
+        返回文件处理函数
+        """
+        if desc is not None:
+            value = self.__funcs.get(desc, None)
+            if value is not None:
+                return value[1]
+
+        if ext is not None:
+            ext = ext.lower()
+            if len(ext) > 0:
+                if ext[0] != '.':
+                    ext = '.' + ext
+            for key, value in self.__funcs.items():
+                if ext in value[0]:
+                    return value[1]
+
+        return None
+
+    def open_file(self, filepath):
+        """
+        使用搜索函数并打开文件
+        """
+        if not isinstance(filepath, str):
+            return None
+
+        if not os.path.isfile(filepath):
+            if os.path.isdir(filepath):
+                from zmlx.ui.gui_buffer import gui
+                gui.set_cwd(filepath)
+            return None
+
+        ext = os.path.splitext(filepath)[-1]
+        if ext is None:
+            return None
+
+        func = self.get(ext=ext)
+        if not callable(func):
+            self.show_info(filepath)
+            return None
+        try:
+            return func(filepath)
+        except Exception as err:
+            print(f'Error: filepath = {filepath} \nmessage = {err}')
+            return None
+
+    @staticmethod
+    def show_info(filepath):
+        if os.path.isfile(filepath):
+            from zmlx.alg.fsys import show_fileinfo
+            show_fileinfo(filepath)
+
+    def open_file_by_dlg(self, folder=None):
+        """
+        打开对话框，并有限基于选中的类型打开文件
+        """
+        if len(self.__funcs) == 0:
+            return
+        filter_text = '所有文件(*.*)'
+        data = {}
+        for desc, value in self.__funcs.items():
+            exts, func = value
+            desc += ' ('
+            for ext in exts:
+                desc += f'*{ext}; '
+            desc += ')'
+            data[desc] = func
+            filter_text += ';;'
+            filter_text += desc
+        if not isinstance(folder, str):
+            folder = ''
+
+        filepath, desc = QtWidgets.QFileDialog.getOpenFileName(
+            self.parent, '请选择要打开的文件', folder, filter_text)
+
+        if os.path.isfile(filepath):
+            func = data.get(desc, None)
+            if callable(func):
+                func(filepath)
+            else:
+                self.open_file(filepath)

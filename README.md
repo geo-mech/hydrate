@@ -42,7 +42,8 @@
 1. Windows 10/11, x64; 需安装[VC_redist.x64.exe](https://gitee.com/geomech/hydrate/attach_files) (程序必要的运行的环境);
 2. 建议安装[git](https://git-scm.com/)：官方下载，默认安装即可（默认安装的时候会添加文件夹的右键菜单，可以取消勾选；git安装之后，建议安装辅助工具[TortoiseGit](https://tortoisegit.org/)，会添加更加好用的右键菜单）;
 3. 安装[Python](https://www.python.org/) (64位, 3.8+, 推荐3.10及更新的版本)，推荐使用[WinPython](https://gitee.com/geomech/hydrate/attach_files) (绿色免安装); 
-4. 推荐提前安装好`PyQt6(不再支持PyQt5), numpy, scipy, matplotlib, pyqtgraph, PyOpenGL`等第三方的Python包. 
+4. 推荐提前安装好`PyQt6(不再支持PyQt5), PyQt6-WebEngine, pyqt6-qscintilla, numpy, scipy, matplotlib, pyqtgraph, PyOpenGL, pypiwin32, pywin32, dulwich`等第三方的Python包. 
+
 
 ### 安装
 
@@ -53,7 +54,7 @@
 ### 建模
 
 1. 参考[`zmlx/demo`](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)建模 (在此基础上，推荐向前追溯函数的实现);
-2. 运行[`zml_ui.pyw`](https://gitee.com/geomech/hydrate/blob/master/zml_ui.pyw)打开界面 (首次启动时会配置Python环境，安装依赖项，因此可能耗时较长).
+2. 运行[`zml_ui.pyw`](https://gitee.com/geomech/hydrate/blob/master/zml_ui.pyw)打开界面.
 
 ### 编程环境 (IDE)
 

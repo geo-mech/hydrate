@@ -1,33 +1,48 @@
 import sys
 
-
-def pyqt6_imported():
-    return 'PyQt6' in sys.modules
-
-
-def pyqt5_imported():
-    return 'PyQt5' in sys.modules
-
+from zml import app_data
 
 qt_name = None
 
 if qt_name is None:
-    if pyqt6_imported():  # 之前已经导入了PyQt6
+    if 'PyQt6' in sys.modules:  # 之前已经导入了PyQt6 (直接使用)
         from PyQt6 import QtGui, QtCore, QtWidgets
 
         qt_name = 'PyQt6'
+        print('PyQt6 is already imported.')
 
 if qt_name is None:
-    if pyqt5_imported():
+    if 'PyQt5' in sys.modules:  # 之前已经导入了PyQt5 (直接使用)
         from PyQt5 import QtGui, QtCore, QtWidgets
 
         qt_name = 'PyQt5'
+        print('PyQt5 is already imported.')
+
+if qt_name is None:
+    text = app_data.getenv(key='Qt_version', default='')
+    if text == 'PyQt6':
+        try:
+            from PyQt6 import QtGui, QtCore, QtWidgets
+
+            qt_name = 'PyQt6'
+            print('User selected PyQt6.')
+        except ImportError:
+            print('User selected PyQt6 not Found.')
+    elif text == 'PyQt5':
+        try:
+            from PyQt5 import QtGui, QtCore, QtWidgets
+
+            qt_name = 'PyQt5'
+            print('User selected PyQt5.')
+        except ImportError:
+            print('User selected PyQt5 not Found.')
 
 if qt_name is None:
     try:
         from PyQt6 import QtGui, QtCore, QtWidgets
 
         qt_name = 'PyQt6'
+        print('PyQt6 is imported.')
     except:
         pass
 
@@ -36,6 +51,7 @@ if qt_name is None:
         from PyQt5 import QtGui, QtCore, QtWidgets
 
         qt_name = 'PyQt5'
+        print('PyQt5 is imported.')
     except:
         pass
 
@@ -44,6 +60,7 @@ if qt_name is None:
 
 is_pyqt5 = qt_name == 'PyQt5'
 is_pyqt6 = qt_name == 'PyQt6'
+assert is_pyqt5 or is_pyqt6, 'please make sure you have installed PyQt6 (Recommended) or PyQt5.'
 
 # QWebEngineView需要在程序正式运行之前来导入
 try:
@@ -53,7 +70,7 @@ try:
     else:
         from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings
 except Exception as e:
-    print(f'Error when import QWebEngineView: {e}')
+    print(f'Error: {e}')
     QWebEngineView = None
     QWebEngineSettings = None
 

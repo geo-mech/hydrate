@@ -5,16 +5,16 @@
 已经在此__init__中给定了。
 """
 
-import os
-
-from zml import make_parent
-from zmlx.alg.fsys import join_paths
 from zmlx.ui.gui_buffer import (
-    gui, information, question, plot, break_point, gui_exec)
+    gui, information, question, plot, break_point, gui_exec, open_gui,
+    open_gui_without_setup)
 
 
 def get_path(*args):
     """
     返回数据目录
     """
+    import os
+    from zml import make_parent
+    from zmlx.alg.fsys import join_paths
     return make_parent(join_paths(os.path.dirname(__file__), *args))

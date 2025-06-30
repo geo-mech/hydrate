@@ -16643,6 +16643,13 @@ class Seepage(HasHandle, HasCells):
             "g_heat" is None, heat is injected according
              to the power, and "opers" is used to set
             the power of the heat injection.
+
+        举例，如果要恒定功率加热，那么，将是类似下面的调用:
+            power = 1 # 瓦特
+            model.add_injector(pos=[0, 0, 0],
+                ca_mc=model.reg_cell_key('mc'),
+                ca_t=model.reg_cell_key('temperature'),
+                value=power)
         """
         inj = self.get_injector(core.seepage_add_inj(self.handle))
         assert inj is not None
@@ -23983,11 +23990,31 @@ _deprecated_funcs = dict(
 )
 
 
+def get_deprecated(name, data, current_pack_name):
+    """
+    当访问不存在的属性时，尝试从其他模块中导入
+    """
+    import importlib
+    value = data.get(name)
+    if value is not None:
+        pack_name = value.get('pack_name')
+        func = value.get('func')
+        date = value.get('date')
+        warnings.warn(
+            f'<{current_pack_name}.{name}> will be removed after {date}, '
+            f'please use <{pack_name}.{func}> instead.',
+            DeprecationWarning,
+            stacklevel=2
+        )
+        mod = importlib.import_module(pack_name)
+        return getattr(mod, func)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
 def __getattr__(name):
     """
     当访问不存在的属性时，尝试从其他模块中导入
     """
-    from zmlx.alg.sys import get_deprecated
     return get_deprecated(
         name, data=_deprecated_funcs, current_pack_name='zml')
 

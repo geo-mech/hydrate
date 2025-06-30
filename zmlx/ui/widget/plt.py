@@ -6,9 +6,8 @@ import warnings
 import matplotlib
 import matplotlib.pyplot as plt
 
-from zmlx.ui.pyqt import QtWidgets, QAction
-from zmlx.ui.settings import load_icon
 from zmlx.ui.gui_buffer import gui
+from zmlx.ui.pyqt import QtWidgets
 
 for backend in ['QtAgg', 'Qt5Agg']:
     try:
@@ -170,7 +169,7 @@ def main():
         ax.plot([1, 2, 3], [1, 3, 8])
 
     w.plot_on_axes(on_axes, xlabel='x', ylabel='y',
-                        title='title', clear=True)
+                   title='title', clear=True)
     w.show()
     sys.exit(app.exec())
 

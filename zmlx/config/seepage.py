@@ -1160,7 +1160,9 @@ def solve(
         close_after_done=None,
         extra_plot=None,
         show_state=True, gui_iter=None, state_hint=None,
-        save_dt=None, export_mass=True, time_unit='y',
+        save_dt=None,
+        export_mass=True, export_fa_keys=None,
+        time_unit='y',
         slots=None, solver=None,
         opt_iter=None,  # 用于在iterate的时候的额外的关键词参数.
         **opt_solve
@@ -1237,8 +1239,8 @@ def solve(
     # 打印cell
     save_cells = SaveManager(
         join_paths(folder, 'cells'),
-        save=lambda name: print_cells(name, model=model,
-                                      export_mass=export_mass),
+        save=lambda name: print_cells(
+            name, model=model, export_mass=export_mass, fa_keys=export_fa_keys),
         ext='.txt',
         time_unit=time_unit,
         unit_length='auto',

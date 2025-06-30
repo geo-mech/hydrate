@@ -8,7 +8,7 @@ def main():
                  note='默认在顶部 North'),
             dict(label='主界面标签形状', key='TabShape',
                  items=['', 'Rounded', 'Triangular'],
-                 note='默认:Rounded'),
+                 note='默认:Rounded。注意，此设置貌似只对PyQt5有效'),
             dict(label='控制台内核优先级', key='console_priority',
                  items=['', 'LowestPriority', 'LowPriority',
                         'InheritPriority', 'NormalPriority',
@@ -43,8 +43,7 @@ def main():
                       '如果打开此选项，则不会向开发者反馈任何信息'),
             dict(label='Qt版本', key='Qt_version',
                  items=['', 'PyQt5', 'PyQt6'],
-                 note='界面优先使用Qt版本，默认为PyQt6. 请尽量保证系统里PyQt5或者PyQt6，仅安装其中一个。'
-                      '两个同时安装，可能会带来不可预知的错误'),
+                 note='界面优先使用的Qt版本，默认为PyQt6. 注意：即将对PyQt5停止支持'),
             dict(label='启动时恢复上次视窗大小',
                  key='restore_window_geometry',
                  items=['', 'Yes', 'No'],

@@ -1,121 +1,40 @@
-class ConsoleApi:
-    def __init__(self):
-        self.__commands = dict(
-            about=self.show_all, information=self.show_all,
-            question=self.question, plot=self.plot,
-            progress=self.do_nothing)
-
-    @staticmethod
-    def do_nothing(*args, **kwargs):
-        pass
-
-    @staticmethod
-    def question(info):
-        """
-        询问信息。返回是否True
-        """
-        y = input(f"{info} input 'y' or 'Y' to continue: ")
-        return y == 'y' or y == 'Y'
-
-    @staticmethod
-    def show_all(*args, **kwargs):
-        """
-        显示所有的参数
-        """
-        print(f'args={args}, kwargs={kwargs}')
-
-    @staticmethod
-    def plot(kernel, **kwargs):
-        """
-        在非GUI模式下绘图(或者显示并阻塞程序执行，或者输出文件但不显示)
-        """
-        try:
-            import matplotlib.pyplot as plt
-        except Exception as e:
-            from zml import log
-            log(text=f'{e}', tag='matplotlib_import_error')
-            plt = None
-
-        if kernel is None or plt is None:
-            return
-        try:
-            fig = plt.figure()
-            kernel(fig)
-            fname = kwargs.get('fname')
-            if fname is not None:
-                dpi = kwargs.get('dpi', 300)
-                fig.savefig(fname=fname, dpi=dpi)
-                plt.close()
-            else:
-                plt.show()
-        except Exception as err:
-            import zmlx.alg.sys as warnings
-            warnings.warn(f'meet exception <{err}> when run <{kernel}>')
-
-    def command(self, name, *args, **kwargs):
-        """
-        当GUI不存在的时候来执行默认的命令
-        """
-        cmd = self.__commands.get(name)
-        if cmd is not None:
-            return cmd(*args, **kwargs)
-        else:
-            print(f'function: {name}(args={args}, kwargs={kwargs})')
-            return None
-
-
-console = ConsoleApi()
-
-
 class GuiBuffer:
     def __init__(self):
-        self.__gui = []
+        self.__api = None
 
     def command(self, *args, **kwargs):
         """
         执行命令
         """
-        if len(self.__gui) > 0:
-            return self.__gui[-1].command(*args, **kwargs)
+        if self.__api is not None:
+            return self.__api.command(*args, **kwargs)
         else:
             return None
 
-    def push(self, the_gui):
+    def set(self, api):
         """
-        压入gui的实例
+        设置api
         """
-        assert hasattr(the_gui, 'command')
-        self.__gui.append(the_gui)
-
-    def pop(self):
-        """
-        弹出最后一个gui的实例
-        """
-        if len(self.__gui) > 0:
-            return self.__gui.pop()
-        else:
-            return None
-
-    def exists(self):
-        """
-        是否存在gui的实例
-        """
-        return len(self.__gui) > 0
-
-    def __bool__(self):
-        """
-        是否存在gui的实例
-        """
-        return self.exists()
+        self.__api = api
+        print(f'Gui Set: {self.__api}')
 
     def get(self):
         """
-        返回最后一个gui实例
+        返回api
         """
-        if len(self.__gui) > 0:
-            return self.__gui[-1]
-        else:
-            return None
+        return self.__api
+
+    def exists(self):
+        """
+        是否存在api (处于gui模式下)
+        """
+        return self.__api is not None
+
+    def __bool__(self):
+        """
+        是否存在api (处于gui模式下)
+        """
+        return self.exists()
 
     def break_point(self):
         """
@@ -127,15 +46,16 @@ class GuiBuffer:
     breakpoint = break_point
 
     class Agent:
-        def __init__(self, the_gui, name):
-            self.gui = the_gui
+        def __init__(self, api, name):
+            self.api = api
             self.name = name
 
         def __call__(self, *args, **kwargs):
-            if self.gui is not None:
-                return self.gui.command(self.name, *args, **kwargs)
+            if self.api is not None:
+                return self.api.command(self.name, *args, **kwargs)
             else:
-                return console.command(self.name, *args, **kwargs)
+                print(f'args={args}, kwargs={kwargs}')
+                return None
 
     def __getattr__(self, name):
         return GuiBuffer.Agent(self.get(), name)
@@ -167,35 +87,8 @@ class GuiBuffer:
             print(f'call gui failed: {err}')
             return fx()
 
-    def __call__(self, *args, **kwargs):
-        """
-        尝试在gui模式下运行给定的函数.
-        """
-        return self.execute(*args, **kwargs)
-
 
 gui = GuiBuffer()
-
-
-def information(*args, **kwargs):
-    break_point()
-    return gui.information(*args, **kwargs)
-
-
-def question(info):
-    break_point()
-    return gui.question(info)
-
-
-def plot(*args, **kwargs):
-    """
-    调用matplotlib执行绘图操作
-    """
-    gui_only = kwargs.pop('gui_only', False)
-    if gui_only and not gui.exists():
-        return
-    break_point()
-    gui.plot(*args, **kwargs)
 
 
 def break_point():
@@ -205,8 +98,98 @@ def break_point():
     gui.break_point()
 
 
+def information(*args, **kwargs):
+    break_point()
+    return gui.information(*args, **kwargs)
+
+
+def question(info):
+    if gui.exists():
+        break_point()
+        return gui.question(info)
+    else:
+        y = input(f"{info} input 'y' or 'Y' to continue: ")
+        return y == 'y' or y == 'Y'
+
+
+def plot_no_gui(kernel, **kwargs):
+    """
+    在非GUI模式下绘图(或者显示并阻塞程序执行，或者输出文件但不显示)
+    """
+    try:
+        import matplotlib.pyplot as plt
+    except Exception as e:
+        from zml import log
+        log(text=f'{e}', tag='matplotlib_import_error')
+        plt = None
+
+    if kernel is None or plt is None:
+        return
+    try:
+        fig = plt.figure()
+        kernel(fig)
+        fname = kwargs.get('fname')
+        if fname is not None:
+            dpi = kwargs.get('dpi', 300)
+            fig.savefig(fname=fname, dpi=dpi)
+            plt.close()
+        else:
+            plt.show()
+    except Exception as err:
+        import zmlx.alg.sys as warnings
+        warnings.warn(f'meet exception <{err}> when run <{kernel}>')
+
+
+def plot(*args, **kwargs):
+    """
+    调用matplotlib执行绘图操作
+    """
+    gui_only = kwargs.pop('gui_only', False)
+    if gui.exists():
+        break_point()
+        gui.plot(*args, **kwargs)
+    else:
+        if not gui_only:
+            plot_no_gui(*args, **kwargs)
+
+
 def gui_exec(*args, **kwargs):
     """
     调用gui来执行一个函数，并返回函数的执行结果
     """
     return gui.execute(*args, **kwargs)
+
+
+def open_gui(argv=None):
+    """
+    打开gui
+    """
+    from zml import app_data
+    app_data.put('argv', argv)
+    # 是否需要恢复标签
+    app_data.put('restore_tabs',
+                 app_data.getenv('restore_tabs', default='Yes') != 'No')
+    # 是否初始检查
+    app_data.put('init_check',
+                 app_data.getenv('init_check', default='Yes') != 'No')
+
+    gui.execute(keep_cwd=False, close_after_done=False)
+
+
+def open_gui_without_setup(argv=None):
+    """
+    打开gui
+    """
+    from zml import app_data
+    app_data.put('restore_tabs', False)
+    app_data.put('run_setup', False)
+    gui.execute(keep_cwd=False, close_after_done=False)
+
+
+def test():
+    import sys
+    open_gui(sys.argv)
+
+
+if __name__ == "__main__":
+    test()

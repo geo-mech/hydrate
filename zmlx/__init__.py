@@ -44,9 +44,10 @@ from zmlx.base.seepage import as_numpy, SeepageNumpy
 
 ########################################
 # config
-from zmlx.config import (seepage, seepage as seepage_config, hydrate,
-                         step_iteration, adjust_vis, icp, timer as timer_config,
-                         sand as sand_config)
+from zmlx.config import (
+    seepage, seepage as seepage_config, hydrate,
+    step_iteration, adjust_vis, icp, timer as timer_config,
+    sand as sand_config)
 from zmlx.config.TherFlowConfig import TherFlowConfig, SeepageTher
 from zmlx.config import capillary
 
@@ -86,10 +87,11 @@ from zmlx.fluid.alg import from_data, from_file
 ########################################
 # geometry
 from zmlx.geometry import dfn2, dfn_v3, rect_3d, rect_v3
-from zmlx.geometry.base import (get_angle, get_center, get_seg_angle,
-                                seg_intersection, triangle_area,
-                                point_distance, seg_point_distance,
-                                get_norm)
+from zmlx.geometry.base import (
+    get_angle, get_center, get_seg_angle,
+    seg_intersection, triangle_area,
+    point_distance, seg_point_distance,
+    get_norm)
 
 ########################################
 # io
@@ -110,8 +112,9 @@ from zmlx.kr.base import create_krf
 # plt
 from zmlx.plt.on_figure import plot_on_figure
 from zmlx.plt.on_axes import plot_on_axes
-from zmlx.plt.fig2 import (plot_xy, plotxy, show_dfn2, show_field2, show_fn2,
-                           tricontourf, trimesh, contourf, plot2)
+from zmlx.plt.fig2 import (
+    plot_xy, plotxy, show_dfn2, show_field2, show_fn2,
+    tricontourf, trimesh, contourf, plot2)
 from zmlx.plt.fig3 import plot_trisurf, scatter, show_rc3
 
 ########################################
@@ -124,21 +127,24 @@ from zmlx.react.inh import create_inh, add_inh
 
 ########################################
 # seepage_mesh
-from zmlx.seepage_mesh.cube import (create_cube as create_cube_seepage_mesh,
-                                    create_cube, create_xz, create_xyz)
+from zmlx.seepage_mesh.cube import (
+    create_cube as create_cube_seepage_mesh,
+    create_cube, create_xz, create_xyz)
 from zmlx.seepage_mesh.cylinder import create_cylinder
 from zmlx.seepage_mesh.edit import scale as seepage_mesh_rescale
-from zmlx.seepage_mesh.edit import (swap_yz, swap_xy, swap_xz,
-                                    swap_yz as seepage_mesh_swap_yz,
-                                    swap_xy as seepage_mesh_swap_xy,
-                                    swap_xz as seepage_mesh_swap_xz)
+from zmlx.seepage_mesh.edit import (
+    swap_yz, swap_xy, swap_xz,
+    swap_yz as seepage_mesh_swap_yz,
+    swap_xy as seepage_mesh_swap_xy,
+    swap_xz as seepage_mesh_swap_xz)
 from zmlx.seepage_mesh.edit import add_cell_face
 
 ########################################
 # ui
-from zmlx.ui import (gui, information, question,
-                     plot as do_plot, plot, break_point, gui_exec)
-from zmlx.ui.main import open_gui
+from zmlx.ui import (
+    gui, information, question,
+    plot as do_plot, plot, break_point, gui_exec,
+    open_gui, open_gui_without_setup)
 
 ########################################
 # utility
@@ -167,14 +173,17 @@ __unused = [zml]
 
 ########################################
 # deprecated
-create_hydconfig = RuntimeFunc(pack_name='zmlx.config.hydrate',
-                               func_name='create',
-                               deprecated_name='zmlx.create_hydconfig',
-                               deprecated_date='2025-5-7')
-find = RuntimeFunc(pack_name='zmlx.ui.Config',
-                   func_name='find')
-find_all = RuntimeFunc(pack_name='zmlx.ui.Config',
-                       func_name='find_all')
+create_hydconfig = RuntimeFunc(
+    pack_name='zmlx.config.hydrate',
+    func_name='create',
+    deprecated_name='zmlx.create_hydconfig',
+    deprecated_date='2025-5-7')
+find = RuntimeFunc(
+    pack_name='zmlx.ui.Config',
+    func_name='find')
+find_all = RuntimeFunc(
+    pack_name='zmlx.ui.Config',
+    func_name='find_all')
 
 if __name__ == "__main__":
     try:

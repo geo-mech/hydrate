@@ -4,11 +4,12 @@ except ImportError:
     np = None
 
 try:
-    from scipy.interpolate import NearestNDInterpolator, LinearNDInterpolator
+    from scipy.interpolate import NearestNDInterpolator, LinearNDInterpolator, CloughTocher2DInterpolator
 except Exception as e:
     print(e)
     NearestNDInterpolator = None
     LinearNDInterpolator = None
+    CloughTocher2DInterpolator =None
 
 from zmlx.alg.base import join_cols
 
@@ -28,6 +29,7 @@ class Interp2:
         if len(v) == 1:
             # 此时是一个常数
             self.value = v[0]
+            self.f0 = None
             self.f1 = None
             self.f2 = None
             return
@@ -35,6 +37,13 @@ class Interp2:
         # 创建插值
         points = join_cols(x, y)
         values = v
+
+        try:
+            self.f0 = CloughTocher2DInterpolator(
+                points, values, rescale=rescale,
+                fill_value=np.nan)
+        except:
+            self.f0 = None
 
         # 首选的线性插值
         try:
@@ -56,15 +65,21 @@ class Interp2:
         返回给定点处的数据。
             注意：此函数不支持向量;
         """
+        if self.f0 is not None:
+            # 首先，尝试线性插值
+            v = self.f0(x, y)
+            if not np.any(np.isnan(v)):  # 当插值失败，会返回np.nan
+                return v
+
         if self.f1 is not None:
             # 首先，尝试线性插值
             v = self.f1(x, y)
-            if not np.isnan(v):  # 当插值失败，会返回np.nan
+            if not np.any(np.isnan(v)):  # 当插值失败，会返回np.nan
                 return v
 
         if self.f2 is not None:
             v = self.f2(x, y)
-            if not np.isnan(v):  # 当插值失败，会返回np.nan
+            if not np.any(np.isnan(v)):  # 当插值失败，会返回np.nan
                 return v
             else:
                 assert False, 'The function f2 (NearestNDInterpolator) should never get nan'
