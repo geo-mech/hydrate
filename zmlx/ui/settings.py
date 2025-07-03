@@ -120,10 +120,13 @@ def save(key, value, encoding=None):
     write_text(path=app_data.temp(key), text=f'{value}', encoding=encoding)
 
 
-def load(key, default='', encoding=None):
-    return read_text(
-        path=app_data.find(key), default=default,
-        encoding=encoding)
+def load(key, default='', encoding=None, ignore_empty=False):
+    for file in app_data.find_all(key):
+        text = read_text(path=file, default=None, encoding=encoding)
+        if isinstance(text, str):
+            if len(text) > 0 or not ignore_empty:
+                return text
+    return default
 
 
 def _intersection_area(rect1, rect2):
@@ -446,34 +449,6 @@ def __env_items_init():
 
 # 环境变量配置的初始化
 __env_items_init()
-
-
-def __init_dep_list():
-    dep_list = []
-    for fname in app_data.find_all('zml_dep_list.json'):
-        try:
-            from zmlx.io.json_ex import read
-            data = read(fname, encoding='utf-8')
-            dep_list.extend(data)
-        except Exception as err:
-            print(f'Error: {err}')
-            pass
-    if is_pyqt6:
-        dep_list.append(dict(
-            package_name='PyQt6-WebEngine',
-            import_name='PyQt6.QtWebEngineWidgets'))
-    else:
-        dep_list.append(dict(
-            package_name='PyQtWebEngine',
-            import_name='PyQt5.QtWebEngineWidgets'))
-    app_data.put('dep_list', dep_list)
-
-
-__init_dep_list()
-
-
-def get_dep_list():
-    return app_data.get('dep_list', [])
 
 
 def get_setup_file_rank(path):

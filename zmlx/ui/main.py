@@ -376,11 +376,6 @@ class MainWindow(QtWidgets.QMainWindow):
                  slot=self.edit_setup_files
                  ),
 
-            dict(menu='设置', name='install_dep',
-                 text='第三方包',
-                 slot=self.show_package_table
-                 ),
-
             dict(menu='设置', name='edit_window_style',
                  text='风格(qss)',
                  slot=lambda: self.open_text(
@@ -1219,17 +1214,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.get_widget(the_type=FeedbackTool, caption='反馈', on_top=True,
                         icon='info', oper=oper)
 
-    def show_package_table(self):
-        from zmlx.ui.widget import PackageTool
-
-        def oper(w):
-            w.gui_restore = f"""gui.show_package_table()"""
-
-        self.get_widget(
-            the_type=PackageTool, caption='Python包管理', on_top=True,
-            type_kw=dict(packages=settings.get_dep_list()), oper=oper
-        )
-
     def open_url(self, url, caption=None, on_top=None, zoom_factor=None,
                  icon=None):
         """
@@ -1383,8 +1367,9 @@ def __on_show(win):
                 key='load_window_style', default='Yes',
                 ignore_empty=True) != 'No':
             text = settings.load(
-                key='zml_window_style.qss', default='',
-                encoding='utf-8')
+                key='zml_window_style.qss',
+                default='',
+                encoding='utf-8', ignore_empty=True)
             if len(text) > 0:
                 win.setStyleSheet(text)
     except Exception as err:

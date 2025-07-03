@@ -51,7 +51,10 @@ class SharedDict:
 
     def set(self, key, value):
         self.mtx.lock()
-        self.value[key] = value
+        if value is None:
+            self.value.pop(key, None)
+        else:
+            self.value[key] = value
         self.mtx.unlock()
 
     def list_keys(self, sort=True):
@@ -89,7 +92,9 @@ class GuiApi(QtCore.QObject):
 
         self.funcs = SharedDict(
             {
-                "add_func": self.add_func, "list_all": self.list_all,
+                "add_func": self.add_func,
+                "get_func": self.get_func,
+                "list_all": self.list_all,
                 "channel_n": channel_n, "call": call,
             }
         )
@@ -101,10 +106,12 @@ class GuiApi(QtCore.QObject):
         """
         添加一个函数
         """
-        if self.funcs.get(key) is not None:
-            raise ValueError(f'gui function <{key}> already exists')
-        self.funcs.set(key, func)
+        if callable(func) or func is None:
+            self.funcs.set(key, func)
         return self
+
+    def get_func(self, key):
+        return self.funcs.get(key, None)
 
     def list_all(self, sort=True):
         """

@@ -23,7 +23,7 @@
 
 ### 反馈
 
-使用过程中遇到问题，请[新建Issue](https://gitee.com/geomech/hydrate/issues/new)或者联系作者来提问/反馈。
+使用过程中遇到问题，请[新建Issue](https://gitee.com/geomech/hydrate/issues/new)或者联系作者来提问/反馈。非常感谢您提出质疑及反馈bug！
 
 ### 功能
 
