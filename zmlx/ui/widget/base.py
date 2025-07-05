@@ -4,7 +4,6 @@
 import glob
 import hashlib
 import os
-import subprocess
 import sys
 import time
 import timeit
@@ -1587,8 +1586,8 @@ class RegTool(QtWidgets.QWidget):
             try:
                 code = reg(text)
                 print(code)
-            except:
-                pass
+            except Exception as err:
+                print(f"Error (RegTool.apply_reg): {err}")
         else:
             QtWidgets.QMessageBox.information(
                 self,
@@ -1960,6 +1959,9 @@ class Console(QtWidgets.QWidget):
                 self.input_editor.get_fname()))
         self.output_widget.setStyleSheet(
             'border: 1px dashed red' if running else '')
+        # 上面设置格式，可能会让显示的内容变化，重新定位到最后
+        self.output_widget.moveCursor(QtGui.QTextCursor.MoveOperation.End)
+        self.output_widget.ensureCursorVisible()
 
     def get_pause(self):
         return self.break_point.locked()
