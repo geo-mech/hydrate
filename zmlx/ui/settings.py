@@ -224,8 +224,8 @@ def _set_default_geometry(win: QtWidgets.QMainWindow, w=None, h=None):
         x = rect.x() + int((rect.width() - w) / 2)
         y = rect.y() + int((rect.height() - h) / 2)
         win.setGeometry(QtCore.QRect(x, y, w, h))
-    except:
-        pass
+    except Exception as err:
+        print(f'Error: \nfunction _set_default_geometry in {__file__}. Message: {err}')
 
 
 def _screen_geometries():
@@ -267,10 +267,9 @@ def _set_saved_geometry(win: QtWidgets.QMainWindow, words, scale=None):
                 target_rect = _adjust_window(target_sc, target_rect)
                 win.setGeometry(target_rect)
                 return
-    except:
-        # 遇到错误，使用默认的
+    except Exception as err:
+        print(f"Error: \nfunction _set_saved_geometry in {__file__}. Message: {err}")
         _set_default_geometry(win)
-
 
 def load_window_size(win: QtWidgets.QMainWindow):
     try:
@@ -294,7 +293,8 @@ def load_window_size(win: QtWidgets.QMainWindow):
         else:  # 恢复窗口
             _set_saved_geometry(win, words)
             return
-    except:
+    except Exception as err:
+        print(f"Error: \nfunction load_window_size in {__file__}. Message: {err}")
         _set_default_geometry(win)
 
 

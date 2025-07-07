@@ -1,6 +1,5 @@
 import os
-from queue import Queue
-
+from queue import Queue, Empty
 from zml import read_text
 from zmlx.alg.sys import unique
 from zmlx.ui.pyqt import QtCore, QtWidgets
@@ -308,7 +307,10 @@ class TaskProc(QtCore.QObject):
         self.__mtx.lock()
         try:  # 尝试从队列中弹出一个任务
             res = self.__tasks.get(block=False)
-        except:
+        except Empty:
+            res = None
+        except Exception as err:
+            print(f'Error: {err}')
             res = None
         self.__mtx.unlock()
         return res
@@ -322,8 +324,8 @@ class TaskProc(QtCore.QObject):
                 else:
                     assert callable(task), 'The task is not a function'
                     task()
-            except Exception as e:
-                print(f'meet error {e}')
+            except Exception as err:
+                print(f'meet error {err}')
 
     def add(self, task):
         try:
@@ -332,8 +334,8 @@ class TaskProc(QtCore.QObject):
                 self.__tasks.put(task, block=False)
                 self.__mtx.unlock()
                 self.__sig_do_task.emit()
-        except Exception as e:
-            print(f'meet error {e}')
+        except Exception as err:
+            print(f'meet error {err}')
 
 
 class CodeFile:
@@ -364,6 +366,7 @@ class FileHandler(QtCore.QObject):
     """
     管理文件处理函数
     """
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.__funcs = {}
@@ -398,19 +401,21 @@ class FileHandler(QtCore.QObject):
         """
         返回文件处理函数
         """
-        if desc is not None:
+        if desc is not None:  # 直接查找函数
             value = self.__funcs.get(desc, None)
             if value is not None:
                 return value[1]
 
-        if ext is not None:
+        if ext is not None:  # 遍历搜索可用的
             ext = ext.lower()
             if len(ext) > 0:
                 if ext[0] != '.':
                     ext = '.' + ext
+            results = []
             for key, value in self.__funcs.items():
                 if ext in value[0]:
-                    return value[1]
+                    results.append([key, value[1]])
+            return results
 
         return None
 
@@ -431,7 +436,23 @@ class FileHandler(QtCore.QObject):
         if ext is None:
             return None
 
-        func = self.get(ext=ext)
+        desc_funcs = self.get(ext=ext)  # 返回的是描述和函数
+        if len(desc_funcs) == 1:
+            func = desc_funcs[0][1]
+        elif len(desc_funcs) == 0:
+            func = None
+        else:
+            items = [desc for desc, func in desc_funcs]
+            desc, ok = QtWidgets.QInputDialog.getItem(
+                self.parent, '此扩展名可能是多种文件类型', '请选择',
+                items, editable=False)
+            func = None
+            if ok:
+                for a, b in desc_funcs:
+                    if desc == a:
+                        func = b
+                        break
+
         if not callable(func):
             self.show_info(filepath)
             return None

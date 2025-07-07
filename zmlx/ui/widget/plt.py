@@ -1,20 +1,29 @@
-# 导入matplotlib模块并使用Qt5Agg
 import os
 import sys
 import warnings
 
-import matplotlib
-import matplotlib.pyplot as plt
-
 from zmlx.ui.gui_buffer import gui
 from zmlx.ui.pyqt import QtWidgets
+
+try:
+    import matplotlib
+    import matplotlib.pyplot as plt
+
+    # 设置Matplotlib支持中文显示
+    matplotlib.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei',
+                                              'SimSun']  # 指定字体
+    matplotlib.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
+except ImportError:
+    matplotlib = None
+    plt = None
+    print(f'Error when import matplotlib')
 
 for backend in ['QtAgg', 'Qt5Agg']:
     try:
         matplotlib.use(backend)
         break
-    except:
-        pass
+    except Exception as err:
+        print(f'Error (when use backend {backend}): {err}')
 
 
 class MatplotWidget(QtWidgets.QWidget):
@@ -26,6 +35,7 @@ class MatplotWidget(QtWidgets.QWidget):
         super(MatplotWidget, self).__init__(parent)
         from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
         layout = QtWidgets.QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)  # 2025-7-5
         self.setLayout(layout)
         self.__figure = plt.figure()
         self.__canvas = FigureCanvasQTAgg(self.__figure)
@@ -72,107 +82,32 @@ class MatplotWidget(QtWidgets.QWidget):
             menu.addAction(gui.get_action('export_plt_figure'))
             menu.exec(event.globalPos())
 
-    def del_all_axes(self):
-        """
-        删除所有的axes
-        """
-        fig = self.figure
-        for ax in fig.get_axes():
-            fig.delaxes(ax)
-
     def plot_on_figure(self, on_figure):
         """
-        在控件上面绘图
+        在控件上面绘图。其中on_figure是回调函数，接受一个Figure类型的参数。
+        注意：
+            如果多次绘图，建议在绘图之前先调用 figure.clear()
         """
         try:
             on_figure(self.figure)
             self.draw()
-        except Exception as err:
-            warnings.warn(f'meet exception <{err}> when run <{on_figure}>')
-
-    def plot_on_axes(
-            self, on_axes, dim=2, xlabel=None, ylabel=None, zlabel=None,
-            title=None, aspect=None,
-            x_lim=None, y_lim=None, z_lim=None,
-            show_legend=False, grid=None, axis=None,
-            clear=True):
-        """
-        绘制图形。使用在坐标轴上绘图的回调函数.
-
-        Args:
-            clear: 是否清除现有的坐标轴
-            on_axes: 在坐标轴上ax上绘图的回调函数，函数的原型为:
-                def on_axes(ax):
-                    ...
-                    其中ax为matplotlib的axes实例，会根据dim的取值而创建并传递给on_axes。
-            dim: 维度，2或者3 (创建的Axes的类型会不同)
-            xlabel: x轴标签，当非None的时候，会设置axes.set_xlabel(xlabel) (默认为None)
-            ylabel: y轴标签，当非None的时候，会设置axes.set_ylabel(ylabel) (默认为None)
-            zlabel: z轴标签，当非None的时候，会设置axes.set_zlabel(zlabel) (默认为None)
-            title: 标题，当非None的时候，会设置axes.set_title(title) (默认为None)
-            aspect: 坐标的比例，当非None的时候，会设置axes.set_aspect(aspect) (默认为None)
-            z_lim: z轴的范围，当非None的时候，会设置axes.set_zlim(zlim) (默认为None)
-            y_lim: y轴的范围，当非None的时候，会设置axes.set_ylim(ylim) (默认为None)
-            x_lim: x轴的范围，当非None的时候，会设置axes.set_xlim(xlim) (默认为None)
-            axis: 设置axis
-            grid: 是否显示网格线
-            show_legend: 是否显示图例
-        Returns:
-            None
-        """
-
-        def on_figure(fig):
-            assert dim == 2 or dim == 3, f'The dim must be 2 or 3 while got {dim}'
-            if dim == 2:
-                ax = fig.subplots()
-            else:
-                ax = fig.add_subplot(111, projection='3d')
-            try:
-                on_axes(ax)
-            except Exception as e:
-                print(e)
-
-            if xlabel is not None:
-                ax.set_xlabel(xlabel)
-            if ylabel is not None:
-                ax.set_ylabel(ylabel)
-            if zlabel is not None and dim == 3:
-                ax.set_zlabel(zlabel)
-            if x_lim is not None:
-                ax.set_xlim(x_lim)
-            if y_lim is not None:
-                ax.set_ylim(y_lim)
-            if z_lim is not None and dim == 3:
-                ax.set_zlim(z_lim)
-            if title is not None:
-                ax.set_title(title)
-            if aspect is not None:
-                ax.set_aspect(aspect)
-            if show_legend:
-                ax.legend()
-            if grid is not None:
-                ax.grid(grid)
-            if axis is not None:
-                ax.axis(axis)
-
-        if clear:
-            self.del_all_axes()
-        self.plot_on_figure(on_figure)
+        except Exception as e:
+            warnings.warn(f'meet exception <{e}> when run <{on_figure}>')
 
 
-def main():
+def test():
     app = QtWidgets.QApplication(sys.argv)
     w = MatplotWidget()
 
-    def on_axes(ax):
+    def on_figure(fig):
+        ax = fig.subplots()
         ax.plot([1, 2, 3], [4, 5, 6])
         ax.plot([1, 2, 3], [1, 3, 8])
 
-    w.plot_on_axes(on_axes, xlabel='x', ylabel='y',
-                   title='title', clear=True)
+    w.plot_on_figure(on_figure)
     w.show()
     sys.exit(app.exec())
 
 
 if __name__ == "__main__":
-    main()
+    test()

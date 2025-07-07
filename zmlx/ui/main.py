@@ -5,7 +5,7 @@ import sys
 import zmlx.alg.sys as warnings
 from zml import lic, core, app_data, read_text, get_dir, is_chinese, \
     log as zml_log
-from zmlx.alg.fsys import has_permission, samefile, show_fileinfo, time_string
+from zmlx.alg.fsys import has_permission, samefile, time_string
 from zmlx.ui import settings
 from zmlx.ui.alg import show_seepage, open_url, get_last_exec_history
 from zmlx.ui.gui_buffer import gui
@@ -731,7 +731,7 @@ class MainWindow(QtWidgets.QMainWindow):
         widget = self.get_widget(the_type=MatplotWidget, **kwargs)
         assert isinstance(widget, MatplotWidget)
         if clear:
-            widget.del_all_axes()
+            widget.figure.clear()
         return widget
 
     def show_fn2(self, filepath, **kwargs):
@@ -1447,7 +1447,7 @@ def __restore_tabs(filename=None):
             gui.show_readme()
 
 
-def __console_kernel(win, code):
+def __console_kernel(code):
     """
     在控制台线程执行的工作
     """
@@ -1540,7 +1540,7 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
 
     # 启动核心(但是不阻塞当前线程)
     win.get_console().start_func(
-        lambda: __console_kernel(win, code),
+        lambda: __console_kernel(code),
         post_task=lambda: __console_done(win, code, close_after_done)
     )
     win.get_console().start_func(None)  # 清除最后一次调用的信息

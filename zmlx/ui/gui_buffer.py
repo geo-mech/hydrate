@@ -181,6 +181,7 @@ def open_gui_without_setup(argv=None):
     打开gui
     """
     from zml import app_data
+    app_data.put('argv', argv)
     app_data.put('restore_tabs', False)
     app_data.put('run_setup', False)
     gui.execute(keep_cwd=False, close_after_done=False)

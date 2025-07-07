@@ -43,8 +43,7 @@ class ImageView(QtWidgets.QGraphicsView):
         self.pixmapItem.setTransformationMode(
             QtCore.Qt.TransformationMode.SmoothTransformation)
         self.setRenderHints(
-            QtGui.QPainter.RenderHint.Antialiasing |
-            QtGui.QPainter.RenderHint.SmoothPixmapTransform
+            QtGui.QPainter.RenderHint.Antialiasing
         )
 
         # 设置场景

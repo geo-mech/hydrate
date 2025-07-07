@@ -29,8 +29,8 @@ def add_code_history(fname):
             with open(app_data.root('console_history', f'{t_str}.txt'),
                       'w', encoding='utf-8') as file:  # 记录原文件的位置.
                 file.write(fname)
-    except:
-        pass
+    except Exception as err:
+        print(f"Error (when add_code_history): {err}")
 
 
 def add_exec_history(code):
@@ -76,8 +76,7 @@ def paint_image(widget, pixmap):
             target = QtCore.QRect(int(x), int(y), int(fig_w), int(height))
         painter = QtGui.QPainter(widget)
         painter.setRenderHints(
-            QtGui.QPainter.RenderHint.Antialiasing |
-            QtGui.QPainter.RenderHint.SmoothPixmapTransform)
+            QtGui.QPainter.RenderHint.Antialiasing)
         try:
             dpr = widget.devicePixelRatioF()
         except AttributeError:
@@ -89,8 +88,8 @@ def paint_image(widget, pixmap):
         pixmap_scaled.setDevicePixelRatio(dpr)
         painter.drawPixmap(target, pixmap_scaled)
         painter.end()
-    except:
-        pass
+    except Exception as err:
+        print(f"Error (when paint_image): {err}")
 
 
 def get_current_screen_geometry(window):
@@ -146,7 +145,8 @@ def open_url(url: str, caption=None, on_top=None, zoom_factor=None,
                 key='use_web_engine',
                 default='Yes',
                 ignore_empty=True) != 'No'
-        except:
+        except Exception as err:
+            print(err)
             use_web_engine = False
 
     if use_web_engine is None:  # 确保其有一个默认的值
