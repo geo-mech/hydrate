@@ -588,46 +588,26 @@ class TextFileEdit(QtWidgets.QTextEdit):
         gui.status(f"{self.__fname}", 3000)
 
 
-class SetupFileEdit(QtWidgets.QWidget):
+class SetupFileEdit(QtWidgets.QListWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.listWidget = QtWidgets.QListWidget()
-
-        self.listWidget.setDragDropMode(
+        self.setDragDropMode(
             QtWidgets.QAbstractItemView.DragDropMode.InternalMove)
-
-        self.listWidget.setSelectionMode(
+        self.setSelectionMode(
             QtWidgets.QAbstractItemView.SelectionMode.SingleSelection)
-        self.listWidget.itemDoubleClicked.connect(self.on_item_double_clicked)
-
-        # 创建按钮
-        self.addButton = QtWidgets.QPushButton("添加文件")
-        self.removeButton = QtWidgets.QPushButton("忽略选中")
-        self.resetButton = QtWidgets.QPushButton("重新搜索")
-
-        # 按钮布局
-        button_layout = QtWidgets.QHBoxLayout()
-        button_layout.addWidget(self.addButton)
-        button_layout.addWidget(self.removeButton)
-        button_layout.addWidget(self.resetButton)
-
-        # 主布局
-        main_layout = QtWidgets.QVBoxLayout()
-        main_layout.addWidget(self.listWidget)
-        main_layout.addLayout(button_layout)
-
-        self.setLayout(main_layout)
-
-        # 连接信号
-        self.addButton.clicked.connect(self.add_file)
-        self.removeButton.clicked.connect(self.remove_selected)
-        self.resetButton.clicked.connect(self.reset_files)
+        self.itemDoubleClicked.connect(self.on_item_double_clicked)
         # 连接拖拽完成信号
-        self.listWidget.model().rowsMoved.connect(self.on_rows_moved)
-
+        self.model().rowsMoved.connect(self.on_rows_moved)
         for file_path in get_setup_files():
             self.add_file_to_list(file_path)
+
+    def contextMenuEvent(self, event):  # 右键菜单
+        menu = QtWidgets.QMenu(self)
+        menu.addAction(create_action(self, '添加文件', slot=self.add_file))
+        menu.addAction(create_action(self, '忽略', slot=self.remove_selected))
+        menu.addAction(create_action(self, '重新搜索', slot=self.reset_files))
+        menu.exec(event.globalPos())
 
     def on_rows_moved(self, parent, start, end, destination, row):
         """
@@ -637,20 +617,19 @@ class SetupFileEdit(QtWidgets.QWidget):
         self.save_files()  # 自动保存新的顺序
 
     def reset_files(self):
-        while self.listWidget.count() > 0:
-            self.listWidget.takeItem(0)
+        while self.count() > 0:
+            self.takeItem(0)
+        set_setup_files([])  # 把额外保存的删除掉
         for file_path in get_setup_files(rank_max=1.0e200):
             self.add_file_to_list(file_path)
-        print('启动文件列表已经重置')
         self.save_files()  # 自动保存
 
     def save_files(self):
         """保存当前列表到环境变量"""
         file_paths = []
-        for i in range(self.listWidget.count()):
-            file_paths.append(self.listWidget.item(i).text())
+        for i in range(self.count()):
+            file_paths.append(self.item(i).text())
         set_setup_files(file_paths)
-        print('启动文件列表已经保存')
 
     def add_file(self):
         """添加新的启动文件"""
@@ -660,10 +639,9 @@ class SetupFileEdit(QtWidgets.QWidget):
             "",
             "Python文件 (*.py);;所有文件 (*)"
         )
-
         if file_path and os.path.isfile(file_path):
-            existing_files = [self.listWidget.item(i).text() for i in
-                              range(self.listWidget.count())]
+            existing_files = [self.item(i).text() for i in
+                              range(self.count())]
             if file_path not in existing_files:
                 self.add_file_to_list(file_path)
                 self.save_files()  # 自动保存
@@ -676,16 +654,16 @@ class SetupFileEdit(QtWidgets.QWidget):
             item.flags() | QtCore.Qt.ItemFlag.ItemIsEnabled |
             QtCore.Qt.ItemFlag.ItemIsSelectable |
             QtCore.Qt.ItemFlag.ItemIsDragEnabled)
-        self.listWidget.addItem(item)
+        self.addItem(item)
 
     def remove_selected(self):
         """移除选中的文件"""
-        selected = self.listWidget.selectedItems()
+        selected = self.selectedItems()
         if not selected:
             return
 
         for item in selected:
-            self.listWidget.takeItem(self.listWidget.row(item))
+            self.takeItem(self.row(item))
         self.save_files()  # 自动保存
         print(f"已移除 {len(selected)} 个文件")
 

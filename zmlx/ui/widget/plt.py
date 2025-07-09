@@ -2,8 +2,8 @@ import os
 import sys
 import warnings
 
-from zmlx.ui.gui_buffer import gui
 from zmlx.ui.pyqt import QtWidgets
+from zmlx.ui.alg import create_action
 
 try:
     import matplotlib
@@ -59,12 +59,13 @@ class MatplotWidget(QtWidgets.QWidget):
             self,
             caption="请选择保存路径",
             directory=os.getcwd(),
-            filter='jpg图片(*.jpg);;所有文件(*.*)')
+            filter='Jpg图片(*.jpg);;Png图片(*.png);;所有文件(*.*)')
         if fpath is not None and len(fpath) > 0:
             from zmlx.io.env import plt_export_dpi
-            self.savefig(fname=fpath, dpi=plt_export_dpi.get_value())
+            self.savefig(
+                fname=fpath, dpi=plt_export_dpi.get_value())
 
-    def export_plt_figure(self):  # 接菜单命令
+    def export_data(self):  # 接菜单命令
         self.savefig_by_dlg()
 
     @property
@@ -75,12 +76,19 @@ class MatplotWidget(QtWidgets.QWidget):
     def canvas(self):
         return self.__canvas
 
+    def set_plt_export_dpi(self):
+        from zmlx.io.env import plt_export_dpi
+        number, ok = QtWidgets.QInputDialog.getDouble(
+            self, '设置导出图的DPI', 'DPI',
+            plt_export_dpi.get_value(), 50, 3000)
+        if ok:
+            plt_export_dpi.set_value(number)
+
     def contextMenuEvent(self, event):  # 右键菜单
-        if gui.exists():
-            menu = QtWidgets.QMenu(self)
-            menu.addAction(gui.get_action('set_plt_export_dpi'))
-            menu.addAction(gui.get_action('export_plt_figure'))
-            menu.exec(event.globalPos())
+        menu = QtWidgets.QMenu(self)
+        menu.addAction(create_action(self, '设置导出图的DPI', icon='set', slot=self.set_plt_export_dpi))
+        menu.addAction(create_action(self, '导出', icon='save', slot=self.savefig_by_dlg))
+        menu.exec(event.globalPos())
 
     def plot_on_figure(self, on_figure):
         """

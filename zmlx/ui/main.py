@@ -228,23 +228,13 @@ class MainWindow(QtWidgets.QMainWindow):
                  is_enabled=not_running,
                  ),
 
-            dict(menu='文件', name='export_data',
-                 text='导出数据',
+            dict(menu='文件', name='export_data', icon='save',
+                 text='导出',
                  slot=lambda: getattr(self.get_current_widget(),
                                       'export_data')(),
                  is_enabled=lambda: hasattr(
                      self.get_current_widget(),
                      'export_data') and not self.is_running(),
-                 ),
-
-            dict(menu='文件', name='export_plt_figure',
-                 text='导出plt图',
-                 on_toolbar=True,
-                 slot=lambda: getattr(self.get_current_widget(),
-                                      'export_plt_figure')(),
-                 is_enabled=lambda: hasattr(
-                     self.get_current_widget(),
-                     'export_plt_figure') and not self.is_running(),
                  ),
 
             dict(menu='显示', name='refresh', icon='refresh',
