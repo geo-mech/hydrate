@@ -300,7 +300,7 @@ def make_parent(path):
     """确保指定文件路径的父目录存在。
 
     Args:
-        path (str): 文件路径
+        path: 文件路径
 
     Returns:
         str: 原始输入路径
@@ -13200,6 +13200,18 @@ class Seepage(HasHandle, HasCells):
                     self.name = name
             else:
                 assert path is None
+
+        def __repr__(self):
+            """
+            返回一个字符串表示当前对象。
+            """
+            return f"""{type(self).__name__}(handle={self.handle}, name='{self.name}')"""
+
+        def __str__(self):
+            """
+            返回一个字符串表示当前对象。
+            """
+            return f"""{type(self).__name__}({self.name})"""
 
         core.use(None, 'fludef_save',
                  c_void_p, c_char_p)

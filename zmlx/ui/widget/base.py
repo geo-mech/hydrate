@@ -15,10 +15,10 @@ from zml import (
 from zmlx.alg.base import fsize2str, time2str, clamp
 from zmlx.alg.fsys import samefile, time_string
 from zmlx.alg.search_paths import choose_path
-from zmlx.ui.gui_buffer import gui
 from zmlx.ui.alg import (
     add_code_history, create_action, add_exec_history,
     get_last_exec_history)
+from zmlx.ui.gui_buffer import gui
 from zmlx.ui.pyqt import (
     QWebEngineView, is_pyqt6, QtCore, QtGui, QtWidgets, qt_name)
 from zmlx.ui.settings import (
@@ -604,9 +604,9 @@ class SetupFileEdit(QtWidgets.QListWidget):
 
     def contextMenuEvent(self, event):  # 右键菜单
         menu = QtWidgets.QMenu(self)
-        menu.addAction(create_action(self, '添加文件', slot=self.add_file))
+        menu.addAction(create_action(self, '添加', slot=self.add_file))
         menu.addAction(create_action(self, '忽略', slot=self.remove_selected))
-        menu.addAction(create_action(self, '重新搜索', slot=self.reset_files))
+        menu.addAction(create_action(self, '重置', slot=self.reset_files))
         menu.exec(event.globalPos())
 
     def on_rows_moved(self, parent, start, end, destination, row):
@@ -827,6 +827,7 @@ class TextBrowser(QtWidgets.QTextBrowser):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._status = None
+        self.context_actions = [create_action(self, "清除内容", 'clean', self.clear)]
 
     def contextMenuEvent(self, event):
         # 创建菜单并添加清除动作
@@ -835,8 +836,8 @@ class TextBrowser(QtWidgets.QTextBrowser):
     def get_context_menu(self):
         menu = super().createStandardContextMenu()
         menu.addSeparator()
-        menu.addAction(create_action(
-            self, "清除内容", 'clean', self.clear))
+        for action in self.context_actions:
+            menu.addAction(action)
         return menu
 
     def set_status(self, text):
@@ -861,6 +862,12 @@ class TextBrowser(QtWidgets.QTextBrowser):
 class ReadMeBrowser(TextBrowser):
     def __init__(self, parent=None):
         super(ReadMeBrowser, self).__init__(parent)
+        self._load()
+        self.context_actions.append(create_action(self, "载入", slot=self._load))
+        self.context_actions.append(create_action(self, "关于", slot=gui.show_about))
+        self.context_actions.append(create_action(self, "注册", slot=gui.show_reg_tool))
+
+    def _load(self):
         path = os.path.join(get_dir(), 'README.md')
         if os.path.isfile(path):
             self.setOpenLinks(True)
@@ -1345,7 +1352,22 @@ class About(QtWidgets.QTableWidget):
         super(About, self).__init__(parent)
         self.horizontalHeader().setSectionResizeMode(
             QtWidgets.QHeaderView.ResizeMode.Stretch)
+        self.context_actions = [
+            create_action(self, "ReadMe", slot=gui.show_readme),
+            create_action(self, "注册", slot=gui.show_reg_tool)
+        ]
+        self.setup(lic_desc)
 
+    def get_context_menu(self):
+        menu = QtWidgets.QMenu(self)
+        for action in self.context_actions:
+            menu.addAction(action)
+        return menu
+
+    def contextMenuEvent(self, event):
+        self.get_context_menu().exec(event.globalPos())
+
+    def setup(self, lic_desc):
         data = [
             ['安装路径', f'{get_dir()}'],
             ['当前版本', f'{core.time_compile}; {core.compiler}'],
@@ -1626,6 +1648,63 @@ class TabWidget(QtWidgets.QTabWidget):
         self.setMovable(True)
         self.set_position()
         self.set_shape()
+        self.context_actions = []  # 附加的命令
+
+    def contextMenuEvent(self, event):
+        tab_index = None
+        for i in range(self.count()):
+            if self.tabBar().tabRect(i).contains(event.pos()):
+                tab_index = i
+
+        menu = QtWidgets.QMenu(self)
+        if self.count() >= 1:
+            menu.addAction(
+                create_action(self, '关闭所有', slot=gui.close_all_tabs))
+            menu.addAction(
+                create_action(self, '列出标签', slot=gui.show_tab_details))
+            if tab_index is not None:
+                menu.addSeparator()
+                menu.addAction(create_action(
+                    self, text='重命名',
+                    slot=lambda: self._rename_tab(tab_index))
+                )
+                menu.addAction(create_action(
+                    self, text='关闭',
+                    slot=lambda: self.close_tab(tab_index))
+                )
+                menu.addAction(create_action(
+                    self, text='关闭其它',
+                    slot=lambda: self._close_all_except(tab_index))
+                )
+        else:
+            self._add_extra(menu)
+
+        if len(self.context_actions) > 0:
+            menu.addSeparator()
+            for action in self.context_actions:
+                menu.addAction(action)
+
+        menu.exec(event.globalPos())
+
+    def _add_extra(self, menu):
+        menu.addAction(create_action(self, text='ReadMe', slot=gui.show_readme))
+        menu.addAction(create_action(self, text='关于', slot=gui.show_about))
+        menu.addSeparator()
+        menu.addAction(create_action(self, text='打开', slot=gui.open_file_by_dlg))
+        menu.addAction(create_action(self, text='新建', slot=gui.new_file))
+        menu.addAction(create_action(self, text='浏览', slot=gui.view_cwd))
+        menu.addSeparator()
+        menu.addAction(create_action(self, text='刷新', slot=gui.refresh))
+        menu.addAction(create_action(self, text='变量', slot=gui.show_memory))
+        menu.addAction(create_action(self, text='耗时', slot=gui.show_timer))
+        menu.addAction(create_action(self, text='Python控制台(测试)', slot=gui.show_pg_console))
+        menu.addSeparator()
+        menu.addAction(create_action(self, text='设置系统变量', slot=gui.show_env_edit))
+        menu.addAction(create_action(self, text='设置启动文件', slot=gui.edit_setup_files))
+        menu.addSeparator()
+        menu.addAction(create_action(self, text='显示Demos', slot=gui.show_demo))
+        menu.addAction(create_action(self, text='注册', slot=gui.show_reg_tool))
+        menu.addAction(create_action(self, text='反馈', slot=gui.show_feedback))
 
     def set_position(self):
         try:
@@ -1653,47 +1732,21 @@ class TabWidget(QtWidgets.QTabWidget):
         except Exception as err:
             print(err)
 
-    def contextMenuEvent(self, event):
-        # 点击的标签的索引
-        tab_index = None
-        for i in range(self.count()):
-            if self.tabBar().tabRect(i).contains(event.pos()):
-                tab_index = i
-
-        menu = QtWidgets.QMenu(self)
-        if self.count() >= 1:
-            menu.addAction(gui.get_action('console_show'))
-            menu.addAction(gui.get_action('console_hide'))
-            menu.addSeparator()
-            menu.addAction(gui.get_action('close_all_tabs'))
-            menu.addAction(gui.get_action('tab_details'))
-            if tab_index is not None:
-                menu.addSeparator()
-                menu.addAction(create_action(
-                    self, text='重命名',
-                    slot=lambda: self._rename_tab(tab_index))
-                )
-                menu.addAction(create_action(
-                    self, text='关闭',
-                    slot=lambda: self.close_tab(tab_index))
-                )
-                menu.addAction(create_action(
-                    self, text='关闭其它',
-                    slot=lambda: self._close_all_except(tab_index))
-                )
-            menu.addSeparator()
-        menu.addAction(gui.get_action('readme'))
-        menu.addAction(gui.get_action('about'))
-        menu.addSeparator()
-        menu.addAction(gui.get_action('open'))
-        menu.addAction(gui.get_action('set_cwd'))
-        menu.addAction(gui.get_action('demo'))
-        menu.exec(event.globalPos())
-
     def close_tab(self, index):
-        widget = self.widget(index)
-        widget.deleteLater()
-        self.removeTab(index)
+        if index < self.count():
+            widget = self.widget(index)
+            widget.deleteLater()
+            self.removeTab(index)
+            return True
+        else:
+            return False
+
+    def close_tab_object(self, widget):
+        index = self.get_tab_index(widget)
+        if index is not None:
+            return self.close_tab(index)
+        else:
+            return False
 
     def find_widget(self, the_type=None, text=None):
         assert the_type is not None or text is not None
@@ -1706,6 +1759,12 @@ class TabWidget(QtWidgets.QTabWidget):
                 if text != self.tabText(i):
                     continue
             return widget
+        return None
+
+    def get_tab_index(self, widget):
+        for idx in range(self.count()):
+            if id(self.widget(idx)) == id(widget):
+                return idx
         return None
 
     def show_next(self):
@@ -1764,17 +1823,42 @@ class ConsoleOutput(TextBrowser):
 
     def get_context_menu(self):
         menu = super().get_context_menu()
-        if self.console is not None:
+        if isinstance(self.console, Console):
             menu.addSeparator()
-            menu.addAction(gui.get_action('console_hide'))
+            menu.addAction(create_action(
+                self, '隐藏', icon='console',
+                slot=lambda: self.console.setVisible(False))
+            )
             if self.console.is_running():
-                menu.addAction(gui.get_action('console_pause'))
-                menu.addAction(gui.get_action('console_resume'))
-                menu.addAction(gui.get_action('console_stop'))
+                if self.console.get_pause():
+                    menu.addAction(create_action(
+                        self, '继续', icon='begin',
+                        slot=lambda: self.console.set_pause(False))
+                    )
+                else:
+                    menu.addAction(create_action(
+                        self, '暂停', icon='pause',
+                        slot=lambda: self.console.set_pause(True))
+                    )
+                menu.addAction(create_action(
+                    self, '停止', icon='stop',
+                    slot=lambda: self.console.stop())
+                )
             else:
-                menu.addAction(gui.get_action('console_start_last'))
-                menu.addAction(gui.get_action('show_code_history'))
-                menu.addAction(gui.get_action('show_output_history'))
+                menu.addAction(create_action(
+                    self, '重新执行', slot=self.console.start_last)
+                )
+                menu.addAction(create_action(
+                    self, '运行历史',
+                    slot=lambda: gui.show_code_history(
+                        folder=app_data.root('console_history'),
+                        caption='运行历史'))
+                )
+                menu.addAction(create_action(
+                    self, '输出历史',
+                    slot=gui.show_output_history)
+                )
+
         return menu
 
     def write(self, text):

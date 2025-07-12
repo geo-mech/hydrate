@@ -7,7 +7,7 @@ from zml import lic, core, app_data, read_text, get_dir, is_chinese, \
     log as zml_log
 from zmlx.alg.fsys import has_permission, samefile, time_string
 from zmlx.ui import settings
-from zmlx.ui.alg import show_seepage, open_url, get_last_exec_history
+from zmlx.ui.alg import open_url, get_last_exec_history
 from zmlx.ui.gui_buffer import gui
 from zmlx.ui.pyqt import (QtCore, QtWidgets, QtMultimedia, QAction, QtGui,
                           is_pyqt6, QWebEngineView, QWebEngineSettings)
@@ -46,16 +46,25 @@ class MainWindow(QtWidgets.QMainWindow):
         self.__task_proc = TaskProc(self)
 
         self.__file_handler = FileHandler(self)
+
+        def _do_nothing(fname):
+            pass
+
+        def new_empty_file(fname):
+            from zml import make_parent
+            with open(make_parent(fname), 'w') as file:
+                pass
+
         for opt in [
-            dict(desc='Python文件', exts=['.py'], func=self.open_code),
+            dict(desc='Python文件', exts=['.py'],
+                 func=dict(open_file=self.open_code, new_file=_do_nothing)),
             dict(desc='文本文件', exts=['.txt', '.json', '.xml', '.qss'],
-                 func=self.open_text),
+                 func=dict(open_file=self.open_text, new_file=new_empty_file)),
             dict(desc='二维裂缝', exts=['.fn2'], func=self.show_fn2),
-            dict(desc='Seepage模型文件', exts=['.seepage'], func=show_seepage),
             dict(desc='图片', exts=['.png', '.jpg'], func=self.open_image),
             dict(desc='PDF文件', exts=['.pdf'], func=self.open_pdf),
         ]:
-            self.__file_handler.add(**opt)
+            self.add_file_handler(**opt)
 
         widget = QtWidgets.QWidget(self)
         h_layout = QtWidgets.QVBoxLayout(widget)
@@ -135,6 +144,24 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.refresh()
 
+    def closeEvent(self, event):
+        if self.__console.is_running():
+            reply = QtWidgets.QMessageBox.question(
+                self, '退出UI',
+                "内核似乎正在运行，确定要退出吗？"
+            )
+            if reply != QtWidgets.QMessageBox.StandardButton.Yes:
+                event.ignore()
+                return
+
+        on_close = getattr(self, 'on_close', None)
+        if callable(on_close):  # 在确定要关闭之前执行的操作
+            on_close()
+
+    def showEvent(self, event):
+        super(MainWindow, self).showEvent(event)
+        self.refresh()
+
     def __init_gui_api(self):
         # 默认，将所有新的定义的函数都添加到GUI API中
         for key in self.list_member_functions():
@@ -163,10 +190,154 @@ class MainWindow(QtWidgets.QMainWindow):
         def not_running():
             return not self.is_running()
 
+        self.add_action(
+            menu='文件', name='set_cwd', icon='open',
+            tooltip='设置工作路径 (在进行各种操作前，务必确保工作路径正确)',
+            text='工作路径', shortcut='Ctrl+W',
+            slot=self.set_cwd_by_dialog,
+            on_toolbar=True,
+            is_enabled=not_running,
+            is_visible=lambda: True
+        )
+
+        self.add_action(
+            menu='文件', name='open', icon='open',
+            tooltip='打开文件', text='打开',
+            slot=self.open_file_by_dlg,
+            on_toolbar=True, shortcut=QtGui.QKeySequence.StandardKey.Open,
+            is_enabled=not_running, is_visible=lambda: True
+        )
+
+        self.add_action(
+            menu='文件', name='new_file', icon='new',
+            text='新建', shortcut=QtGui.QKeySequence.StandardKey.New,
+            slot=self.new_file,
+            on_toolbar=True,
+            is_enabled=not_running,
+        )
+
+        self.add_action(
+            menu='文件', name='quit', icon='quit',
+            text='退出',
+            slot=self.close,
+        )
+
+        self.add_action(
+            menu='文件', name='view_cwd', icon='cwd',
+            text='浏览', shortcut='Ctrl+B',
+            slot=self.view_cwd
+        )
+
+        def import_data():
+            widget = self.get_current_widget()
+            f = getattr(widget, 'import_data', None)
+            if callable(f):
+                try:
+                    f()
+                    self.refresh_action()
+                except Exception as e:
+                    print(e)
+
+        self.add_action(
+            menu='文件', text='导入', name=None, slot=import_data,
+            icon='import',
+            on_toolbar=True,
+            is_visible=lambda: hasattr(self.get_current_widget(), 'import_data') and not self.is_running(),
+        )
+
+        def is_enabled():
+            widget = self.get_current_widget()
+            if hasattr(widget, 'need_save'):
+                try:
+                    return widget.need_save()
+                except Exception as err:
+                    print(err)
+                    return True
+            else:
+                return True
+
+        def save_file():
+            widget = self.get_current_widget()
+            f = getattr(widget, 'save_file', None)
+            if callable(f):
+                try:
+                    f()
+                    self.refresh_action()
+                except Exception as e:
+                    print(e)
+
+        self.add_action(
+            menu='文件', text='保存', name=None, slot=save_file,
+            icon='save', shortcut='Ctrl+S',
+            on_toolbar=True,
+            is_enabled=is_enabled,
+            is_visible=lambda: hasattr(self.get_current_widget(), 'save_file') and not self.is_running(),
+        )
+
+        def export_data():
+            widget = self.get_current_widget()
+            f = getattr(widget, 'export_data', None)
+            if callable(f):
+                try:
+                    f()
+                    self.refresh_action()
+                except Exception as e:
+                    print(e)
+
+        self.add_action(
+            menu='文件', name='export_data', icon='export',
+            text='导出', shortcut='Ctrl+Shift+S',
+            slot=export_data,
+            on_toolbar=True,
+            is_visible=lambda: hasattr(self.get_current_widget(), 'export_data') and not self.is_running(),
+        )
+
+        self.add_action(
+            menu='显示', name='refresh', icon='refresh',
+            text='刷新',
+            slot=self.refresh
+        )
+
+        self.add_action(
+            menu='显示', name='memory', icon='variables',
+            text='变量',
+            slot=self.show_memory
+        )
+
+        self.add_action(
+            menu='显示', name='timer', icon='clock',
+            tooltip='显示cpu耗时统计的结果', text='耗时',
+            slot=self.show_timer
+        )
+
+        self.add_action(
+            menu='显示', name='console', icon='console',
+            text='Python控制台(测试)',
+            slot=self.show_pg_console
+        )
+
+        self.add_action(
+            menu='显示', name='cls', icon='clean',
+            text='清屏', shortcut='Ctrl+L',
+            slot=self.cls
+        )
+
         def console_exec():
             f = getattr(self.get_current_widget(), 'console_exec', None)
             if callable(f):
                 f()
+            else:
+                self.get_console().exec_file(fname=None)
+
+        self.add_action(
+            menu='操作', name='console_exec', icon='begin',
+            tooltip='运行当前标签页面显示的脚本',
+            text='运行', shortcut='Ctrl+R',
+            slot=console_exec,
+            on_toolbar=True,
+            is_enabled=not_running,
+            is_visible=not_running,
+        )
 
         def pause_enabled():
             c = self.get_console()
@@ -174,347 +345,198 @@ class MainWindow(QtWidgets.QMainWindow):
                 return False
             return not c.get_pause()
 
+        self.add_action(
+            menu='操作', name='console_pause',
+            icon='pause',
+            tooltip='暂停内核的执行 (需要提前在脚本内设置break_point)',
+            text='暂停',
+            slot=lambda: self.get_console().set_pause(True),
+            on_toolbar=True,
+            is_enabled=pause_enabled,
+        )
+
+        self.add_action(
+            menu='操作', name='console_resume',
+            icon='begin',
+            tooltip=None, text='继续',
+            slot=lambda: self.get_console().set_pause(False),
+            on_toolbar=True,
+            is_enabled=lambda: self.is_running() and self.get_console().get_pause(),
+        )
+
+        self.add_action(
+            menu='操作', name='console_stop', icon='stop',
+            tooltip='安全地终止内核的执行 (需要提前在脚本内设置break_point)',
+            text='停止', shortcut='Ctrl+Q',
+            slot=lambda: self.get_console().stop(),
+            on_toolbar=True,
+            is_enabled=self.is_running
+        )
+
+        self.add_action(
+            menu='操作', name='console_kill', icon='kill',
+            text='强制结束',
+            slot=self.kill_thread,
+            is_enabled=self.is_running
+        )
+
+        self.add_action(
+            menu='操作', name='console_hide',
+            icon='console',
+            tooltip='隐藏主窗口右侧的控制台', text='隐藏',
+            slot=lambda: self.get_console().setVisible(False),
+            on_toolbar=True,
+            is_enabled=lambda: self.get_console().isVisible()
+        )
+
+        self.add_action(
+            menu='操作', name='console_show',
+            icon='console',
+            tooltip='显示主窗口右侧的控制台', text='显示',
+            slot=lambda: self.get_console().setVisible(True),
+            on_toolbar=True,
+            is_enabled=lambda: not self.get_console().isVisible()
+        )
+
+        self.add_action(
+            menu='操作', name='console_start_last',
+            text='重新执行', shortcut='Ctrl+Shift+R',
+            slot=self.get_console().start_last,
+            is_enabled=lambda: not self.is_running() and get_last_exec_history() is not None,
+        )
+
+        self.add_action(
+            menu='操作', name='close_all_tabs',
+            icon='close_all',
+            text='关闭所有页面',
+            slot=self.close_all_tabs,
+            is_enabled=lambda: self.count_tabs() > 0,
+        )
+
+        self.add_action(
+            menu='设置', name='env', icon='set',
+            text='系统变量', shortcut='Ctrl+E',
+            slot=self.show_env_edit
+        )
+
+        self.add_action(
+            menu='设置', name='setup_files',
+            text='启动文件',
+            slot=self.edit_setup_files
+        )
+
+        self.add_action(
+            menu='设置', name='search', icon='set',
+            text='搜索路径',
+            slot=self.show_file_finder
+        )
+
+        self.add_action(
+            menu='设置', name='edit_window_style',
+            text='窗口风格',
+            slot=lambda: self.open_text(
+                app_data.temp('zml_window_style.qss'), '窗口风格')
+        )
+
+        self.add_action(
+            menu='帮助', name='readme', icon='info',
+            text='ReadMe', shortcut='F1',
+            slot=self.show_readme,
+            on_toolbar=True)
+
         def about():
             print(lic.desc)
             self.show_about()
 
-        def set_plt_export_dpi():
-            from zmlx.io.env import plt_export_dpi
-            number, ok = QtWidgets.QInputDialog.getDouble(
-                self,
-                '设置导出图的DPI',
-                'DPI',
-                plt_export_dpi.get_value(), 50, 3000)
-            if ok:
-                plt_export_dpi.set_value(number)
+        self.add_action(
+            menu='帮助', name='about',
+            text='关于', shortcut='Ctrl+Shift+A',
+            icon='info',
+            slot=about,
+            is_enabled=not_running,
+        )
 
-        data = [
-            dict(menu='文件', name='set_cwd', icon='open',
-                 tooltip='设置工作路径 (在进行各种操作前，务必确保工作路径正确)',
-                 text='工作路径',
-                 slot=self.set_cwd_by_dialog,
-                 on_toolbar=True,
-                 is_enabled=not_running,
-                 is_visible=lambda: True
-                 ),
+        self.add_action(
+            menu='帮助', name='demo', icon='demo',
+            tooltip=None, text='示例',
+            slot=self.show_demo,
+            on_toolbar=True, is_enabled=None, is_visible=lambda: True
+        )
 
-            dict(menu='文件', name='quit', icon='quit',
-                 text='退出',
-                 slot=self.close,
-                 ),
+        self.add_action(
+            menu='帮助', name='reg', icon='reg',
+            text='注册',
+            slot=self.show_reg_tool
+        )
 
-            dict(menu='文件', name='open', icon='open',
-                 tooltip='打开文件', text='打开',
-                 slot=self.open_file_by_dlg,
-                 on_toolbar=True,
-                 is_enabled=not_running, is_visible=lambda: True
-                 ),
+        self.add_action(
+            menu='帮助', name='feedback',
+            text='反馈',
+            icon='info',
+            slot=self.show_feedback,
+            is_enabled=not_running,
+        )
 
-            dict(menu='文件', name='demo', icon='demo',
-                 tooltip=None, text='示例',
-                 slot=self.show_demo,
-                 on_toolbar=True, is_enabled=None, is_visible=lambda: True
-                 ),
+        self.add_action(
+            menu='帮助', name='create_lnk',
+            text='创建快捷方式',
+            slot=create_ui_lnk_on_desktop,
+        )
 
-            dict(menu='文件', name='view_cwd', icon='cwd',
-                 text='文件',
-                 slot=self.view_cwd,
-                 on_toolbar=True
-                 ),
+        self.add_action(
+            menu=['帮助', '打开'], name='papers',
+            text='已发表文章',
+            slot=lambda: open_url(
+                url="https://pan.cstcloud.cn/s/5cKaQrdFSHM",
+                use_web_engine=False)
+        )
 
-            dict(menu='文件', name='py_new', icon='python',
-                 text='新建脚本',
-                 slot=self.new_code,
-                 is_enabled=not_running,
-                 ),
+        self.add_action(
+            menu=['帮助', '打开'], name='new_issue',
+            text='新建Issue',
+            icon='issues',
+            slot=lambda: open_url(
+                url='https://gitee.com/geomech/hydrate/issues/new',
+                on_top=True,
+                caption='新建Issue',
+                icon='issues'),
+            is_enabled=not_running,
+        )
 
-            dict(menu='文件', name='export_data', icon='save',
-                 text='导出',
-                 slot=lambda: getattr(self.get_current_widget(),
-                                      'export_data')(),
-                 is_enabled=lambda: hasattr(
-                     self.get_current_widget(),
-                     'export_data') and not self.is_running(),
-                 ),
+        self.add_action(
+            menu=['帮助', '打开'], name='iggcas',
+            text='中科院地质地球所',
+            icon='iggcas',
+            slot=lambda: open_url(
+                url='http://www.igg.cas.cn/',
+                on_top=True,
+                caption='中科院地质地球所主页',
+                icon='iggcas'
+            ),
+            is_enabled=not_running,
+        )
 
-            dict(menu='显示', name='refresh', icon='refresh',
-                 text='刷新',
-                 slot=self.refresh
-                 ),
+        self.add_action(
+            menu=['帮助', '打开'], name='homepage',
+            text='主页',
+            icon='home',
+            slot=lambda: open_url(
+                url='https://gitee.com/geomech/hydrate',
+                on_top=True,
+                caption='IGG-Hydrate',
+                icon='home'
+            ),
+            is_enabled=not_running,
+        )
 
-            dict(menu='显示', name='memory', icon='variables',
-                 text='变量',
-                 slot=self.show_memory
-                 ),
-
-            dict(menu='显示', name='timer', icon='clock',
-                 tooltip='显示cpu耗时统计的结果', text='耗时',
-                 slot=self.show_timer
-                 ),
-
-            dict(menu='显示', name='console', icon='console',
-                 text='Python控制台(测试)',
-                 slot=self.show_pg_console
-                 ),
-
-            dict(menu='显示', name='cls', icon='clean',
-                 text='清屏',
-                 slot=self.cls
-                 ),
-
-            dict(menu='显示', name='tab_details',
-                 text='标签列表',
-                 tooltip='在一个标签页内显示所有标签也的摘要，当标签特别多的时候比较有用',
-                 slot=self.show_tab_details
-                 ),
-
-            dict(menu='显示', name='show_code_history',
-                 text='运行历史',
-                 slot=lambda: self.show_code_history(
-                     folder=app_data.root('console_history'),
-                     caption='运行历史')
-                 ),
-
-            dict(menu='显示', name='show_output_history',
-                 text='输出历史',
-                 slot=self.show_output_history,
-                 ),
-
-            dict(menu='操作', name='console_exec', icon='begin',
-                 tooltip='运行当前标签页面显示的脚本',
-                 text='运行',
-                 slot=console_exec,
-                 on_toolbar=True,
-                 is_enabled=lambda: hasattr(
-                     self.get_current_widget(),
-                     'console_exec') and not self.is_running(),
-                 is_visible=not_running,
-                 ),
-
-            dict(menu='操作', name='console_pause',
-                 icon='pause',
-                 tooltip='暂停内核的执行 (需要提前在脚本内设置break_point)',
-                 text='暂停',
-                 slot=lambda: self.get_console().set_pause(True),
-                 on_toolbar=True,
-                 is_enabled=pause_enabled,
-                 ),
-
-            dict(menu='操作', name='console_resume',
-                 icon='begin',
-                 tooltip=None, text='继续',
-                 slot=lambda: self.get_console().set_pause(False),
-                 on_toolbar=True,
-                 is_enabled=lambda: self.is_running() and self.get_console().get_pause(),
-                 ),
-
-            dict(menu='操作', name='console_stop', icon='stop',
-                 tooltip='安全地终止内核的执行 (需要提前在脚本内设置break_point)',
-                 text='停止',
-                 slot=lambda: self.get_console().stop(),
-                 on_toolbar=True,
-                 is_enabled=self.is_running
-                 ),
-
-            dict(menu='操作', name='console_kill', icon='kill',
-                 text='强制结束',
-                 slot=self.kill_thread,
-                 is_enabled=self.is_running
-                 ),
-
-            dict(menu='操作', name='console_hide',
-                 icon='console',
-                 tooltip='隐藏主窗口右侧的控制台', text='隐藏',
-                 slot=lambda: self.get_console().setVisible(False),
-                 on_toolbar=True,
-                 is_enabled=lambda: self.get_console().isVisible()
-                 ),
-
-            dict(menu='操作', name='console_show',
-                 icon='console',
-                 tooltip='显示主窗口右侧的控制台', text='显示',
-                 slot=lambda: self.get_console().setVisible(True),
-                 on_toolbar=True,
-                 is_enabled=lambda: not self.get_console().isVisible()
-                 ),
-
-            dict(menu='操作', name='console_start_last',
-                 text='重新执行',
-                 slot=self.get_console().start_last,
-                 is_enabled=lambda: not self.is_running() and get_last_exec_history() is not None,
-                 ),
-
-            dict(menu='操作', name='close_all_tabs',
-                 icon='close_all',
-                 text='关闭所有页面',
-                 slot=self.close_all_tabs,
-                 is_enabled=lambda: self.count_tabs() > 0,
-                 ),
-
-            dict(menu='设置', name='search', icon='set',
-                 text='搜索路径',
-                 slot=self.show_file_finder
-                 ),
-
-            dict(menu='设置', name='env', icon='set',
-                 text='Env变量',
-                 slot=self.show_env_edit
-                 ),
-
-            dict(menu='设置', name='setup_files',
-                 text='Setup文件',
-                 slot=self.edit_setup_files
-                 ),
-
-            dict(menu='设置', name='edit_window_style',
-                 text='风格(qss)',
-                 slot=lambda: self.open_text(
-                     app_data.temp('zml_window_style.qss'), '窗口风格')
-                 ),
-
-            dict(menu='设置', name='set_plt_export_dpi',
-                 text='plt的DPI',
-                 slot=set_plt_export_dpi
-                 ),
-
-            dict(menu='帮助', name='readme', icon='info',
-                 text='ReadMe',
-                 slot=self.show_readme,
-                 on_toolbar=True),
-
-            dict(menu='帮助', name='about',
-                 text='关于',
-                 icon='info',
-                 slot=about,
-                 is_enabled=not_running,
-                 ),
-
-            dict(menu='帮助', name='reg', icon='reg',
-                 text='注册',
-                 slot=self.show_reg_tool
-                 ),
-
-            dict(menu='帮助', name='feedback',
-                 text='反馈',
-                 icon='info',
-                 slot=self.show_feedback,
-                 is_enabled=not_running,
-                 ),
-
-            dict(menu='帮助', name='create_lnk',
-                 text='创建快捷方式',
-                 slot=create_ui_lnk_on_desktop,
-                 ),
-
-            dict(menu=['帮助', '打开'], name='papers',
-                 text='已发表文章',
-                 slot=lambda: open_url(
-                     url="https://pan.cstcloud.cn/s/5cKaQrdFSHM",
-                     use_web_engine=False)
-                 ),
-
-            dict(menu=['帮助', '打开'], name='new_issue',
-                 text='新建Issue',
-                 icon='issues',
-                 slot=lambda: open_url(
-                     url='https://gitee.com/geomech/hydrate/issues/new',
-                     on_top=True,
-                     caption='新建Issue',
-                     icon='issues'),
-                 is_enabled=not_running,
-                 ),
-
-            dict(menu=['帮助', '打开'], name='iggcas',
-                 text='中科院地质地球所',
-                 icon='iggcas',
-                 slot=lambda: open_url(
-                     url='http://www.igg.cas.cn/',
-                     on_top=True,
-                     caption='中科院地质地球所主页',
-                     icon='iggcas'
-                 ),
-                 is_enabled=not_running,
-                 ),
-
-            dict(menu=['帮助', '打开'], name='homepage',
-                 text='主页',
-                 icon='home',
-                 slot=lambda: open_url(
-                     url='https://gitee.com/geomech/hydrate',
-                     on_top=True,
-                     caption='IGG-Hydrate',
-                     icon='home'
-                 ),
-                 is_enabled=not_running,
-                 ),
-        ]
-        for opt in data:
-            self.add_action(**opt)
-
-    def add_action(self, menu=None, text=None, name=None, slot=None,
-                   icon=None, tooltip=None,
-                   on_toolbar=None,
-                   is_enabled=None,
-                   is_visible=None
-                   ):
+    def list_member_functions(self):
         """
-        添加一个Action. 这是一个新的版本，将替代后续的直接基于File的ActionX的创建方法，
-        并且将支持动态地创建Action。
-        Since 2026-6-9.
+        列出所有成员函数（排除私有方法）
         """
-        if self.get_action(name=name, create_empty=False) is not None:
-            warnings.warn(
-                f'The action already exists: {name}',
-                UserWarning, stacklevel=2)
-            name = None
-
-        if name is None:
-            index = 1
-            while self.get_action(name='unnamed_%03d' % index,
-                                  create_empty=False) is not None:
-                index += 1
-            name = 'unnamed_%03d' % index
-
-        action = Action(self)
-        action.setObjectName(name)
-
-        if callable(is_enabled):  # 作为一个函数，动态地判断是否可用
-            action.is_enabled = is_enabled
-
-        if callable(is_visible):  # 作为一个函数，动态地判断是否可见
-            action.is_visible = is_visible
-
-        action.setIcon(settings.load_icon(
-            icon if icon is not None else 'python'))
-
-        if tooltip is not None:
-            action.setToolTip(settings.get_text(tooltip))
-
-        if text is not None:
-            action.setText(settings.get_text(text))
-        else:
-            action.setText(name)
-
-        def slot_x():
-            try:
-                self.parse_value(slot)
-                app_data.log(f'run <{name}>')
-                self.refresh()  # since 2024-10-11
-            except Exception as e2:
-                info = f'meet error when run <{name}>. \nInfo = \n {e2}'
-                print(info)
-                app_data.log(info)
-
-        action.triggered.connect(slot_x)
-
-        if menu is None:
-            menu = '其它'
-
-        if on_toolbar:
-            toolbar_name = menu if isinstance(menu, str) else menu[0]
-            self.get_toolbar(toolbar_name).addAction(action)
-
-        self.get_menu(menu).addAction(action)
+        import inspect
+        return [name for name, _ in inspect.getmembers(self.__class__)
+                if inspect.isfunction(getattr(self.__class__, name))
+                and not name.startswith('__')]
 
     def parse_value(self, value):
         if callable(value):  # 直接是一个函数，直接运行
@@ -586,6 +608,99 @@ class MainWindow(QtWidgets.QMainWindow):
                 return toolbar
         return self.addToolBar(name)
 
+    def add_action(self, menu=None, text=None, name=None, slot=None,
+                   icon=None, tooltip=None, shortcut=None,
+                   on_toolbar=None,
+                   is_enabled=None,
+                   is_visible=None
+                   ):
+        """
+        添加一个Action. 这是一个新的版本，将替代后续的直接基于File的ActionX的创建方法，
+        并且将支持动态地创建Action。
+        Since 2026-6-9.
+        """
+        if self.get_action(name=name, create_empty=False) is not None:
+            warnings.warn(
+                f'The action already exists: {name}',
+                UserWarning, stacklevel=2)
+            name = None
+
+        if name is None:
+            index = 1
+            while self.get_action(name='unnamed_%03d' % index,
+                                  create_empty=False) is not None:
+                index += 1
+            name = 'unnamed_%03d' % index
+
+        action = Action(self)
+        action.setObjectName(name)
+
+        if callable(is_enabled):  # 作为一个函数，动态地判断是否可用
+            action.is_enabled = is_enabled
+
+        if callable(is_visible):  # 作为一个函数，动态地判断是否可见
+            action.is_visible = is_visible
+
+        action.setIcon(settings.load_icon(
+            icon if icon is not None else 'python'))
+
+        if tooltip is not None:
+            action.setToolTip(settings.get_text(tooltip))
+
+        if text is not None:
+            action.setText(settings.get_text(text))
+        else:
+            action.setText(name)
+
+        if shortcut is not None:
+            if isinstance(shortcut, str):
+                action.setShortcut(QtGui.QKeySequence(shortcut))
+            else:
+                action.setShortcut(shortcut)
+
+        def slot_x():
+            try:
+                self.parse_value(slot)
+                app_data.log(f'run <{name}>')
+                self.refresh()  # since 2024-10-11
+            except Exception as e2:
+                info = f'meet error when run <{name}>. \nInfo = \n {e2}'
+                print(info)
+                app_data.log(info)
+
+        action.triggered.connect(slot_x)
+
+        if menu is None:
+            menu = '其它'
+
+        if on_toolbar:
+            toolbar_name = menu if isinstance(menu, str) else menu[0]
+            self.get_toolbar(toolbar_name).addAction(action)
+
+        self.get_menu(menu).addAction(action)
+
+    def get_action(self, name, create_empty=None):
+        """
+        返回给定name的菜单action
+        """
+        if isinstance(name, str):
+            for action in self.findChildren(QAction):
+                if action.objectName() == name or action.objectName() == name + '.py':
+                    return action
+        if create_empty is None:
+            create_empty = True
+        if create_empty:
+            warnings.warn(f'cannot find the action with name: <{name}>',
+                          UserWarning, stacklevel=2)
+            action = QAction(parent=self)
+            if name is not None:
+                action.setText(name)
+            else:
+                action.setText('unnamed')
+            return action
+        else:
+            return None
+
     def list_actions(self):
         names = []
         for action in self.findChildren(QAction):
@@ -595,17 +710,62 @@ class MainWindow(QtWidgets.QMainWindow):
                     names.append(name)
         return names
 
+    def trigger(self, name):
+        """
+        出发给定的Action
+        """
+        action = self.get_action(name)
+        if hasattr(action, 'trigger'):
+            action.trigger()
+
     def count_tabs(self):
+        """
+        返回标签的数量
+        """
         return self.__tab_widget.count()
 
     def close_all_tabs(self):
+        """
+        关闭所有的标签
+        """
         self.__tab_widget.close_all_tabs()
+
+    def close_tab_object(self, widget):
+        """
+        关闭给定对象的标签页面
+        """
+        return self.__tab_widget.close_tab_object(widget)
+
+    def get_tab_caption(self, index):
+        """
+        返回给定位置tab的Caption
+        """
+        return self.__tab_widget.tabText(index)
+
+    def set_tab_caption(self, index, caption):
+        """
+        设置tab的文本
+        """
+        self.__tab_widget.setTabText(index, caption)
+
+    def exec_tab_func(self, name):
+        widget = self.get_current_widget()
+        if hasattr(widget, name):
+            f = getattr(widget, name)
+            f()
+
+    def get_tabs(self):
+        return self.__tab_widget
 
     def cls(self):
         self.__console.output_widget.clear()
 
-    def kill_thread(self):
-        self.__console.kill_thread()
+    def show_status(self, *args, **kwargs):
+        self.statusBar().showMessage(*args, **kwargs)
+
+    def set_title(self, title):
+        self.__title = title
+        self.refresh()
 
     def toolbar_warning(self, text=None):
         if isinstance(text, str):
@@ -616,6 +776,53 @@ class MainWindow(QtWidgets.QMainWindow):
             else:
                 self.__warning_toolbar.setVisible(False)
                 self.__warning_action.setText('')
+
+    def get_console(self):
+        return self.__console
+
+    def is_running(self):
+        return self.__console.is_running()
+
+    def exec_file(self, filename):
+        self.__console.exec_file(filename)
+
+    def start_func(self, *args, **kwargs):
+        """
+        在控制台执行代码
+        """
+        self.__console.start_func(*args, **kwargs)
+
+    def exec_current(self):
+        widget = self.__tab_widget.currentWidget()
+        if isinstance(widget, CodeEdit):
+            widget.save()
+            self.__console.exec_file(widget.get_fname())
+        else:
+            self.__console.exec_file()
+
+    def kill_thread(self):
+        self.__console.kill_thread()
+
+    def refresh_action(self, name=None):
+        """
+        刷新给定的Action或者所有的Action
+        """
+        if name is None:
+            for action in self.findChildren(QAction):
+                update_view = getattr(action, 'update_view', None)
+                if callable(update_view):
+                    try:
+                        update_view()
+                    except Exception as err:
+                        print(err)
+        else:
+            action = self.get_action(name=name, create_empty=False)
+            update_view = getattr(action, 'update_view', None)
+            if callable(update_view):
+                try:
+                    update_view()
+                except Exception as err:
+                    print(err)
 
     def refresh(self):
         """
@@ -633,37 +840,15 @@ class MainWindow(QtWidgets.QMainWindow):
         except Exception as err:
             print(f'Error: {err}')
 
-        for action in self.findChildren(QAction):
-            update_view = getattr(action, 'update_view', None)
-            if callable(update_view):
-                update_view()
+        self.refresh_action()
 
         # 调用刷新
         self.__console.refresh_view()
 
-    def closeEvent(self, event):
-        if self.__console.is_running():
-            reply = QtWidgets.QMessageBox.question(
-                self, '退出UI',
-                "内核似乎正在运行，确定要退出吗？",
-                QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No
-            )
-            if reply != QtWidgets.QMessageBox.StandardButton.Yes:
-                event.ignore()
-                return
-
-        on_close = getattr(self, 'on_close', None)
-        if callable(on_close):  # 在确定要关闭之前执行的操作
-            on_close()
-
-    def showEvent(self, event):
-        super(MainWindow, self).showEvent(event)
-        self.refresh()
-
     def get_widget(
             self, the_type, caption=None, on_top=None, init=None,
             type_kw=None, oper=None, icon=None, caption_color=None,
-            set_parent=False):
+            set_parent=False, tooltip=None):
         """
         返回一个控件，其中type为类型，caption为标题，现有的控件，只有类型和标题都满足，才会返回，否则就
         创建新的控件。
@@ -697,6 +882,8 @@ class MainWindow(QtWidgets.QMainWindow):
             if icon is not None:
                 self.__tab_widget.setTabIcon(index, settings.load_icon(icon))
             self.__tab_widget.setCurrentWidget(widget)
+            if tooltip is not None:
+                self.__tab_widget.setTabToolTip(index, tooltip)
             if caption_color is not None:
                 self.__tab_widget.tabBar().setTabTextColor(
                     index, QtGui.QColor(caption_color)
@@ -746,40 +933,6 @@ class MainWindow(QtWidgets.QMainWindow):
             except Exception as err:
                 warnings.warn(f'meet exception <{err}> when run <{kernel}>')
 
-    def show_status(self, *args, **kwargs):
-        self.statusBar().showMessage(*args, **kwargs)
-
-    def trigger(self, name):
-        action = self.get_action(name)
-        if hasattr(action, 'trigger'):
-            action.trigger()
-
-    def get_action(self, name, create_empty=None):
-        """
-        返回给定name的菜单action
-        """
-        if isinstance(name, str):
-            for action in self.findChildren(QAction):
-                if action.objectName() == name or action.objectName() == name + '.py':
-                    return action
-        if create_empty is None:
-            create_empty = True
-        if create_empty:
-            warnings.warn(f'cannot find the action with name: <{name}>',
-                          UserWarning, stacklevel=2)
-            action = QAction(parent=self)
-            if name is not None:
-                action.setText(name)
-            else:
-                action.setText('unnamed')
-            return action
-        else:
-            return None
-
-    def set_title(self, title):
-        self.__title = title
-        self.refresh()
-
     def view_cwd(self):
         from zmlx.ui.widget.base import CwdView
 
@@ -788,7 +941,7 @@ class MainWindow(QtWidgets.QMainWindow):
             w.gui_restore = f"""gui.view_cwd()"""  # 用于重启
 
         self.get_widget(
-            the_type=CwdView, caption='文件', on_top=True,
+            the_type=CwdView, caption='浏览', on_top=True,
             oper=oper,
             icon='cwd')
 
@@ -847,10 +1000,9 @@ class MainWindow(QtWidgets.QMainWindow):
                     caption = os.path.basename(fname)
 
                 self.get_widget(
-                    the_type=CodeEdit,
-                    caption=caption,
-                    on_top=True,
-                    oper=oper, icon='python')
+                    the_type=CodeEdit, caption=caption, on_top=True, oper=oper, icon='python',
+                    tooltip='代码编辑窗口，点击工具栏的运行按钮可以执行'
+                )
                 if app_data.getenv('show_info_after_code_open',
                                    default='') != 'No':
                     print(
@@ -861,17 +1013,18 @@ class MainWindow(QtWidgets.QMainWindow):
         if not isinstance(fname, str):
             return
         if len(fname) > 0:
+            def oper(x: TextFileEdit):
+                x.set_fname(fname)
+                kwds = dict(fname=fname, caption=caption)
+                x.gui_restore = f"""gui.open_text(**{kwds})"""  # 用于重启
+
             for i in range(self.__tab_widget.count()):
                 widget = self.__tab_widget.widget(i)
                 if isinstance(widget, TextFileEdit):
                     if samefile(fname, widget.get_fname()):
                         self.__tab_widget.setCurrentWidget(widget)
+                        oper(widget)
                         return
-
-            def oper(x):
-                x.set_fname(fname)
-                kwds = dict(fname=fname, caption=caption)
-                x.gui_restore = f"""gui.open_text(**{kwds})"""  # 用于重启
 
             if caption is None:
                 caption = os.path.basename(fname)
@@ -943,19 +1096,22 @@ class MainWindow(QtWidgets.QMainWindow):
             self,
             caption='新建.py脚本',
             directory=os.getcwd(),
-            filter='Python File (*.py);;')
+            filter='Python File (*.py)')
         self.open_code(fname)
 
-    def exec_current(self):
-        widget = self.__tab_widget.currentWidget()
-        if isinstance(widget, CodeEdit):
-            widget.save()
-            self.__console.exec_file(widget.get_fname())
-        else:
-            self.__console.exec_file()
+    def new_file(self):
+        return self.__file_handler.new_file_by_dlg(
+            folder=os.getcwd())
 
     def add_file_handler(self, desc, exts, func):
-        return self.__file_handler.add(desc=desc, exts=exts, func=func)
+        if callable(func):
+            open_file = func
+            new_file = None
+        else:
+            open_file = func.get('open_file', None)
+            new_file = func.get('new_file', None)
+        return self.__file_handler.add(
+            desc=desc, exts=exts, open_file=open_file, new_file=new_file)
 
     def open_file(self, filepath):
         return self.__file_handler.open_file(filepath)
@@ -982,15 +1138,6 @@ class MainWindow(QtWidgets.QMainWindow):
     def get_current_widget(self):
         return self.__tab_widget.currentWidget()
 
-    def exec_file(self, filename):
-        self.__console.exec_file(filename)
-
-    def start_func(self, *args, **kwargs):
-        """
-        在控制台执行代码
-        """
-        self.__console.start_func(*args, **kwargs)
-
     def get_output_widget(self):
         return self.__console.output_widget
 
@@ -999,21 +1146,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def get_gui_api(self):
         return self.__gui_api
-
-    def get_console(self):
-        return self.__console
-
-    def exec_tab_func(self, name):
-        widget = self.get_current_widget()
-        if hasattr(widget, name):
-            f = getattr(widget, name)
-            f()
-
-    def is_running(self):
-        return self.__console.is_running()
-
-    def get_tabs(self):
-        return self.__tab_widget
 
     def check_license(self):
         try:
@@ -1098,15 +1230,6 @@ class MainWindow(QtWidgets.QMainWindow):
             on_top=True, oper=oper
         )
 
-    def list_member_functions(self):
-        """
-        列出所有成员函数（排除私有方法）
-        """
-        import inspect
-        return [name for name, _ in inspect.getmembers(self.__class__)
-                if inspect.isfunction(getattr(self.__class__, name))
-                and not name.startswith('__')]
-
     def show_demo(self):
         from zmlx.ui.widget import DemoView
 
@@ -1115,7 +1238,8 @@ class MainWindow(QtWidgets.QMainWindow):
             w.gui_restore = f"""gui.show_demo()"""
 
         self.get_widget(the_type=DemoView, caption='示例', on_top=True,
-                        oper=oper, icon='demo')
+                        oper=oper, icon='demo',
+                        tooltip='内置在模型中的示例。单击条目可以打开，然后，请点击工具条的运行按钮来执行')
 
     def show_memory(self):
         from zmlx.ui.widget import MemView
@@ -1184,7 +1308,8 @@ class MainWindow(QtWidgets.QMainWindow):
             w.gui_restore = f"""gui.show_readme()"""
 
         self.get_widget(the_type=ReadMeBrowser, caption='ReadMe', on_top=True,
-                        icon='info', oper=oper)
+                        icon='info', oper=oper,
+                        tooltip='显示ReadMe信息，与IGG-Hydrate网站首页的ReadMe保持一致')
 
     def show_reg_tool(self):
         from zmlx.ui.widget import RegTool

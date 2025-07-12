@@ -2,8 +2,8 @@ import os
 import sys
 import warnings
 
-from zmlx.ui.pyqt import QtWidgets
 from zmlx.ui.alg import create_action
+from zmlx.ui.pyqt import QtWidgets
 
 try:
     import matplotlib
@@ -40,6 +40,7 @@ class MatplotWidget(QtWidgets.QWidget):
         self.__figure = plt.figure()
         self.__canvas = FigureCanvasQTAgg(self.__figure)
         self.__right_menu = None
+        self.context_actions = []  # 额外的右键菜单
         layout.addWidget(self.__canvas)
 
     def draw(self):
@@ -84,11 +85,27 @@ class MatplotWidget(QtWidgets.QWidget):
         if ok:
             plt_export_dpi.set_value(number)
 
-    def contextMenuEvent(self, event):  # 右键菜单
+    def get_context_menu(self):
         menu = QtWidgets.QMenu(self)
-        menu.addAction(create_action(self, '设置导出图的DPI', icon='set', slot=self.set_plt_export_dpi))
-        menu.addAction(create_action(self, '导出', icon='save', slot=self.savefig_by_dlg))
-        menu.exec(event.globalPos())
+        menu.addAction(
+            create_action(
+                self, '设置导出图的DPI', icon='set',
+                slot=self.set_plt_export_dpi))
+        menu.addAction(
+            create_action(
+                self, '导出图', icon='export',
+                slot=self.savefig_by_dlg))
+
+        # 尝试获得提前存储的额外的Action
+        if len(self.context_actions) > 0:
+            menu.addSeparator()
+            for action in self.context_actions:
+                menu.addAction(action)
+
+        return menu
+
+    def contextMenuEvent(self, event):  # 右键菜单
+        self.get_context_menu().exec(event.globalPos())
 
     def plot_on_figure(self, on_figure):
         """

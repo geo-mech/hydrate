@@ -4,6 +4,7 @@ from zml import app_data
 def create_action(parent, text, icon=None, slot=None):
     from zmlx.ui.settings import load_icon
     from zmlx.ui.pyqt import QAction
+    from zmlx.ui.gui_buffer import gui
     ac = QAction(text, parent)
     if icon is not None:
         ac.setIcon(load_icon(icon))
@@ -11,7 +12,10 @@ def create_action(parent, text, icon=None, slot=None):
         ac.setIcon(load_icon('python'))
     if slot is not None:
         assert callable(slot), 'slot must be callable'
-        ac.triggered.connect(lambda: slot())  # 确保不会传入参数
+        def func():
+            slot()
+            gui.refresh()
+        ac.triggered.connect(func)
     return ac
 
 
@@ -104,12 +108,6 @@ def get_current_screen_geometry(window):
     else:
         desktop = QtWidgets.QDesktopWidget()
         return desktop.availableGeometry(desktop.screenNumber(window))
-
-
-def show_seepage(filepath):
-    from zml import Seepage
-    model = Seepage(path=filepath)
-    print(model)
 
 
 def v_spacer():

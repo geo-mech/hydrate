@@ -4,9 +4,15 @@
 from zml import Vector, Seepage, Interp1, get_pointer64, np
 from zmlx.base.seepage import get_face_sum, get_face_diff, get_dt, as_numpy
 
-vs0 = Vector()
-vk = Vector()
-vg = Vector()
+try:
+    vs0 = Vector()
+    vk = Vector()
+    vg = Vector()
+except Exception as err:
+    print(err)
+    vs0 = None
+    vk = None
+    vg = None
 
 text_key = 'cap_settings'
 

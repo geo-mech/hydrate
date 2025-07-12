@@ -1,5 +1,6 @@
 import os
 from queue import Queue, Empty
+
 from zml import read_text
 from zmlx.alg.sys import unique
 from zmlx.ui.pyqt import QtCore, QtWidgets
@@ -195,9 +196,7 @@ class GuiApi(QtCore.QObject):
         def question(info):
             reply = QtWidgets.QMessageBox.question(
                 parent, '请选择',
-                info,
-                QtWidgets.QMessageBox.StandardButton.Yes |
-                QtWidgets.QMessageBox.StandardButton.No)
+                info)
             if reply != QtWidgets.QMessageBox.StandardButton.Yes:
                 return False
             else:
@@ -369,59 +368,57 @@ class FileHandler(QtCore.QObject):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.__funcs = {}
+        self.__handlers = {}  # key = desc, value = [exts, open, new_file]
         self.parent = parent
 
-    def add(self, desc, exts, func):
+    def add(self, desc, exts, open_file=None, new_file=None):
         """
         添加文件类型
         """
         if not isinstance(exts, (list, tuple)):
             assert isinstance(exts, str)
             exts = [exts]
-        assert callable(func)
 
         exts = [e.lower() for e in exts]
         for i in range(len(exts)):
-            assert len(exts[i]) > 0
+            assert len(exts[i]) > 0, f'The file extension should not be empty'
             if exts[i][0] != '.':
                 exts[i] = '.' + exts[i]
 
-        value = self.__funcs.get(desc, None)
+        value = self.__handlers.get(desc, None)
 
         if value is None:
-            self.__funcs[desc] = [exts, func]
+            self.__handlers[desc] = [exts, open_file, new_file]
         else:  # 对于同样的描述，只能适用于某一个函数
-            x, y = value
-            x = unique(x + exts)
-            y = func
-            self.__funcs[desc] = [x, y]
+            self.__handlers[desc] = [unique(value[0] + exts), open_file, new_file]
 
-    def get(self, *, desc=None, ext=None):
+    def get(self, desc):
         """
-        返回文件处理函数
+        根据文件类型描述找文件处理函数
         """
-        if desc is not None:  # 直接查找函数
-            value = self.__funcs.get(desc, None)
-            if value is not None:
-                return value[1]
+        value = self.__handlers.get(desc, None)
+        if value is None:
+            return [desc, None, None, None]
+        else:
+            return [desc, value[0], value[1], value[2]]
 
-        if ext is not None:  # 遍历搜索可用的
-            ext = ext.lower()
-            if len(ext) > 0:
-                if ext[0] != '.':
-                    ext = '.' + ext
-            results = []
-            for key, value in self.__funcs.items():
-                if ext in value[0]:
-                    results.append([key, value[1]])
-            return results
-
-        return None
+    def find(self, ext):
+        """
+        根据文件扩展名找处理函数
+        """
+        ext = ext.lower()
+        if len(ext) > 0:
+            if ext[0] != '.':
+                ext = '.' + ext
+        results = []
+        for desc, value in self.__handlers.items():
+            if ext in value[0]:
+                results.append([desc, value[0], value[1], value[2]])
+        return results
 
     def open_file(self, filepath):
         """
-        使用搜索函数并打开文件
+        打开文件
         """
         if not isinstance(filepath, str):
             return None
@@ -429,35 +426,37 @@ class FileHandler(QtCore.QObject):
         if not os.path.isfile(filepath):
             if os.path.isdir(filepath):
                 from zmlx.ui.gui_buffer import gui
-                gui.set_cwd(filepath)
+                gui.set_cwd(filepath)  # 浏览文件夹
             return None
 
         ext = os.path.splitext(filepath)[-1]
         if ext is None:
             return None
 
-        desc_funcs = self.get(ext=ext)  # 返回的是描述和函数
-        if len(desc_funcs) == 1:
-            func = desc_funcs[0][1]
-        elif len(desc_funcs) == 0:
-            func = None
+        funcs = self.find(ext)
+
+        if len(funcs) == 0:
+            open_file = None
+        elif len(funcs) == 1:
+            open_file = funcs[0][2]
         else:
-            items = [desc for desc, func in desc_funcs]
+            items = [x[0] for x in funcs]
             desc, ok = QtWidgets.QInputDialog.getItem(
                 self.parent, '此扩展名可能是多种文件类型', '请选择',
                 items, editable=False)
-            func = None
+            open_file = None
             if ok:
-                for a, b in desc_funcs:
-                    if desc == a:
-                        func = b
+                for x in funcs:
+                    if desc == x[0]:
+                        open_file = x[2]
                         break
 
-        if not callable(func):
+        if not callable(open_file):
             self.show_info(filepath)
             return None
+
         try:
-            return func(filepath)
+            return open_file(filepath)
         except Exception as err:
             print(f'Error: filepath = {filepath} \nmessage = {err}')
             return None
@@ -470,21 +469,22 @@ class FileHandler(QtCore.QObject):
 
     def open_file_by_dlg(self, folder=None):
         """
-        打开对话框，并有限基于选中的类型打开文件
+        打开对话框，并基于选中的类型打开文件
         """
-        if len(self.__funcs) == 0:
+        if len(self.__handlers) == 0:
             return
         filter_text = '所有文件(*.*)'
         data = {}
-        for desc, value in self.__funcs.items():
-            exts, func = value
-            desc += ' ('
-            for ext in exts:
-                desc += f'*{ext}; '
-            desc += ')'
-            data[desc] = func
-            filter_text += ';;'
-            filter_text += desc
+        for desc, value in self.__handlers.items():
+            exts, open_file, new_file = value
+            if callable(open_file):
+                desc += ' ('
+                for ext in exts:
+                    desc += f'*{ext}; '
+                desc += ')'
+                data[desc] = open_file
+                filter_text += ';;'
+                filter_text += desc
         if not isinstance(folder, str):
             folder = ''
 
@@ -492,8 +492,65 @@ class FileHandler(QtCore.QObject):
             self.parent, '请选择要打开的文件', folder, filter_text)
 
         if os.path.isfile(filepath):
-            func = data.get(desc, None)
-            if callable(func):
-                func(filepath)
-            else:
+            open_file = data.get(desc, None)
+            if callable(open_file):
+                open_file(filepath)
+            else:  # 使用扩展名来查找
                 self.open_file(filepath)
+
+    def new_file_by_dlg(self, folder=None):
+        """
+        打开对话框，创建文件，并打开文件
+        """
+        if len(self.__handlers) == 0:
+            print('没有设置任何的文件处理函数')
+            return
+        filter_text = None
+        data = {}
+        for desc, value in self.__handlers.items():
+            exts, open_file, new_file = value
+            if callable(new_file):
+                desc += ' ('
+                for i, ext in enumerate(exts):
+                    if i+1==len(exts):
+                        desc += f'*{ext}'
+                    else:
+                        desc += f'*{ext}; '
+                desc += ')'
+                data[desc] = [open_file, new_file]
+                if filter_text is None:
+                    filter_text = desc
+                else:
+                    filter_text += ';;'
+                    filter_text += desc
+
+        if len(data) == 0:
+            print('没有用于新建文件的处理函数')
+            return
+
+        if not isinstance(folder, str):
+            folder = ''
+
+        filepath, desc = QtWidgets.QFileDialog.getSaveFileName(
+            self.parent, '新建文件', folder, filter_text)
+
+        print(f'filepath = {filepath}')
+        print(f'desc = {desc}')
+
+        value = data.get(desc, None)
+        if value is None:
+            print(f'对于给定类型，没有找到文件处理函数: {desc}')
+            return
+
+        assert isinstance(value, list)
+        open_file = value[0]
+        new_file = value[1]
+
+        if callable(new_file):
+            try:
+                new_file(filepath)
+                if callable(open_file):
+                    open_file(filepath)
+            except Exception as err:
+                print(f'Error: filepath = {filepath} \nmessage = {err}')
+                return

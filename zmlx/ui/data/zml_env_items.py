@@ -55,6 +55,8 @@ def main():
             dict(label='打开脚本后显示提示', key='show_info_after_code_open',
                  items=['', 'Yes', 'No'],
                  note='默认 Yes，即显示提示；如果选择No，则打开代码后不提示'),
+            dict(label='导出Matplotlib绘图时的默认的DPI', key='plt_export_dpi',
+                 note='导出Matplotlib绘图时的默认的DPI. 也可以在Matplotlib的绘图页面右键设置'),
             ]
     fname = os.path.join(os.path.dirname(__file__), 'zml_env_items.json')
     write(fname, data, encoding='utf-8')
@@ -62,3 +64,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+

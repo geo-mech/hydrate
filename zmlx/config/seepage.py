@@ -180,7 +180,11 @@ def get_recommended_dt(
     return min(dt1, dt2)
 
 
-solid_buffer = Seepage.CellData()
+try:
+    solid_buffer = Seepage.CellData()
+except Exception as err:
+    print(err)
+    solid_buffer = None
 
 
 def iterate(
