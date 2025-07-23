@@ -12,7 +12,7 @@ warnings.warn(f'The modulus {__name__} is deprecated and '
 
 
 def test():
-    from zmlx.data.example_fn2 import pos, w, c
+    from zmlx.plt.data.example_fn2 import pos, w, c
     show_fn2(pos, w, c, w_max=3, clabel='Pressure [Pa]', gui_mode=True)
 
 

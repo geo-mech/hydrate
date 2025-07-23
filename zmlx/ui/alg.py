@@ -1,4 +1,6 @@
-from zml import app_data
+from zml import app_data, get_hash
+from zmlx.ui.gui_buffer import gui
+from zmlx.ui.pyqt import QtWidgets
 
 
 def create_action(parent, text, icon=None, slot=None):
@@ -184,3 +186,159 @@ def show_widget(widget, caption=None, use_gui=False, **kwargs):
         w = widget(**kwargs)
         w.show()
         sys.exit(app.exec())
+
+
+def modify_file_exts(exts):
+    """
+    对文件扩展名进行处理
+    """
+    exts = [e.lower() for e in exts]
+    for i in range(len(exts)):
+        assert len(exts[i]) > 0, f'The file extension should not be empty'
+        if exts[i][0] != '.':
+            exts[i] = '.' + exts[i]
+    return exts
+
+
+def reg_file_type(desc, exts, name, save, load, init, widget_type):
+    """
+    注册一种文件类型，设置其保存、新建、打开等过程的行为.
+    Args:
+        desc: 文件类型的描述
+        exts: 支持的扩展名列表
+        name: 文件的名字. 和desc不同，这里的name必须是一个变量，从而用户注册 open_xxx这样的函数
+        save: save(data, filename)，用于将数据存储到文件
+        load: load(filename) 读取文件的函数
+        init: init() 返回初始化之后的数据的函数
+        widget_type: 编辑器控件类型。此类需要有set_data和get_data函数.
+    Returns:
+        None
+    """
+    if isinstance(exts, str):
+        exts = [exts]
+
+    exts = modify_file_exts(exts)
+
+    if name is None:
+        name = get_hash(desc)  # 默认，此时函数的名称将是乱码
+
+    file_filter = desc
+    file_filter += ' ('
+    for ext in exts:
+        file_filter += f'*{ext}; '
+    file_filter += ')'
+
+    def open_file(filename):
+        import os
+        def oper(x):
+            if callable(load) and hasattr(x, 'set_data'):  # 只有此时，才能够导入数据
+                try:
+                    x.set_data(load(filename))
+                except Exception as err:
+                    print(err)
+
+            if not hasattr(x, 'gui_restore'):  # 新添加的一个函数
+                x.gui_restore = f"gui.open_{name}(r'{filename}')"
+
+            if not hasattr(x, 'save_file'): # 尝试添加保存文件的操作
+                if hasattr(x, 'get_data') and callable(save):
+                    def save_file():
+                        try:
+                            save(x.get_data(), filename)
+                            print(f'成功保存到:\n{filename}')
+                        except Exception as e:
+                            print(e)
+                    x.save_file = save_file
+
+            if not hasattr(x, 'export_data'):  # 尝试支持导出操作
+                if hasattr(x, 'get_data') and callable(save):
+                    def export_data():
+                        name2, _ = QtWidgets.QFileDialog.getSaveFileName(
+                            x, '导出文件', os.getcwd(), file_filter)
+                        if name2:
+                            try:
+                                save(x.get_data(), name2)
+                            except Exception as e:
+                                print(e)
+                    x.export_data = export_data
+
+            if not hasattr(x, 'import_data'):  # 尝试支持导入操作
+                if hasattr(x, 'set_data') and callable(load):
+                    def import_data():
+                        name2, _ = QtWidgets.QFileDialog.getOpenFileName(
+                            x, '选取文件', os.getcwd(), file_filter)
+                        if name2:
+                            try:
+                                x.set_data(load(name2))
+                            except Exception as e:
+                                print(e)
+                    x.import_data = import_data
+
+        gui.get_widget(widget_type, os.path.basename(filename), oper=oper)
+
+    if callable(init):
+        def new_file(filename):
+            from zml import make_parent
+            try:
+                save(init(), make_parent(filename))
+            except Exception as e:
+                print(e)
+    else:
+        new_file = None  # 此时，将不支持“新建”操作
+
+    gui.add_func(f'open_{name}', open_file)
+    gui.add_file_handler(
+        desc, exts,
+        {'open_file': open_file, 'new_file': new_file})
+
+
+def edit_in_tab(widget_type, set_data, get_data=None, caption=None):
+    """
+    在另外一个标签里面，使用给定的编辑器控件去编辑数据. 这个给定的控件，需要有get_data和set_data函数
+    """
+    def do_init(widget):
+        layout = QtWidgets.QVBoxLayout(widget)
+        widget.setLayout(layout)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        editor = widget_type(widget)
+        if callable(get_data) and hasattr(editor, 'set_data'):
+            try:
+                editor.set_data(get_data())
+            except Exception as err:
+                print(err)
+        layout.addWidget(editor)
+
+        button_layout = QtWidgets.QHBoxLayout()
+        layout.addLayout(button_layout)
+
+        def ok_clicked():
+            try:
+                if hasattr(editor, 'get_data') and callable(set_data):
+                    set_data(editor.get_data())
+            except Exception as e:
+                print(e)
+                QtWidgets.QMessageBox.information(
+                    widget, '设置数据错误', str(e))
+            gui.close_tab_object(widget)
+
+        def cancel_clicked():
+            gui.close_tab_object(widget)
+
+        button_layout.addItem(h_spacer())
+
+        button_ok = QtWidgets.QPushButton('确定')
+        button_ok.clicked.connect(ok_clicked)
+        button_layout.addWidget(button_ok)
+
+        button_cancel = QtWidgets.QPushButton('取消')
+        button_cancel.clicked.connect(cancel_clicked)
+        button_layout.addWidget(button_cancel)
+
+    if caption is None:
+        caption = f'Edit Data(id={id(set_data)})'
+    gui.get_widget(
+        QtWidgets.QWidget, caption=caption,
+        init=do_init, on_top=True)
+
+

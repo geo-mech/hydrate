@@ -1,7 +1,7 @@
 try:
     import numpy as np
-except Exception as e:
-    print(e)
+except ImportError as import_error:
+    print(import_error)
     np = None
 
 from zmlx.plt.cmap import get_cm

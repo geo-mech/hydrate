@@ -3,6 +3,7 @@ from queue import Queue, Empty
 
 from zml import read_text
 from zmlx.alg.sys import unique
+from zmlx.ui.alg import modify_file_exts
 from zmlx.ui.pyqt import QtCore, QtWidgets
 
 
@@ -140,6 +141,16 @@ class GuiApi(QtCore.QObject):
                 if self.flag_exit is not None:
                     if self.flag_exit.value:
                         raise KeyboardInterrupt()
+
+        is_direct = kwargs.pop('is_direct', False)
+        if is_direct:  # 直接进行调用
+            if len(args) > 0:
+                f = self.funcs.get(args[0])
+                assert f is not None, f'gui function <{args[0]}> not found'
+                return f(*args[1:], **kwargs)
+            else:
+                return None
+
         if len(args) > 0:
             for idx in range(self.channels.length()):
                 item = self.channels.get(idx)
@@ -379,11 +390,7 @@ class FileHandler(QtCore.QObject):
             assert isinstance(exts, str)
             exts = [exts]
 
-        exts = [e.lower() for e in exts]
-        for i in range(len(exts)):
-            assert len(exts[i]) > 0, f'The file extension should not be empty'
-            if exts[i][0] != '.':
-                exts[i] = '.' + exts[i]
+        exts = modify_file_exts(exts)
 
         value = self.__handlers.get(desc, None)
 

@@ -20,7 +20,7 @@ from zmlx.ui.alg import (
     get_last_exec_history)
 from zmlx.ui.gui_buffer import gui
 from zmlx.ui.pyqt import (
-    QWebEngineView, is_pyqt6, QtCore, QtGui, QtWidgets, qt_name)
+    QWebEngineView, is_pyqt6, QtCore, QtGui, QtWidgets, qt_name, QAction)
 from zmlx.ui.settings import (
     get_default_code, load_icon, get_text, play_error,
     load_priority, priority_value, get_setup_files, set_setup_files)
@@ -837,7 +837,10 @@ class TextBrowser(QtWidgets.QTextBrowser):
         menu = super().createStandardContextMenu()
         menu.addSeparator()
         for action in self.context_actions:
-            menu.addAction(action)
+            if isinstance(action, QAction):
+                menu.addAction(action)
+            else:
+                menu.addSeparator()
         return menu
 
     def set_status(self, text):
@@ -863,7 +866,7 @@ class ReadMeBrowser(TextBrowser):
     def __init__(self, parent=None):
         super(ReadMeBrowser, self).__init__(parent)
         self._load()
-        self.context_actions.append(create_action(self, "载入", slot=self._load))
+        self.context_actions.append(create_action(self, "重新导入并显示ReadMe", slot=self._load))
         self.context_actions.append(create_action(self, "关于", slot=gui.show_about))
         self.context_actions.append(create_action(self, "注册", slot=gui.show_reg_tool))
 
@@ -957,39 +960,47 @@ class TabDetailView(QtWidgets.QTableWidget):
 
 
 class CodeHistoryView(QtWidgets.QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, count_max=100):
         super().__init__(parent)
         self.__current_folder = None
+        self.count_max = count_max
 
         layout = QtWidgets.QHBoxLayout(self)
 
         # 左侧文件列表（保持与之前相同）
-        self.__list = QtWidgets.QListWidget()
-        self.__list.itemClicked.connect(self.__show_content)
-        layout.addWidget(self.__list, stretch=2)
+        self._list = QtWidgets.QListWidget()
+        self._list.itemClicked.connect(self.__show_content)
+        layout.addWidget(self._list, stretch=2)
 
         # 右侧代码编辑器
-        self.__edit = CodeEdit()
-        layout.addWidget(self.__edit, stretch=5)
+        self._edit = CodeEdit()
+        layout.addWidget(self._edit, stretch=5)
 
-        self.__list.clear()
-        self.__edit.clear()
+        self._list.clear()
+        self._edit.clear()
 
-    def set_folder(self, folder):
-        """设置目标文件夹，自动过滤.py文件"""
+    def set_folder(self, folder, count_max=None):
+        """
+        设置目标文件夹，自动过滤.py文件
+        """
+        if count_max is not None:
+            self.count_max = count_max
+
         self.__current_folder = os.path.abspath(folder)
         self.__refresh_list()
 
-        if self.__list.count() > 0:
-            self.__list.setCurrentRow(0)
-            self.__show_content(self.__list.currentItem())
+        if self._list.count() > 0:
+            self._list.setCurrentRow(0)
+            self.__show_content(self._list.currentItem())
 
     def console_exec(self):
-        self.__edit.console_exec()
+        self._edit.console_exec()
 
     def __refresh_list(self):
-        """刷新.py文件列表"""
-        self.__list.clear()
+        """
+        刷新.py文件列表
+        """
+        self._list.clear()
 
         if not self.__current_folder or not os.path.isdir(
                 self.__current_folder):
@@ -1001,6 +1012,8 @@ class CodeHistoryView(QtWidgets.QWidget):
         sorted_files = sorted(files, key=lambda x: x[1], reverse=True)
 
         for idx, (file_path, mtime) in enumerate(sorted_files, 1):
+            if idx > self.count_max:
+                break
             time_str = QtCore.QDateTime.toString(
                 mtime, "yyyy-MM-dd hh:mm")
             text = read_text(file_path, encoding='utf-8')
@@ -1008,12 +1021,14 @@ class CodeHistoryView(QtWidgets.QWidget):
             item = QtWidgets.QListWidgetItem(
                 f"\n{idx:02d}.\t{time_str}\n\n{text}\n--------------\n\n")
             item.setData(QtCore.Qt.ItemDataRole.UserRole, file_path)
-            self.__list.addItem(item)
+            self._list.addItem(item)
 
     def __show_content(self, item):
-        """使用CodeEdit打开文件"""
+        """
+        使用CodeEdit打开文件
+        """
         file_path = item.data(QtCore.Qt.ItemDataRole.UserRole)
-        self.__edit.open(file_path)  # 依赖CodeEdit自身的错误处理
+        self._edit.open(file_path)  # 依赖CodeEdit自身的错误处理
 
 
 class OutputHistoryView(QtWidgets.QWidget):
@@ -1595,11 +1610,16 @@ class RegTool(QtWidgets.QWidget):
 
 
 class Label(QtWidgets.QLabel):
+    sig_double_clicked = QtCore.pyqtSignal()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, text=None, status=None,
+                 double_clicked=None):
         super(Label, self).__init__(parent)
-        self._style_backup = None
-        self._status = None
+        self._status = status
+        if text is not None:
+            self.setText(text)
+        if callable(double_clicked):
+            self.sig_double_clicked.connect(lambda: double_clicked())
 
     def set_status(self, text):
         self._status = text
@@ -1607,15 +1627,22 @@ class Label(QtWidgets.QLabel):
     def enterEvent(self, event):
         if self._status is not None:
             gui.status(self._status, 3000)
-        if self._style_backup is None:
-            self._style_backup = self.styleSheet()
-        self.setStyleSheet('border: 1px solid red;')
+        style_backup = getattr(self, 'style_backup', None)
+        if style_backup is None:
+            setattr(self, 'style_backup', self.styleSheet())
+            self.setStyleSheet('border: 1px solid red;')
         super().enterEvent(event)
 
     def leaveEvent(self, event):
-        if self._style_backup is not None:
-            self.setStyleSheet(self._style_backup)
+        style_backup = getattr(self, 'style_backup', None)
+        if style_backup is not None:
+            self.setStyleSheet(style_backup)
+            setattr(self, 'style_backup', None)
         super().leaveEvent(event)
+
+    def mouseDoubleClickEvent(self, event):
+        self.sig_double_clicked.emit()
+        super().mouseDoubleClickEvent(event)  # 调用父类的事件处理
 
 
 class VersionLabel(Label):
@@ -1628,16 +1655,7 @@ class VersionLabel(Label):
             print(err)
             self.setText('Version: ERROR')
         self.set_status('程序内核版本，双击显示详细内容')
-
-    def mouseDoubleClickEvent(self, event):
-        """
-        在鼠标双击的时候，清除所有的内容
-        """
-        try:
-            gui.show_about()
-        except Exception as err:
-            print(err)
-        super().mouseDoubleClickEvent(event)  # 调用父类的事件处理
+        self.sig_double_clicked.connect(lambda: gui.show_about())
 
 
 class TabWidget(QtWidgets.QTabWidget):
@@ -1811,55 +1829,93 @@ class TabWidget(QtWidgets.QTabWidget):
         super().mousePressEvent(event)
 
 
-class ConsoleOutput(TextBrowser):
+class ConsoleOutput(QtWidgets.QWidget):
     sig_add_text = QtCore.pyqtSignal(str)
 
     def __init__(self, parent=None, console=None):
-        super(ConsoleOutput, self).__init__(parent)
+        super().__init__(parent)
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(layout)
+        self.text_browser = TextBrowser()
+        layout.addWidget(self.text_browser)
+        # 添加进度条（这也是作为标准输出）
+        self.progress_label = QtWidgets.QLabel(self)
+        self.progress_bar = QtWidgets.QProgressBar(self)
+        layout.addWidget(self.progress_label)
+        layout.addWidget(self.progress_bar)
+        self.progress(visible=False)
+        # 覆盖text_browser的右键菜单
+        get_context_menu = self.text_browser.get_context_menu
+        def f2():
+            menu = get_context_menu()
+            menu.addSeparator()
+            for ac in self.get_context_actions():
+                menu.addAction(ac)
+            return menu
+        self.text_browser.get_context_menu = f2  # 替换
+        # 其它初始化
         self.__length = 0
         self.__length_max = 100000
         self.sig_add_text.connect(self.__add_text)
         self.console = console
 
-    def get_context_menu(self):
-        menu = super().get_context_menu()
+    def progress(
+            self, label=None, val_range=None, value=None, visible=None):
+        """
+        显示进度
+        """
+        if label is not None:
+            visible = True
+            self.progress_label.setText(label)
+        if val_range is not None:
+            visible = True
+            assert len(val_range) == 2
+            self.progress_bar.setRange(*val_range)
+        if value is not None:
+            visible = True
+            self.progress_bar.setValue(value)
+        if visible is not None:
+            self.progress_bar.setVisible(visible)
+            self.progress_label.setVisible(visible)
+
+    def get_context_actions(self):
+        result = []
         if isinstance(self.console, Console):
-            menu.addSeparator()
-            menu.addAction(create_action(
+            result.append(create_action(
                 self, '隐藏', icon='console',
                 slot=lambda: self.console.setVisible(False))
             )
             if self.console.is_running():
                 if self.console.get_pause():
-                    menu.addAction(create_action(
+                    result.append(create_action(
                         self, '继续', icon='begin',
                         slot=lambda: self.console.set_pause(False))
                     )
                 else:
-                    menu.addAction(create_action(
+                    result.append(create_action(
                         self, '暂停', icon='pause',
                         slot=lambda: self.console.set_pause(True))
                     )
-                menu.addAction(create_action(
+                result.append(create_action(
                     self, '停止', icon='stop',
                     slot=lambda: self.console.stop())
                 )
             else:
-                menu.addAction(create_action(
+                result.append(create_action(
                     self, '重新执行', slot=self.console.start_last)
                 )
-                menu.addAction(create_action(
+                result.append(create_action(
                     self, '运行历史',
                     slot=lambda: gui.show_code_history(
                         folder=app_data.root('console_history'),
                         caption='运行历史'))
                 )
-                menu.addAction(create_action(
+                result.append(create_action(
                     self, '输出历史',
                     slot=gui.show_output_history)
                 )
-
-        return menu
+        return result
 
     def write(self, text):
         self.sig_add_text.emit(text)
@@ -1869,16 +1925,16 @@ class ConsoleOutput(TextBrowser):
 
     def __check_length(self):
         while self.__length > self.__length_max:
-            fulltext = self.toPlainText()
+            fulltext = self.text_browser.toPlainText()
             fulltext = fulltext[-int(len(fulltext) / 2): -1]
-            self.clear()
-            self.setPlainText(fulltext)
+            self.text_browser.clear()
+            self.text_browser.setPlainText(fulltext)
             self.__length = len(fulltext)
 
     def __add_text(self, text):
         self.__check_length()
-        self.moveCursor(QtGui.QTextCursor.MoveOperation.End)
-        self.insertPlainText(text)
+        self.text_browser.moveCursor(QtGui.QTextCursor.MoveOperation.End)
+        self.text_browser.insertPlainText(text)
         self.__length += len(text)
 
     def load_text(self, filename):
@@ -1886,18 +1942,18 @@ class ConsoleOutput(TextBrowser):
             if os.path.isfile(filename):
                 with open(filename, 'r') as file:
                     text = file.read()
-                    self.setPlainText(text)
+                    self.text_browser.setPlainText(text)
                     self.__length = len(text)
                     self.__check_length()
-                    self.moveCursor(QtGui.QTextCursor.MoveOperation.End)
+                    self.text_browser.moveCursor(QtGui.QTextCursor.MoveOperation.End)
         except Exception as err2:
             print(err2)
-            self.setPlainText('')
+            self.text_browser.setPlainText('')
 
     def save_text(self, filename):
         try:
             with open(filename, 'w') as file:
-                file.write(self.toPlainText())
+                file.write(self.text_browser.toPlainText())
         except Exception as err2:
             print(err2)
 
@@ -1940,7 +1996,12 @@ class Console(QtWidgets.QWidget):
         self.splitter.setOrientation(QtCore.Qt.Orientation.Vertical)
         main_layout.addWidget(self.splitter)
 
-        self.output_widget = ConsoleOutput(self.splitter, console=self)
+        self.widget_1 = QtWidgets.QWidget(self.splitter)  # 在这个控件上，放置多个控件
+        output_layout = QtWidgets.QVBoxLayout(self.widget_1)
+        output_layout.setContentsMargins(0, 0, 0, 0)
+        self.output_widget = ConsoleOutput(self.widget_1, console=self)
+        output_layout.addWidget(self.output_widget)
+
         self.input_editor = CodeEdit(self.splitter)
 
         self.splitter.setStretchFactor(0, 3)
@@ -1987,8 +2048,7 @@ class Console(QtWidgets.QWidget):
         self.kernel_err = None
         self.thread = None
         self.result = None
-        if app_data.get('gui') is None:
-            app_data.put('gui', gui)
+
         self.restore_code()
 
         self.break_point = BreakPoint(self)
@@ -2019,11 +2079,13 @@ class Console(QtWidgets.QWidget):
             True if not running else samefile(
                 app_data.get('__file__', ''),
                 self.input_editor.get_fname()))
-        self.output_widget.setStyleSheet(
+        if not running:  # 只要发现没有运行，就关闭进度条显示
+            self.output_widget.progress(visible=False)
+        self.output_widget.text_browser.setStyleSheet(
             'border: 1px dashed red' if running else '')
         # 上面设置格式，可能会让显示的内容变化，重新定位到最后
-        self.output_widget.moveCursor(QtGui.QTextCursor.MoveOperation.End)
-        self.output_widget.ensureCursorVisible()
+        self.output_widget.text_browser.moveCursor(QtGui.QTextCursor.MoveOperation.End)
+        self.output_widget.text_browser.ensureCursorVisible()
 
     def get_pause(self):
         return self.break_point.locked()
@@ -2159,9 +2221,7 @@ class Console(QtWidgets.QWidget):
         if self.thread is not None:
             reply = QtWidgets.QMessageBox.question(
                 self, '杀死进程',
-                "强制结束当前进程，可能会产生不可预期的影响，是否继续?",
-                QtWidgets.QMessageBox.StandardButton.Yes
-                | QtWidgets.QMessageBox.StandardButton.No)
+                "强制结束当前进程，可能会产生不可预期的影响，是否继续?")
             if reply == QtWidgets.QMessageBox.StandardButton.Yes:
                 if self.thread is not None:
                     thread = self.thread

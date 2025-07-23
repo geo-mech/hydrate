@@ -486,6 +486,14 @@ def get_setup_files(rank_max=2.0e10):
 
     all_files = []
 
+    try:
+        from zmlx.ui.exts import get_files
+        for path in get_files():
+            if os.path.isfile(path) and path not in all_files:
+                all_files.append(path)
+    except Exception as err:
+        print(err)
+
     # 用户额外存储的文件
     files_data = app_data.getenv(
         key='zml_gui_setup_files', encoding='utf-8', default=''

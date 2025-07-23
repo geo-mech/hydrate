@@ -9,6 +9,7 @@ class GuiBuffer:
         if self.__api is not None:
             return self.__api.command(*args, **kwargs)
         else:
+            print(f'gui.command while api is None. args={args}, kwargs={kwargs}')
             return None
 
     def set(self, api):
@@ -46,19 +47,40 @@ class GuiBuffer:
     breakpoint = break_point
 
     class Agent:
-        def __init__(self, api, name):
-            self.api = api
+        def __init__(self, obj, name, **opts):
+            self.obj = obj
             self.name = name
+            self.opts = opts  # 预定义的
 
         def __call__(self, *args, **kwargs):
-            if self.api is not None:
-                return self.api.command(self.name, *args, **kwargs)
-            else:
-                print(f'args={args}, kwargs={kwargs}')
-                return None
+            opts = self.opts.copy()
+            opts.update(kwargs)
+            return self.obj.command(self.name, *args, **opts)
 
     def __getattr__(self, name):
-        return GuiBuffer.Agent(self.get(), name)
+        """
+        返回一个函数代理
+        """
+        return GuiBuffer.Agent(self, name)
+
+    def set_agent(self, key, **kwargs):
+        """
+        添加函数关键词的代理(给定默认值)
+        """
+        if len(kwargs) == 0:  # 移除代理
+            if hasattr(self, key):
+                delattr(self, key)
+            return self
+        else:  # 添加代理
+            agent = GuiBuffer.Agent(self, key, **kwargs)
+            setattr(self, key, agent)
+            return self
+
+    def mark_direct(self, key):
+        """
+        将函数标记为直接调用
+        """
+        return self.set_agent(key, is_direct=True)
 
     def execute(
             self, func=None, keep_cwd=True, close_after_done=True,
@@ -83,12 +105,19 @@ class GuiBuffer:
             from zmlx.ui.main import execute
             return execute(fx, keep_cwd=keep_cwd,
                            close_after_done=close_after_done)
-        except Exception as err:
-            print(f'call gui failed: {err}')
+        except Exception as execute_err:
+            print(f'call gui failed: {execute_err}')
             return fx()
 
 
 gui = GuiBuffer()
+
+try:
+    from zml import app_data
+
+    app_data.put('gui', gui)
+except Exception as err:
+    print(err)
 
 
 def break_point():
@@ -112,7 +141,7 @@ def question(info):
         return y == 'y' or y == 'Y'
 
 
-def plot_no_gui(kernel, **kwargs):
+def plot_no_gui(kernel, fname=None, dpi=300):
     """
     在非GUI模式下绘图(或者显示并阻塞程序执行，或者输出文件但不显示)
     """
@@ -128,9 +157,7 @@ def plot_no_gui(kernel, **kwargs):
     try:
         fig = plt.figure()
         kernel(fig)
-        fname = kwargs.get('fname')
         if fname is not None:
-            dpi = kwargs.get('dpi', 300)
             fig.savefig(fname=fname, dpi=dpi)
             plt.close()
         else:
@@ -140,17 +167,36 @@ def plot_no_gui(kernel, **kwargs):
         warnings.warn(f'meet exception <{err}> when run <{kernel}>')
 
 
-def plot(*args, **kwargs):
+def plot(kernel, *args, gui_only=False, gui_mode=None,
+         fname=None, dpi=300,
+         **kwargs):
     """
-    调用matplotlib执行绘图操作
+    调用matplotlib执行绘图操作. 如果需要处于gui_mode下面绘图，但是当前不是gui模式，则打开gui界面绘图(此功能仅供测试使用)
+    Args:
+        kernel: 绘图的回调函数，函数的原型为：
+            def kernel(figure, *args, **kwargs):
+                ...
+        gui_only: 是否只在GUI模式下执行
+        fname: 输出的文件名
+        dpi: 输出的分辨率
+        *args: 传递给kernel函数的参数
+        **kwargs: 传递给kernel函数的关键字参数
+        gui_mode: 是否强制使用GUI模式
+    Returns:
+        None
     """
-    gui_only = kwargs.pop('gui_only', False)
+
+    def plot_with_gui():
+        return gui.plot(kernel, *args, fname=fname, dpi=dpi, **kwargs)
+
     if gui.exists():
-        break_point()
-        gui.plot(*args, **kwargs)
+        return plot_with_gui()
+    if gui_mode:  # 创建窗口来运行
+        return gui.execute(plot_with_gui, close_after_done=False)
+    if gui_only:
+        return None
     else:
-        if not gui_only:
-            plot_no_gui(*args, **kwargs)
+        return plot_no_gui(kernel, fname=fname, dpi=dpi)
 
 
 def gui_exec(*args, **kwargs):

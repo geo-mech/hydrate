@@ -1,6 +1,6 @@
 import zmlx.alg.sys as warnings
 
-from zmlx.plt.fig3 import scatter
+from zmlx.plt.fig3 import *
 
 warnings.warn(f'The modulus {__name__} is deprecated and '
               f'will be removed after 2026-4-16, import functions directly from <zmlx> instead',
@@ -8,15 +8,14 @@ warnings.warn(f'The modulus {__name__} is deprecated and '
 
 
 def test_1():
-    try:
-        import numpy as np
-    except ImportError:
-        np = None
+    from zmlx.ui import plot
+    from zmlx.plt.on_axes import add_subplot, scatter3
     x = np.random.rand(100)
     y = np.random.rand(100)
     z = np.random.rand(100)
     c = np.random.rand(100)
-    scatter(x=x, y=y, z=z, c=c, cb_label='value')
+    plot(add_subplot, scatter3, x, y, z, c,
+         gui_mode=True, clear=True, caption='MyTest', title='My Scatter Plot', xlabel='x/m', projection='3d')
 
 
 if __name__ == '__main__':

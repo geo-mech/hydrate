@@ -3,8 +3,7 @@ import os
 import sys
 
 import zmlx.alg.sys as warnings
-from zml import lic, core, app_data, read_text, get_dir, is_chinese, \
-    log as zml_log
+from zml import lic, core, app_data, read_text, get_dir, is_chinese
 from zmlx.alg.fsys import has_permission, samefile, time_string
 from zmlx.ui import settings
 from zmlx.ui.alg import open_url, get_last_exec_history
@@ -31,6 +30,11 @@ class Action(QAction):
             self.is_visible) else is_enabled
         self.setEnabled(is_enabled)
         self.setVisible(is_visible)
+        get_text = getattr(self, 'get_text', None)
+        if callable(get_text):
+            text = get_text()
+            if isinstance(text, str):
+                self.setText(text)
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -90,29 +94,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.sig_cwd_changed.connect(self.__console.restore_code)
 
         self.__console.sig_refresh.connect(self.refresh)
-
-        # 尝试关闭进度条，从而使得进度条总是临时显示一下.
-        self.__timer_close_progress = QtCore.QTimer(self)
-        self.__timer_close_progress.timeout.connect(
-            lambda: self.progress(visible=False))
-        self.__timer_close_progress.start(5000)
-
-        self.__progress_label = Label()
-        self.__progress_bar = QtWidgets.QProgressBar()
-        self.statusBar().addPermanentWidget(self.__progress_label)
-        self.statusBar().addPermanentWidget(self.__progress_bar)
         self.statusBar().addPermanentWidget(VersionLabel())
-        self.progress(visible=False)
-
-        # 用以显示警告
-        self.__warning_toolbar = self.addToolBar('WarningToolbar')
-        self.__warning_toolbar.setVisible(False)
-        self.__warning_toolbar.setStyleSheet('background-color: yellow;')
-        self.__warning_action = Action(self)
-        self.__warning_action.setToolTip('警告消息(点击以隐藏)')
-        self.__warning_action.triggered.connect(
-            lambda: self.toolbar_warning(text=''))
-        self.__warning_toolbar.addAction(self.__warning_action)
 
         # 用以播放声音
         if QtMultimedia is not None:
@@ -180,6 +162,18 @@ class MainWindow(QtWidgets.QMainWindow):
         self.__gui_api.add_func('show_maximized', lambda: self.showMaximized())
         self.__gui_api.add_func('resize', self.resize)
         self.__gui_api.add_func('device_pixel_ratio', self.devicePixelRatioF)
+
+        try:
+            from zmlx.ui.alg import reg_file_type, edit_in_tab
+            for key, func in [('reg_file_type', reg_file_type),
+                              ('edit_in_tab', edit_in_tab)]:
+                self.__gui_api.add_func(key, func)
+                gui.mark_direct(key)  # 直接调用的函数
+        except Exception as err:
+            print(err)
+
+        for key in ['window']:
+            gui.mark_direct(key)
 
     def __init_actions(self):
         """
@@ -648,7 +642,11 @@ class MainWindow(QtWidgets.QMainWindow):
             action.setToolTip(settings.get_text(tooltip))
 
         if text is not None:
-            action.setText(settings.get_text(text))
+            if isinstance(text, str):
+                action.setText(settings.get_text(text))
+            else:
+                assert callable(text)
+                setattr(action, 'get_text', text)
         else:
             action.setText(name)
 
@@ -767,15 +765,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self.__title = title
         self.refresh()
 
-    def toolbar_warning(self, text=None):
+    @staticmethod
+    def toolbar_warning(text=None):
         if isinstance(text, str):
             if len(text) > 0:
-                self.__warning_toolbar.setVisible(True)
-                self.__warning_action.setText(text)
-                zml_log(text)
-            else:
-                self.__warning_toolbar.setVisible(False)
-                self.__warning_action.setText('')
+                try:
+                    gui.add_message(text, color='red')  # 警告
+                except:
+                    print(text)
 
     def get_console(self):
         return self.__console
@@ -851,7 +848,7 @@ class MainWindow(QtWidgets.QMainWindow):
             set_parent=False, tooltip=None):
         """
         返回一个控件，其中type为类型，caption为标题，现有的控件，只有类型和标题都满足，才会返回，否则就
-        创建新的控件。
+        创建新控件。
         init：首次生成控件，在显示之前所做的操作
         oper：每次调用都会执行，且在控件显示之后执行
         """
@@ -898,18 +895,62 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.add_task(lambda: oper(widget))
             return widget
 
-    def get_figure_widget(self, clear=True, **kwargs):
+    def get_figure_widget(self, **kwargs):
         """
         返回一个用以 matplotlib 绘图的控件
         """
         from zmlx.ui.widget.plt import MatplotWidget
-        if kwargs.get('icon') is None:
-            kwargs['icon'] = 'matplotlib'
-        widget = self.get_widget(the_type=MatplotWidget, **kwargs)
-        assert isinstance(widget, MatplotWidget)
-        if clear:
-            widget.figure.clear()
-        return widget
+        kwargs.setdefault('icon', 'matplotlib')
+        return self.get_widget(the_type=MatplotWidget, **kwargs)
+
+    def plot(
+            self, kernel, *args, fname=None, dpi=None,
+            caption=None, on_top=None, icon=None,
+            clear=None,
+            **kwargs):
+        """
+        调用matplotlib执行绘图操作 注意，此函数会创建或者返回一个标签，并默认清除标签的绘图，返回使用回调函数
+        在figure上绘图。
+        Args:
+            kernel: 绘图的回调函数，函数的原型为：
+                def kernel(figure, *args, **kwargs):
+                    ...
+            fname: 输出的文件名
+            dpi: 输出的分辨率
+            *args: 传递给kernel函数的参数
+            **kwargs: 传递给kernel函数的关键字参数
+            caption: 窗口的标题
+            on_top: 是否置顶
+            icon: 窗口的图标
+            clear: 是否清除之前的内容 (特别注意，默认是要清除之前的内容的，因此，如果要多个视图的时候，就不要使用clear)
+
+        Returns:
+            None
+        """
+        if clear is None:  # 默认清除
+            clear = True
+        try:
+            widget = self.get_figure_widget(caption=caption, on_top=on_top, icon=icon)
+
+            def on_figure(figure):
+                if clear:  # 清除
+                    figure.clear()
+                if callable(kernel):
+                    try:
+                        kernel(figure, *args, **kwargs)  # 这里，并不会传入clear参数
+                    except Exception as kernel_err:
+                        print(kernel_err)
+
+            widget.plot_on_figure(on_figure=on_figure)
+            if fname is not None:
+                if dpi is None:
+                    dpi = 300
+                widget.savefig(fname=fname, dpi=dpi)
+
+            return widget.figure  # 返回Figure对象，后续进一步处理
+        except Exception as err:
+            warnings.warn(f'meet exception <{err}> when run <{kernel}>')
+            return None
 
     def show_fn2(self, filepath, **kwargs):
         warnings.warn('gui.show_fn2 will be removed after 2026-3-5, '
@@ -921,17 +962,6 @@ class MainWindow(QtWidgets.QMainWindow):
         widget = self.get_widget(the_type=Fn2Widget, **kwargs)
         assert widget is not None
         widget.open_fn2_file(filepath)
-
-    def plot(self, kernel=None, fname=None, dpi=300, **kwargs):
-        if kernel is not None:
-            try:
-                widget = self.get_figure_widget(**kwargs)
-                widget.plot_on_figure(on_figure=kernel)
-                if fname is not None:
-                    assert dpi is not None
-                    widget.savefig(fname=fname, dpi=dpi)
-            except Exception as err:
-                warnings.warn(f'meet exception <{err}> when run <{kernel}>')
 
     def view_cwd(self):
         from zmlx.ui.widget.base import CwdView
@@ -947,27 +977,14 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def progress(
             self, label=None, val_range=None, value=None, visible=None,
-            duration=5000):
+            duration=None):
         """
         显示进度
         """
-        if label is not None:
-            visible = True
-            self.__progress_label.setText(label)
-        if val_range is not None:
-            visible = True
-            assert len(val_range) == 2
-            self.__progress_bar.setRange(*val_range)
-        if value is not None:
-            visible = True
-            self.__progress_bar.setValue(value)
-        if visible is not None:
-            self.__progress_bar.setVisible(visible)
-            self.__progress_label.setVisible(visible)
-            if visible:
-                self.__timer_close_progress.setInterval(duration)
-            else:
-                self.__timer_close_progress.setInterval(5000000)  # 不再执行
+        if duration is not None:
+            warnings.warn('duration will not be used in future')
+        return self.__console.output_widget.progress(
+            label=label, val_range=val_range, value=value, visible=visible)
 
     def open_code(self, fname, caption=None):
         if not isinstance(fname, str):

@@ -15,6 +15,7 @@
 import ctypes
 import datetime
 import hashlib
+import importlib
 import math
 import os
 import re
@@ -25,6 +26,7 @@ import warnings
 from collections.abc import Iterable
 from ctypes import (cdll, c_void_p, c_char_p, c_int, c_int64, c_bool, c_double,
                     c_size_t, c_uint, CFUNCTYPE, POINTER)
+from pathlib import Path
 
 try:
     import numpy as np
@@ -33,9 +35,31 @@ except ImportError:
 
 warnings.simplefilter("default")  # Default warning display
 
-# Indicates whether the system is currently Windows (both Windows
-# and Linux systems are currently supported)
-is_windows = os.name == 'nt'
+
+def get_os_type():
+    """
+    返回操作系统类型字符串
+    """
+    platform = sys.platform
+
+    if platform.startswith('win'):
+        return 'windows'
+    elif platform.startswith('linux'):
+        return 'linux'
+    elif platform == 'darwin':
+        return 'macos'
+    else:
+        return 'unknown'
+
+
+# 是否是Windows系统
+is_windows = get_os_type() == 'windows'
+
+# 是否是Linux系统
+is_linux = get_os_type() == 'linux'
+
+# 是否是MacOS系统
+is_macos = get_os_type() == 'macos'
 
 
 def const_f64_ptr(arr):
@@ -368,6 +392,38 @@ def write_text(path, text, encoding=None):
             f.write(text)
 
 
+def get_user_data_dir(roaming=False):
+    """
+    获取用户数据目录(支持roaming)
+    """
+    # Windows 系统
+    if is_windows:
+        # 优先使用 LOCALAPPDATA（不可漫游）或 APPDATA（可漫游）
+        base_path = Path(
+            os.getenv("LOCALAPPDATA" if not roaming else "APPDATA", ""))
+
+        # 环境变量缺失时的后备方案
+        if not base_path or not base_path.exists():
+            base_path = Path.home() / "AppData" / (
+                "Local" if not roaming else "Roaming")
+
+    # macOS 系统
+    elif is_macos:
+        base_path = Path.home() / "Library" / "Application Support"
+
+    # Linux/Unix 系统
+    else:
+        # 遵循 XDG Base Directory 规范
+        base_path = Path(
+            os.getenv("XDG_DATA_HOME", "")
+        ) or (Path.home() / ".local" / "share")
+
+    # 创建并返回应用专属目录
+    app_dir = base_path / 'zml'
+    app_dir.mkdir(parents=True, exist_ok=True)
+    return str(app_dir)
+
+
 class _AppData(Object):
     """应用程序数据管理核心类，负责持久化存储和运行时数据管理。
 
@@ -380,32 +436,31 @@ class _AppData(Object):
     """
 
     def __init__(self):
-        """初始化应用程序数据管理系统。
-
-        自动完成：
-        1. 创建平台相关缓存目录（Windows: APPDATA，Linux: /var/tmp）
-        2. 加载自定义搜索路径配置
-        3. 初始化内存存储空间
         """
-        # cache directory
-        if is_windows:
-            self.folder = os.path.join(os.getenv("APPDATA"), 'zml')
-        else:
-            self.folder = os.path.join('/var/tmp/zml')
+        初始化应用程序数据管理系统。
+        """
+        self.__folder = get_user_data_dir(roaming=True)
 
-        make_dirs(self.folder)
+        # memory variable
+        self.__space = {}
+
         # Custom file search path
-        self.paths = []
+        self.__custom_paths = []
         try:
-            for line in self.getenv(key='path', default='').splitlines():
+            for line in self.getenv(key='path', default='').split(';'):
                 line = line.strip()
                 if os.path.isdir(line):
                     self.add_path(line)
-        except:
-            pass
+        except Exception as err:
+            warnings.warn(f'Error: {err}', stacklevel=2)
 
-        # memory variable
-        self.space = {}
+    @property
+    def folder(self):
+        return self.__folder
+
+    @property
+    def space(self):
+        return self.__space
 
     def add_path(self, path):
         """添加自定义文件搜索路径。
@@ -421,10 +476,10 @@ class _AppData(Object):
             - 仅接受有效目录路径
         """
         if os.path.isdir(path):
-            for existed in self.paths:
+            for existed in self.__custom_paths:
                 if os.path.samefile(path, existed):
                     return False
-            self.paths.append(path)
+            self.__custom_paths.append(path)
             return True
         else:
             return False
@@ -439,7 +494,7 @@ class _AppData(Object):
             bool: 当天已有该标签返回True，否则返回False
         """
         name = get_hash(datetime.datetime.now().strftime(f"%Y-%m-%d.{tag}"))
-        path = os.path.join(self.folder, 'tags', name)
+        path = self.root('tags', name)
         return os.path.exists(path)
 
     def add_tag_today(self, tag):
@@ -454,10 +509,8 @@ class _AppData(Object):
             - 文件内容为空，仅通过存在性标记
         """
         try:
-            folder = os.path.join(self.folder, 'tags')
-            make_dirs(folder)
             name = get_hash(datetime.datetime.now().strftime(f"%Y-%m-%d.{tag}"))
-            path = os.path.join(folder, name)
+            path = self.root('tags', name)
             with open(path, 'w') as f:
                 f.write('\n')
         except:
@@ -476,10 +529,8 @@ class _AppData(Object):
             - 自动创建所需目录结构
         """
         try:
-            folder = os.path.join(self.folder, 'logs')
-            make_dirs(folder)
-            path = os.path.join(folder, datetime.datetime.now().strftime(
-                "%Y-%m-%d.log"))
+            name = datetime.datetime.now().strftime("%Y-%m-%d.log")
+            path = self.root('logs', name)
             if encoding is None:
                 encoding = 'utf-8'
             with open(path, 'a', encoding=encoding) as f:
@@ -499,7 +550,7 @@ class _AppData(Object):
         Returns:
             Union[str, Any]: 成功读取返回字符串值，失败返回默认值
         """
-        path = os.path.join(self.folder, 'env', key)
+        path = self.root('env', key)
         if encoding is None:
             encoding = 'utf-8'
         res = read_text(path, encoding=encoding, default=default)
@@ -521,7 +572,7 @@ class _AppData(Object):
             - 变量存储在缓存目录的env子目录
             - 每个变量对应单独文件
         """
-        path = os.path.join(self.folder, 'env', key)
+        path = self.root('env', key)
         if encoding is None:
             encoding = 'utf-8'
         write_text(path, value, encoding=encoding)
@@ -554,7 +605,7 @@ class _AppData(Object):
             - 文件存储在缓存目录的temp子目录
             - 适合存储临时中间数据
         """
-        return make_parent(os.path.join(self.folder, 'temp', *args))
+        return self.root('temp', *args)
 
     @staticmethod
     def proj(*args):
@@ -587,7 +638,7 @@ class _AppData(Object):
             - 使用 shutil.rmtree 进行递归删除
             - 静默处理所有文件操作异常
         """
-        folder = os.path.join(self.folder, 'temp')
+        folder = self.temp()
         if os.path.isdir(folder):
             if len(args) == 0:
                 shutil.rmtree(folder)
@@ -618,13 +669,11 @@ class _AppData(Object):
             6. 自定义路径
             7. Python系统路径
         """
-        paths = [os.getcwd(), self.proj()] if first is None else [
-            first,
-            os.getcwd(),
-            self.proj()]
-        return paths + [self.folder,
-                        os.path.join(self.folder, 'temp')
-                        ] + self.paths + sys.path
+        paths = []
+        if first is not None:
+            paths.append(first)
+        paths.extend([os.getcwd(), self.proj(), self.root(), self.temp()])
+        return paths + self.__custom_paths + sys.path
 
     def find(self, *name, first=None):
         """查找指定文件的首个有效路径。
@@ -646,8 +695,8 @@ class _AppData(Object):
                     path = os.path.join(folder, *name)
                     if os.path.exists(path):
                         return path
-                except:
-                    pass
+                except Exception as err:
+                    warnings.warn(f'Meet Error: {err}')
         return None
 
     def find_all(self, *name, first=None):
@@ -765,13 +814,17 @@ def load_cdll(name, *, first=None):
             assert isinstance(path, str)
             return cdll.LoadLibrary(path)
         except Exception as e:
-            print(f'Error load library from <{path}>. Message = {e}')
+            warnings.warn(
+                f'Error load library from <{path}>. Message = {e}',
+                stacklevel=2)
             return None
     else:
         try:
             return cdll.LoadLibrary(name)
         except Exception as e:
-            print(f'Error load library from <{name}>. Message = {e}')
+            warnings.warn(
+                f'Error load library from <{name}>. Message = {e}',
+                stacklevel=2)
             return None
 
 
@@ -801,8 +854,8 @@ class _NullFunction:
             - 自动打印调用参数帮助调试
             - 保持与正常函数相同的调用接口
         """
-        print(
-            f'calling null function {self.name}(args={args}, kwargs={kwargs})')
+        info = f'calling null function {self.name}(args={args}, kwargs={kwargs})'
+        warnings.warn(info, stacklevel=2)
 
 
 def get_func(dll_obj, restype, name, *argtypes):
@@ -829,7 +882,8 @@ def get_func(dll_obj, restype, name, *argtypes):
     fn = getattr(dll_obj, name, None)
     if fn is None:
         if dll_obj is not None:
-            print(f'Warning: can not find function <{name}> in <{dll_obj}>')
+            info = f'Warning: can not find function <{name}> in <{dll_obj}>'
+            warnings.warn(info, stacklevel=2)
         return _NullFunction(name)
     if restype is not None:
         fn.restype = restype
@@ -1181,7 +1235,8 @@ class DllCore:
         """
         if self.has_dll():
             if self._dll_funcs.get(name) is not None:
-                print(f'Warning: function <{name}> already exists')
+                info = f'Warning: function <{name}> already exists'
+                warnings.warn(info, stacklevel=2)
             else:
                 func = get_func(self.dll, restype, name, *argtypes)
                 if func is not None:
@@ -1213,8 +1268,9 @@ core = DllCore(dll_obj=dll)
 # Version of the zml module (date represented by six digits)
 try:
     version = core.version
-except:
+except Exception as version_error:
     version = 110101
+    warnings.warn(f'Meet error when get version: {version_error}', stacklevel=2)
 
 
 class Timer:
@@ -2104,10 +2160,10 @@ def __feedback():
         None
     """
     try:
-        folder_logs = os.path.join(app_data.folder, 'logs')
+        folder_logs = app_data.root('logs')
         if not os.path.isdir(folder_logs):
             return
-        folder_logs_feedback = os.path.join(app_data.folder, 'logs_feedback')
+        folder_logs_feedback = app_data.root('logs_feedback')
         make_dirs(folder_logs_feedback)
         has_feedback = set(os.listdir(folder_logs_feedback))
         date = datetime.datetime.now().strftime("%Y-%m-%d.log")
@@ -23931,105 +23987,79 @@ def main(argv: list):
         return
 
 
-def __deprecated_func(pack_name, func, date=None):
-    return dict(pack_name=pack_name, func=func, date=date)
+class LazyImport:
+    def __init__(self, module, name, deprecated_date=None):
+        self.pack = module
+        self.name = name
+        self.date = deprecated_date
 
-
-_deprecated_funcs = dict(
-    information=__deprecated_func('zmlx.ui.gui_buffer',
-                                  'information',
-                                  '2025-1-21'),
-    question=__deprecated_func('zmlx.ui.gui_buffer',
-                               'question', '2025-1-21'),
-    plot=__deprecated_func('zmlx.ui.gui_buffer',
-                           'plot', '2025-1-21'),
-    gui=__deprecated_func('zmlx.ui.gui_buffer',
-                          'gui', '2025-1-21'),
-    break_point=__deprecated_func('zmlx.ui.gui_buffer',
-                                  'break_point',
-                                  '2025-1-21'),
-    breakpoint=__deprecated_func('zmlx.ui.gui_buffer',
-                                 'break_point',
-                                 '2025-1-21'),
-    gui_exec=__deprecated_func('zmlx.ui.gui_buffer',
-                               'gui_exec', '2025-1-21'),
-    time_string=__deprecated_func('zmlx.filesys.tag',
-                                  'time_string',
-                                  '2025-1-21'),
-    is_time_string=__deprecated_func('zmlx.filesys.tag',
-                                     'is_time_string',
-                                     '2025-1-21'),
-    has_tag=__deprecated_func('zmlx.filesys.tag',
-                              'has_tag', '2025-1-21'),
-    print_tag=__deprecated_func('zmlx.filesys.tag',
-                                'print_tag', '2025-1-21'),
-    first_only=__deprecated_func('zmlx.filesys.first_only',
-                                 'first_only',
-                                 '2025-1-21'),
-    add_keys=__deprecated_func('zmlx.utility.AttrKeys',
-                               'add_keys',
-                               '2025-1-21'),
-    AttrKeys=__deprecated_func('zmlx.utility.AttrKeys',
-                               'AttrKeys',
-                               '2025-1-21'),
-    install=__deprecated_func('zmlx.alg.install',
-                              'install', '2025-1-21'),
-    prepare_dir=__deprecated_func('zmlx.filesys.prepare_dir',
-                                  'prepare_dir',
-                                  '2025-1-21'),
-    time2str=__deprecated_func('zmlx.alg.time2str',
-                               'time2str', '2025-1-21'),
-    mass2str=__deprecated_func('zmlx.alg.mass2str',
-                               'mass2str', '2025-1-21'),
-    make_fpath=__deprecated_func('zmlx.filesys.make_fpath',
-                                 'make_fpath',
-                                 '2025-1-21'),
-    get_last_file=__deprecated_func('zmlx.filesys.get_last_file',
-                                    'get_last_file',
-                                    '2025-1-21'),
-    write_py=__deprecated_func('zmlx.io.python',
-                               'write_py', '2025-1-21'),
-    read_py=__deprecated_func('zmlx.io.python',
-                              'read_py', '2025-1-21'),
-    TherFlowConfig=__deprecated_func('zmlx.config.TherFlowConfig',
-                                     'TherFlowConfig',
-                                     '2025-1-21'),
-    SeepageTher=__deprecated_func('zmlx.config.TherFlowConfig',
-                                  'TherFlowConfig',
-                                  '2025-1-21'),
-    Field=__deprecated_func('zmlx.utility.Field',
-                            'Field', '2025-1-21'),
-)
-
-
-def get_deprecated(name, data, current_pack_name):
-    """
-    当访问不存在的属性时，尝试从其他模块中导入
-    """
-    import importlib
-    value = data.get(name)
-    if value is not None:
-        pack_name = value.get('pack_name')
-        func = value.get('func')
-        date = value.get('date')
+    def __get_origin(self):
         warnings.warn(
-            f'<{current_pack_name}.{name}> will be removed after {date}, '
-            f'please use <{pack_name}.{func}> instead.',
+            f'function in zml will be removed after {self.date}, '
+            f'please use <{self.pack}.{self.name}> instead.',
             DeprecationWarning,
-            stacklevel=2
+            stacklevel=3
         )
-        mod = importlib.import_module(pack_name)
-        return getattr(mod, func)
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+        mod = importlib.import_module(self.pack)
+        return getattr(mod, self.name, None)
+
+    def __call__(self, *args, **kwargs):
+        return self.__get_origin()(*args, **kwargs)
+
+    def __getattr__(self, *args, **kwargs):
+        return getattr(self.__get_origin(), *args, **kwargs)
 
 
-def __getattr__(name):
-    """
-    当访问不存在的属性时，尝试从其他模块中导入
-    """
-    return get_deprecated(
-        name, data=_deprecated_funcs, current_pack_name='zml')
-
+information = LazyImport(
+    'zmlx.ui.gui_buffer', 'information', '2025-1-21')
+question = LazyImport(
+    'zmlx.ui.gui_buffer', 'question', '2025-1-21')
+plot = LazyImport(
+    'zmlx.ui.gui_buffer', 'plot', '2025-1-21')
+gui = LazyImport(
+    'zmlx.ui.gui_buffer', 'gui', '2025-1-21')
+break_point = LazyImport(
+    'zmlx.ui.gui_buffer', 'break_point', '2025-1-21')
+breakpoint = LazyImport(
+    'zmlx.ui.gui_buffer', 'break_point', '2025-1-21')
+gui_exec = LazyImport(
+    'zmlx.ui.gui_buffer', 'gui_exec', '2025-1-21')
+time_string = LazyImport(
+    'zmlx.filesys.tag', 'time_string', '2025-1-21')
+is_time_string = LazyImport(
+    'zmlx.filesys.tag', 'is_time_string', '2025-1-21')
+has_tag = LazyImport(
+    'zmlx.filesys.tag', 'has_tag', '2025-1-21')
+print_tag = LazyImport(
+    'zmlx.filesys.tag', 'print_tag', '2025-1-21')
+first_only = LazyImport(
+    'zmlx.filesys.first_only', 'first_only', '2025-1-21')
+add_keys = LazyImport(
+    'zmlx.utility.AttrKeys', 'add_keys', '2025-1-21')
+AttrKeys = LazyImport(
+    'zmlx.utility.AttrKeys', 'AttrKeys', '2025-1-21')
+install = LazyImport(
+    'zmlx.alg.install', 'install', '2025-1-21')
+prepare_dir = LazyImport(
+    'zmlx.filesys.prepare_dir', 'prepare_dir', '2025-1-21')
+time2str = LazyImport(
+    'zmlx.alg.time2str', 'time2str', '2025-1-21')
+mass2str = LazyImport(
+    'zmlx.alg.mass2str', 'mass2str', '2025-1-21')
+make_fpath = LazyImport(
+    'zmlx.filesys.make_fpath', 'make_fpath', '2025-1-21')
+get_last_file = LazyImport(
+    'zmlx.filesys.get_last_file', 'get_last_file', '2025-1-21')
+write_py = LazyImport(
+    'zmlx.io.python', 'write_py', '2025-1-21')
+read_py = LazyImport(
+    'zmlx.io.python', 'read_py', '2025-1-21')
+TherFlowConfig = LazyImport(
+    'zmlx.config.TherFlowConfig', 'TherFlowConfig', '2025-1-21')
+SeepageTher = LazyImport(
+    'zmlx.config.TherFlowConfig', 'TherFlowConfig', '2025-1-21')
+Field = LazyImport(
+    'zmlx.utility.Field', 'Field', '2025-1-21')
 
 if __name__ == "__main__":
     main(sys.argv)
