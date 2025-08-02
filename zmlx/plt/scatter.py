@@ -9,13 +9,15 @@ warnings.warn(f'The modulus {__name__} is deprecated and '
 
 def test_1():
     from zmlx.ui import plot
-    from zmlx.plt.on_axes import add_subplot, scatter3
+    from zmlx.plt.on_figure import add_axes3
+    from zmlx.plt.on_axes import scatter3
     x = np.random.rand(100)
     y = np.random.rand(100)
     z = np.random.rand(100)
     c = np.random.rand(100)
-    plot(add_subplot, scatter3, x, y, z, c,
-         gui_mode=True, clear=True, caption='MyTest', title='My Scatter Plot', xlabel='x/m', projection='3d')
+    plot(add_axes3, scatter3, x, y, z, c=c,
+         gui_mode=True, clear=True, caption='MyTest', title='My Scatter Plot', xlabel='x/m',
+         cbar=dict(label='xxx'))
 
 
 if __name__ == '__main__':

@@ -4,13 +4,17 @@
       C++代码的Python接口（必须与 zml.dll一起使用）。
 
 环境: Windows 10/11；Python 3.7或更高版本；64位系统；
+     注：
+     另有Linux版本，如有必要可联系作者获取。
 
-依赖: numpy
+依赖: 部分功能依赖 numpy/scipy/matplotlib等.
 
-网站: https://gitee.com/geomech/hydrate
+网站: https://gitee.com/geomech/hydrate;
+    注:
+    在使用过程中遇到问题，优先在此页面"新建Issue"来反馈.
 
 作者: 张召彬 <zhangzhaobin@mail.iggcas.ac.cn>，
-     中国科学院地质与地球物理研究所
+     中国科学院地质与地球物理研究所.
 """
 import ctypes
 import datetime
@@ -36,30 +40,52 @@ except ImportError:
 warnings.simplefilter("default")  # Default warning display
 
 
+def in_windows():
+    """
+    判断当前是否处于Windows系统的运行环境
+    Returns:
+        bool: True表示是Windows系统，False表示不是
+    """
+    return sys.platform.startswith('win')
+
+def in_linux():
+    """
+    判断当前是否处于Linux系统的运行环境
+    Returns:
+        bool: True表示是Linux系统，False表示不是
+    """
+    return sys.platform.startswith('linux')
+
+def in_macos():
+    """
+    判断当前是否处于Mac系统
+    Returns:
+        bool: True表示是Mac系统，False表示不是
+    """
+    return sys.platform == 'darwin'
+
+
 def get_os_type():
     """
-    返回操作系统类型字符串
+    返回操作系统类型字符串 (注意，zml模块仅支持 Windows和Linux两个系统，在Mac系统未测试)
     """
-    platform = sys.platform
-
-    if platform.startswith('win'):
+    if in_windows():
         return 'windows'
-    elif platform.startswith('linux'):
+    elif in_linux():
         return 'linux'
-    elif platform == 'darwin':
+    elif in_macos():
         return 'macos'
     else:
         return 'unknown'
 
+# 是否是Windows系统 (注: 此常量后续弃用，请使用函数 in_windows)
+is_windows = in_windows()
 
-# 是否是Windows系统
-is_windows = get_os_type() == 'windows'
+# 是否是Linux系统 (注: 此常量后续弃用，请使用函数 in_linux)
+is_linux = in_linux()
 
-# 是否是Linux系统
-is_linux = get_os_type() == 'linux'
-
-# 是否是MacOS系统
-is_macos = get_os_type() == 'macos'
+# 是否是MacOS系统 (注: 此常量后续弃用，请使用函数 in_macos)
+is_macos = in_macos()
 
 
 def const_f64_ptr(arr):
@@ -397,26 +423,28 @@ def get_user_data_dir(roaming=False):
     获取用户数据目录(支持roaming)
     """
     # Windows 系统
-    if is_windows:
+    if in_windows():
         # 优先使用 LOCALAPPDATA（不可漫游）或 APPDATA（可漫游）
-        base_path = Path(
-            os.getenv("LOCALAPPDATA" if not roaming else "APPDATA", ""))
-
-        # 环境变量缺失时的后备方案
-        if not base_path or not base_path.exists():
+        base_path_str = os.getenv(
+            "LOCALAPPDATA" if not roaming else "APPDATA", "")
+        if len(base_path_str) > 0 and os.path.exists(base_path_str):
+            base_path = Path(base_path_str)
+        else:  # 环境变量缺失时的后备方案
             base_path = Path.home() / "AppData" / (
                 "Local" if not roaming else "Roaming")
 
     # macOS 系统
-    elif is_macos:
+    elif in_macos():
         base_path = Path.home() / "Library" / "Application Support"
 
     # Linux/Unix 系统
     else:
         # 遵循 XDG Base Directory 规范
-        base_path = Path(
-            os.getenv("XDG_DATA_HOME", "")
-        ) or (Path.home() / ".local" / "share")
+        xdg_data_home = os.getenv("XDG_DATA_HOME", "")
+        if len(xdg_data_home) > 0:
+            base_path = Path(xdg_data_home)
+        else:
+            base_path = Path.home() / ".local" / "share"
 
     # 创建并返回应用专属目录
     app_dir = base_path / 'zml'
@@ -1260,7 +1288,7 @@ class DllCore:
 
 
 # 动态库对象
-dll = load_cdll('zml.dll' if is_windows else 'zml.so.1', first=get_dir())
+dll = load_cdll('zml.dll' if in_windows() else 'zml_impl.so', first=get_dir())
 
 # 对动态库对象的进一步的封装
 core = DllCore(dll_obj=dll)
@@ -2219,6 +2247,58 @@ def is_chinese(string):
         bool: 如果字符串包含中文字符，则返回 True；否则返回 False。
     """
     return bool(re.search('[\u4e00-\u9fff]', string))
+
+
+class ThreadPool(HasHandle):
+    """
+    封装 zml::thread_pool_ty
+    """
+    core.use(c_void_p, 'new_thread_pool', c_int)
+    core.use(None, 'del_thread_pool', c_void_p)
+
+    def __init__(self, num_threads=0, handle=None):
+        """
+        创建线程池.
+        Args:
+            num_threads (int, optional): 线程数量. 默认为0. 如果给定0，则由系统自动确定线程数量。
+            handle: 已有的句柄。如果提供，则忽略其他参数。
+        """
+        super().__init__(
+            handle,
+            lambda: core.new_thread_pool(num_threads),
+            core.del_thread_pool)
+
+    core.use(None, 'thread_pool_join', c_void_p)
+
+    def join(self):
+        """
+        等待所有任务执行完毕，并且，终止线程池
+        """
+        return core.thread_pool_join(self.handle)
+
+    core.use(None, 'thread_pool_wait', c_void_p)
+
+    def wait(self):
+        """
+        等待所有任务执行完毕，并且，终止线程池
+        """
+        return core.thread_pool_wait(self.handle)
+
+    core.use(None, 'thread_pool_stop', c_void_p)
+
+    def stop(self):
+        """
+        停止线程池
+        """
+        return core.thread_pool_stop(self.handle)
+
+    core.use(None, 'thread_pool_sync', c_void_p)
+
+    def sync(self):
+        """
+        同步等待当前存在的任务 (不停止线程池，因此，线程池在后续还可以再使用)
+        """
+        return core.thread_pool_sync(self.handle)
 
 
 class FileMap(HasHandle):
@@ -16169,36 +16249,56 @@ class Seepage(HasHandle, HasCells):
         core.use(None, 'seepage_updater_iterate',
                  c_void_p, c_void_p, c_void_p,
                  c_double,
-                 c_size_t, c_size_t, c_size_t, c_size_t, c_void_p)
+                 c_size_t, c_size_t, c_size_t, c_size_t, c_void_p,
+                 c_void_p  # ThreadPool since 2025-7-25
+                 )
 
         def iterate(self, model, dt, fa_s=None, fa_q=None,
                     fa_k=None, ca_p=None,
-                    solver=None):
+                    solver=None, pool=None, report=None):
             """
             在时间上向前迭代。
 
             Args:
                 model: 渗流模型对象。
-                dt (float): 时间步长。
+                dt (float): 时间步长 [单位：秒]
                 fa_s (int, optional): Face自定义属性的ID，
                     代表Face的横截面积（用于计算Face内流体的受力），默认为None。
                 fa_q (int, optional): Face自定义属性的ID，
                     代表Face内流体在通量(也将在iterate中更新)，默认为None。
-                fa_k (int, optional): Face内流体的惯性系数的属性ID，
+                fa_k (int, optional): Face内流体的"惯性系数"的属性ID，
                     默认为None。
                 ca_p (int, optional): Cell的自定义属性，
                     表示Cell内流体的压力(迭代时的压力，并非按照流体体积进行计算的)，
                     默认为None。
                 solver (ConjugateGradientSolver, optional): 求解器实例，
                     默认为None。
+                pool (ThreadPool, optional): 线程池实例，
+                    默认为None。
+                report (Map, optional): 报告对象，默认为None。
+
+            Notes:
+                关于惯性：
+                    对于Face中的流体，定义其动量为
+                        momentum = m*v = k*q
+                    其中q为通过该Face的流体的速率，k是一个自定义的系数. 这个系数越大，则流体的惯性越强.
+                    另外，作用在Face上的流体的作用力为：
+                        f = dp*s
+                    其中s为横截面积. 根据动量定理，动量的变化量为
+                        m*d(v)=k*d(q)=f*d(t)
+                    以上就是在程序中考虑惯性的基本的逻辑。因此，要计算流体的惯性效应，关键是要正确设置Face的
+                    面积s和系数k这两个属性。另外，在迭代的过程中，随着face内流体的密度的变化，也应该去更新
+                    这两个属性的值.
 
             Returns:
                 dict: 包含迭代报告的字典。
             """
             lic.check_once()
+
             if solver is None:
                 self.solver = ConjugateGradientSolver(tolerance=1.0e-25)
                 solver = self.solver
+
             if fa_s is None:
                 fa_s = 1000000000
             if fa_q is None:
@@ -16207,19 +16307,41 @@ class Seepage(HasHandle, HasCells):
                 fa_k = 1000000000
             if ca_p is None:
                 ca_p = 1000000000
-            report = Map()
-            core.seepage_updater_iterate(self.handle, model.handle,
-                                         report.handle, dt,
-                                         fa_s, fa_q, fa_k, ca_p, solver.handle)
-            return report.to_dict()
+
+            if isinstance(pool, ThreadPool):  # 将任务放入线程池，然后立即返回
+                if isinstance(report, Map):
+                    h_report = report.handle
+                else:  # 由于需要在另外的线程中执行，因此，这里再创建临时缓冲区将是不安全的
+                    h_report = 0
+                core.seepage_updater_iterate(
+                    self.handle, model.handle, h_report,
+                    dt,
+                    fa_s, fa_q, fa_k, ca_p,
+                    solver.handle, pool.handle
+                )
+                return None
+
+            else:  # 此时，直接运行
+                if not isinstance(report, Map):
+                    report = Map()
+                core.seepage_updater_iterate(
+                    self.handle, model.handle, report.handle,
+                    dt,
+                    fa_s, fa_q, fa_k, ca_p,
+                    solver.handle, 0
+                )
+                return report.to_dict()
 
         core.use(None, 'seepage_updater_iterate_thermal',
                  c_void_p, c_void_p,
                  c_void_p,
                  c_size_t, c_size_t, c_size_t,
-                 c_double, c_void_p)
+                 c_double, c_void_p,
+                 c_void_p  # ThreadPool since 2025-7-25
+                 )
 
-        def iterate_thermal(self, model, dt, ca_t, ca_mc, fa_g, solver=None):
+        def iterate_thermal(self, model, dt, ca_t, ca_mc, fa_g, solver=None,
+                            pool=None, report=None):
             """
             对于此渗流模型，当定义了热传导相关的参数之后，可以作为一个热传导模型来使用。
             具体和Thermal模型类似。
@@ -16233,6 +16355,9 @@ class Seepage(HasHandle, HasCells):
                     单位时间内通过Face的热量dH = g * dT。
                 solver (ConjugateGradientSolver, optional): 求解器实例，
                     默认为None。
+                pool (ThreadPool, optional): 线程池实例，
+                    默认为None。
+                report (Map, optional): 报告对象，默认为None。
 
             Returns:
                 dict: 包含迭代报告的字典。
@@ -16240,13 +16365,31 @@ class Seepage(HasHandle, HasCells):
             if solver is None:
                 self.solver = ConjugateGradientSolver(tolerance=1.0e-25)
                 solver = self.solver
+
             lic.check_once()
-            report = Map()
-            core.seepage_updater_iterate_thermal(self.handle, model.handle,
-                                                 report.handle,
-                                                 ca_t, ca_mc, fa_g,
-                                                 dt, solver.handle)
-            return report.to_dict()
+            if isinstance(pool, ThreadPool):  # 将任务放入线程池，然后立即返回
+                if isinstance(report, Map):
+                    h_report = report.handle
+                else:  # 由于需要在另外的线程中执行，因此，这里再创建临时缓冲区将是不安全的
+                    h_report = 0
+                core.seepage_updater_iterate_thermal(
+                    self.handle, model.handle,
+                    h_report,
+                    ca_t, ca_mc, fa_g,
+                    dt, solver.handle, pool.handle
+                )
+                return None
+
+            else:  # 此时，直接运行
+                if not isinstance(report, Map):
+                    report = Map()
+                core.seepage_updater_iterate_thermal(
+                    self.handle, model.handle,
+                    report.handle,
+                    ca_t, ca_mc, fa_g,
+                    dt, solver.handle, 0
+                )
+                return report.to_dict()
 
         core.use(c_double, 'seepage_updater_get_face_relative_dv_max',
                  c_void_p)
@@ -18460,37 +18603,67 @@ class Seepage(HasHandle, HasCells):
         assert isinstance(buffer, Seepage.CellData)
         core.seepage_push_fluids(self.handle, buffer.handle)
 
-    def iterate(self, *args, **kwargs):
+    def iterate(self, dt, fa_s=None, fa_q=None,
+                fa_k=None, ca_p=None,
+                solver=None, pool=None, report=None):
         """
         迭代更新模型状态. 在这里，对于各个Face内流体的流动阻力，将会使用Face的cond属性，
         结合各流体的饱和度，来计算得到各个流体的流动阻力。所以，在调用此函数之前，如果
         修改了Face的cond，将会在这里直接影响到流动的过程。
 
         Args:
-            *args: 可变参数
-            **kwargs: 关键字参数
+            dt (float): 时间步长。
+            fa_s (int, optional): Face自定义属性的ID，
+                代表Face的横截面积（用于计算Face内流体的受力），默认为None。
+            fa_q (int, optional): Face自定义属性的ID，
+                代表Face内流体在通量(也将在iterate中更新)，默认为None。
+            fa_k (int, optional): Face内流体的惯性系数的属性ID，
+                默认为None。
+            ca_p (int, optional): Cell的自定义属性，
+                表示Cell内流体的压力(迭代时的压力，并非按照流体体积进行计算的)，
+                默认为None。
+            solver (ConjugateGradientSolver, optional): 求解器实例，
+                默认为None。
+            pool (ThreadPool, optional): 线程池实例，
+                默认为None。
+            report (Map, optional): 报告对象，默认为None。
 
         Returns:
             迭代结果
         """
         if self.__updater is None:
             self.__updater = Seepage.Updater()
-        return self.__updater.iterate(self, *args, **kwargs)
+        return self.__updater.iterate(
+            self, dt=dt, fa_s=fa_s, fa_q=fa_q,
+            fa_k=fa_k, ca_p=ca_p,
+            solver=solver, pool=pool, report=report)
 
-    def iterate_thermal(self, *args, **kwargs):
+    def iterate_thermal(self, dt, ca_t, ca_mc, fa_g, solver=None,
+                        pool=None, report=None):
         """
         迭代更新模型的热状态
 
         Args:
-            *args: 可变参数
-            **kwargs: 关键字参数
+            dt (float): 时间步长。
+            ca_t (int): Cell的温度属性的ID。
+            ca_mc (int): Cell范围内质量和比热的乘积。
+            fa_g (int): Face导热的通量g；
+                单位时间内通过Face的热量dH = g * dT。
+            solver (ConjugateGradientSolver, optional): 求解器实例，
+                默认为None。
+            pool (ThreadPool, optional): 线程池实例，
+                默认为None。
+            report (Map, optional): 报告对象，默认为None。
 
         Returns:
             热状态迭代结果
         """
         if self.__updater is None:
             self.__updater = Seepage.Updater()
-        return self.__updater.iterate_thermal(self, *args, **kwargs)
+        return self.__updater.iterate_thermal(
+            self, dt=dt, ca_t=ca_t, ca_mc=ca_mc, fa_g=fa_g,
+            solver=solver,
+            pool=pool, report=report)
 
     def get_recommended_dt(self, *args, **kwargs):
         """

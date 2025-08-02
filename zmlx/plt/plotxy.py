@@ -16,16 +16,3 @@ def test_1():
     y = np.sin(x)
     plotxy(x, y, title='sin(x)', xlabel='x', ylabel='y',
             caption='sin(x)', gui_mode=True)
-
-
-def test_2():
-    from zmlx.plt.on_axes import add_axes2, curve2
-    from zmlx import plot
-    import numpy as np
-    x = np.linspace(0, 10, 100)
-    y = np.sin(x)
-    plot(add_axes2, curve2, x, y, xlabel='x', ylabel='y', caption='sin(x)', gui_mode=True)
-
-
-if __name__ == '__main__':
-    test_2()

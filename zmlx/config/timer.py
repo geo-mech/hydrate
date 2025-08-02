@@ -3,7 +3,7 @@
 """
 
 from zml import Seepage
-from zmlx.config.slots import standard_slots
+from zmlx.config.slots import get_slot
 
 text_key = 'timers'
 
@@ -15,7 +15,7 @@ def get_settings(model: Seepage):
     text = model.get_text(text_key)
     if len(text) > 2:
         data = eval(text)
-        assert isinstance(data, list)
+        assert isinstance(data, list), 'timers must be a list'
         return data
     else:
         return []
@@ -26,26 +26,44 @@ def add_setting(model: Seepage, time, name, args=None, kwds=None):
     添加设置
     """
     setting = get_settings(model)
-    setting.append({'time': time,
-                    'name': name,
-                    'args': args,
-                    'kwds': kwds,
-                    })
-    # 排序，确保顺序正确，从而，方便后续的执行
+    x = dict(time=time, name=name)
+    if args is not None:
+        x['args'] = args
+    if kwds is not None:
+        x['kwds'] = kwds
+    setting.append(x)
     setting = sorted(setting, key=lambda item: item['time'])
     model.set_text(text_key, setting)
+
+
+def get(x: dict, key, default=None):
+    """
+    返回字典的值（忽略None）
+    """
+    value = x.get(key, default)
+    if value is None:
+        return default
+    else:
+        return value
+
+
+def replace(data, table):
+    """
+    替换参数列表或者关键词列表的值
+    """
+    if isinstance(data, str):  # 此时，尝试替换字符串
+        return table.get(data, data)
+    elif isinstance(data, (list, tuple)):
+        return [replace(item, table) for item in data]
+    elif isinstance(data, dict):
+        return {key: replace(value, table) for key, value in data.items()}
+    else:
+        return data
 
 
 def iterate(model: Seepage, t0, t1, slots):
     if t0 >= t1:
         return
-
-    if slots is not None:
-        temp = standard_slots.copy()
-        temp.update(slots)
-        slots = temp
-    else:
-        slots = standard_slots
 
     settings = get_settings(model)
     if len(settings) == 0:
@@ -61,22 +79,21 @@ def iterate(model: Seepage, t0, t1, slots):
         assert isinstance(setting, dict)
         time = setting.get('time')
         if t0 <= time < t1:
-            name = setting.get('name')
-            func = slots.get(name)
+            table = {'@time': time, '@model': model}  # 需要替换的数据表格
+            func = get_slot(setting.get('name'), slots)
             if func is not None:
-                args = setting.get('args')
-                if args is None:
-                    args = []
-                kwds = setting.get('kwds')
-                if kwds is None:
-                    kwds = {}
-                # 替换@model
-                args = [model if equal(item, '@model') else item for item in
-                        args]
-                kwds = {key: model if equal(value, '@model') else value for
-                        key, value in kwds.items()}
-                # 替换@time
-                args = [time if equal(item, '@time') else item for item in args]
-                kwds = {key: time if equal(value, '@time') else value for
-                        key, value in kwds.items()}
+                args = get(setting, 'args', [])
+                kwds = get(setting, 'kwds', {})
+                args = replace(args, table)
+                kwds = replace(kwds, table)
                 func(*args, **kwds)
+
+
+def test_1():
+    table = {'xx': 1, 'yy': 2, 'zz': 3}
+    print(replace(['yy', 'zz', 4, 5, 'xx'], table))
+    print(replace({'xx': 1, 'name': 'yy', 'age': 'xx'}, table))
+
+
+if __name__ == '__main__':
+    test_1()

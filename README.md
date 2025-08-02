@@ -44,6 +44,7 @@
 3. 安装[Python](https://www.python.org/) (64位, 3.8+, 推荐3.10及更新的版本)，推荐使用[WinPython](https://gitee.com/geomech/hydrate/attach_files) (绿色免安装); 
 4. 推荐提前安装好`PyQt6(不再支持PyQt5), PyQt6-WebEngine, pyqt6-qscintilla, numpy, scipy, matplotlib, pyqtgraph, PyOpenGL, pypiwin32, pywin32, dulwich`等第三方的Python包. 
 
+注：如有在Linux上运行的需求，请联系作者. 
 
 ### 安装
 

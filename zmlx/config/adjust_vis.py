@@ -54,7 +54,7 @@ def add_setting(model: Seepage, name=None, key=None):
         model.set_text(text_key, text=f'{settings}')
 
 
-data_backups = []
+data_backups_dict = {}
 
 
 def adjust(model: Seepage):
@@ -69,7 +69,7 @@ def adjust(model: Seepage):
 
     该函数会备份模型中所有设置的流体的粘性系数，并根据每个设置中的属性值（key）调整相应流体的粘性系数
     """
-    assert len(data_backups) == 0
+    data_backups = []
     for setting in get_settings(model):
         assert isinstance(setting, dict)
         name, key = setting.get('name'), setting.get('key')
@@ -83,6 +83,7 @@ def adjust(model: Seepage):
         vis = flu.vis
         data_backups.append(vis)
         flu.vis = vis * ratio  # 修改粘性系数
+    data_backups_dict[model.handle] = data_backups
 
 
 def restore(model: Seepage):
@@ -98,10 +99,10 @@ def restore(model: Seepage):
     该函数会根据之前备份的流体粘性系数，恢复模型中相应流体的粘性系数
     """
     settings = get_settings(model)
+    data_backups = data_backups_dict.pop(model.handle)
     assert len(data_backups) == len(settings)
     for idx in range(len(settings)):
         name = settings[idx].get('name')
         fid = model.find_fludef(name=name)
         flu = as_numpy(model).fluids(*fid)
         flu.vis = data_backups[idx]
-    data_backups.clear()  # 清空数据

@@ -1,12 +1,13 @@
 """
 渗流类Seepage的一些基础的接口。注意，此模块不依赖其它顶层的模块。
 """
+import collections.abc
 import ctypes
 import os
 from ctypes import c_void_p
 
 import zmlx.alg.sys as warnings
-from zml import Seepage, Vector, is_array, get_pointer64, np
+from zml import Seepage, Vector, is_array, get_pointer64, np, ThreadPool, Map
 from zmlx.alg.base import time2str
 
 
@@ -1079,6 +1080,8 @@ def get_cell_fv(model: Seepage, fid=None, mask=None):
     if fid is None:
         v = as_numpy(model).cells.fluid_vol
     else:
+        if isinstance(fid, str) or not isinstance(fid, collections.abc.Iterable):
+            fid = [fid]
         v = as_numpy(model).fluids(*fid).vol
     return v if mask is None else v[mask]
 
@@ -1100,6 +1103,8 @@ def get_cell_fm(model: Seepage, fid=None, mask=None):
     if fid is None:
         v = as_numpy(model).cells.fluid_mass
     else:
+        if isinstance(fid, str) or not isinstance(fid, collections.abc.Iterable):
+            fid = [fid]
         v = as_numpy(model).fluids(*fid).mass
     return v if mask is None else v[mask]
 
@@ -1145,3 +1150,111 @@ def get_sat(names, table: dict):
         assert False, (f'names not used: {list(the_copy.keys())}. '
                        f'The required names: {names}')
     return values
+
+
+def get_recommended_dt(
+        model: Seepage, previous_dt,
+        dv_relative=0.1,
+        using_flow=True, using_ther=True):
+    """
+    在调用了 iterate 函数之后，调用此函数，来获取更优的时间步长。
+
+    参数:
+    - model: Seepage 模型对象
+    - previous_dt: 之前的时间步长
+    - dv_relative: 相对体积变化率，默认为 0.1
+    - using_flow: 是否使用流动模型，默认为 True
+    - using_ther: 是否使用热模型，默认为 True
+
+    返回值:
+    - 更优的时间步长
+
+    该函数首先断言 `using_flow` 或 `using_ther` 至少有一个为真。
+    然后，根据是否使用流动模型和热模型，分别计算推荐的时间步长 `dt1` 和 `dt2`。
+    最后，返回 `dt1` 和 `dt2` 中的较小值。
+    """
+    assert using_flow or using_ther
+    if using_flow:
+        dt1 = model.get_recommended_dt(
+            previous_dt=previous_dt,
+            dv_relative=dv_relative)
+    else:
+        dt1 = 1.0e100
+
+    if using_ther:
+        ca_t = model.reg_cell_key('temperature')
+        ca_mc = model.reg_cell_key('mc')
+        dt2 = model.get_recommended_dt(
+            previous_dt=previous_dt,
+            dv_relative=dv_relative,
+            ca_t=ca_t, ca_mc=ca_mc)
+    else:
+        dt2 = 1.0e100
+    return min(dt1, dt2)
+
+
+def _get_reports(reports):
+    """
+    解析并返回计算的报告
+    """
+    results = []
+    for r in reports:
+        results.append(None if r is None else r.to_dict())
+    return results
+
+
+def parallel_update_flow(*local_kwargs, pool=None, **global_kwargs):
+    """
+    对于多个模型，并行地更新模型的流场 (如果没有给定pool，则不并行)
+    """
+    reports = []
+
+    for opts in local_kwargs:  # 执行检查
+        assert isinstance(opts, dict), f'The type of opts is not dict. Opts = {opts}'
+        kwargs = global_kwargs.copy()
+        kwargs.update(opts)
+
+        model = kwargs.pop('model')  # 此参数必须给定
+        assert isinstance(model, Seepage), f'The model is not Seepage. model = {model}'
+
+        if model.not_has_tag('disable_flow') and model.fludef_number > 0:
+            reports.append(Map())
+            model.iterate(**kwargs, pool=pool, report=reports[-1])
+        else:
+            reports.append(None)
+
+    if pool is not None:
+        pool.sync()  # 等待放入pool中的任务执行完毕
+
+    return _get_reports(reports)
+
+
+def parallel_update_thermal(*local_kwargs, pool=None, **global_kwargs):
+    """
+    对于多个模型，并行地更新模型的温度场
+    """
+    reports = []
+
+    for opts in local_kwargs:  # 执行检查
+        assert isinstance(opts, dict)
+        kwargs = global_kwargs.copy()
+        kwargs.update(opts)
+
+        model = kwargs.pop('model')
+        assert isinstance(model, Seepage)
+
+        dt = kwargs.pop('dt')
+        ca_t = kwargs.pop('ca_t')
+        ca_mc = kwargs.pop('ca_mc')
+        fa_g = kwargs.pop('fa_g')
+
+        if model.has_tag('disable_ther') or dt <= 0 or ca_t is None or ca_mc is None or fa_g is None:
+            reports.append(None)
+        else:
+            reports.append(Map())
+            model.iterate_thermal(dt=dt, ca_t=ca_t, ca_mc=ca_mc, fa_g=fa_g, pool=pool, report=reports[-1])
+
+    if pool is not None:
+        pool.sync()  # 等待放入pool中的任务执行完毕
+
+    return _get_reports(reports)

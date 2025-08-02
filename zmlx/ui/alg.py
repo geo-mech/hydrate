@@ -14,9 +14,11 @@ def create_action(parent, text, icon=None, slot=None):
         ac.setIcon(load_icon('python'))
     if slot is not None:
         assert callable(slot), 'slot must be callable'
+
         def func():
             slot()
             gui.refresh()
+
         ac.triggered.connect(func)
     return ac
 
@@ -200,7 +202,8 @@ def modify_file_exts(exts):
     return exts
 
 
-def reg_file_type(desc, exts, name, save, load, init, widget_type):
+def reg_file_type(desc, exts, *, name=None, save=None, load=None, init=None, widget_type=None,
+                  get_data=None, set_data=None):
     """
     注册一种文件类型，设置其保存、新建、打开等过程的行为.
     Args:
@@ -210,7 +213,9 @@ def reg_file_type(desc, exts, name, save, load, init, widget_type):
         save: save(data, filename)，用于将数据存储到文件
         load: load(filename) 读取文件的函数
         init: init() 返回初始化之后的数据的函数
-        widget_type: 编辑器控件类型。此类需要有set_data和get_data函数.
+        get_data: data=get_data(view), 从控件获取数据
+        set_data: set_data(view, data) 将数据推送到控件上显示
+        widget_type: 编辑器控件类型。如果没有给定set_data和get_data，则此类需要有set_data和get_data函数
     Returns:
         None
     """
@@ -228,50 +233,79 @@ def reg_file_type(desc, exts, name, save, load, init, widget_type):
         file_filter += f'*{ext}; '
     file_filter += ')'
 
+    if save is None and callable(init):  # 如果类定义save，则使用类的save
+        if hasattr(init(), 'save'):
+            def save(data, filename):
+                try:
+                    data.save(filename)
+                except Exception as err:
+                    print(err)
+
+    if load is None and callable(init):  # 使用数据类自身定义的load函数
+        if hasattr(init(), 'load'):
+            def load(filename):
+                data = init()
+                try:
+                    data.load(filename)
+                except Exception as err:
+                    print(err)
+                return data
+
+    if set_data is None and hasattr(widget_type, 'set_data'):
+        def set_data(view, data):
+            view.set_data(data)
+
+    if get_data is None and hasattr(widget_type, 'get_data'):
+        def get_data(view):
+            return view.get_data()
+
     def open_file(filename):
         import os
         def oper(x):
-            if callable(load) and hasattr(x, 'set_data'):  # 只有此时，才能够导入数据
+            if callable(load) and callable(set_data):  # 只有此时，才能够导入数据
                 try:
-                    x.set_data(load(filename))
+                    set_data(x, load(filename))
                 except Exception as err:
                     print(err)
 
             if not hasattr(x, 'gui_restore'):  # 新添加的一个函数
                 x.gui_restore = f"gui.open_{name}(r'{filename}')"
 
-            if not hasattr(x, 'save_file'): # 尝试添加保存文件的操作
-                if hasattr(x, 'get_data') and callable(save):
+            if not hasattr(x, 'save_file'):  # 尝试添加保存文件的操作
+                if callable(get_data) and callable(save):
                     def save_file():
                         try:
-                            save(x.get_data(), filename)
+                            save(get_data(x), filename)
                             print(f'成功保存到:\n{filename}')
                         except Exception as e:
                             print(e)
+
                     x.save_file = save_file
 
             if not hasattr(x, 'export_data'):  # 尝试支持导出操作
-                if hasattr(x, 'get_data') and callable(save):
+                if callable(get_data) and callable(save):
                     def export_data():
                         name2, _ = QtWidgets.QFileDialog.getSaveFileName(
                             x, '导出文件', os.getcwd(), file_filter)
                         if name2:
                             try:
-                                save(x.get_data(), name2)
+                                save(get_data(x), name2)
                             except Exception as e:
                                 print(e)
+
                     x.export_data = export_data
 
             if not hasattr(x, 'import_data'):  # 尝试支持导入操作
-                if hasattr(x, 'set_data') and callable(load):
+                if callable(set_data) and callable(load):
                     def import_data():
                         name2, _ = QtWidgets.QFileDialog.getOpenFileName(
                             x, '选取文件', os.getcwd(), file_filter)
                         if name2:
                             try:
-                                x.set_data(load(name2))
+                                set_data(x, load(name2))
                             except Exception as e:
                                 print(e)
+
                     x.import_data = import_data
 
         gui.get_widget(widget_type, os.path.basename(filename), oper=oper)
@@ -292,10 +326,19 @@ def reg_file_type(desc, exts, name, save, load, init, widget_type):
         {'open_file': open_file, 'new_file': new_file})
 
 
-def edit_in_tab(widget_type, set_data, get_data=None, caption=None):
+def edit_in_tab(widget_type, set_data, get_data=None, caption=None, support_refresh=False):
     """
-    在另外一个标签里面，使用给定的编辑器控件去编辑数据. 这个给定的控件，需要有get_data和set_data函数
+    在另外一个标签里面，使用给定的编辑器控件去编辑数据. 这个给定的控件，需要有get_data和set_data函数。其中
+    get_data函数用于从编辑器获取数据，set_data函数用于设置数据（将数据推送到编辑器上显示）。
+
+    Args:
+        widget_type: 编辑器控件类型（需要定义set_data和get_data成员函数）
+        set_data: 一个函数，调用此函数用于返回编辑器编辑之后的结果
+        get_data: 一个函数，调用此函数用于获得初始化/刷新编辑器的数据
+        caption: 标签的标题.
+        support_refresh: 是否支持刷新操作 (默认为否，即控件在创建之后，不再接收数据)
     """
+
     def do_init(widget):
         layout = QtWidgets.QVBoxLayout(widget)
         widget.setLayout(layout)
@@ -303,11 +346,21 @@ def edit_in_tab(widget_type, set_data, get_data=None, caption=None):
 
         editor = widget_type(widget)
         if callable(get_data) and hasattr(editor, 'set_data'):
-            try:
+            try:  # 尝试初始化编辑器的数据
                 editor.set_data(get_data())
             except Exception as err:
                 print(err)
         layout.addWidget(editor)
+
+        if support_refresh:
+            if callable(get_data) and hasattr(editor, 'set_data'):
+                def refresh():
+                    try:
+                        editor.set_data(get_data())
+                    except Exception as err2:
+                        print(err2)
+
+                widget.refresh = refresh  # 添加一个刷新操作（会自动被主界面所调用）
 
         button_layout = QtWidgets.QHBoxLayout()
         layout.addLayout(button_layout)
@@ -316,6 +369,8 @@ def edit_in_tab(widget_type, set_data, get_data=None, caption=None):
             try:
                 if hasattr(editor, 'get_data') and callable(set_data):
                     set_data(editor.get_data())
+                else:
+                    print('如果需要返回数据，则编辑器控件需要有get_data函数，同时，需要给定edit_in_tab函数的set_data参数')
             except Exception as e:
                 print(e)
                 QtWidgets.QMessageBox.information(
@@ -340,5 +395,3 @@ def edit_in_tab(widget_type, set_data, get_data=None, caption=None):
     gui.get_widget(
         QtWidgets.QWidget, caption=caption,
         init=do_init, on_top=True)
-
-

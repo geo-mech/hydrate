@@ -14,7 +14,6 @@
     disable_update_vis：是否禁止更新粘性
     has_solid：是否有固体；如果有，那么只能允许最后一个流体为固体
     disable_flow：是否禁止流动计算
-    has_inertia：是否考虑流体的惯性，如果考虑，则需要额外的属性来存储（定义：fa_s, fa_q, fa_k）
     disable_ther：是否禁止传热计算
     disable_heat_exchange：禁止流体和固体之间的热交换
     disable_update_dt：禁止更新时间不长dt
@@ -29,28 +28,29 @@ Cell的属性:
     pre：流体的压力：用来存储迭代计算的压力结果，可能和利用流体体积和孔隙弹性计算的压力略有不同
     fv0：流体体积的初始值（和初始的g0对应的数值）
     g_heat：流体和固体热交换的系数
-    vol：体积
+    vol：网格的体积(此体积乘以孔隙度，得到孔隙的体积)
 
 Face的属性：
-    area：横截面积
-    length：长度（流体经过这个face需要流过的距离）
-    g0：初始时刻的导流系数
-    igr：导流系数的相对曲线的id（用来修正孔隙空间大小改变所带来的渗透率的改变）
-    g_heat：用于传热计算的导流系数（注意，并非热传导系数。这个系数，已经考虑了face的横截面积和长度）
-    perm: face位置的渗透率
+    area：横截面积。（当考虑流体的惯性的时候，也将使用此面积来计算作用在流体上的“冲量”，从而改变流体的动量）;
+    length：长度（流体经过这个face需要流过的距离）;
+    g0：初始时刻的导流系数;
+    igr：导流系数的相对曲线的id（用来修正孔隙空间大小改变所带来的渗透率的改变）;
+    g_heat：用于传热计算的导流系数（注意，并非热传导系数。这个系数，已经考虑了face的横截面积和长度）;
+    perm: face位置的渗透率;
+    rate: 流体流动的速率(用以计算流体的惯性);
+    inertia: 惯性系数. 使用速率rate乘以此系数，则得到流体的动量（=m*v）. 根据Face的area*Face两侧的压力差，计算作用力，从而计算动量的
+             变量速度。当Face同时定义了rate和inertia之后，才可以去考虑惯性效应。
 """
 from collections.abc import Iterable
-
 from zml import (get_average_perm, Tensor3, ConjugateGradientSolver,
                  make_parent, SeepageMesh)
-from zmlx.alg.base import clamp
-from zmlx.alg.base import join_cols
+from zmlx.alg.base import clamp, join_cols
 from zmlx.alg.fsys import join_paths, make_fname, print_tag
 from zmlx.base.seepage import *
 from zmlx.config import (capillary, prod, fluid_heating, timer,
                          sand, step_iteration, adjust_vis)
 from zmlx.config.attr_keys import cell_keys, face_keys, flu_keys
-from zmlx.config.slots import standard_slots
+from zmlx.config.slots import get_slot
 from zmlx.geometry.base import point_distance
 from zmlx.plt.fig2 import tricontourf
 from zmlx.react.alg import add_reaction
@@ -139,253 +139,232 @@ def show_cells(
                 **kw)
 
 
-def get_recommended_dt(
-        model: Seepage, previous_dt,
-        dv_relative=0.1,
-        using_flow=True, using_ther=True):
+solid_buffers = {}
+
+
+def parallel_iterate(*args, pool=None):
     """
-    在调用了 iterate 函数之后，调用此函数，来获取更优的时间步长。
-
-    参数:
-    - model: Seepage 模型对象
-    - previous_dt: 之前的时间步长
-    - dv_relative: 相对体积变化率，默认为 0.1
-    - using_flow: 是否使用流动模型，默认为 True
-    - using_ther: 是否使用热模型，默认为 True
-
-    返回值:
-    - 更优的时间步长
-
-    该函数首先断言 `using_flow` 或 `using_ther` 至少有一个为真。
-    然后，根据是否使用流动模型和热模型，分别计算推荐的时间步长 `dt1` 和 `dt2`。
-    最后，返回 `dt1` 和 `dt2` 中的较小值。
-    """
-    assert using_flow or using_ther
-    if using_flow:
-        dt1 = model.get_recommended_dt(
-            previous_dt=previous_dt,
-            dv_relative=dv_relative)
-    else:
-        dt1 = 1.0e100
-
-    if using_ther:
-        ca_t = model.reg_cell_key('temperature')
-        ca_mc = model.reg_cell_key('mc')
-        dt2 = model.get_recommended_dt(
-            previous_dt=previous_dt,
-            dv_relative=dv_relative,
-            ca_t=ca_t, ca_mc=ca_mc)
-    else:
-        dt2 = 1.0e100
-    return min(dt1, dt2)
-
-
-try:
-    solid_buffer = Seepage.CellData()
-except Exception as err:
-    print(err)
-    solid_buffer = None
-
-
-def iterate(
-        model: Seepage, dt=None, solver=None, fa_s=None,
-        fa_q=None, fa_k=None,
-        cond_updaters=None, diffusions=None,
-        react_bufs=None,
-        vis_max=None, vis_min=None, slots=None):
-    """
-    在时间上向前迭代。其中
-        dt:     时间步长,若为None，则使用自动步长
-        solver: 线性求解器，若为None,则使用内部定义的共轭梯度求解器.
-        fa_s:   Face自定义属性的ID，代表Face的横截面积（用于计算Face内流体的受力）;
-        fa_q：   Face自定义属性的ID，代表Face内流体在通量(也将在iterate中更新)
-        fa_k:   Face内流体的惯性系数的属性ID
-            (若fa_k属性不为None，则所有Face的该属性需要提前给定).
-        react_bufs:  反应的缓冲区，用来记录各个cell发生的反应的质量，
-            其中的每一个buf都应该是一个pointer，且长度等于cell的数量;
+    在时间上向前并行地迭代一次
     """
     if gui.exists():  # 添加断点，从而使得在这里可以暂停和终止
         gui.break_point()
 
-    if dt is not None:
-        set_dt(model, dt)
+    for kwargs in args:
+        if gui.exists():  # 添加断点，从而使得在这里可以暂停和终止
+            gui.break_point()
 
-    dt = get_dt(model)
-    assert dt is not None, 'You must set dt before iterate'
+        assert isinstance(kwargs, dict)
+        model = kwargs['model']
+        assert isinstance(model, Seepage)
 
-    # 使得slots至少包含standard_slots
-    temp = standard_slots.copy()
-    if slots is not None:
-        temp.update(slots)
-    slots = temp
+        if kwargs.get('dt') is not None:
+            set_dt(model, kwargs.get('dt'))
 
-    # 执行定时器函数.
-    timer.iterate(
-        model, t0=get_time(model), t1=get_time(model) + dt,
-        slots=slots)
+        assert get_dt(model) is not None, 'You must set dt before iterate'
 
-    # 执行step迭代
-    step_iteration.iterate(
-        model=model,
-        current_step=get_step(model),
-        slots=slots)
+        # 执行定时器函数.
+        timer.iterate(
+            model, t0=get_time(model), t1=get_time(model) + get_dt(model),
+            slots=kwargs.get('slots'))
 
-    if model.not_has_tag('disable_update_den') and model.fludef_number > 0:
-        fa_t = model.reg_flu_key('temperature')
-        model.update_den(relax_factor=0.3, fa_t=fa_t)
+        # 执行step迭代
+        step_iteration.iterate(
+            model=model,
+            current_step=get_step(model),
+            slots=kwargs.get('slots'))
 
-    if model.not_has_tag('disable_update_vis') and model.fludef_number > 0:
-        # 更新流体的粘性系数(注意，当有固体存在的时候，务必将粘性系数的最大值设置为1.0e30)
-        if vis_min is None:
-            # 允许的最小的粘性系数
-            vis_min = 1.0e-7
-        if vis_max is None:
-            # !!
-            # 自2024-5-23开始，将vis_max的默认值从1.0修改为1.0e30，即默认
-            #                 不再对粘性系数的最大值进行限制.
-            #                 !!
-            vis_max = 1.0e30
+        if model.not_has_tag('disable_update_den') and model.fludef_number > 0:
+            model.update_den(relax_factor=0.3, fa_t=model.reg_flu_key('temperature'))
 
-        assert 1.0e-10 <= vis_min <= vis_max <= 1.0e40
-        ca_p = model.reg_cell_key('pre')
-        fa_t = model.reg_flu_key('temperature')
-        model.update_vis(
-            ca_p=ca_p,  # 压力属性
-            fa_t=fa_t,  # 温度属性
-            relax_factor=1.0, min=vis_min, max=vis_max)
+        if model.not_has_tag('disable_update_vis') and model.fludef_number > 0:
+            # 更新流体的粘性系数(注意，当有固体存在的时候，务必将粘性系数的最大值设置为1.0e30)
+            model.update_vis(
+                ca_p=model.reg_cell_key('pre'),  # 压力属性
+                fa_t=model.reg_flu_key('temperature'),  # 温度属性
+                relax_factor=1.0, min=kwargs.get('vis_min', 1.0e-7), max=kwargs.get('vis_max', 1.0e30))
 
-    if model.injector_number > 0:
-        # 实施流体的注入操作.
-        model.apply_injectors(dt=dt, time=get_time(model))
+        if model.injector_number > 0:
+            # 实施流体的注入操作.
+            model.apply_injectors(dt=get_dt(model), time=get_time(model))
 
-    # 尝试修改边界的压力，从而使得流体生产 (使用模型内部定义的time)
-    #   since 2024-6-12
-    prod.iterate(model)
+        # 尝试修改边界的压力，从而使得流体生产 (使用模型内部定义的time)
+        #   since 2024-6-12
+        prod.iterate(model)
 
-    # 对流体进行加热
-    fluid_heating.iterate(model)
+        # 对流体进行加热
+        fluid_heating.iterate(model)
 
-    has_solid = model.has_tag('has_solid')
+        if model.has_tag('has_solid'):
+            # 此时，认为最后一种流体其实是固体，并进行备份处理
+            buffer = solid_buffers.get(model.handle, Seepage.CellData())
+            model.pop_fluids(buffer)
+            solid_buffers[model.handle] = buffer
 
-    if has_solid:
-        # 此时，认为最后一种流体其实是固体，并进行备份处理
-        model.pop_fluids(solid_buffer)
+        if model.gr_number > 0:
+            # 此时，各个Face的导流系数是可变的
+            #       (并且，这里由于已经弹出了固体，因此计算体积使用的是流体的数值).
+            # 注意：
+            #     在建模的时候，务必要设置Cell的v0属性，Face的g0属性和igr属性，
+            #     并且，在model中，应该有相应的gr和它对应。
+            if model.get_cell_key('fv0') is not None and model.get_face_key('g0') is not None and model.get_face_key(
+                    'igr') is not None:
+                model.update_cond(
+                    ca_v0=model.get_cell_key('fv0'),
+                    fa_g0=model.get_face_key('g0'),
+                    fa_igr=model.get_face_key('igr'),
+                    relax_factor=0.3)
 
-    if model.gr_number > 0:
-        # 此时，各个Face的导流系数是可变的
-        #       (并且，这里由于已经弹出了固体，因此计算体积使用的是流体的数值).
-        # 注意：
-        #     在建模的时候，务必要设置Cell的v0属性，Face的g0属性和igr属性，
-        #     并且，在model中，应该有相应的gr和它对应。
-        ca_v0 = model.get_cell_key('fv0')
-        fa_g0 = model.get_face_key('g0')
-        fa_igr = model.get_face_key('igr')
-        if ca_v0 is not None and fa_g0 is not None and fa_igr is not None:
-            model.update_cond(
-                ca_v0=ca_v0, fa_g0=fa_g0,
-                fa_igr=fa_igr,
-                relax_factor=0.3)
-
-    if cond_updaters is not None:  # 施加cond的更新操作
-        for update in cond_updaters:
+        for update in kwargs.get('cond_updaters', []):  # 施加cond的更新操作
             assert callable(
                 update), f'The update in cond_updaters must be callable. However, it is: {update}'
             update(model)
 
-    # 当未禁止更新flow且流体的数量非空
-    update_flow = model.not_has_tag('disable_flow') and model.fludef_number > 0
+    parallel_opts = []
+    for kwargs in args:
+        assert isinstance(kwargs, dict)
+        model = kwargs['model']
+        opts = dict(
+            model=model, dt=get_dt(model), ca_p=model.reg_cell_key('pre'), solver=kwargs.get('solver'),
+            fa_s=kwargs.get('fa_s', model.get_face_key('area')),
+            fa_q=kwargs.get('fa_q', model.get_face_key('rate')),
+            fa_k=kwargs.get('fa_k', model.get_face_key('inertia')),
+        )
+        parallel_opts.append(opts)
 
-    if update_flow:
-        ca_p = model.reg_cell_key('pre')
-        adjust_vis.adjust(model=model)  # 备份粘性，并且尝试调整
-        if model.has_tag('has_inertia'):
-            r1 = model.iterate(
-                dt=dt, solver=solver, fa_s=fa_s,
-                fa_q=fa_q, fa_k=fa_k, ca_p=ca_p)
-        else:
-            r1 = model.iterate(
-                dt=dt, solver=solver, ca_p=ca_p)
-        adjust_vis.restore(model=model)  # 恢复之前备份的粘性
-    else:
-        r1 = None
+    r1 = parallel_update_flow(*parallel_opts, pool=pool)
 
-    # 执行所有的扩散操作，这一步需要在没有固体存在的条件下进行
-    if diffusions is not None:
-        for update in diffusions:
-            update(model, dt)
+    for kwargs in args:
+        if gui.exists():  # 添加断点，从而使得在这里可以暂停和终止
+            gui.break_point()
 
-    # 执行毛管力相关的操作
-    capillary.iterate(model)
+        assert isinstance(kwargs, dict)
+        model = kwargs['model']
+        assert isinstance(model, Seepage)
 
-    if has_solid:
-        # 恢复备份的固体物质
-        model.push_fluids(solid_buffer)
+        # 执行所有的扩散操作，这一步需要在没有固体存在的条件下进行
+        for update in kwargs.get('diffusions', []):
+            update(model, get_dt(model))
 
-    # 更新砂子的体积（优先使用自定义的update_sand）
-    update_sand = slots.get('update_sand')
-    if update_sand is None:
-        update_sand = sand.iterate  # 优先使用自定义的update_sand
-    update_sand(model=model)
+        # 执行毛管力相关的操作
+        capillary.iterate(model)
 
-    # 是否禁用热力学过程
-    update_ther = model.not_has_tag('disable_ther')
+        if model.has_tag('has_solid'):
+            # 恢复备份的固体物质
+            model.push_fluids(solid_buffers.get(model.handle))
 
-    r2 = None
-    if update_ther:
-        ca_t = model.get_cell_key('temperature')
-        ca_mc = model.get_cell_key('mc')
-        fa_g = model.get_face_key('g_heat')
-        if ca_t is not None and ca_mc is not None and fa_g is not None:
-            r2 = model.iterate_thermal(
-                dt=dt, solver=solver, ca_t=ca_t,
-                ca_mc=ca_mc, fa_g=fa_g)
+        # 更新砂子的体积（优先使用自定义的update_sand）
+        update_sand = get_slot('update_sand', kwargs.get('slots'))
+        if update_sand is None:
+            update_sand = sand.iterate  # 优先使用自定义的update_sand
+        update_sand(model=model)
 
-    # 不存在禁止标识且存在流体
-    exchange_heat = model.not_has_tag('disable_heat_exchange'
-                                      ) and model.fludef_number > 0
+    parallel_opts = []
+    for kwargs in args:
+        assert isinstance(kwargs, dict)
+        model = kwargs['model']
+        parallel_opts.append(dict(
+            model=kwargs['model'], dt=get_dt(model), ca_t=model.get_cell_key('temperature'),
+            ca_mc=model.get_cell_key('mc'), fa_g=model.get_face_key('g_heat'),
+            solver=kwargs.get('solver'),
+        ))
 
-    if exchange_heat:
-        ca_g = model.get_cell_key('g_heat')
-        ca_t = model.get_cell_key('temperature')
-        ca_mc = model.get_cell_key('mc')
-        fa_t = model.get_flu_key('temperature')
-        fa_c = model.get_flu_key('specific_heat')
-        if ca_g is not None and ca_t is not None and ca_mc is not None and \
-                fa_t is not None and fa_c is not None:
+    r2 = parallel_update_thermal(*parallel_opts, pool=pool)
+
+    for model_idx in range(len(args)):
+        if gui.exists():  # 添加断点，从而使得在这里可以暂停和终止
+            gui.break_point()
+
+        kwargs = args[model_idx]
+        assert isinstance(kwargs, dict)
+        model = kwargs['model']
+        assert isinstance(model, Seepage)
+
+        if model.not_has_tag('disable_heat_exchange') and model.fludef_number > 0:
             model.exchange_heat(
-                dt=dt, ca_g=ca_g, ca_t=ca_t, ca_mc=ca_mc,
-                fa_t=fa_t, fa_c=fa_c)
-        else:
-            warnings.warn('model.exchange_heat failed in seepage.iterate')
-
-    # 反应
-    for idx in range(model.reaction_number):
-        reaction = model.get_reaction(idx)
-        assert isinstance(reaction, Seepage.Reaction)
-        buf = None
-        if react_bufs is not None:
-            if idx < len(react_bufs):
-                # 使用这个buf
-                #   (必须确保这个buf是一个double类型的指针，并且长度等于cell_number)
-                buf = react_bufs[idx]
-        reaction.react(model, dt, buf=buf)
-
-    set_time(model, get_time(model) + dt)
-    set_step(model, get_step(model) + 1)
-
-    if not model.has_tag('disable_update_dt'):
-        # 只要不禁用dt更新，就尝试更新dt
-        if update_flow or update_ther:
-            # 只有当计算了流动或者传热过程，才可以使用自动的时间步长
-            dt = get_recommended_dt(
-                model, dt, get_dv_relative(model),
-                using_flow=update_flow,
-                using_ther=update_ther
+                dt=get_dt(model), ca_g=model.get_cell_key('g_heat'),
+                ca_t=model.get_cell_key('temperature'),
+                ca_mc=model.get_cell_key('mc'),
+                fa_t=model.get_flu_key('temperature'), fa_c=model.get_flu_key('specific_heat')
             )
-        dt = max(get_dt_min(model), min(get_dt_max(model), dt))
-        set_dt(model, dt)  # 修改dt为下一步建议使用的值
+
+        # 反应
+        for idx in range(model.reaction_number):
+            reaction = model.get_reaction(idx)
+            assert isinstance(reaction, Seepage.Reaction)
+            react_bufs = kwargs.get('react_bufs')
+            buf = None
+            if react_bufs is not None:
+                if idx < len(react_bufs):
+                    # 使用这个buf
+                    #   (必须确保这个buf是一个double类型的指针，并且长度等于cell_number)
+                    buf = react_bufs[idx]
+            reaction.react(model, get_dt(model), buf=buf)
+
+        set_time(model, get_time(model) + get_dt(model))
+        set_step(model, get_step(model) + 1)
+
+        if not model.has_tag('disable_update_dt'):
+            # 只要不禁用dt更新，就尝试更新dt
+            assert model_idx < len(r1) and model_idx < len(r2)
+            using_flow = r1[model_idx] is not None
+            using_ther = r2[model_idx] is not None
+            if using_flow or using_ther:
+                # 只有当计算了流动或者传热过程，才可以使用自动的时间步长
+                dt = get_recommended_dt(
+                    model, get_dt(model), get_dv_relative(model),
+                    using_flow=using_flow,
+                    using_ther=using_ther
+                )
+                dt = max(get_dt_min(model), min(get_dt_max(model), dt))
+                set_dt(model, dt)  # 修改dt为下一步建议使用的值
 
     return r1, r2
+
+
+def iterate(model, pool=None, **kwargs):
+    """
+    在时间上向前迭代
+    """
+    r1, r2 = parallel_iterate(dict(model=model, **kwargs), pool=pool)
+    return r1[0], r2[0]
+
+
+def parallel_sync(*args, pool=None, target_time=None):
+    """
+    并行地迭代，直到给定的目标时间
+    """
+
+    def get(x: dict, key, default=None):
+        """
+        返回字典的值（忽略None）
+        """
+        value = x.get(key, default)
+        if value is None:
+            return default
+        else:
+            return value
+
+    n_loop = 0
+    n_iter = 0
+
+    while True:
+        opt_list = []
+        for arg in args:
+            assert isinstance(arg, dict), f'The given argument is not a dict. it is: {arg}'
+            opt = arg.copy()
+            model = opt.get('model')
+            assert isinstance(model, Seepage)
+            if get_time(model) < get(opt, 'target_time', target_time):
+                opt_list.append(opt)
+        if len(opt_list) == 0:
+            break
+        else:
+            n_loop += 1
+            n_iter += len(opt_list)
+            parallel_iterate(*opt_list,
+                             pool=pool if len(opt_list) > 1 else None)
+
+    return n_loop, n_iter
 
 
 def get_inited(
@@ -1266,6 +1245,9 @@ def solve(
         do_show = None
 
     def plot():
+        """
+        所有需要绘图的操作
+        """
         if do_show is not None:
             do_show()
         for index in range(len(monitors)):
@@ -1283,15 +1265,15 @@ def solve(
             if callable(extra_plot):
                 try:
                     extra_plot()
-                except:
-                    pass
+                except Exception as err:
+                    print(f'Error when run the extra plot. Function = {extra_plot.__name__}, Error = {err}')
             elif isinstance(extra_plot, Iterable):
                 for extra_plot_i in extra_plot:
                     if callable(extra_plot_i):
                         try:
                             extra_plot_i()
-                        except:
-                            pass
+                        except Exception as err:
+                            print(f'Error when run the extra plot. Function = {extra_plot_i.__name__}, Error = {err}')
 
     def save_monitors():
         if folder is not None:

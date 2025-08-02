@@ -1,9 +1,13 @@
+"""
+这里，定义在gui上绘图的顶层的函数，直接操作gui或者在控制台绘图.
+"""
 import warnings
 
 from zml import is_array, np
 from zmlx.plt.cmap import get_cm, get_color
-from zmlx.plt.on_axes import plot_on_axes
-from zmlx.plt.on_figure import plot_on_figure
+from zmlx.plt.on_axes import tricontourf as tricontourf_on_axes
+from zmlx.plt.on_figure import add_axes2
+from zmlx.ui import plot
 
 
 def contourf(
@@ -42,7 +46,7 @@ def contourf(
         if clabel is not None:
             cbar.set_label(clabel)
 
-    plot_on_axes(on_axes, **opts)
+    plot(add_axes2, on_axes, **opts)
 
 
 def plot_xy(
@@ -76,13 +80,14 @@ def plot_xy(
     if x is None or y is None:
         raise ValueError("必须提供x/y数据或有效文件路径")
 
-    plot_on_axes(on_axes=lambda ax: ax.plot(x, y), **opts)
+    plot(add_axes2, on_axes=lambda ax: ax.plot(x, y), **opts)
 
 
 def plotxy(*args, **kwargs):
-    warnings.warn("plotxy is deprecated, please use plot_xy instead",
-                  DeprecationWarning,
-                  stacklevel=2)
+    warnings.warn(
+        "plotxy is deprecated, please use plot_xy instead",
+        DeprecationWarning,
+        stacklevel=2)
     plot_xy(*args, **kwargs)
 
 
@@ -96,7 +101,7 @@ def show_dfn2(dfn2, **opts):
             ax.plot([pos[0], pos[2]], [pos[1], pos[3]])
 
     opts.setdefault('aspect', 'equal')
-    plot_on_axes(on_axes, **opts)
+    plot(add_axes2, on_axes, **opts)
 
 
 def show_field2(f, xr, yr, clabel=None, **opts):
@@ -125,40 +130,32 @@ def show_field2(f, xr, yr, clabel=None, **opts):
         if isinstance(clabel, str):
             cbar.set_label(clabel)
 
-    plot_on_axes(on_axes, **opts)
+    plot(add_axes2, on_axes, **opts)
 
 
 def tricontourf(
         x=None, y=None, z=None,
         ipath=None, ix=None, iy=None, iz=None,
         triangulation=None,
-        levels=20,
-        cmap='coolwarm',
         clabel=None,
         **opts):
     """
     利用给定的x，y，z来画一个二维的云图.
     """
-
     def _load(ipath_=None, ix_=None, iy_=None, iz_=None):
         data = np.loadtxt(ipath_, float)
         return data[:, ix_], data[:, iy_], data[:, iz_]
 
-    def on_axes(ax):
-        args = (x, y, z) if ipath is None else _load(ipath, ix, iy, iz)
-        if triangulation is None:
-            item = ax.tricontourf(*args, levels=levels, cmap=cmap,
-                                  antialiased=True)
-        else:
-            item = ax.tricontourf(triangulation, args[2], levels=levels,
-                                  cmap=cmap, antialiased=True)
-
-        cbar = ax.get_figure().colorbar(item, ax=ax)
-        if clabel is not None:
-            cbar.set_label(clabel)
+    if ipath is not None:
+        x, y, z = _load(ipath, ix, iy, iz)
 
     opts.setdefault('aspect', 'equal')
-    plot_on_axes(on_axes, **opts)
+    opts.setdefault('antialiased', 'True')
+    cbar = dict(label=clabel)
+    if triangulation is None:
+        plot(add_axes2, tricontourf_on_axes, x, y, z, cbar=cbar, **opts)
+    else:
+        plot(add_axes2, tricontourf_on_axes, triangulation, z, cbar=cbar, **opts)
 
 
 def show_fn2(
@@ -191,7 +188,7 @@ def show_fn2(
         ylabel (str, optional): y轴标签，默认显示'y / m'。
         xlim (tuple[float], optional): x轴显示范围(min, max)。默认为None。
         ylim (tuple[float], optional): y轴显示范围(min, max)。默认为None。
-        **opt: 传递给 plot_on_figure 的额外参数
+        **opt: 传递给 plot 的额外参数
 
     Returns:
         None: 直接显示matplotlib图形，无返回值
@@ -298,18 +295,19 @@ def show_fn2(
             ax.set_aspect('equal')
 
     # 执行绘图
-    plot_on_figure(on_figure, **opt)
+    from zmlx.ui import plot
+    plot(on_figure, **opt)
 
 
 def trimesh(triangles, points, line_width=1.0, **opts):
     """
-    调用plot_on_axes，使用Matplotlib绘制二维三角形网格.
+    调用plot，使用Matplotlib绘制二维三角形网格.
 
     Args:
         line_width: 绘制三角形的时候，线条的宽度 (默认为1.0)
         triangles: 三角形的索引，形状为(N, 3). 或者是一个list，且list的每一个元素的长度都是3
         points: 顶点坐标，形状为(N, 2). 或者是一个list，且list的每一个元素的长度都是2
-        **opts: 传递给plot_on_axes的参数，主要包括:
+        **opts: 传递给plot的参数，主要包括:
             caption(str): 在界面绘图的时候的标签 （默认为untitled）
             clear(bool): 是否清除界面上之前的axes （默认清除）
             on_top (bool): 是否将标签页当到最前面显示 (默认为否)
@@ -337,7 +335,7 @@ def trimesh(triangles, points, line_width=1.0, **opts):
 
     # 设置默认的坐标轴比例为等比例，用户可通过opts覆盖
     opts.setdefault('aspect', 'equal')
-    plot_on_axes(on_axes=on_axes, dim=2, **opts)
+    plot(add_axes2, on_axes=on_axes, dim=2, **opts)
 
 
 def tricontourf_(
@@ -411,4 +409,4 @@ def plot2(data=None, **opts):
                 print(f'plot failed: name={name}, '
                       f'args={args}, kwargs={kwargs}')
 
-    plot_on_axes(on_axes, dim=2, **opts)
+    plot(add_axes2, on_axes, dim=2, **opts)

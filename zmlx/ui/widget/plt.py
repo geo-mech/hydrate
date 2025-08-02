@@ -4,15 +4,50 @@ import warnings
 
 from zmlx.ui.alg import create_action
 from zmlx.ui.pyqt import QtWidgets
+from zml import in_windows, in_linux, in_macos
 
 try:
     import matplotlib
     import matplotlib.pyplot as plt
 
-    # 设置Matplotlib支持中文显示
-    matplotlib.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei',
-                                              'SimSun']  # 指定字体
-    matplotlib.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
+    try:  # 设置Matplotlib支持中文显示
+        if in_windows():
+            matplotlib.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei',
+                                                      'SimSun']  # 指定字体
+            matplotlib.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
+        elif in_linux():
+            # 使用文泉驿字体作为首选
+            matplotlib.rcParams['font.sans-serif'] = [
+                'WenQuanYi Micro Hei',
+                'Noto Sans CJK SC',
+                'Droid Sans Fallback',
+                'AR PL UMing CN',
+                'sans-serif'
+            ]
+            matplotlib.rcParams['axes.unicode_minus'] = False
+            cache_dir = matplotlib.get_cachedir()
+            cache_files = ['fontlist-v330.json', 'fontlist-v310.json']
+
+            for cf in cache_files:
+                cache_path = os.path.join(cache_dir, cf)
+                if os.path.exists(cache_path):
+                    try:
+                        os.unlink(cache_path)
+                    except:
+                        print(f'无法删除字体缓存 {cache_path}')
+                        pass
+        elif in_macos():
+            # macOS 通常使用 .ttc 字体文件
+            matplotlib.rcParams['font.sans-serif'] = [
+                'PingFang SC',  # 苹方
+                'Hiragino Sans GB',  # 冬青黑体
+                'STHeiti',  # 华文黑体
+                'Apple SD Gothic Neo'
+            ]
+            matplotlib.rcParams['axes.unicode_minus'] = False
+    except Exception as font_err:
+        print(f'Error when set font: {font_err}')
+
 except ImportError:
     matplotlib = None
     plt = None

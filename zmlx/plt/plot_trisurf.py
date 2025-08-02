@@ -21,8 +21,8 @@ def test_1():
 
     # 生成 z 坐标
     Z = np.sin(np.sqrt(X ** 2 + Y ** 2))
-    plot_trisurf(x=X.flatten(), y=Y.flatten(), z=Z.flatten(),
-                 gui_mode=True)
+    plot_trisurf(X.flatten(), Y.flatten(), Z.flatten(),
+                 gui_mode=True, cbar={}, cmap='viridis')
 
 
 if __name__ == '__main__':

@@ -9,54 +9,44 @@ def update_sand(model: Seepage, *args, **kwargs):
     model.update_sand(*args, **kwargs)
 
 
-class Thread(HasHandle):
-    core.use(c_void_p, 'new_thread')
-    core.use(None, 'del_thread', c_void_p)
+core.use(c_int, 'prime_calculations', c_int, c_void_p, c_void_p)
 
-    def __init__(self, handle=None):
-        super().__init__(handle, core.new_thread, core.del_thread)
-
-    core.use(None, 'thread_join', c_void_p)
-
-    def join(self):
-        core.thread_join(self.handle)
-
-
-core.use(None, 'prime_calculations')
-core.use(None, 'prime_calculations_thread', c_void_p)
-
-def prime_calculations(thread=None):
-    if thread is None:
-        core.prime_calculations()
+def prime_calculations(n_max, pool=None, result=None):
+    if isinstance(pool, ThreadPool):
+        h1 = pool.handle
     else:
-        core.prime_calculations_thread(thread.handle)
+        h1 = 0
 
+    if isinstance(result, Any):
+        h2 = result.handle
+    else:
+        h2 = 0
 
-core.use(c_void_p, 'new_thread_prime_calculations')
+    return core.prime_calculations(
+        n_max,
+        h1,
+        h2,
+    )
 
-def new_thread_prime_calculations():
-    return core.new_thread_prime_calculations()
+core.use(None, 'sleep_for', c_int, c_void_p)
+
+def sleep_for(ms, pool=None):
+    core.sleep_for(ms, pool.handle if isinstance(pool, ThreadPool) else 0)
+
 
 def test_1():
-    t0 = timeit.default_timer()
-    prime_calculations()
-    t1 = timeit.default_timer()
-    print(t1 - t0)
-
-    threads = []
-    for i in range(8):
-        threads.append(Thread())
-
-    for step in range(1000):
+    pool = ThreadPool(10)
+    for step in range(10):
+        t0 = timeit.default_timer()
+        results = []
+        for i in range(10):
+            results.append(Any())
+            prime_calculations(1000000, pool, results[-1])
+        pool.sync()
         t1 = timeit.default_timer()
-        for thread in threads:
-            print(thread.handle)
-            prime_calculations(thread)
-        for thread in threads:
-            thread.join()
-        t2 = timeit.default_timer()
-        print(t2 - t1)
-
+        print(f'time = {t1 - t0}')
+        print(f'Results = {[x.get_int() for x in results]}')
 
 if __name__ == '__main__':
     test_1()
+

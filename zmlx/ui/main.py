@@ -830,7 +830,7 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             self.setWindowTitle(f'WorkDir: {os.getcwd()}')
 
-        try:
+        try:  # 尝试刷新当前的页面（在定义refresh函数的情况下）
             current = self.get_current_widget()
             if hasattr(current, 'refresh'):
                 self.__task_proc.add(lambda: current.refresh())

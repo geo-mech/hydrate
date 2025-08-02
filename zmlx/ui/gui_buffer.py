@@ -187,12 +187,19 @@ def plot(kernel, *args, gui_only=False, gui_mode=None,
     """
 
     def plot_with_gui():
-        return gui.plot(kernel, *args, fname=fname, dpi=dpi, **kwargs)
+        try:
+            gui.break_point()
+            return gui.plot(kernel, *args, fname=fname, dpi=dpi, **kwargs)
+        except Exception as plot_err:
+            print(f'plot failed: {plot_err}')
+            return None
 
     if gui.exists():
         return plot_with_gui()
+
     if gui_mode:  # 创建窗口来运行
         return gui.execute(plot_with_gui, close_after_done=False)
+
     if gui_only:
         return None
     else:

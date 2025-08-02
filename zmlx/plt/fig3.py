@@ -5,36 +5,20 @@ except ImportError as import_error:
     np = None
 
 from zmlx.plt.cmap import get_cm
-from zmlx.plt.on_axes import plot_on_axes
+from zmlx.plt.on_figure import add_axes3
+from zmlx.ui import plot
+from zmlx.plt.on_axes import trisurf3, scatter3
 
 
-def plot_trisurf(x=None, y=None, z=None,
-                 cmap='coolwarm',
-                 **kwargs):
+def plot_trisurf(*args, **kwargs):
     """
     绘制三维三角化曲面图，支持坐标轴标签和颜色映射配置
-
-    Args:
-        x: 数据点的三维坐标数组，必须为相同长度的一维数组
-        y: 数据点的三维坐标数组，必须为相同长度的一维数组
-        z: 数据点的三维坐标数组，必须为相同长度的一维数组
-        cmap : 曲面颜色映射，支持所有Matplotlib注册的colormap名称
-        **kwargs : 传递给底层plot_on_axes函数的附加参数
     """
-
-    def on_axes(ax):
-        res = ax.plot_trisurf(x, y, z, cmap=cmap, antialiased=True)
-        ax.get_figure().colorbar(res, ax=ax)
-
-    plot_on_axes(on_axes, dim=3, **kwargs)
+    plot(add_axes3, trisurf3, *args, **kwargs)
 
 
-def scatter(items=None, get_val=None, x=None, y=None, z=None, c=None,
-            get_pos=None,
-            alpha=1.0,
-            cb_label=None,
-            cmap='coolwarm',
-            **opts):
+def scatter(
+        items=None, get_val=None, x=None, y=None, z=None, c=None, get_pos=None, cb_label=None, **opts):
     """
     绘制三维的散点图
     """
@@ -50,13 +34,8 @@ def scatter(items=None, get_val=None, x=None, y=None, z=None, c=None,
         assert get_val is not None
         c = [get_val(item) for item in items]
 
-    def on_axes(ax):
-        obj = ax.scatter(x, y, z, c=c, cmap=cmap, alpha=alpha)
-        cbar = ax.get_figure().colorbar(obj, ax=ax)
-        if cb_label is not None:
-            cbar.set_label(cb_label)
-
-    plot_on_axes(on_axes, dim=3, **opts)
+    plot(add_axes3, scatter3, x, y, z, c=c,
+         cbar=dict(label=cb_label), **opts)
 
 
 def show_rc3(rc3, *, face_color=None, face_alpha=None, face_cmap=None,
@@ -74,7 +53,7 @@ def show_rc3(rc3, *, face_color=None, face_alpha=None, face_cmap=None,
         edge_width: 线的宽度
         edge_color: 边的颜色
         clabel: 颜色条的标签
-        **opts: 其它传递给plot_on_axes的参数
+        **opts: 其它传递给plot的参数
     Returns:
         None
     """
@@ -132,4 +111,4 @@ def show_rc3(rc3, *, face_color=None, face_alpha=None, face_cmap=None,
             cbar.set_label(clabel)
 
     opts.setdefault('aspect', 'equal')
-    plot_on_axes(on_axes, dim=3, **opts)
+    plot(add_axes3, on_axes, **opts)

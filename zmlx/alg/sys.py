@@ -27,9 +27,10 @@ def log_deprecated(name):
 
 def warn(message, category=None, stacklevel=1, tag=None):
     """
-    警告，并且当tag给定的时候，则记录日志 (每天只记录一次)
+    警告，并且当tag给定的时候，则记录日志 (每天只记录一次). 这个函数用于在zmlx内部，去替换warnings的warn函数，
+    实现在弹出警告的同时，还会进行必要的记录。
     Args:
-        tag: 记录日志的标签
+        tag: 记录日志的标签（非必需）。在没有tag的时候，则使用message来替代
         message: 需要弹出的警告
         category: 类别
         stacklevel: 栈的深度
@@ -251,6 +252,7 @@ def install_dep(show_exists=True):
         ('pypiwin32', 'win32com'),
         ('pywin32', 'pywintypes'),
         ('dulwich', 'dulwich'),
+        ('pillow', 'PIL'),
     ]:
         pip_install(package_name, name=name, show_exists=show_exists)
 
@@ -376,6 +378,10 @@ def create_shortcut(target: str, path: str,
         description (str): 快捷方式描述（可选）
     """
     try:
+        from zml import in_windows
+        if not in_windows():
+            print(f'The function create_shortcut works only for Windows')
+            return
         from pathlib import Path
         import win32com.client  # pip_install('pypiwin32')
 
@@ -426,7 +432,10 @@ def create_ui_lnk_on_desktop(name='IGG-Hydrate.lnk'):
         None
     """
     from zmlx.alg.os import get_desktop_path
-    from zmlx import get_path
+    from zmlx import get_path, in_windows
+    if not in_windows():
+        print(f'The function create_ui_lnk_on_desktop works only for Windows')
+        return
     filename = get_desktop_path(name)
     if isinstance(filename, str):
         create_shortcut(get_pythonw_path(), filename,
@@ -436,7 +445,7 @@ def create_ui_lnk_on_desktop(name='IGG-Hydrate.lnk'):
 
 def has_module(name):
     """
-    测试是否存在给定名字的库
+    测试是否存在给定名字的库(这个，可能并不是很安全的测试方法，因为在测试的时候，会导入，进而执行一些可能不是所预期的操作)
     """
     try:
         import importlib
