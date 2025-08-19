@@ -7,7 +7,7 @@ import os
 from ctypes import c_void_p
 
 import zmlx.alg.sys as warnings
-from zml import Seepage, Vector, is_array, get_pointer64, np, ThreadPool, Map
+from zml import Seepage, Vector, is_array, get_pointer64, np, Map
 from zmlx.alg.base import time2str
 
 
@@ -1258,3 +1258,45 @@ def parallel_update_thermal(*local_kwargs, pool=None, **global_kwargs):
         pool.sync()  # 等待放入pool中的任务执行完毕
 
     return _get_reports(reports)
+
+
+class CellCopyTask:
+    """
+    一个在多个Seepage模型之间并行地拷贝Cell的任务
+    """
+    def __init__(self, sources=None, targets=None):
+        self._sources = None
+        self._targets = None
+        self._count = None
+        if sources is not None and targets is not None:
+            assert len(sources) == len(targets)
+            self.create(sources, targets)
+
+    def create(self, sources, targets):
+        """
+        创建拷贝任务
+        Args:
+            sources: 作为源的Cells
+            targets: 作为目标的Cells
+        """
+        assert len(sources) == len(targets)
+        self._count = len(sources)
+
+        self._sources = (ctypes.c_void_p * self._count)()
+        self._targets = (ctypes.c_void_p * self._count)()
+
+        for idx, cell in enumerate(sources):
+            self._sources[idx] = cell.handle
+        for idx, cell in enumerate(targets):
+            self._targets[idx] = cell.handle
+
+    def run(self, positive=True):
+        """
+        执行任务
+        """
+        if positive:
+            Seepage.Cell.clone_all(targets=self._targets, sources=self._sources, count=self._count)
+        else:
+            Seepage.Cell.clone_all(sources=self._targets, targets=self._sources, count=self._count)
+        return self
+

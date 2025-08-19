@@ -19,6 +19,19 @@ def scatter3(ax, *args, cbar=None, **kwargs):
     return obj
 
 
+def colorbar(ax, obj, **kwargs):
+    """
+    为Axes添加颜色条.
+    Args:
+        ax: Axes对象，用于添加颜色条
+        obj: 用于创建颜色条的对象，例如散点图、填充等高线图等
+        **kwargs: 传递给ax.colorbar函数的关键字参数
+    Returns:
+        颜色条对象
+    """
+    return ax.get_figure().colorbar(obj, ax=ax, **kwargs)
+
+
 def contourf(ax, *args, cbar=None, **kwargs):
     """
     绘制二维填充等高线图（云图）。

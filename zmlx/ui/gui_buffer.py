@@ -141,9 +141,9 @@ def question(info):
         return y == 'y' or y == 'Y'
 
 
-def plot_no_gui(kernel, fname=None, dpi=300):
+def plot_no_gui(kernel, *args, fname=None, dpi=300, **kwargs):
     """
-    在非GUI模式下绘图(或者显示并阻塞程序执行，或者输出文件但不显示)
+    在非GUI模式下绘图(或者显示并阻塞程序执行，或者输出文件但不显示).
     """
     try:
         import matplotlib.pyplot as plt
@@ -153,18 +153,21 @@ def plot_no_gui(kernel, fname=None, dpi=300):
         plt = None
 
     if kernel is None or plt is None:
-        return
+        return None
     try:
         fig = plt.figure()
-        kernel(fig)
+        kernel(fig, *args, **kwargs)
         if fname is not None:
             fig.savefig(fname=fname, dpi=dpi)
             plt.close()
+            return None
         else:
             plt.show()
+            return fig
     except Exception as err:
         import zmlx.alg.sys as warnings
         warnings.warn(f'meet exception <{err}> when run <{kernel}>')
+        return None
 
 
 def plot(kernel, *args, gui_only=False, gui_mode=None,
@@ -203,7 +206,7 @@ def plot(kernel, *args, gui_only=False, gui_mode=None,
     if gui_only:
         return None
     else:
-        return plot_no_gui(kernel, fname=fname, dpi=dpi)
+        return plot_no_gui(kernel, *args, fname=fname, dpi=dpi, **kwargs)
 
 
 def gui_exec(*args, **kwargs):

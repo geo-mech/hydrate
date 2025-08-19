@@ -96,6 +96,7 @@ from zmlx.geometry.base import (
 ########################################
 # io
 from zmlx.io.path import get_path as opath
+from zmlx.io import json_ex
 
 ########################################
 # kr

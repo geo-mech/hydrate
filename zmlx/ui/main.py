@@ -325,7 +325,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.add_action(
             menu='操作', name='console_exec', icon='begin',
-            tooltip='运行当前标签页面显示的脚本',
+            tooltip='运行当前标签页面显示的脚本 (执行当前标签的console_exec函数)',
             text='运行', shortcut='Ctrl+R',
             slot=console_exec,
             on_toolbar=True,
@@ -845,16 +845,29 @@ class MainWindow(QtWidgets.QMainWindow):
     def get_widget(
             self, the_type, caption=None, on_top=None, init=None,
             type_kw=None, oper=None, icon=None, caption_color=None,
-            set_parent=False, tooltip=None):
+            set_parent=False, tooltip=None, is_ok=None):
         """
         返回一个控件，其中type为类型，caption为标题，现有的控件，只有类型和标题都满足，才会返回，否则就
         创建新控件。
-        init：首次生成控件，在显示之前所做的操作
-        oper：每次调用都会执行，且在控件显示之后执行
+        Args:
+            the_type: 控件的类型
+            caption: 标题
+            on_top: 是否将控件设置为当前的控件
+            init: 首次生成控件，在显示之前所做的操作
+            type_kw: 用于创建控件的关键字参数
+            oper: 每次调用都会执行，且在控件显示之后执行
+            icon: 图标
+            caption_color: 标题的颜色
+            set_parent: 是否将控件的父对象设置为当前的窗口
+            tooltip: 工具提示
+            is_ok: 一个函数，用于检查控件对象
+
+        Returns:
+            符合条件的Widget对象，否则返回None
         """
         if caption is None:
             caption = 'untitled'
-        widget = self.__tab_widget.find_widget(the_type=the_type, text=caption)
+        widget = self.__tab_widget.find_widget(the_type=the_type, text=caption, is_ok=is_ok)
         if widget is None:
             if self.__tab_widget.count() >= 200:
                 print(f'The current number of tabs has reached '
@@ -1153,7 +1166,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self.set_cwd(folder)
 
     def get_current_widget(self):
+        """
+        返回当前的标签对象
+        """
         return self.__tab_widget.currentWidget()
+
+    def get_current_tab_index(self):
+        """
+        返回当前标签的序号
+        """
+        return self.__tab_widget.currentIndex()
 
     def get_output_widget(self):
         return self.__console.output_widget

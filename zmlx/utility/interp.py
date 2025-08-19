@@ -1,3 +1,6 @@
+"""
+进行自动的多维插值的库
+"""
 try:
     import numpy as np
 except ImportError:
@@ -16,9 +19,8 @@ from zmlx.alg.base import join_cols
 
 class Interp2:
     """
-    二维的插值. 将首先尝试线性插值，当线性插值失败的时候，则转而寻找最为接近的点.
-        注意：
-            不支持向量化操作；
+    二维的插值.
+        将首先尝试CloughTocher2DInterpolator，之后是线性插值，最后寻找最为接近的点.
     """
 
     def __init__(self, x, y, v, rescale=True):
@@ -27,7 +29,7 @@ class Interp2:
         """
         assert len(v) >= 1
         if len(v) == 1:
-            # 此时是一个常数
+            # 此时是一个常数，无论如何插值，都是这个数字本身，因此不用插值
             self.value = v[0]
             self.f0 = None
             self.f1 = None
@@ -38,6 +40,7 @@ class Interp2:
         points = join_cols(x, y)
         values = v
 
+        # 这是一个比线性插值更加平滑的方法
         try:
             self.f0 = CloughTocher2DInterpolator(
                 points, values, rescale=rescale,
@@ -54,8 +57,11 @@ class Interp2:
             self.f1 = None
 
         # 备选，当线性插值失败的时候，使用这个
-        self.f2 = NearestNDInterpolator(
-            points, values, rescale=rescale)
+        try:
+            self.f2 = NearestNDInterpolator(
+                points, values, rescale=rescale)
+        except:
+            self.f2 = None
 
         # 默认值 (此时不具备默认值)
         self.value = None
@@ -63,16 +69,13 @@ class Interp2:
     def __call__(self, x, y):
         """
         返回给定点处的数据。
-            注意：此函数不支持向量;
         """
-        if self.f0 is not None:
-            # 首先，尝试线性插值
+        if self.f0 is not None:  # 首先，尝试CloughTocher插值
             v = self.f0(x, y)
             if not np.any(np.isnan(v)):  # 当插值失败，会返回np.nan
                 return v
 
-        if self.f1 is not None:
-            # 首先，尝试线性插值
+        if self.f1 is not None:  # 尝试线性插值
             v = self.f1(x, y)
             if not np.any(np.isnan(v)):  # 当插值失败，会返回np.nan
                 return v
@@ -86,24 +89,31 @@ class Interp2:
 
         # 最后，返回默认值.
         assert self.f2 is None
-        return self.value
+
+        if self.value is not None:
+            return self.value * np.ones_like(x)
+        else:
+            return np.nan * np.ones_like(x)  #  2025-8-4修改，尚未测试
 
 
 class Interp3:
     """
-    三维的插值. 将首先尝试线性插值，当线性插值失败的时候，则转而寻找最为接近的点.
-        注意：
-            不支持向量化操作；
+    三维的插值.
+    将首先尝试线性插值，当线性插值失败的时候，则转而寻找最为接近的点.
     """
 
     def __init__(self, x, y, z, v, rescale=True):
         """
         根据4列数据来构造一个三维插值。当不同维度的范围差异比较大的时候，务必将rescale设置为True
         """
-        assert len(v) >= 1
-        if len(v) == 1:
+        x = np.asarray(x)
+        y = np.asarray(y)
+        z = np.asarray(z)
+        v = np.asarray(v)
+
+        if v.size == 1:
             # 此时是一个常数
-            self.value = v[0]
+            self.value = float(v)
             self.f1 = None
             self.f2 = None
             return
@@ -130,24 +140,25 @@ class Interp3:
     def __call__(self, x, y, z):
         """
         返回给定点处的数据。
-            注意：此函数不支持向量;
         """
-        if self.f1 is not None:
-            # 首先，尝试线性插值
+        if self.f1 is not None:  # 首先，尝试线性插值
             v = self.f1(x, y, z)
-            if not np.isnan(v):  # 当插值失败，会返回np.nan
+            if not np.any(np.isnan(v)):  # 当插值失败，会返回np.nan
                 return v
 
-        if self.f2 is not None:
+        if self.f2 is not None:  # 尝试最接近的点
             v = self.f2(x, y, z)
-            if not np.isnan(v):  # 当插值失败，会返回np.nan
+            if not np.any(np.isnan(v)):  # 当插值失败，会返回np.nan
                 return v
             else:
                 assert False, 'The function f2 (NearestNDInterpolator) should never get nan'
 
         # 最后，返回默认值.
         assert self.f2 is None
-        return self.value
+        if self.value is not None:
+            return self.value * np.ones_like(x)
+        else:
+            return np.nan * np.ones_like(x)  # 2025-8-4修改，尚未测试
 
 
 def test():

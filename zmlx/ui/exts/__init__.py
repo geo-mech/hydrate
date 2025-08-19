@@ -8,5 +8,8 @@ def get_path(*args):
 def get_files():
     return [
         get_path('message.py'),
+        get_path('string_table.py'),
         get_path('seepage.py'),
+        get_path('examples.py'),
+        get_path('editors.py'),
     ]

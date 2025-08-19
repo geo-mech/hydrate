@@ -1766,8 +1766,18 @@ class TabWidget(QtWidgets.QTabWidget):
         else:
             return False
 
-    def find_widget(self, the_type=None, text=None):
-        assert the_type is not None or text is not None
+    def find_widget(self, the_type=None, text=None, is_ok=None):
+        """
+        返回给定条件的Widget。给定的所有条件需要同时满足
+        Args:
+            the_type: 控件的类型
+            text: 标题
+            is_ok: 一个函数，用于检查控件对象
+
+        Returns:
+            符合条件的Widget对象，否则返回None
+        """
+        assert the_type is not None or text is not None or is_ok is not None
         for i in range(self.count()):
             widget = self.widget(i)
             if the_type is not None:
@@ -1775,6 +1785,9 @@ class TabWidget(QtWidgets.QTabWidget):
                     continue
             if text is not None:
                 if text != self.tabText(i):
+                    continue
+            if callable(is_ok):
+                if not is_ok(widget):
                     continue
             return widget
         return None

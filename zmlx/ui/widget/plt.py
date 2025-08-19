@@ -2,9 +2,9 @@ import os
 import sys
 import warnings
 
+from zml import in_windows, in_linux, in_macos
 from zmlx.ui.alg import create_action
 from zmlx.ui.pyqt import QtWidgets
-from zml import in_windows, in_linux, in_macos
 
 try:
     import matplotlib
@@ -150,9 +150,12 @@ class MatplotWidget(QtWidgets.QWidget):
         """
         try:
             on_figure(self.figure)
-            self.draw()
         except Exception as e:
             warnings.warn(f'meet exception <{e}> when run <{on_figure}>')
+        try:
+            self.draw()
+        except Exception as e:
+            warnings.warn(f'meet exception <{e}> when run <{self.draw}>')
 
 
 def test():

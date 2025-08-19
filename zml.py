@@ -48,6 +48,7 @@ def in_windows():
     """
     return sys.platform.startswith('win')
 
+
 def in_linux():
     """
     判断当前是否处于Linux系统的运行环境
@@ -55,6 +56,7 @@ def in_linux():
         bool: True表示是Linux系统，False表示不是
     """
     return sys.platform.startswith('linux')
+
 
 def in_macos():
     """
@@ -77,6 +79,7 @@ def get_os_type():
         return 'macos'
     else:
         return 'unknown'
+
 
 # 是否是Windows系统 (注: 此常量后续弃用，请使用函数 in_windows)
 is_windows = in_windows()
@@ -14266,9 +14269,10 @@ class Seepage(HasHandle, HasCells):
                 path (str, optional): 用于加载数据的文件路径。默认为None。
                 handle (c_void_p, optional): 指向底层数据的句柄。默认为None。
             """
-            super(Seepage.CellData, self).__init__(handle,
-                                                   core.new_seepage_cell,
-                                                   core.del_seepage_cell)
+            super(Seepage.CellData, self).__init__(
+                handle,
+                core.new_seepage_cell,
+                core.del_seepage_cell)
             if handle is None:
                 if isinstance(path, str):
                     self.load(path)
@@ -14893,6 +14897,22 @@ class Seepage(HasHandle, HasCells):
             else:
                 core.seepage_cell_clone(self.handle, other.handle)
                 return self
+
+        core.use(None, 'seepage_cell_clone_all', POINTER(c_void_p), POINTER(c_void_p), c_size_t)
+
+        @staticmethod
+        def clone_all(targets, sources, count):
+            """
+            拷贝所有给定的Cell数据
+            Args:
+                targets: 即将被覆盖的目标Cell
+                sources: 数据来源
+                count: 需要拷贝的数量
+
+            Returns:
+                None
+            """
+            core.seepage_cell_clone_all(targets, sources, count)
 
         core.use(None, 'seepage_cell_set_fluid_components',
                  c_void_p, c_void_p)
