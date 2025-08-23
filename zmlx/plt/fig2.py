@@ -104,7 +104,7 @@ def show_dfn2(dfn2, **opts):
     plot(add_axes2, on_axes, **opts)
 
 
-def show_field2(f, xr, yr, clabel=None, **opts):
+def show_field2(f, xr, yr, clabel=None, cmap=None, levels=None, **opts):
     """
     显示一个二维的场，用于测试
     """
@@ -122,8 +122,8 @@ def show_field2(f, xr, yr, clabel=None, **opts):
                 z.append(f(a, b))
         item = ax.tricontourf(
             x, y, z,
-            levels=30,
-            cmap='coolwarm',
+            levels=levels,
+            cmap=cmap,
             antialiased=True
         )
         cbar = ax.get_figure().colorbar(item, ax=ax)

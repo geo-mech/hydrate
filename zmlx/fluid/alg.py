@@ -1,5 +1,56 @@
+import os
 from zml import Interp2, Seepage, np
 from zmlx.utility.interp import Interp2 as Interpolator
+from zmlx.io import json_ex
+
+
+def load_fludefs(option, folder):
+    """
+    从文件导入流体的定义(多个定义).
+    返回：
+        None或者list
+    """
+    if isinstance(option, str):
+        option = json_ex.read(os.path.join(folder, option))
+    if isinstance(option, list):
+        return [_load_fludef(fludef, folder) for fludef in option]
+    elif isinstance(option, dict):
+        return _load_fludef(option, folder)
+    else:
+        raise TypeError('option must be str or list')
+
+
+def _load_fludef(opt, folder):
+    """
+    从文件导入单个的流体的定义
+    """
+    assert isinstance(opt, dict)
+
+    name = opt.get('name')  # 流体的名字。如果没有给定，那么就使用文件中定义的名字
+    data = opt.get('data')
+    if isinstance(data, str):
+        if len(data) > 0:
+            path = os.path.join(folder, data)
+            assert os.path.isfile(path)
+            result = Seepage.FluDef()
+            result.load(path)
+            if isinstance(name, str):
+                assert len(name) > 0
+                result.name = name
+            else:
+                assert len(result.name) > 0
+            return result
+
+    # 此时，必须给定name
+    assert isinstance(name, str)
+    assert len(name) > 0
+    result = Seepage.FluDef(name=name)
+    components = opt.get('components')
+    if isinstance(components, (list, tuple)):
+        for comp in components:
+            result.add_component(_load_fludef(comp, folder))
+
+    return result
 
 
 def _get_max(data, get, max_):

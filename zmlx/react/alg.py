@@ -1,7 +1,30 @@
+import os
 import warnings
 from collections.abc import Iterable
 
 from zml import Seepage, parse_fid
+from zmlx.io import json_ex
+
+
+def load_reactions(option, folder):
+    """
+    从文件夹导入多个反应，并且返回一个list
+    """
+    if isinstance(option, str):  # 导入配置文件
+        option = json_ex.read(os.path.join(folder, option))
+
+    if isinstance(option, list):
+        result = []
+        for opt in option:
+            if isinstance(opt, str):
+                opt = json_ex.read(os.path.join(folder, opt))
+            if isinstance(opt, dict):
+                result.append(opt)
+        return result
+    elif isinstance(option, dict):
+        return [option]
+    else:
+        return []
 
 
 def __add_inhibitor(
