@@ -4,8 +4,8 @@
 import os
 
 import zmlx.alg.sys as warnings
-from zmlx.io import json_ex
 from zml import make_parent, np
+from zmlx.io import json_ex
 
 try:
     from PIL import Image
@@ -21,17 +21,13 @@ except ImportError as err:
 
 import glob
 
-try:
-    import cv2  # python -m pip install opencv-python
-except ImportError as err:
-    cv2 = None
-    warnings.warn(f'{err}', ImportWarning)
-
 
 def make_video(video_name, image_folder, fps=30, img_ext='.jpg'):
     """
     将给定文件夹中的给定扩展名的图片合成一个视频.
     """
+    import cv2  # python -m pip install opencv-python
+
     # 获取图片列表
     images = [img for img in glob.glob(f"{image_folder}/*{img_ext}")]
 
@@ -115,64 +111,70 @@ def crop_image(output_path, input_path, left, upper, right, lower):
             print(f'Failed. Reason: {e}')
 
 
-def get_data(img_name, map_name, *, vmin=0.0, vmax=1.0, xmin=None, xmax=None, ymin=None, ymax=None):
+def get_data(img, cmap, *, vmin=0.0, vmax=1.0, xmin=None, xmax=None, ymin=None, ymax=None, values=None):
     """
-    读取云图和对应的colormap，将之转化为矩阵。其中:
-        img_name: 云图的文件名(图片)
-        map_name: colormap的文件名(图片). 应该尽量保证colormap图片为长方形. 当
-            图片宽度>高度的时候: 左侧颜色对应数值vmin，右侧对应数值vmax
-            图片宽度<高度的时候: 下方颜色对应数值vmin，上方对应数值vmax
+    读取云图和对应的colormap，将之转化为矩阵或者插值
+    Args:
+        img: 云图（一个三维的numpy矩阵）或者路径（一个图片的路径）
+        cmap: colormap或者colormap的图片路径
+        vmin: colormap的最小值
+        vmax: colormap的最大值
+        xmin: 云图的x最小值
+        xmax: 云图的x最大值
+        ymin: 云图的y最小值
+        ymax: 云图的y最大值
+        values: colormap的数值
     返回:
-        一个矩阵（大小和fig_name图片一致），矩阵的元素从vmin到vmax.
+        一个矩阵或者一个插值
     注意:
         此算法采用NearestNDInterpolator来进行插值，因此如果colormap的颜色比较少，则会
         有数据精度的损失.
     Since 2023-12-17. by ZZB
     最后修改  2025-8-23  新增功能：可以指定xmin, xmax, ymin, ymax
     """
-    if not os.path.isfile(img_name) or not os.path.isfile(map_name):
-        return None
+    if isinstance(cmap, str):  # 读取图片
+        assert os.path.isfile(cmap)
+        cmap = np.array(Image.open(cmap))
+        assert len(cmap.shape) == 2 or len(cmap.shape) == 3
+        if len(cmap.shape) == 2:
+            cmap = cmap[:, :, np.newaxis]
+        # 压扁
+        if cmap.shape[0] < cmap.shape[1]:
+            points = np.mean(cmap, axis=0)
+            if values is None:
+                values = np.linspace(vmin, vmax, cmap.shape[1])
+        else:
+            points = np.mean(cmap, axis=1)
+            if values is None:
+                values = np.linspace(vmax, vmin, cmap.shape[0])
+    else:  # 直接假设它就是一些颜色，从上到下，对应的值从小到大
+        cmap = np.asarray(cmap)
+        points = cmap
+        if values is None:
+            values = np.linspace(vmin, vmax, cmap.shape[0])
+    # 生成插值
+    cmap_interp = NearestNDInterpolator(points, values, rescale=True)  # 确保数值范围为[0, 1]
 
-    # 创建cmap
-    cmap_image = np.array(Image.open(map_name))
-    rows, cols, cmap_dims = cmap_image.shape
-    assert 1 <= cmap_dims <= 4
-    points = np.hstack(
-        [cmap_image[:, :, i].reshape(rows * cols, 1) for i in range(cmap_dims)])
-    [i0, i1] = np.meshgrid(range(cols), range(rows))
-    if rows < cols:
-        values = i0.reshape(rows * cols, 1) / cols
-    else:
-        values = 1 - i1.reshape(rows * cols, 1) / rows
-    cmap = NearestNDInterpolator(points, values, rescale=False)
+    if isinstance(img, str):  # 读取图片
+        assert os.path.isfile(img)
+        img = np.array(Image.open(img))
 
-    # 读取数据
-    field_image = np.array(Image.open(img_name))
-    field_dims = field_image.shape[2]
-    assert field_dims == cmap_dims
-    assert 1 <= field_dims <= 4
-    points = [field_image[:, :, i] for i in range(field_dims)]
+    assert len(img.shape) == 2 or len(img.shape) == 3
+    if len(img.shape) == 2:
+        img = img[:, :, np.newaxis]
 
-    # 插值
-    data = cmap(*points) * (vmax - vmin) + vmin
-
-    # 获取结果
-    if len(data.shape) == 3:
-        data = data[:, :, 0]  # 转换称为二维的
+    # 插值获取值
+    points = [img[:, :, i] for i in range(img.shape[2])]
+    data = cmap_interp(*points)
+    assert len(data.shape) == 2
 
     # 如果没有给定x或者y的范围，则直接返回矩阵
     if xmin is None or xmax is None or ymin is None or ymax is None:
         return data
 
-    # 给定了范围，则尝试将结果转化为后续更加方便使用的插值体
-    assert xmin < xmax
-    assert ymin < ymax
-
     vx = np.linspace(xmin, xmax, data.shape[1])
     vy = np.linspace(ymax, ymin, data.shape[0])
     x, y = np.meshgrid(vx, vy)
-
-    # 转化为数据点，后续插值
     x = x.flatten()
     y = y.flatten()
     v = data.flatten()
@@ -182,7 +184,9 @@ def get_data(img_name, map_name, *, vmin=0.0, vmax=1.0, xmin=None, xmax=None, ym
 
 
 def load_field(option, folder=None):
-
+    """
+    读取图片，并且转化为一个插值场
+    """
     if folder is None:
         if isinstance(option, str):
             assert os.path.isfile(option)
@@ -192,41 +196,27 @@ def load_field(option, folder=None):
             option = json_ex.read(option)
 
     if isinstance(option, str):
-        option = json_ex.read(option)
+        if os.path.isfile(option):
+            option = json_ex.read(option)
+        else:
+            if isinstance(folder, str):
+                if os.path.isfile(os.path.join(folder, option)):
+                    option = json_ex.read(os.path.join(folder, option))
 
     if not isinstance(option, dict):
         return None
 
-    img_name = option.get('img_name', 'field.jpg')
-    map_name = option.get('map_name', 'cmap.jpg')
-    assert isinstance(img_name, str)
-    assert isinstance(map_name, str)
+    img = option.pop('img', 'field.jpg')
+    cmap = option.pop('cmap', 'cmap.jpg')
 
-    if not os.path.isfile(img_name):
-        img_name = os.path.join(folder, img_name)
-        assert os.path.isfile(img_name)
+    assert isinstance(img, str)
+    if not os.path.isfile(img):
+        if os.path.isfile(os.path.join(folder, img)):
+            img = os.path.join(folder, img)
 
-    if not os.path.isfile(map_name):
-        map_name = os.path.join(folder, map_name)
-        assert os.path.isfile(map_name)
+    if isinstance(cmap, str):
+        if not os.path.isfile(cmap):
+            if os.path.isfile(os.path.join(folder, cmap)):
+                cmap = os.path.join(folder, cmap)
 
-    vmin = option.get('vmin')
-    vmax = option.get('vmax')
-    assert isinstance(vmin, (int, float))
-    assert isinstance(vmax, (int, float))
-    assert vmin < vmax
-
-    xmin = option.get('xmin')
-    xmax = option.get('xmax')
-    assert isinstance(xmin, (int, float))
-    assert isinstance(xmax, (int, float))
-    assert xmin < xmax
-
-    ymin = option.get('ymin')
-    ymax = option.get('ymax')
-    assert isinstance(ymin, (int, float))
-    assert isinstance(ymax, (int, float))
-    assert ymin < ymax
-
-    return get_data(img_name, map_name, vmin=vmin, vmax=vmax, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
-
+    return get_data(img, cmap, **option)
