@@ -1,6 +1,6 @@
 import zmlx.alg.sys as warnings
 
-from zmlx.plt.fig3 import show_rc3
+from zmlx.plt.rc3 import show_rc3
 
 warnings.warn(f'The modulus {__name__} is deprecated and '
               f'will be removed after 2026-4-16, import functions directly from <zmlx> instead',

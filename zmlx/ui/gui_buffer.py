@@ -141,7 +141,7 @@ def question(info):
         return y == 'y' or y == 'Y'
 
 
-def plot_no_gui(kernel, *args, fname=None, dpi=300, **kwargs):
+def plot_no_gui(kernel, *args, fname=None, dpi=300, caption=None, **kwargs):
     """
     在非GUI模式下绘图(或者显示并阻塞程序执行，或者输出文件但不显示).
     """

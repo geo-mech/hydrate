@@ -1,10 +1,6 @@
-"""
-定义数据格式 fn2，主要包括4列数据，用于定义裂缝位置，1列数据，用于定义裂缝的宽度，
-1列数据，用于定义裂缝的颜色（如压力）
-"""
 import zmlx.alg.sys as warnings
 
-from zmlx.plt.fig2 import show_fn2
+from zmlx.plt.fn2 import show_fn2
 
 warnings.warn(f'The modulus {__name__} is deprecated and '
               f'will be removed after 2026-4-16, import functions directly from <zmlx> instead',
