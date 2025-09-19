@@ -45,6 +45,7 @@ def tricontourf(
 
     opts.setdefault('aspect', 'equal')
     opts.setdefault('antialiased', 'True')
+    opts.setdefault('tight_layout', True)
     cbar = dict(label=clabel)
     if triangulation is None:
         plot(add_axes2, add_tricontourf, x, y, z, cbar=cbar, **opts)

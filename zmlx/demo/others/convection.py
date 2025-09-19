@@ -32,13 +32,29 @@ def create():
 
 
 def show(model):
-    title = f'Time = {seepage.get_time(model, as_str=True)}'
+    from zmlx.plt.on_axes import add_axes2, tricontourf
+    if not gui.exists():
+        return
+
     x = as_numpy(model).cells.x
     z = as_numpy(model).cells.z
     density = as_numpy(model).fluids(0).den
-    tricontourf(x, z, density, caption='密度', title=title)
     y0 = as_numpy(model).fluids(0).get_attr(model.get_flu_key('z0'))
-    tricontourf(x, z, y0, caption='流体Z0', title=title)
+
+    def on_figure(figure):
+        figure.suptitle(f'Model when time = {seepage.get_time(model, as_str=True)}')
+        opts = dict(
+            ncols=2, nrows=1, xlabel='x', ylabel='y', aspect='equal'
+        )
+        add_axes2(figure, tricontourf, x, z, density, title='密度', cbar=dict(label='密度'),
+                  index=1, **opts
+                  )
+        add_axes2(figure, tricontourf, x, z, y0, title='流体Z0', cbar=dict(label='流体Z0'),
+                  index=2, **opts
+                  )
+        figure.tight_layout()
+
+    plot(on_figure, caption=f'Seepage(handle={model.handle})', clear=True)
 
 
 def main():

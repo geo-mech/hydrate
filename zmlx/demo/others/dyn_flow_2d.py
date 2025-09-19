@@ -47,7 +47,7 @@ def main():
         r = model.iterate(dt=0.1, fa_s=fa_s, fa_q=fa_q, fa_k=fa_k, ca_p=ca_p)
         if step % 5 == 0:
             plot(add_axes2, tricontourf, x, y, as_numpy(model).cells.pre, xlabel='x', ylabel='y',
-                 cbar=dict(label='Pressure'), aspect='equal')
+                 cbar=dict(label='Pressure', shrink=0.8), aspect='equal', tight_layout=True)
         print(f'step = {step}, r = {r}')
 
 
