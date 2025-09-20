@@ -1,5 +1,4 @@
 include zml.py
-include zml.dll
 include README.md
 include zml_ui.pyw
 recursive-include zmlx *
