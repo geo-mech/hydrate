@@ -21,7 +21,7 @@ p = 10000000.0Pa, T = 500K, vis = 0.0063358958456372905Pa.s, den = 898.062894kg/
 from math import log, exp
 
 import zmlx.alg.sys as warnings
-from zml import Interp2, Seepage
+from zmlx.exts.base import Interp2, Seepage
 
 
 def create(t_min=270, t_max=1000, p_min=1e6, p_max=40e6, name=None,

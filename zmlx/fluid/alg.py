@@ -1,5 +1,5 @@
 import os
-from zml import Interp2, Seepage, np
+from zmlx.exts.base import Interp2, Seepage, np
 from zmlx.utility.interp import Interp2 as Interpolator
 from zmlx.io import json_ex
 

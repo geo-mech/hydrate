@@ -7,8 +7,8 @@ import os
 from ctypes import c_void_p
 
 import zmlx.alg.sys as warnings
-from zml import Seepage, Vector, is_array, get_pointer64, np, Map
 from zmlx.alg.base import time2str
+from zmlx.exts.base import Seepage, Vector, is_array, get_pointer64, np, Map
 
 
 class SeepageNumpy:
@@ -473,6 +473,19 @@ def get_dt(model: Seepage, as_str=False):
     return time2str(result) if as_str else result
 
 
+def get_dt_str(model: Seepage):
+    """
+    获取模型的时间步长，返回格式化的时间字符串。
+
+    Args:
+        model: 渗流模型对象
+
+    Returns:
+        str: 格式化的时间字符串
+    """
+    return get_dt(model, as_str=True)
+
+
 def get_time(model: Seepage, as_str=False):
     """获取模型当前的计算时间。
 
@@ -488,6 +501,19 @@ def get_time(model: Seepage, as_str=False):
     """
     result = get_attr(model, key='time', default_val=0.0)
     return time2str(result) if as_str else result
+
+
+def get_time_str(model: Seepage):
+    """
+    获取模型当前的计算时间，返回格式化的时间字符串。
+
+    Args:
+        model: 渗流模型对象
+
+    Returns:
+        str: 格式化的时间字符串
+    """
+    return get_time(model, as_str=True)
 
 
 def set_time(model: Seepage, value):
@@ -1012,7 +1038,7 @@ def get_cell_mask(model: Seepage, xr=None, yr=None, zr=None):
     return [x_mask[i] and y_mask[i] and z_mask[i] for i in range(len(x_mask))]
 
 
-def get_cell_pos(model: Seepage, dim, mask=None):
+def get_cell_pos(model: Seepage, dim, mask=None, shape=None):
     """
     返回cell的位置向量
 
@@ -1020,50 +1046,116 @@ def get_cell_pos(model: Seepage, dim, mask=None):
     - model: Seepage 模型对象
     - dim: 维度索引（0, 1, 2 分别对应 x, y, z 维度）
     - mask: 可选的掩码，用于筛选特定的单元格
+    - shape: 可选的形状，用于将结果重新整形为指定的维度
 
     返回值:
     - 一个 numpy 数组，包含给定维度上单元格的位置向量
 
     如果 mask 为 None，则返回所有单元格的位置向量；否则，返回掩码指定的单元格的位置向量
     """
-    assert 0 <= dim < 3
+    assert 0 <= dim < 3, 'dim must be 0, 1, or 2'
     v = as_numpy(model).cells.get(-(dim + 1))
-    return v if mask is None else v[mask]
+    res = v if mask is None else v[mask]
+    if shape is not None:
+        res = np.reshape(res, shape)
+    return res
 
 
-def get_cell_pre(model: Seepage, mask=None):
+def get_x(model: Seepage, mask=None, shape=None):
+    """
+    返回模型中单元格的x坐标。
+
+    Args:
+        model: Seepage 模型对象
+        mask: 可选的掩码，用于筛选特定的单元格
+        shape: 可选的形状，用于将结果重新整形为指定的维度
+
+    Returns:
+        一个 numpy 数组，包含模型中所有单元格的x坐标。
+        如果提供了掩码，则返回掩码指定的单元格的x坐标。
+    """
+    return get_cell_pos(model, dim=0, mask=mask, shape=shape)
+
+
+def get_y(model: Seepage, mask=None, shape=None):
+    """
+    返回模型中单元格的y坐标。
+
+    Args:
+        model: Seepage 模型对象
+        mask: 可选的掩码，用于筛选特定的单元格
+        shape: 可选的形状，用于将结果重新整形为指定的维度
+
+    Returns:
+        一个 numpy 数组，包含模型中所有单元格的y坐标。
+        如果提供了掩码，则返回掩码指定的单元格的y坐标。
+    """
+    return get_cell_pos(model, dim=1, mask=mask, shape=shape)
+
+
+def get_z(model: Seepage, mask=None, shape=None):
+    """
+    返回模型中单元格的z坐标。
+
+    Args:
+        model: Seepage 模型对象
+        mask: 可选的掩码，用于筛选特定的单元格
+        shape: 可选的形状，用于将结果重新整形为指定的维度
+
+    Returns:
+        一个 numpy 数组，包含模型中所有单元格的z坐标。
+        如果提供了掩码，则返回掩码指定的单元格的z坐标。
+    """
+    return get_cell_pos(model, dim=2, mask=mask, shape=shape)
+
+
+def get_cell_pre(model: Seepage, mask=None, shape=None):
     """
     返回模型中单元格的压力值。
 
     参数:
     - model: Seepage 模型对象
     - mask: 可选的掩码，用于筛选特定的单元格
+    - shape: 可选的形状，用于将结果重新整形为指定的维度
 
     返回值:
     - 一个 numpy 数组，包含模型中所有单元格的压力值。
     - 如果提供了掩码，则返回掩码指定的单元格的压力值。
     """
     v = as_numpy(model).cells.pre
-    return v if mask is None else v[mask]
+    res = v if mask is None else v[mask]
+    if shape is not None:
+        res = np.reshape(res, shape)
+    return res
 
 
-def get_cell_temp(model: Seepage, mask=None):
+get_p = get_cell_pre
+
+
+def get_cell_temp(model: Seepage, mask=None, shape=None):
     """
     返回模型中单元格的温度值。
 
     参数:
     - model: Seepage 模型对象
     - mask: 可选的掩码，用于筛选特定的单元格
+    - shape: 可选的形状，用于将结果重新整形为指定的维度
 
     返回值:
     - 一个 numpy 数组，包含模型中所有单元格的温度值。
     - 如果提供了掩码，则返回掩码指定的单元格的温度值。
     """
     v = as_numpy(model).cells.get(model.get_cell_key('temperature'))
-    return v if mask is None else v[mask]
+    res = v if mask is None else v[mask]
+    if shape is not None:
+        res = np.reshape(res, shape)
+    return res
 
 
-def get_cell_fv(model: Seepage, fid=None, mask=None):
+get_t = get_cell_temp
+
+
+def get_cell_fv(model: Seepage, fid=None, mask=None, shape=None):
     """
     返回模型中单元格的流体体积。
 
@@ -1071,6 +1163,7 @@ def get_cell_fv(model: Seepage, fid=None, mask=None):
     - model: Seepage 模型对象
     - fid: 流体 ID（可选），如果未提供，则返回所有流体的总体积
     - mask: 可选的掩码，用于筛选特定的单元格
+    - shape: 可选的形状，用于将结果重新整形为指定的维度
 
     返回值:
     - 一个 numpy 数组，包含模型中所有单元格的流体体积。
@@ -1080,13 +1173,22 @@ def get_cell_fv(model: Seepage, fid=None, mask=None):
     if fid is None:
         v = as_numpy(model).cells.fluid_vol
     else:
-        if isinstance(fid, str) or not isinstance(fid, collections.abc.Iterable):
+        if isinstance(fid, str):
+            fid = model.find_fludef(name=fid)
+            assert fid is not None
+        if not is_array(fid):
             fid = [fid]
         v = as_numpy(model).fluids(*fid).vol
-    return v if mask is None else v[mask]
+    res = v if mask is None else v[mask]
+    if shape is not None:
+        res = np.reshape(res, shape)
+    return res
 
 
-def get_cell_fm(model: Seepage, fid=None, mask=None):
+get_v = get_cell_fv
+
+
+def get_cell_fm(model: Seepage, fid=None, mask=None, shape=None):
     """
     返回模型中单元格的流体质量。
 
@@ -1094,6 +1196,7 @@ def get_cell_fm(model: Seepage, fid=None, mask=None):
     - model: Seepage 模型对象
     - fid: 流体 ID（可选），如果未提供，则返回所有流体的总质量
     - mask: 可选的掩码，用于筛选特定的单元格
+    - shape: 可选的形状，用于将结果重新整形为指定的维度
 
     返回值:
     - 一个 numpy 数组，包含模型中所有单元格的流体质量。
@@ -1103,10 +1206,113 @@ def get_cell_fm(model: Seepage, fid=None, mask=None):
     if fid is None:
         v = as_numpy(model).cells.fluid_mass
     else:
-        if isinstance(fid, str) or not isinstance(fid, collections.abc.Iterable):
+        if isinstance(fid, str):
+            fid = model.find_fludef(name=fid)
+            assert fid is not None
+        if not is_array(fid):
             fid = [fid]
         v = as_numpy(model).fluids(*fid).mass
-    return v if mask is None else v[mask]
+    res = v if mask is None else v[mask]
+    if shape is not None:
+        res = np.reshape(res, shape)
+    return res
+
+
+get_m = get_cell_fm
+
+
+def get_ca(model: Seepage, ca, mask=None, shape=None):
+    """
+    返回cell的属性
+
+    参数:
+    - model: Seepage 模型对象
+    - ca: 单元格属性索引（例如 CellAttrs.temperature）
+    - mask: 可选的掩码，用于筛选特定的单元格
+    - shape: 可选的形状，用于将结果重新整形为指定的维度
+
+    返回值:
+    - 一个 numpy 数组，包含给定维度上单元格的位置向量
+
+    如果 mask 为 None，则返回所有单元格的位置向量；否则，返回掩码指定的单元格的位置向量
+    """
+    v = as_numpy(model).cells.get(ca)
+    res = v if mask is None else v[mask]
+    if shape is not None:
+        res = np.reshape(res, shape)
+    return res
+
+
+def get_den(model: Seepage, fid, mask=None, shape=None):
+    """
+    返回模型中单元格的流体密度。
+
+    参数:
+    - model: Seepage 模型对象
+    - fid: 流体 ID（可选），如果未提供，则返回所有流体的总密度
+    - mask: 可选的掩码，用于筛选特定的单元格
+    - shape: 可选的形状，用于将结果重新整形为指定的维度
+
+    返回值:
+    - 一个 numpy 数组，包含模型中所有单元格的流体密度。
+    - 如果提供了流体 ID，则返回该流体在所有单元格中的密度。
+    - 如果提供了掩码，则返回掩码指定的单元格的流体密度。
+    """
+    if isinstance(fid, str):
+        fid = model.find_fludef(name=fid)
+        assert fid is not None
+    if not is_array(fid):
+        fid = [fid]
+    v = as_numpy(model).fluids(*fid).den
+    res = v if mask is None else v[mask]
+    if shape is not None:
+        res = np.reshape(res, shape)
+    return res
+
+
+def set_fa(model: Seepage, fid, fa, value):
+    """
+    设置模型中单元格的流体属性值。
+
+    参数:
+    - model: Seepage 模型对象
+    - fid: 流体 ID（可选），如果未提供，则设置所有流体的总属性值
+    - fa: 流体属性索引（例如 FluidAttrs.density）
+    - value: 要设置的属性值
+    """
+    if isinstance(fid, str):
+        fid = model.find_fludef(name=fid)
+        assert fid is not None
+    if not is_array(fid):
+        fid = [fid]
+    as_numpy(model).fluids(*fid).set(fa, value)
+
+
+def get_fa(model: Seepage, fid, fa, mask=None, shape=None):
+    """
+    返回模型中单元格的流体属性值。
+
+    参数:
+    - model: Seepage 模型对象
+    - fid: 流体 ID（可选），如果未提供，则返回所有流体的总属性值
+    - fa: 流体属性索引（例如 FluidAttrs.density）
+    - mask: 可选的掩码，用于筛选特定的单元格
+    - shape: 可选的形状，用于将结果重新整形为指定的维度
+
+    返回值:
+    - 一个 numpy 数组，包含模型中所有单元格的流体属性值。
+    - 如果提供了流体 ID，则返回该流体在所有单元格中的属性值。
+    - 如果提供了掩码，则返回掩码指定的单元格的流体属性值。
+    """
+    if isinstance(fid, str):
+        fid = model.find_fludef(name=fid)
+    if not is_array(fid):
+        fid = [fid]
+    v = as_numpy(model).fluids(*fid).get(fa)
+    res = v if mask is None else v[mask]
+    if shape is not None:
+        res = np.reshape(res, shape)
+    return res
 
 
 def _pop_sat(name, table: dict):
@@ -1264,6 +1470,7 @@ class CellCopyTask:
     """
     一个在多个Seepage模型之间并行地拷贝Cell的任务
     """
+
     def __init__(self, sources=None, targets=None):
         self._sources = None
         self._targets = None
@@ -1299,4 +1506,3 @@ class CellCopyTask:
         else:
             Seepage.Cell.clone_all(sources=self._targets, targets=self._sources, count=self._count)
         return self
-

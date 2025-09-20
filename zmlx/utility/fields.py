@@ -100,7 +100,7 @@ class UniformProfile:
 
 
 def _test():
-    from zml import app_data
+    from zmlx.exts.base import app_data
     f = UniformProfile(
         xlim=[0, 10], ylim=[2, 3],
         fname=app_data.temp('uniform_profile.txt'))

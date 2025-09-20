@@ -1,4 +1,4 @@
-from zml import *
+from zmlx.exts.base import *
 
 core = DllCore(dll_obj=load_cdll(name='frac.dll',
                                  first=os.path.dirname(__file__)))
@@ -225,7 +225,7 @@ class FractureNetwork2(HasHandle):
                                                core.del_fnet2)
 
     def __str__(self):
-        return (f'zml.FractureNetwork2(handle = {self.handle}, '
+        return (f'FractureNetwork2(handle = {self.handle}, '
                 f'vtx_n = {self.vtx_n}, frac_n = {self.frac_n})')
 
     core.use(None, 'fnet2_save',

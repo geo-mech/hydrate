@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import warnings
 from typing import List, Dict
 from zmlx.react import alg
-from zml import Seepage
+from zmlx.exts.base import Seepage
 
 # ---------- 全局常量 ----------
 R = 8.314  # 气体常数 J/mol/K

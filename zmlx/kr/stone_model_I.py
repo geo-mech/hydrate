@@ -1,4 +1,4 @@
-from zml import np
+from zmlx.exts.base import np
 
 
 def stone_model_I(swir, sorg, sorw, sgc, krwro, kroiw, krgro, nw, nsorw, ng,
@@ -58,7 +58,7 @@ if __name__ == '__main__':
             ax.plot(so, kro)
 
 
-        from zml import plot
+        from zmlx.exts.base import plot
 
         plot(f)
     except Exception as err:

@@ -1,4 +1,4 @@
-from zml import DynSys
+from zmlx.exts.base import DynSys
 
 
 def find_boundary(dyn: DynSys, n_dim, i_dim, lower, i_dir, eps=None):

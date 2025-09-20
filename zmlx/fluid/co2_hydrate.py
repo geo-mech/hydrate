@@ -4,7 +4,7 @@
 
 import zmlx.alg.sys as warnings
 
-from zml import Seepage
+from zmlx.exts.base import Seepage
 
 
 def create(name=None, den=1112.0, specific_heat=2190.0):

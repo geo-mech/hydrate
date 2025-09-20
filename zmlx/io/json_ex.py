@@ -1,4 +1,5 @@
 import zmlx.alg.sys as warnings
+from zmlx.exts.base import make_parent
 from json import *
 
 
@@ -7,6 +8,7 @@ def write(path, obj, encoding=None, indent=2):
     将一个对象写入到json文件
     """
     try:
+        make_parent(path)  # 确保父目录存在
         with open(path, 'w',
                   encoding='utf-8' if encoding is None else encoding) as file:
             dump(obj, file, indent=indent)

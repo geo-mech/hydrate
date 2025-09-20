@@ -6,10 +6,14 @@ def get_path(*args):
 
 
 def get_files():
-    return [
-        get_path('message.py'),
-        get_path('string_table.py'),
-        get_path('seepage.py'),
-        get_path('examples.py'),
-        get_path('editors.py'),
-    ]
+    folder = os.path.dirname(__file__)
+    files = []
+    for name in os.listdir(folder):
+        if name.endswith('.py'):
+            if name != '__init__.py':
+                files.append(get_path(name))
+    return files
+
+
+if __name__ == '__main__':
+    print(get_files())

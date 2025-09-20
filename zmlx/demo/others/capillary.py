@@ -106,15 +106,15 @@ def create():
     fludefs = [Seepage.FluDef(den=50, vis=1.0e-4, name='gas'),
                Seepage.FluDef(den=1000, vis=1.0e-3, name='water')
                ]
+    mesh = create_cube(np.linspace(0, 100, 101),
+                       np.linspace(0, 100, 101),
+                       (-0.5, 0.5))
     model = seepage.create(
-        mesh=create_cube(np.linspace(0, 100, 101),
-                         np.linspace(0, 100, 101),
-                         (-0.5, 0.5)),
-        porosity=0.2, pore_modulus=100e6, p=1e6, temperature=280, perm=1e-14,
-        s=get_s, fludefs=fludefs
+        mesh=mesh,
+        porosity=0.2, pore_modulus=100e6,
+        p=1e6, temperature=280, perm=1e-14, s=get_s, fludefs=fludefs
     )
-    model.set_kr(saturation=[0, 1],
-                 kr=[0, 1])
+    model.set_kr(saturation=[0, 1], kr=[0, 1])
     capillary.add(model, fid0='water', fid1='gas', get_idx=get_idx,
                   data=[mud, sand_J, sand_K, sand_P, sand_T])
     return model
@@ -125,9 +125,8 @@ def show(x, y, z, caption=None):
 
 
 def solve(model: Seepage):
-    md = as_numpy(model)
-    x = md.cells.get(-1)
-    y = md.cells.get(-2)
+    x = seepage.get_x(model)
+    y = seepage.get_y(model)
 
     show(x, y, [get_idx(x[i], y[i], 0) for i in range(len(x))],
          caption='岩石ID')
@@ -139,7 +138,7 @@ def solve(model: Seepage):
         capillary.iterate(model, 1e5)
         if step % 30 == 0:
             print(f'step = {step}')
-            show(x, y, md.fluids(1).vol, caption='饱和度')
+            show(x, y, seepage.get_v(model, 1), caption='饱和度')
 
 
 def execute(gui_mode=True, close_after_done=False):

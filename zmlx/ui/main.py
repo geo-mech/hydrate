@@ -3,16 +3,17 @@ import os
 import sys
 
 import zmlx.alg.sys as warnings
-from zml import lic, core, app_data, read_text, get_dir, is_chinese
-from zmlx.alg.fsys import has_permission, samefile, time_string
+from zmlx.alg.fsys import has_permission, samefile, time_string, print_tag
+from zmlx.exts.base import lic, core, app_data, read_text, get_dir, is_chinese
 from zmlx.ui import settings
-from zmlx.ui.alg import open_url, get_last_exec_history
+from zmlx.ui.alg import open_url, get_last_exec_history, install_package, set_plt_export_dpi, play_images
 from zmlx.ui.gui_buffer import gui
-from zmlx.ui.pyqt import (QtCore, QtWidgets, QtMultimedia, QAction, QtGui,
-                          is_pyqt6, QWebEngineView, QWebEngineSettings)
+from zmlx.ui.pyqt import (
+    QtCore, QtWidgets, QtMultimedia, QAction, QtGui,
+    is_pyqt6, QWebEngineView, QWebEngineSettings)
 from zmlx.ui.utils import TaskProc, GuiApi, FileHandler
 from zmlx.ui.widget import (
-    CodeEdit, Console, Label, TabWidget, VersionLabel)
+    CodeEdit, Console, TabWidget, ConsoleStateLabel)
 
 
 class Action(QAction):
@@ -55,7 +56,7 @@ class MainWindow(QtWidgets.QMainWindow):
             pass
 
         def new_empty_file(fname):
-            from zml import make_parent
+            from zmlx.exts.base import make_parent
             with open(make_parent(fname), 'w') as file:
                 pass
 
@@ -94,7 +95,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self.sig_cwd_changed.connect(self.__console.restore_code)
 
         self.__console.sig_refresh.connect(self.refresh)
-        self.statusBar().addPermanentWidget(VersionLabel())
+        self.console_state_label = ConsoleStateLabel(self)
+        self.statusBar().addPermanentWidget(self.console_state_label)
+
+        def show_text_on_console_state(text):
+            if not self.__console.output_widget.isVisible():
+                text = text.strip()[:50]
+                if len(text) > 0:
+                    self.console_state_label.setText(text)
+
+        self.__console.output_widget.sig_add_text.connect(show_text_on_console_state)  # 同时，尝试在控制台状态标签中显示
 
         # 用以播放声音
         if QtMultimedia is not None:
@@ -352,7 +362,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.add_action(
             menu='操作', name='console_resume',
             icon='begin',
-            tooltip=None, text='继续',
+            tooltip=None, text='继续', shortcut='Ctrl+R',
             slot=lambda: self.get_console().set_pause(False),
             on_toolbar=True,
             is_enabled=lambda: self.is_running() and self.get_console().get_pause(),
@@ -377,8 +387,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.add_action(
             menu='操作', name='console_hide',
             icon='console',
-            tooltip='隐藏主窗口右侧的控制台', text='隐藏',
-            slot=lambda: self.get_console().setVisible(False),
+            tooltip='隐藏主窗口右侧的控制台', text='隐藏', shortcut='Ctrl+H',
+            slot=self.hide_console,
             on_toolbar=True,
             is_enabled=lambda: self.get_console().isVisible()
         )
@@ -386,8 +396,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.add_action(
             menu='操作', name='console_show',
             icon='console',
-            tooltip='显示主窗口右侧的控制台', text='显示',
-            slot=lambda: self.get_console().setVisible(True),
+            tooltip='显示主窗口右侧的控制台', text='显示', shortcut='Ctrl+H',
+            slot=self.show_console,
             on_toolbar=True,
             is_enabled=lambda: not self.get_console().isVisible()
         )
@@ -405,6 +415,12 @@ class MainWindow(QtWidgets.QMainWindow):
             text='关闭所有页面',
             slot=self.close_all_tabs,
             is_enabled=lambda: self.count_tabs() > 0,
+        )
+
+        self.add_action(
+            menu='操作', name='play_images',
+            text='播放图片',
+            slot=play_images
         )
 
         self.add_action(
@@ -430,6 +446,12 @@ class MainWindow(QtWidgets.QMainWindow):
             text='窗口风格',
             slot=lambda: self.open_text(
                 app_data.temp('zml_window_style.qss'), '窗口风格')
+        )
+
+        self.add_action(
+            menu='设置', name='set_plt_export_dpi',
+            text='设置plt输出图的DPI',
+            slot=set_plt_export_dpi
         )
 
         self.add_action(
@@ -461,6 +483,12 @@ class MainWindow(QtWidgets.QMainWindow):
             menu='帮助', name='reg', icon='reg',
             text='注册',
             slot=self.show_reg_tool
+        )
+
+        self.add_action(
+            menu='帮助',
+            text='安装Python包',
+            slot=install_package,
         )
 
         self.add_action(
@@ -523,6 +551,76 @@ class MainWindow(QtWidgets.QMainWindow):
             is_enabled=not_running,
         )
 
+        self.add_action(
+            menu=['帮助', '显示'],
+            text='日历',
+            slot=self.show_calendar,
+        )
+
+        self.add_action(
+            menu='帮助', name='print_tag',
+            text='时间标签',
+            slot=print_tag
+        )
+
+        def print_funcs():
+            self.show_string_table(list(gui.list_all()), '命令列表')
+
+        def print_actions():
+            names = gui.list_actions()
+            names.sort()
+            gui.show_string_table(names, 'Action列表')
+
+        self.add_action(
+            menu=['帮助', '显示'],
+            text='命令列表',
+            slot=lambda: self.start_func(print_funcs),
+        )
+
+        self.add_action(
+            menu=['帮助', '显示'],
+            text='Action列表',
+            slot=lambda: self.start_func(print_actions),
+        )
+
+        def print_gui_setup_logs():
+            logs = app_data.get('gui_setup_logs')
+            gui.show_string_table(logs, 'gui_setup_logs', 1)
+
+        self.add_action(
+            menu=['帮助', '显示'],
+            text='Setup日志',
+            slot=print_gui_setup_logs,
+        )
+
+        def print_sys_folders():
+            from zmlx.alg.sys import listdir
+            paths = listdir(app_data.get_paths())
+            gui.show_string_table(paths, '系统路径', 1)
+
+        self.add_action(
+            menu=['帮助', '显示'],
+            text='系统路径',
+            slot=print_sys_folders,
+        )
+
+        def open_cwd():
+            print(f'当前工作路径：\n{os.getcwd()}\n')
+            os.startfile(os.getcwd())
+
+        self.add_action(
+            menu=['帮助', '打开'], name='open_cwd',
+            text='工作路径',
+            slot=open_cwd
+        )
+
+        self.add_action(
+            menu=['帮助', '打开'], name='open_app_data',
+            text='AppData',
+            slot=lambda: os.startfile(app_data.root()),
+            is_enabled=lambda: lic.is_admin
+        )
+
     def list_member_functions(self):
         """
         列出所有成员函数（排除私有方法）
@@ -537,11 +635,11 @@ class MainWindow(QtWidgets.QMainWindow):
             return value()
 
         if isinstance(value, dict):  # 字典，则尝试作为带有参数的函数
-            on_window = value.get('on_window', None)
+            on_window = value.get('on_window')
             if callable(on_window):
                 return on_window(self)
 
-            func = value.get('func', None)
+            func = value.get('func')
             if callable(func):
                 args = value.get('args', [])
                 args = [self if item == '@window' else item for item in args]
@@ -761,6 +859,18 @@ class MainWindow(QtWidgets.QMainWindow):
     def show_status(self, *args, **kwargs):
         self.statusBar().showMessage(*args, **kwargs)
 
+    def console_state(self, text):
+        """
+        在控制台状态标签中显示文本，
+        Args:
+            text: 要显示的文本
+        """
+        if not isinstance(text, str):
+            text = str(text)
+        if len(text) > 20:
+            text = text[:20] + '...'
+        self.console_state_label.setText(text)
+
     def set_title(self, title):
         self.__title = title
         self.refresh()
@@ -779,6 +889,13 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def is_running(self):
         return self.__console.is_running()
+
+    def click_pause(self):
+        """
+        在界面上点击暂停按钮
+        """
+        if self.is_running():
+            self.__console.set_pause(True)
 
     def exec_file(self, filename):
         self.__console.exec_file(filename)
@@ -920,6 +1037,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self, kernel, *args, fname=None, dpi=None,
             caption=None, on_top=None, icon=None,
             clear=None,
+            tight_layout=None,
+            suptitle=None,
             **kwargs):
         """
         调用matplotlib执行绘图操作 注意，此函数会创建或者返回一个标签，并默认清除标签的绘图，返回使用回调函数
@@ -936,6 +1055,8 @@ class MainWindow(QtWidgets.QMainWindow):
             on_top: 是否置顶
             icon: 窗口的图标
             clear: 是否清除之前的内容 (特别注意，默认是要清除之前的内容的，因此，如果要多个视图的时候，就不要使用clear)
+            tight_layout: 是否自动调整子图参数，以防止重叠
+            suptitle: 图表的标题
 
         Returns:
             None
@@ -953,6 +1074,10 @@ class MainWindow(QtWidgets.QMainWindow):
                         kernel(figure, *args, **kwargs)  # 这里，并不会传入clear参数
                     except Exception as kernel_err:
                         print(kernel_err)
+                if isinstance(suptitle, str):
+                    figure.suptitle(suptitle)
+                if tight_layout:
+                    figure.tight_layout()
 
             widget.plot_on_figure(on_figure=on_figure)
             if fname is not None:
@@ -1307,17 +1432,19 @@ class MainWindow(QtWidgets.QMainWindow):
         def oper(w):
             w.gui_restore = f"""gui.show_pg_console()"""
 
-        self.get_widget(the_type=PgConsole, caption='Python控制台', on_top=True,
-                        icon='console', oper=oper)
+        self.get_widget(
+            the_type=PgConsole, caption='Python控制台', on_top=True,
+            icon='console', oper=oper)
 
     def show_file_finder(self):
         from zmlx.ui.widget import AppPathEdit
         def oper(w):
             w.gui_restore = f"""gui.show_file_finder()"""
 
-        self.get_widget(the_type=AppPathEdit, caption='搜索路径',
-                        on_top=True,
-                        icon='set', oper=oper)
+        self.get_widget(
+            the_type=AppPathEdit, caption='搜索路径',
+            on_top=True,
+            icon='set', oper=oper)
 
     def show_env_edit(self):
         from zmlx.ui.widget import EnvEdit
@@ -1325,10 +1452,37 @@ class MainWindow(QtWidgets.QMainWindow):
         def oper(w):
             w.gui_restore = f"""gui.show_env_edit()"""
 
-        self.get_widget(the_type=EnvEdit, caption='设置Env', on_top=True,
-                        icon='set', oper=oper,
-                        type_kw=dict(items=settings.get_env_items())
-                        )
+        self.get_widget(
+            the_type=EnvEdit, caption='设置Env', on_top=True,
+            icon='set', oper=oper,
+            type_kw=dict(items=settings.get_env_items())
+        )
+
+    def show_calendar(self):
+        def oper(w):
+            w.gui_restore = f"""gui.show_calendar()"""
+
+        self.get_widget(
+            the_type=QtWidgets.QCalendarWidget,
+            caption='日历',
+            on_top=True,
+            oper=oper
+        )
+
+    def show_string_table(self, data, caption=None, data_columns=3):
+        from zmlx.ui.widget.string_table import StringTable
+        opts = dict(data=data, caption=caption, data_columns=data_columns)
+
+        def oper(w):
+            w.gui_restore = f"""gui.show_string_table(**{opts})"""
+            w.set_data(data)
+
+        widget = self.get_widget(
+            StringTable, caption='文本表格' if caption is None else caption,
+            type_kw=dict(data_columns=data_columns),
+            set_parent=True, oper=oper)
+
+        return widget
 
     def edit_setup_files(self):
         from zmlx.ui.widget import SetupFileEdit
@@ -1336,9 +1490,10 @@ class MainWindow(QtWidgets.QMainWindow):
         def oper(w):
             w.gui_restore = f"""gui.edit_setup_files()"""
 
-        self.get_widget(the_type=SetupFileEdit, caption='启动文件',
-                        on_top=True,
-                        icon='set', oper=oper)
+        self.get_widget(
+            the_type=SetupFileEdit, caption='启动文件',
+            on_top=True,
+            icon='set', oper=oper)
 
     def show_readme(self):
         from zmlx.ui.widget import ReadMeBrowser
@@ -1346,9 +1501,10 @@ class MainWindow(QtWidgets.QMainWindow):
         def oper(w):
             w.gui_restore = f"""gui.show_readme()"""
 
-        self.get_widget(the_type=ReadMeBrowser, caption='ReadMe', on_top=True,
-                        icon='info', oper=oper,
-                        tooltip='显示ReadMe信息，与IGG-Hydrate网站首页的ReadMe保持一致')
+        self.get_widget(
+            the_type=ReadMeBrowser, caption='ReadMe', on_top=True,
+            icon='info', oper=oper,
+            tooltip='显示ReadMe信息，与IGG-Hydrate网站首页的ReadMe保持一致')
 
     def show_reg_tool(self):
         from zmlx.ui.widget import RegTool
@@ -1356,8 +1512,9 @@ class MainWindow(QtWidgets.QMainWindow):
         def oper(w):
             w.gui_restore = f"""gui.show_reg_tool()"""
 
-        self.get_widget(the_type=RegTool, caption='注册', on_top=True,
-                        icon='reg', oper=oper)
+        self.get_widget(
+            the_type=RegTool, caption='注册', on_top=True,
+            icon='reg', oper=oper)
 
     def show_feedback(self):
         from zmlx.ui.widget import FeedbackTool
@@ -1365,8 +1522,9 @@ class MainWindow(QtWidgets.QMainWindow):
         def oper(w):
             w.gui_restore = f"""gui.show_feedback()"""
 
-        self.get_widget(the_type=FeedbackTool, caption='反馈', on_top=True,
-                        icon='info', oper=oper)
+        self.get_widget(
+            the_type=FeedbackTool, caption='反馈', on_top=True,
+            icon='info', oper=oper)
 
     def open_url(self, url, caption=None, on_top=None, zoom_factor=None,
                  icon=None):
@@ -1407,6 +1565,25 @@ class MainWindow(QtWidgets.QMainWindow):
             the_type=QWebEngineView, caption=caption, on_top=on_top,
             oper=oper, icon=icon)
 
+    def set_console_visible(self, visible: bool):
+        """
+        设置控制台是否可见
+        """
+        self.get_console().setVisible(visible)
+        self.refresh()  # 刷新窗口
+
+    def hide_console(self):
+        """
+        隐藏控制台
+        """
+        self.set_console_visible(False)
+
+    def show_console(self):
+        """
+        显示控制台
+        """
+        self.set_console_visible(True)
+
 
 class MySplashScreen(QtWidgets.QSplashScreen):
     def mousePressEvent(self, event):
@@ -1431,9 +1608,9 @@ def __make_splash(app):
         splash.setPixmap(splash_fig)
         splash.show()
         app.processEvents()  # 处理主进程事件
+        return splash
     else:
-        splash = None
-    return splash
+        return None
 
 
 def __exception_hook(the_type, value, tb):
@@ -1542,16 +1719,24 @@ def __add_code_history():
 
 
 def __gui_setup():
-    from zmlx.ui.settings import get_setup_files
+    """
+    设置GUI的额外的选项(会在线程里面执行)
+    """
+    from zmlx.ui import setup_files
     the_logs = []
-    for path in get_setup_files():
+    for path in setup_files.get_files():
         try:
+            folder = os.path.dirname(os.path.dirname(path))
+            if folder not in sys.path:
+                sys.path.append(folder)  # 确保包含zml_gui_setup.py的包能够被正确import
+
             the_logs.append(f'Exec File: {path}')
             space = {'__name__': '__main__', '__file__': path}
             exec(read_text(path, encoding='utf-8'),
                  space)
         except Exception as err:
             the_logs.append(f'Failed: {err}')
+            gui.add_message(f'path = {path}, error = {err}')
     app_data.put('gui_setup_logs', the_logs)
 
 
@@ -1607,6 +1792,18 @@ def __console_kernel(code):
     """
     # 在尝试调用gui执行的时候，添加代码执行历史
     __add_code_history()
+
+    try:
+        from zmlx.ui.widget.message import setup_ui
+        setup_ui()
+    except Exception as err:
+        print(f'Error when setup message: {err}')
+
+    try:
+        from zmlx.ui.widget.editors import setup_ui
+        setup_ui()
+    except Exception as err:
+        print(f'Error when setup editors: {err}')
 
     if app_data.get('run_setup', True):  # 执行额外的配置文件(默认执行)
         __gui_setup()
@@ -1682,7 +1879,7 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
 
     # 显示主窗口
     win.show()
-    if splash is not None:
+    if isinstance(splash, QtWidgets.QSplashScreen):
         splash.finish(win)  # 隐藏启动界面
         splash.deleteLater()
 
@@ -1694,7 +1891,7 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
 
     # 启动核心(但是不阻塞当前线程)
     win.get_console().start_func(
-        lambda: __console_kernel(code),
+        lambda: __console_kernel(code),  # 这里，会启动包含code在内的其它一些在初始化的代码
         post_task=lambda: __console_done(win, code, close_after_done)
     )
     win.get_console().start_func(None)  # 清除最后一次调用的信息

@@ -2,7 +2,7 @@
 
 @author: Maryelin
 """
-from zml import Seepage
+from zmlx.exts.base import Seepage
 
 
 def create(name=None):

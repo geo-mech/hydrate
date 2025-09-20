@@ -4,7 +4,7 @@
 import math
 from random import uniform
 
-from zml import read_text, Vector, is_array, np
+from zmlx.exts.base import read_text, Vector, is_array, np
 
 
 def year_to_seconds(year):
@@ -116,9 +116,10 @@ def code_config(path=None, encoding=None, text=None):
     """
     try:
         if text is None:
-            text = read_text(path=path,
-                             encoding='utf-8' if encoding is None else encoding,
-                             default=None)
+            text = read_text(
+                path=path,
+                encoding='utf-8' if encoding is None else encoding,
+                default=None)
         config = {}
         if text is not None:
             code = ""

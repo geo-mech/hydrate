@@ -1,20 +1,11 @@
 # 1D benchmark field of heat conduction
 """
-by 徐涛
-
-todo:
-    1. 建议所有的操作在gui内实现
-    2. 建议使用zmlx.demo.opath来获得输出数据的路径
-    3. 倒数第二行execute(folder_name)调用错误
+by 徐涛、张召彬
 """
 
-import os
-
-import matplotlib.pyplot as plt
 from scipy.special import erf
 
-from zmlx import Seepage, plot_xy, create_cube_seepage_mesh as create_cube, gui, \
-    as_numpy, np
+from zmlx import *
 
 
 class CellAttrs:
@@ -27,8 +18,15 @@ class FaceAttrs:
 
 
 def create():
+    """
+    创建模型
+    """
     model = Seepage()
-    mesh = create_cube(np.linspace(0, 100, 501), (-0.5, 0.5), (-0.5, 0.5))
+    mesh = create_cube(
+        x=np.linspace(0, 100, 501),
+        y=(-0.5, 0.5),
+        z=(-0.5, 0.5)
+    )
     x0, x1 = mesh.get_pos_range(0)
 
     for c in mesh.cells:
@@ -51,84 +49,65 @@ def create():
     return model
 
 
-def show(model, step, folder_name):
-    ada = as_numpy(model)
-    plot_xy(ada.cells.x, ada.cells.get(CellAttrs.temperature),
-            caption='temperature', gui_only=True)
-    np.savetxt(f'{folder_name}/{step:05d}.txt', np.column_stack(
-        (ada.cells.x, ada.cells.get(CellAttrs.temperature))))
-
-
-def solve(model, folder_name):
-    dt = 200000
-
-    for step in range(5001):
-        gui.break_point()
-        model.iterate_thermal(dt=dt, ca_t=CellAttrs.temperature,
-                              ca_mc=CellAttrs.mc,
-                              fa_g=FaceAttrs.g_heat)
-        if (step * dt) % (500 * 24 * 3600) < dt:
-            show(model, step, folder_name)
-            print(f'step = {step}')
-
-
-def execute(gui_mode=False, close_after_done=False):
-    gui.execute(solve, close_after_done=close_after_done,
-                args=(create(), folder_name), disable_gui=not gui_mode)
-
-
-def plt_compr(folder_name):
-    # 设置颜色循环
-    colors = plt.cm.tab20.colors[:13]  # 使用前13个颜色
-    # 定义参数
+def get_theory(time):
+    """
+    返回给定时刻的理论解.
+    """
     x = np.linspace(0, 100, 101)
-    T0 = 0
-    T1 = 100
+    T0 = 273.15
+    T1 = 273.15 + 100
     k = 1.69
     rho = 2640
     c = 754.4
     alpha = k / (rho * c)
-    folder = folder_name
-    names = os.listdir(folder)
+    T = T1 + (T0 - T1) * erf(x / (2 * np.sqrt(alpha * time)))
+    return x, T
 
-    # 创建图形
-    fig, ax = plt.subplots(figsize=(6, 3), dpi=300)
 
-    day = 24 * 3600
+def show(model, time):
+    import matplotlib.pyplot as plt
+    def on_figure(fig):
+        if hasattr(fig, 'my_ax'):
+            ax = fig.my_ax
+            fig.my_idx += 1
+        else:
+            ax = add_axes2(fig)
+            fig.my_ax = ax
+            fig.my_idx = 0
+            ax.set_xlabel('x (m)')
+            ax.set_ylabel('temperature (K)')
 
-    # 理论解
-    for i, t in enumerate(np.linspace(500 * day, 3000 * day, 6)):
-        T = T1 + (T0 - T1) * erf(x / (2 * np.sqrt(alpha * t)))
-        ax.plot(x, T, c=colors[i], label=f'{t / 3600 / 24:.0f} d')
+        c = plt.cm.tab20.colors[fig.my_idx]
+        x1 = seepage.get_x(model)
+        t1 = seepage.get_ca(model, CellAttrs.temperature)
+        ax.plot(x1[::20], t1[::20], 'o', c=c)
+        x2, t2 = get_theory(time)
+        ax.plot(x2, t2, c=c, label=f'{time / 3600 / 24:.0f} d')
+        ax.legend(frameon=False)
 
-    # 数值模拟
-    step = 5  # 每隔 10 个点取一个点
-    for i in [1, 2, 3, 4, 5, 6]:
-        d = np.loadtxt(os.path.join(folder, names[i]))
-        print(os.path.join(folder, names[i]))
-        ax.plot(d[::step, 0], d[::step, 1] - 273.15, 'o', markersize=3,
-                c=colors[i - 1])
+    plot(on_figure, caption='temperature', clear=False)
 
-    ax.set(xlim=(0, 100), ylim=(0, 100))
-    ax.legend(frameon=False)
-    # 显示图形
-    plt.xlabel('Distance (m)')
-    plt.ylabel('Temperature (℃)')
-    plt.tight_layout()
-    plt.show()
+
+def solve(model):
+    dt = 200000
+    for step in range(5000):
+        gui.break_point()
+        model.iterate_thermal(
+            dt=dt, ca_t=CellAttrs.temperature,
+            ca_mc=CellAttrs.mc,
+            fa_g=FaceAttrs.g_heat)
+        if step % 500 == 0 and step != 0:
+            show(model, time=dt * step)
+            print(f'step = {step}')
+
+
+def execute():
+    """
+    执行建模的求解的全过程
+    """
+    model = create()
+    gui.execute(solve, close_after_done=False, args=[model, ])
 
 
 if __name__ == '__main__':
-
-    # 创建文件夹
-    folder_name = 'Heat1D'
-    # 检查文件夹是否存在
-    if not os.path.exists(folder_name):
-        # 如果不存在，创建文件夹
-        os.makedirs(folder_name)
-        print(f"文件夹 '{folder_name}' 已创建")
-    else:
-        print(f"文件夹 '{folder_name}' 已存在")
-
-    execute(folder_name)
-    plt_compr(folder_name)
+    execute()

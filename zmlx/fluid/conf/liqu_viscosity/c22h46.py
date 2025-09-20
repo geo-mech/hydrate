@@ -7,7 +7,7 @@ Mehrotra, Anil K and Svrcek, William Y, The Canadian Journal of Chemical Enginee
 Viscosity oof Compressed Athabasca Bitumen
 """
 
-from zml import np
+from zmlx.exts.base import np
 
 
 def liq_vis_c22h46(P, T):  # Mehrotra and Svrcek, 1986

@@ -1,4 +1,4 @@
-from zml import make_dirs, makedirs
+from zmlx.exts.base import make_dirs, makedirs
 
 __all__ = ['make_dirs', 'makedirs']
 

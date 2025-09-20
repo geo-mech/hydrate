@@ -1,5 +1,7 @@
-from matplotlib import cm
-
+try:
+    from matplotlib import cm
+except ImportError:
+    cm = None
 
 def add_cbar(ax=None, *, label=None, cmap=None, clim=None, fig=None,
              shrink=None, **opts):

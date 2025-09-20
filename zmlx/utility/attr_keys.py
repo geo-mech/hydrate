@@ -7,7 +7,7 @@ def add_keys(*args):
     """
     在字典中注册键值。将从0开始尝试，直到发现不存在的数值再使用. 返回添加了key之后的字典对象.
     示例:
-        from zml import add_keys
+        from zmlx.exts.base import add_keys
         keys = add_keys('x', 'y')
         print(keys)
         add_keys(keys, 'a', 'b', 'c')

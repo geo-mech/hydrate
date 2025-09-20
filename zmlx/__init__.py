@@ -1,17 +1,15 @@
 """
-zmlx: zml模块的扩展，将首先引入zml的所有功能，并定义数据和扩展功能。
-
 说明：
     1. 优先从zmlx中import，只有当zmlx中没有定义，再考虑从次一级文件夹import；
     2. 用户可添加文件，但勿修改现有文件内容；
 """
 
 ########################################
-# zml中的内容
-from zml import *
+# zmlx.exts.base中的内容
+from zmlx.exts.base import *
 
 if is_chinese(get_dir()):
-    warnings.warn('Please make sure to install zml in a pure English path, '
+    warnings.warn('Please make sure to install zmlx in a pure English path, '
                   'otherwise it may cause unpredictable errors.')
 
 setenv = app_data.setenv
@@ -47,14 +45,15 @@ from zmlx.base.seepage import as_numpy, SeepageNumpy
 from zmlx.config import (
     seepage, seepage as seepage_config, hydrate,
     step_iteration, adjust_vis, icp, timer as timer_config,
-    sand as sand_config)
+    sand as sand_config, diffusion, capillary
+)
 from zmlx.config.TherFlowConfig import TherFlowConfig, SeepageTher
-from zmlx.config import capillary
 
 ########################################
 # data
 from zmlx.data.mesh_c10000 import \
     get_face_centered_seepage_mesh as create_c10000
+from zmlx.data.igg import load_igg  # 加载igg.png
 
 ########################################
 # demo
@@ -81,8 +80,9 @@ from zmlx.fluid.co2_hydrate import create as create_co2_hydrate
 from zmlx.fluid.h2o import create as create_h2o
 from zmlx.fluid.h2o_gas import create as create_h2o_gas
 from zmlx.fluid.h2o_ice import create as create_h2o_ice
-from zmlx.fluid import h2o
+from zmlx.fluid import h2o, ch4
 from zmlx.fluid.alg import from_data, from_file
+from zmlx.fluid import load_fludefs
 
 ########################################
 # geometry
@@ -111,18 +111,27 @@ from zmlx.kr.base import create_krf
 
 ########################################
 # plt
-from zmlx.plt.on_figure import plot_on_figure
-from zmlx.plt.on_axes import plot_on_axes
+from zmlx.plt.on_figure import plot_on_figure, add_axes2, add_axes3, add_subplot
+from zmlx.plt.on_axes import plot_on_axes, add_items, item, plot2d, plot3d, curve
 from zmlx.plt.fig2 import (
     plot_xy, plotxy, show_dfn2, show_field2, show_fn2,
-    tricontourf, trimesh, contourf, plot2)
+    tricontourf, trimesh, contourf, plot2
+)
 from zmlx.plt.fig3 import plot_trisurf, scatter, show_rc3
+# 在ax上添加项目
+from zmlx.plt.tricontourf import add_tricontourf
+from zmlx.plt.contourf import add_contourf
+from zmlx.plt.curve2 import add_curve2
+from zmlx.plt.surf import add_surf
+from zmlx.plt.legend import add_legend
+from zmlx.plt.cbar import add_cbar
 
 ########################################
 # ptree
 
 ########################################
 # react
+from zmlx.react import load_reactions
 from zmlx.react.alg import create_reaction, add_reaction
 from zmlx.react.inh import create_inh, add_inh
 
@@ -149,6 +158,7 @@ from zmlx.ui import (
 
 ########################################
 # utility
+from zmlx.utility import load_field3
 from zmlx.utility.fields import Field, LinearField
 from zmlx.utility.attr_keys import AttrKeys, add_keys
 from zmlx.utility.runtime_fn import RuntimeFunc
@@ -168,9 +178,7 @@ def get_path(*args):
     return make_parent(join_paths(os.path.dirname(__file__), *args))
 
 
-import zml
-
-__unused = [zml]
+import zmlx.exts.base as zml
 
 ########################################
 # deprecated

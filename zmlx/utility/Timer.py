@@ -6,6 +6,6 @@ warnings.warn(f'The modulus {__name__} is deprecated and '
 
 
 
-from zml import Timer, timer
+from zmlx.exts.base import Timer, timer
 
 __all__ = ['Timer', 'timer']

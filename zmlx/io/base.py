@@ -2,7 +2,7 @@ import os
 import zmlx.alg.sys as warnings
 from io import StringIO
 
-from zml import make_dirs, make_parent, np
+from zmlx.exts.base import make_dirs, make_parent, np
 
 
 def load_txt(*args, **kwargs):

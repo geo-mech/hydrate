@@ -1,4 +1,4 @@
-from zml import Seepage
+from zmlx.exts.base import Seepage
 
 
 def get(model: Seepage, *, text_key: str):

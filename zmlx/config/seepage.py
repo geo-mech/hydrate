@@ -29,6 +29,7 @@ Cell的属性:
     fv0：流体体积的初始值（和初始的g0对应的数值）
     g_heat：流体和固体热交换的系数
     vol：网格的体积(此体积乘以孔隙度，得到孔隙的体积)
+    temp_variable: 临时变量，用来存储迭代计算的中间结果
 
 Face的属性：
     area：横截面积。（当考虑流体的惯性的时候，也将使用此面积来计算作用在流体上的“冲量”，从而改变流体的动量）;
@@ -42,15 +43,16 @@ Face的属性：
              变量速度。当Face同时定义了rate和inertia之后，才可以去考虑惯性效应。
 """
 from collections.abc import Iterable
-from zml import (get_average_perm, Tensor3, ConjugateGradientSolver,
-                 make_parent, SeepageMesh)
+
 from zmlx.alg.base import clamp, join_cols
 from zmlx.alg.fsys import join_paths, make_fname, print_tag
 from zmlx.base.seepage import *
 from zmlx.config import (capillary, prod, fluid_heating, timer,
-                         sand, step_iteration, adjust_vis)
+                         sand, step_iteration)
 from zmlx.config.attr_keys import cell_keys, face_keys, flu_keys
 from zmlx.config.slots import get_slot
+from zmlx.exts.base import (get_average_perm, Tensor3, ConjugateGradientSolver,
+                            make_parent, SeepageMesh)
 from zmlx.geometry.base import point_distance
 from zmlx.plt.fig2 import tricontourf
 from zmlx.react.alg import add_reaction
@@ -1148,6 +1150,7 @@ def solve(
         time_unit='y',
         slots=None, solver=None,
         opt_iter=None,  # 用于在iterate的时候的额外的关键词参数.
+        hide_console_when_done=False,
         **opt_solve
 ):
     """
@@ -1190,6 +1193,7 @@ def solve(
         monitors = [monitors]
     elif monitors is None:
         monitors = []
+
     for item in monitors:
         if isinstance(item, dict):
             item['monitor'] = SeepageCellMonitor(
@@ -1250,17 +1254,22 @@ def solve(
         """
         if do_show is not None:
             do_show()
-        for index in range(len(monitors)):
-            item1 = monitors[index]
-            assert isinstance(item1, dict)
-            monitor = item1.get('monitor')
-            assert isinstance(monitor, SeepageCellMonitor)
-            plot_rate = item1.get('plot_rate')
-            if plot_rate is not None:
-                for idx in plot_rate:
-                    monitor.plot_rate(
-                        index=idx,
-                        caption=f'Rate_{index}.{idx}')  # 显示生产曲线
+
+        try:
+            for index in range(len(monitors)):
+                item1 = monitors[index]
+                assert isinstance(item1, dict)
+                monitor = item1.get('monitor')
+                assert isinstance(monitor, SeepageCellMonitor)
+                plot_rate = item1.get('plot_rate')
+                if plot_rate is not None:
+                    for idx in plot_rate:
+                        monitor.plot_rate(
+                            index=idx,
+                            caption=f'Rate_{index}.{idx}')  # 显示生产曲线
+        except Exception as e:
+            print(f'Error when plot the monitor. Error = {e}')
+
         if extra_plot is not None:  # 一些额外的，非标准的绘图操作
             if callable(extra_plot):
                 try:
@@ -1350,6 +1359,8 @@ def solve(
         # 显示并保存最终的状态
         do_show_state()
         save_monitors()
+        if hide_console_when_done:  # 求解完成后，隐藏控制台
+            gui.hide_console()
         plot()
         save(check_dt=False)  # 保存最终状态
 

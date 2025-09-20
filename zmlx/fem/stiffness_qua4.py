@@ -4,7 +4,7 @@ Created on Sun Feb 19 15:38:08 2023
 @author: Maryelin
 https://calfem-for-python.readthedocs.io/en/latest/_modules/calfem/core.html#bar1s
 """
-from zml import np
+from zmlx.exts.base import np
 from zmlx.fem.stiffness_triangle import stiffness as tri3
 
 

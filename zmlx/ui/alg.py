@@ -1,4 +1,4 @@
-from zml import app_data, get_hash
+from zmlx.exts.base import app_data, get_hash
 from zmlx.ui.gui_buffer import gui
 from zmlx.ui.pyqt import QtWidgets
 
@@ -28,7 +28,7 @@ def add_code_history(fname):
         import os
         import shutil
 
-        from zml import app_data
+        from zmlx.exts.base import app_data
         from zmlx.alg.fsys import time_string
         if os.path.isfile(fname):
             t_str = time_string()
@@ -142,7 +142,7 @@ def open_url(url: str, caption=None, on_top=None, zoom_factor=None,
 
     if use_web_engine is None:
         try:
-            from zml import app_data
+            from zmlx.exts.base import app_data
             use_web_engine = app_data.getenv(
                 key='use_web_engine',
                 default='Yes',
@@ -312,7 +312,7 @@ def reg_file_type(desc, exts, *, name=None, save=None, load=None, init=None, wid
 
     if callable(init):
         def new_file(filename):
-            from zml import make_parent
+            from zmlx.exts.base import make_parent
             try:
                 save(init(), make_parent(filename))
             except Exception as e:
@@ -395,3 +395,47 @@ def edit_in_tab(widget_type, set_data, get_data=None, caption=None, support_refr
     gui.get_widget(
         QtWidgets.QWidget, caption=caption,
         init=do_init, on_top=True)
+
+
+def install_package():
+    from zmlx.alg.sys import pip_install
+    text, ok = gui.get_item(
+        '安装第三包包', '输入或者选择你所需要的Python包名，并执行pip安装\n',
+        ['', 'numpy', 'scipy', 'matplotlib', 'pyqtgraph', 'PyQt5', 'PyQt6',
+         'PyQt6-WebEngine', 'pyqt6-qscintilla',
+         'PyOpenGL', 'pypiwin32', 'pywin32', 'dulwich',
+         ],
+        editable=True, current=0)
+    if ok:
+        def code():
+            pip_install(text)
+
+        gui.start_func(code)
+
+
+def set_plt_export_dpi():
+    from zmlx.io.env import plt_export_dpi
+    number, ok = gui.get_double(
+        '设置导出图的DPI',
+        'DPI',
+        plt_export_dpi.get_value(), 50, 3000)
+    if ok:
+        plt_export_dpi.set_value(number)
+
+
+def play_images():
+    from zmlx.alg.fsys import list_files
+
+    def task():
+        files = list_files(exts=['.jpg', '.png'])
+        for idx in range(len(files)):
+            print(files[idx])
+            gui.open_image(files[idx], caption='播放图片',
+                           on_top=False)
+            gui.break_point()
+            gui.progress(
+                val_range=[0, len(files)], value=idx,
+                visible=True, label="Playing Figures ")
+        gui.progress(visible=False)
+
+    gui.start_func(task)

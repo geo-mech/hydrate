@@ -5,46 +5,69 @@ class GuiBuffer:
     def command(self, *args, **kwargs):
         """
         执行命令
+        Args:
+            *args: 位置参数
+            **kwargs: 关键词参数
+        Returns:
+            命令的返回值
         """
         if self.__api is not None:
             return self.__api.command(*args, **kwargs)
         else:
-            print(f'gui.command while api is None. args={args}, kwargs={kwargs}')
             return None
 
     def set(self, api):
         """
         设置api
+        Args:
+            api: 要设置的api对象
         """
         self.__api = api
         print(f'Gui Set: {self.__api}')
 
     def get(self):
         """
-        返回api
+        返回api对象
+        Returns:
+            api对象
         """
         return self.__api
 
     def exists(self):
         """
         是否存在api (处于gui模式下)
+        Returns:
+            是否存在api对象
         """
         return self.__api is not None
 
     def __bool__(self):
         """
-        是否存在api (处于gui模式下)
+        是否存在api对象 (处于gui模式下)
+        Returns:
+            是否存在api对象
         """
         return self.exists()
 
     def break_point(self):
         """
-        添加一个断点，用于暂停以及安全地终止
+        添加一个断点，用于暂停以及安全地终止gui程序
         """
         self.command(break_point=True)
 
     # 函数的别名<为了兼容之前的代码>
     breakpoint = break_point
+
+    def pause(self, message=None):
+        """
+        点击暂停，并添加断点，确保可以被暂停.
+        Args:
+            message: 要打印的消息
+        """
+        if message is not None:
+            print(message)
+        self.command('click_pause')
+        self.break_point()
 
     class Agent:
         def __init__(self, obj, name, **opts):
@@ -59,13 +82,20 @@ class GuiBuffer:
 
     def __getattr__(self, name):
         """
-        返回一个函数代理
+        返回一个函数代理对象
+        Returns:
+            函数代理对象
         """
         return GuiBuffer.Agent(self, name)
 
     def set_agent(self, key, **kwargs):
         """
         添加函数关键词的代理(给定默认值)
+        Args:
+            key: 函数的名称
+            **kwargs: 关键词参数，作为默认值
+        Returns:
+            函数代理对象
         """
         if len(kwargs) == 0:  # 移除代理
             if hasattr(self, key):
@@ -78,7 +108,11 @@ class GuiBuffer:
 
     def mark_direct(self, key):
         """
-        将函数标记为直接调用
+        将函数标记为直接调用，而不是通过gui调用
+        Args:
+            key: 函数的名称
+        Returns:
+            函数代理对象
         """
         return self.set_agent(key, is_direct=True)
 
@@ -88,6 +122,15 @@ class GuiBuffer:
             kwargs=None, disable_gui=False):
         """
         尝试在gui模式下运行给定的函数 func
+        Args:
+            func: 要运行的函数
+            keep_cwd: 是否保持当前目录
+            close_after_done: 是否在完成后关闭gui
+            args: 要传递给函数的位置参数
+            kwargs: 要传递给函数的关键词参数
+            disable_gui: 是否禁用gui模式
+        Returns:
+            函数的返回值
         """
 
         def fx():
@@ -113,7 +156,7 @@ class GuiBuffer:
 gui = GuiBuffer()
 
 try:
-    from zml import app_data
+    from zmlx.exts.base import app_data
 
     app_data.put('gui', gui)
 except Exception as err:
@@ -141,14 +184,25 @@ def question(info):
         return y == 'y' or y == 'Y'
 
 
-def plot_no_gui(kernel, *args, fname=None, dpi=300, caption=None, **kwargs):
+def plot_no_gui(kernel, *args, fname=None, dpi=300, caption=None, tight_layout=None, suptitle=None, **kwargs):
     """
     在非GUI模式下绘图(或者显示并阻塞程序执行，或者输出文件但不显示).
+    Args:
+        kernel: 绘图的回调函数，函数的原型为：
+            def kernel(figure, *args, **kwargs):
+                ...
+        *args: 传递给kernel函数的参数
+        **kwargs: 传递给kernel函数的关键字参数
+        tight_layout: 是否自动调整子图参数，以防止重叠
+        caption: 图表的标题
+        dpi: 输出图片的分辨率
+        fname: 输出的文件名
+        suptitle: 图表的标题
     """
     try:
         import matplotlib.pyplot as plt
     except Exception as e:
-        from zml import log
+        from zmlx.exts.base import log
         log(text=f'{e}', tag='matplotlib_import_error')
         plt = None
 
@@ -157,6 +211,10 @@ def plot_no_gui(kernel, *args, fname=None, dpi=300, caption=None, **kwargs):
     try:
         fig = plt.figure()
         kernel(fig, *args, **kwargs)
+        if isinstance(suptitle, str):
+            fig.suptitle(suptitle)
+        if tight_layout:
+            fig.tight_layout()
         if fname is not None:
             fig.savefig(fname=fname, dpi=dpi)
             plt.close()
@@ -220,7 +278,7 @@ def open_gui(argv=None):
     """
     打开gui
     """
-    from zml import app_data
+    from zmlx.exts.base import app_data
     app_data.put('argv', argv)
     # 是否需要恢复标签
     app_data.put('restore_tabs',
@@ -236,7 +294,7 @@ def open_gui_without_setup(argv=None):
     """
     打开gui
     """
-    from zml import app_data
+    from zmlx.exts.base import app_data
     app_data.put('argv', argv)
     app_data.put('restore_tabs', False)
     app_data.put('run_setup', False)
