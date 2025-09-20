@@ -871,7 +871,8 @@ class ReadMeBrowser(TextBrowser):
         self.context_actions.append(create_action(self, "注册", slot=gui.show_reg_tool))
 
     def _load(self):
-        path = os.path.join(get_dir(), 'README.md')
+        from zmlx import get_path
+        path = get_path('..', 'README.md')
         if os.path.isfile(path):
             self.setOpenLinks(True)
             self.setOpenExternalLinks(True)
