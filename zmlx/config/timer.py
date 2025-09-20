@@ -2,7 +2,7 @@
 定义，在模型执行到某一个时刻的时候来执行的操作
 """
 
-from zml import Seepage
+from zmlx.exts.base import Seepage
 from zmlx.config.slots import get_slot
 
 text_key = 'timers'

@@ -1,7 +1,7 @@
 """
 这里，定义在gui上绘图的顶层的函数，直接操作gui或者在控制台绘图.
 """
-from zml import np
+from zmlx.exts.base import np
 from zmlx.plt.contourf import contourf
 from zmlx.plt.curve2 import plotxy, plot_xy
 from zmlx.plt.dfn2 import show_dfn2

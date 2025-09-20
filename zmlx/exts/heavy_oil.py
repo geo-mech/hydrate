@@ -1,4 +1,4 @@
-from zml import *
+from zmlx.exts.base import *
 
 core = DllCore(dll_obj=load_cdll(name='heavy_oil.dll',
                                  first=os.path.dirname(__file__)))
@@ -250,7 +250,7 @@ class Disc3Vec(HasHandle):
                 self.load(path)
 
     def __str__(self):
-        return f'zml.Disc3Vec(size={len(self)})'
+        return f'Disc3Vec(size={len(self)})'
 
     core.use(None, 'vdisc3_save', c_void_p, c_char_p)
 

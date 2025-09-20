@@ -4,7 +4,7 @@
 """
 import zmlx.alg.sys as warnings
 
-from zml import Interp2, Seepage
+from zmlx.exts.base import Interp2, Seepage
 from zmlx.fluid.conf.liqu_density.c22h46 import liq_den_c22h46
 from zmlx.fluid.conf.liqu_viscosity.c22h46 import liq_vis_c22h46
 

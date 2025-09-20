@@ -113,7 +113,7 @@ class GuiBuffer:
 gui = GuiBuffer()
 
 try:
-    from zml import app_data
+    from zmlx.exts.base import app_data
 
     app_data.put('gui', gui)
 except Exception as err:
@@ -148,7 +148,7 @@ def plot_no_gui(kernel, *args, fname=None, dpi=300, caption=None, **kwargs):
     try:
         import matplotlib.pyplot as plt
     except Exception as e:
-        from zml import log
+        from zmlx.exts.base import log
         log(text=f'{e}', tag='matplotlib_import_error')
         plt = None
 
@@ -220,7 +220,7 @@ def open_gui(argv=None):
     """
     打开gui
     """
-    from zml import app_data
+    from zmlx.exts.base import app_data
     app_data.put('argv', argv)
     # 是否需要恢复标签
     app_data.put('restore_tabs',
@@ -236,7 +236,7 @@ def open_gui_without_setup(argv=None):
     """
     打开gui
     """
-    from zml import app_data
+    from zmlx.exts.base import app_data
     app_data.put('argv', argv)
     app_data.put('restore_tabs', False)
     app_data.put('run_setup', False)

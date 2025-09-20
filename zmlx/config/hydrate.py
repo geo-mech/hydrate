@@ -2,7 +2,7 @@
 用于水合物计算的配置.
 """
 import zmlx.alg.sys as warnings
-from zml import Seepage, log
+from zmlx.exts.base import Seepage, log
 from zmlx.alg.base import time2str
 from zmlx.alg.fsys import join_paths
 from zmlx.alg.fsys import make_fname

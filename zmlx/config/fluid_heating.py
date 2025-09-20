@@ -1,4 +1,4 @@
-from zml import Seepage, np
+from zmlx.exts.base import Seepage, np
 from zmlx.base.seepage import get_dt, as_numpy
 from zmlx.base.vector import to_numpy
 

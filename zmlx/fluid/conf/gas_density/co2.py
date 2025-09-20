@@ -12,7 +12,7 @@ PC=Pa
 w = adimentional
 """
 
-from zml import np
+from zmlx.exts.base import np
 
 
 def den_co2(P, T):

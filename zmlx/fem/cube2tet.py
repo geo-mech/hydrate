@@ -1,4 +1,4 @@
-from zml import Mesh3
+from zmlx.exts.base import Mesh3
 
 
 def cube2tet(body: Mesh3.Body, to_local=False):

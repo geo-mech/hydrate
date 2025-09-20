@@ -1,4 +1,4 @@
-from zml import Seepage, Vector
+from zmlx.exts.base import Seepage, Vector
 
 
 class CondUpdater:

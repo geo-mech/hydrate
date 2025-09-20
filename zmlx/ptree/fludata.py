@@ -1,4 +1,4 @@
-from zml import Seepage
+from zmlx.exts.base import Seepage
 from zmlx.alg.fsys import *
 from zmlx.ptree.ptree import PTree, as_ptree
 

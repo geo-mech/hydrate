@@ -1,4 +1,4 @@
-from zml import FractureNetwork
+from zmlx.exts.base import FractureNetwork
 
 
 def get_fn2(network: FractureNetwork, key=None):

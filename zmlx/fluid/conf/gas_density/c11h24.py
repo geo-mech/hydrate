@@ -14,7 +14,7 @@ w = adimentional
 "peng-robinson EOS"
 " range T < 900"
 
-from zml import np
+from zmlx.exts.base import np
 
 
 def den_c11h24(P, T):

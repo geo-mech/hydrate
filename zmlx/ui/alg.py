@@ -1,4 +1,4 @@
-from zml import app_data, get_hash
+from zmlx.exts.base import app_data, get_hash
 from zmlx.ui.gui_buffer import gui
 from zmlx.ui.pyqt import QtWidgets
 
@@ -28,7 +28,7 @@ def add_code_history(fname):
         import os
         import shutil
 
-        from zml import app_data
+        from zmlx.exts.base import app_data
         from zmlx.alg.fsys import time_string
         if os.path.isfile(fname):
             t_str = time_string()
@@ -142,7 +142,7 @@ def open_url(url: str, caption=None, on_top=None, zoom_factor=None,
 
     if use_web_engine is None:
         try:
-            from zml import app_data
+            from zmlx.exts.base import app_data
             use_web_engine = app_data.getenv(
                 key='use_web_engine',
                 default='Yes',
@@ -312,7 +312,7 @@ def reg_file_type(desc, exts, *, name=None, save=None, load=None, init=None, wid
 
     if callable(init):
         def new_file(filename):
-            from zml import make_parent
+            from zmlx.exts.base import make_parent
             try:
                 save(init(), make_parent(filename))
             except Exception as e:

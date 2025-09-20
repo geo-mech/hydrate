@@ -42,7 +42,7 @@ Face的属性：
              变量速度。当Face同时定义了rate和inertia之后，才可以去考虑惯性效应。
 """
 from collections.abc import Iterable
-from zml import (get_average_perm, Tensor3, ConjugateGradientSolver,
+from zmlx.exts.base import (get_average_perm, Tensor3, ConjugateGradientSolver,
                  make_parent, SeepageMesh)
 from zmlx.alg.base import clamp, join_cols
 from zmlx.alg.fsys import join_paths, make_fname, print_tag

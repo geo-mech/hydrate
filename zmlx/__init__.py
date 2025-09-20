@@ -8,10 +8,10 @@ zmlx: zml模块的扩展，将首先引入zml的所有功能，并定义数据�
 
 ########################################
 # zml中的内容
-from zml import *
+from zmlx.exts.base import *
 
 if is_chinese(get_dir()):
-    warnings.warn('Please make sure to install zml in a pure English path, '
+    warnings.warn('Please make sure to install zmlx in a pure English path, '
                   'otherwise it may cause unpredictable errors.')
 
 setenv = app_data.setenv
@@ -168,9 +168,9 @@ def get_path(*args):
     return make_parent(join_paths(os.path.dirname(__file__), *args))
 
 
-import zml
+import zmlx.exts.base as zml
 
-__unused = [zml]
+__keep = [zml]
 
 ########################################
 # deprecated

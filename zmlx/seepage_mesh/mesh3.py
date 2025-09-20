@@ -1,4 +1,4 @@
-from zml import SeepageMesh, Mesh3
+from zmlx.exts.base import SeepageMesh, Mesh3
 from zmlx.geometry.base import point_distance
 
 

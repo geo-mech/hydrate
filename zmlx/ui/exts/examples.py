@@ -1,6 +1,6 @@
 import os
 
-from zml import app_data, lic
+from zmlx.exts.base import app_data, lic
 from zmlx import gui
 from zmlx.alg.fsys import print_tag
 

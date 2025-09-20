@@ -1,7 +1,7 @@
 """
 用于管理毛管压力驱动下的流动
 """
-from zml import Vector, Seepage, Interp1, get_pointer64, np
+from zmlx.exts.base import Vector, Seepage, Interp1, get_pointer64, np
 from zmlx.base.seepage import get_face_sum, get_face_diff, get_dt, as_numpy
 
 try:

@@ -3,7 +3,7 @@
 """
 
 import zmlx.react.hydrate as hydrate
-from zml import Interp1
+from zmlx.exts.base import Interp1
 from zmlx.alg.interp import interp1
 
 # 温度压力曲线：取自Tough+Hydrate的手册

@@ -12,7 +12,7 @@ class RuntimeFunc:
 
     def get_func(self):
         if self.deprecated_name is not None:
-            from zml import log
+            from zmlx.exts.base import log
             warnings.warn(
                 f'function "{self.deprecated_name}" will be removed after {self.deprecated_date}, '
                 f'please use "{self.pack_name}.{self.func_name}" instead. ',

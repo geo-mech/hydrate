@@ -7,7 +7,7 @@ import os
 from ctypes import c_void_p
 
 import zmlx.alg.sys as warnings
-from zml import Seepage, Vector, is_array, get_pointer64, np, Map
+from zmlx.exts.base import Seepage, Vector, is_array, get_pointer64, np, Map
 from zmlx.alg.base import time2str
 
 

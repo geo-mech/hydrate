@@ -3,7 +3,7 @@
 """
 import zmlx.alg.sys as warnings
 
-from zml import Seepage
+from zmlx.exts.base import Seepage
 
 
 class DynKeys:

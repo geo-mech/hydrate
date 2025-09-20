@@ -7,7 +7,7 @@ https://www.engineeringtoolbox.com/carbon-monoxide-d_1416.html
 """
 import zmlx.alg.sys as warnings
 
-from zml import Interp2, Seepage
+from zmlx.exts.base import Interp2, Seepage
 from zmlx.fluid.conf.gas_density.CO_density import *
 from zmlx.fluid.conf.gas_viscosity.CO_viscosity import *
 

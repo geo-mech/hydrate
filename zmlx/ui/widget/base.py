@@ -9,7 +9,7 @@ import time
 import timeit
 from datetime import datetime
 
-from zml import (
+from zmlx.exts.base import (
     core, lic, get_dir, make_parent, reg, timer, app_data,
     write_text, read_text)
 from zmlx.alg.base import fsize2str, time2str, clamp
@@ -1546,7 +1546,7 @@ class FeedbackTool(QtWidgets.QWidget):
 {self.feedback_edit.toPlainText()}"""
 
         try:
-            from zml import sendmail
+            from zmlx.exts.base import sendmail
             success = sendmail(
                 address="zhangzhaobin@mail.iggcas.ac.cn",
                 subject=subject,

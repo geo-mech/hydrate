@@ -4,7 +4,7 @@
 import math
 from random import uniform
 
-from zml import read_text, Vector, is_array, np
+from zmlx.exts.base import read_text, Vector, is_array, np
 
 
 def year_to_seconds(year):

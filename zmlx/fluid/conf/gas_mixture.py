@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from zml import Interp2, Seepage
+from zmlx.exts.base import Interp2, Seepage
 
 'gas mixture'
 "gas mixture density, viscosity the same C2h6(ethane)"

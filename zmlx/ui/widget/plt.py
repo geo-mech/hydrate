@@ -2,7 +2,7 @@ import os
 import sys
 import warnings
 
-from zml import in_windows, in_linux, in_macos
+from zmlx.exts.base import in_windows, in_linux, in_macos
 from zmlx.ui.alg import create_action
 from zmlx.ui.pyqt import QtWidgets
 

@@ -6,7 +6,7 @@ except ImportError:
     np = None
     print('numpy not installed')
 
-from zml import Interp1, Interp2, Seepage
+from zmlx.exts.base import Interp1, Interp2, Seepage
 from zmlx.alg.numpy_algs import text_to_numpy, numpy_to_text
 from zmlx.ui.alg import create_action, h_spacer
 from zmlx.ui.gui_buffer import gui

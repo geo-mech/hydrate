@@ -1,4 +1,4 @@
-from zml import np
+from zmlx.exts.base import np
 
 
 def stiffness(nodes, E, mu):

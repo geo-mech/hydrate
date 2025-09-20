@@ -1,7 +1,7 @@
 import os
 from ctypes import c_void_p, c_char_p, c_int, c_bool, c_double, c_size_t
 
-from zml import (DllCore, HasHandle, load_cdll, make_c_char_p, Vector, Lattice3,
+from zmlx.exts.base import (DllCore, HasHandle, load_cdll, make_c_char_p, Vector, Lattice3,
                  UintVector, Interp1, is_array,
                  Interp3, clock, Matrix3)
 
@@ -27,7 +27,7 @@ class Molecule(HasHandle):
             self.set(**kwargs)
 
     def __str__(self):
-        return f'zml.Molecule(mass={self.mass}, radi={self.radi}, pos={self.pos}, vel={self.vel})'
+        return f'Molecule(mass={self.mass}, radi={self.radi}, pos={self.pos}, vel={self.vel})'
 
     core.use(None, 'molecule_save', c_void_p, c_char_p)
 
@@ -202,7 +202,7 @@ class MoleVec(HasHandle):
         super(MoleVec, self).__init__(handle, core.new_vmole, core.del_vmole)
 
     def __str__(self):
-        return f'zml.Moles(size={len(self)})'
+        return f'Moles(size={len(self)})'
 
     core.use(None, 'vmole_save', c_void_p, c_char_p)
 
@@ -483,7 +483,7 @@ class Region3(HasHandle):
                 self.create(box, shape, value)
 
     def __str__(self):
-        return f'zml.Region3(box={self.box}, shape={self.shape}, size={self.size})'
+        return f'Region3(box={self.box}, shape={self.shape}, size={self.size})'
 
     core.use(None, 'region3_save', c_void_p, c_char_p)
 

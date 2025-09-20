@@ -6,7 +6,7 @@
     此模块后续可能会被标记为弃用。
 """
 
-from zml import Seepage
+from zmlx.exts.base import Seepage
 from zmlx.base.seepage import as_numpy
 
 text_key = 'adjust_vis'

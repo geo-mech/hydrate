@@ -1,6 +1,6 @@
 import random
 
-from zml import np
+from zmlx.exts.base import np
 from zmlx.alg.base import clamp, linspace
 from zmlx.geometry.dfn2 import dfn2
 from zmlx.geometry.rect_3d import from_v3

@@ -4,7 +4,7 @@
 
 import os
 
-from zml import app_data, read_text, write_text, get_hash
+from zmlx.exts.base import app_data, read_text, write_text, get_hash
 from zmlx.alg.base import clamp
 from zmlx.io.json_ex import read as read_json
 from zmlx.ui.alg import get_current_screen_geometry

@@ -1,6 +1,6 @@
 import zmlx.alg.sys as warnings
 
-from zml import is_array, Seepage, np
+from zmlx.exts.base import is_array, Seepage, np
 
 
 def _get_mass(item):

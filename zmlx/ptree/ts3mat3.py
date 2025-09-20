@@ -1,4 +1,4 @@
-from zml import Tensor3Matrix3
+from zmlx.exts.base import Tensor3Matrix3
 from zmlx.ptree.box import box3
 from zmlx.ptree.ptree import PTree
 from zmlx.ptree.size import size3

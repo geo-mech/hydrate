@@ -1,6 +1,6 @@
 import zmlx.alg.sys as warnings
 
-from zml import DynSys, Mesh3, ConjugateGradientSolver, np
+from zmlx.exts.base import DynSys, Mesh3, ConjugateGradientSolver, np
 from zmlx.fem.boundary import find_boundary
 from zmlx.fem.create3 import create3
 from zmlx.fem.set_mass import set_mass

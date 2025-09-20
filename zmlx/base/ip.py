@@ -4,7 +4,7 @@
 
 from ctypes import c_double, POINTER
 
-from zml import InvasionPercolation, get_pointer64, np
+from zmlx.exts.base import InvasionPercolation, get_pointer64, np
 from zmlx.plt.on_axes import plot_on_axes
 
 

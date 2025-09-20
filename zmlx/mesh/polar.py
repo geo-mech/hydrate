@@ -1,6 +1,6 @@
 import math
 
-from zml import Mesh3, np
+from zmlx.exts.base import Mesh3, np
 
 
 def create_ring(vr, angle_step=math.pi / 20.0, z=0.0):

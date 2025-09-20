@@ -1,6 +1,6 @@
 import os
 
-from zml import read_text, Mesh3
+from zmlx.exts.base import read_text, Mesh3
 from zmlx.seepage_mesh.mesh3 import face_centered
 
 xy_data = read_text(os.path.join(os.path.dirname(__file__), 'xy'))
