@@ -3,8 +3,7 @@
 """
 try:
     from scipy.interpolate import interp1d
-except ImportError as e:
-    print(e)
+except ImportError:
     interp1d = None
 
 

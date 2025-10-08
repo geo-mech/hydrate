@@ -9,12 +9,12 @@ import time
 import timeit
 from datetime import datetime
 
-from zmlx.exts.base import (
-    core, lic, get_dir, make_parent, reg, timer, app_data,
-    write_text, read_text)
 from zmlx.alg.base import fsize2str, time2str, clamp
 from zmlx.alg.fsys import samefile, time_string
 from zmlx.alg.search_paths import choose_path
+from zmlx.exts.base import (
+    core, lic, get_dir, make_parent, reg, timer, app_data,
+    write_text, read_text)
 from zmlx.ui.alg import (
     add_code_history, create_action, add_exec_history,
     get_last_exec_history)
@@ -1115,8 +1115,7 @@ class DemoView(QtWidgets.QTableWidget):
         from zmlx.demo.list_demo_files import list_demo_files
         from zmlx.demo.path import get_path
         folder = get_path()
-        self.__data = [['关于', folder,
-                        f'注意，请单击以下项目以打开，之后点击任务栏上的<运行>按钮来运行. 可以在文件夹<{folder}>找到这些示例'], ]
+        self.__data = [['demo根目录', folder, folder], ]
         for path, desc in list_demo_files():
             self.__data.append([os.path.relpath(path, folder), path, desc])
 
@@ -1126,7 +1125,7 @@ class DemoView(QtWidgets.QTableWidget):
 
         self.setRowCount(len(self.__data))
         self.setColumnCount(2)
-        self.setHorizontalHeaderLabels(['项目', '说明'])
+        self.setHorizontalHeaderLabels(['项目 (点击打开)', '说明 (点击运行)'])
         self.horizontalHeader().setSectionResizeMode(
             0, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
 
@@ -1154,8 +1153,10 @@ class DemoView(QtWidgets.QTableWidget):
                 ext = os.path.splitext(path)[-1]
                 if ext is not None:
                     if ext.lower() == '.py' or ext.lower() == '.pyw':
-                        gui.open_code(path)
-
+                        if index.column() == 0:
+                            gui.open_code(path)
+                        else:
+                            gui.exec_file(path)
             if os.path.isdir(path):
                 os.startfile(path)
         except Exception as err:
@@ -1628,17 +1629,9 @@ class Label(QtWidgets.QLabel):
     def enterEvent(self, event):
         if self._status is not None:
             gui.status(self._status, 3000)
-        style_backup = getattr(self, 'style_backup', None)
-        if style_backup is None:
-            setattr(self, 'style_backup', self.styleSheet())
-            self.setStyleSheet('border: 1px solid red;')
         super().enterEvent(event)
 
     def leaveEvent(self, event):
-        style_backup = getattr(self, 'style_backup', None)
-        if style_backup is not None:
-            self.setStyleSheet(style_backup)
-            setattr(self, 'style_backup', None)
         super().leaveEvent(event)
 
     def mouseDoubleClickEvent(self, event):
@@ -1646,17 +1639,24 @@ class Label(QtWidgets.QLabel):
         super().mouseDoubleClickEvent(event)  # 调用父类的事件处理
 
 
-class VersionLabel(Label):
+class ConsoleStateLabel(Label):
     def __init__(self, parent=None):
         super().__init__(parent)
+
         try:
             text = core.time_compile.split(',')[0]
-            self.setText(f'Version: {text}')
-        except Exception as err:
-            print(err)
-            self.setText('Version: ERROR')
-        self.set_status('程序内核版本，双击显示详细内容')
+            self.default_text = f'Version: {text}'
+        except:
+            self.default_text = 'Version: ERROR'
+
+        self.setText('')
+        self.set_status('双击显示程序内核的详细内容')
         self.sig_double_clicked.connect(lambda: gui.show_about())
+
+    def setText(self, a0):
+        if len(a0) == 0:
+            a0 = self.default_text
+        super().setText(a0)
 
 
 class TabWidget(QtWidgets.QTabWidget):
@@ -1861,12 +1861,14 @@ class ConsoleOutput(QtWidgets.QWidget):
         self.progress(visible=False)
         # 覆盖text_browser的右键菜单
         get_context_menu = self.text_browser.get_context_menu
+
         def f2():
             menu = get_context_menu()
             menu.addSeparator()
             for ac in self.get_context_actions():
                 menu.addAction(ac)
             return menu
+
         self.text_browser.get_context_menu = f2  # 替换
         # 其它初始化
         self.__length = 0
@@ -2080,26 +2082,25 @@ class Console(QtWidgets.QWidget):
         running = self.is_running()
         pause = self.get_pause()
         self.button_exec.setEnabled(not running)
-        self.button_exec.setStyleSheet(
-            'background-color: #e15631; ' if running else '')
+
         self.button_pause.setVisible(not pause)
         self.button_pause.setEnabled(running)
         self.button_continue.setVisible(pause)
         self.button_continue.setEnabled(running)
         self.button_exit.setEnabled(running)
-        self.button_exit.setStyleSheet(
-            'background-color: #e15631; ' if self.get_stop() else '')
+
         self.input_editor.setVisible(
             True if not running else samefile(
                 app_data.get('__file__', ''),
                 self.input_editor.get_fname()))
         if not running:  # 只要发现没有运行，就关闭进度条显示
             self.output_widget.progress(visible=False)
-        self.output_widget.text_browser.setStyleSheet(
-            'border: 1px dashed red' if running else '')
-        # 上面设置格式，可能会让显示的内容变化，重新定位到最后
-        self.output_widget.text_browser.moveCursor(QtGui.QTextCursor.MoveOperation.End)
-        self.output_widget.text_browser.ensureCursorVisible()
+            gui.console_state('', is_direct=True)  # 显示默认
+        else:
+            if pause:
+                gui.console_state('控制台：已暂停', is_direct=True)
+            else:
+                gui.console_state('控制台：运行中', is_direct=True)
 
     def get_pause(self):
         return self.break_point.locked()

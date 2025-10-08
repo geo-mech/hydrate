@@ -54,7 +54,7 @@ def show(model, mesh, caption=None):
             dz.append(model.get_pos(node_id * 3 + 2) - z0)
         contourf(x=np.reshape(vy, [21, 21]),
                  y=np.reshape(vz, [21, 21]),
-                 z=np.reshape(dz, [21, 21]), caption=caption)
+                 z=np.reshape(dz, [21, 21]), caption=caption, aspect='equal')
 
 
 def solve(model, mesh):

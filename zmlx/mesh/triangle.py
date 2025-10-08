@@ -1,6 +1,8 @@
 """
 处理三角形网格相关的算法
 """
+import math
+
 from scipy.spatial import Delaunay
 
 from zmlx.exts.base import Mesh3, np
@@ -51,37 +53,52 @@ def layered_triangles(x_min, x_max, nx, y_min, y_max, ny, as_mesh=False):
     在y方向，等腰三角形的高乘以ny等于y_max - y_min.
 
     Args:
-        as_mesh: 作为Mesh3对象返回，还是作为faces和nodes返回
         x_min: x坐标的最小值
         x_max: x坐标的最大值
         nx: x方向的三角形个数
         y_min: y坐标的最小值
         y_max: y坐标的最大值
         ny: y方向的三角形个数
+        as_mesh: 作为Mesh3对象返回，还是作为faces和nodes返回
 
     Returns:
         faces (list): 各个三角形的顶点的索引 (从0开始编号)
         nodes (list): 各个顶点的x, y坐标
     """
 
+    # 计算x方向的网格节点
     dx = (x_max - x_min) / nx
     x1 = np.linspace(x_min, x_max, nx + 1)
     x2 = np.linspace(x_min - dx / 2, x_max + dx / 2, nx + 2)
     x2[0] = x_min
     x2[-1] = x_max
 
+    # 计算y方向的三角形高度(包括顶部和底部的三角形)
+    dy = (y_max - y_min) / ny
+    assert dy > 0, 'y方向的三角形高度必须大于0'
+
+    # y坐标放大一定比例，确保在三角剖分的时候，三角形接近于正三角形；
+    # 否则，三角剖分的效果可能不符合预期
+    y_times = dx * math.sqrt(3) * 0.5 / dy
+
+    # 计算三角形的节点（y方向矫正）
     nodes = []
     idx = 0
     for y in np.linspace(y_min, y_max, ny + 1):
         if idx % 2 == 0:
-            p = [(x, y) for x in x1]
+            p = [(x, y * y_times) for x in x1]
         else:
-            p = [(x, y) for x in x2]
+            p = [(x, y * y_times) for x in x2]
         idx += 1
         nodes.extend(p)
 
+    # 进行三角剖分
     faces = get_triangles(nodes)
-    if as_mesh:
+
+    # 恢复y坐标
+    nodes = [(x, y / y_times) for x, y in nodes]
+
+    if as_mesh:  # 作为Mesh3对象返回
         return mesh3_from_triangles(faces, nodes)
     else:
         return faces, nodes
@@ -128,10 +145,9 @@ def test():
     """
     from zmlx import trimesh
     faces, nodes = layered_triangles(
-        0, 1, 10,
-        0, 1, 10)
-    print(mesh3_from_triangles(faces, nodes))
-    trimesh(faces, nodes, gui_mode=True)
+        0, 2, 10,
+        0, 1, 6)
+    trimesh(faces, nodes)
 
 
 if __name__ == '__main__':

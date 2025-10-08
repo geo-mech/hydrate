@@ -1,4 +1,4 @@
-from zmlx.exts.base import np
+from zmlx.exts.base import np  # 当numpy没有安装的时候，np为None
 
 
 def stiffness(nodes, E, mu, thickness=1.0):

@@ -28,6 +28,8 @@ def test():
         xxx(0.1)
 
     print(timer)
+    if gui.exists():
+        gui.show_timer()
 
 
 if __name__ == '__main__':

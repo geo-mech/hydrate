@@ -114,6 +114,7 @@ def get_kernels():
     from zmlx.plt.curve2 import add_curve2
     from zmlx.plt.dfn2 import add_dfn2
     from zmlx.plt.field2 import add_field2
+    from zmlx.plt.legend import add_legend
     return dict(
         tricontourf=add_tricontourf, tric=add_tricontourf,
         surface=add_surf, surf=add_surf,
@@ -122,6 +123,7 @@ def get_kernels():
         curve2=add_curve2, xy=add_curve2,
         dfn2=add_dfn2,
         field2=add_field2,
+        legend=add_legend,
     )
 
 

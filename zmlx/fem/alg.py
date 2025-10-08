@@ -101,12 +101,13 @@ def add_body_pressure(dyn: DynSys, mesh: Mesh3, body_id, pressure):
         add_face_force(dyn, mesh, face.index, force)
 
 
-def compute_disp(mesh: Mesh3, na_dx=None, na_dy=None, na_dz=None, ba_dd=None,
-                 ba_dp=None,
-                 ba_E0=None, ba_E1=None, ba_mu=None, gravity=-10.0, dt=1.0e3,
-                 top_stress=None, top_pressure=None,
-                 tolerance=1.0e-20, show=print, bound_mas=1.0e20,
-                 bound_sym=True):
+def compute_disp(
+        mesh: Mesh3, na_dx=None, na_dy=None, na_dz=None, ba_dd=None,
+        ba_dp=None,
+        ba_E0=None, ba_E1=None, ba_mu=None, gravity=-10.0, dt=1.0e3,
+        top_stress=None, top_pressure=None,
+        tolerance=1.0e-20, show=print, bound_mas=1.0e20,
+        bound_sym=True):
     """
     计算各个Node的位移，并且存储在Node属性里面. 其中：
         na_dx, na_dy和na_dz为Node的属性，用来存储计算的结果（各个Node的位移）;
@@ -309,8 +310,9 @@ def _test2():
     # 设置属性
     for body in mesh.bodies:
         assert isinstance(body, Mesh3.Body)
-        body.set_attr(ba_dd,
-                      100 if get_distance(body.pos, [0, 0, 0]) < 5 else 0)
+        body.set_attr(
+            ba_dd,
+            100 if get_distance(body.pos, [0, 0, 0]) < 5 else 0)
         body.set_attr(ba_dp, 0)
         body.set_attr(ba_E0, 200e6)
         body.set_attr(ba_E1, 200e6)
@@ -320,9 +322,10 @@ def _test2():
     na_dx = 0
     na_dy = 1
     na_dz = 2
-    compute_disp(mesh, na_dx=na_dx, na_dy=na_dy, na_dz=na_dz, ba_dd=ba_dd,
-                 ba_dp=ba_dp,
-                 ba_E0=ba_E0, ba_E1=ba_E1, ba_mu=ba_mu, top_stress=1e6)
+    compute_disp(
+        mesh, na_dx=na_dx, na_dy=na_dy, na_dz=na_dz, ba_dd=ba_dd,
+        ba_dp=ba_dp,
+        ba_E0=ba_E0, ba_E1=ba_E1, ba_mu=ba_mu, top_stress=1e6)
 
     # 读取中间一个切面，并且绘图
     x = []

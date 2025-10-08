@@ -12,9 +12,10 @@ def create():
     model = seepage.create(
         mesh=mesh,
         dv_relative=0.2,
-        fludefs=[h2o.create(name='h2o',
-                            density=1000.0,
-                            viscosity=1.0e-3)],
+        fludefs=[h2o.create(
+            name='h2o',
+            density=1000.0,
+            viscosity=1.0e-3)],
         porosity=0.2,
         pore_modulus=200e6,
         p=2e6,

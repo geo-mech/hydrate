@@ -12,7 +12,7 @@ from zmlx.ui.pyqt import (QtCore, QtWidgets, QtMultimedia, QAction, QtGui,
                           is_pyqt6, QWebEngineView, QWebEngineSettings)
 from zmlx.ui.utils import TaskProc, GuiApi, FileHandler
 from zmlx.ui.widget import (
-    CodeEdit, Console, Label, TabWidget, VersionLabel)
+    CodeEdit, Console, Label, TabWidget, ConsoleStateLabel)
 
 
 class Action(QAction):
@@ -94,7 +94,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.sig_cwd_changed.connect(self.__console.restore_code)
 
         self.__console.sig_refresh.connect(self.refresh)
-        self.statusBar().addPermanentWidget(VersionLabel())
+        self.console_state_label = ConsoleStateLabel(self)
+        self.statusBar().addPermanentWidget(self.console_state_label)
 
         # 用以播放声音
         if QtMultimedia is not None:
@@ -352,7 +353,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.add_action(
             menu='操作', name='console_resume',
             icon='begin',
-            tooltip=None, text='继续',
+            tooltip=None, text='继续', shortcut='Ctrl+R',
             slot=lambda: self.get_console().set_pause(False),
             on_toolbar=True,
             is_enabled=lambda: self.is_running() and self.get_console().get_pause(),
@@ -377,7 +378,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.add_action(
             menu='操作', name='console_hide',
             icon='console',
-            tooltip='隐藏主窗口右侧的控制台', text='隐藏',
+            tooltip='隐藏主窗口右侧的控制台', text='隐藏', shortcut='Ctrl+H',
             slot=lambda: self.get_console().setVisible(False),
             on_toolbar=True,
             is_enabled=lambda: self.get_console().isVisible()
@@ -386,7 +387,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.add_action(
             menu='操作', name='console_show',
             icon='console',
-            tooltip='显示主窗口右侧的控制台', text='显示',
+            tooltip='显示主窗口右侧的控制台', text='显示', shortcut='Ctrl+H',
             slot=lambda: self.get_console().setVisible(True),
             on_toolbar=True,
             is_enabled=lambda: not self.get_console().isVisible()
@@ -537,11 +538,11 @@ class MainWindow(QtWidgets.QMainWindow):
             return value()
 
         if isinstance(value, dict):  # 字典，则尝试作为带有参数的函数
-            on_window = value.get('on_window', None)
+            on_window = value.get('on_window')
             if callable(on_window):
                 return on_window(self)
 
-            func = value.get('func', None)
+            func = value.get('func')
             if callable(func):
                 args = value.get('args', [])
                 args = [self if item == '@window' else item for item in args]
@@ -761,6 +762,18 @@ class MainWindow(QtWidgets.QMainWindow):
     def show_status(self, *args, **kwargs):
         self.statusBar().showMessage(*args, **kwargs)
 
+    def console_state(self, text):
+        """
+        在控制台状态标签中显示文本，
+        Args:
+            text: 要显示的文本
+        """
+        if not isinstance(text, str):
+            text = str(text)
+        if len(text) > 20:
+            text = text[:20] + '...'
+        self.console_state_label.setText(text)
+
     def set_title(self, title):
         self.__title = title
         self.refresh()
@@ -779,6 +792,13 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def is_running(self):
         return self.__console.is_running()
+
+    def click_pause(self):
+        """
+        在界面上点击暂停按钮
+        """
+        if self.is_running():
+            self.__console.set_pause(True)
 
     def exec_file(self, filename):
         self.__console.exec_file(filename)
@@ -1431,9 +1451,9 @@ def __make_splash(app):
         splash.setPixmap(splash_fig)
         splash.show()
         app.processEvents()  # 处理主进程事件
+        return splash
     else:
-        splash = None
-    return splash
+        return None
 
 
 def __exception_hook(the_type, value, tb):
@@ -1546,6 +1566,10 @@ def __gui_setup():
     the_logs = []
     for path in get_setup_files():
         try:
+            folder = os.path.dirname(os.path.dirname(path))
+            if folder not in sys.path:
+                sys.path.append(folder)  # 确保包含zml_gui_setup.py的包能够被正确import
+
             the_logs.append(f'Exec File: {path}')
             space = {'__name__': '__main__', '__file__': path}
             exec(read_text(path, encoding='utf-8'),
@@ -1682,7 +1706,7 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
 
     # 显示主窗口
     win.show()
-    if splash is not None:
+    if isinstance(splash, QtWidgets.QSplashScreen):
         splash.finish(win)  # 隐藏启动界面
         splash.deleteLater()
 
@@ -1694,7 +1718,7 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
 
     # 启动核心(但是不阻塞当前线程)
     win.get_console().start_func(
-        lambda: __console_kernel(code),
+        lambda: __console_kernel(code),  # 这里，会启动包含code在内的其它一些在初始化的代码
         post_task=lambda: __console_done(win, code, close_after_done)
     )
     win.get_console().start_func(None)  # 清除最后一次调用的信息

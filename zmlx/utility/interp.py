@@ -8,8 +8,7 @@ except ImportError:
 
 try:
     from scipy.interpolate import NearestNDInterpolator, LinearNDInterpolator, CloughTocher2DInterpolator
-except Exception as e:
-    print(e)
+except ImportError:
     NearestNDInterpolator = None
     LinearNDInterpolator = None
     CloughTocher2DInterpolator =None
@@ -113,7 +112,7 @@ class Interp3:
 
         if v.size == 1:
             # 此时是一个常数
-            self.value = float(v)
+            self.value = v[0]
             self.f1 = None
             self.f2 = None
             return

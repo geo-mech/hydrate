@@ -16417,17 +16417,21 @@ class Seepage(HasHandle, HasCells):
 
         def get_recommended_dt(self, model, previous_dt,
                                dv_relative=0.1,
-                               ca_t=None, ca_mc=None):
+                               ca_t=None, ca_mc=None, cfl=None):
             """
             在调用了iterate/iterate_thermal函数之后，调用此函数，来获取更优的时间步长。
-            当ca_T和ca_mc给定时，返回热传导过程的建议值，否则为渗流的。
+            当ca_t和ca_mc给定时，返回热传导过程的建议值，否则为渗流的。特别注意，
+            这个函数依赖于模型内部的一些缓存，因此，需要在每次iterate之后，立即调用此
+            函数来获取建议的时间步长，否则如果缓存失效，则此函数可能出错。
 
             Args:
                 model: 渗流模型对象。
-                previous_dt (float): 上一次的时间步长。
-                dv_relative (float, optional): 相对变化阈值，默认为0.1。
-                ca_t (int, optional): Cell的温度属性的ID，默认为None。
-                ca_mc (int, optional): Cell范围内质量和比热的乘积，默认为None。
+                previous_dt: 上一次的时间步长。
+                dv_relative: 相对变化阈值，默认为0.1.
+                             此参数即为Courant-Friedrichs-Lewy数，简称CFL数。
+                ca_t: Cell的温度属性的ID，默认为None。
+                ca_mc: Cell范围内质量和比热的乘积，默认为None。
+                cfl: Courant-Friedrichs-Lewy数，默认为None。
 
             Returns:
                 float: 建议的时间步长。
@@ -16443,6 +16447,9 @@ class Seepage(HasHandle, HasCells):
                     self.handle)
             dv_max = max(1.0e-6, dv_max)
             dt = previous_dt
+            if cfl is not None:  # 新的变量名，覆盖dv_relative，后续，dv_relative可能会被移除
+                assert 0 < cfl <= 1.0, 'cfl must be in (0, 1]'
+                dv_relative = cfl
             if dv_max > dv_relative:
                 dt *= (dv_relative / dv_max)
             else:
@@ -19024,14 +19031,14 @@ class Seepage(HasHandle, HasCells):
         用以和numpy交互数据
 
         警告: Seepage.numpy将在2025-1-21之后移除。
-            请使用zmlx.utility.SeepageNumpy代替。
+            请使用zmlx.as_numpy。
 
         Returns:
             SeepageNumpy: 用于和numpy交互数据的SeepageNumpy对象
         """
         warnings.warn(
             'Seepage.numpy will be removed after 2025-1-21. '
-            'Use zmlx.utility.SeepageNumpy Instead.'
+            'Use zmlx.as_numpy Instead.'
             , DeprecationWarning, stacklevel=2)
         from zmlx.base.seepage import SeepageNumpy
         return SeepageNumpy(model=self)

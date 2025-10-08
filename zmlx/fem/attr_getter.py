@@ -17,7 +17,8 @@ def attr_getter(index, left, right, default=None):
         return f
     else:
         def f(o):
-            return o.get_attr(index=index, left=left, right=right,
-                              default_val=default)
+            return o.get_attr(
+                index=index, left=left, right=right,
+                default_val=default)
 
         return f
