@@ -45,9 +45,9 @@ from zmlx.base.seepage import as_numpy, SeepageNumpy
 from zmlx.config import (
     seepage, seepage as seepage_config, hydrate,
     step_iteration, adjust_vis, icp, timer as timer_config,
-    sand as sand_config)
+    sand as sand_config, diffusion, capillary
+)
 from zmlx.config.TherFlowConfig import TherFlowConfig, SeepageTher
-from zmlx.config import capillary
 
 ########################################
 # data
@@ -79,7 +79,7 @@ from zmlx.fluid.co2_hydrate import create as create_co2_hydrate
 from zmlx.fluid.h2o import create as create_h2o
 from zmlx.fluid.h2o_gas import create as create_h2o_gas
 from zmlx.fluid.h2o_ice import create as create_h2o_ice
-from zmlx.fluid import h2o
+from zmlx.fluid import h2o, ch4
 from zmlx.fluid.alg import from_data, from_file
 
 ########################################
@@ -109,12 +109,20 @@ from zmlx.kr.base import create_krf
 
 ########################################
 # plt
-from zmlx.plt.on_figure import plot_on_figure
-from zmlx.plt.on_axes import plot_on_axes
+from zmlx.plt.on_figure import plot_on_figure, add_axes2, add_axes3, add_subplot
+from zmlx.plt.on_axes import plot_on_axes, add_items, item, plot2d, plot3d, curve
 from zmlx.plt.fig2 import (
     plot_xy, plotxy, show_dfn2, show_field2, show_fn2,
-    tricontourf, trimesh, contourf, plot2)
+    tricontourf, trimesh, contourf, plot2
+)
 from zmlx.plt.fig3 import plot_trisurf, scatter, show_rc3
+# 在ax上添加项目
+from zmlx.plt.tricontourf import add_tricontourf
+from zmlx.plt.contourf import add_contourf
+from zmlx.plt.curve2 import add_curve2
+from zmlx.plt.surf import add_surf
+from zmlx.plt.legend import add_legend
+from zmlx.plt.cbar import add_cbar
 
 ########################################
 # ptree

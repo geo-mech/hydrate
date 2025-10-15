@@ -1,4 +1,4 @@
-# ** desc = '流体在毛管力驱动下的流动'
+# ** desc = '流体在毛管力驱动下的流动(渗吸的过程)'
 
 from zmlx import *
 
@@ -84,30 +84,30 @@ def get_idx(x, y, z):
     """
     定义在不同的区域所使用的毛管压力曲线的ID (从0开始编号)
     """
-    if point_distance((x, y, z), (50, 50, 0)) < 20:
+    if point_distance((x, y, z), (0, 0, 0)) < 20:
         return 0
-    if x < 50:
-        if y < 50:
+    if x < 0:
+        if y < 0:
             return 1
         else:
             return 2
     else:
-        if y < 50:
+        if y < 0:
             return 3
         else:
             return 4
 
 
 def get_s(x, y, z):
-    return (0, 1) if point_distance((x, y, z), (60, 50, 0)) < 20 else (1, 0)
+    return (0, 1) if point_distance((x, y, z), (10, 0, 0)) < 20 else (1, 0)
 
 
 def create():
     fludefs = [Seepage.FluDef(den=50, vis=1.0e-4, name='gas'),
                Seepage.FluDef(den=1000, vis=1.0e-3, name='water')
                ]
-    mesh = create_cube(np.linspace(0, 100, 101),
-                       np.linspace(0, 100, 101),
+    mesh = create_cube(np.linspace(-50, 50, 101),
+                       np.linspace(-50, 50, 101),
                        (-0.5, 0.5))
     model = seepage.create(
         mesh=mesh,
@@ -121,7 +121,20 @@ def create():
 
 
 def show(x, y, z, caption=None):
-    tricontourf(x, y, z, caption=caption, gui_only=True)
+    def on_figure(fig):
+        ax = add_axes2(fig, add_tricontourf, x, y, z)
+        angles = np.linspace(0, 2 * np.pi, 100)
+        ax.plot(20 * np.cos(angles), 20 * np.sin(angles), 'r--')
+        ax.plot([0, 0], [20, 50], 'r--')
+        ax.plot([0, 0], [-20, -50], 'r--')
+        ax.plot([20, 50], [0, 0], 'r--')
+        ax.plot([-20, -50], [0, 0], 'r--')
+        ax.set_aspect('equal')
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+        fig.tight_layout()
+
+    plot(on_figure, caption=caption)
 
 
 def solve(model: Seepage):

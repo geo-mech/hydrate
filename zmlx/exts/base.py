@@ -18049,7 +18049,7 @@ class Seepage(HasHandle, HasCells):
         返回与给定位置距离最近的cell (在[i_beg, i_end)的范围内搜索)
 
         Args:
-            pos (tuple): 位置坐标 (x, y, z)
+            pos (tuple | list): 位置坐标 (x, y, z)
             i_beg (int, optional): 搜索范围的起始索引。默认为None。
             i_end (int, optional): 搜索范围的结束索引。默认为None。
 

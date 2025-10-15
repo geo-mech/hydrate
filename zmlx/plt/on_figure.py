@@ -3,7 +3,7 @@
 """
 
 def add_subplot(
-        figure, on_axes, *args, nrows=1, ncols=1, index=1, projection=None, label=None,
+        figure, on_axes=None, *args, nrows=1, ncols=1, index=1, projection=None, label=None,
         xlabel=None, ylabel=None, zlabel=None, title=None,
         view_opts=None, aspect=None, xlim=None, ylim=None, zlim=None, show_legend=False,
         grid=None, axis=None, tight_layout=None,

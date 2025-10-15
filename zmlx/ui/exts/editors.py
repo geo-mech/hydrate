@@ -387,7 +387,7 @@ class Interp1Edit(MatplotWidget):
 class Interp2Edit(MatplotWidget):
     sig_changed = QtCore.pyqtSignal(object)
 
-    def __init__(self, parent=None, **opts):
+    def __init__(self, parent=None, view_init=None, cmap=None, **opts):
         super().__init__(parent)
         self.data = Interp2()
         self.opts = opts
@@ -401,6 +401,8 @@ class Interp2Edit(MatplotWidget):
                     slot=lambda: self.plot_on_figure(
                         lambda figure: self.on_figure(figure))),
             ])
+        self.view_init = view_init  # 视图初始化参数
+        self.cmap = cmap
 
     def on_figure(self, figure):
         figure.clear()
@@ -436,8 +438,11 @@ class Interp2Edit(MatplotWidget):
             for j in range(shape[1]):
                 z[i, j] = self.data.get(float(x[i, j]), float(y[i, j]))
 
-        surf = ax.plot_surface(x, y, z, cmap='coolwarm')
+        surf = ax.plot_surface(x, y, z, cmap=self.cmap if self.cmap is not None else 'coolwarm')
         figure.colorbar(surf, ax=ax, shrink=0.5, aspect=10)
+
+        if self.view_init is not None:
+            ax.view_init(**self.view_init)
 
         set_axes(ax, ['title', 'xlabel', 'ylabel', 'zlabel'],
                  opts=self.opts)
@@ -518,12 +523,16 @@ class FludefEdit(QtWidgets.QWidget):
 
         self.den_view = Interp2Edit(
             self, title='密度 (kg/m^3)', xlabel='压力 (Pa)', ylabel='温度 (K)',
-            zlabel='密度')
+            zlabel='密度',
+            view_init={'elev': 30, 'azim': -120},
+        )
         layout1.addWidget(self.den_view)
 
         self.vis_view = Interp2Edit(
             self, title='粘性 (Pa.s)', xlabel='压力 (Pa)', ylabel='温度 (K)',
-            zlabel='粘性')
+            zlabel='粘性',
+            view_init={'elev': 30, 'azim': -120},
+        )
         layout1.addWidget(self.vis_view)
 
         layout2 = QtWidgets.QHBoxLayout(self)
@@ -548,7 +557,7 @@ class FludefEdit(QtWidgets.QWidget):
             self.name_edit.setText(self.data.name)
             self.den_view.set_data(self.data.den)
             self.vis_view.set_data(self.data.vis)
-            self.c_edit.setText(str(self.data.specific_heat))
+            self.c_edit.setText(f'{self.data.specific_heat:.2f}')
 
     def get_data(self):
         return self.data

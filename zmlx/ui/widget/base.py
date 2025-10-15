@@ -2070,14 +2070,6 @@ class Console(QtWidgets.QWidget):
         self.break_point = BreakPoint(self)
         self.flag_exit = SharedValue(False)
 
-        def set_visible():
-            if not self.isVisible():
-                self.setVisible(True)
-                self.sig_refresh.emit()
-
-        # 只要有线程启动，就显示控制台窗口
-        self.sig_kernel_started.connect(set_visible)
-
     def refresh_view(self):
         running = self.is_running()
         pause = self.get_pause()

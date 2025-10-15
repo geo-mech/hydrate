@@ -3,8 +3,8 @@ import os
 import sys
 
 import zmlx.alg.sys as warnings
-from zmlx.exts.base import lic, core, app_data, read_text, get_dir, is_chinese
 from zmlx.alg.fsys import has_permission, samefile, time_string
+from zmlx.exts.base import lic, core, app_data, read_text, get_dir, is_chinese
 from zmlx.ui import settings
 from zmlx.ui.alg import open_url, get_last_exec_history
 from zmlx.ui.gui_buffer import gui
@@ -12,7 +12,7 @@ from zmlx.ui.pyqt import (QtCore, QtWidgets, QtMultimedia, QAction, QtGui,
                           is_pyqt6, QWebEngineView, QWebEngineSettings)
 from zmlx.ui.utils import TaskProc, GuiApi, FileHandler
 from zmlx.ui.widget import (
-    CodeEdit, Console, Label, TabWidget, ConsoleStateLabel)
+    CodeEdit, Console, TabWidget, ConsoleStateLabel)
 
 
 class Action(QAction):
@@ -96,6 +96,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self.__console.sig_refresh.connect(self.refresh)
         self.console_state_label = ConsoleStateLabel(self)
         self.statusBar().addPermanentWidget(self.console_state_label)
+
+        def show_text_on_console_state(text):
+            if not self.__console.output_widget.isVisible():
+                text = text.strip()[:50]
+                if len(text) > 0:
+                    self.console_state_label.setText(text)
+
+        self.__console.output_widget.sig_add_text.connect(show_text_on_console_state)  # 同时，尝试在控制台状态标签中显示
 
         # 用以播放声音
         if QtMultimedia is not None:
@@ -379,7 +387,7 @@ class MainWindow(QtWidgets.QMainWindow):
             menu='操作', name='console_hide',
             icon='console',
             tooltip='隐藏主窗口右侧的控制台', text='隐藏', shortcut='Ctrl+H',
-            slot=lambda: self.get_console().setVisible(False),
+            slot=self.hide_console,
             on_toolbar=True,
             is_enabled=lambda: self.get_console().isVisible()
         )
@@ -388,7 +396,7 @@ class MainWindow(QtWidgets.QMainWindow):
             menu='操作', name='console_show',
             icon='console',
             tooltip='显示主窗口右侧的控制台', text='显示', shortcut='Ctrl+H',
-            slot=lambda: self.get_console().setVisible(True),
+            slot=self.show_console,
             on_toolbar=True,
             is_enabled=lambda: not self.get_console().isVisible()
         )
@@ -1426,6 +1434,25 @@ class MainWindow(QtWidgets.QMainWindow):
         self.get_widget(
             the_type=QWebEngineView, caption=caption, on_top=on_top,
             oper=oper, icon=icon)
+
+    def set_console_visible(self, visible: bool):
+        """
+        设置控制台是否可见
+        """
+        self.get_console().setVisible(visible)
+        self.refresh()  # 刷新窗口
+
+    def hide_console(self):
+        """
+        隐藏控制台
+        """
+        self.set_console_visible(False)
+
+    def show_console(self):
+        """
+        显示控制台
+        """
+        self.set_console_visible(True)
 
 
 class MySplashScreen(QtWidgets.QSplashScreen):

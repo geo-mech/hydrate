@@ -1149,6 +1149,7 @@ def solve(
         time_unit='y',
         slots=None, solver=None,
         opt_iter=None,  # 用于在iterate的时候的额外的关键词参数.
+        hide_console_when_done=False,
         **opt_solve
 ):
     """
@@ -1351,6 +1352,8 @@ def solve(
         # 显示并保存最终的状态
         do_show_state()
         save_monitors()
+        if hide_console_when_done:  # 求解完成后，隐藏控制台
+            gui.hide_console()
         plot()
         save(check_dt=False)  # 保存最终状态
 
