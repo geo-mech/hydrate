@@ -948,6 +948,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self, kernel, *args, fname=None, dpi=None,
             caption=None, on_top=None, icon=None,
             clear=None,
+            tight_layout=None,
+            suptitle=None,
             **kwargs):
         """
         调用matplotlib执行绘图操作 注意，此函数会创建或者返回一个标签，并默认清除标签的绘图，返回使用回调函数
@@ -964,6 +966,8 @@ class MainWindow(QtWidgets.QMainWindow):
             on_top: 是否置顶
             icon: 窗口的图标
             clear: 是否清除之前的内容 (特别注意，默认是要清除之前的内容的，因此，如果要多个视图的时候，就不要使用clear)
+            tight_layout: 是否自动调整子图参数，以防止重叠
+            suptitle: 图表的标题
 
         Returns:
             None
@@ -981,6 +985,10 @@ class MainWindow(QtWidgets.QMainWindow):
                         kernel(figure, *args, **kwargs)  # 这里，并不会传入clear参数
                     except Exception as kernel_err:
                         print(kernel_err)
+                if isinstance(suptitle, str):
+                    figure.suptitle(suptitle)
+                if tight_layout:
+                    figure.tight_layout()
 
             widget.plot_on_figure(on_figure=on_figure)
             if fname is not None:
@@ -1589,6 +1597,9 @@ def __add_code_history():
 
 
 def __gui_setup():
+    """
+    设置GUI的额外的选项(会在线程里面执行)
+    """
     from zmlx.ui.settings import get_setup_files
     the_logs = []
     for path in get_setup_files():
@@ -1658,6 +1669,24 @@ def __console_kernel(code):
     """
     # 在尝试调用gui执行的时候，添加代码执行历史
     __add_code_history()
+
+    try:
+        from zmlx.ui.widget.editors import setup_ui
+        setup_ui()
+    except Exception as err:
+        print(f'Error when setup editors: {err}')
+
+    try:
+        from zmlx.ui.widget.message import setup_ui
+        setup_ui()
+    except Exception as err:
+        print(f'Error when setup message: {err}')
+
+    try:
+        from zmlx.ui.widget.string_table import setup_ui
+        setup_ui()
+    except Exception as err:
+        print(f'Error when setup string_table: {err}')
 
     if app_data.get('run_setup', True):  # 执行额外的配置文件(默认执行)
         __gui_setup()

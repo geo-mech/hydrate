@@ -5,7 +5,9 @@
 from ctypes import c_double, POINTER
 
 from zmlx.exts.base import InvasionPercolation, get_pointer64, np
-from zmlx.plt.on_axes import plot_on_axes
+from zmlx.plt.on_axes import item, add_items
+from zmlx.plt.on_figure import add_axes2
+from zmlx.ui import plot
 
 
 def ip_nodes_write(model: InvasionPercolation, index, pointer=None, buf=None):
@@ -136,21 +138,21 @@ def set_bonds(model: InvasionPercolation, count, node0, node1, radi=None):
         model.read_bond_radi(get_pointer64(radi, readonly=True))
 
 
-def show_xy(model: InvasionPercolation, caption='侵入过程', gui_only=True,
+def show_xy(model: InvasionPercolation, caption='侵入过程',
+            jx=None, jy=None, cmap=None, clabel='Phase', grid=True,
+            xlabel='x (m)', ylabel='y (m)', title='Fluid Invasion',
             **kwargs):
-    def on_axes(ax):
-        x = get_x(model)
-        y = get_y(model)
-        v = get_phase(model)
-        mask = v < 0.5
-        ax.scatter(
-            x[mask], y[mask], c='tab:blue', s=3, label='Water',
-            alpha=0.2, edgecolors='none')
-        mask = [not m for m in mask]
-        ax.scatter(
-            x[mask], y[mask], c='tab:orange', s=8, label='Oil',
-            alpha=0.7, edgecolors='none')
-
-    plot_on_axes(
-        on_axes, show_legend=True, grid=True, axis='equal',
-        caption=caption, gui_only=gui_only, **kwargs)
+    x = get_x(model)
+    y = get_y(model)
+    v = get_phase(model)
+    if cmap is None:
+        cmap = 'coolwarm'
+    if jx is not None and jy is not None:
+        o = item('contourf', np.reshape(x, shape=(jx, jy)),
+                 np.reshape(y, shape=(jx, jy)),
+                 np.reshape(v, shape=(jx, jy)), cmap=cmap, cbar=dict(label=clabel))
+    else:
+        o = item('tricontourf', x, y, v, cmap=cmap, cbar=dict(label=clabel))
+    plot(add_axes2, add_items, o, aspect='equal', caption=caption, grid=grid,
+         xlabel=xlabel, ylabel=ylabel, title=title,
+         **kwargs)

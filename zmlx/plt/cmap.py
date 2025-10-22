@@ -1,3 +1,11 @@
+try:
+    import matplotlib
+    import matplotlib.pyplot as plt
+except ImportError:
+    matplotlib = None
+    plt = None
+
+
 def get_color(cmap, lr, rr, val):
     """
     根据给定的颜色映射和数值范围，返回数值对应的颜色
@@ -29,6 +37,7 @@ def get_color(cmap, lr, rr, val):
     2. 数值超出范围时返回端点颜色
     3. 使用线性插值计算颜色位置，分母添加极小值防止除零错误
     """
+    assert isinstance(cmap, matplotlib.colors.Colormap)
     # 确保颜色映射至少包含2种颜色（否则无法进行线性插值）
     assert cmap.N >= 2, "Colormap must contain at least 2 colors"
 
@@ -78,8 +87,8 @@ def get_cm(name=None):
     异常:
         ValueError: 如果名称对应的 Colormap 不存在
     """
-    import matplotlib
-    import matplotlib.pyplot as plt
+    if isinstance(name, matplotlib.colors.Colormap):
+        return name
 
     parts = []
     version_str = matplotlib.__version__
@@ -106,12 +115,23 @@ def get_cm(name=None):
         return plt.get_cmap(name)  # 旧版本兼容方式
 
 
+
+def resample(cmap, lutsize):
+    assert isinstance(cmap, matplotlib.colors.Colormap)
+    return cmap.resampled(lutsize)
+
+
 def test_1():
     cmap = get_cm()
     print(get_color(cmap, 0, 1, 0.5))
     print(get_color(cmap, 0, 1, 0.0))
     print(get_color(cmap, 0, 1, 1.0))
     print(get_color(cmap, 0, 1, -1.0))
+
+    # (np.float64(0.8674276350862745), np.float64(0.864376599772549), np.float64(0.8626024620196079), np.float64(1.0))
+    # (np.float64(0.2298057), np.float64(0.298717966), np.float64(0.753683153), np.float64(1.0))
+    # (np.float64(0.705673158), np.float64(0.01555616), np.float64(0.150232812), np.float64(1.0))
+    # (np.float64(0.2298057), np.float64(0.298717966), np.float64(0.753683153), np.float64(1.0))
 
 
 if __name__ == '__main__':

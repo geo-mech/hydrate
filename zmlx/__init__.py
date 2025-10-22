@@ -53,6 +53,7 @@ from zmlx.config.TherFlowConfig import TherFlowConfig, SeepageTher
 # data
 from zmlx.data.mesh_c10000 import \
     get_face_centered_seepage_mesh as create_c10000
+from zmlx.data.igg import load_igg  # 加载igg.png
 
 ########################################
 # demo

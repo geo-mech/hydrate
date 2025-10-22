@@ -30,13 +30,14 @@ class View(QtWidgets.QWidget):
 
 
 def setup_ui():
-    gui.reg_file_type('Seepage文件', ['.seepage', '.xml', '.txt'],
-                      name='seepage',
-                      save=lambda data, name: data.save(name),
-                      load=lambda name: Seepage(path=name),
-                      init=lambda: Seepage(),
-                      widget_type=View
-                      )
+    gui.reg_file_type(
+        'Seepage文件', ['.seepage', '.xml', '.txt'],
+        name='seepage',
+        save=lambda data, name: data.save(name),
+        load=lambda name: Seepage(path=name),
+        init=lambda: Seepage(),
+        widget_type=View
+    )
 
 
 def main():

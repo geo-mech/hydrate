@@ -265,7 +265,7 @@ def create_caps(
     return result
 
 
-def create_kwargs(
+def create_opts(
         has_co2=False,
         has_steam=False,
         has_inh=False,
@@ -348,6 +348,10 @@ def create_kwargs(
         gravity=gravity,
         has_solid=True,
         **kwargs)
+
+
+# 别名
+create_kwargs = create_opts
 
 
 def create_t_ini(z_top=0.0, t_top=276.0, grad_t=0.04466):

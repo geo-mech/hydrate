@@ -1,8 +1,8 @@
 import os
 
-from zmlx.exts.base import app_data, lic
 from zmlx import gui
 from zmlx.alg.fsys import print_tag
+from zmlx.exts.base import app_data, lic
 
 
 def print_funcs():
@@ -60,23 +60,6 @@ def install_package():
         editable=True, current=0)
     if ok:
         pip_install(text)
-
-
-def heavy_work():
-    import numpy as np
-    from time import sleep
-    from zmlx import plot_xy
-    x = np.linspace(0, 20, 100)
-    for idx in range(1000):
-        gui.progress(label='Heavy Work执行进度', val_range=[0, 1000], value=idx,
-                     visible=True)
-        gui.break_point()
-        sleep(0.02)
-        print(f'step = {idx}/1000')
-        x += 1
-        y = np.sin(x)
-        plot_xy(x, y)
-    gui.progress(visible=False)
 
 
 def show_calendar():
@@ -157,11 +140,6 @@ def setup_ui():
              text='AppData',
              slot=lambda: os.startfile(app_data.root()),
              is_enabled=lambda: lic.is_admin
-             ),
-
-        dict(menu=['帮助', '测试'],
-             text='Heavy Task',
-             slot=lambda: gui.start(heavy_work),
              ),
 
         dict(menu='设置', name='set_plt_export_dpi',

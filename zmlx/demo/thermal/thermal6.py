@@ -1,22 +1,13 @@
 # ** desc = '基于Seepage类的温度场计算'
 
 from zmlx import *
-from zmlx.alg.image import get_data
-
-
-def load_func():
-    cmap = [[255, 255, 255, 1], [0, 0, 255, 1]]
-    f = get_data(img='igg_logo.png', cmap=cmap, vmin=0.0, vmax=1.0,
-                 xmin=-50, xmax=50, ymin=-50, ymax=50
-                 )
-    return f
 
 
 def create(jx, jy):
     """
     创建模型(不设置任何边界条件)
     """
-    f = load_func()
+    f = load_igg(xmin=-50, xmax=50, ymin=-50, ymax=50)
 
     def heat_cond(x, y, z):
         if f(x, y) > 0.5:

@@ -11816,7 +11816,7 @@ class SeepageMesh(HasHandle, HasCells):
         返回与给定位置距离最近的cell
 
         Args:
-            pos (tuple): 包含三个浮点数的元组，表示三维空间中的位置。
+            pos (tuple | list): 包含三个浮点数的元组，表示三维空间中的位置。
 
         Returns:
             SeepageMesh.Cell: 与给定位置距离最近的cell对象，

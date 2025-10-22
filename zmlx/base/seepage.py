@@ -473,6 +473,19 @@ def get_dt(model: Seepage, as_str=False):
     return time2str(result) if as_str else result
 
 
+def get_dt_str(model: Seepage):
+    """
+    获取模型的时间步长，返回格式化的时间字符串。
+
+    Args:
+        model: 渗流模型对象
+
+    Returns:
+        str: 格式化的时间字符串
+    """
+    return get_dt(model, as_str=True)
+
+
 def get_time(model: Seepage, as_str=False):
     """获取模型当前的计算时间。
 
@@ -488,6 +501,19 @@ def get_time(model: Seepage, as_str=False):
     """
     result = get_attr(model, key='time', default_val=0.0)
     return time2str(result) if as_str else result
+
+
+def get_time_str(model: Seepage):
+    """
+    获取模型当前的计算时间，返回格式化的时间字符串。
+
+    Args:
+        model: 渗流模型对象
+
+    Returns:
+        str: 格式化的时间字符串
+    """
+    return get_time(model, as_str=True)
 
 
 def set_time(model: Seepage, value):
@@ -1147,7 +1173,10 @@ def get_cell_fv(model: Seepage, fid=None, mask=None, shape=None):
     if fid is None:
         v = as_numpy(model).cells.fluid_vol
     else:
-        if isinstance(fid, str) or not isinstance(fid, collections.abc.Iterable):
+        if isinstance(fid, str):
+            fid = model.find_fludef(name=fid)
+            assert fid is not None
+        if not is_array(fid):
             fid = [fid]
         v = as_numpy(model).fluids(*fid).vol
     res = v if mask is None else v[mask]
@@ -1177,7 +1206,10 @@ def get_cell_fm(model: Seepage, fid=None, mask=None, shape=None):
     if fid is None:
         v = as_numpy(model).cells.fluid_mass
     else:
-        if isinstance(fid, str) or not isinstance(fid, collections.abc.Iterable):
+        if isinstance(fid, str):
+            fid = model.find_fludef(name=fid)
+            assert fid is not None
+        if not is_array(fid):
             fid = [fid]
         v = as_numpy(model).fluids(*fid).mass
     res = v if mask is None else v[mask]
@@ -1205,6 +1237,78 @@ def get_ca(model: Seepage, ca, mask=None, shape=None):
     如果 mask 为 None，则返回所有单元格的位置向量；否则，返回掩码指定的单元格的位置向量
     """
     v = as_numpy(model).cells.get(ca)
+    res = v if mask is None else v[mask]
+    if shape is not None:
+        res = np.reshape(res, shape)
+    return res
+
+
+def get_den(model: Seepage, fid, mask=None, shape=None):
+    """
+    返回模型中单元格的流体密度。
+
+    参数:
+    - model: Seepage 模型对象
+    - fid: 流体 ID（可选），如果未提供，则返回所有流体的总密度
+    - mask: 可选的掩码，用于筛选特定的单元格
+    - shape: 可选的形状，用于将结果重新整形为指定的维度
+
+    返回值:
+    - 一个 numpy 数组，包含模型中所有单元格的流体密度。
+    - 如果提供了流体 ID，则返回该流体在所有单元格中的密度。
+    - 如果提供了掩码，则返回掩码指定的单元格的流体密度。
+    """
+    if isinstance(fid, str):
+        fid = model.find_fludef(name=fid)
+        assert fid is not None
+    if not is_array(fid):
+        fid = [fid]
+    v = as_numpy(model).fluids(*fid).den
+    res = v if mask is None else v[mask]
+    if shape is not None:
+        res = np.reshape(res, shape)
+    return res
+
+
+def set_fa(model: Seepage, fid, fa, value):
+    """
+    设置模型中单元格的流体属性值。
+
+    参数:
+    - model: Seepage 模型对象
+    - fid: 流体 ID（可选），如果未提供，则设置所有流体的总属性值
+    - fa: 流体属性索引（例如 FluidAttrs.density）
+    - value: 要设置的属性值
+    """
+    if isinstance(fid, str):
+        fid = model.find_fludef(name=fid)
+        assert fid is not None
+    if not is_array(fid):
+        fid = [fid]
+    as_numpy(model).fluids(*fid).set(fa, value)
+
+
+def get_fa(model: Seepage, fid, fa, mask=None, shape=None):
+    """
+    返回模型中单元格的流体属性值。
+
+    参数:
+    - model: Seepage 模型对象
+    - fid: 流体 ID（可选），如果未提供，则返回所有流体的总属性值
+    - fa: 流体属性索引（例如 FluidAttrs.density）
+    - mask: 可选的掩码，用于筛选特定的单元格
+    - shape: 可选的形状，用于将结果重新整形为指定的维度
+
+    返回值:
+    - 一个 numpy 数组，包含模型中所有单元格的流体属性值。
+    - 如果提供了流体 ID，则返回该流体在所有单元格中的属性值。
+    - 如果提供了掩码，则返回掩码指定的单元格的流体属性值。
+    """
+    if isinstance(fid, str):
+        fid = model.find_fludef(name=fid)
+    if not is_array(fid):
+        fid = [fid]
+    v = as_numpy(model).fluids(*fid).get(fa)
     res = v if mask is None else v[mask]
     if shape is not None:
         res = np.reshape(res, shape)

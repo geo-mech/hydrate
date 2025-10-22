@@ -184,9 +184,20 @@ def question(info):
         return y == 'y' or y == 'Y'
 
 
-def plot_no_gui(kernel, *args, fname=None, dpi=300, caption=None, **kwargs):
+def plot_no_gui(kernel, *args, fname=None, dpi=300, caption=None, tight_layout=None, suptitle=None, **kwargs):
     """
     在非GUI模式下绘图(或者显示并阻塞程序执行，或者输出文件但不显示).
+    Args:
+        kernel: 绘图的回调函数，函数的原型为：
+            def kernel(figure, *args, **kwargs):
+                ...
+        *args: 传递给kernel函数的参数
+        **kwargs: 传递给kernel函数的关键字参数
+        tight_layout: 是否自动调整子图参数，以防止重叠
+        caption: 图表的标题
+        dpi: 输出图片的分辨率
+        fname: 输出的文件名
+        suptitle: 图表的标题
     """
     try:
         import matplotlib.pyplot as plt
@@ -200,6 +211,10 @@ def plot_no_gui(kernel, *args, fname=None, dpi=300, caption=None, **kwargs):
     try:
         fig = plt.figure()
         kernel(fig, *args, **kwargs)
+        if isinstance(suptitle, str):
+            fig.suptitle(suptitle)
+        if tight_layout:
+            fig.tight_layout()
         if fname is not None:
             fig.savefig(fname=fname, dpi=dpi)
             plt.close()

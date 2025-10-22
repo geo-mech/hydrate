@@ -1,15 +1,14 @@
 # ** desc = '侵入逾渗(IP)模型计算油气运移成藏(测试更多的批量接口)'
 
 
-import random
-
 from zmlx import *
 
 
-def create():
+def create(jx=100, jy=300):
+    import random
     mesh = create_cube(
-        x=np.linspace(0, 100, 100),
-        y=np.linspace(0, 300, 300),
+        x=np.linspace(0, 100, jx + 1),
+        y=np.linspace(0, 300, jy + 1),
         z=(0, 1))
     model = InvasionPercolation()
     random.seed(1000000)
@@ -55,7 +54,7 @@ def create():
     return model
 
 
-def solve(model):
+def solve(model, jx, jy):
     for step in range(4000):
         gui.break_point()
         model.iterate()
@@ -67,13 +66,14 @@ def solve(model):
                 print(f'({oper.get_node(0).index} -> {oper.get_node(1).index})',
                       end=', ')
             print('')
-            ip.show_xy(model)
+            ip.show_xy(model, jx=jx, jy=jy)
 
 
 def execute(gui_mode=True, close_after_done=False):
-    model = create()
+    jx, jy = 100, 300
+    model = create(jx, jy)
     ip.set_x(model, ip.get_x(model) + ip.get_y(model) * 0.3)
-    gui.execute(lambda: solve(model), close_after_done=close_after_done,
+    gui.execute(lambda: solve(model, jx, jy), close_after_done=close_after_done,
                 disable_gui=not gui_mode)
 
 
