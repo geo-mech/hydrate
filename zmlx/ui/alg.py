@@ -395,3 +395,47 @@ def edit_in_tab(widget_type, set_data, get_data=None, caption=None, support_refr
     gui.get_widget(
         QtWidgets.QWidget, caption=caption,
         init=do_init, on_top=True)
+
+
+def install_package():
+    from zmlx.alg.sys import pip_install
+    text, ok = gui.get_item(
+        '安装第三包包', '输入或者选择你所需要的Python包名，并执行pip安装\n',
+        ['', 'numpy', 'scipy', 'matplotlib', 'pyqtgraph', 'PyQt5', 'PyQt6',
+         'PyQt6-WebEngine', 'pyqt6-qscintilla',
+         'PyOpenGL', 'pypiwin32', 'pywin32', 'dulwich',
+         ],
+        editable=True, current=0)
+    if ok:
+        def code():
+            pip_install(text)
+
+        gui.start_func(code)
+
+
+def set_plt_export_dpi():
+    from zmlx.io.env import plt_export_dpi
+    number, ok = gui.get_double(
+        '设置导出图的DPI',
+        'DPI',
+        plt_export_dpi.get_value(), 50, 3000)
+    if ok:
+        plt_export_dpi.set_value(number)
+
+
+def play_images():
+    from zmlx.alg.fsys import list_files
+
+    def task():
+        files = list_files(exts=['.jpg', '.png'])
+        for idx in range(len(files)):
+            print(files[idx])
+            gui.open_image(files[idx], caption='播放图片',
+                           on_top=False)
+            gui.break_point()
+            gui.progress(
+                val_range=[0, len(files)], value=idx,
+                visible=True, label="Playing Figures ")
+        gui.progress(visible=False)
+
+    gui.start_func(task)

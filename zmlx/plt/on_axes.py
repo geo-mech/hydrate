@@ -146,6 +146,7 @@ def add_items(ax, *items, kernels=None):
     Returns:
         一个列表，包含添加到Axes上的对象。如果项目的名称为空，则添加None到列表中。
     """
+    # 首先，准备项目名称到添加函数的映射表
     if kernels is None:
         kernels = get_kernels()
     else:
@@ -154,28 +155,36 @@ def add_items(ax, *items, kernels=None):
         temp.update(kernels)
         kernels = temp
 
-    objects = []
+    objects = []  # 用于存储添加到Axes上的对象
     for opt in items:
-        if len(opt) == 0:
+        if len(opt) == 0:  # 没有给定选项
             objects.append(None)
             continue
 
         name = opt[0]
         assert isinstance(name, str)
-        if len(name) == 0:
+        if len(name) == 0:  # 没有给定项目名称
             objects.append(None)
             continue
 
+        # 准备绘图的参数
+        args = [] if 1 >= len(opt) else opt[1]
+        kwargs = {} if 2 >= len(opt) else opt[2]
+
+        # 首先，尝试从kernels中获取对应的添加函数
         func = kernels.get(name, None)
-        if func is None:
-            objects.append(None)
-            continue
-        else:
-            args = [] if 1 >= len(opt) else opt[1]
-            kwargs = {} if 2 >= len(opt) else opt[2]
+        if func is None:  # 此时，没有找到特定的内核函数
+            func = getattr(ax, name, None)  # 尝试从Axes对象中获取对应的方法
+            if func is None:
+                objects.append(None)
+            else:
+                obj = func(*args, **kwargs)
+                objects.append(obj)
+        else:  # 使用给定的函数绘图
             obj = func(ax, *args, **kwargs)
             objects.append(obj)
-            continue
+
+    return objects  # 返回添加到Axes上的对象列表
 
 
 def item(name, *args, **kwargs):

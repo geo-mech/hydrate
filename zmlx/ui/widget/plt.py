@@ -112,20 +112,22 @@ class MatplotWidget(QtWidgets.QWidget):
     def canvas(self):
         return self.__canvas
 
-    def set_plt_export_dpi(self):
-        from zmlx.io.env import plt_export_dpi
-        number, ok = QtWidgets.QInputDialog.getDouble(
-            self, '设置导出图的DPI', 'DPI',
-            plt_export_dpi.get_value(), 50, 3000)
-        if ok:
-            plt_export_dpi.set_value(number)
+    @staticmethod
+    def set_plt_export_dpi():
+        warnings.warn(
+            'set_plt_export_dpi is deprecated, use set_plt_export_dpi in zmlx.ui.alg',
+            DeprecationWarning, stacklevel=2
+        )
+        from zmlx.ui.alg import set_plt_export_dpi as impl
+        impl()
 
     def get_context_menu(self):
+        from zmlx.ui.alg import set_plt_export_dpi
         menu = QtWidgets.QMenu(self)
         menu.addAction(
             create_action(
                 self, '设置导出图的DPI', icon='set',
-                slot=self.set_plt_export_dpi))
+                slot=set_plt_export_dpi))
         menu.addAction(
             create_action(
                 self, '导出图', icon='export',

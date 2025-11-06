@@ -26,40 +26,9 @@ def print_sys_folders():
     gui.show_string_table(paths, '系统路径', 1)
 
 
-def play_images():
-    from zmlx.alg.fsys import list_files
-
-    def task():
-        files = list_files(exts=['.jpg', '.png'])
-        for idx in range(len(files)):
-            print(files[idx])
-            gui.open_image(files[idx], caption='播放图片',
-                           on_top=False)
-            gui.break_point()
-            gui.progress(
-                val_range=[0, len(files)], value=idx,
-                visible=True, label="Playing Figures ")
-        gui.progress(visible=False)
-
-    gui.start_func(task)
-
-
 def open_cwd():
     print(f'当前工作路径：\n{os.getcwd()}\n')
     os.startfile(os.getcwd())
-
-
-def install_package():
-    from zmlx.alg.sys import pip_install
-    text, ok = gui.get_item(
-        '安装第三包包', '输入或者选择你所需要的Python包名，并执行pip安装\n',
-        ['', 'numpy', 'scipy', 'matplotlib', 'pyqtgraph', 'PyQt5', 'PyQt6',
-         'PyQt6-WebEngine', 'pyqt6-qscintilla',
-         'PyOpenGL', 'pypiwin32', 'pywin32', 'dulwich',
-         ],
-        editable=True, current=0)
-    if ok:
-        pip_install(text)
 
 
 def show_calendar():
@@ -75,80 +44,66 @@ def show_calendar():
     )
 
 
-def set_plt_export_dpi():
-    from zmlx.io.env import plt_export_dpi
-    from zmlx.ui.pyqt import QtWidgets
-    number, ok = QtWidgets.QInputDialog.getDouble(
-        gui.window(),
-        '设置导出图的DPI',
-        'DPI',
-        plt_export_dpi.get_value(), 50, 3000)
-    if ok:
-        plt_export_dpi.set_value(number)
-
-
 def setup_ui():
+    from zmlx.ui.alg import install_package, set_plt_export_dpi, play_images
     gui.add_func('show_calendar', show_calendar)
 
-    data = [
-        dict(
-            menu='帮助',
-            text='安装Python包',
-            slot=lambda: gui.start_func(install_package),
-        ),
-        dict(menu='帮助', name='print_tag',
-             text='时间标签',
-             slot=print_tag
-             ),
+    add = gui.add_action
 
-        dict(menu='操作', name='play_images',
-             text='播放图片',
-             slot=play_images
-             ),
+    add(menu='帮助',
+        text='安装Python包',
+        slot=install_package,
+        )
+    add(menu='帮助', name='print_tag',
+        text='时间标签',
+        slot=print_tag
+        )
 
-        dict(menu=['帮助', '显示'],
-             text='gui命令列表',
-             slot=lambda: gui.start(print_funcs),
-             ),
+    add(menu='操作', name='play_images',
+        text='播放图片',
+        slot=play_images
+        )
 
-        dict(menu=['帮助', '显示'],
-             text='action列表',
-             slot=print_actions,
-             ),
+    add(menu=['帮助', '显示'],
+        text='gui命令列表',
+        slot=lambda: gui.start(print_funcs),
+        )
 
-        dict(menu=['帮助', '显示'],
-             text='Setup日志',
-             slot=print_gui_setup_logs,
-             ),
+    add(menu=['帮助', '显示'],
+        text='action列表',
+        slot=print_actions,
+        )
 
-        dict(menu=['帮助', '显示'],
-             text='系统路径',
-             slot=print_sys_folders,
-             ),
+    add(menu=['帮助', '显示'],
+        text='Setup日志',
+        slot=print_gui_setup_logs,
+        )
 
-        dict(menu=['帮助', '显示'],
-             text='日历',
-             slot=show_calendar,
-             ),
+    add(menu=['帮助', '显示'],
+        text='系统路径',
+        slot=print_sys_folders,
+        )
 
-        dict(menu=['帮助', '打开'], name='open_cwd',
-             text='工作路径',
-             slot=open_cwd
-             ),
+    add(menu=['帮助', '显示'],
+        text='日历',
+        slot=show_calendar,
+        )
 
-        dict(menu=['帮助', '打开'], name='open_app_data',
-             text='AppData',
-             slot=lambda: os.startfile(app_data.root()),
-             is_enabled=lambda: lic.is_admin
-             ),
+    add(menu=['帮助', '打开'], name='open_cwd',
+        text='工作路径',
+        slot=open_cwd
+        )
 
-        dict(menu='设置', name='set_plt_export_dpi',
-             text='设置plt输出图的DPI',
-             slot=set_plt_export_dpi
-             ),
-    ]
-    for opt in data:
-        gui.add_action(**opt)
+    add(menu=['帮助', '打开'], name='open_app_data',
+        text='AppData',
+        slot=lambda: os.startfile(app_data.root()),
+        is_enabled=lambda: lic.is_admin
+        )
+
+    add(menu='设置', name='set_plt_export_dpi',
+        text='设置plt输出图的DPI',
+        slot=set_plt_export_dpi
+        )
 
 
 def main():

@@ -214,7 +214,9 @@ class XyEdit(DataEdit):
 
     def __init__(self, parent=None, **opts):
         super().__init__(parent)
-        self.opts = opts
+        self.opts = dict(
+            xlabel='x', ylabel='y', title='Xy数据')
+        self.opts.update(opts)
 
     def on_figure(self, fig, data):
         fig.clear()
@@ -253,7 +255,9 @@ class XyzEdit(DataEdit):
 
     def __init__(self, parent=None, **opts):
         super().__init__(parent)
-        self.opts = opts
+        self.opts = dict(
+            xlabel='x', ylabel='y', zlabel='z', title='Xyz数据')
+        self.opts.update(opts)
 
     def on_figure(self, fig, data):
         fig.clear()
@@ -297,7 +301,9 @@ class Interp1Edit(MatplotWidget):
     def __init__(self, parent=None, **opts):
         super().__init__(parent)
         self.data = Interp1()
-        self.opts = opts
+        self.opts = dict(
+            xlabel='x', ylabel='y', title='一维插值(右键编辑/导入)')
+        self.opts.update(opts)
         self.context_actions.append(
             create_action(self, '导入数据', icon='import',
                           slot=self.import_data))
@@ -612,10 +618,8 @@ class FludefEdit(QtWidgets.QWidget):
 
 
 def setup_ui():
-    for f in [ArrayEdit.setup_ui, XyEdit.setup_ui, XyzEdit.setup_ui,
-              Interp1Edit.setup_ui, Interp2Edit.setup_ui, FludefEdit.setup_ui]:
+    for obj in [ArrayEdit, XyEdit, XyzEdit, Interp1Edit, Interp2Edit, FludefEdit]:
         try:
-            f()
+            obj.setup_ui()
         except Exception as e:
             print(e)
-

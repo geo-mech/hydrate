@@ -82,6 +82,7 @@ from zmlx.fluid.h2o_gas import create as create_h2o_gas
 from zmlx.fluid.h2o_ice import create as create_h2o_ice
 from zmlx.fluid import h2o, ch4
 from zmlx.fluid.alg import from_data, from_file
+from zmlx.fluid import load_fludefs
 
 ########################################
 # geometry
@@ -130,6 +131,7 @@ from zmlx.plt.cbar import add_cbar
 
 ########################################
 # react
+from zmlx.react import load_reactions
 from zmlx.react.alg import create_reaction, add_reaction
 from zmlx.react.inh import create_inh, add_inh
 
@@ -156,6 +158,7 @@ from zmlx.ui import (
 
 ########################################
 # utility
+from zmlx.utility import load_field3
 from zmlx.utility.fields import Field, LinearField
 from zmlx.utility.attr_keys import AttrKeys, add_keys
 from zmlx.utility.runtime_fn import RuntimeFunc
@@ -176,8 +179,6 @@ def get_path(*args):
 
 
 import zmlx.exts.base as zml
-
-__keep = [zml]
 
 ########################################
 # deprecated

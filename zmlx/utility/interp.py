@@ -11,7 +11,7 @@ try:
 except ImportError:
     NearestNDInterpolator = None
     LinearNDInterpolator = None
-    CloughTocher2DInterpolator =None
+    CloughTocher2DInterpolator = None
 
 from zmlx.alg.base import join_cols
 
@@ -92,7 +92,7 @@ class Interp2:
         if self.value is not None:
             return self.value * np.ones_like(x)
         else:
-            return np.nan * np.ones_like(x)  #  2025-8-4修改，尚未测试
+            return np.nan * np.ones_like(x)  # 2025-8-4修改，尚未测试
 
 
 class Interp3:
@@ -110,9 +110,15 @@ class Interp3:
         z = np.asarray(z)
         v = np.asarray(v)
 
-        if v.size == 1:
-            # 此时是一个常数
-            self.value = v[0]
+        assert x.shape == y.shape == z.shape == v.shape, "x, y, z, v must have the same shape"
+        ndim = x.ndim
+        assert 0 <= ndim <= 1, "x, y, z must be scalar or 1D arrays"
+
+        if v.size == 1 or ndim == 0:
+            if ndim == 0:
+                self.value = float(v)
+            else:  # 1d
+                self.value = float(v[0])
             self.f1 = None
             self.f2 = None
             return
@@ -158,6 +164,30 @@ class Interp3:
             return self.value * np.ones_like(x)
         else:
             return np.nan * np.ones_like(x)  # 2025-8-4修改，尚未测试
+
+
+def load_field3(filename):
+    """
+    从文件中加载数据.
+    Args:
+        filename: 文件名，文件中每一行包含4个数字，分别表示x, y, z, v
+
+    Returns:
+        Interp3: 插值对象
+    """
+    data = np.loadtxt(filename)
+    if len(data.shape) == 1:
+        # 对于一维数组，直接取前4个元素
+        x, y, z, v = data[:4]  # 简洁的解包方式
+        return Interp3(x, y, z, v)
+    else:
+        # 对于二维数组，取前4列
+        assert data.shape[1] >= 4, "数据列数不足4列"
+        x = data[:, 0]
+        y = data[:, 1]
+        z = data[:, 2]
+        v = data[:, 3]
+        return Interp3(x, y, z, v)
 
 
 def test():
