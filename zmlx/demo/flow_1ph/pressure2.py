@@ -102,12 +102,17 @@ def test():
 
     # 迭代并且绘图显示
     step_max = 50
+    dv_rela = 0.5
+    dt = 1.0e9
     for step in range(step_max):
-        print(f'step = {step}/{step_max}')
-        model.iterate(dt=1.0e6)
+        r = model.iterate(dt=dt, dv_rela=dv_rela)
+        print(f'step = {step}/{step_max}, dt = {r.get("dt")}')
+        # 新的步长
+        dt = model.get_recommended_dt(r.get('dt'), dv_relative=dv_rela)
         items = pressure_items(model, jx, jy)
         plot(add_axes3, add_items, *items,
-             xlabel="x/m", ylabel="y/m", title=f'Pressure Distribution, step = {step}',
+             xlabel="x/m", ylabel="y/m",
+             title=f'Pressure Distribution, step = {step}',
              aspect='equal', tight_layout=True,
              caption='压力场')
 

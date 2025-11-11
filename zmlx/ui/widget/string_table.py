@@ -1,6 +1,5 @@
 import math
 
-from zmlx.ui.gui_buffer import gui
 from zmlx.ui.pyqt import QtWidgets, QtCore
 
 
@@ -79,24 +78,3 @@ class StringTable(QtWidgets.QTableWidget):
                     if self.item(row, col) is None:
                         empty_item = QtWidgets.QTableWidgetItem("")
                         self.setItem(row, col, empty_item)
-
-
-def show_string_table(data, caption=None, data_columns=3):
-    from zmlx import gui
-    kwds = dict(data=data, caption=caption, data_columns=data_columns)
-
-    def oper(w):
-        w.gui_restore = f"""gui.show_string_table(**{kwds})"""
-        w.set_data(data)
-
-    widget = gui.get_widget(
-        StringTable, caption='文本表格' if caption is None else caption,
-        type_kw=dict(data_columns=data_columns),
-        set_parent=True, oper=oper)
-
-    return widget
-
-
-def setup_ui():
-    gui.add_func('show_string_table', show_string_table)
-

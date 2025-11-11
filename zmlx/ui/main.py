@@ -3,13 +3,14 @@ import os
 import sys
 
 import zmlx.alg.sys as warnings
-from zmlx.alg.fsys import has_permission, samefile, time_string
+from zmlx.alg.fsys import has_permission, samefile, time_string, print_tag
 from zmlx.exts.base import lic, core, app_data, read_text, get_dir, is_chinese
 from zmlx.ui import settings
-from zmlx.ui.alg import open_url, get_last_exec_history
+from zmlx.ui.alg import open_url, get_last_exec_history, install_package, set_plt_export_dpi, play_images
 from zmlx.ui.gui_buffer import gui
-from zmlx.ui.pyqt import (QtCore, QtWidgets, QtMultimedia, QAction, QtGui,
-                          is_pyqt6, QWebEngineView, QWebEngineSettings)
+from zmlx.ui.pyqt import (
+    QtCore, QtWidgets, QtMultimedia, QAction, QtGui,
+    is_pyqt6, QWebEngineView, QWebEngineSettings)
 from zmlx.ui.utils import TaskProc, GuiApi, FileHandler
 from zmlx.ui.widget import (
     CodeEdit, Console, TabWidget, ConsoleStateLabel)
@@ -417,6 +418,12 @@ class MainWindow(QtWidgets.QMainWindow):
         )
 
         self.add_action(
+            menu='操作', name='play_images',
+            text='播放图片',
+            slot=play_images
+        )
+
+        self.add_action(
             menu='设置', name='env', icon='set',
             text='系统变量', shortcut='Ctrl+E',
             slot=self.show_env_edit
@@ -439,6 +446,12 @@ class MainWindow(QtWidgets.QMainWindow):
             text='窗口风格',
             slot=lambda: self.open_text(
                 app_data.temp('zml_window_style.qss'), '窗口风格')
+        )
+
+        self.add_action(
+            menu='设置', name='set_plt_export_dpi',
+            text='设置plt输出图的DPI',
+            slot=set_plt_export_dpi
         )
 
         self.add_action(
@@ -470,6 +483,12 @@ class MainWindow(QtWidgets.QMainWindow):
             menu='帮助', name='reg', icon='reg',
             text='注册',
             slot=self.show_reg_tool
+        )
+
+        self.add_action(
+            menu='帮助',
+            text='安装Python包',
+            slot=install_package,
         )
 
         self.add_action(
@@ -530,6 +549,76 @@ class MainWindow(QtWidgets.QMainWindow):
                 icon='home'
             ),
             is_enabled=not_running,
+        )
+
+        self.add_action(
+            menu=['帮助', '显示'],
+            text='日历',
+            slot=self.show_calendar,
+        )
+
+        self.add_action(
+            menu='帮助', name='print_tag',
+            text='时间标签',
+            slot=print_tag
+        )
+
+        def print_funcs():
+            self.show_string_table(list(gui.list_all()), '命令列表')
+
+        def print_actions():
+            names = gui.list_actions()
+            names.sort()
+            gui.show_string_table(names, 'Action列表')
+
+        self.add_action(
+            menu=['帮助', '显示'],
+            text='命令列表',
+            slot=lambda: self.start_func(print_funcs),
+        )
+
+        self.add_action(
+            menu=['帮助', '显示'],
+            text='Action列表',
+            slot=lambda: self.start_func(print_actions),
+        )
+
+        def print_gui_setup_logs():
+            logs = app_data.get('gui_setup_logs')
+            gui.show_string_table(logs, 'gui_setup_logs', 1)
+
+        self.add_action(
+            menu=['帮助', '显示'],
+            text='Setup日志',
+            slot=print_gui_setup_logs,
+        )
+
+        def print_sys_folders():
+            from zmlx.alg.sys import listdir
+            paths = listdir(app_data.get_paths())
+            gui.show_string_table(paths, '系统路径', 1)
+
+        self.add_action(
+            menu=['帮助', '显示'],
+            text='系统路径',
+            slot=print_sys_folders,
+        )
+
+        def open_cwd():
+            print(f'当前工作路径：\n{os.getcwd()}\n')
+            os.startfile(os.getcwd())
+
+        self.add_action(
+            menu=['帮助', '打开'], name='open_cwd',
+            text='工作路径',
+            slot=open_cwd
+        )
+
+        self.add_action(
+            menu=['帮助', '打开'], name='open_app_data',
+            text='AppData',
+            slot=lambda: os.startfile(app_data.root()),
+            is_enabled=lambda: lic.is_admin
         )
 
     def list_member_functions(self):
@@ -1343,17 +1432,19 @@ class MainWindow(QtWidgets.QMainWindow):
         def oper(w):
             w.gui_restore = f"""gui.show_pg_console()"""
 
-        self.get_widget(the_type=PgConsole, caption='Python控制台', on_top=True,
-                        icon='console', oper=oper)
+        self.get_widget(
+            the_type=PgConsole, caption='Python控制台', on_top=True,
+            icon='console', oper=oper)
 
     def show_file_finder(self):
         from zmlx.ui.widget import AppPathEdit
         def oper(w):
             w.gui_restore = f"""gui.show_file_finder()"""
 
-        self.get_widget(the_type=AppPathEdit, caption='搜索路径',
-                        on_top=True,
-                        icon='set', oper=oper)
+        self.get_widget(
+            the_type=AppPathEdit, caption='搜索路径',
+            on_top=True,
+            icon='set', oper=oper)
 
     def show_env_edit(self):
         from zmlx.ui.widget import EnvEdit
@@ -1361,10 +1452,37 @@ class MainWindow(QtWidgets.QMainWindow):
         def oper(w):
             w.gui_restore = f"""gui.show_env_edit()"""
 
-        self.get_widget(the_type=EnvEdit, caption='设置Env', on_top=True,
-                        icon='set', oper=oper,
-                        type_kw=dict(items=settings.get_env_items())
-                        )
+        self.get_widget(
+            the_type=EnvEdit, caption='设置Env', on_top=True,
+            icon='set', oper=oper,
+            type_kw=dict(items=settings.get_env_items())
+        )
+
+    def show_calendar(self):
+        def oper(w):
+            w.gui_restore = f"""gui.show_calendar()"""
+
+        self.get_widget(
+            the_type=QtWidgets.QCalendarWidget,
+            caption='日历',
+            on_top=True,
+            oper=oper
+        )
+
+    def show_string_table(self, data, caption=None, data_columns=3):
+        from zmlx.ui.widget.string_table import StringTable
+        opts = dict(data=data, caption=caption, data_columns=data_columns)
+
+        def oper(w):
+            w.gui_restore = f"""gui.show_string_table(**{opts})"""
+            w.set_data(data)
+
+        widget = self.get_widget(
+            StringTable, caption='文本表格' if caption is None else caption,
+            type_kw=dict(data_columns=data_columns),
+            set_parent=True, oper=oper)
+
+        return widget
 
     def edit_setup_files(self):
         from zmlx.ui.widget import SetupFileEdit
@@ -1372,9 +1490,10 @@ class MainWindow(QtWidgets.QMainWindow):
         def oper(w):
             w.gui_restore = f"""gui.edit_setup_files()"""
 
-        self.get_widget(the_type=SetupFileEdit, caption='启动文件',
-                        on_top=True,
-                        icon='set', oper=oper)
+        self.get_widget(
+            the_type=SetupFileEdit, caption='启动文件',
+            on_top=True,
+            icon='set', oper=oper)
 
     def show_readme(self):
         from zmlx.ui.widget import ReadMeBrowser
@@ -1382,9 +1501,10 @@ class MainWindow(QtWidgets.QMainWindow):
         def oper(w):
             w.gui_restore = f"""gui.show_readme()"""
 
-        self.get_widget(the_type=ReadMeBrowser, caption='ReadMe', on_top=True,
-                        icon='info', oper=oper,
-                        tooltip='显示ReadMe信息，与IGG-Hydrate网站首页的ReadMe保持一致')
+        self.get_widget(
+            the_type=ReadMeBrowser, caption='ReadMe', on_top=True,
+            icon='info', oper=oper,
+            tooltip='显示ReadMe信息，与IGG-Hydrate网站首页的ReadMe保持一致')
 
     def show_reg_tool(self):
         from zmlx.ui.widget import RegTool
@@ -1392,8 +1512,9 @@ class MainWindow(QtWidgets.QMainWindow):
         def oper(w):
             w.gui_restore = f"""gui.show_reg_tool()"""
 
-        self.get_widget(the_type=RegTool, caption='注册', on_top=True,
-                        icon='reg', oper=oper)
+        self.get_widget(
+            the_type=RegTool, caption='注册', on_top=True,
+            icon='reg', oper=oper)
 
     def show_feedback(self):
         from zmlx.ui.widget import FeedbackTool
@@ -1401,8 +1522,9 @@ class MainWindow(QtWidgets.QMainWindow):
         def oper(w):
             w.gui_restore = f"""gui.show_feedback()"""
 
-        self.get_widget(the_type=FeedbackTool, caption='反馈', on_top=True,
-                        icon='info', oper=oper)
+        self.get_widget(
+            the_type=FeedbackTool, caption='反馈', on_top=True,
+            icon='info', oper=oper)
 
     def open_url(self, url, caption=None, on_top=None, zoom_factor=None,
                  icon=None):
@@ -1681,12 +1803,6 @@ def __console_kernel(code):
         setup_ui()
     except Exception as err:
         print(f'Error when setup message: {err}')
-
-    try:
-        from zmlx.ui.widget.string_table import setup_ui
-        setup_ui()
-    except Exception as err:
-        print(f'Error when setup string_table: {err}')
 
     if app_data.get('run_setup', True):  # 执行额外的配置文件(默认执行)
         __gui_setup()

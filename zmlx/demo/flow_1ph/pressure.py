@@ -34,6 +34,7 @@ def add_cell(model: Seepage, x, y, v, p):
     c = model.add_cell()
     set_cell(c, x, y, v, p)
 
+
 def add_face(model: Seepage, i0, i1, area, perm):
     """
     在一个渗流模型中(Seepage)，添加一个流体的流动面(Seepage.Face)
@@ -60,7 +61,7 @@ def pressure_items(model: Seepage, jx, jy):
     x = np.reshape(as_numpy(model).cells.x, (jx, jy))
     y = np.reshape(as_numpy(model).cells.y, (jx, jy))
     p = np.reshape(as_numpy(model).cells.pre / 1e6, (jx, jy))
-    return [item('surf', x, y, p*20-15, p, cbar={'label': 'Pressure/MPa', 'shrink': 0.7}),
+    return [item('surf', x, y, p * 20 - 15, p, cbar={'label': 'Pressure/MPa', 'shrink': 0.7}),
             item('contourf', x, y, p)
             ]
 
@@ -83,7 +84,7 @@ def test():
             else:
                 add_cell(model, x=ix, y=iy, v=1, p=2.0e6)
     # 在对角位置设置压力固定（将Cell的体积设置为无穷大）
-    cent = model.get_nearest_cell(pos=[jx/2, jy/2, 0])
+    cent = model.get_nearest_cell(pos=[jx / 2, jy / 2, 0])
     set_cell(cent, x=None, y=None, v=1e6, p=1e6)  # 中心位置，将体积设置为无穷大，确保压力固定
 
     # 在这些Cell之间，添加Face，用于描述流体在这些Cell之间的流动
@@ -97,12 +98,17 @@ def test():
 
     # 迭代并且绘图显示
     step_max = 50
+    dv_rela = 0.5
+    dt = 1.0e9
     for step in range(step_max):
-        print(f'step = {step}/{step_max}')
-        model.iterate(dt=1.0e6)
+        r = model.iterate(dt=dt, dv_rela=dv_rela)
+        print(f'step = {step}/{step_max}, dt = {r.get("dt")}')
+        # 新的步长
+        dt = model.get_recommended_dt(r.get('dt'), dv_relative=dv_rela)
         items = pressure_items(model, jx, jy)
         plot(add_axes3, add_items, *items,
-             xlabel="x/m", ylabel="y/m", title=f'Pressure Distribution, step = {step}',
+             xlabel="x/m", ylabel="y/m",
+             title=f'Pressure Distribution, step = {step}',
              aspect='equal', tight_layout=True,
              caption='压力场')
 

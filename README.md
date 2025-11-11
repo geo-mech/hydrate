@@ -4,38 +4,38 @@
 
 ### 作者
 
-[张召彬](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/201703/t20170306_4755492.html)<sup>1,2,x</sup>, [李守定](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/201412/t20141218_4278784.html)<sup>1,2,x</sup>, [李晓](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/200907/t20090713_2065538.html)<sup>1,2</sup>, [赫建明](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/201203/t20120302_3448658.html)<sup>1,2</sup>, 李关访<sup>1,2</sup>, [郑博](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/202303/t20230322_6706946.html)<sup>1,2</sup>, 毛天桥<sup>1,2</sup>, 徐涛<sup>1,2</sup>, 李宇轩<sup>1,2</sup>, Maryelin<sup>1,2</sup>, 谢卓然<sup>1,2</sup>
+[张召彬](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/201703/t20170306_4755492.html)<sup>1,2,x</sup>, [李守定](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/201412/t20141218_4278784.html)<sup>1,2</sup>, [李晓](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/200907/t20090713_2065538.html)<sup>1,2</sup>, [赫建明](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/201203/t20120302_3448658.html)<sup>1,2</sup>, 李关访<sup>1,2</sup>, [郑博](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/202303/t20230322_6706946.html)<sup>1,2</sup>, 毛天桥<sup>1,2</sup>, 徐涛<sup>1,2</sup>, 李宇轩<sup>1,2</sup>, Maryelin<sup>1,2</sup>, 谢卓然<sup>1,2</sup>
 
 <sup>1</sup>[中国科学院地质与地球物理研究所](https://igg.cas.cn/)(北京, 100029);
 
 <sup>2</sup>[中国科学院大学](https://www.ucas.ac.cn/)(北京, 101408).
 
 <sup>x</sup>
-联系人: [zhangzhaobin@mail.iggcas.ac.cn](zhangzhaobin@mail.iggcas.ac.cn) (张召彬); [lsdlyh@mail.iggcas.ac.cn](lsdlyh@mail.iggcas.ac.cn) (李守定).   
-(技术问题请[**新建Issue**](https://gitee.com/geomech/hydrate/issues/new))
-
-### 授权
-
-使用前请[联系作者](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/201703/t20170306_4755492.html)，另外请注意：
-
-1. 在THMC耦合的C++内核部分，免费用于学术用途; 
-2. 在Python层面，在注明来源的情况下可免费用于任何用途.
+联系人: [张召彬](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/201703/t20170306_4755492.html), 邮箱: [zhangzhaobin@mail.iggcas.ac.cn](zhangzhaobin@mail.iggcas.ac.cn); [或添加**微信**](https://gitee.com/geomech/hydrate/issues/ID5HZX).   
 
 ### 反馈
 
-使用过程中遇到问题，请[新建Issue](https://gitee.com/geomech/hydrate/issues/new)或者联系作者来提问/反馈。非常感谢您提出质疑及反馈bug！
+技术问题建议[**新建Issue**](https://gitee.com/geomech/hydrate/issues/new)，另外，也欢迎[添加**微信**](https://gitee.com/geomech/hydrate/issues/ID5HZX). 
+
+### 授权
+
+使用前请[联系作者](https://gitee.com/geomech/hydrate/issues/ID5HZX)。
+
+### 反馈
+
+使用过程中遇到问题，请[新建Issue](https://gitee.com/geomech/hydrate/issues/new)或者[联系作者](https://gitee.com/geomech/hydrate/issues/ID5HZX)来提问/反馈。非常感谢您[提出质疑及反馈bug](https://gitee.com/geomech/hydrate/issues/new)！
 
 ### 功能
 
-1. 多相多[组分](https://gitee.com/geomech/hydrate/tree/master/zmlx/fluid)流动，支持: 水/蒸气/水冰，ch4/ch4水合物，co2/co2水合物，盐度/砂，油/重油/干酪根，或其它自定义组分;
-2. [反应](https://gitee.com/geomech/hydrate/tree/master/zmlx/react): 水的蒸发/结冰/融化; ch4水合物形成/分解; co2水合物形成/分解; 干酪根/重油裂解，或其它自定义的反应;
+1. 多相多组分流动，支持: 水/蒸气/水冰，ch4/ch4水合物，co2/co2水合物，盐度/砂，油/重油/干酪根，或其它自定义组分;
+2. 反应: 水的蒸发/结冰/融化; ch4水合物形成/分解; co2水合物形成/分解; 干酪根/重油裂解，或其它自定义的反应;
 3. 热传导/对流;
 4. 应力/应变/振动等静力学和动力学过程.
 
 ### 特点
 
-1. 接口完备，可编程性强，方便应用到不同场景;
-2. 支持任意多个相，且每个相支持任意多组分(传统组分模型一般只支持油、气、水三相).
+1. 接口完备，可编程，方便应用到不同场景;
+2. 支持任意多个相，每个相支持任意多组分，每个组分支持多个属性.
 
 ### 环境
 
@@ -59,7 +59,7 @@
 
 ### 编程环境 (IDE)
 
-推荐使用PyCharm集成开发环境([官网下载PyCharm Community Edition](https://www.jetbrains.com/pycharm/download)默认安装即可)，之后，推荐安装 [Trae AI](https://www.trae.com.cn/)插件 (在PyCharm的插件管理中搜索下载)，其中集成了DeepSeek等AI工具，使用比较友好。
+推荐使用[PyCharm](https://www.jetbrains.com/pycharm)集成开发环境([官网下载PyCharm Community Edition](https://www.jetbrains.com/pycharm/download)默认安装即可)，之后，推荐安装 [Trae AI](https://www.trae.com.cn/)插件 (在PyCharm的插件管理中搜索下载)，其中集成了DeepSeek等AI工具，使用友好。
 
 ### 开发
 
