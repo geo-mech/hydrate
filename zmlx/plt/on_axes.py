@@ -1,6 +1,7 @@
 """
 在这里，处理对axes的各种操作。这是定义绘图的底层的操作。
 """
+import warnings
 from zmlx.plt.contourf import add_contourf as contourf
 from zmlx.plt.scatter import add_scatter3 as scatter3
 from zmlx.plt.tricontourf import add_tricontourf as tricontourf
@@ -102,7 +103,7 @@ def add_axes3(*args, **kwargs):
 
 def get_kernels():
     """
-    获取一个项目名称到添加函数的映射表。
+    获取一个“项目名称”到“内核函数”的映射表
     这个表用于将项目名称映射到对应的添加函数，从而在add_items函数中根据项目名称调用相应的添加函数。
     Returns:
         一个字典，键为项目名称，值为对应的添加函数。
@@ -111,19 +112,18 @@ def get_kernels():
     from zmlx.plt.cbar import add_cbar
     from zmlx.plt.contourf import add_contourf
     from zmlx.plt.tricontourf import add_tricontourf
-    from zmlx.plt.curve2 import add_curve2
     from zmlx.plt.dfn2 import add_dfn2
     from zmlx.plt.field2 import add_field2
-    from zmlx.plt.legend import add_legend
+
+    # 准备“项目名称”到“内核函数”的映射表
     return dict(
         tricontourf=add_tricontourf, tric=add_tricontourf,
         surface=add_surf, surf=add_surf,
         colorbar=add_cbar, cbar=add_cbar,
         contourf=add_contourf, cont=add_contourf,
-        curve2=add_curve2, xy=add_curve2,
+        curve2='plot', xy='plot',
         dfn2=add_dfn2,
         field2=add_field2,
-        legend=add_legend,
     )
 
 
@@ -146,7 +146,7 @@ def add_items(ax, *items, kernels=None):
     Returns:
         一个列表，包含添加到Axes上的对象。如果项目的名称为空，则添加None到列表中。
     """
-    # 首先，准备项目名称到添加函数的映射表
+    # 首先，准备“项目名称”到“内核函数”的映射表
     if kernels is None:
         kernels = get_kernels()
     else:
@@ -155,27 +155,40 @@ def add_items(ax, *items, kernels=None):
         temp.update(kernels)
         kernels = temp
 
-    objects = []  # 用于存储添加到Axes上的对象
-    for opt in items:
+    objects = []  # 添加到Axes上的对象
+
+    for opt in items:  # 依次添加所有的选项
         if len(opt) == 0:  # 没有给定选项
+            warnings.warn('没有给定项目的名称', stacklevel=2)
             objects.append(None)
             continue
 
-        name = opt[0]
-        assert isinstance(name, str)
-        if len(name) == 0:  # 没有给定项目名称
+        name = opt[0]  # 项目的名字，可以是kernels中的函数，或者是Axes对象的方法的名字
+        if not isinstance(name, str):
             objects.append(None)
+            warnings.warn(f'name 不是字符串：{type(name)}', stacklevel=2)
             continue
 
-        # 准备绘图的参数
+        # 识别别名
+        for step in range(10):
+            assert step <= 5
+            value = kernels.get(name, None)
+            if isinstance(value, str):
+                assert len(value) > 0
+                name = value
+            else:
+                break  # 不是别名
+
+        # 准备参数
         args = [] if 1 >= len(opt) else opt[1]
         kwargs = {} if 2 >= len(opt) else opt[2]
 
         # 首先，尝试从kernels中获取对应的添加函数
         func = kernels.get(name, None)
-        if func is None:  # 此时，没有找到特定的内核函数
+        if func is None:
             func = getattr(ax, name, None)  # 尝试从Axes对象中获取对应的方法
-            if func is None:
+            if func is None:  # 没有对应的方法
+                warnings.warn(f'没有对应的添加函数或方法：{name}', stacklevel=2)
                 objects.append(None)
             else:
                 obj = func(*args, **kwargs)
@@ -277,9 +290,9 @@ def test_2():
         item('tric', x.flatten() + 12, y.flatten(), z.flatten(),
              cmap=cmap),
         item('cbar', clim=(-1, 1), label='Hehe', shrink=0.8, cmap=cmap),
-        item('xy', a, b),
+        item('curve2', a, b),
         item('xy', a, b + 1),
-        item('xy', a, b + 2),
+        item('plot', a, b + 2),
         item('dfn2', fractures)
     ]
     plot2d(*items, tight_layout=True, caption='Test',

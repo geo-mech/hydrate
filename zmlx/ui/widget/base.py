@@ -23,7 +23,8 @@ from zmlx.ui.pyqt import (
     QWebEngineView, is_pyqt6, QtCore, QtGui, QtWidgets, qt_name, QAction)
 from zmlx.ui.settings import (
     get_default_code, load_icon, get_text, play_error,
-    load_priority, priority_value, get_setup_files, set_setup_files)
+    load_priority, priority_value)
+from zmlx.ui import setup_files
 from zmlx.ui.utils import CodeFile, SharedValue, BreakPoint
 
 try:  # 尝试基于QsciScintilla实现Python编辑器
@@ -599,7 +600,7 @@ class SetupFileEdit(QtWidgets.QListWidget):
         self.itemDoubleClicked.connect(self.on_item_double_clicked)
         # 连接拖拽完成信号
         self.model().rowsMoved.connect(self.on_rows_moved)
-        for file_path in get_setup_files():
+        for file_path in setup_files.get_files():
             self.add_file_to_list(file_path)
 
     def contextMenuEvent(self, event):  # 右键菜单
@@ -619,8 +620,8 @@ class SetupFileEdit(QtWidgets.QListWidget):
     def reset_files(self):
         while self.count() > 0:
             self.takeItem(0)
-        set_setup_files([])  # 把额外保存的删除掉
-        for file_path in get_setup_files(rank_max=1.0e200):
+        setup_files.set_files([])  # 把额外保存的删除掉
+        for file_path in setup_files.get_files(rank_max=1.0e200):
             self.add_file_to_list(file_path)
         self.save_files()  # 自动保存
 
@@ -629,7 +630,7 @@ class SetupFileEdit(QtWidgets.QListWidget):
         file_paths = []
         for i in range(self.count()):
             file_paths.append(self.item(i).text())
-        set_setup_files(file_paths)
+        setup_files.set_files(file_paths)
 
     def add_file(self):
         """添加新的启动文件"""

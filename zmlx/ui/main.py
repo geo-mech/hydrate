@@ -1722,9 +1722,9 @@ def __gui_setup():
     """
     设置GUI的额外的选项(会在线程里面执行)
     """
-    from zmlx.ui.settings import get_setup_files
+    from zmlx.ui import setup_files
     the_logs = []
-    for path in get_setup_files():
+    for path in setup_files.get_files():
         try:
             folder = os.path.dirname(os.path.dirname(path))
             if folder not in sys.path:
@@ -1736,6 +1736,7 @@ def __gui_setup():
                  space)
         except Exception as err:
             the_logs.append(f'Failed: {err}')
+            gui.add_message(f'path = {path}, error = {err}')
     app_data.put('gui_setup_logs', the_logs)
 
 
@@ -1793,16 +1794,16 @@ def __console_kernel(code):
     __add_code_history()
 
     try:
-        from zmlx.ui.widget.editors import setup_ui
-        setup_ui()
-    except Exception as err:
-        print(f'Error when setup editors: {err}')
-
-    try:
         from zmlx.ui.widget.message import setup_ui
         setup_ui()
     except Exception as err:
         print(f'Error when setup message: {err}')
+
+    try:
+        from zmlx.ui.widget.editors import setup_ui
+        setup_ui()
+    except Exception as err:
+        print(f'Error when setup editors: {err}')
 
     if app_data.get('run_setup', True):  # 执行额外的配置文件(默认执行)
         __gui_setup()
