@@ -4691,6 +4691,86 @@ class Interp1(HasHandle):
         result.clone(self)
         return result
 
+    core.use(None, 'interp1_iadd', c_void_p, c_double)
+
+    def __iadd__(self, value):
+        """实现 += 操作，将值添加到所有 y 坐标上。
+
+        Args:
+            value (float): 要添加的值。
+
+        Returns:
+            Interp1: 当前对象（支持链式调用）。
+        """
+        core.interp1_iadd(self.handle, value)
+        return self
+
+    core.use(None, 'interp1_imul', c_void_p, c_double)
+
+    def __imul__(self, value):
+        """实现 *= 操作，将值乘以所有 y 坐标上。
+
+        Args:
+            value (float): 要乘以的值。
+
+        Returns:
+            Interp1: 当前对象（支持链式调用）。
+        """
+        core.interp1_imul(self.handle, value)
+        return self
+
+    def __add__(self, value):
+        """
+        实现加法操作，将当前对象的值加上指定值。
+
+        Args:
+            value (float): 要添加的值。
+
+        Returns:
+            Interp1: 新的插值对象，包含相加后的值。
+        """
+        result = self.get_copy()
+        result += value
+        return result
+
+    def __radd__(self, value):
+        """
+        实现右加法操作，将指定值加上当前对象的值。
+
+        Args:
+            value (float): 要添加的值。
+
+        Returns:
+            Interp1: 新的插值对象，包含相加后的值。
+        """
+        return self + value
+
+    def __mul__(self, value):
+        """
+        实现乘法操作，将当前对象的值乘以指定值。
+
+        Args:
+            value (float): 要乘以的值。
+
+        Returns:
+            Interp1: 新的插值对象，包含相乘后的值。
+        """
+        result = self.get_copy()
+        result *= value
+        return result
+
+    def __rmul__(self, value):
+        """
+        实现右乘法操作，将当前对象的值乘以指定值。
+
+        Args:
+            value (float): 要乘以的值。
+
+        Returns:
+            Interp1: 新的插值对象，包含相乘后的值。
+        """
+        return self * value
+
 
 class Interp2(HasHandle):
     """映射 C++ 类：zml::Interp2。
@@ -4944,6 +5024,87 @@ class Interp2(HasHandle):
         result = Interp2()
         result.clone(self)
         return result
+
+    core.use(None, 'interp2_iadd', c_void_p, c_double)
+
+    def __iadd__(self, value):
+        """实现 += 操作，将值添加到所有 z 坐标上。
+
+        Args:
+            value (float): 要添加的值。
+
+        Returns:
+            Interp2: 当前对象（支持链式调用）。
+        """
+        core.interp2_iadd(self.handle, value)
+        return self
+
+    core.use(None, 'interp2_imul', c_void_p, c_double)
+
+    def __imul__(self, value):
+        """实现 *= 操作，将值乘以所有 z 坐标上。
+
+        Args:
+            value (float): 要乘以的值。
+
+        Returns:
+            Interp2: 当前对象（支持链式调用）。
+        """
+        core.interp2_imul(self.handle, value)
+        return self
+
+    def __add__(self, value):
+        """
+        实现加法操作，将当前对象的值加上指定值。
+
+        Args:
+            value (float): 要添加的值。
+
+        Returns:
+            Interp1: 新的插值对象，包含相加后的值。
+        """
+        result = self.get_copy()
+        result += value
+        return result
+
+    def __radd__(self, value):
+        """
+        实现右加法操作，将指定值加上当前对象的值。
+
+        Args:
+            value (float): 要添加的值。
+
+        Returns:
+            Interp1: 新的插值对象，包含相加后的值。
+        """
+        return self + value
+
+    def __mul__(self, value):
+        """
+        实现乘法操作，将当前对象的值乘以指定值。
+
+        Args:
+            value (float): 要乘以的值。
+
+        Returns:
+            Interp1: 新的插值对象，包含相乘后的值。
+        """
+        result = self.get_copy()
+        result *= value
+        return result
+
+    def __rmul__(self, value):
+        """
+        实现右乘法操作，将当前对象的值乘以指定值。
+
+        Args:
+            value (float): 要乘以的值。
+
+        Returns:
+            Interp1: 新的插值对象，包含相乘后的值。
+        """
+        return self * value
+
 
 
 class Interp3(HasHandle):
@@ -5223,6 +5384,86 @@ class Interp3(HasHandle):
         result = Interp3()
         result.clone(self)
         return result
+
+    core.use(None, 'interp3_iadd', c_void_p, c_double)
+
+    def __iadd__(self, value):
+        """实现 += 操作，将值添加到所有 z 坐标上。
+
+        Args:
+            value (float): 要添加的值。
+
+        Returns:
+            Interp3: 当前对象（支持链式调用）。
+        """
+        core.interp3_iadd(self.handle, value)
+        return self
+
+    core.use(None, 'interp3_imul', c_void_p, c_double)
+
+    def __imul__(self, value):
+        """实现 *= 操作，将值乘以所有 z 坐标上。
+
+        Args:
+            value (float): 要乘以的值。
+
+        Returns:
+            Interp3: 当前对象（支持链式调用）。
+        """
+        core.interp3_imul(self.handle, value)
+        return self
+
+    def __add__(self, value):
+        """
+        实现加法操作，将当前对象的值加上指定值。
+
+        Args:
+            value (float): 要添加的值。
+
+        Returns:
+            Interp1: 新的插值对象，包含相加后的值。
+        """
+        result = self.get_copy()
+        result += value
+        return result
+
+    def __radd__(self, value):
+        """
+        实现右加法操作，将指定值加上当前对象的值。
+
+        Args:
+            value (float): 要添加的值。
+
+        Returns:
+            Interp1: 新的插值对象，包含相加后的值。
+        """
+        return self + value
+
+    def __mul__(self, value):
+        """
+        实现乘法操作，将当前对象的值乘以指定值。
+
+        Args:
+            value (float): 要乘以的值。
+
+        Returns:
+            Interp1: 新的插值对象，包含相乘后的值。
+        """
+        result = self.get_copy()
+        result *= value
+        return result
+
+    def __rmul__(self, value):
+        """
+        实现右乘法操作，将当前对象的值乘以指定值。
+
+        Args:
+            value (float): 要乘以的值。
+
+        Returns:
+            Interp1: 新的插值对象，包含相乘后的值。
+        """
+        return self * value
 
 
 class Array2(HasHandle):

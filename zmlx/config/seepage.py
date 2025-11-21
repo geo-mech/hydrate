@@ -141,9 +141,6 @@ def show_cells(
                 **kw)
 
 
-solid_buffers = {}
-
-
 def parallel_iterate(*args, pool=None):
     """
     在时间上向前并行地迭代一次
@@ -198,9 +195,11 @@ def parallel_iterate(*args, pool=None):
 
         if model.has_tag('has_solid'):
             # 此时，认为最后一种流体其实是固体，并进行备份处理
-            buffer = solid_buffers.get(model.handle, Seepage.CellData())
+            buffer = getattr(model, 'solid_buffer', None)
+            if buffer is None:
+                buffer = Seepage.CellData()
             model.pop_fluids(buffer)
-            solid_buffers[model.handle] = buffer
+            setattr(model, 'solid_buffer', buffer)
 
         if model.gr_number > 0:
             # 此时，各个Face的导流系数是可变的
@@ -252,7 +251,9 @@ def parallel_iterate(*args, pool=None):
 
         if model.has_tag('has_solid'):
             # 恢复备份的固体物质
-            model.push_fluids(solid_buffers.get(model.handle))
+            buffer = getattr(model, 'solid_buffer')
+            assert isinstance(buffer, Seepage.CellData), 'You must set solid_buffer before iterate'
+            model.push_fluids(buffer)
 
         # 更新砂子的体积（优先使用自定义的update_sand）
         update_sand = get_slot('update_sand', kwargs.get('slots'))

@@ -29,18 +29,26 @@
 1. 接口完备，可编程，方便应用到不同场景;
 2. 支持任意多个相，每个相支持任意多组分，每个组分支持多个属性.
 
-### 安装
-1. 确保系统为Windows 10/11, x64;  如有在Linux上运行的需求，请联系作者; 
-2. 安装[Python](https://www.python.org/) (64位, 3.8+, 推荐3.10及更新的版本); 推荐[WinPython](https://gitee.com/geomech/hydrate/attach_files) (绿色免安装); 
-3. 安装`PyQt6, PyQt6-WebEngine, pyqt6-qscintilla, numpy, scipy, matplotlib, pyqtgraph, PyOpenGL, pypiwin32, pywin32, dulwich`等第三方的Python包; 
-4. [下载](https://gitee.com/geomech/hydrate)zip并解压，或者使用[git](https://git-scm.com/)来[clone](https://gitee.com/help/articles/4111#article-header0)代码(务必存储到纯英文路径下);
-5. 将`zmlx`所在的文件夹添加到Python的搜索路径中，确保`zmlx`可以被Python导入. 
-6. 参考[`zmlx/demo`](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)建模; 运行[`zml_ui.pyw`](https://gitee.com/geomech/hydrate/blob/master/zml_ui.pyw)打开界面.
+### 安装/运行
+1. 确保系统为Windows 10/11, x64<sup>①</sup>;
+2. 安装[Python](https://www.python.org/) (64位, 3.8+, 推荐3.10及以上版本)<sup>②</sup>; 
+3. [下载](https://gitee.com/geomech/hydrate)zip并解压，或者使用[git](https://git-scm.com/)来[clone](https://gitee.com/help/articles/4111#article-header0)代码(务必存储到纯英文路径下);
+4. 将`zmlx`所在的文件夹添加到Python的搜索路径中; 
+5. 安装`PyQt6, numpy, scipy, matplotlib`等第三方的Python包<sup>③</sup>;  
+6. 参考[`zmlx/demo`](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)建模<sup>④</sup>; 运行[`zml_ui.pyw`](https://gitee.com/geomech/hydrate/blob/master/zml_ui.pyw)打开界面.
+
+**注**：<sup>①</sup> 如有在Linux上运行的需求，请联系作者; 
+<sup>②</sup> 推荐[WinPython](https://gitee.com/geomech/hydrate/attach_files) (绿色免安装); 
+<sup>③</sup> 运行脚本`zmlx/script/install_dep.py`来可自动安装所有依赖包;
+<sup>④</sup> 建议在demo的基础上，向前追溯脚本函数的实现;
 
 ### 开发
 
 欢迎并感谢您成为[IGG-Hydrate](https://gitee.com/geomech/hydrate)的开发者：
 
 1. 请只修改自己创建的文件(以避免冲突);
-2. 请务必熟悉[git](https://git-scm.com/)，在[Gitee帮助中心](https://gitee.com/help#article-header0)有不少git的入门资料；新手建议安装[TortoiseGit](https://tortoisegit.org/)，它会在文件管理器添加右键菜单，可以满足大部分操作;
-3. 如果直接向[IGG-Hydrate](https://gitee.com/geomech/hydrate)推送代码，可能会报错（因为没有权限）。此时，可以在页面右上角，点击[申请加入仓库](https://gitee.com/geomech/hydrate)，成为开发者；或者，你也可以使用[Fork + Pull 模式](https://help.gitee.com/base/pullrequest/Fork+Pull)参与开发。
+2. 请务必熟悉[git](https://git-scm.com/)<sup>①</sup>;
+3. 如果直接向[IGG-Hydrate](https://gitee.com/geomech/hydrate)推送代码，可能会报错（因为没有权限）。此时，可以在页面右上角，点击[申请加入仓库](https://gitee.com/geomech/hydrate)，成为开发者；或者，你也可以使用[Fork + Pull 模式](https://help.gitee.com/base/pullrequest/Fork+Pull)<sup>②</sup>参与开发。
+
+**注**：<sup>①</sup> 在[Gitee帮助中心](https://gitee.com/help#article-header0)有不少git的入门资料；新手建议安装[TortoiseGit](https://tortoisegit.org/)，它会在文件管理器添加右键菜单，可以满足大部分操作;
+<sup>②</sup>[Fork + Pull 模式](https://help.gitee.com/base/pullrequest/Fork+Pull)是Gitee建议的一种参与开发的方式;

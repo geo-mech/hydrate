@@ -4,16 +4,18 @@
 from zmlx import *
 
 
-def create_xz_half(x_max=300.0, depth=300.0, height=100.0,
-                   dx=2.0, dz=2.0,
-                   hc=150, rc=100,
-                   ratio=1.05,
-                   dx_max=None, dz_max=None):
+def create_xz_half(
+        x_max=300.0, depth=300.0, height=100.0,
+        dx=2.0, dz=2.0,
+        hc=150, rc=100,
+        ratio=1.05,
+        dx_max=None, dz_max=None):
     """
     创建网格.  (主要用于co2封存模拟). 其中：
         radius: 圆柱体的半径
         depth: 圆柱体的高度(在海底面以下的深度)
-        height: 在海面以上的高度 (在海底面以上的深度. 注意，这里的网格，其主要的目的，是模拟出口边界)
+        height: 在海面以上的高度
+            (在海底面以上的深度. 注意，这里的网格，其主要的目的，是模拟出口边界)
         dr: 在半径方向上的(初始的)网格的大小
         dh: 在高度方向上的(初始的)网格的大小
         rc: 临界的半径(在这个范围内一直采用细网格)
@@ -23,7 +25,7 @@ def create_xz_half(x_max=300.0, depth=300.0, height=100.0,
     """
     if dx_max is None:
         dx_max = dx * 4.0
-    vx = [0, dx]
+    vx = [0.0, dx]
     while vx[-1] < x_max:
         if vx[-1] > rc:  # 只有在超过这个区域之后，才可是尝试使用粗网格
             dx *= ratio
@@ -31,7 +33,7 @@ def create_xz_half(x_max=300.0, depth=300.0, height=100.0,
         vx.append(vx[-1] + dx)
     # y方向在0附近，并且厚度等于1
     vy = [-0.5, 0.5]
-    vz = [0]
+    vz = [0.0]
 
     if height > 0:
         dz_backup = dz  # 备份，后续还需要
@@ -57,13 +59,16 @@ def create_xz_half(x_max=300.0, depth=300.0, height=100.0,
     return create_cube(x=vx, y=vy, z=vz)
 
 
-def create(mass_rate=50.0 / (3600.0 * 24.0), years_inj=20,
-           p_seabed=10e6, t_seabed=275.0,
-           depth_inj=200.0, x_inj=0.0, y_inj=0.0,
-           perm=1.0e-15, free_h=5.0,
-           mesh=None, s_ini=None, save_dt_min=None, save_dt_max=None,
-           years_max=1.0e5, co2_temp=290.0,
-           **extra_kwds):
+def create(
+        mass_rate=50.0 / (3600.0 * 24.0), years_inj=20,
+        p_seabed=10e6, t_seabed=275.0,
+        depth_inj=200.0, x_inj=0.0, y_inj=0.0,
+        perm=1.0e-15, free_h=5.0,
+        mesh=None, s_ini=None,
+        save_dt_min=None, save_dt_max=None,
+        years_max=1.0e5, co2_temp=290.0,
+        **opts
+):
     """
     free_h: 在海底一下，一定区域内，禁止生成水合物.
     创建模型(返回Seepage对象).
@@ -108,49 +113,51 @@ def create(mass_rate=50.0 / (3600.0 * 24.0), years_inj=20,
             return 0.3
 
     # 生成用于建立水合物模型的关键词.
-    kw = hydrate.create_kwargs(has_inh=True,  # 存在抑制剂
-                               has_co2=True,
-                               gravity=[0, 0, -10],
-                               has_co2_in_liq=True,
-                               sol_dt=-0.3,
-                               inh_diff=1.0e6 / 400
-                               )
-    # 添加额外的属性
-    kw.update(dict(mesh=mesh,
-                   porosity=get_porosity,
-                   pore_modulus=200e6,
-                   denc=get_denc,
-                   temperature=get_t,
-                   p=get_p,
-                   s=s_ini,  # 初始饱和度自定义
-                   perm=perm,
-                   heat_cond=2.0,
-                   dt_max=3600 * 24 * 365 * 10,  # 允许的最大的时间步长
-                   dv_relative=0.1,  # 每一步流体流体的距离与网格大小的比值
-                   gr=create_krf(0.2, 3, as_interp=True,
-                                 k_max=1, s_max=1, count=200)
-                   ))
+    kw = hydrate.create_kwargs(
+        has_inh=True,  # 存在抑制剂
+        has_co2=True,
+        gravity=[0, 0, -10],
+        has_co2_in_liq=True,
+        sol_dt=-0.3,
+        inh_diff=1.0e6 / 400,
+        co2_sol_data=dict(c=0.05, den_times=1.01),
+        ch4_sol_data=dict(c=0.01, den_times=0.999),
+        inh_sol_data=dict(c=0.035, den_times=1026.8 / 999.7),
+        mesh=mesh,
+        porosity=get_porosity,
+        pore_modulus=200e6,
+        denc=get_denc,
+        temperature=get_t,
+        p=get_p,
+        s=s_ini,  # 初始饱和度自定义
+        perm=perm,
+        heat_cond=2.0,
+        dt_max=3600 * 24 * 365 * 10,  # 允许的最大的时间步长
+        dv_relative=0.1,  # 每一步流体流体的距离与网格大小的比值
+        gr=create_krf(
+            0.2, 3, as_interp=True,
+            k_max=1, s_max=1, count=200),
+        **opts
+    )
 
     # 用于求解的选项
     if save_dt_min is None:
         save_dt_min = 365.0 * 24.0 * 3600.0
     if save_dt_max is None:
         save_dt_max = 365.0 * 24.0 * 3600.0 * 1000.0
-
-    # 用于界面绘图的选项
-    solve = {'show_cells': {'dim0': 0, 'dim1': 2,
-                            'show_s': ['ch4', 'ch4_hydrate', 'co2',
-                                       'co2_in_liq',
-                                       'co2_hydrate', 'inh'],
-                            'use_mass': True
-                            },
-             'time_max': years_max * 365.0 * 24.0 * 3600.0,
-             'save_dt_min': save_dt_min,
-             'save_dt_max': save_dt_max,
-             }
-
-    # 预先定义的额外的关键词
-    kw.update(extra_kwds)
+    solve = {
+        'show_cells': {
+            'dim0': 0,
+            'dim1': 2,
+            'show_s': ['ch4', 'ch4_hydrate', 'co2',
+                       'co2_in_liq',
+                       'co2_hydrate', 'inh'],
+            'use_mass': True
+        },
+        'time_max': years_max * 365.0 * 24.0 * 3600.0,
+        'save_dt_min': save_dt_min,
+        'save_dt_max': save_dt_max,
+    }
 
     # 创建模型
     model = seepage.create(texts={'solve': solve}, **kw)
@@ -201,15 +208,22 @@ def create(mass_rate=50.0 / (3600.0 * 24.0), years_inj=20,
     except:  # 失败了之后，再作为一个数字来对待
         vol_rate = mass_rate / flu.den
         opers = [[0, f'{vol_rate}'], [years_inj * 3600.0 * 24.0 * 365.0, '0']]
-    model.add_injector(cell=cell,
-                       value=0,
-                       fluid_id=fid,
-                       flu=flu,
-                       opers=opers,
-                       )
+    model.add_injector(
+        cell=cell,
+        value=0,
+        fluid_id=fid,
+        flu=flu,
+        opers=opers,
+    )
     # 返回创建的模型.
     return model
 
 
+def main():
+    model = create()
+    seepage.solve(model, close_after_done=False,
+                  folder=opath('co2_v1120'))
+
+
 if __name__ == '__main__':
-    seepage.solve(create(), close_after_done=False, folder=None)
+    main()

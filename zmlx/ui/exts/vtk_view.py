@@ -21,11 +21,11 @@ def setup_ui():
         plotter.add_scalar_bar("高程")
 
     gui.add_action(
-        menu=['VTK视图'], text='显示球体1', slot=lambda: gui.get_vtk_view(caption='球体1', init=show_sphere),
+        menu=['帮助', 'VtkView'], text='显示球体1', slot=lambda: gui.get_vtk_view(caption='球体1', init=show_sphere),
     )
 
     gui.add_action(
-        menu=['VTK视图'], text='显示球体2', slot=lambda: gui.get_vtk_view(caption='球体2', init=show_sphere),
+        menu=['帮助', 'VtkView'], text='显示球体2', slot=lambda: gui.get_vtk_view(caption='球体2', init=show_sphere),
     )
 
 
