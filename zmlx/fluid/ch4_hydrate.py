@@ -4,7 +4,7 @@
 
 import zmlx.alg.sys as warnings
 
-from zmlx.exts.base import data_version, Seepage
+from zmlx.base.zml import data_version, Seepage
 
 """
 甲烷水合物的比热随着温度和压力略有变化，但是变化的幅度很小，所以可以视为常数:

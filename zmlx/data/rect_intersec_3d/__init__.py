@@ -1,4 +1,4 @@
-from zmlx.exts.base import *
+from zmlx.base.zml import *
 
 # 读取生成的相交矩阵序号
 demo_path = os.path.join(os.path.dirname(__file__), 'demo_links.txt')

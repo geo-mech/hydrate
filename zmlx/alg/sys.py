@@ -21,7 +21,7 @@ def log_deprecated(name):
     Returns:
         None
     """
-    from zmlx.exts.base import log
+    from zmlx.base.zml import log
     log(f'The deprecated used: {name}', tag=f'{name}.deprecated_used')
 
 
@@ -42,7 +42,7 @@ def warn(message, category=None, stacklevel=1, tag=None):
     if tag is None:
         tag = message
     if isinstance(tag, str):
-        from zmlx.exts.base import log
+        from zmlx.base.zml import log
         log(text=message, tag=f'{tag}.warn')
 
 
@@ -209,52 +209,10 @@ def install_dep(show_exists=True):
     """
     安装计算模块运行所需要的第三方的包
     """
-    found_qt = False
-    if not found_qt:
-        try:
-            import PyQt6
-            found_qt = True
-            pip_install('PyQt6-WebEngine', 'PyQt6.QtWebEngineWidgets',
-                        show_exists=show_exists)
-            pip_install('pyqt6-qscintilla', 'PyQt6.Qsci',
-                        show_exists=show_exists)
-        except:
-            pass
-
-    if not found_qt:
-        try:
-            import PyQt5
-            found_qt = True
-            pip_install('PyQtWebEngine', 'PyQt5.QtWebEngineWidgets',
-                        show_exists=show_exists)
-        except:
-            pass
-
-    if not found_qt:
-        if sys.version_info >= (3, 8):
-            items = [('PyQt6', 'PyQt6'),
-                     ('PyQt6-WebEngine', 'PyQt6.QtWebEngineWidgets'),
-                     ('pyqt6-qscintilla', 'PyQt6.Qsci')
-                     ]
-        else:
-            items = [('PyQt5', 'PyQt5'),
-                     ('PyQtWebEngine', 'PyQt5.QtWebEngineWidgets')
-                     ]
-        for package_name, name in items:
-            pip_install(package_name, name=name, show_exists=show_exists)
-
-    for package_name, name in [
-        ('numpy', 'numpy'),
-        ('scipy', 'scipy'),
-        ('matplotlib', 'matplotlib'),
-        ('PyOpenGL', 'OpenGL'),
-        ('pyqtgraph', 'pyqtgraph'),
-        ('pypiwin32', 'win32com'),
-        ('pywin32', 'pywintypes'),
-        ('dulwich', 'dulwich'),
-        ('pillow', 'PIL'),
-    ]:
-        pip_install(package_name, name=name, show_exists=show_exists)
+    from zmlx.data.dep import package_names, import_names
+    for package_name in package_names:
+        pip_install(package_name, name=import_names.get(package_name, None),
+                    show_exists=show_exists)
 
 
 def add_pth_file(name, folder):
@@ -378,7 +336,7 @@ def create_shortcut(target: str, path: str,
         description (str): 快捷方式描述（可选）
     """
     try:
-        from zmlx.exts.base import in_windows
+        from zmlx.base.zml import in_windows
         if not in_windows():
             print(f'The function create_shortcut works only for Windows')
             return
@@ -511,7 +469,7 @@ def srand(seed):
     设置Python和zml内核的随机数种子.  2023-9-25
     """
     import random
-    from zmlx.exts.base import set_srand
+    from zmlx.base.zml import set_srand
 
     random.seed(seed)
     set_srand(seed)
@@ -573,7 +531,7 @@ def first_execute(name, key=None):
     检查给定的文件是否是第一次运行（只有在首次启动first_execute函数的时候返回True）.
     其中name为文件的全路径。key为在app_data中存储的名字。
     """
-    from zmlx.exts.base import app_data
+    from zmlx.base.zml import app_data
     if name is None:
         name = ''
     if key is None:

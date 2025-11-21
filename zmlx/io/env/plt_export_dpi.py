@@ -1,4 +1,4 @@
-from zmlx.exts.base import app_data
+from zmlx.base.zml import app_data
 
 key = 'plt_export_dpi'
 

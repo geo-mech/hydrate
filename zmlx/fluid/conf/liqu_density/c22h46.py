@@ -22,7 +22,7 @@ TEMP = (100-750)K
 import \
     chemicals  # pip install chemicals (https://chemicals.readthedocs.io/index.html#installation)
 
-from zmlx.exts.base import np
+from zmlx.base.zml import np
 
 
 def liq_den_c22h46(P, T):

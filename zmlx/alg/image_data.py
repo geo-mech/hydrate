@@ -1,7 +1,7 @@
 from PIL import Image
 
 import zmlx.alg.sys as warnings
-from zmlx.exts.base import np
+from zmlx.base.zml import np
 from zmlx.alg.image import get_data
 
 warnings.warn(f'{__name__} will be removed after 2026-4-15', DeprecationWarning,

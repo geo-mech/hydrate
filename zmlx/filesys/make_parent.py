@@ -1,4 +1,4 @@
-from zmlx.exts.base import make_parent
+from zmlx.base.zml import make_parent
 
 __all__ = ['make_parent']
 

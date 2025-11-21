@@ -5,7 +5,7 @@ import math
 
 from scipy.spatial import Delaunay
 
-from zmlx.exts.base import Mesh3, np
+from zmlx.base.zml import Mesh3, np
 
 
 def get_triangles(nodes):

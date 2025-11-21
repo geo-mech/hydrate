@@ -225,7 +225,7 @@ def make_fpath(folder, step=None, ext='.txt', name=None):
     """
     Returns a filename to output data, and ensures that the folder exists
     """
-    from zmlx.exts.base import make_dirs
+    from zmlx.base.zml import make_dirs
     assert isinstance(folder, str)
     if not os.path.exists(folder):
         make_dirs(folder)
@@ -244,7 +244,7 @@ def prepare_dir(folder, direct_del=False):
     Prepare an empty folder for output calculation data
     """
     from zmlx.ui.gui_buffer import question
-    from zmlx.exts.base import make_dirs
+    from zmlx.base.zml import make_dirs
     if folder is None:
         return
     if os.path.exists(folder):
@@ -355,7 +355,7 @@ def print_tag(folder=None):
     Print a file, the file name is similar to 20201021T183800, this file can be used as a label for the data,
     and then search the file to locate the data
     """
-    from zmlx.exts.base import make_parent
+    from zmlx.base.zml import make_parent
     if has_tag(folder=folder):
         return
     if folder is None:

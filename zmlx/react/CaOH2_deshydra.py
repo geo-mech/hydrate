@@ -7,7 +7,7 @@ by Maryelin
 
 """
 import zmlx.react.endothermic as endothermic
-from zmlx.exts.base import Interp1, np
+from zmlx.base.zml import Interp1, np
 
 """
 vt, vp 

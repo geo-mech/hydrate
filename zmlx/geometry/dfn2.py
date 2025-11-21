@@ -1,4 +1,4 @@
-from zmlx.exts.base import Dfn2
+from zmlx.base.zml import Dfn2
 from zmlx.alg.base import linspace
 from zmlx.geometry.base import point_distance
 

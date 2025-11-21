@@ -1,7 +1,7 @@
 import os
 from ctypes import c_void_p, c_char_p, c_int, c_bool, c_double, c_size_t
 
-from zmlx.exts.base import (DllCore, HasHandle, load_cdll, make_c_char_p, Vector, Lattice3,
+from zmlx.base.zml import (DllCore, HasHandle, load_cdll, make_c_char_p, Vector, Lattice3,
                  UintVector, Interp1, is_array,
                  Interp3, clock, Matrix3)
 

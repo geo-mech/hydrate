@@ -23,4 +23,3 @@ def get_slot(name, extra_slots=None):
         if func is not None:
             return func
     return standard_slots.get(name)
-

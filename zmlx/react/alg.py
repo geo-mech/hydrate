@@ -2,7 +2,7 @@ import os
 import warnings
 from collections.abc import Iterable
 
-from zmlx.exts.base import Seepage, parse_fid
+from zmlx.base.zml import Seepage, parse_fid
 from zmlx.io import json_ex
 
 

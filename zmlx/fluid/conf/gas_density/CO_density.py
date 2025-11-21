@@ -8,7 +8,7 @@ PC=Pa
 w = adimentional
 """
 
-from zmlx.exts.base import np
+from zmlx.base.zml import np
 
 
 def den_co(P, T):

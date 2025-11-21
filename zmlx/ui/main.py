@@ -4,7 +4,7 @@ import sys
 
 import zmlx.alg.sys as warnings
 from zmlx.alg.fsys import has_permission, samefile, time_string, print_tag
-from zmlx.exts.base import lic, core, app_data, read_text, get_dir, is_chinese
+from zmlx.base.zml import lic, core, app_data, read_text, get_dir, is_chinese
 from zmlx.ui import settings
 from zmlx.ui.alg import open_url, get_last_exec_history, install_package, set_plt_export_dpi, play_images
 from zmlx.ui.gui_buffer import gui
@@ -56,7 +56,7 @@ class MainWindow(QtWidgets.QMainWindow):
             pass
 
         def new_empty_file(fname):
-            from zmlx.exts.base import make_parent
+            from zmlx.base.zml import make_parent
             with open(make_parent(fname), 'w') as file:
                 pass
 

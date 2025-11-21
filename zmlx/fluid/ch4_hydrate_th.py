@@ -5,7 +5,7 @@
 import math
 
 import zmlx.alg.sys as warnings
-from zmlx.exts.base import Seepage, Interp2
+from zmlx.base.zml import Seepage, Interp2
 
 
 def create(MH, NH=6, t_min=270, t_max=290, p_min=1e6, p_max=40e6, name=None):

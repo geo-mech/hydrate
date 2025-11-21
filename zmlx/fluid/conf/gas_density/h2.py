@@ -11,7 +11,7 @@ Tc= K
 PC=Pa
 w = adimentional
 """
-from zmlx.exts.base import np
+from zmlx.base.zml import np
 
 
 def den_h2(P, T):

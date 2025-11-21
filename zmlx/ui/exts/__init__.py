@@ -1,4 +1,6 @@
-
+"""
+提供GUI功能的扩展. (特别是处于测试阶段的功能)
+"""
 import os
 
 def get_path(*args):
