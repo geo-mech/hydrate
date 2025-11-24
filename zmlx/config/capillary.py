@@ -1,8 +1,13 @@
 """
-用于管理毛管压力驱动下的流动
+用于管理毛管压力驱动下的流动。
+
+这里，我们将毛管压力理解为驱动相邻Cell之间流体交换的驱动压力。在这个驱动下，Cell内流体的组分会进行交换，但是，
+各个Cell内流体的总的体积均不会发生任何改变。
+
 """
-from zmlx.exts.base import Vector, Seepage, Interp1, get_pointer64, np
+
 from zmlx.base.seepage import get_face_sum, get_face_diff, get_dt, as_numpy
+from zmlx.base.zml import Seepage, Interp1, get_pointer64, np, Vector
 
 try:
     vs0 = Vector()
@@ -59,8 +64,7 @@ def set_settings(model: Seepage, settings):
     将cap设置存储到model
     """
     assert isinstance(settings, list)
-    model.set_text(text_key,
-                   f'{settings}')
+    model.set_text(text_key, f'{settings}')
 
 
 def get_face_density_diff(model: Seepage, fid0, fid1):

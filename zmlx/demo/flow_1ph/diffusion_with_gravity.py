@@ -69,6 +69,8 @@ def show(model: Seepage, jx, jy, time=None):
         jy: 单元的数量，y方向
         time: 模拟的时间，单位：s
     """
+    if not gui:
+        return
     cells = as_numpy(model).cells
     x = np.reshape(cells.x, (jx, jy))
     y = np.reshape(cells.y, (jx, jy))
@@ -95,7 +97,7 @@ def show(model: Seepage, jx, jy, time=None):
     plot(on_figure)
 
 
-def test():
+def main():
     """
     运行测试：创建模型、运行、绘制结果
     """
@@ -108,8 +110,7 @@ def test():
     mesh = create_cube(x=linspace(0, jx, jx + 1), y=linspace(0, jy, jy + 1), z=[-0.5, 0.5])
 
     # 辅助盐度扩散过程计算的属性
-    ca_c2m = model.reg_cell_key('c2m')  # 质量与浓度的比值
-    fa_g = model.reg_face_key('g_diff')  # 盐度的传导系数
+    fa_g = model.reg_face_key('g')  # 盐度的传导系数
 
     # 添加Cell
     for c1 in mesh.cells:
@@ -118,14 +119,12 @@ def test():
         else:
             s = 0
         c = add_cell(model, x=c1.pos[0], y=c1.pos[1], v=c1.vol, p=1.5e6, s=s)
-        # 设置扩散相关的常数
-        c.set_attr(ca_c2m, 1.0e3)
 
     # 添加重力
     model.gravity = [0, -10, 0]
 
     # 设置扩散常数
-    diffu_c = 1.0e-7
+    d = 1.0e-9
 
     # 在这些Cell之间，添加Face，用于描述流体在这些Cell之间的流动
     for f1 in mesh.faces:
@@ -133,7 +132,9 @@ def test():
             model, f1.cell_i0, f1.cell_i1, area=f1.area, dist=f1.dist,
             perm=1.0e-15
         )
-        f2.set_attr(fa_g, f1.area * diffu_c / f1.dist)
+        f2.set_attr(fa_g, f1.area * d / f1.dist)
+
+    diffusion.add_setting(model, flu0=[0, 1], flu1=[0], fa_g=fa_g, cfl=0.2)
 
     # 迭代并且绘图显示
     step_max = 300
@@ -148,14 +149,14 @@ def test():
         model.iterate(dt=dt)
         dt1 = model.get_recommended_dt(previous_dt=dt, cfl=0.2)
 
-        r = diffusion.iterate(model, fid=[0, 1], dt=dt, ca_c2m=ca_c2m, fa_g=fa_g, cfl=0.2)
-        dt2 = r.get('dt', dt)
+        r = diffusion.iterate(model, dt=dt)
+        dt2 = r[0].get('dt', dt)
 
-        dt = min(dt1, dt2, 1.0e8)
+        dt = min(dt1, dt2, 1.0e9)
         if step % 10 == 0:
             show(model, jx, jy, time=time)
     show(model, jx, jy, time=time)
 
 
 if __name__ == '__main__':
-    gui.execute(test, close_after_done=False)
+    gui.execute(main, close_after_done=False)

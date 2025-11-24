@@ -1,7 +1,7 @@
 import os
 import zmlx.alg.sys as warnings
 
-from zmlx.exts.base import make_parent
+from zmlx.base.zml import make_parent
 from zmlx.alg.fsys import join_paths
 
 warnings.warn(

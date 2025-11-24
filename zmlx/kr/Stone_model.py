@@ -39,7 +39,7 @@ if __name__ == '__main__':
             ax.plot(vs, kw)
 
 
-        from zmlx.exts.base import plot
+        from zmlx.base.zml import plot
 
         plot(f)
     except:

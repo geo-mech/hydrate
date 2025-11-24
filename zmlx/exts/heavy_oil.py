@@ -1,4 +1,4 @@
-from zmlx.exts.base import *
+from zmlx.base.zml import *
 
 core = DllCore(dll_obj=load_cdll(name='heavy_oil.dll',
                                  first=os.path.dirname(__file__)))

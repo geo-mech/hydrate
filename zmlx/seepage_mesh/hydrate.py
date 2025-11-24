@@ -1,4 +1,4 @@
-from zmlx.exts.base import np
+from zmlx.base.zml import np
 from zmlx.seepage_mesh.cube import create_cube
 
 

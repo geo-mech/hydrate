@@ -80,7 +80,7 @@ def test_1():
     """
     测试get_angle函数
     """
-    from zmlx.exts.base import Array2
+    from zmlx.base.zml import Array2
     import random
     for i in range(100):
         x = random.uniform(-1, 1)

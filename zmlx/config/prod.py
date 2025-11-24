@@ -2,7 +2,7 @@
 控制用来生产的Cell的压力
 """
 
-from zmlx.exts.base import Seepage
+from zmlx.base.zml import Seepage
 from zmlx.alg.interp import interp1
 from zmlx.base.seepage import get_time
 

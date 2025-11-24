@@ -1,4 +1,4 @@
-from zmlx.exts.base import Interp1
+from zmlx.base.zml import Interp1
 from zmlx.alg.base import linspace
 
 

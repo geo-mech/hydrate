@@ -2,7 +2,7 @@
 用于模拟砂的沉降及脱离
 """
 
-from zmlx.exts.base import Seepage, get_pointer64, np
+from zmlx.base.zml import Seepage, get_pointer64, np
 from zmlx.config.alg import settings
 from zmlx.config.alg.pressure_gradient import get_face_pressure_gradient
 

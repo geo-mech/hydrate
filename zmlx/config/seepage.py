@@ -51,7 +51,7 @@ from zmlx.config import (capillary, prod, fluid_heating, timer,
                          sand, step_iteration)
 from zmlx.config.attr_keys import cell_keys, face_keys, flu_keys
 from zmlx.config.slots import get_slot
-from zmlx.exts.base import (get_average_perm, Tensor3, ConjugateGradientSolver,
+from zmlx.base.zml import (get_average_perm, Tensor3, ConjugateGradientSolver,
                             make_parent, SeepageMesh)
 from zmlx.geometry.base import point_distance
 from zmlx.plt.fig2 import tricontourf

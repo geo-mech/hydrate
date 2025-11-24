@@ -1,6 +1,6 @@
 import zmlx.alg.sys as warnings
 
-from zmlx.exts.base import Object, Seepage, get_average_perm, Reaction, log
+from zmlx.base.zml import Object, Seepage, get_average_perm, Reaction, log
 from zmlx.utility.attr_keys import AttrKeys
 from zmlx.utility.fields import Field
 

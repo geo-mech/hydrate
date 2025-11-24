@@ -8,7 +8,7 @@ Zhou X, Fan S, Liang D, et al., 2008. . Energy Conversion and Management, 49(8):
 """
 
 import zmlx.react.hydrate as hydrate
-from zmlx.exts.base import Interp1
+from zmlx.base.zml import Interp1
 from zmlx.alg.interp import interp1
 
 # 温度

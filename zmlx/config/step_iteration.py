@@ -2,7 +2,7 @@
 根据step，按照给定的间隔来执行操作
 """
 
-from zmlx.exts.base import Seepage
+from zmlx.base.zml import Seepage
 from zmlx.config.slots import get_slots
 
 text_key = 'step_iteration'

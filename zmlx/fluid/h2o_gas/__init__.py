@@ -1,6 +1,6 @@
 import os
 
-from zmlx.exts.base import Interp2, Seepage
+from zmlx.base.zml import Interp2, Seepage
 
 
 def create(name=None):

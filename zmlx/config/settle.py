@@ -6,7 +6,7 @@
 """
 import zmlx.alg.sys as warnings
 
-from zmlx.exts.base import Seepage, get_pointer64, np
+from zmlx.base.zml import Seepage, get_pointer64, np
 from zmlx.base.seepage import as_numpy
 from zmlx.config.seepage import get_face_sum, get_face_diff, get_face_left, \
     get_face_right

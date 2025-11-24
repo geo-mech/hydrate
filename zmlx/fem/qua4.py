@@ -1,4 +1,4 @@
-from zmlx.exts.base import Mesh3, LinearExpr
+from zmlx.base.zml import Mesh3, LinearExpr
 from zmlx.geometry.base import get_center
 from zmlx.geometry.base import point_distance
 

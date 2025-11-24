@@ -1,4 +1,4 @@
-from zmlx.exts.base import SeepageMesh
+from zmlx.base.zml import SeepageMesh
 
 
 def load_ascii(cell_file, face_file, mesh=None):

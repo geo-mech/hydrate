@@ -1,4 +1,4 @@
-from zmlx.exts.base import make_parent
+from zmlx.base.zml import make_parent
 from zmlx.alg.fsys import *
 from zmlx.io.json_ex import read as read_json, write as write_json
 

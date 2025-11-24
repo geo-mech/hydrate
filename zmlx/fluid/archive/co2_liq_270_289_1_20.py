@@ -2,7 +2,7 @@
 说明：
     zmlx.fluid.co2_liq需要用到第三方的库，可能会没有安装，因此，这里建立一个数据存档
 """
-from zmlx.exts.base import Seepage
+from zmlx.base.zml import Seepage
 from zmlx.fluid.co2_liq import create
 
 t_min = 270

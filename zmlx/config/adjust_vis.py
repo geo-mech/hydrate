@@ -4,7 +4,7 @@
 """
 
 from zmlx.base.seepage import as_numpy
-from zmlx.exts.base import Seepage
+from zmlx.base.zml import Seepage
 
 text_key = 'adjust_vis'
 
@@ -69,7 +69,7 @@ def adjust(model: Seepage):
         name, key = setting.get('name'), setting.get('key')
 
         # 检查，之前是否已经备份过(如果已经备份过，则跳过)
-        key_backup = f'viscosity_backup_of_{name}'
+        key_backup = f'adjust_vis.backup.{name}'
         if getattr(model, key_backup, None) is not None:
             print(f'流体{name}的粘性已经备份过. 请先恢复备份，然后才能调整粘性系数')
             continue
@@ -92,7 +92,7 @@ def adjust(model: Seepage):
 
         # 所有流体的粘性系数
         vis = flu.vis
-        setattr(model, key_backup, vis)  # 临时用属性来备份
+        model.temps[key_backup] = vis
         flu.vis = vis * ratio  # 修改粘性系数
 
 
@@ -111,12 +111,17 @@ def restore(model: Seepage):
     settings = get_settings(model)
     for setting in settings:
         name = setting.get('name')
-        key_backup = f'viscosity_backup_of_{name}'
-        vis = getattr(model, key_backup, None)
+        assert isinstance(name, str)
+
+        key_backup = f'adjust_vis.backup.{name}'
+
+        vis = model.temps.get(key_backup)
         if vis is None:
             print(f'流体{name}的粘性系数未备份. 请先备份粘性系数，然后才能恢复粘性系数')
             continue
+
         fid = model.find_fludef(name=name)
-        flu = as_numpy(model).fluids(*fid)
-        flu.vis = vis
-        setattr(model, key_backup, None)  # 在恢复了之后，则删除之前的备份，使得这种备份/恢复只能执行一次
+        assert fid is not None
+
+        as_numpy(model).fluids(*fid).vis = vis
+        del model.temps[key_backup]  # 在恢复了之后，则删除之前的备份，使得这种备份/恢复只能执行一次

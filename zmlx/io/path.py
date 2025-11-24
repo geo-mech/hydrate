@@ -1,7 +1,7 @@
 import os
 
 import zmlx.alg.sys as warnings
-from zmlx.exts.base import app_data, get_dir, is_chinese, make_parent, make_dirs
+from zmlx.base.zml import app_data, get_dir, is_chinese, make_parent, make_dirs
 from zmlx.alg.fsys import in_directory, join_paths
 
 

@@ -8,7 +8,7 @@ from zmlx.alg.fsys import make_fname
 from zmlx.base.seepage import as_numpy
 from zmlx.config import seepage
 from zmlx.config.TherFlowConfig import TherFlowConfig
-from zmlx.exts.base import Seepage, log
+from zmlx.base.zml import Seepage, log
 from zmlx.fluid.ch4 import create as create_ch4
 from zmlx.fluid.ch4_hydrate import create as create_ch4_hydrate
 from zmlx.fluid.co2 import create as create_co2

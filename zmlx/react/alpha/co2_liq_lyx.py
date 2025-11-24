@@ -4,7 +4,7 @@
 Temperature to 1100 K at Pressures up to 800 MPa, J. Phys. Chem. Ref. Data, 1996, 25, 6, 1509-1596, https://doi.org/10.1063/1.555991
 """
 
-from zmlx.exts.base import Interp1
+from zmlx.base.zml import Interp1
 
 if __name__ == '__main__':
     vt = [250, 255, 260, 265, 270, 275, 280, 285, 290, 295, 300]

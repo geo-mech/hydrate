@@ -1,14 +1,13 @@
 """
 渗流类Seepage的一些基础的接口。注意，此模块不依赖其它顶层的模块。
 """
-import collections.abc
 import ctypes
 import os
 from ctypes import c_void_p
 
 import zmlx.alg.sys as warnings
 from zmlx.alg.base import time2str
-from zmlx.exts.base import Seepage, Vector, is_array, get_pointer64, np, Map
+from zmlx.base.zml import Seepage, Vector, is_array, get_pointer64, np, Map
 
 
 class SeepageNumpy:
@@ -1506,3 +1505,42 @@ class CellCopyTask:
         else:
             Seepage.Cell.clone_all(sources=self._targets, targets=self._sources, count=self._count)
         return self
+
+
+def reg_cell_tmp(model: Seepage, index):
+    """
+    注册一个Cell的临时属性
+    Args:
+        model: 渗流模型，Seepage类的对象
+        index: 临时属性的索引
+
+    Returns:
+        临时属性的索引
+    """
+    return model.reg_cell_key(f'tmp_{index}')
+
+
+def reg_face_tmp(model: Seepage, index):
+    """
+    注册一个Face的临时属性
+    Args:
+        model: 渗流模型，Seepage类的对象
+        index: 临时属性的索引
+
+    Returns:
+        临时属性的索引
+    """
+    return model.reg_face_key(f'tmp_{index}')
+
+
+def reg_flu_tmp(model: Seepage, index):
+    """
+    注册一个Fluid的临时属性
+    Args:
+        model: 渗流模型，Seepage类的对象
+        index: 临时属性的索引
+
+    Returns:
+        临时属性的索引
+    """
+    return model.reg_flu_key(f'tmp_{index}')

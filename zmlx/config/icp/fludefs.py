@@ -1,4 +1,4 @@
-from zmlx.exts.base import Seepage
+from zmlx.base.zml import Seepage
 from zmlx.fluid import c11h24
 from zmlx.fluid import char
 from zmlx.fluid import kerogen

@@ -12,7 +12,7 @@ from datetime import datetime
 from zmlx.alg.base import fsize2str, time2str, clamp
 from zmlx.alg.fsys import samefile, time_string
 from zmlx.alg.search_paths import choose_path
-from zmlx.exts.base import (
+from zmlx.base.zml import (
     core, lic, get_dir, make_parent, reg, timer, app_data,
     write_text, read_text)
 from zmlx.ui.alg import (
@@ -1549,7 +1549,7 @@ class FeedbackTool(QtWidgets.QWidget):
 {self.feedback_edit.toPlainText()}"""
 
         try:
-            from zmlx.exts.base import sendmail
+            from zmlx.base.zml import sendmail
             success = sendmail(
                 address="zhangzhaobin@mail.iggcas.ac.cn",
                 subject=subject,
