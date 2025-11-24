@@ -124,6 +124,8 @@ def main():
     model.gravity = [0, -10, 0]
 
     # 设置扩散常数
+    # 关于沉积物中扩散系数的取值，DeepSeek的回答，供参考：
+    #   https://yb.tencent.com/s/uAOnIZCnSrLa
     d = 1.0e-9
 
     # 在这些Cell之间，添加Face，用于描述流体在这些Cell之间的流动

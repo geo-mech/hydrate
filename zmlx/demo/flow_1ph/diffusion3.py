@@ -127,6 +127,8 @@ def main():
         add_cell(model, x=c1.pos[0], y=c1.pos[1], v=c1.vol, p=1.5e6, s=[s0, s1])
 
     # 设置扩散常数. 这里，可以尝试在一定的范围内修改此扩散系数，来观察扩散的影响效果
+    # 关于沉积物中扩散系数的取值，DeepSeek的回答，供参考：
+    #   https://yb.tencent.com/s/uAOnIZCnSrLa
     d1 = 1.0e-9
     d2 = d1 * 3
 

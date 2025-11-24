@@ -113,6 +113,9 @@ def main():
         add_cell(model, x=c1.pos[0], y=c1.pos[1], v=c1.vol, p=1.5e6, s=s)
 
     # 扩散系数，用以计算g
+    # 关于沉积物中扩散系数的取值，DeepSeek的回答，供参考：
+    #   https://yb.tencent.com/s/uAOnIZCnSrLa
+
     d = 1.0e-9
 
     # 在这些Cell之间，添加Face，用于描述流体在这些Cell之间的流动

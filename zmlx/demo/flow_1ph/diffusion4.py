@@ -128,6 +128,8 @@ def main():
     set_cell(c, x=None, y=None, v=1e6, p=1.5e6 - d_pre * 0.5, s=0)
 
     # 设置扩散常数. 这里，可以尝试在一定的范围内修改此扩散系数，来观察扩散的影响效果
+    # 关于沉积物中扩散系数的取值，DeepSeek的回答，供参考：
+    #   https://yb.tencent.com/s/uAOnIZCnSrLa
     d = 1.0e-9
 
     # 在这些Cell之间，添加Face，用于描述流体在这些Cell之间的流动
