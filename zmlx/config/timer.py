@@ -3,6 +3,7 @@
 """
 
 from zmlx.base.zml import Seepage
+from zmlx.config.alg import settings as alg_settings
 from zmlx.config.slots import get_slot
 
 text_key = 'timers'
@@ -12,13 +13,7 @@ def get_settings(model: Seepage):
     """
     读取设置
     """
-    text = model.get_text(text_key)
-    if len(text) > 2:
-        data = eval(text)
-        assert isinstance(data, list), 'timers must be a list'
-        return data
-    else:
-        return []
+    return alg_settings.get(model, text_key=text_key)
 
 
 def add_setting(model: Seepage, time, name, args=None, kwds=None):
@@ -87,13 +82,3 @@ def iterate(model: Seepage, t0, t1, slots):
                 args = replace(args, table)
                 kwds = replace(kwds, table)
                 func(*args, **kwds)
-
-
-def test_1():
-    table = {'xx': 1, 'yy': 2, 'zz': 3}
-    print(replace(['yy', 'zz', 4, 5, 'xx'], table))
-    print(replace({'xx': 1, 'name': 'yy', 'age': 'xx'}, table))
-
-
-if __name__ == '__main__':
-    test_1()

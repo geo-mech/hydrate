@@ -9,16 +9,7 @@
 from zmlx.base.seepage import get_face_sum, get_face_diff, get_dt, as_numpy
 from zmlx.base.zml import Seepage, Interp1, get_pointer64, np, Vector
 
-try:
-    vs0 = Vector()
-    vk = Vector()
-    vg = Vector()
-except Exception as err:
-    print(err)
-    vs0 = None
-    vk = None
-    vg = None
-
+# 用于存储毛管压力驱动下的流动设置（不可以修改，否则之前的设置失效）
 text_key = 'cap_settings'
 
 
@@ -44,9 +35,11 @@ def get_settings(model: Seepage):
         ca_ipc = round(buf[ind + 6])
         ind += 7
         #
-        settings.append({'fid0': [a0, b0, c0],
-                         'fid1': [a1, b1, c1],
-                         'ca_ipc': ca_ipc})
+        settings.append(
+            {'fid0': [a0, b0, c0],
+             'fid1': [a1, b1, c1],
+             'ca_ipc': ca_ipc}
+        )
 
     # from text
     text = model.get_text(text_key)
@@ -67,7 +60,8 @@ def set_settings(model: Seepage, settings):
     model.set_text(text_key, f'{settings}')
 
 
-def get_face_density_diff(model: Seepage, fid0, fid1):
+def get_face_density_diff(
+        model: Seepage, fid0, fid1):
     """
     获得face位置两种流体的密度差
     """
@@ -84,13 +78,15 @@ def get_face_gra(model: Seepage):
     """
     ca = as_numpy(model).cells.g_pos
     fa = np.zeros(shape=model.face_number, dtype=float)
-    get_face_diff(model, ca=get_pointer64(ca, readonly=True),
-                  fa=get_pointer64(fa))
+    get_face_diff(
+        model, ca=get_pointer64(ca, readonly=True),
+        fa=get_pointer64(fa))
     return fa
 
 
-def iterate(model: Seepage, dt=None, fid0=None, fid1=None,
-            ca_ipc=None, ds=0.05, gravity=None):
+def iterate(
+        model: Seepage, dt=None, fid0=None, fid1=None,
+        ca_ipc=None, ds=0.05, gravity=None):
     """
     在毛管力驱动下的流动。
     其中：
@@ -104,7 +100,25 @@ def iterate(model: Seepage, dt=None, fid0=None, fid1=None,
 
     if dt <= 1.0e-30:
         return
+
     if fid0 is not None and fid1 is not None:
+
+        # 准备临时变量
+        vs0 = model.temps.get('capillary.vs0')
+        if vs0 is None:
+            vs0 = Vector()
+            model.temps['capillary.vs0'] = vs0
+
+        vk = model.temps.get('capillary.vk')
+        if vk is None:
+            vk = Vector()
+            model.temps['capillary.vk'] = vk
+
+        vg = model.temps.get('capillary.vg')
+        if vg is None:
+            vg = Vector()
+            model.temps['capillary.vg'] = vg
+
         # 毛管压力
         if ca_ipc is not None:
             model.get_linear_dpre(
@@ -172,7 +186,8 @@ def iterate(model: Seepage, dt=None, fid0=None, fid1=None,
                     ds=ds, gravity=gravity)  # 执行迭代.
 
 
-def add(model: Seepage, fid0=None, fid1=None, get_idx=None, data=None,
+def add(model: Seepage, fid0=None, fid1=None,
+        get_idx=None, data=None,
         gravity=None):
     """
     创建一个毛管压力计算模型，其中fid0和fid1为涉及的两种流体。
@@ -185,7 +200,8 @@ def add(model: Seepage, fid0=None, fid1=None, get_idx=None, data=None,
     if fid0 is None or fid1 is None:  # 必须指定一对流体
         return
 
-    if data is None and gravity is None:  # 必须有毛管压力或者重力，否则，这个函数是不起作用的.
+    if data is None and gravity is None:
+        # 必须有毛管压力或者重力，否则，这个函数是不起作用的.
         return
 
     # 获取现在已经有的设置.
@@ -194,7 +210,8 @@ def add(model: Seepage, fid0=None, fid1=None, get_idx=None, data=None,
     count = len(settings)
 
     if data is not None:  # 给定的毛管压力的数据
-        ca_ipc = model.reg_cell_key(f'ipc_{count}')  # 在cell中注册一个key，用来存储pc的id
+        # 在cell中注册一个key，用来存储pc的id
+        ca_ipc = model.reg_cell_key(f'ipc_{count}')
         # 将data添加到model
         ipcs = []
         for curve_id in range(len(data)):

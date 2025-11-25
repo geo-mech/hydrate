@@ -16494,7 +16494,7 @@ class Seepage(HasHandle, HasCells):
             """
             初始化UFlowSol类的实例。
             Args:
-                handle: 句柄，默认为None。
+                handle: 句柄，默认为None(此时创建新的对象; 否则，为给定对象的引用)。
             """
             super().__init__(handle, core.new_seepage_fs, core.del_seepage_fs)
             self.solver = None
@@ -16506,30 +16506,41 @@ class Seepage(HasHandle, HasCells):
                  c_void_p  # ThreadPool since 2025-7-25
                  )
 
-        def iterate(self, model, dt, fa_s=None, fa_q=None,
-                    fa_k=None, ca_p=None,
-                    solver=None, pool=None, report=None, dv_rela=None):
+        def iterate(
+                self, model, dt, fa_s=None, fa_q=None,
+                fa_k=None, ca_p=None,
+                solver=None, pool=None, report=None,
+                dv_rela=None):
             """
-            在时间上向前迭代。
+            在时间上向前迭代(更新流动)
 
             Args:
-                model: 渗流模型对象。
-                dt (float): 时间步长 [单位：秒]
+                model: 即将被迭代的渗流模型对象(Seepage)
+                dt (float): 迭代的目标时间步长 [单位：秒]
+                    注意，当给定dv_rela的时候，将会进行检查，最终采用的，可能并不是这个给定的
+                    时间步长。
                 fa_s (int, optional): Face自定义属性的ID，
                     代表Face的横截面积（用于计算Face内流体的受力），默认为None。
+                    当考虑惯性的时候，需要给定
                 fa_q (int, optional): Face自定义属性的ID，
                     代表Face内流体在通量(也将在iterate中更新)，默认为None。
+                    当考虑惯性的时候，需要给定(且需要给定初始值)
                 fa_k (int, optional): Face内流体的"惯性系数"的属性ID，
                     默认为None。
+                    当考虑惯性的时候，需要给定(且需要给定初始值)
                 ca_p (int, optional): Cell的自定义属性，
-                    表示Cell内流体的压力(迭代时的压力，并非按照流体体积进行计算的)，
-                    默认为None。
+                    用于写入Cell内流体的压力(迭代时的压力，并非按照流体体积进行计算的)，
+                    默认为None（即不写入）
                 solver (ConjugateGradientSolver, optional): 求解器实例，
                     默认为None。
                 pool (ThreadPool, optional): 线程池实例，
                     默认为None。
-                report (Map, optional): 报告对象，默认为None。
-                dv_rela (float, optional): 控制时间步长。代表dt内流体流过的最大距离与网格的比值
+                report (Map, optional): 报告对象，
+                    默认为None (此时，会新建一个Map并且传入内核)
+                dv_rela (float, optional): 控制时间步长。
+                    代表dt内流体流过的最大距离与网格的比值
+                    当dv_rela为None的时候，将直接使用给定的dt来进行迭代。
+                    当dv_rela给定的时候，则会检查给定的dt是否满足条件。如果不满足，则会降低dt。
 
             Notes:
                 关于惯性：
@@ -16547,12 +16558,14 @@ class Seepage(HasHandle, HasCells):
             Returns:
                 dict: 包含迭代报告的字典。
             """
+            # 检查计算模块是否有授权
             lic.check_once()
 
-            if solver is None:
+            if solver is None:  # 线性求解器
                 self.solver = ConjugateGradientSolver(tolerance=1.0e-25)
                 solver = self.solver
 
+            # 如下几个属性，都不是必须的，这里，给出默认值
             if fa_s is None:
                 fa_s = 1000000000
             if fa_q is None:
@@ -16562,17 +16575,19 @@ class Seepage(HasHandle, HasCells):
             if ca_p is None:
                 ca_p = 1000000000
 
-            if dv_rela is None:
+            if dv_rela is None:  # 给定一个非常大，一定可以满足的值
                 dv_rela = 1.0e20
             else:
                 assert 0 < dv_rela
 
-            self.dv_permitted = dv_rela  # 设置容许步长参数
+            # 设置容许步长参数(因此，这个数值后续会被存储求解器中)
+            self.dv_permitted = dv_rela
 
             if isinstance(pool, ThreadPool):  # 将任务放入线程池，然后立即返回
                 if isinstance(report, Map):
                     h_report = report.handle
-                else:  # 由于需要在另外的线程中执行，因此，这里再创建临时缓冲区将是不安全的
+                else:
+                    # 由于需要在另外的线程中执行，因此，这里再创建临时缓冲区将是不安全的
                     h_report = 0
                 core.seepage_fs_iterate(
                     self.handle, model.handle, h_report,

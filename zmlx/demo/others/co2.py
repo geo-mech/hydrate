@@ -162,6 +162,11 @@ def create(
     # 创建模型
     model = seepage.create(texts={'solve': solve}, **kw)
 
+    # 添加溶解态co2的扩散 (2025-11-25)
+    diffusion.add_setting(
+        model,
+        flu0='co2_in_liq', flu1='liq', d=1.0e-9)
+
     # 设置co2的溶解度
     key = model.get_cell_key('n_co2_sol')
     for cell in model.cells:
@@ -222,7 +227,7 @@ def create(
 def main():
     model = create()
     seepage.solve(model, close_after_done=False,
-                  folder=opath('co2_v1120'))
+                  folder=opath('co2_v1125'))
 
 
 if __name__ == '__main__':

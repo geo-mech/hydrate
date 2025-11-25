@@ -2,9 +2,10 @@
 控制用来生产的Cell的压力
 """
 
-from zmlx.base.zml import Seepage
 from zmlx.alg.interp import interp1
 from zmlx.base.seepage import get_time
+from zmlx.base.zml import Seepage
+from zmlx.config.alg import settings
 
 text_key = 'prod_settings'
 
@@ -23,29 +24,24 @@ def get_settings(model: Seepage):
     """
     读取设置
     """
-    text = model.get_text(text_key)
-    if len(text) > 2:
-        data = eval(text)
-        assert isinstance(data, list)
-        return data
-    return None
+    return settings.get(model, text_key=text_key)
 
 
 def set_settings(model: Seepage, data):
     """
     写入设置
     """
-    if isinstance(data, list):
-        model.set_text(text_key, f'{data}')
-    else:
-        model.set_text(text_key, '')
+    settings.put(model, text_key=text_key, data=data)
 
 
-def add_setting(model: Seepage, index=None, pos=None, t=None, p=None):
+def add_setting(model: Seepage,
+                index=None, pos=None, t=None, p=None):
     """
-    添加设置. 其中index为cell的序号 (当index为None的时候，使用pos最为接近的Cell)
+    添加设置. 其中index为cell的序号
+    (当index为None的时候，使用pos最为接近的Cell)
     """
-    if index is None and pos is not None:  # 当index没有给定的时候，使用pos来找到最为接近的index
+    if index is None and pos is not None:
+        # 当index没有给定的时候，使用pos来找到最为接近的index
         cell = model.get_nearest_cell(pos=pos)
         if cell is not None:
             index = cell.index
@@ -56,15 +52,12 @@ def add_setting(model: Seepage, index=None, pos=None, t=None, p=None):
     assert isinstance(index, int), f'The index should be integer type'
 
     if index < 0:
-        index = model.cell_number + index
+        index += model.cell_number
 
     if index < model.cell_number:  # 添加一个用于生产的确定压力的设置.
         assert len(t) == len(p) and len(t) >= 2
         data = get_settings(model)
-        if data is None:
-            data = []
-        else:
-            assert isinstance(data, list)
+        assert isinstance(data, list)
         # 检查idx是否已经被设置了
         exists = False
         for item in data:
@@ -82,7 +75,7 @@ def iterate(model: Seepage, time=None):
     更新pore
     """
     data = get_settings(model)
-    if data is None:
+    if len(data) == 0:
         return
 
     if time is None:

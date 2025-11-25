@@ -113,8 +113,8 @@ def main():
         z=[-0.5, 0.5])
 
     # 辅助盐度扩散过程计算的属性
-    fa_g1 = model.reg_face_key('g1')  # 盐度的传导系数
-    fa_g2 = model.reg_face_key('g2')  # 盐度的传导系数
+    fa_s = model.reg_face_key('area')
+    fa_l = model.reg_face_key('length')
 
     # 添加Cell
     for c1 in mesh.cells:
@@ -130,7 +130,7 @@ def main():
     # 关于沉积物中扩散系数的取值，DeepSeek的回答，供参考：
     #   https://yb.tencent.com/s/uAOnIZCnSrLa
     d1 = 1.0e-9
-    d2 = d1 * 3
+    d2 = d1 * 2
 
     # 在这些Cell之间，添加Face，用于描述流体在这些Cell之间的流动
     for f1 in mesh.faces:
@@ -138,11 +138,11 @@ def main():
             model, f1.cell_i0, f1.cell_i1, area=f1.area,
             perm=1.0e-15
         )
-        f2.set_attr(fa_g1, f1.area * d1 / f1.dist)
-        f2.set_attr(fa_g2, f1.area * d2 / f1.dist)
+        f2.set_attr(fa_s, f1.area)
+        f2.set_attr(fa_l, f1.dist)
 
-    diffusion.add_setting(model, flu0=[0, 1], flu1=[0], fa_g=fa_g1, cfl=0.2)
-    diffusion.add_setting(model, flu0=[0, 2], flu1=[0], fa_g=fa_g2, cfl=0.2)
+    diffusion.add_setting(model, flu0=[0, 1], flu1=[0], d=d1, cfl=0.2)
+    diffusion.add_setting(model, flu0=[0, 2], flu1=[0], d=d2, cfl=0.2)
     model.gravity = [0, -10, 0]
 
     # 迭代并且绘图显示

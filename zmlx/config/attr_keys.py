@@ -83,9 +83,10 @@ def frac_keys(m=None):
     注意：
         将裂缝的属性保存到seepage中并不是好的选项.
     """
-    warnings.warn('please use zmlx.utility.AttrKeys instead, '
-                  'this function will be removed after 2026-4-9',
-                  DeprecationWarning, stacklevel=2)
+    warnings.warn(
+        'please use zmlx.utility.AttrKeys instead, '
+        'this function will be removed after 2026-4-9',
+        DeprecationWarning, stacklevel=2)
     return DynKeys(m, 'fr_')
 
 
@@ -95,9 +96,10 @@ def vtx_keys(m=None):
     注意：
         将裂缝的属性保存到seepage中并不是好的选项.
     """
-    warnings.warn('please use zmlx.utility.AttrKeys instead, '
-                  'this function will be removed after 2026-4-9',
-                  DeprecationWarning, stacklevel=2)
+    warnings.warn(
+        'please use zmlx.utility.AttrKeys instead, '
+        'this function will be removed after 2026-4-9',
+        DeprecationWarning, stacklevel=2)
     return DynKeys(m, 've_')
 
 

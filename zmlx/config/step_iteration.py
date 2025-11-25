@@ -3,6 +3,7 @@
 """
 
 from zmlx.base.zml import Seepage
+from zmlx.config.alg import settings as alg_settings
 from zmlx.config.slots import get_slots
 
 text_key = 'step_iteration'
@@ -12,13 +13,7 @@ def get_settings(model: Seepage):
     """
     读取设置
     """
-    text = model.get_text(text_key)
-    if len(text) > 2:
-        data = eval(text)
-        assert isinstance(data, list)
-        return data
-    else:
-        return []
+    return alg_settings.get(model, text_key=text_key)
 
 
 def add_setting(model: Seepage, start=0, step=1, stop=999999999, name=None,
@@ -28,15 +23,11 @@ def add_setting(model: Seepage, start=0, step=1, stop=999999999, name=None,
     """
     if name is None or start >= stop or step <= 0:
         return
-    setting = get_settings(model)
-    setting.append({'start': start,
-                    'step': step,
-                    'stop': stop,
-                    'name': name,
-                    'args': args,
-                    'kwds': kwds,
-                    })
-    model.set_text(text_key, setting)
+    alg_settings.add(
+        model, text_key=text_key,
+        start=start, step=step, stop=stop,
+        name=name, args=args, kwds=kwds
+    )
 
 
 def iterate(model: Seepage, current_step, slots):

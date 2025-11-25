@@ -47,12 +47,12 @@ from collections.abc import Iterable
 from zmlx.alg.base import clamp, join_cols
 from zmlx.alg.fsys import join_paths, make_fname, print_tag
 from zmlx.base.seepage import *
+from zmlx.base.zml import (get_average_perm, Tensor3, ConjugateGradientSolver,
+                           make_parent, SeepageMesh)
 from zmlx.config import (capillary, prod, fluid_heating, timer,
-                         sand, step_iteration)
+                         sand, step_iteration, diffusion, solid_buffer)
 from zmlx.config.attr_keys import cell_keys, face_keys, flu_keys
 from zmlx.config.slots import get_slot
-from zmlx.base.zml import (get_average_perm, Tensor3, ConjugateGradientSolver,
-                            make_parent, SeepageMesh)
 from zmlx.geometry.base import point_distance
 from zmlx.plt.fig2 import tricontourf
 from zmlx.react.alg import add_reaction
@@ -164,23 +164,29 @@ def parallel_iterate(*args, pool=None):
         # 执行定时器函数.
         timer.iterate(
             model, t0=get_time(model), t1=get_time(model) + get_dt(model),
-            slots=kwargs.get('slots'))
+            slots=kwargs.get('slots')
+        )
 
         # 执行step迭代
         step_iteration.iterate(
             model=model,
             current_step=get_step(model),
-            slots=kwargs.get('slots'))
+            slots=kwargs.get('slots')
+        )
 
         if model.not_has_tag('disable_update_den') and model.fludef_number > 0:
-            model.update_den(relax_factor=0.3, fa_t=model.reg_flu_key('temperature'))
+            model.update_den(
+                relax_factor=0.3, fa_t=model.get_flu_key('temperature'))
 
         if model.not_has_tag('disable_update_vis') and model.fludef_number > 0:
             # 更新流体的粘性系数(注意，当有固体存在的时候，务必将粘性系数的最大值设置为1.0e30)
             model.update_vis(
-                ca_p=model.reg_cell_key('pre'),  # 压力属性
-                fa_t=model.reg_flu_key('temperature'),  # 温度属性
-                relax_factor=1.0, min=kwargs.get('vis_min', 1.0e-7), max=kwargs.get('vis_max', 1.0e30))
+                ca_p=model.get_cell_key('pre'),  # 压力属性
+                fa_t=model.get_flu_key('temperature'),  # 温度属性
+                relax_factor=1.0,
+                min=kwargs.get('vis_min', 1.0e-7),
+                max=kwargs.get('vis_max', 1.0e30)
+            )
 
         if model.injector_number > 0:
             # 实施流体的注入操作.
@@ -194,12 +200,7 @@ def parallel_iterate(*args, pool=None):
         fluid_heating.iterate(model)
 
         if model.has_tag('has_solid'):
-            # 此时，认为最后一种流体其实是固体，并进行备份处理
-            buffer = getattr(model, 'solid_buffer', None)
-            if buffer is None:
-                buffer = Seepage.CellData()
-            model.pop_fluids(buffer)
-            setattr(model, 'solid_buffer', buffer)
+            solid_buffer.backup(model)
 
         if model.gr_number > 0:
             # 此时，各个Face的导流系数是可变的
@@ -225,7 +226,9 @@ def parallel_iterate(*args, pool=None):
         assert isinstance(kwargs, dict)
         model = kwargs['model']
         opts = dict(
-            model=model, dt=get_dt(model), ca_p=model.reg_cell_key('pre'), solver=kwargs.get('solver'),
+            model=model, dt=get_dt(model),
+            ca_p=model.reg_cell_key('pre'),
+            solver=kwargs.get('solver'),
             fa_s=kwargs.get('fa_s', model.get_face_key('area')),
             fa_q=kwargs.get('fa_q', model.get_face_key('rate')),
             fa_k=kwargs.get('fa_k', model.get_face_key('inertia')),
@@ -249,11 +252,13 @@ def parallel_iterate(*args, pool=None):
         # 执行毛管力相关的操作
         capillary.iterate(model)
 
+        # 执行diffusion操作 （2025-11-25）
+        # 注意：1 这里的diffusion.iterate 会更新模型中的浓度属性 (依据model中存储的相关配置)
+        #      2 这里，假设扩散是慢的过程，因此，直接采用模型的dt (这在极端情况下，可能会有问题)
+        diffusion.iterate(model, dt=get_dt(model))
+
         if model.has_tag('has_solid'):
-            # 恢复备份的固体物质
-            buffer = getattr(model, 'solid_buffer')
-            assert isinstance(buffer, Seepage.CellData), 'You must set solid_buffer before iterate'
-            model.push_fluids(buffer)
+            solid_buffer.restore(model)
 
         # 更新砂子的体积（优先使用自定义的update_sand）
         update_sand = get_slot('update_sand', kwargs.get('slots'))

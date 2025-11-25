@@ -2,8 +2,8 @@
 计算各个face的位置流体压力的梯度，并作为一个numpy的数组返回
 """
 
-from zmlx.base.zml import Seepage, get_pointer64 as pointer
 from zmlx.base.seepage import as_numpy
+from zmlx.base.zml import Seepage, get_pointer64 as pointer
 
 
 def get_face_pressure_gradient(model: Seepage, fluid=None):

@@ -6,9 +6,9 @@ from zmlx.alg.base import time2str
 from zmlx.alg.fsys import join_paths
 from zmlx.alg.fsys import make_fname
 from zmlx.base.seepage import as_numpy
+from zmlx.base.zml import Seepage, log
 from zmlx.config import seepage
 from zmlx.config.TherFlowConfig import TherFlowConfig
-from zmlx.base.zml import Seepage, log
 from zmlx.fluid.ch4 import create as create_ch4
 from zmlx.fluid.ch4_hydrate import create as create_ch4_hydrate
 from zmlx.fluid.co2 import create as create_co2
@@ -281,6 +281,11 @@ def create_caps(
 
     # 盐度的扩散
     if inh_diff is not None:
+        warnings.warn(
+            'inh_diff已弃用. 后续，请使用 zmlx.config.diffusion的相关功能',
+            DeprecationWarning,
+            stacklevel=2
+        )
         assert inh_diff >= 0
         cap = dict(
             fid0='inh', fid1='h2o',
@@ -290,6 +295,11 @@ def create_caps(
 
     # 溶解co2的扩散
     if co2_diff is not None:
+        warnings.warn(
+            'co2_diff已弃用. 后续，请使用 zmlx.config.diffusion的相关功能',
+            DeprecationWarning,
+            stacklevel=2
+        )
         assert co2_diff >= 0
         cap = dict(
             fid0='co2_in_liq', fid1='h2o',
@@ -299,6 +309,11 @@ def create_caps(
 
     # 溶解ch4的扩散
     if ch4_diff is not None:
+        warnings.warn(
+            'ch4_diff已弃用. 后续，请使用 zmlx.config.diffusion的相关功能',
+            DeprecationWarning,
+            stacklevel=2
+        )
         assert ch4_diff >= 0
         cap = dict(
             fid0='ch4_in_liq', fid1='h2o',
@@ -405,12 +420,34 @@ def create_opts(
     if not has_co2:
         co2_cap = None
 
+    if ch4_diff is not None:
+        warnings.warn(
+            'ch4_diff已弃用. 后续，请使用 zmlx.config.diffusion的相关功能',
+            DeprecationWarning,
+            stacklevel=2
+        )
+
+    if inh_diff is not None:
+        warnings.warn(
+            'inh_diff已弃用. 后续，请使用 zmlx.config.diffusion的相关功能',
+            DeprecationWarning,
+            stacklevel=2
+        )
+
+    if co2_diff is not None:
+        warnings.warn(
+            'co2_diff已弃用. 后续，请使用 zmlx.config.diffusion的相关功能',
+            DeprecationWarning,
+            stacklevel=2
+        )
+
     caps = create_caps(
         ch4_diff=ch4_diff,
         inh_diff=inh_diff,
         co2_diff=co2_diff,
         co2_cap=co2_cap,
-        ch4_cap=ch4_cap)
+        ch4_cap=ch4_cap
+    )
 
     if dt_max is None:
         dt_max = 3600 * 24

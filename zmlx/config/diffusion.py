@@ -24,20 +24,53 @@ def set_settings(model: Seepage, data: list | None):
     return settings.put(model, data=data, text_key=text_key)
 
 
-def add_setting(model: Seepage, flu0=None, flu1=None, ca_m1=None,
-                fa_g=None, fa_d=None, ca_c=None, cfl=None, fa_s=None, fa_l=None):
+def add_setting(
+        model: Seepage, flu0=None, flu1=None, ca_m1=None,
+        fa_g=None, fa_d=None, ca_c=None, cfl=None,
+        fa_s=None, fa_l=None, d=None,
+):
     """
     添加一个设置。具体的参数，参考 iterate 函数的参数.
     """
     assert flu0 is not None, "flu0 (溶质) 必须指定"
-    assert flu1 is not None or ca_m1 is not None, "flu1 (溶液) 或者其质量(ca_m1)必须给定，否则无法计算浓度"
-    assert fa_g is not None or fa_d is not None, "fa_g (face的扩散常数) 或者 fa_d(扩散系数)，必须给定一个"
-    settings.add(model, text_key=text_key, flu0=flu0, flu1=flu1, ca_m1=ca_m1,
-                 fa_g=fa_g, fa_d=fa_d, ca_c=ca_c, cfl=cfl, fa_s=fa_s, fa_l=fa_l)
+    assert flu1 is not None or ca_m1 is not None, \
+        "flu1 (溶液) 或者其质量(ca_m1)必须给定，否则无法计算浓度"
+
+    if d is not None:  # 给定了扩散系数，则设置给各个Face
+        if fa_d is None:
+            for index in range(20):  # 尝试注册fa_d
+                key = f'diffusion_{index}'
+                fa = model.get_face_key(key=key)
+                if fa is None:
+                    fa_d = model.reg_face_key(key=key)  # 新注册
+                    break
+
+        # 此时，上面尝试注册属性失败
+        assert fa_d is not None, "fa_d (扩散系数属性) 必须指定"
+
+        for face in model.faces:
+            assert isinstance(face, Seepage.Face)
+            if callable(d):
+                value = d(*face.pos)
+            else:
+                value = d
+            face.set_attr(fa_d, value)
+
+    assert fa_g is not None or fa_d is not None, \
+        "fa_g (face的扩散常数) 或者 fa_d(扩散系数)，必须给定一个"
+
+    settings.add(
+        model, text_key=text_key,
+        flu0=flu0, flu1=flu1, ca_m1=ca_m1,
+        fa_g=fa_g, fa_d=fa_d, ca_c=ca_c,
+        cfl=cfl, fa_s=fa_s, fa_l=fa_l
+    )
 
 
-def iterate(model: Seepage, dt,
-            *, flu0=None, flu1=None, ca_m1=None, fa_g=None, fa_d=None, ca_c=None, cfl=None, fa_s=None, fa_l=None):
+def iterate(
+        model: Seepage, dt,
+        *, flu0=None, flu1=None, ca_m1=None,
+        fa_g=None, fa_d=None, ca_c=None, cfl=None, fa_s=None, fa_l=None):
     """
     计算扩散过程. 如果具体的参数没有给出，则会尝试从model的配置中去获取。
 
@@ -49,21 +82,28 @@ def iterate(model: Seepage, dt,
         ca_m1: “溶液”的质量属性
             在没有给定flu1的时候，会使用ca_m1作为“溶液”的质量属性.
         ca_c: 浓度属性的索引。
-            浓度在这里是一个临时变量，因此ca_c可以为None. 此时，函数会创建一个临时的属性，用来暂时存储浓度.
+            浓度在这里是一个临时变量，因此ca_c可以为None.
+            此时，函数会创建一个临时的属性，用来暂时存储浓度.
         fa_d: 扩散系数属性. 此扩散系数乘以面积，再除以流动距离，就是g;
-        fa_g: 用来计算扩散的cond的索引. 定义为 g=D*area/dist. 其中D为扩散系数 (有效扩散系数)
+            在多孔介质中，扩散系数D的典型值为1e-9 m2/s.
+            参考DeepSeek的回答：https://yb.tencent.com/s/uAOnIZCnSrLa
+        fa_g: 用来计算扩散的cond的索引.
+            定义为 g=D*area/dist. 其中D为扩散系数 (有效扩散系数)
             当fa_g给定的时候，将会忽略fa_d
             注意：fa_d和fa_g必须给定1个
-        cfl: CFL数，即通过Face扩散输运的质量与相邻的Cell中质量的比值 (用来计算建议的时间步长dt).
+        cfl: CFL数，即通过Face扩散输运的质量与相邻的Cell中质量的比值
+            (用来计算建议的时间步长dt).
         fa_s: Face的属性，定义横截面积（当fa_g未指定时需要）
         fa_l: Face的属性，定义流动距离（当fa_g未指定时需要）
 
     Returns:
-        计算的报告。一个dict类型. 当cfl不为None时，返回的报告中会包含“建议的时间步长dt”
+        计算的报告。一个dict类型.
+        当cfl不为None时，返回的报告中会包含“建议的时间步长dt”
 
     Notes:
         这里，我们关于溶质浓度，采用的是质量分数的定义，即浓度=溶质质量/溶液质量.
-        此单位和化学中普遍采用的mol/L并不完全一样。关于浓度定义的差异，可能会影响到扩散系数的单位，
+        此单位和化学中普遍采用的mol/L并不完全一样。关
+        于浓度定义的差异，可能会影响到扩散系数的单位，
         因此，在给定fa_d属性的时候，需要考虑到这个差异。
     """
     assert isinstance(model, Seepage), 'model must be a Seepage model'
@@ -75,7 +115,8 @@ def iterate(model: Seepage, dt,
         for setting in get_settings(model):
             assert isinstance(setting, dict)
             # 在配置中，必须已经给定了“溶质” (否则，这种递归调用会无限循环)
-            assert setting.get('flu0') is not None, 'flu0 must be given in the setting'
+            assert setting.get('flu0') is not None, \
+                'flu0 must be given in the setting'
             report = iterate(model, dt=dt, **setting)
             reports.append(report)
         return reports  # 返回多组计算报告
@@ -97,7 +138,8 @@ def iterate(model: Seepage, dt,
 
     # 确定m1，即溶液的质量（在迭代的时候，假设m1是不变的。注意：这其实是一个近似!）
     if flu1 is None:  # 没有给定“溶液”，此时，必须在迭代之前，在外部给定溶液的质量
-        assert ca_m1 is not None, 'ca_m1 must be given when solution is not given'
+        assert ca_m1 is not None, \
+            'ca_m1 must be given when solution is not given'
         m1 = as_numpy(model).cells.get(ca_m1)  # 要读取这个属性，因此，属性的值必须给定
     else:  # 使用溶液的质量
         m1 = as_numpy(model).fluids(*flu1).mass
