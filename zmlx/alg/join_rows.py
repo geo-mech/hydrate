@@ -1,6 +1,5 @@
 import zmlx.alg.sys as warnings
-
-from zmlx.base.zml import np
+from zml import np
 from zmlx.alg.base import join_rows
 
 warnings.warn(f'{__name__} will be removed after 2026-4-15', DeprecationWarning,

@@ -1,6 +1,6 @@
 import zmlx.alg.sys as warnings
 
-from zmlx.base.zml import Seepage
+from zml import Seepage
 
 
 def create(den=1100, name=None):

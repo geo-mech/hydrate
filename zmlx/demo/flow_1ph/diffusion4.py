@@ -147,8 +147,6 @@ def main():
     dt = 1.0
     time = 0.0
 
-    gui.hide_console()  # 隐藏控制台，从而增大绘图的区域
-
     for step in range(step_max):
         gui.progress(label='计算进度', val_range=[0, step_max], value=step)
         print(f'step = {step}/{step_max}, dt = {time2str(dt)}')
@@ -157,8 +155,8 @@ def main():
         model.iterate(dt=dt)
         dt1 = model.get_recommended_dt(previous_dt=dt, cfl=0.2)
 
-        r = diffusion.iterate(model, dt=dt)
-        dt2 = r[0].get('dt', dt)
+        diffusion.iterate(model, dt=dt, recommend_dt=True)
+        dt2 = diffusion.get_dt_next(model)
 
         dt = min(dt1, dt2, 1.0e9)
         if step % 10 == 0:

@@ -6,20 +6,22 @@ def get_slots(slots=None):
     """
     返回包含standard_slots在内的槽函数
     """
-    results = standard_slots.copy()
-    if slots is not None:
-        results.update(slots)
-    return results
+    if isinstance(slots, dict):
+        return {**standard_slots, **slots}
+    else:
+        return standard_slots.copy()
 
 
-def get_slot(name, extra_slots=None):
+def get_slot(name, *, slots=None):
     """
     返回给定名字的slot. 并且，如果给定的slots中不存在，则搜索标准的slots
     """
-    if name is None:
+    if not isinstance(name, str):
         return None
-    if extra_slots is not None:
-        func = extra_slots.get(name)
-        if func is not None:
-            return func
+
+    if slots is not None:
+        f = slots.get(name)
+        if f is not None:
+            return f
+
     return standard_slots.get(name)

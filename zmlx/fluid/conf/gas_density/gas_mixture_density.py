@@ -7,7 +7,7 @@ the density of a gas mixture obtained from heavy oil upgrading
 by 10.1016/j.petrol.2020.107850
 """
 
-from zmlx.base.zml import np
+from zml import np
 
 
 def GAS_den(P, T):

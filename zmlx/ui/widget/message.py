@@ -1,7 +1,7 @@
 import os
 import time
 
-from zmlx.base.zml import app_data, get_hash, log as zml_log
+from zml import app_data, get_hash, log as zml_log
 from zmlx.io.json_ex import read, write
 from zmlx.ui import gui
 from zmlx.ui.alg import create_action
@@ -209,4 +209,3 @@ def setup_ui():
         gui.refresh_action('show_messages')
 
     gui.add_func('add_message', add_and_show)
-

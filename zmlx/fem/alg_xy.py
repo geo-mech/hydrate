@@ -2,7 +2,7 @@
 二维有限元相关的辅助算法。
 """
 
-from zmlx.base.zml import DynSys, Mesh3
+from zml import DynSys, Mesh3
 
 
 def add_node_fx(dyn: DynSys, node_id, fx):

@@ -1,9 +1,8 @@
-import re
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.interpolate import interp1d
-from typing import List, Dict
 import warnings
+from typing import List, Dict
+
+import matplotlib.pyplot as plt
+import numpy as np
 
 # ---------- 用户输入部分 ----------
 user_reactant_pool = ["Ca++", "Mg++", "HCO3-", "H+", "OH-"]  # 多种反应物
@@ -12,6 +11,7 @@ user_reactant_pool = ["Ca++", "Mg++", "HCO3-", "H+", "OH-"]  # 多种反应物
 T_celsius_raw = np.array([0, 25, 60, 100, 150, 200, 250, 300])
 T_kelvin_raw = T_celsius_raw + 273.15
 T_kelvin_dense = np.linspace(T_kelvin_raw.min(), T_kelvin_raw.max(), 100)
+
 
 # ---------- 辅助函数 ----------
 def extract_reaction_blocks(filepath: str):
@@ -43,7 +43,7 @@ def extract_reaction_blocks(filepath: str):
                 except ValueError:
                     species.append(part)
             i += 1
-        species_list = [species[i+1] for i in range(0, len(species), 2)]
+        species_list = [species[i + 1] for i in range(0, len(species), 2)]
 
         # Get log10(k)
         logk = []

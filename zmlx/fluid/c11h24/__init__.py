@@ -1,6 +1,6 @@
 import os
 
-from zmlx.base.zml import Interp2, Seepage
+from zml import Interp2, Seepage
 
 
 def create(name=None, specific_heat=None):

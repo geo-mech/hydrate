@@ -1,8 +1,6 @@
 """
 二维的曲线
 """
-from zmlx.plt.on_figure import add_axes2
-from zmlx.ui import plot
 
 
 def add_curve2(ax, *args, **kwargs):
@@ -35,6 +33,8 @@ def plot_xy(
     **opts :
         传递给底层plot的附加参数
     """
+    from zmlx.plt.on_figure import add_axes2
+    from zmlx.ui import plot
     # 文件数据加载处理
     if ipath is not None:
         try:
@@ -54,7 +54,7 @@ def plot_xy(
 
 
 def plotxy(*args, **kwargs):
-    import warnings
+    import zmlx.alg.sys as warnings
     warnings.warn(
         "plotxy is deprecated, please use plot_xy instead",
         DeprecationWarning,
@@ -62,11 +62,8 @@ def plotxy(*args, **kwargs):
     plot_xy(*args, **kwargs)
 
 
-def test_1():
-    try:
-        import numpy as np
-    except ImportError:
-        np = None
+def test():
+    import numpy as np
     x = np.linspace(0, 10, 100)
     y = np.sin(x)
     plot_xy(x, y, title='sin(x)', xlabel='x', ylabel='y',
@@ -74,4 +71,4 @@ def test_1():
 
 
 if __name__ == '__main__':
-    test_1()
+    test()

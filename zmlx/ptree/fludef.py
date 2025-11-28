@@ -1,6 +1,6 @@
 import os
 
-from zmlx.base.zml import Seepage
+from zml import Seepage
 from zmlx.ptree.interp2 import interp2
 from zmlx.ptree.ptree import PTree, as_ptree
 

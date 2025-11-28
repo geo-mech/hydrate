@@ -96,9 +96,8 @@ def wat_disp_oil():
     """
     jx, jy = 30, 30
     model = create(jx, jy, s=(1, 0), fid_inj=1)
-    gui.hide_console()
     seepage.solve(model, extra_plot=lambda: show(model, jx, jy), time_forward=100 * 24 * 3600)
 
 
 if __name__ == '__main__':
-    gui.execute(wat_disp_oil, close_after_done=False, )
+    gui.execute(wat_disp_oil, close_after_done=False)

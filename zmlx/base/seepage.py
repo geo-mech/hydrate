@@ -1,13 +1,23 @@
 """
 渗流类Seepage的一些基础的接口。注意，此模块不依赖其它顶层的模块。
+
+对于多场耦合过程，我们采用工作流模式 (Workflow Pattern)-各流程像流水线一样处理数据。因此，关于数据的定义是非常关键的。
+对于流体计算，我们采用Seepage类来定义所有的数据状态。因此，这里定义的接口，是后续进行流体计算的基础。这里，定义最核心
+的数据接口。当然，一切的定义，本质上都是基于Seepage类的成员函数。
 """
 import ctypes
 import os
 from ctypes import c_void_p
 
 import zmlx.alg.sys as warnings
+from zml import Seepage, Vector, is_array, get_pointer64, Map, ThreadPool
+from zml import clock
 from zmlx.alg.base import time2str
-from zmlx.base.zml import Seepage, Vector, is_array, get_pointer64, np, Map
+
+try:
+    import numpy as np
+except ImportError:
+    np = None
 
 
 class SeepageNumpy:
@@ -27,6 +37,12 @@ class SeepageNumpy:
         def get(self, index, buf=None):
             """
             Cell属性。index的含义参考 Seepage.cells_write
+            Args:
+                index: 属性索引
+                buf: 输出缓冲区，默认None
+
+            Returns:
+                如果buf为None，则返回一个新的numpy数组，否则将数据写入buf并返回buf
             """
             if np is not None:
                 if buf is None:
@@ -42,6 +58,12 @@ class SeepageNumpy:
         def set(self, index, buf):
             """
             Cell属性。index的含义参考 Seepage.cells_write
+            Args:
+                index: 属性索引
+                buf: 输入缓冲区
+
+            Returns:
+                None
             """
             if not is_array(buf):
                 self.model.cells_read(value=buf, index=index)
@@ -163,6 +185,12 @@ class SeepageNumpy:
         def get(self, index, buf=None):
             """
             读取各个Face的属性
+            Args:
+                index: 属性索引
+                buf: 输出缓冲区，默认None
+
+            Returns:
+                如果buf为None，则返回一个新的numpy数组，否则将数据写入buf并返回buf
             """
             if np is not None:
                 if buf is None:
@@ -178,6 +206,12 @@ class SeepageNumpy:
         def set(self, index, buf):
             """
             设置各个Face的属性
+            Args:
+                index: 属性索引
+                buf: 输入缓冲区
+
+            Returns:
+                None
             """
             if not is_array(buf):
                 self.model.faces_read(value=buf, index=index)
@@ -219,6 +253,7 @@ class SeepageNumpy:
         def get_dv(self, index=None, buf=None):
             """
             上一次迭代经过Face流体的体积.
+                index=0时为所有流体的体积, index=1时为流体1的体积, ..., index=8时为流体8的体积.
             """
             if index is None:
                 return self.get(-19, buf=buf)
@@ -258,6 +293,12 @@ class SeepageNumpy:
         def get(self, index, buf=None):
             """
             返回属性
+            Args:
+                index: 属性索引
+                buf: 输出缓冲区，默认None
+
+            Returns:
+                如果buf为None，则返回一个新的numpy数组，否则将数据写入buf并返回buf
             """
             if np is not None:
                 if buf is None:
@@ -273,6 +314,12 @@ class SeepageNumpy:
         def set(self, index, buf):
             """
             设置属性
+            Args:
+                index: 属性索引
+                buf: 输入缓冲区
+
+            Returns:
+                None
             """
             if not is_array(buf):
                 self.model.fluids_read(
@@ -340,10 +387,16 @@ class SeepageNumpy:
 
     @property
     def cells(self):
+        """
+        返回Cell属性适配器
+        """
         return SeepageNumpy.Cells(model=self.model)
 
     @property
     def faces(self):
+        """
+        返回Face属性适配器
+        """
         return SeepageNumpy.Faces(model=self.model)
 
     def fluids(self, *fluid_id):
@@ -385,9 +438,10 @@ def get_attr(model: Seepage, key, default_val=None, cast=None,
     Raises:
         AssertionError: 当key不是int或str类型时抛出
 
-    该函数首先检查 key 是否为字符串或整数。如果是字符串，它会将其转换为模型内部使用的键。
-    然后，它尝试从模型中获取属性值，如果属性不存在，它会返回默认值或发出警告。
-    如果提供了类型转换函数 cast，它会将属性值转换为指定的类型。最后，它返回属性值或默认值。
+    Notes:
+        该函数首先检查 key 是否为字符串或整数。如果是字符串，它会将其转换为模型内部使用的键。
+        然后，它尝试从模型中获取属性值，如果属性不存在，它会返回默认值或发出警告。
+        如果提供了类型转换函数 cast，它会将属性值转换为指定的类型。最后，它返回属性值或默认值。
     """
     assert isinstance(key, (int, str))
     key_backup = key
@@ -425,8 +479,9 @@ def set_attr(model: Seepage, key=None, value=None, **key_values):
 
     Notes:
         当value为None时会触发警告但不会设置属性
-
-    该函数首先检查是否提供了单个键值对。如果提供了键，它会将键转换为模型内部使用的键，并尝试设置属性值。如果值为 None，它会发出警告。如果提供了多个键值对，它会遍历这些键值对，并调用自身来设置每个属性。
+        该函数首先检查是否提供了单个键值对。如果提供了键，它会将键转换为模型内部使用的键，
+        并尝试设置属性值。如果值为 None，它会发出警告。如果提供了多个键值对，
+        它会遍历这些键值对，并调用自身来设置每个属性。
     """
     if key is not None:
         if isinstance(key, str):
@@ -493,7 +548,8 @@ def get_time(model: Seepage, as_str=False):
         as_str (bool, optional): 是否返回格式化时间字符串，默认为False
 
     Returns:
-        float | str: 当as_str=False时返回浮点型时间值（秒），当as_str=True时返回格式化的时间字符串
+        float | str: 当as_str=False时返回浮点型时间值（秒），
+        当as_str=True时返回格式化的时间字符串
 
     Notes:
         底层通过get_attr获取'time'属性，默认值为0.0秒
@@ -673,6 +729,265 @@ def set_dt_max(model: Seepage, value):
     set_attr(model, 'dt_max', value)
 
 
+def get_vis_min(model: Seepage):
+    return get_attr(model, 'vis_min', default_val=1.0e-7)
+
+
+def set_vis_min(model: Seepage, value):
+    set_attr(model, 'vis_min', value)
+
+
+def get_vis_max(model: Seepage):
+    return get_attr(model, 'vis_max', default_val=1.0e30)
+
+
+def set_vis_max(model: Seepage, value):
+    set_attr(model, 'vis_max', value)
+
+
+def get_func_opts(model: Seepage, key: str):
+    """
+    获取模型的迭代参数。
+    Args:
+        model: 要获取参数的模型
+        key: 迭代参数的键
+
+    Returns:
+        一个字典，包含模型的迭代参数
+    """
+    text = model.get_text(key)
+    if len(text) > 1:
+        opts = eval(text)
+        assert isinstance(opts, dict)
+        return opts
+    else:
+        return {}
+
+
+def set_func_opts(model: Seepage, key: str, **opts):
+    """
+    设置模型的迭代参数。
+    Args:
+        model: 要设置参数的模型
+        key: 迭代参数的键
+        **opts: 迭代的参数，会被设置到模型的key文本中.
+
+    Returns:
+        None
+    """
+    model.set_text(key, str(opts) if len(opts) > 0 else '')
+
+
+def add_func_opts(model: Seepage, key: str, **opts):
+    """
+    添加迭代的参数到模型中。
+    Args:
+        model: 要添加参数的模型
+        key: 迭代参数的键
+        **opts: 迭代的参数，会被添加到模型的key文本中.
+
+    Returns:
+        None
+    """
+    new_opts = {**get_func_opts(model, key), **opts}
+    set_func_opts(model, key, **new_opts)
+
+
+@clock
+def iterate_flow(*local_opts, pool=None, **global_opts):
+    """
+    保持当前所有的流体性质不变，迭代模型的流动状态。如果给定pool，则尝试并行执行。
+    """
+    if len(local_opts) <= 1:  # 仅有一个任务，则直接执行，不使用线程池
+        pool = None
+
+    key_opt = 'flow_opt'
+    models = []  # 所有的模型
+
+    for local_opt in local_opts:
+        # 解析出model
+        if isinstance(local_opt, dict):
+            model = local_opt.pop('model', None)
+            assert isinstance(model, Seepage), f'The model is not Seepage. model = {model}'
+        else:
+            assert isinstance(local_opt, Seepage)
+            model = local_opt
+            local_opt = {}
+
+        # 记录模型
+        models.append(model)
+
+        # 获得内部定义的选项
+        inner_opts = get_func_opts(model, key_opt)
+
+        # 默认选项
+        default_opts = dict(
+            disable_flow=model.has_tag('disable_flow'),
+            check_dt=model.has_tag('check_dt'),
+            recommend_dt=model.has_tag('recommend_dt'),
+            dt=get_dt(model),
+            dv_rela=get_dv_relative(model),
+            fa_s=model.get_face_key('area'),
+            fa_q=model.get_face_key('rate'),
+            fa_k=model.get_face_key('inertia'),
+        )
+
+        # 所有用来迭代的选项
+        opts = {
+            **default_opts, **inner_opts, **global_opts, **local_opt
+        }
+
+        # 准备其它参数
+        if opts.get('ca_p') is None:
+            opts['ca_p'] = model.reg_cell_key('pre')
+
+        if opts['disable_flow']:
+            model.temps[key_opt] = None
+            continue
+
+        # 备份参数，后续使用
+        opts['result'] = Map()
+        model.temps[key_opt] = opts
+
+        sol = model.get_flow_sol()
+        assert isinstance(sol, Seepage.FlowSol)
+
+        sol.iterate(
+            model, dt=opts['dt'],
+            fa_s=opts['fa_s'],
+            fa_q=opts['fa_q'],
+            fa_k=opts['fa_k'],
+            ca_p=opts['ca_p'],
+            solver=opts.get('solver'),
+            dv_rela=opts['dv_rela'] if opts['check_dt'] else None,
+            pool=pool, report=opts['result']
+        )
+
+    if isinstance(pool, ThreadPool):
+        pool.sync()  # 等待放入pool中的任务执行完毕
+
+    # 将报告转化为dict，以及一切其它的操作
+    for model in models:
+        assert isinstance(model, Seepage)
+
+        # 设置缺省值
+        set_attr(model, 'flow_real_dt', -1)
+        set_attr(model, 'flow_dt_next', -1)
+
+        opts = model.temps.get(key_opt)
+        if opts is None:
+            continue
+
+        assert isinstance(opts, dict)
+        result = opts.get('result')
+        assert isinstance(result, Map)
+        result = result.to_dict()
+        real_dt = result.get('dt')
+        if real_dt is None:
+            continue
+
+        set_attr(model, 'flow_real_dt', real_dt)
+
+        if opts['recommend_dt']:
+            dv_rela = opts['dv_rela']
+            if 0 < dv_rela < 1.0e3:
+                sol = model.get_flow_sol()
+                dt_next = sol.get_recommended_dt(previous_dt=real_dt, dv_relative=dv_rela)
+                set_attr(model, 'flow_dt_next', dt_next)
+
+
+def get_flow_dt_next(model: Seepage):
+    return get_attr(model, 'flow_dt_next', default_val=-1)
+
+
+@clock
+def iterate_thermal(*local_opts, pool=None, **global_opts):
+    """
+    对于多个模型，并行地更新模型的温度场
+    """
+    if len(local_opts) <= 1:  # 仅有一个任务，则直接执行，不使用线程池
+        pool = None
+
+    key_opt = 'thermal_opt'
+    models = []  # 所有的模型
+
+    for local_opt in local_opts:  # 执行检查
+        # 解析出model
+        if isinstance(local_opt, dict):
+            model = local_opt.pop('model', None)
+            assert isinstance(model, Seepage), f'The model is not Seepage. model = {model}'
+        else:
+            assert isinstance(local_opt, Seepage)
+            model = local_opt
+            local_opt = {}
+
+        # 记录模型
+        models.append(model)
+
+        # 获得内部定义的选项
+        inner_opts = get_func_opts(model, key_opt)
+
+        # 默认选项
+        default_opts = dict(
+            disable_ther=model.has_tag('disable_ther'),
+            recommend_dt=model.has_tag('recommend_dt'),
+            dt=get_dt(model),
+            dv_rela=get_dv_relative(model),
+            ca_t=model.get_cell_key('temperature'),
+            ca_mc=model.get_cell_key('mc'),
+            fa_g=model.get_face_key('g_heat'),
+        )
+
+        # 所有用来迭代的选项
+        opts = {
+            **default_opts, **inner_opts, **global_opts, **local_opt
+        }
+
+        # 检查是否主动声明禁止迭代流场
+        if opts['disable_ther']:
+            model.temps[key_opt] = None
+            continue
+
+        # 备份参数，后续使用
+        opts['result'] = Map()
+        model.temps[key_opt] = opts
+
+        # 准备求解器
+        sol = model.get_thermal_sol()
+        assert isinstance(sol, Seepage.ThermalSol)
+        sol.iterate(
+            model, dt=opts['dt'], pool=pool, report=opts['result'],
+            ca_t=opts['ca_t'], ca_mc=opts['ca_mc'], fa_g=opts['fa_g'],
+            solver=opts.get('solver'),
+        )
+
+    if isinstance(pool, ThreadPool):
+        pool.sync()  # 等待放入pool中的任务执行完毕
+
+    # 将报告转化为dict
+    for model in models:
+        assert isinstance(model, Seepage)
+        # 设置缺省值
+        set_attr(model, 'thermal_dt_next', -1)
+
+        opts = model.temps[key_opt]
+        if opts is None:
+            continue
+
+        if opts['recommend_dt']:
+            sol = model.get_thermal_sol()
+            dt_next = sol.get_recommended_dt(
+                model, previous_dt=opts['dt'],
+                dv_relative=opts['dv_rela'],
+                ca_t=opts['ca_t'], ca_mc=opts['ca_mc']
+            )
+            set_attr(model, 'thermal_dt_next', dt_next)
+
+
+def get_thermal_dt_next(model: Seepage):
+    return get_attr(model, 'thermal_dt_next', default_val=-1)
+
+
 class FloatBuffer:
     """
     准备一个数据的缓冲区
@@ -740,9 +1055,20 @@ def get_face_gradient(model: Seepage, ca, fa=None):
     """
     根据cell中心位置的属性的值来计算各个face位置的梯度.
         (c1 - c0) / dist
-    默认：
-        ca可以是一个pointer或者是一个Vector(输入)
-        fa可以是一个pointer，或者是一个Vector(输出)
+    Args:
+        model (Seepage): 渗流模型对象，用于获取单元格数量和面数量等信息。
+        ca (Union[ctypes.c_void_p, Vector]): 输入参数，
+            表示单元格中心位置的属性值。可以是指针或者 Vector 对象。
+        fa (Optional[Union[ctypes.c_void_p, Vector]]): 输出参数，
+            表示面位置的梯度结果。可以是指针或者 Vector 对象，默认为 None。
+
+    Returns:
+        Vector: 包含各个面位置梯度结果的 Vector 对象。
+
+    Notes:
+        该函数会调用 `FloatBuffer` 类来处理输入和输出数据。
+        输入的 `ca` 长度必须等于模型的单元格数量。
+        输出的 `fa` 长度必须等于模型的面数量。
     """
     ca = FloatBuffer(value=ca, is_input=True, length=model.cell_number)
     fa = FloatBuffer(value=fa, is_input=False, length=model.face_number)
@@ -765,9 +1091,9 @@ def get_face_diff(model: Seepage, ca, fa=None):
         Vector: 包含各个面位置差异结果的 Vector 对象。
 
     Notes:
-        - 该函数会调用 `FloatBuffer` 类来处理输入和输出数据。
-        - 输入的 `ca` 长度必须等于模型的单元格数量。
-        - 输出的 `fa` 长度必须等于模型的面数量。
+        该函数会调用 `FloatBuffer` 类来处理输入和输出数据。
+        输入的 `ca` 长度必须等于模型的单元格数量。
+        输出的 `fa` 长度必须等于模型的面数量。
     """
     ca = FloatBuffer(value=ca, is_input=True, length=model.cell_number)
     fa = FloatBuffer(value=fa, is_input=False, length=model.face_number)
@@ -790,9 +1116,9 @@ def get_face_sum(model: Seepage, ca, fa=None):
         Vector: 包含各个面位置和结果的 Vector 对象。
 
     Notes:
-        - 该函数会调用 `FloatBuffer` 类来处理输入和输出数据。
-        - 输入的 `ca` 长度必须等于模型的单元格数量。
-        - 输出的 `fa` 长度必须等于模型的面数量。
+        该函数会调用 `FloatBuffer` 类来处理输入和输出数据。
+        输入的 `ca` 长度必须等于模型的单元格数量。
+        输出的 `fa` 长度必须等于模型的面数量。
     """
     ca = FloatBuffer(value=ca, is_input=True, length=model.cell_number)
     fa = FloatBuffer(value=fa, is_input=False, length=model.face_number)
@@ -802,11 +1128,22 @@ def get_face_sum(model: Seepage, ca, fa=None):
 
 def get_face_average(model: Seepage, ca, fa=None):
     """
-    根据cell中心位置的属性的值来计算各个face位置的平均值
-        c1 + c0
-    默认：
-        ca可以是一个pointer或者是一个Vector(输入)
-        fa可以是一个pointer，或者是一个Vector(输出)
+    根据cell中心位置的属性的值来计算各个face位置的平均值。计算公式为 (c1 + c0) / 2。
+
+    Args:
+        model (Seepage): 渗流模型对象，用于获取单元格数量和面数量等信息。
+        ca (Union[ctypes.c_void_p, Vector]): 输入参数，
+            表示单元格中心位置的属性值。可以是指针或者 Vector 对象。
+        fa (Optional[Union[ctypes.c_void_p, Vector]]): 输出参数，
+            表示面位置的平均值结果。可以是指针或者 Vector 对象，默认为 None。
+
+    Returns:
+        Vector: 包含各个面位置平均值结果的 Vector 对象。
+
+    Notes:
+        该函数会调用 `FloatBuffer` 类来处理输入和输出数据。
+        输入的 `ca` 长度必须等于模型的单元格数量。
+        输出的 `fa` 长度必须等于模型的面数量。
     """
     ca = FloatBuffer(value=ca, is_input=True, length=model.cell_number)
     fa = FloatBuffer(value=fa, is_input=False, length=model.face_number)
@@ -816,9 +1153,22 @@ def get_face_average(model: Seepage, ca, fa=None):
 
 def get_face_left(model: Seepage, ca, fa=None):
     """
-    默认：
-        ca可以是一个pointer或者是一个Vector(输入)
-        fa可以是一个pointer，或者是一个Vector(输出)
+    根据单元格中心位置的属性值计算各个面位置的左侧值。计算公式为 c0。
+
+    Args:
+        model (Seepage): 渗流模型对象，用于获取单元格数量和面数量等信息。
+        ca (Union[ctypes.c_void_p, Vector]): 输入参数，
+            表示单元格中心位置的属性值。可以是指针或者 Vector 对象。
+        fa (Optional[Union[ctypes.c_void_p, Vector]]): 输出参数，
+            表示面位置的左侧值结果。可以是指针或者 Vector 对象，默认为 None。
+
+    Returns:
+        Vector: 包含各个面位置左侧值结果的 Vector 对象。
+
+    Notes:
+        该函数会调用 `FloatBuffer` 类来处理输入和输出数据。
+        输入的 `ca` 长度必须等于模型的单元格数量。
+        输出的 `fa` 长度必须等于模型的面数量。
     """
     ca = FloatBuffer(value=ca, is_input=True, length=model.cell_number)
     fa = FloatBuffer(value=fa, is_input=False, length=model.face_number)
@@ -828,9 +1178,22 @@ def get_face_left(model: Seepage, ca, fa=None):
 
 def get_face_right(model: Seepage, ca, fa=None):
     """
-    默认：
-        ca可以是一个pointer或者是一个Vector(输入)
-        fa可以是一个pointer，或者是一个Vector(输出)
+    根据单元格中心位置的属性值计算各个面位置的右侧值。计算公式为 c1。
+
+    Args:
+        model (Seepage): 渗流模型对象，用于获取单元格数量和面数量等信息。
+        ca (Union[ctypes.c_void_p, Vector]): 输入参数，
+            表示单元格中心位置的属性值。可以是指针或者 Vector 对象。
+        fa (Optional[Union[ctypes.c_void_p, Vector]]): 输出参数，
+            表示面位置的右侧值结果。可以是指针或者 Vector 对象，默认为 None。
+
+    Returns:
+        Vector: 包含各个面位置右侧值结果的 Vector 对象。
+
+    Notes:
+        该函数会调用 `FloatBuffer` 类来处理输入和输出数据。
+        输入的 `ca` 长度必须等于模型的单元格数量。
+        输出的 `fa` 长度必须等于模型的面数量。
     """
     ca = FloatBuffer(value=ca, is_input=True, length=model.cell_number)
     fa = FloatBuffer(value=fa, is_input=False, length=model.face_number)
@@ -840,10 +1203,22 @@ def get_face_right(model: Seepage, ca, fa=None):
 
 def get_cell_average(model: Seepage, fa, ca=None):
     """
-    计算cell周围face的平均值
-    默认：
-        fa可以是一个pointer，或者是一个Vector(输入)
-        ca可以是一个pointer或者是一个Vector(输出)
+    根据面位置的属性值计算各个单元格中心位置的平均值。计算公式为 (f0 + f1 + .. Fn) / N。
+
+    Args:
+        model (Seepage): 渗流模型对象，用于获取单元格数量和面数量等信息。
+        fa (Union[ctypes.c_void_p, Vector]): 输入参数，
+            表示面位置的属性值。可以是指针或者 Vector 对象。
+        ca (Optional[Union[ctypes.c_void_p, Vector]]): 输出参数，
+            表示单元格中心位置的平均值结果。可以是指针或者 Vector 对象，默认为 None。
+
+    Returns:
+        Vector: 包含各个单元格中心位置平均值结果的 Vector 对象。
+
+    Notes:
+        该函数会调用 `FloatBuffer` 类来处理输入和输出数据。
+        输入的 `fa` 长度必须等于模型的面数量。
+        输出的 `ca` 长度必须等于模型的单元格数量。
     """
     fa = FloatBuffer(value=fa, is_input=True, length=model.face_number)
     ca = FloatBuffer(value=ca, is_input=False, length=model.cell_number)
@@ -853,10 +1228,22 @@ def get_cell_average(model: Seepage, fa, ca=None):
 
 def get_cell_max(model: Seepage, fa, ca=None):
     """
-    计算cell周围face的最大值
-    默认：
-        fa可以是一个pointer，或者是一个Vector(输入)
-        ca可以是一个pointer或者是一个Vector(输出)
+    根据面位置的属性值计算各个单元格中心位置的最大值。
+
+    Args:
+        model (Seepage): 渗流模型对象，用于获取单元格数量和面数量等信息。
+        fa (Union[ctypes.c_void_p, Vector]): 输入参数，
+            表示面位置的属性值。可以是指针或者 Vector 对象。
+        ca (Optional[Union[ctypes.c_void_p, Vector]]): 输出参数，
+            表示单元格中心位置的最大值结果。可以是指针或者 Vector 对象，默认为 None。
+
+    Returns:
+        Vector: 包含各个单元格中心位置最大值结果的 Vector 对象。
+
+    Notes:
+        该函数会调用 `FloatBuffer` 类来处理输入和输出数据。
+        输入的 `fa` 长度必须等于模型的面数量。
+        输出的 `ca` 长度必须等于模型的单元格数量。
     """
     fa = FloatBuffer(value=fa, is_input=True, length=model.face_number)
     ca = FloatBuffer(value=ca, is_input=False, length=model.cell_number)
@@ -865,11 +1252,31 @@ def get_cell_max(model: Seepage, fa, ca=None):
 
 
 def set_text(model: Seepage, **kwargs):
+    """
+    设置模型中的文本属性。
+
+    Args:
+        model: 渗流模型对象，用于设置文本属性。
+        **kwargs: 关键字参数，每个参数表示一个文本属性，键为属性名，值为属性值。
+
+    Returns:
+        None
+
+    """
     for key, text in kwargs.items():
         model.set_text(key=key, text=text)
 
 
-def __list(fdef):
+def __list(fdef: Seepage.FluDef):
+    """
+    递归列出流体定义中的所有组分。
+
+    Args:
+        fdef (Seepage.FluDef): 流体定义对象。
+
+    Returns:
+        dict: 包含所有组分属性的字典
+    """
     data = {}
     for i in range(fdef.component_number):
         name = fdef.get_component(i).name
@@ -880,7 +1287,13 @@ def __list(fdef):
 
 def list_fludefs(model):
     """
-    列出模型中流体的定义
+    列出模型中流体的定义。
+
+    Args:
+        model: 渗流模型对象，用于获取流体定义。
+
+    Returns:
+        dict: 包含所有流体定义的字典，键为流体名，值为该流体的组分属性字典。
     """
     data = {}
     for i in range(model.fludef_number):
@@ -893,6 +1306,12 @@ def list_fludefs(model):
 def seepage2txt(path=None, processes=None):
     """
     将seepage文件转化为txt （注意，文件必须存储在models中）
+    Args:
+        path: 要转换的文件路径，默认当前目录
+        processes: 并行进程数，默认None
+
+    Returns:
+        None
     """
     from zmlx.alg.fsys import change_fmt
     if path is None:
@@ -918,9 +1337,12 @@ def txt2seepage(path=None, processes=None):
 
 def _get_names(f_def: Seepage.FluDef):
     """
-    返回给定流体定义的所有的组分的名字
-    :param f_def: 流体定义
-    :return: 如果f_def没有组分，则返回f_def的名字；否则，将所有组分的名字作为list返回
+    返回给定流体定义的所有的组分的名字 (since 2024-7-25)
+    Args:
+        f_def: 流体定义
+
+    Returns:
+        如果f_def没有组分，则返回f_def的名字；否则，将所有组分的名字作为list返回
     """
     if f_def.component_number == 0:
         return f_def.name
@@ -935,14 +1357,13 @@ def _flatten_comp(name):
     """
     用在list_comp中，去除组分的结构
 
-    参数:
-    - name: 组分的名字，可以是字符串或列表
+    Args:
+        name: 组分的名字，可以是字符串或列表
 
-    返回值:
-    - 一个列表，包含所有组分的名字，去除了嵌套结构
-
-    如果输入的是字符串，则直接返回一个包含该字符串的列表；
-    如果输入的是列表，则遍历该列表，递归地展开所有嵌套的子列表，并将结果合并成一个平面列表。
+    Returns:
+        一个列表，包含所有组分的名字，去除了嵌套结构
+        如果输入的是字符串，则直接返回一个包含该字符串的列表；
+        如果输入的是列表，则遍历该列表，递归地展开所有嵌套的子列表，并将结果合并成一个平面列表。
     """
     if isinstance(name, str):
         return [name]
@@ -956,10 +1377,13 @@ def _flatten_comp(name):
 
 def list_comp(model: Seepage, keep_structure=True):
     """
-    列出所有组分的名字
-    :param keep_structure: 返回的结构是否保持流体的结构 (since 2024-7-25)
-    :param model: 需要列出组分的模型
-    :return: 所有组分的名字作为list返回(注意，会维持流体和组分的组成结构)
+    列出所有组分的名字 (since 2024-7-25)
+    Args:
+        keep_structure: 返回的结构是否保持流体的结构 (since 2024-7-25)
+        model: 需要列出组分的模型
+
+    Returns:
+        所有组分的名字作为list返回(注意，会维持流体和组分的组成结构)
     """
     names = []
     for idx in range(model.fludef_number):
@@ -1000,28 +1424,27 @@ def get_cell_mask(model: Seepage, xr=None, yr=None, zr=None):
     """
     返回给定坐标范围内的cell的index。主要用来辅助绘图。since 2024-6-12
 
-    参数:
-    - model: Seepage 模型对象
-    - xr: x 坐标范围（可选）
-    - yr: y 坐标范围（可选）
-    - zr: z 坐标范围（可选）
+    Args:
+        model: Seepage 模型对象
+        xr: x 坐标范围（可选）
+        yr: y 坐标范围（可选）
+        zr: z 坐标范围（可选）
 
-    返回值:
-    - 一个列表，包含给定坐标范围内的单元格索引
-
-    如果 xr、yr 或 zr 为 None，则表示该方向上没有限制
+    Returns:
+        一个列表，包含给定坐标范围内的单元格索引
+        如果 xr、yr 或 zr 为 None，则表示该方向上没有限制
     """
 
     def get_(v, r):
         """
         辅助函数，用于判断每个坐标是否在给定范围内
 
-        参数:
-        - v: 坐标值列表
-        - r: 坐标范围（可选）
+        Args:
+            v: 坐标值列表
+            r: 坐标范围（可选）
 
-        返回值:
-        - 一个列表，包含每个坐标是否在给定范围内的布尔值
+        Returns:
+            一个列表，包含每个坐标是否在给定范围内的布尔值
         """
         if r is None:
             return [True] * len(v)  # 此时为所有
@@ -1041,16 +1464,15 @@ def get_cell_pos(model: Seepage, dim, mask=None, shape=None):
     """
     返回cell的位置向量
 
-    参数:
-    - model: Seepage 模型对象
-    - dim: 维度索引（0, 1, 2 分别对应 x, y, z 维度）
-    - mask: 可选的掩码，用于筛选特定的单元格
-    - shape: 可选的形状，用于将结果重新整形为指定的维度
+    Args:
+        model: Seepage 模型对象
+        dim: 维度索引（0, 1, 2 分别对应 x, y, z 维度）
+        mask: 可选的掩码，用于筛选特定的单元格
+        shape: 可选的形状，用于将结果重新整形为指定的维度
 
-    返回值:
-    - 一个 numpy 数组，包含给定维度上单元格的位置向量
-
-    如果 mask 为 None，则返回所有单元格的位置向量；否则，返回掩码指定的单元格的位置向量
+    Returns:
+        一个 numpy 数组，包含给定维度上单元格的位置向量
+        如果 mask 为 None，则返回所有单元格的位置向量；否则，返回掩码指定的单元格的位置向量
     """
     assert 0 <= dim < 3, 'dim must be 0, 1, or 2'
     v = as_numpy(model).cells.get(-(dim + 1))
@@ -1112,14 +1534,13 @@ def get_cell_pre(model: Seepage, mask=None, shape=None):
     """
     返回模型中单元格的压力值。
 
-    参数:
-    - model: Seepage 模型对象
-    - mask: 可选的掩码，用于筛选特定的单元格
-    - shape: 可选的形状，用于将结果重新整形为指定的维度
-
-    返回值:
-    - 一个 numpy 数组，包含模型中所有单元格的压力值。
-    - 如果提供了掩码，则返回掩码指定的单元格的压力值。
+    Args:
+        model: Seepage 模型对象
+        mask: 可选的掩码，用于筛选特定的单元格
+        shape: 可选的形状，用于将结果重新整形为指定的维度
+    Returns:
+        一个 numpy 数组，包含模型中所有单元格的压力值。
+        如果提供了掩码，则返回掩码指定的单元格的压力值。
     """
     v = as_numpy(model).cells.pre
     res = v if mask is None else v[mask]
@@ -1135,14 +1556,13 @@ def get_cell_temp(model: Seepage, mask=None, shape=None):
     """
     返回模型中单元格的温度值。
 
-    参数:
-    - model: Seepage 模型对象
-    - mask: 可选的掩码，用于筛选特定的单元格
-    - shape: 可选的形状，用于将结果重新整形为指定的维度
-
-    返回值:
-    - 一个 numpy 数组，包含模型中所有单元格的温度值。
-    - 如果提供了掩码，则返回掩码指定的单元格的温度值。
+    Args:
+        model: Seepage 模型对象
+        mask: 可选的掩码，用于筛选特定的单元格
+        shape: 可选的形状，用于将结果重新整形为指定的维度
+    Returns:
+        一个 numpy 数组，包含模型中所有单元格的温度值。
+        如果提供了掩码，则返回掩码指定的单元格的温度值。
     """
     v = as_numpy(model).cells.get(model.get_cell_key('temperature'))
     res = v if mask is None else v[mask]
@@ -1158,16 +1578,15 @@ def get_cell_fv(model: Seepage, fid=None, mask=None, shape=None):
     """
     返回模型中单元格的流体体积。
 
-    参数:
-    - model: Seepage 模型对象
-    - fid: 流体 ID（可选），如果未提供，则返回所有流体的总体积
-    - mask: 可选的掩码，用于筛选特定的单元格
-    - shape: 可选的形状，用于将结果重新整形为指定的维度
-
-    返回值:
-    - 一个 numpy 数组，包含模型中所有单元格的流体体积。
-    - 如果提供了流体 ID，则返回该流体在所有单元格中的体积。
-    - 如果提供了掩码，则返回掩码指定的单元格的流体体积。
+    Args:
+        model: Seepage 模型对象
+        fid: 流体 ID（可选），如果未提供，则返回所有流体的总体积
+        mask: 可选的掩码，用于筛选特定的单元格
+        shape: 可选的形状，用于将结果重新整形为指定的维度
+    Returns:
+        一个 numpy 数组，包含模型中所有单元格的流体体积。
+        如果提供了流体 ID，则返回该流体在所有单元格中的体积。
+        如果提供了掩码，则返回掩码指定的单元格的流体体积。
     """
     if fid is None:
         v = as_numpy(model).cells.fluid_vol
@@ -1190,17 +1609,15 @@ get_v = get_cell_fv
 def get_cell_fm(model: Seepage, fid=None, mask=None, shape=None):
     """
     返回模型中单元格的流体质量。
-
-    参数:
-    - model: Seepage 模型对象
-    - fid: 流体 ID（可选），如果未提供，则返回所有流体的总质量
-    - mask: 可选的掩码，用于筛选特定的单元格
-    - shape: 可选的形状，用于将结果重新整形为指定的维度
-
-    返回值:
-    - 一个 numpy 数组，包含模型中所有单元格的流体质量。
-    - 如果提供了流体 ID，则返回该流体在所有单元格中的质量。
-    - 如果提供了掩码，则返回掩码指定的单元格的流体质量。
+    Args:
+        model: Seepage 模型对象
+        fid: 流体 ID（可选），如果未提供，则返回所有流体的总质量
+        mask: 可选的掩码，用于筛选特定的单元格
+        shape: 可选的形状，用于将结果重新整形为指定的维度
+    Returns:
+        一个 numpy 数组，包含模型中所有单元格的流体质量。
+        如果提供了流体 ID，则返回该流体在所有单元格中的质量。
+        如果提供了掩码，则返回掩码指定的单元格的流体质量。
     """
     if fid is None:
         v = as_numpy(model).cells.fluid_mass
@@ -1224,16 +1641,15 @@ def get_ca(model: Seepage, ca, mask=None, shape=None):
     """
     返回cell的属性
 
-    参数:
-    - model: Seepage 模型对象
-    - ca: 单元格属性索引（例如 CellAttrs.temperature）
-    - mask: 可选的掩码，用于筛选特定的单元格
-    - shape: 可选的形状，用于将结果重新整形为指定的维度
+    Args:
+        model: Seepage 模型对象
+        ca: 单元格属性索引（例如 CellAttrs.temperature）
+        mask: 可选的掩码，用于筛选特定的单元格
+        shape: 可选的形状，用于将结果重新整形为指定的维度
 
-    返回值:
-    - 一个 numpy 数组，包含给定维度上单元格的位置向量
-
-    如果 mask 为 None，则返回所有单元格的位置向量；否则，返回掩码指定的单元格的位置向量
+    Returns:
+        一个 numpy 数组，包含给定维度上单元格的属性值
+        如果 mask 为 None，则返回所有单元格的属性值；否则，返回掩码指定的单元格的属性值
     """
     v = as_numpy(model).cells.get(ca)
     res = v if mask is None else v[mask]
@@ -1246,16 +1662,16 @@ def get_den(model: Seepage, fid, mask=None, shape=None):
     """
     返回模型中单元格的流体密度。
 
-    参数:
-    - model: Seepage 模型对象
-    - fid: 流体 ID（可选），如果未提供，则返回所有流体的总密度
-    - mask: 可选的掩码，用于筛选特定的单元格
-    - shape: 可选的形状，用于将结果重新整形为指定的维度
+    Args:
+        model: Seepage 模型对象
+        fid: 流体 ID（可选），如果未提供，则返回所有流体的总密度
+        mask: 可选的掩码，用于筛选特定的单元格
+        shape: 可选的形状，用于将结果重新整形为指定的维度
 
-    返回值:
-    - 一个 numpy 数组，包含模型中所有单元格的流体密度。
-    - 如果提供了流体 ID，则返回该流体在所有单元格中的密度。
-    - 如果提供了掩码，则返回掩码指定的单元格的流体密度。
+    Returns:
+        一个 numpy 数组，包含模型中所有单元格的流体密度。
+        如果提供了流体 ID，则返回该流体在所有单元格中的密度。
+        如果提供了掩码，则返回掩码指定的单元格的流体密度。
     """
     if isinstance(fid, str):
         fid = model.find_fludef(name=fid)
@@ -1273,11 +1689,11 @@ def set_fa(model: Seepage, fid, fa, value):
     """
     设置模型中单元格的流体属性值。
 
-    参数:
-    - model: Seepage 模型对象
-    - fid: 流体 ID（可选），如果未提供，则设置所有流体的总属性值
-    - fa: 流体属性索引（例如 FluidAttrs.density）
-    - value: 要设置的属性值
+    Args:
+        model: Seepage 模型对象
+        fid: 流体 ID（可选），如果未提供，则设置所有流体的总属性值
+        fa: 流体属性索引（例如 FluidAttrs.density）
+        value: 要设置的属性值
     """
     if isinstance(fid, str):
         fid = model.find_fludef(name=fid)
@@ -1291,17 +1707,17 @@ def get_fa(model: Seepage, fid, fa, mask=None, shape=None):
     """
     返回模型中单元格的流体属性值。
 
-    参数:
-    - model: Seepage 模型对象
-    - fid: 流体 ID（可选），如果未提供，则返回所有流体的总属性值
-    - fa: 流体属性索引（例如 FluidAttrs.density）
-    - mask: 可选的掩码，用于筛选特定的单元格
-    - shape: 可选的形状，用于将结果重新整形为指定的维度
+    Args:
+        model: Seepage 模型对象
+        fid: 流体 ID（可选），如果未提供，则返回所有流体的总属性值
+        fa: 流体属性索引（例如 FluidAttrs.density）
+        mask: 可选的掩码，用于筛选特定的单元格
+        shape: 可选的形状，用于将结果重新整形为指定的维度
 
-    返回值:
-    - 一个 numpy 数组，包含模型中所有单元格的流体属性值。
-    - 如果提供了流体 ID，则返回该流体在所有单元格中的属性值。
-    - 如果提供了掩码，则返回掩码指定的单元格的流体属性值。
+    Returns:
+        一个 numpy 数组，包含模型中所有单元格的流体属性值。
+        如果提供了流体 ID，则返回该流体在所有单元格中的属性值。
+        如果提供了掩码，则返回掩码指定的单元格的流体属性值。
     """
     if isinstance(fid, str):
         fid = model.find_fludef(name=fid)
@@ -1317,20 +1733,19 @@ def get_fa(model: Seepage, fid, fa, mask=None, shape=None):
 def _pop_sat(name, table: dict):
     """
     从饱和度表中获取指定流体或流体组分的饱和度值。
+    Args:
+        name: 流体或流体组分的名称，可以是字符串或列表。
+        table: 饱和度表，一个字典，其中键是流体或流体组分的名称，值是对应的饱和度值。
 
-    参数:
-    - name: 流体或流体组分的名称，可以是字符串或列表。
-    - table: 饱和度表，一个字典，其中键是流体或流体组分的名称，值是对应的饱和度值。
-
-    返回值:
-    - 如果 name 是字符串，则返回该流体的饱和度值；如果 name 是列表，
-    则返回一个列表，包含每个流体组分的饱和度值。
-    - 如果指定的流体或流体组分名称不在饱和度表中，则返回默认值 0.0。
-
-    该函数首先检查 name 是否为字符串。如果是字符串，它会验证名称是否为空，
-    并从饱和度表中获取相应的饱和度值。如果 name 不在表中，它会返回默认值 0.0。
-    如果 name 是列表，函数会遍历列表中的每个元素，递归调用 _pop_sat
-    函数获取每个流体组分的饱和度值，并将这些值收集到一个列表中返回。
+    Returns:
+        如果 name 是字符串，则返回该流体的饱和度值；如果 name 是列表，
+        则返回一个列表，包含每个流体组分的饱和度值。
+    Notes:
+        如果指定的流体或流体组分名称不在饱和度表中，则返回默认值 0.0。
+        该函数首先检查 name 是否为字符串。如果是字符串，它会验证名称是否为空，
+        并从饱和度表中获取相应的饱和度值。如果 name 不在表中，它会返回默认值 0.0。
+        如果 name 是列表，函数会遍历列表中的每个元素，递归调用 _pop_sat
+        函数获取每个流体组分的饱和度值，并将这些值收集到一个列表中返回。
     """
     if isinstance(name, str):
         assert len(name) > 0, 'fluid name not set'
@@ -1345,9 +1760,14 @@ def _pop_sat(name, table: dict):
 def get_sat(names, table: dict):
     """
     返回各个组分的饱和度数值
-    :param names: 组分的名字列表
-    :param table: 饱和度表
-    :return: 各个组分的饱和度（维持和name相同的结构，默认为0）
+    Args:
+        names: 组分的名字列表
+        table: 饱和度表
+
+    Returns:
+        各个组分的饱和度（维持和name相同的结构，默认为0）
+    Notes:
+        如果指定的流体或流体组分名称不在饱和度表中，则返回默认值 0.0。
     """
     the_copy = table.copy()
     values = _pop_sat(names, the_copy)
@@ -1364,19 +1784,20 @@ def get_recommended_dt(
     """
     在调用了 iterate 函数之后，调用此函数，来获取更优的时间步长。
 
-    参数:
-    - model: Seepage 模型对象
-    - previous_dt: 之前的时间步长
-    - dv_relative: 相对体积变化率，默认为 0.1
-    - using_flow: 是否使用流动模型，默认为 True
-    - using_ther: 是否使用热模型，默认为 True
+    Args:
+        model: Seepage 模型对象
+        previous_dt: 之前的时间步长
+        dv_relative: 相对体积变化率，默认为 0.1
+        using_flow: 是否使用流动模型，默认为 True
+        using_ther: 是否使用热模型，默认为 True
 
-    返回值:
-    - 更优的时间步长
+    Returns:
+        更优的时间步长
 
-    该函数首先断言 `using_flow` 或 `using_ther` 至少有一个为真。
-    然后，根据是否使用流动模型和热模型，分别计算推荐的时间步长 `dt1` 和 `dt2`。
-    最后，返回 `dt1` 和 `dt2` 中的较小值。
+    Notes:
+        该函数首先断言 `using_flow` 或 `using_ther` 至少有一个为真。
+        然后，根据是否使用流动模型和热模型，分别计算推荐的时间步长 `dt1` 和 `dt2`。
+        最后，返回 `dt1` 和 `dt2` 中的较小值。
     """
     assert using_flow or using_ther
     if using_flow:
@@ -1398,71 +1819,9 @@ def get_recommended_dt(
     return min(dt1, dt2)
 
 
-def _get_reports(reports):
-    """
-    解析并返回计算的报告
-    """
-    results = []
-    for r in reports:
-        results.append(None if r is None else r.to_dict())
-    return results
-
-
-def parallel_update_flow(*local_kwargs, pool=None, **global_kwargs):
-    """
-    对于多个模型，并行地更新模型的流场 (如果没有给定pool，则不并行)
-    """
-    reports = []
-
-    for opts in local_kwargs:  # 执行检查
-        assert isinstance(opts, dict), f'The type of opts is not dict. Opts = {opts}'
-        kwargs = global_kwargs.copy()
-        kwargs.update(opts)
-
-        model = kwargs.pop('model')  # 此参数必须给定
-        assert isinstance(model, Seepage), f'The model is not Seepage. model = {model}'
-
-        if model.not_has_tag('disable_flow') and model.fludef_number > 0:
-            reports.append(Map())
-            model.iterate(**kwargs, pool=pool, report=reports[-1])
-        else:
-            reports.append(None)
-
-    if pool is not None:
-        pool.sync()  # 等待放入pool中的任务执行完毕
-
-    return _get_reports(reports)
-
-
-def parallel_update_thermal(*local_kwargs, pool=None, **global_kwargs):
-    """
-    对于多个模型，并行地更新模型的温度场
-    """
-    reports = []
-
-    for opts in local_kwargs:  # 执行检查
-        assert isinstance(opts, dict)
-        kwargs = global_kwargs.copy()
-        kwargs.update(opts)
-
-        model = kwargs.pop('model')
-        assert isinstance(model, Seepage)
-
-        dt = kwargs.pop('dt')
-        ca_t = kwargs.pop('ca_t')
-        ca_mc = kwargs.pop('ca_mc')
-        fa_g = kwargs.pop('fa_g')
-
-        if model.has_tag('disable_ther') or dt <= 0 or ca_t is None or ca_mc is None or fa_g is None:
-            reports.append(None)
-        else:
-            reports.append(Map())
-            model.iterate_thermal(dt=dt, ca_t=ca_t, ca_mc=ca_mc, fa_g=fa_g, pool=pool, report=reports[-1])
-
-    if pool is not None:
-        pool.sync()  # 等待放入pool中的任务执行完毕
-
-    return _get_reports(reports)
+# backward compatibility
+parallel_update_flow = iterate_flow
+parallel_update_thermal = iterate_thermal
 
 
 class CellCopyTask:

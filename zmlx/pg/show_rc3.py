@@ -4,8 +4,7 @@
 """
 
 import zmlx.alg.sys as warnings
-
-from zmlx.base.zml import is_array
+from zml import is_array
 from zmlx.alg.base import clamp
 from zmlx.geometry import rect_3d as rect3
 from zmlx.geometry.base import point_distance as get_distance
@@ -21,7 +20,7 @@ def show_rc3(rc3, color=None, alpha=None, cmap=None, caption=None, on_top=None,
     显示一组三维的离散裂缝网络
         gl_option:  opaque, translucent, additive
     """
-    if not gui.exists():
+    if not gui:
         return
 
     if len(rc3) <= 0:

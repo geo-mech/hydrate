@@ -21,7 +21,7 @@ def log_deprecated(name):
     Returns:
         None
     """
-    from zmlx.base.zml import log
+    from zml import log
     log(f'The deprecated used: {name}', tag=f'{name}.deprecated_used')
 
 
@@ -42,7 +42,7 @@ def warn(message, category=None, stacklevel=1, tag=None):
     if tag is None:
         tag = message
     if isinstance(tag, str):
-        from zmlx.base.zml import log
+        from zml import log
         log(text=message, tag=f'{tag}.warn')
 
 
@@ -336,7 +336,7 @@ def create_shortcut(target: str, path: str,
         description (str): 快捷方式描述（可选）
     """
     try:
-        from zmlx.base.zml import in_windows
+        from zml import in_windows
         if not in_windows():
             print(f'The function create_shortcut works only for Windows')
             return
@@ -469,7 +469,7 @@ def srand(seed):
     设置Python和zml内核的随机数种子.  2023-9-25
     """
     import random
-    from zmlx.base.zml import set_srand
+    from zml import set_srand
 
     random.seed(seed)
     set_srand(seed)
@@ -531,7 +531,7 @@ def first_execute(name, key=None):
     检查给定的文件是否是第一次运行（只有在首次启动first_execute函数的时候返回True）.
     其中name为文件的全路径。key为在app_data中存储的名字。
     """
-    from zmlx.base.zml import app_data
+    from zml import app_data
     if name is None:
         name = ''
     if key is None:

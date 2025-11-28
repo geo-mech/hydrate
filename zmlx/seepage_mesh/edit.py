@@ -3,7 +3,7 @@
 
 since 2025-2-6
 """
-from zmlx.base.zml import SeepageMesh
+from zml import SeepageMesh
 
 
 def add_cell_face(mesh: SeepageMesh, *, offset, pos=None, cell=None, vol=1.0,

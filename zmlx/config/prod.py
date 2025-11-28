@@ -1,16 +1,16 @@
 """
-控制用来生产的Cell的压力
+控制用来生产的Cell的压力.
 """
 
+from zml import clock
 from zmlx.alg.interp import interp1
-from zmlx.base.seepage import get_time
-from zmlx.base.zml import Seepage
+from zmlx.base.seepage import get_time, Seepage
 from zmlx.config.alg import settings
 
 text_key = 'prod_settings'
 
 
-def modify_pore(cell: Seepage.CellData, target_fp):
+def _modify_pore(cell: Seepage.CellData, target_fp):
     """
     通过调整pore的方式来控制压力
     """
@@ -38,7 +38,7 @@ def add_setting(model: Seepage,
                 index=None, pos=None, t=None, p=None):
     """
     添加设置. 其中index为cell的序号
-    (当index为None的时候，使用pos最为接近的Cell)
+        (当index为None的时候，使用pos最为接近的Cell)
     """
     if index is None and pos is not None:
         # 当index没有给定的时候，使用pos来找到最为接近的index
@@ -70,27 +70,32 @@ def add_setting(model: Seepage,
             set_settings(model, data=data)
 
 
-def iterate(model: Seepage, time=None):
+@clock
+def iterate(*models):
     """
-    更新pore
+    根据此刻的时间来更新pore。
+    注意：
+        后续，这个函数有效率优化的空间。这里，可能会有一个比较长的
+        向量以文本的形式存储。这可能会带来一定的计算消耗。
     """
-    data = get_settings(model)
-    if len(data) == 0:
-        return
+    for model in models:
+        assert isinstance(model, Seepage), f'The model is not Seepage. model = {model}'
 
-    if time is None:
         time = get_time(model)
+        data = get_settings(model)
+        if len(data) == 0:
+            continue
 
-    assert isinstance(data, list)
-    for item in data:
-        try:
-            assert isinstance(item, dict)
-            index = item.get('index')
-            if index < model.cell_number:
-                t = item.get('time')
-                p = item.get('pressure')
-                target_fp = interp1(x=t, y=p, xq=time)  # 获取此刻的目标压力
-                if target_fp > 0:  # 压力必须大于0
-                    modify_pore(cell=model.get_cell(index), target_fp=target_fp)
-        except Exception as err:  # 打印错误，但是不中断执行.
-            print(err)
+        assert isinstance(data, list)
+        for item in data:
+            try:
+                assert isinstance(item, dict)
+                index = item.get('index')
+                if index < model.cell_number:
+                    t = item.get('time')
+                    p = item.get('pressure')
+                    target_fp = interp1(x=t, y=p, xq=time)  # 获取此刻的目标压力
+                    if target_fp > 0:  # 压力必须大于0
+                        _modify_pore(cell=model.get_cell(index), target_fp=target_fp)
+            except Exception as err:  # 打印错误，但是不中断执行.
+                print(err)

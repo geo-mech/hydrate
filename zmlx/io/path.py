@@ -1,7 +1,7 @@
 import os
 
 import zmlx.alg.sys as warnings
-from zmlx.base.zml import app_data, get_dir, is_chinese, make_parent, make_dirs
+from zml import app_data, get_dir, is_chinese, make_parent, make_dirs
 from zmlx.alg.fsys import in_directory, join_paths
 
 
@@ -56,6 +56,10 @@ def get_path(*args, tag=None, key=None):
     if not in_directory(path, os.path.join(get_dir(), 'zmlx')):  # 确保不在脚本目录内输出.
         return make_parent(path)
     return None
+
+
+# 别名
+opath = get_path
 
 
 def set_path(folder=None, tag=None, key=None):

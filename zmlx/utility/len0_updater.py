@@ -1,4 +1,4 @@
-from zmlx.base.zml import Vector, SpringSys, Seepage, ElementMap, np
+from zml import Vector, SpringSys, Seepage, ElementMap, np
 
 
 class Len0Updater:

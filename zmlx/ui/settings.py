@@ -4,7 +4,7 @@
 
 import os
 
-from zmlx.base.zml import app_data, read_text, write_text, get_hash
+from zml import app_data, read_text, write_text
 from zmlx.alg.base import clamp
 from zmlx.io.json_ex import read as read_json
 from zmlx.ui.alg import get_current_screen_geometry
@@ -270,6 +270,7 @@ def _set_saved_geometry(win: QtWidgets.QMainWindow, words, scale=None):
     except Exception as err:
         print(f"Error: \nfunction _set_saved_geometry in {__file__}. Message: {err}")
         _set_default_geometry(win)
+
 
 def load_window_size(win: QtWidgets.QMainWindow):
     try:

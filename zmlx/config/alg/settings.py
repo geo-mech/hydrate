@@ -6,7 +6,7 @@
 这个模块，就是处理这些“操作”的配置参数的。对于每一类操作，我们定义，它的参数格式，必须是 list[dict]这样的形式。其中list的每一个
 元素，都代表这一类操作中的一个（每一类的操作都可以有很多个）；而每个dict，都代表这一个操作的参数。
 """
-from zmlx.base.zml import Seepage
+from zml import Seepage
 
 
 def get(model: Seepage, *, text_key: str) -> list:

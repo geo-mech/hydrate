@@ -7,7 +7,7 @@
 @2025-11-20  张召彬
 """
 
-from zmlx.base.zml import Seepage
+from zml import Seepage
 
 
 def create_solute(
@@ -95,7 +95,7 @@ def test():
     flu.get_component(1).vis = solute.get_vis(10e6, 300)
 
     # 计算溶液的密度和粘性随着浓度的变化趋势
-    vx = np.linspace(0.0, c*2, 100)
+    vx = np.linspace(0.0, c * 2, 100)
     y1 = []
     y2 = []
 

@@ -1,6 +1,6 @@
 import timeit
-import zmlx.alg.sys as warnings
 
+import zmlx.alg.sys as warnings
 from zmlx.alg.base import time2str, clamp
 from zmlx.ui import gui
 

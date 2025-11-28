@@ -44,7 +44,7 @@ def test(t_ini=510):
     except ImportError:
         np = None
     print(f'\n\nTest when initial temperature is {t_ini}')
-    from zmlx.base.zml import Seepage, get_pointer64
+    from zml import Seepage, get_pointer64
 
     model = Seepage()
     cell = model.add_cell()

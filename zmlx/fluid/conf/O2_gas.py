@@ -6,11 +6,10 @@
 Specific Heat of Oxigen Gas  from:
 https://www.engineeringtoolbox.com/oxygen-d_978.html
 """
-import zmlx.alg.sys as warnings
-
 import matplotlib.pyplot as plt
 
-from zmlx.base.zml import Interp2, Seepage, np
+import zmlx.alg.sys as warnings
+from zml import Interp2, Seepage, np
 from zmlx.fluid.conf.gas_density.O2_density import *
 from zmlx.fluid.conf.gas_viscosity.O2_viscosity import *
 

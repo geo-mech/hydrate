@@ -3,7 +3,6 @@ from zmlx.fluid.nist.ch4 import create
 
 
 def main():
-    gui.hide_console()
     flu = create(name='ch4')
     filename = app_data.temp('ch4.xml')
     flu.save(filename)

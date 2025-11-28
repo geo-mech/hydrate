@@ -2,7 +2,7 @@
 计算各个face的刚度矩阵（使用x和y坐标），并且存储到给定的Vector里面.
 """
 
-from zmlx.base.zml import Vector, Mesh3
+from zml import Vector, Mesh3
 from zmlx.fem.attr_getter import attr_getter
 from zmlx.fem.stiff2 import stiff2
 

@@ -42,7 +42,7 @@ def get_velocity_after_slowdown_by_viscosity(v0, a0, time):
 
 def test():
     from random import uniform
-    from zmlx.base.zml import Alg
+    from zml import Alg
     for _ in range(100):
         v0 = uniform(-100, 100)
         a0 = uniform(-100, 100)

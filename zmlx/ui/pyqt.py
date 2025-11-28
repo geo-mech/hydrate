@@ -1,6 +1,6 @@
 import sys
 
-from zmlx.base.zml import app_data
+from zml import app_data
 
 qt_name = None
 

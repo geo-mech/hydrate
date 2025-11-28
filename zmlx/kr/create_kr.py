@@ -1,9 +1,9 @@
+import zmlx.alg.sys as warnings
 from zmlx.kr.base import create_kr
 
-import zmlx.alg.sys as warnings
-
-warnings.warn(f'The module {__name__} is deprecated and will be removed after 2026-4-15, please import from "zmlx" instead. ',
-              DeprecationWarning, stacklevel=2)
+warnings.warn(
+    f'The module {__name__} is deprecated and will be removed after 2026-4-15, please import from "zmlx" instead. ',
+    DeprecationWarning, stacklevel=2)
 
 
 def _test1():

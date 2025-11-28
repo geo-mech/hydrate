@@ -1,6 +1,6 @@
 import os
 
-from zmlx.base.zml import make_parent
+from zml import make_parent
 from zmlx.alg.fsys import join_paths
 
 

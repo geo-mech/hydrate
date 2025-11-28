@@ -6,9 +6,9 @@
 张召彬 2023-6-21
 """
 
+from zmlx.geometry.point import point_distance as get_distance
 from zmlx.geometry.rect_v3 import get_area as v3_area, \
     intersected as v3_intersected
-from zmlx.geometry.point import point_distance as get_distance
 
 _keep = [v3_area, v3_intersected]
 
@@ -148,6 +148,22 @@ def get_cent(rc3):
     """
     if rc3 is not None:
         return rc3[0: 3]
+    else:
+        return None
+
+
+def get_p0(rc3):
+    if rc3 is not None:
+        return rc3[3: 6]
+    else:
+        return None
+
+
+def get_p1(rc3):
+    if rc3 is not None:
+        return rc3[6: 9]
+    else:
+        return None
 
 
 def get_area(rc3):
@@ -159,6 +175,8 @@ def get_area(rc3):
         a = get_distance(rc3[0: 3], rc3[3: 6])
         b = get_distance(rc3[0: 3], rc3[6: 9])
         return a * b * 4.0
+    else:
+        return None
 
 
 def __cen(x, y):
@@ -167,6 +185,8 @@ def __cen(x, y):
     """
     if x is not None and y is not None:
         return [(x[i] + y[i]) / 2 for i in range(3)]
+    else:
+        return None
 
 
 def __sym(c, x):
@@ -175,14 +195,16 @@ def __sym(c, x):
     """
     if c is not None and x is not None:
         return [c[i] * 2 - x[i] for i in range(3)]
+    else:
+        return None
 
 
 def get_vertexes(rc3):
     """
-    返回三维矩形4个顶点的坐标.
+    按照顺序，返回三维矩形4个顶点的坐标.
     """
     if rc3 is None:
-        return
+        return None
 
     p0 = rc3[0: 3]  # 中心点
     p1 = rc3[3: 6]

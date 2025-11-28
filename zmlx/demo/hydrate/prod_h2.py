@@ -2,6 +2,7 @@
 
 
 from zmlx import *
+from zmlx.config.hydrate import show_2d_v2
 
 
 def create(jx, jy, xr=None, yr=None):
@@ -53,40 +54,13 @@ def create(jx, jy, xr=None, yr=None):
 
 
 def show(model: Seepage, jx, jy, caption=None):
-    def on_figure(fig):
-        opts = dict(ncols=2, nrows=2, xlabel='x', ylabel='y', aspect='equal')
-        mask = seepage.get_cell_mask(model=model, zr=[-1, 1])
-        x = seepage.get_x(model, shape=[jx, jy], mask=mask)
-        y = seepage.get_y(model, shape=[jx, jy], mask=mask)
-        args = ['contourf', x, y, ]
-        t = seepage.get_t(model, shape=[jx, jy], mask=mask)
-        add_axes2(fig, add_items,
-                  item(*args, t, cbar=dict(label='温度', shrink=0.6), cmap='coolwarm'),
-                  title='温度', index=1, **opts)
-        p = seepage.get_p(model, shape=[jx, jy], mask=mask)
-        add_axes2(fig, add_items,
-                  item(*args, p, cbar=dict(label='压力', shrink=0.6), cmap='coolwarm'),
-                  title='压力', index=2, **opts)
-        v = seepage.get_v(model, shape=[jx, jy], mask=mask)
-        index = 3
-        for fid in ['ch4', 'ch4_hydrate']:
-            s = seepage.get_v(model, fid=fid, shape=[jx, jy], mask=mask) / v
-            add_axes2(fig, add_items,
-                      item(*args, s, cbar=dict(label=f'{fid}饱和度', shrink=0.6), levels=30),
-                      title=f'{fid}饱和度', index=index, **opts)
-            index += 1
-
-    plot(on_figure, caption=caption, clear=True,
-         suptitle=f'time = {seepage.get_time_str(model)}'
-         )
+    show_2d_v2(model, shape=(jx, jy), dim0=0, dim1=1, zr=[-1, 1], caption=caption)
 
 
 def main():
     jx, jy = 70, 50
     model = create(jx, jy, xr=[-70, 70], yr=[-50, 50])
-    gui.hide_console()
-    show(model, jx, jy, caption='初始状态')
-    seepage.solve(model, extra_plot=lambda: show(model, jx, jy, caption='当前状态'))
+    seepage.solve(model, extra_plot=lambda: show(model, jx, jy))
 
 
 if __name__ == '__main__':

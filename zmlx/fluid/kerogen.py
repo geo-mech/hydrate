@@ -1,6 +1,6 @@
 import zmlx.alg.sys as warnings
 
-from zmlx.base.zml import Seepage
+from zml import Seepage
 
 
 def create_flu_v0():

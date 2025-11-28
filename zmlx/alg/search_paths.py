@@ -3,7 +3,7 @@ import os
 
 def get_paths():
     try:
-        from zmlx.base.zml import app_data
+        from zml import app_data
         paths = []
         for line in app_data.getenv(key='path', default='').splitlines():
             line = line.strip()
@@ -23,7 +23,7 @@ def add_path(paths, path):
 
 def save_paths(paths):
     try:
-        from zmlx.base.zml import app_data
+        from zml import app_data
         app_data.setenv('path', '\n'.join(paths))
     except:
         pass

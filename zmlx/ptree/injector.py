@@ -1,4 +1,4 @@
-from zmlx.base.zml import Seepage
+from zml import Seepage
 from zmlx.alg.fsys import *
 from zmlx.ptree.array import array
 from zmlx.ptree.fludata import fludata

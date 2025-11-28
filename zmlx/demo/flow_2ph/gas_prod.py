@@ -86,7 +86,7 @@ def show(model: Seepage, jx, jz, folder=None):
         add_axes2(*args, s, title='水饱和度', cbar=dict(label='Saturation', shrink=0.5), index=2, **opts)
 
     fname = make_fname(time=seepage.get_time(model) / (3600 * 24), folder=folder, ext='jpg', unit='d')
-    plot(on_figure, caption=f'Seepage(handle={model.handle})', clear=True, fname=fname, tight_layout=True)
+    plot(on_figure, caption=f'Seepage({model.handle})', clear=True, fname=fname, tight_layout=True)
 
 
 def main(folder=None):

@@ -6,7 +6,7 @@ from zmlx.plt.fig2 import plot2
 version = 250401
 
 
-def test_1():
+def test():
     """
     测试
     """
@@ -59,4 +59,4 @@ def test_1():
 
 
 if __name__ == '__main__':
-    test_1()
+    test()

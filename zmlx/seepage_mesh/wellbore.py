@@ -1,6 +1,6 @@
 from scipy.interpolate import interp1d
 
-from zmlx.base.zml import SeepageMesh, np
+from zml import SeepageMesh, np
 from zmlx.geometry.base import point_distance
 
 

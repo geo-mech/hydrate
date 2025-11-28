@@ -58,7 +58,7 @@ def create(jx, jz):
         dt_max=3600 * 24 * 30.0, gravity=(0, 0, -10)
     )
 
-    capillary.add(
+    capillary.add_setting(
         model, fid0='ch4', fid1='h2o', get_idx=get_region_id,
         data=[[[0, 1], [0, 1]],
               [[0, 1], [0, 5e6]]
@@ -74,7 +74,7 @@ def create(jx, jz):
     return model
 
 
-def show(model, jx, jz, caption=None):
+def show(model, jx, jz):
     def on_figure(fig):
         x = seepage.get_x(model, shape=(jx, jz))
         z = seepage.get_z(model, shape=(jx, jz))
@@ -100,14 +100,13 @@ def show(model, jx, jz, caption=None):
                        **opts)
         add_rect(ax)
 
-    plot(on_figure, caption=caption, suptitle=f'时间: {seepage.get_time(model, as_str=True)}', tight_layout=True)
+    plot(on_figure, caption=f'Seepage({model.handle})', suptitle=f'时间: {seepage.get_time(model, as_str=True)}', tight_layout=True)
 
 
 def main():
     jx, jz = 60, 100
     model = create(jx, jz)
-    gui.hide_console()
-    seepage.solve(model, extra_plot=lambda: show(model, jx, jz, caption='当前状态'))
+    seepage.solve(model, extra_plot=lambda: show(model, jx, jz))
 
 
 if __name__ == '__main__':

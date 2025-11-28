@@ -1,4 +1,4 @@
-from zmlx.base.zml import *
+from zml import *
 
 core = DllCore(dll_obj=load_cdll(name='frac.dll',
                                  first=os.path.dirname(__file__)))

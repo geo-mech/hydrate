@@ -6,7 +6,7 @@
 import ctypes
 import os
 
-import zmlx.base.zml as zml
+import zml
 
 dll = ctypes.cdll.LoadLibrary(
     os.path.join(os.path.dirname(__file__), 'fill_01.dll'))

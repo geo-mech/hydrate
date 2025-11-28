@@ -1,16 +1,16 @@
 """
 这里，定义在gui上绘图的顶层的函数，直接操作gui或者在控制台绘图.
 """
-from zmlx.base.zml import np
+
+from zmlx.io.xyz import load_xyz
 from zmlx.plt.contourf import contourf
 from zmlx.plt.curve2 import plotxy, plot_xy
 from zmlx.plt.dfn2 import show_dfn2
 from zmlx.plt.field2 import show_field2
 from zmlx.plt.fn2 import show_fn2
 from zmlx.plt.on_figure import add_axes2
-from zmlx.plt.tricontourf import tricontourf
+from zmlx.plt.tricontourf import tricontourf, add_tricontourf
 from zmlx.plt.trimesh import trimesh
-from zmlx.ui import plot
 
 _keep = [contourf, plotxy, plot_xy, show_dfn2, show_field2,
          tricontourf, show_fn2, trimesh
@@ -20,25 +20,25 @@ _keep = [contourf, plotxy, plot_xy, show_dfn2, show_field2,
 def tricontourf_(
         ax, x=None, y=None, z=None, ipath=None, ix=None, iy=None,
         iz=None,
-        triangulation=None, levels=20, cmap='coolwarm'):
+        triangulation=None, **opts):
     """
     利用给定的x，y，z来画一个二维的云图
     """
     if ipath is not None:
-        data = np.loadtxt(ipath, float)
-        if ix is not None:
-            x = data[:, ix]
-        if iy is not None:
-            y = data[:, iy]
-        if iz is not None:
-            z = data[:, iz]
+        x2, y2, z2 = load_xyz(ipath, ix=ix, iy=iy, iz=iz)
+        if x2 is not None:
+            x = x2
+        if y2 is not None:
+            y = y2
+        if z2 is not None:
+            z = z2
 
+    opts = {'antialiased': True, 'cmap': 'coolwarm', 'levels': 20,
+            **opts}
     if triangulation is None:
-        return ax.tricontourf(x, y, z, levels=levels, cmap=cmap,
-                              antialiased=True)
+        return add_tricontourf(ax, x, y, z, **opts)
     else:
-        return ax.tricontourf(triangulation, z, levels=levels,
-                              cmap=cmap, antialiased=True)
+        return add_tricontourf(ax, triangulation, z, **opts)
 
 
 kernels = {'tricontourf': tricontourf_}
@@ -88,4 +88,5 @@ def plot2(data=None, **opts):
                 print(f'plot failed: name={name}, '
                       f'args={args}, kwargs={kwargs}')
 
-    plot(add_axes2, on_axes, dim=2, **opts)
+    from zmlx.ui import plot
+    plot(add_axes2, on_axes, **opts)

@@ -13,7 +13,11 @@ def test():
         for _ in rc3:
             color.append(random.uniform(0, 1))
             alpha.append(random.uniform(0.3, 1))
-        show_rc3(rc3, face_color=color, face_alpha=alpha, caption='dfn_v3')
+        show_rc3(
+            rc3, face_color=color, face_alpha=alpha, caption='dfn_v3',
+            cbar=dict(label='Random Value', shrink=.7),
+            title='dfn_v3, Index = %d' % i,
+        )
 
 
 if __name__ == '__main__':
