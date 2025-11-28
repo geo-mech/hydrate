@@ -209,4 +209,3 @@ def setup_ui():
         gui.refresh_action('show_messages')
 
     gui.add_func('add_message', add_and_show)
-

@@ -6,9 +6,9 @@
 张召彬 2023-6-21
 """
 
+from zmlx.geometry.point import point_distance as get_distance
 from zmlx.geometry.rect_v3 import get_area as v3_area, \
     intersected as v3_intersected
-from zmlx.geometry.point import point_distance as get_distance
 
 _keep = [v3_area, v3_intersected]
 

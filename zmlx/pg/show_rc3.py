@@ -4,9 +4,8 @@
 """
 
 import zmlx.alg.sys as warnings
-
-from zmlx.base.zml import is_array
 from zmlx.alg.base import clamp
+from zmlx.base.zml import is_array
 from zmlx.geometry import rect_3d as rect3
 from zmlx.geometry.base import point_distance as get_distance
 from zmlx.pg.colormap import coolwarm

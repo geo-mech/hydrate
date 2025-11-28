@@ -15,7 +15,7 @@ def create(jx, jy):
         temperature=400.0,
         denc=1.0e6,
         heat_cond=1.0,
-        dt_max=3600*24*7,
+        dt_max=3600 * 24 * 7,
     )
     return model
 

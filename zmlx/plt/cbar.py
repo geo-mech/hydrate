@@ -3,6 +3,7 @@ try:
 except ImportError:
     cm = None
 
+
 def add_cbar(ax=None, *, label=None, cmap=None, clim=None, fig=None,
              shrink=None, **opts):
     """
@@ -39,4 +40,3 @@ def add_cbar(ax=None, *, label=None, cmap=None, clim=None, fig=None,
     bar = fig.colorbar(mappable, ax=ax, label=label,
                        shrink=shrink, **opts)
     return bar
-

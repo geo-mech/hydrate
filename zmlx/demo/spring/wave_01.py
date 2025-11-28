@@ -12,7 +12,7 @@ def create_model(triangles, x, y):
     virtual_nodes = []
     for i in range(len(x)):
         xx = 0.16
-        if xx-0.05 < x[i] < xx+0.05 and -0.3 < y[i] < 0.3:
+        if xx - 0.05 < x[i] < xx + 0.05 and -0.3 < y[i] < 0.3:
             v = -1 if x[i] < xx else 1
         else:
             v = 0

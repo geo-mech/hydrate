@@ -15,6 +15,7 @@ from zmlx.alg.search_paths import choose_path
 from zmlx.base.zml import (
     core, lic, get_dir, make_parent, reg, timer, app_data,
     write_text, read_text)
+from zmlx.ui import setup_files
 from zmlx.ui.alg import (
     add_code_history, create_action, add_exec_history,
     get_last_exec_history)
@@ -24,7 +25,6 @@ from zmlx.ui.pyqt import (
 from zmlx.ui.settings import (
     get_default_code, load_icon, get_text, play_error,
     load_priority, priority_value)
-from zmlx.ui import setup_files
 from zmlx.ui.utils import CodeFile, SharedValue, BreakPoint
 
 try:  # 尝试基于QsciScintilla实现Python编辑器

@@ -1,8 +1,8 @@
 import os
 from queue import Queue, Empty
 
-from zmlx.base.zml import read_text
 from zmlx.alg.sys import unique
+from zmlx.base.zml import read_text
 from zmlx.ui.alg import modify_file_exts
 from zmlx.ui.pyqt import QtCore, QtWidgets
 
@@ -519,7 +519,7 @@ class FileHandler(QtCore.QObject):
             if callable(new_file):
                 desc += ' ('
                 for i, ext in enumerate(exts):
-                    if i+1==len(exts):
+                    if i + 1 == len(exts):
                         desc += f'*{ext}'
                     else:
                         desc += f'*{ext}; '

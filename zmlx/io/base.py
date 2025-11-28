@@ -1,7 +1,7 @@
 import os
-import zmlx.alg.sys as warnings
 from io import StringIO
 
+import zmlx.alg.sys as warnings
 from zmlx.base.zml import make_dirs, make_parent, np
 
 

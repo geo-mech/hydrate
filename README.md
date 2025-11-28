@@ -19,7 +19,9 @@
 
 ### 反馈
 
-技术问题(bug反馈/建模咨询等)请[**新建Issue**](https://gitee.com/geomech/hydrate/issues/new)，软件授权及其他问题请[联系作者](https://gitee.com/geomech/hydrate/issues/ID5HZX).
+技术问题(bug反馈/建模咨询等)请[**新建Issue**](https://gitee.com/geomech/hydrate/issues/new)<sup>①</sup>，其他问题请[联系作者](https://gitee.com/geomech/hydrate/issues/ID5HZX).
+
+**注**：<sup>①</sup> 在[新建Issue](https://gitee.com/geomech/hydrate/issues/new)之前，建议浏览[已有的Issues](https://gitee.com/geomech/hydrate/issues).
 
 ### 功能
 

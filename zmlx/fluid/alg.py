@@ -1,7 +1,8 @@
 import os
+
 from zmlx.base.zml import Interp2, Seepage, np
-from zmlx.utility.interp import Interp2 as Interpolator
 from zmlx.io import json_ex
+from zmlx.utility.interp import Interp2 as Interpolator
 
 
 def load_fludefs(option, folder):

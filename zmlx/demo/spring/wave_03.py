@@ -17,7 +17,7 @@ def create_model(triangles, x, y):
         for c in points:
             r = max(get_distance([x[i], y[i]], c), 0.001)
             if r < 0.05:
-                v = [(x[i]-c[0]) / r, (y[i]-c[1]) / r, 0]
+                v = [(x[i] - c[0]) / r, (y[i] - c[1]) / r, 0]
         node = model.add_node(
             pos=(x[i], y[i], 0),
             vel=v,

@@ -16501,7 +16501,7 @@ class Seepage(HasHandle, HasCells):
 
         core.use(None, 'seepage_fs_iterate',
                  c_void_p, c_void_p, c_void_p,
-                 c_double,
+                 c_double, c_double,
                  c_size_t, c_size_t, c_size_t, c_size_t, c_void_p,
                  c_void_p  # ThreadPool since 2025-7-25
                  )
@@ -16580,9 +16580,6 @@ class Seepage(HasHandle, HasCells):
             else:
                 assert 0 < dv_rela
 
-            # 设置容许步长参数(因此，这个数值后续会被存储求解器中)
-            self.dv_permitted = dv_rela
-
             if isinstance(pool, ThreadPool):  # 将任务放入线程池，然后立即返回
                 if isinstance(report, Map):
                     h_report = report.handle
@@ -16591,7 +16588,7 @@ class Seepage(HasHandle, HasCells):
                     h_report = 0
                 core.seepage_fs_iterate(
                     self.handle, model.handle, h_report,
-                    dt,
+                    dt, dv_rela,
                     fa_s, fa_q, fa_k, ca_p,
                     solver.handle, pool.handle
                 )
@@ -16602,7 +16599,7 @@ class Seepage(HasHandle, HasCells):
                     report = Map()
                 core.seepage_fs_iterate(
                     self.handle, model.handle, report.handle,
-                    dt,
+                    dt, dv_rela,
                     fa_s, fa_q, fa_k, ca_p,
                     solver.handle, 0
                 )
@@ -16640,23 +16637,6 @@ class Seepage(HasHandle, HasCells):
             else:
                 dt *= min(2.0, math.sqrt(dv_relative / dv_max))
             return dt
-
-        core.use(c_double, 'seepage_fs_get_dv_permitted',
-                 c_void_p)
-
-        core.use(None, 'seepage_fs_set_dv_permitted',
-                 c_void_p, c_double)
-
-        @property
-        def dv_permitted(self):
-            """
-            内核迭代的时候，容许的dv。用以控制时间步长
-            """
-            return core.seepage_fs_get_dv_permitted(self.handle)
-
-        @dv_permitted.setter
-        def dv_permitted(self, value):
-            core.seepage_fs_set_dv_permitted(self.handle, value)
 
     class ThermalSol(HasHandle):
         """

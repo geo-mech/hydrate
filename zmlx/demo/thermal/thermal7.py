@@ -2,6 +2,7 @@
 
 from zmlx import *
 
+
 def create(jx, jy):
     """
     创建模型(不设置任何边界条件)

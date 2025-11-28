@@ -132,7 +132,8 @@ def execute_unzip(folder, this_only=False):
 
 def setup_ui():
     def func1():
-        if not gui.question(f'危险操作：\n\n会将当前目录下({os.getcwd()})的零碎文件压缩到一个zip文件中，并显著修改文件结构. \n\n是否继续？'):
+        if not gui.question(
+                f'危险操作：\n\n会将当前目录下({os.getcwd()})的零碎文件压缩到一个zip文件中，并显著修改文件结构. \n\n是否继续？'):
             return
         execute_zip(os.getcwd())
 
@@ -141,7 +142,8 @@ def setup_ui():
     )
 
     def func2():
-        if not gui.question(f'危险操作：\n\n会将当前目录下({os.getcwd()})的zip文件解压，并显著修改文件结构. \n\n是否继续？'):
+        if not gui.question(
+                f'危险操作：\n\n会将当前目录下({os.getcwd()})的zip文件解压，并显著修改文件结构. \n\n是否继续？'):
             return
         execute_unzip(os.getcwd())
 

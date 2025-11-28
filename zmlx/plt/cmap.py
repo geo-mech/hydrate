@@ -115,7 +115,6 @@ def get_cm(name=None):
         return plt.get_cmap(name)  # 旧版本兼容方式
 
 
-
 def resample(cmap, lutsize):
     assert isinstance(cmap, matplotlib.colors.Colormap)
     return cmap.resampled(lutsize)

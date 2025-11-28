@@ -84,7 +84,7 @@ def show(model: Seepage, jx, jy, time=None):
             fig: matplotlib.figure.Figure类的对象，用于绘图
         """
         args = [fig, add_contourf, x, y]
-        opts = dict(nrows=1, ncols=2, xlabel="x/m", ylabel="y/m", aspect='equal')
+        opts = dict(nrows=1, ncols=2, xlabel="x/m", ylabel="y/m", aspect='equal', cmap='coolwarm')
         add_axes2(*args, s1, index=1, title='溶质1',
                   cbar={'label': '浓度', 'shrink': 0.7}, **opts)
         add_axes2(*args, s2, index=2, title='溶质2',

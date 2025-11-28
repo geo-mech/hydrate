@@ -64,6 +64,7 @@ def seg_intersection(ax, ay, bx, by, cx, cy, dx, dy):
     #  original coordinate system.
     return ax + pos_ab * cos_, ay + pos_ab * sin_
 
+
 def _triangle_area(a, b, c):
     """
     get the area of a triangle by the length of its edge.
@@ -72,6 +73,7 @@ def _triangle_area(a, b, c):
     p = (a + b + c) / 2
     p = p * (p - a) * (p - b) * (p - c)
     return p ** 0.5 if p > 0 else 0
+
 
 def seg_point_distance(seg, point):
     """

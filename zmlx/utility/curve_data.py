@@ -2,8 +2,8 @@ import os
 
 from scipy.interpolate import interp1d
 
-from zmlx.base.zml import is_array, np
 from zmlx.alg.base import clamp
+from zmlx.base.zml import is_array, np
 
 
 class CurveData:

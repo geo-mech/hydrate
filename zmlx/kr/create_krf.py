@@ -8,8 +8,6 @@ warnings.warn(f'The module {__name__} will be removed after 2026-4-15, please im
               DeprecationWarning, stacklevel=2)
 
 
-
-
 def _test1():
     from zmlx.base.zml import plot
     x, y = create_krf(0.05, 3)

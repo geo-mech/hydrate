@@ -4,7 +4,7 @@
     修改脚本里面的监测点，然后，运行，即可生成一个文件，这个文件包含两列
     第一列是时间，第二列是给定位置的压力.
 """
-from zmlx import *   # 需要首先确保zmlx可用
+from zmlx import *  # 需要首先确保zmlx可用
 
 
 def main():

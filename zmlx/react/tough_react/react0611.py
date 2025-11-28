@@ -1,12 +1,13 @@
-import numpy as np
-import matplotlib.pyplot as plt
-import warnings
 from typing import List, Dict
-from zmlx.react import alg
+
+import numpy as np
+
 from zmlx.base.zml import Seepage
+from zmlx.react import alg
 
 # ---------- 全局常量 ----------
 R = 8.314  # 气体常数 J/mol/K
+
 
 # ---------- 提取反应条目 ----------
 def extract_reaction(filepath: str, target_species: List[str]) -> Dict:
@@ -34,7 +35,7 @@ def extract_reaction(filepath: str, target_species: List[str]) -> Dict:
                 except ValueError:
                     species.append(part)
             i += 1
-        species_list = [species[j+1] for j in range(0, len(species), 2)]
+        species_list = [species[j + 1] for j in range(0, len(species), 2)]
         stoichs = [float(species[j]) for j in range(0, len(species), 2)]
 
         # 获取 log10(k)
@@ -67,9 +68,9 @@ def fit_kinetics(T_dense, log10_k):
     log10_k = np.clip(np.array(log10_k), -100, 100)
     K_raw = np.power(10.0, log10_k)
     lnK = np.log(K_raw)
-    coeff = np.polyfit(1/T_raw, lnK, 1)
+    coeff = np.polyfit(1 / T_raw, lnK, 1)
     a, b = coeff
-    K_dense = np.exp(a * (1/T_dense) + b)
+    K_dense = np.exp(a * (1 / T_dense) + b)
 
     # 任意示例 Arrhenius 参数拟合
     A_f = 1e6

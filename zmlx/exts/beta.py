@@ -4,4 +4,3 @@
 from zmlx.base.zml import *
 
 core = DllCore(dll_obj=load_cdll(name='beta.dll', first=os.path.dirname(__file__)))
-

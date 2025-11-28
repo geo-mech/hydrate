@@ -1,7 +1,7 @@
 import random
 
-from zmlx.base.zml import np
 from zmlx.alg.base import clamp, linspace
+from zmlx.base.zml import np
 from zmlx.geometry.dfn2 import dfn2
 from zmlx.geometry.rect_3d import from_v3
 from zmlx.geometry.rect_v3 import intersected, get_area

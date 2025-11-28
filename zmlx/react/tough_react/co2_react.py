@@ -1,12 +1,10 @@
 # co2_react.py  ───────────────────────────────────────────
 # --------------------------------------------------------
 
-import numpy as np
-import warnings
 from typing import List, Dict
 
-from zmlx import *                     # 网格/水合物建模
-from zmlx.react import alg             # 反应模块
+from zmlx import *  # 网格/水合物建模
+from zmlx.react import alg  # 反应模块
 
 
 def create_xz_half(x_max=300.0, depth=300.0, height=100.0,
@@ -14,7 +12,6 @@ def create_xz_half(x_max=300.0, depth=300.0, height=100.0,
                    hc=150, rc=100,
                    ratio=1.05,
                    dx_max=None, dz_max=None):
-
     if dx_max is None:
         dx_max = dx * 4.0
     vx = [0, dx]
@@ -55,7 +52,6 @@ def create(mass_rate=50.0 / (3600 * 24), years_inj=20,
            perm=1.0e-15, free_h=5.0,
            mesh=None, s_ini=None, save_dt_min=None, save_dt_max=None,
            years_max=1e5, co2_temp=290.0, **extra_kwds):
-
     if mesh is None:
         mesh = create_xz_half(x_max=300)
 
@@ -135,7 +131,7 @@ def create(mass_rate=50.0 / (3600 * 24), years_inj=20,
     flu_in.set_attr(index=model.reg_flu_key('temperature'),
                     value=co2_temp)
 
-    try:            # 曲线注入
+    try:  # 曲线注入
         vt, vq = mass_rate
         opers = [[t, str(q / flu_in.den)]
                  for t, q in zip(vt, vq) if t < years_inj * 365 * 24 * 3600]
@@ -148,8 +144,6 @@ def create(mass_rate=50.0 / (3600 * 24), years_inj=20,
                        fluid_id=fid, flu=flu_in, opers=opers)
 
     return model
-
-
 
 
 R_GAS = 8.314  # J/mol/K
@@ -169,7 +163,8 @@ def extract_reaction(filepath: str, target_species: List[str]) -> Dict:
         if i >= len(lines):
             break
 
-        num = int(lines[i].split()[0]); i += 1
+        num = int(lines[i].split()[0]);
+        i += 1
         sp, st = [], []
         while len(sp) < num and i < len(lines):
             parts = lines[i].split()
@@ -198,10 +193,10 @@ def fit_kinetics(T: np.ndarray, log10_k: List[float]):
     log10_k = np.clip(np.array(log10_k), -100, 100)
     K_raw = 10 ** log10_k
     a, b = np.polyfit(1 / T_raw, np.log(K_raw), 1)
-    K_T = np.exp(a / T + b)             # K(T)
+    K_T = np.exp(a / T + b)  # K(T)
 
     # 任选常数级前向速率系数 (示例)
-    A_f, Ea_f = 1e6, 5e4                # 单位对后续无影响，只用于示范
+    A_f, Ea_f = 1e6, 5e4  # 单位对后续无影响，只用于示范
     k_f = A_f * np.exp(-Ea_f / (R_GAS * T))
     k_r = k_f / K_T
     return K_T, k_f, k_r
@@ -257,7 +252,7 @@ def add_caco3_reaction(model: seepage.Seepage,
         model,
         name="CaCO3_dissolution_precip",
         temp=298.15,
-        heat=2.73e5,          # 示意焓变，可按需修改
+        heat=2.73e5,  # 示意焓变，可按需修改
         p2t=([0, 100e6], [0, 0]),
         t2q=(T_dense.tolist(), kf.tolist()),
         t2qr=(T_dense.tolist(), kr.tolist()),
@@ -268,10 +263,9 @@ def add_caco3_reaction(model: seepage.Seepage,
     return reaction
 
 
-
 def create_with_reaction(**kwds):
     """外部主接口：返回含 CO₂ 注入+CaCO₃ 反应的模型"""
-    mdl = create(**kwds)            # 先建 CO₂-hydrate 模型
+    mdl = create(**kwds)  # 先建 CO₂-hydrate 模型
     try:
         add_caco3_reaction(mdl)
     except Exception as e:
@@ -279,12 +273,10 @@ def create_with_reaction(**kwds):
     return mdl
 
 
-
-
 if __name__ == "__main__":
     # ------ 可在此处集中修改模型/反应参数 ------
     model = create_with_reaction(
-        mass_rate=50.0 / (3600 * 24),   # kg/s
+        mass_rate=50.0 / (3600 * 24),  # kg/s
         years_inj=20,
         depth_inj=200.0,
         perm=1e-15,

@@ -1,9 +1,8 @@
-import re
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.interpolate import interp1d
-from typing import List, Dict
 import warnings
+from typing import List, Dict
+
+import matplotlib.pyplot as plt
+import numpy as np
 
 # ---------- 用户输入部分 ----------
 user_reactant_pool = ["Ca++", "Mg++", "HCO3-", "H+", "OH-"]  # 多种反应物
@@ -11,6 +10,7 @@ user_reactant_pool = ["Ca++", "Mg++", "HCO3-", "H+", "OH-"]  # 多种反应物
 # ---------- 温度定义 ----------
 T_celsius = np.array([0, 25, 60, 100, 150, 200, 250, 300])
 T_kelvin = T_celsius + 273.15
+
 
 # ---------- 辅助函数 ----------
 def extract_reaction_blocks(filepath: str):
@@ -42,7 +42,7 @@ def extract_reaction_blocks(filepath: str):
                 except ValueError:
                     species.append(part)
             i += 1
-        species_list = [species[i+1] for i in range(0, len(species), 2)]
+        species_list = [species[i + 1] for i in range(0, len(species), 2)]
 
         # Get log10(k)
         logk = []
@@ -122,6 +122,7 @@ def compute_reverse_k(k_forward, delta_logK):
     logK = np.array(delta_logK)
     K_eq = 10 ** logK
     return k_forward / K_eq
+
 
 # ---------- 主程序 ----------
 file_path = "reaction data/aqueous.txt"

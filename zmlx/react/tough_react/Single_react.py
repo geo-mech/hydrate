@@ -1,9 +1,8 @@
-import re
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.interpolate import interp1d
-from typing import List
 import warnings
+from typing import List
+
+import matplotlib.pyplot as plt
+import numpy as np
 
 # 单一反应检索脚本
 
@@ -13,6 +12,7 @@ user_reactants = ["Mg++", "HCO3-", "H+", "Cl-"]  # 示例反应物列表
 # ---------- 温度定义 ----------
 T_celsius = np.array([0, 25, 60, 100, 150, 200, 250, 300])
 T_kelvin = T_celsius + 273.15
+
 
 # ---------- 辅助函数 ----------
 def extract_reaction_blocks(filepath: str):
@@ -44,7 +44,7 @@ def extract_reaction_blocks(filepath: str):
                 except ValueError:
                     species.append(part)
             i += 1
-        species_list = [species[i+1] for i in range(0, len(species), 2)]
+        species_list = [species[i + 1] for i in range(0, len(species), 2)]
 
         # Get log10(k)
         logk = []
@@ -99,7 +99,7 @@ def plot_results(T, k, A, Ea, title):
 
     plt.figure(figsize=(8, 5))
     plt.plot(T, k, 'o', label='Data')
-    plt.plot(T_fit, k_fit, '-', label=f'Arrhenius Fit\nA={A:.2e}, Ea={Ea/1000:.2f} kJ/mol')
+    plt.plot(T_fit, k_fit, '-', label=f'Arrhenius Fit\nA={A:.2e}, Ea={Ea / 1000:.2f} kJ/mol')
     plt.xlabel('Temperature (K)')
     plt.ylabel('k (mol$^{-1}$·L·s$^{-1}$)')
     plt.yscale('log')
