@@ -7,21 +7,22 @@ from zmlx.plt.contourf import add_contourf as contourf
 from zmlx.plt.scatter import add_scatter3 as scatter3
 from zmlx.plt.tricontourf import add_tricontourf as tricontourf
 from zmlx.plt.trisurf import add_trisurf as trisurf3
+from zmlx.plt.cbar import add_cbar
 
 _keep = [contourf, trisurf3, tricontourf, scatter3]
 
 
-def colorbar(ax, obj, **kwargs):
+def colorbar(ax, obj, **opts):
     """
     为Axes添加颜色条.
     Args:
         ax: Axes对象，用于添加颜色条
         obj: 用于创建颜色条的对象，例如散点图、填充等高线图等
-        **kwargs: 传递给ax.colorbar函数的关键字参数
+        **opts: 传递给ax.colorbar函数的关键字参数
     Returns:
         颜色条对象
     """
-    return ax.get_figure().colorbar(obj, ax=ax, **kwargs)
+    return add_cbar(ax, obj=obj, **opts)
 
 
 def call_ax(ax, name, *args, **kwargs):
@@ -290,7 +291,8 @@ def test_2():
         item('cont', x, y, z, cmap=cmap),
         item('tric', x.flatten() + 12, y.flatten(), z.flatten(),
              cmap=cmap),
-        item('cbar', clim=(-1, 1), label='Hehe', shrink=0.8, cmap=cmap),
+        item('cbar', clim=(-1, 1), label='label', title='title',
+             shrink=0.8, cmap=cmap),
         item('curve2', a, b),
         item('xy', a, b + 1),
         item('plot', a, b + 2),

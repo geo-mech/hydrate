@@ -1,5 +1,5 @@
 from zmlx.plt.on_figure import add_axes3
-from zmlx.ui import plot
+from zmlx.plt.cbar import add_cbar
 
 
 def add_trisurf(ax, *args, cbar=None, **kwargs):
@@ -16,7 +16,7 @@ def add_trisurf(ax, *args, cbar=None, **kwargs):
     kwargs.setdefault('antialiased', False)
     obj = ax.plot_trisurf(*args, **kwargs)
     if cbar is not None:
-        ax.get_figure().colorbar(obj, ax=ax, **cbar)
+        add_cbar(ax, obj=obj, **cbar)
     return obj
 
 
@@ -24,10 +24,11 @@ def plot_trisurf(*args, **kwargs):
     """
     绘制三维三角化曲面图，支持坐标轴标签和颜色映射配置
     """
+    from zmlx.ui import plot
     plot(add_axes3, add_trisurf, *args, **kwargs)
 
 
-def test_1():
+def test():
     from zmlx.plt.data.surf import get_data
     x, y, z, _ = get_data(jx=40, jy=20, xr=(-5, 5), yr=(-3, 3))
     plot_trisurf(x.flatten(), y.flatten(), z.flatten(),
@@ -35,4 +36,4 @@ def test_1():
 
 
 if __name__ == '__main__':
-    test_1()
+    test()

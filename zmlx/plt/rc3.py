@@ -1,28 +1,29 @@
+from zmlx.geometry import rect_3d as rect3
+from zmlx.plt.cbar import add_cbar
 from zmlx.plt.cmap import get_cm
 from zmlx.plt.on_figure import add_axes3
-from zmlx.ui import plot
 
 
-def show_rc3(rc3, *, face_color=None, face_alpha=None, face_cmap=None,
-             edge_width=0.1,
-             edge_color=(0, 0, 0, 0.3),
-             clabel=None,
-             **opts):
+def add_rc3(
+        ax, rc3, *, face_color=None, face_alpha=None, face_cmap=None,
+        edge_width=0.1,
+        edge_color=(0, 0, 0, 0.3),
+        cbar=None):
     """
-    绘制三维的矩形集合
+    在指定的轴上绘制三维的矩形集合
     Args:
+        ax: 需要绘图的轴
         rc3: 矩形集合，每个矩形用一个rect_3d对象表示
         face_color: 颜色值
         face_alpha: 透明度
         face_cmap: 颜色表
         edge_width: 线的宽度
         edge_color: 边的颜色
-        clabel: 颜色条的标签
-        **opts: 其它传递给plot的参数
+        cbar: 颜色条的参数，例如{'label': 'label', 'title': 'title'}
+
     Returns:
-        None
+        Poly3DCollection
     """
-    from zmlx.geometry import rect_3d as rect3
     from matplotlib.colors import Normalize
     from mpl_toolkits.mplot3d.art3d import Poly3DCollection
     import numpy as np
@@ -35,49 +36,59 @@ def show_rc3(rc3, *, face_color=None, face_alpha=None, face_cmap=None,
     if face_alpha is None:  # 默认不透明
         face_alpha = 1.0
 
-    if face_cmap is None or isinstance(face_cmap, str):
-        face_cmap = get_cm(face_cmap)
+    face_cmap = get_cm(face_cmap)
 
     face_color = np.asarray(face_color)
-    norm = Normalize(vmin=face_color.min(), vmax=face_color.max())
+    face_cmin, face_cmax = face_color.min(), face_color.max()
+    norm = Normalize(vmin=face_cmin, vmax=face_cmax)
     rgba_colors = face_cmap(norm(face_color))
+
     if isinstance(face_alpha, (list, np.ndarray)):
-        rgba_colors[:, 3] = np.clip(face_alpha, 0, 1)  # 独立透明度
+        rgba_colors[:, 3] = np.clip(face_alpha, 0.0, 1.0)  # 独立透明度
     else:
         rgba_colors[:, 3] = face_alpha
 
-    def on_axes(ax):
-        """
-        在指定的轴上绘制面数据
-        Args:
-            ax: 需要绘图的轴
+    # 生成面数据
+    faces = [rect3.get_vertexes(item) for item in rc3]
 
-        Returns:
-            None
+    collection = Poly3DCollection(
+        faces,
+        facecolors=rgba_colors,
+        edgecolors=edge_color,
+        linewidths=edge_width
+    )
+    ax.add_collection3d(collection)
 
-        """
-        from matplotlib.cm import ScalarMappable
+    if cbar is not None:
+        add_cbar(ax, clim=(face_cmin, face_cmax), cmap=face_cmap, **cbar)
 
-        # 生成面数据
-        faces = [rect3.get_vertexes(item) for item in rc3]
+    return collection
 
-        collection = Poly3DCollection(
-            faces,
-            facecolors=rgba_colors,
-            edgecolors=edge_color,
-            linewidths=edge_width
-        )
-        ax.add_collection3d(collection)
 
-        # 显式创建ScalarMappable对象
-        mappable = ScalarMappable(norm=norm, cmap=face_cmap)
-        mappable.set_array(face_color)
-        cbar = ax.get_figure().colorbar(mappable, ax=ax)
-        if clabel is not None:
-            cbar.set_label(clabel)
-
-    opts.setdefault('aspect', 'equal')
-    plot(add_axes3, on_axes, **opts)
+def show_rc3(
+        rc3, *, clabel=None, cbar=None, **opts):
+    """
+    绘制三维的矩形集合
+    Args:
+        rc3: 矩形集合，每个矩形用一个rect_3d对象表示
+        clabel: 颜色条的标签
+        cbar: 颜色条的参数，例如{'label': 'label', 'title': 'title'}
+        **opts: 其它传递给plot的参数
+    Returns:
+        None
+    """
+    from zmlx.ui import plot
+    if clabel is not None:
+        if cbar is None:
+            cbar = dict(label=clabel)
+        else:
+            cbar['label'] = clabel
+    opts = {
+        'aspect': 'equal', 'tight_layout': True,
+        'xlabel': 'x / m', 'ylabel': 'y / m', 'zlabel': 'z / m',
+        **opts
+    }
+    plot(add_axes3, add_rc3, rc3, cbar=cbar, **opts)
 
 
 def test():
@@ -89,7 +100,8 @@ def test():
     for _ in rc3:
         color.append(random.uniform(5, 9))
         alpha.append(random.uniform(0, 1))
-    show_rc3(rc3, gui_mode=True)
+    show_rc3(rc3, gui_mode=True,
+             cbar=dict(label='Index', title='Index', shrink=0.5), )
 
 
 if __name__ == '__main__':

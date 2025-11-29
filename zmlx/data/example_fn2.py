@@ -1,6 +1,6 @@
 import os
 
-from zmlx.io.load_col import load_col
+from zmlx.io.base import load_col
 
 # 文件路径
 fpath = os.path.join(os.path.dirname(__file__), 'example.fn2')

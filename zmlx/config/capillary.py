@@ -1,8 +1,9 @@
 """
 用于管理毛管压力驱动下的流动。
 
-这里，我们将毛管压力理解为驱动相邻Cell之间流体交换的驱动压力。在这个驱动下，Cell内流体的组分会进行交换，但是，
-各个Cell内流体的总的体积均不会发生任何改变。
+这里，我们将毛管压力理解为驱动相邻Cell之间流体交换的“驱动压力”。
+在这个驱动下，Cell内流体的组分会进行交换，但是，
+各个Cell内流体的“总的体积”均不会发生任何改变。
 
 """
 
@@ -60,7 +61,81 @@ def set_settings(model: Seepage, settings):
     model.set_text(text_key, f'{settings}')
 
 
-def get_face_density_diff(
+def _make_s2p(text):
+    """
+    根据文本来创建从饱和度到毛管压力的插值
+    """
+    vv = [[float(w) for w in line.split()] for line in text.splitlines() if
+          len(line) > 2]
+    s = [v[0] for v in vv]
+    p = [v[1] for v in vv]
+    assert len(s) == len(p) and len(s) >= 2
+    for i in range(1, len(s)):
+        assert s[i - 1] < s[i]
+        assert p[i - 1] < p[i]
+    return Interp1(x=s, y=p)
+
+
+def add_setting(model: Seepage, fid0=None, fid1=None,
+                get_idx=None, data=None,
+                gravity=None):
+    """
+    创建一个毛管压力计算模型，其中fid0和fid1为涉及的两种流体。
+    毛管压力定义为fid0的压力减去fid1的压力。model为创建好的渗流模型（或者Mesh）.
+        idx = get_idx(x, y, z)
+    是一个函数，该函数返回给定位置所需要采用的毛管压力曲线的ID，
+        注意这个ID从0开始编号.
+    后续的所有参数为毛管压力曲线，可以是Interp1类型，也可以给定两个list.
+    """
+    if fid0 is None or fid1 is None:  # 必须指定一对流体
+        return
+
+    if data is None and gravity is None:
+        # 必须有毛管压力或者重力，否则，这个函数是不起作用的.
+        return
+
+    # 获取现在已经有的设置.
+    settings = get_settings(model)
+    assert isinstance(settings, list)
+    count = len(settings)
+
+    if data is not None:  # 给定的毛管压力的数据
+        # 在cell中注册一个key，用来存储pc的id
+        ca_ipc = model.reg_cell_key(f'ipc_{count}')
+        # 将data添加到model
+        ipcs = []
+        for curve_id in range(len(data)):
+            if isinstance(data[curve_id], Interp1):
+                c = data[curve_id]
+            elif isinstance(data[curve_id], str):
+                c = _make_s2p(data[curve_id])
+            else:
+                s, p = data[curve_id]  # 从饱和度到压力的插值.
+                c = Interp1(x=s, y=p)
+            idx = model.add_pc(c, need_id=True)
+            ipcs.append(idx)
+
+        # 设置cell的pc的id
+        for cell_id in range(model.cell_number):
+            idx = round(get_idx(*model.get_cell(cell_id).pos))
+            assert 0 <= idx < len(data)
+            ipc = ipcs[idx]
+            model.get_cell(cell_id).set_attr(ca_ipc, ipc)  # 设置pc的id
+    else:  # 此时，不再考虑毛细管压力.
+        ca_ipc = None
+
+    # 将设置添加到model
+    settings.append({
+        'ca_ipc': ca_ipc, 'fid0': fid0, 'fid1': fid1,
+        'gravity': gravity})
+    set_settings(model, settings)
+
+
+# 兼容之前的名字
+add = add_setting
+
+
+def _get_face_density_diff(
         model: Seepage, fid0, fid1):
     """
     获得face位置两种流体的密度差
@@ -72,7 +147,7 @@ def get_face_density_diff(
     return fa / 2
 
 
-def get_face_gra(model: Seepage):
+def _get_face_gra(model: Seepage):
     """
     获取face两侧pos*gravity的差异
     """
@@ -85,15 +160,18 @@ def get_face_gra(model: Seepage):
 
 
 def iterate(
-        model: Seepage, dt=None, fid0=None, fid1=None,
+        model: Seepage, dt=None, *, fid0=None, fid1=None,
         ca_ipc=None, ds=0.05, gravity=None):
     """
-    在毛管力驱动下的流动。
-    其中：
-        dt为时间步长；
-        fid0和fid1为需要交换的两种流体;
-        ca_ipc为cell的属性，定义cell选择毛管压力曲线的id
-        ds为线性化的时候饱和度的变化幅度;
+    在毛管力驱动下的流动。如果只给定model，则根据model的设置进行迭代。
+    Args:
+        model: Seepage 对象
+        dt: 时间步长
+        fid0: 流体1的ID
+        fid1: 流体2的ID
+        ca_ipc: cell的属性，定义cell选择毛管压力曲线的id
+        ds: 线性化的时候饱和度的变化幅度
+        gravity: 驱动流体交换的重力加速度
     """
     if dt is None:
         dt = get_dt(model)
@@ -131,7 +209,7 @@ def iterate(
 
         # 重力
         if gravity is not None and gravity > 0:
-            g = get_face_gra(model) * get_face_density_diff(
+            g = _get_face_gra(model) * _get_face_density_diff(
                 model, fid0, fid1) * gravity
             ppg = get_pointer64(g)
             lpg = len(g)
@@ -167,7 +245,8 @@ def iterate(
                 model.diffusion(
                     dt, fid0=fid0, fid1=fid1,
                     pg=vg.pointer, lg=vg.size,
-                    ppg=ppg, lpg=lpg, ds_max=ds * 0.5)
+                    ppg=ppg, lpg=lpg, ds_max=ds * 0.5
+                )
     else:  # 读取设置
         settings = get_settings(model)
         for setting in settings:
@@ -181,76 +260,7 @@ def iterate(
                 fid1 = model.find_fludef(fid1)
                 assert fid1 is not None
             gravity = setting.get('gravity')
-            iterate(model=model, dt=dt, fid0=fid0, fid1=fid1,
-                    ca_ipc=setting.get('ca_ipc'),
-                    ds=ds, gravity=gravity)  # 执行迭代.
-
-
-def add(model: Seepage, fid0=None, fid1=None,
-        get_idx=None, data=None,
-        gravity=None):
-    """
-    创建一个毛管压力计算模型，其中fid0和fid1为涉及的两种流体。
-    毛管压力定义为fid0的压力减去fid1的压力。model为创建好的渗流模型（或者Mesh）.
-        idx = get_idx(x, y, z)
-    是一个函数，该函数返回给定位置所需要采用的毛管压力曲线的ID，
-        注意这个ID从0开始编号.
-    后续的所有参数为毛管压力曲线，可以是Interp1类型，也可以给定两个list.
-    """
-    if fid0 is None or fid1 is None:  # 必须指定一对流体
-        return
-
-    if data is None and gravity is None:
-        # 必须有毛管压力或者重力，否则，这个函数是不起作用的.
-        return
-
-    # 获取现在已经有的设置.
-    settings = get_settings(model)
-    assert isinstance(settings, list)
-    count = len(settings)
-
-    if data is not None:  # 给定的毛管压力的数据
-        # 在cell中注册一个key，用来存储pc的id
-        ca_ipc = model.reg_cell_key(f'ipc_{count}')
-        # 将data添加到model
-        ipcs = []
-        for curve_id in range(len(data)):
-            if isinstance(data[curve_id], Interp1):
-                c = data[curve_id]
-            elif isinstance(data[curve_id], str):
-                c = s2p(data[curve_id])
-            else:
-                s, p = data[curve_id]  # 从饱和度到压力的插值.
-                c = Interp1(x=s, y=p)
-            idx = model.add_pc(c, need_id=True)
-            ipcs.append(idx)
-
-        # 设置cell的pc的id
-        for cell_id in range(model.cell_number):
-            idx = round(get_idx(*model.get_cell(cell_id).pos))
-            assert 0 <= idx < len(data)
-            ipc = ipcs[idx]
-            model.get_cell(cell_id).set_attr(ca_ipc, ipc)  # 设置pc的id
-    else:  # 此时，不再考虑毛细管压力.
-        ca_ipc = None
-
-    # 将设置添加到model
-    settings.append({
-        'ca_ipc': ca_ipc, 'fid0': fid0, 'fid1': fid1,
-        'gravity': gravity})
-    set_settings(model, settings)
-
-
-def s2p(text):
-    """
-    根据文本来创建从饱和度到毛管压力的插值
-    """
-    vv = [[float(w) for w in line.split()] for line in text.splitlines() if
-          len(line) > 2]
-    s = [v[0] for v in vv]
-    p = [v[1] for v in vv]
-    assert len(s) == len(p) and len(s) >= 2
-    for i in range(1, len(s)):
-        assert s[i - 1] < s[i]
-        assert p[i - 1] < p[i]
-    return Interp1(x=s, y=p)
+            iterate(
+                model=model, dt=dt, fid0=fid0, fid1=fid1,
+                ca_ipc=setting.get('ca_ipc'),
+                ds=ds, gravity=gravity)  # 执行迭代.

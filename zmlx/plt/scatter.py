@@ -1,5 +1,4 @@
-from zmlx.plt.on_figure import add_axes3
-from zmlx.ui import plot
+from zmlx.plt.cbar import add_cbar
 
 
 def add_scatter3(ax, *args, cbar=None, **kwargs):
@@ -15,7 +14,7 @@ def add_scatter3(ax, *args, cbar=None, **kwargs):
     """
     obj = ax.scatter(*args, **kwargs)
     if cbar is not None:
-        ax.get_figure().colorbar(obj, ax=ax, **cbar)
+        add_cbar(ax, obj=obj, **cbar)
     return obj
 
 
@@ -24,6 +23,8 @@ def scatter(
     """
     绘制三维的散点图
     """
+    from zmlx.plt.on_figure import add_axes3
+    from zmlx.ui import plot
     if x is None or y is None or z is None:
         if get_pos is None:
             def get_pos(item):
@@ -40,7 +41,7 @@ def scatter(
          cbar=dict(label=cb_label), **opts)
 
 
-def test_1():
+def test():
     from zmlx.ui import plot
     from zmlx.plt.on_figure import add_axes3
     import numpy as np
@@ -51,8 +52,8 @@ def test_1():
     c = np.random.rand(100)
     plot(add_axes3, add_scatter3, x, y, z, c=c,
          gui_mode=True, clear=True, caption='MyTest', title='My Scatter Plot', xlabel='x/m',
-         cbar=dict(label='xxx'))
+         cbar=dict(label='label', title='title'))
 
 
 if __name__ == '__main__':
-    test_1()
+    test()

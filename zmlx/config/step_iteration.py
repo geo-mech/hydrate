@@ -16,8 +16,9 @@ def get_settings(model: Seepage):
     return alg_settings.get(model, text_key=text_key)
 
 
-def add_setting(model: Seepage, start=0, step=1, stop=999999999, name=None,
-                args=None, kwds=None):
+def add_setting(
+        model: Seepage, start=0, step=1, stop=999999999, name=None,
+        args=None, kwds=None):
     """
     添加设置
     """

@@ -1,5 +1,5 @@
 """
-控制用来生产的Cell的压力
+控制用来生产的Cell的压力。
 """
 
 from zmlx.alg.interp import interp1
@@ -10,7 +10,7 @@ from zmlx.config.alg import settings
 text_key = 'prod_settings'
 
 
-def modify_pore(cell: Seepage.CellData, target_fp):
+def _modify_pore(cell: Seepage.CellData, target_fp):
     """
     通过调整pore的方式来控制压力
     """
@@ -70,9 +70,12 @@ def add_setting(model: Seepage,
             set_settings(model, data=data)
 
 
-def iterate(model: Seepage, time=None):
+def iterate(model: Seepage, *, time=None):
     """
-    更新pore
+    根据此刻的时间来更新pore。
+    注意：
+        后续，这个函数有效率优化的空间。这里，可能会有一个比较长的
+        向量以文本的形式存储。这可能会带来一定的计算消耗。
     """
     data = get_settings(model)
     if len(data) == 0:
@@ -91,6 +94,6 @@ def iterate(model: Seepage, time=None):
                 p = item.get('pressure')
                 target_fp = interp1(x=t, y=p, xq=time)  # 获取此刻的目标压力
                 if target_fp > 0:  # 压力必须大于0
-                    modify_pore(cell=model.get_cell(index), target_fp=target_fp)
+                    _modify_pore(cell=model.get_cell(index), target_fp=target_fp)
         except Exception as err:  # 打印错误，但是不中断执行.
             print(err)

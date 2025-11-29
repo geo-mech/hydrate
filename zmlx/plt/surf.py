@@ -1,8 +1,3 @@
-try:
-    import matplotlib.pyplot as plt
-except ImportError:
-    plt = None
-
 from zmlx.plt.cbar import add_cbar
 
 
@@ -25,6 +20,9 @@ def add_surf(ax, x, y, z, c, *, alpha=None, clim=None, cmap=None, cbar=None,
     Returns:
         曲面对象
     """
+    import matplotlib.pyplot as plt
+    import matplotlib
+
     if clim is None:
         clim = c.min(), c.max()
 
@@ -36,6 +34,8 @@ def add_surf(ax, x, y, z, c, *, alpha=None, clim=None, cmap=None, cbar=None,
     if isinstance(cmap, str):
         from zmlx.plt.cmap import get_cm
         cmap = get_cm(cmap)
+
+    assert isinstance(cmap, matplotlib.colors.Colormap)
 
     # 计算颜色
     colors = cmap(norm(c))

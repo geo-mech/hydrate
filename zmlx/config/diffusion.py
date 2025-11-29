@@ -3,7 +3,7 @@
 
 @2025-10-2
 """
-from zmlx.base.seepage import as_numpy, Seepage, reg_cell_tmp, reg_face_tmp
+from zmlx.base.seepage import as_numpy, Seepage, reg_cell_tmp, reg_face_tmp, get_dt
 from zmlx.config.alg import settings
 
 # 存储的text
@@ -68,7 +68,7 @@ def add_setting(
 
 
 def iterate(
-        model: Seepage, dt,
+        model: Seepage, dt=None,
         *, flu0=None, flu1=None, ca_m1=None,
         fa_g=None, fa_d=None, ca_c=None, cfl=None, fa_s=None, fa_l=None):
     """
@@ -173,6 +173,9 @@ def iterate(
         model.temps['diffusion_sol'] = sol
 
     # 将浓度视为是温度场，将溶液的质量视为能量和温度的比值(即mc)，去迭代温度(修改浓度属性)
+    if dt is None:  # 没有给定时间步长，此时，从模型中读取
+        dt = get_dt(model)
+
     r = sol.iterate(
         model, dt, ca_t=ca_c, ca_mc=ca_m1, fa_g=fa_g, solver=None,
         pool=None, report=None

@@ -2,6 +2,7 @@
 定义，在模型执行到某一个时刻的时候来执行的操作
 """
 
+from zmlx.base.seepage import get_time, get_dt
 from zmlx.base.zml import Seepage
 from zmlx.config.alg import settings as alg_settings
 from zmlx.config.slots import get_slot
@@ -16,7 +17,9 @@ def get_settings(model: Seepage):
     return alg_settings.get(model, text_key=text_key)
 
 
-def add_setting(model: Seepage, time, name, args=None, kwds=None):
+def add_setting(
+        model: Seepage, *,
+        time, name, args=None, kwds=None):
     """
     添加设置
     """
@@ -35,7 +38,7 @@ def get(x: dict, key, default=None):
     """
     返回字典的值（忽略None）
     """
-    value = x.get(key, default)
+    value = x.get(key)
     if value is None:
         return default
     else:
@@ -56,7 +59,14 @@ def replace(data, table):
         return data
 
 
-def iterate(model: Seepage, t0, t1, slots):
+def iterate(
+        model: Seepage, *,
+        t0=None, t1=None, slots=None):
+    if t0 is None:
+        t0 = get_time(model)
+    if t1 is None:
+        t1 = t0 + get_dt(model)
+
     if t0 >= t1:
         return
 
@@ -64,18 +74,12 @@ def iterate(model: Seepage, t0, t1, slots):
     if len(settings) == 0:
         return
 
-    def equal(a, b):
-        if isinstance(a, str) and isinstance(b, str):
-            return a == b
-        else:
-            return False
-
     for setting in settings:
         assert isinstance(setting, dict)
         time = setting.get('time')
         if t0 <= time < t1:
             table = {'@time': time, '@model': model}  # 需要替换的数据表格
-            func = get_slot(setting.get('name'), slots)
+            func = get_slot(setting.get('name'), slots=slots)
             if func is not None:
                 args = get(setting, 'args', [])
                 kwds = get(setting, 'kwds', {})

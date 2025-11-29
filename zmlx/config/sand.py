@@ -1,5 +1,5 @@
 """
-用于模拟砂的沉降及脱离
+用于模拟砂的沉降及脱离（测试中）
 """
 
 from zmlx.base.zml import Seepage, get_pointer64, np
@@ -24,8 +24,9 @@ def set_settings(model: Seepage, data):
     return settings.put(model, data=data, text_key=text_key)
 
 
-def add_setting(model: Seepage, *, sol_sand, flu_sand, ca_i0, ca_i1,
-                use_average=False):
+def add_setting(
+        model: Seepage, *, sol_sand, flu_sand, ca_i0, ca_i1,
+        use_average=False):
     """
     添加设置
     """

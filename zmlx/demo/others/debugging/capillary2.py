@@ -115,8 +115,8 @@ def create():
     )
     model.set_kr(saturation=[0, 1],
                  kr=[0, 1])
-    capillary.add(model, fid0='water', fid1='gas', get_idx=get_idx,
-                  data=[mud, sand_J, sand_K, sand_P, sand_T], gravity=1)
+    capillary.add_setting(model, fid0='water', fid1='gas', get_idx=get_idx,
+                          data=[mud, sand_J, sand_K, sand_P, sand_T], gravity=1)
     return model
 
 

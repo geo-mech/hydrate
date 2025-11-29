@@ -50,7 +50,7 @@ from zmlx.base.seepage import *
 from zmlx.base.zml import (get_average_perm, Tensor3, ConjugateGradientSolver,
                            make_parent, SeepageMesh)
 from zmlx.config import (capillary, prod, fluid_heating, timer,
-                         sand, step_iteration, diffusion, solid_buffer)
+                         sand, step_iteration, diffusion, flu_buffer)
 from zmlx.config.attr_keys import cell_keys, face_keys, flu_keys
 from zmlx.config.slots import get_slot
 from zmlx.geometry.base import point_distance
@@ -200,7 +200,7 @@ def parallel_iterate(*args, pool=None):
         fluid_heating.iterate(model)
 
         if model.has_tag('has_solid'):
-            solid_buffer.backup(model)
+            flu_buffer.backup(model)
 
         if model.gr_number > 0:
             # 此时，各个Face的导流系数是可变的
@@ -258,10 +258,11 @@ def parallel_iterate(*args, pool=None):
         diffusion.iterate(model, dt=get_dt(model))
 
         if model.has_tag('has_solid'):
-            solid_buffer.restore(model)
+            flu_buffer.restore(model)
 
         # 更新砂子的体积（优先使用自定义的update_sand）
-        update_sand = get_slot('update_sand', kwargs.get('slots'))
+        update_sand = get_slot('update_sand',
+                               slots=kwargs.get('slots'))
         if update_sand is None:
             update_sand = sand.iterate  # 优先使用自定义的update_sand
         update_sand(model=model)
@@ -594,7 +595,7 @@ def create(
     # 添加毛管效应.
     if caps is not None:
         for cap in caps:
-            capillary.add(model, **cap)
+            capillary.add_setting(model, **cap)
 
     if prods is not None:  # 添加用于生产的压力控制.
         if isinstance(prods, dict):

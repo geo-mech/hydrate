@@ -145,7 +145,7 @@ def create(jx, jy):
 
     model.set_kr(saturation=[0, 1], kr=[0, 1])
 
-    capillary.add(
+    capillary.add_setting(
         model, fid0='gas', fid1='water', get_idx=get_idx,
         data=[mud, sand_J, sand_K, sand_P, sand_T]
     )

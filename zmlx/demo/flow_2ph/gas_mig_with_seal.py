@@ -58,7 +58,7 @@ def create(jx, jz):
         dt_max=3600 * 24 * 30.0, gravity=(0, 0, -10)
     )
 
-    capillary.add(
+    capillary.add_setting(
         model, fid0='ch4', fid1='h2o', get_idx=get_region_id,
         data=[[[0, 1], [0, 1]],
               [[0, 1], [0, 5e6]]

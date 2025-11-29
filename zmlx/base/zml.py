@@ -16507,12 +16507,12 @@ class Seepage(HasHandle, HasCells):
                  )
 
         def iterate(
-                self, model, dt, fa_s=None, fa_q=None,
+                self, model, dt, *, fa_s=None, fa_q=None,
                 fa_k=None, ca_p=None,
                 solver=None, pool=None, report=None,
                 dv_rela=None):
             """
-            在时间上向前迭代(更新流动)
+            将给定的模型在时间上向前迭代(更新流动).
 
             Args:
                 model: 即将被迭代的渗流模型对象(Seepage)
@@ -16536,9 +16536,9 @@ class Seepage(HasHandle, HasCells):
                 pool (ThreadPool, optional): 线程池实例，
                     默认为None。
                 report (Map, optional): 报告对象，
-                    默认为None (此时，会新建一个Map并且传入内核)
-                dv_rela (float, optional): 控制时间步长。
-                    代表dt内流体流过的最大距离与网格的比值
+                    默认为None (此时，会新建一个Map并且传入内核).
+                dv_rela (float, optional): 控制时间步长（最大允许的值）。
+                    代表dt内流体流过的“最大距离”与网格的比值。
                     当dv_rela为None的时候，将直接使用给定的dt来进行迭代。
                     当dv_rela给定的时候，则会检查给定的dt是否满足条件。如果不满足，则会降低dt。
 
@@ -16556,13 +16556,18 @@ class Seepage(HasHandle, HasCells):
                     这两个属性的值.
 
             Returns:
-                dict: 包含迭代报告的字典。
+                dict: 包含迭代报告的字典，可能会包括：
+                    dt_modify_times: 时间步长调整的次数
+                    dv_rela: 实际的dv_rela
+                    dt_error: 1 (当dt错误的时候；)；若存在此key，则迭代失败
+                    dt: 实际采用的时间步长。
             """
             # 检查计算模块是否有授权
             lic.check_once()
 
-            if solver is None:  # 线性求解器
-                self.solver = ConjugateGradientSolver(tolerance=1.0e-25)
+            if solver is None:
+                if self.solver is None:  # 第一次调用，创建默认的求解器
+                    self.solver = ConjugateGradientSolver(tolerance=1.0e-25)
                 solver = self.solver
 
             # 如下几个属性，都不是必须的，这里，给出默认值
@@ -16576,18 +16581,14 @@ class Seepage(HasHandle, HasCells):
                 ca_p = 1000000000
 
             if dv_rela is None:  # 给定一个非常大，一定可以满足的值
-                dv_rela = 1.0e20
+                dv_rela = 1.0e30
             else:
                 assert 0 < dv_rela
 
             if isinstance(pool, ThreadPool):  # 将任务放入线程池，然后立即返回
-                if isinstance(report, Map):
-                    h_report = report.handle
-                else:
-                    # 由于需要在另外的线程中执行，因此，这里再创建临时缓冲区将是不安全的
-                    h_report = 0
+                assert isinstance(report, Map), "report must be a Map object when using thread pool."
                 core.seepage_fs_iterate(
-                    self.handle, model.handle, h_report,
+                    self.handle, model.handle, report.handle,
                     dt, dv_rela,
                     fa_s, fa_q, fa_k, ca_p,
                     solver.handle, pool.handle
@@ -16608,25 +16609,25 @@ class Seepage(HasHandle, HasCells):
         core.use(c_double, 'seepage_fs_get_dv',
                  c_void_p)
 
-        def get_recommended_dt(self, previous_dt,
-                               dv_relative=0.1,
-                               cfl=None):
+        def get_recommended_dt(
+                self, previous_dt,
+                dv_relative=0.1,
+                cfl=None):
             """
             在调用了iterate函数之后，调用此函数，来获取更优的时间步长。
-            当ca_t和ca_mc给定时，返回热传导过程的建议值，否则为渗流的。特别注意，
+            特别注意，
             这个函数依赖于模型内部的一些缓存，因此，需要在每次iterate之后，立即调用此
             函数来获取建议的时间步长，否则如果缓存失效，则此函数可能出错。
 
             Args:
-                previous_dt: 上一次的时间步长。
+                previous_dt: 上一次的时间步长。应该为iterate函数返回报告中的dt(实际的dt)
                 dv_relative: 相对变化阈值，默认为0.1.
                              此参数即为Courant-Friedrichs-Lewy数，简称CFL数。
                 cfl: Courant-Friedrichs-Lewy数，默认为None。
             Returns:
                 float: 建议的时间步长。
             """
-            dv_max = core.seepage_fs_get_dv(
-                self.handle)
+            dv_max = core.seepage_fs_get_dv(self.handle)
             dv_max = max(1.0e-6, dv_max)
             dt = previous_dt
             if cfl is not None:  # 新的变量名，覆盖dv_relative，后续，dv_relative可能会被移除
@@ -16663,7 +16664,7 @@ class Seepage(HasHandle, HasCells):
                  c_void_p  # ThreadPool since 2025-7-25
                  )
 
-        def iterate(self, model, dt, ca_t, ca_mc, fa_g, solver=None,
+        def iterate(self, model, dt, *, ca_t=None, ca_mc=None, fa_g=None, solver=None,
                     pool=None, report=None):
             """
             对于此渗流模型，当定义了热传导相关的参数之后，可以作为一个热传导模型来使用。
@@ -16685,19 +16686,20 @@ class Seepage(HasHandle, HasCells):
             Returns:
                 dict: 包含迭代报告的字典。
             """
+            lic.check_once()
+
+            if dt <= 0 or ca_t is None or ca_mc is None or fa_g is None:   # 此时无法迭代，直接返回
+                return None
+
             if solver is None:
-                self.solver = ConjugateGradientSolver(tolerance=1.0e-25)
+                if self.solver is None:
+                    self.solver = ConjugateGradientSolver(tolerance=1.0e-25)
                 solver = self.solver
 
-            lic.check_once()
-            if isinstance(pool, ThreadPool):  # 将任务放入线程池，然后立即返回
-                if isinstance(report, Map):
-                    h_report = report.handle
-                else:  # 由于需要在另外的线程中执行，因此，这里再创建临时缓冲区将是不安全的
-                    h_report = 0
+            if isinstance(pool, ThreadPool):  # 将任务放入线程池，然后立即返回（需要在后续手动进行同步）
+                assert isinstance(report, Map), "report must be a Map object"
                 core.seepage_ts_iterate(
-                    self.handle, model.handle,
-                    h_report,
+                    self.handle, model.handle, report.handle,
                     ca_t, ca_mc, fa_g,
                     dt, solver.handle, pool.handle
                 )
@@ -16740,6 +16742,8 @@ class Seepage(HasHandle, HasCells):
             Returns:
                 float: 建议的时间步长。
             """
+            assert ca_mc is not None, "ca_mc must be specified"
+            assert ca_t is not None, "ca_t must be specified"
             dv_max = core.seepage_ts_get_de(
                 self.handle,
                 model.handle, ca_t, ca_mc)
@@ -18925,62 +18929,27 @@ class Seepage(HasHandle, HasCells):
         assert isinstance(buffer, Seepage.CellData)
         core.seepage_push_fluids(self.handle, buffer.handle)
 
-    def iterate(self, dt, fa_s=None, fa_q=None,
-                fa_k=None, ca_p=None,
-                solver=None, pool=None, report=None, dv_rela=None):
+    def iterate(self, dt, **opts):
         """
-        迭代更新模型状态. 在这里，对于各个Face内流体的流动阻力，将会使用Face的cond属性，
-        结合各流体的饱和度，来计算得到各个流体的流动阻力。所以，在调用此函数之前，如果
-        修改了Face的cond，将会在这里直接影响到流动的过程。
-
+        迭代模型内的流动过程
         Args:
             dt (float): 时间步长。
-            fa_s (int, optional): Face自定义属性的ID，
-                代表Face的横截面积（用于计算Face内流体的受力），默认为None。
-            fa_q (int, optional): Face自定义属性的ID，
-                代表Face内流体在通量(也将在iterate中更新)，默认为None。
-            fa_k (int, optional): Face内流体的惯性系数的属性ID，
-                默认为None。
-            ca_p (int, optional): Cell的自定义属性，
-                表示Cell内流体的压力(迭代时的压力，并非按照流体体积进行计算的)，
-                默认为None。
-            solver (ConjugateGradientSolver, optional): 求解器实例，
-                默认为None。
-            pool (ThreadPool, optional): 线程池实例，
-                默认为None。
-            report (Map, optional): 报告对象，默认为None。
-            dv_rela: 控制时间步长的参数，代表dt内流经的距离与网格的比值
-
         Returns:
             迭代结果
         """
         flow_sol = self.temps.get('flow_sol')
-
         if flow_sol is None:
             flow_sol = Seepage.FlowSol()
             self.temps['flow_sol'] = flow_sol
 
-        return flow_sol.iterate(
-            self, dt=dt, fa_s=fa_s, fa_q=fa_q,
-            fa_k=fa_k, ca_p=ca_p,
-            solver=solver, pool=pool, report=report, dv_rela=dv_rela)
+        return flow_sol.iterate(self, dt=dt, **opts)
 
-    def iterate_thermal(self, dt, ca_t, ca_mc, fa_g, solver=None,
-                        pool=None, report=None):
+    def iterate_thermal(self, dt, **opts):
         """
         迭代更新模型的热状态
 
         Args:
             dt (float): 时间步长。
-            ca_t (int): Cell的温度属性的ID。
-            ca_mc (int): Cell范围内质量和比热的乘积。
-            fa_g (int): Face导热的通量g；
-                单位时间内通过Face的热量dH = g * dT。
-            solver (ConjugateGradientSolver, optional): 求解器实例，
-                默认为None。
-            pool (ThreadPool, optional): 线程池实例，
-                默认为None。
-            report (Map, optional): 报告对象，默认为None。
 
         Returns:
             热状态迭代结果
@@ -18990,10 +18959,7 @@ class Seepage(HasHandle, HasCells):
             thermal_sol = Seepage.ThermalSol()
             self.temps['thermal_sol'] = thermal_sol
 
-        return thermal_sol.iterate(
-            self, dt=dt, ca_t=ca_t, ca_mc=ca_mc, fa_g=fa_g,
-            solver=solver,
-            pool=pool, report=report)
+        return thermal_sol.iterate(self, dt=dt, **opts)
 
     def get_recommended_dt(self, *args, ca_t=None, ca_mc=None, **kwargs):
         """
