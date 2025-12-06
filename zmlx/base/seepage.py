@@ -1,5 +1,9 @@
 """
 渗流类Seepage的一些基础的接口。注意，此模块不依赖其它顶层的模块。
+
+对于多场耦合过程，我们采用工作流模式 (Workflow Pattern)-各流程像流水线一样处理数据。因此，关于数据的定义是非常关键的。
+对于流体计算，我们采用Seepage类来定义所有的数据状态。因此，这里定义的接口，是后续进行流体计算的基础。这里，定义最核心
+的数据接口。当然，一切的定义，本质上都是基于Seepage类的成员函数。
 """
 import ctypes
 import os
@@ -7,7 +11,13 @@ from ctypes import c_void_p
 
 import zmlx.alg.sys as warnings
 from zmlx.alg.base import time2str
-from zmlx.base.zml import Seepage, Vector, is_array, get_pointer64, np, Map
+from zmlx.base.zml import Seepage, Vector, is_array, get_pointer64, Map, ThreadPool
+from zmlx.base.zml import clock
+
+try:
+    import numpy as np
+except ImportError:
+    np = None
 
 
 class SeepageNumpy:
@@ -717,6 +727,265 @@ def set_dt_max(model: Seepage, value):
         实际通过 `set_attr(model, 'dt_max', value)` 存储该值。
     """
     set_attr(model, 'dt_max', value)
+
+
+def get_vis_min(model: Seepage):
+    return get_attr(model, 'vis_min', default_val=1.0e-7)
+
+
+def set_vis_min(model: Seepage, value):
+    set_attr(model, 'vis_min', value)
+
+
+def get_vis_max(model: Seepage):
+    return get_attr(model, 'vis_max', default_val=1.0e30)
+
+
+def set_vis_max(model: Seepage, value):
+    set_attr(model, 'vis_max', value)
+
+
+def get_func_opts(model: Seepage, key: str):
+    """
+    获取模型的迭代参数。
+    Args:
+        model: 要获取参数的模型
+        key: 迭代参数的键
+
+    Returns:
+        一个字典，包含模型的迭代参数
+    """
+    text = model.get_text(key)
+    if len(text) > 1:
+        opts = eval(text)
+        assert isinstance(opts, dict)
+        return opts
+    else:
+        return {}
+
+
+def set_func_opts(model: Seepage, key: str, **opts):
+    """
+    设置模型的迭代参数。
+    Args:
+        model: 要设置参数的模型
+        key: 迭代参数的键
+        **opts: 迭代的参数，会被设置到模型的key文本中.
+
+    Returns:
+        None
+    """
+    model.set_text(key, str(opts) if len(opts) > 0 else '')
+
+
+def add_func_opts(model: Seepage, key: str, **opts):
+    """
+    添加迭代的参数到模型中。
+    Args:
+        model: 要添加参数的模型
+        key: 迭代参数的键
+        **opts: 迭代的参数，会被添加到模型的key文本中.
+
+    Returns:
+        None
+    """
+    new_opts = {**get_func_opts(model, key), **opts}
+    set_func_opts(model, key, **new_opts)
+
+
+@clock
+def iterate_flow(*local_opts, pool=None, **global_opts):
+    """
+    保持当前所有的流体性质不变，迭代模型的流动状态。如果给定pool，则尝试并行执行。
+    """
+    if len(local_opts) <= 1:   # 仅有一个任务，则直接执行，不使用线程池
+        pool = None
+
+    key_opt = 'flow_opt'
+    models = []  # 所有的模型
+
+    for local_opt in local_opts:
+        # 解析出model
+        if isinstance(local_opt, dict):
+            model = local_opt.pop('model', None)
+            assert isinstance(model, Seepage), f'The model is not Seepage. model = {model}'
+        else:
+            assert isinstance(local_opt, Seepage)
+            model = local_opt
+            local_opt = {}
+
+        # 记录模型
+        models.append(model)
+
+        # 获得内部定义的选项
+        inner_opts = get_func_opts(model, key_opt)
+
+        # 默认选项
+        default_opts = dict(
+            disable_flow=model.has_tag('disable_flow'),
+            check_dt=model.has_tag('check_dt'),
+            recommend_dt=model.has_tag('recommend_dt'),
+            dt=get_dt(model),
+            dv_rela=get_dv_relative(model),
+            fa_s=model.get_face_key('area'),
+            fa_q=model.get_face_key('rate'),
+            fa_k=model.get_face_key('inertia'),
+        )
+
+        # 所有用来迭代的选项
+        opts = {
+            **default_opts, **inner_opts, **global_opts, **local_opt
+        }
+
+        # 准备其它参数
+        if opts.get('ca_p') is None:
+            opts['ca_p'] = model.reg_cell_key('pre')
+
+        if opts['disable_flow']:
+            model.temps[key_opt] = None
+            continue
+
+        # 备份参数，后续使用
+        opts['result'] = Map()
+        model.temps[key_opt] = opts
+
+        sol = model.get_flow_sol()
+        assert isinstance(sol, Seepage.FlowSol)
+
+        sol.iterate(
+            model, dt=opts['dt'],
+            fa_s=opts['fa_s'],
+            fa_q=opts['fa_q'],
+            fa_k=opts['fa_k'],
+            ca_p=opts['ca_p'],
+            solver=opts.get('solver'),
+            dv_rela=opts['dv_rela'] if opts['check_dt'] else None,
+            pool=pool, report=opts['result']
+        )
+
+    if isinstance(pool, ThreadPool):
+        pool.sync()  # 等待放入pool中的任务执行完毕
+
+    # 将报告转化为dict，以及一切其它的操作
+    for model in models:
+        assert isinstance(model, Seepage)
+
+        # 设置缺省值
+        set_attr(model, 'flow_real_dt', -1)
+        set_attr(model, 'flow_dt_next', -1)
+
+        opts = model.temps.get(key_opt)
+        if opts is None:
+            continue
+
+        assert isinstance(opts, dict)
+        result = opts.get('result')
+        assert isinstance(result, Map)
+        result = result.to_dict()
+        real_dt = result.get('dt')
+        if real_dt is None:
+            continue
+
+        set_attr(model, 'flow_real_dt', real_dt)
+
+        if opts['recommend_dt']:
+            dv_rela = opts['dv_rela']
+            if 0 < dv_rela < 1.0e3:
+                sol = model.get_flow_sol()
+                dt_next = sol.get_recommended_dt(previous_dt=real_dt, dv_relative=dv_rela)
+                set_attr(model, 'flow_dt_next', dt_next)
+
+
+def get_flow_dt_next(model: Seepage):
+    return get_attr(model, 'flow_dt_next', default_val=-1)
+
+
+@clock
+def iterate_thermal(*local_opts, pool=None, **global_opts):
+    """
+    对于多个模型，并行地更新模型的温度场
+    """
+    if len(local_opts) <= 1:   # 仅有一个任务，则直接执行，不使用线程池
+        pool = None
+
+    key_opt = 'thermal_opt'
+    models = []  # 所有的模型
+
+    for local_opt in local_opts:  # 执行检查
+        # 解析出model
+        if isinstance(local_opt, dict):
+            model = local_opt.pop('model', None)
+            assert isinstance(model, Seepage), f'The model is not Seepage. model = {model}'
+        else:
+            assert isinstance(local_opt, Seepage)
+            model = local_opt
+            local_opt = {}
+
+        # 记录模型
+        models.append(model)
+
+        # 获得内部定义的选项
+        inner_opts = get_func_opts(model, key_opt)
+
+        # 默认选项
+        default_opts = dict(
+            disable_ther=model.has_tag('disable_ther'),
+            recommend_dt=model.has_tag('recommend_dt'),
+            dt=get_dt(model),
+            dv_rela=get_dv_relative(model),
+            ca_t=model.get_cell_key('temperature'),
+            ca_mc=model.get_cell_key('mc'),
+            fa_g=model.get_face_key('g_heat'),
+        )
+
+        # 所有用来迭代的选项
+        opts = {
+            **default_opts, **inner_opts, **global_opts, **local_opt
+        }
+
+        # 检查是否主动声明禁止迭代流场
+        if opts['disable_ther']:
+            model.temps[key_opt] = None
+            continue
+
+        # 备份参数，后续使用
+        opts['result'] = Map()
+        model.temps[key_opt] = opts
+
+        # 准备求解器
+        sol = model.get_thermal_sol()
+        assert isinstance(sol, Seepage.ThermalSol)
+        sol.iterate(
+            model, dt=opts['dt'], pool=pool, report=opts['result'],
+            ca_t=opts['ca_t'], ca_mc=opts['ca_mc'], fa_g=opts['fa_g'],
+            solver=opts.get('solver'),
+        )
+
+    if isinstance(pool, ThreadPool):
+        pool.sync()  # 等待放入pool中的任务执行完毕
+
+    # 将报告转化为dict
+    for model in models:
+        assert isinstance(model, Seepage)
+        # 设置缺省值
+        set_attr(model, 'thermal_dt_next', -1)
+
+        opts = model.temps[key_opt]
+        if opts is None:
+            continue
+
+        if opts['recommend_dt']:
+            sol = model.get_thermal_sol()
+            dt_next = sol.get_recommended_dt(
+                model, previous_dt=opts['dt'],
+                dv_relative=opts['dv_rela'],
+                ca_t=opts['ca_t'], ca_mc=opts['ca_mc']
+            )
+            set_attr(model, 'thermal_dt_next', dt_next)
+
+
+def get_thermal_dt_next(model: Seepage):
+    return get_attr(model, 'thermal_dt_next', default_val=-1)
 
 
 class FloatBuffer:
@@ -1550,78 +1819,8 @@ def get_recommended_dt(
     return min(dt1, dt2)
 
 
-def _get_reports(reports):
-    """
-    解析并返回计算的报告
-    Args:
-        reports: 报告列表，每个元素可以是 Map 对象或 None
-
-    Returns:
-        一个列表，包含解析后的报告字典或 None
-    """
-    results = []
-    for report in reports:
-        if isinstance(report, Map):
-            results.append(report.to_dict())
-        else:
-            results.append(None)
-    return results
-
-
-def iterate_flow(*local_opts, pool=None, **global_opts):
-    """
-    对于多个模型，并行地更新模型的流场 (如果没有给定pool，则不并行)
-    """
-    reports = []
-
-    for opts in local_opts:
-        assert isinstance(opts, dict), f'The type of opts is not dict. Opts = {opts}'
-
-        model = opts.pop('model', None)
-        assert isinstance(model, Seepage), f'The model is not Seepage. model = {model}'
-
-        if model.not_has_tag('disable_flow') and model.fludef_number > 0:
-            reports.append(Map())  # 添加Map
-            all_opts = {**global_opts, **opts}
-            model.iterate(**all_opts, pool=pool, report=reports[-1])
-        else:  # 此时，不需要迭代
-            reports.append(None)
-
-    if pool is not None:
-        pool.sync()  # 等待放入pool中的任务执行完毕
-
-    return _get_reports(reports)
-
-
 # backward compatibility
 parallel_update_flow = iterate_flow
-
-
-def iterate_thermal(*local_opts, pool=None, **global_opts):
-    """
-    对于多个模型，并行地更新模型的温度场
-    """
-    reports = []
-
-    for opts in local_opts:  # 执行检查
-        assert isinstance(opts, dict), f'The type of opts is not dict. Opts = {opts}'
-
-        model = opts.pop('model', None)
-        assert isinstance(model, Seepage), f'The model is not Seepage. model = {model}'
-
-        if model.not_has_tag('disable_ther'):
-            reports.append(Map())
-            all_opts = {**global_opts, **opts}
-            model.iterate_thermal(**all_opts, pool=pool, report=reports[-1])
-        else:
-            reports.append(None)
-
-    if pool is not None:
-        pool.sync()  # 等待放入pool中的任务执行完毕
-
-    return _get_reports(reports)
-
-
 parallel_update_thermal = iterate_thermal
 
 

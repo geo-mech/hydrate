@@ -5,6 +5,7 @@
 from zmlx.base.zml import Mesh3, DynSys, LinearExpr
 from zmlx.fem.attr_getter import attr_getter
 from zmlx.fem.stiff2 import stiff2
+import warnings
 
 
 def create2(mesh, fa_E=None, fa_mu=None, fa_den=None, fa_h=None,
@@ -23,6 +24,8 @@ def create2(mesh, fa_E=None, fa_mu=None, fa_den=None, fa_h=None,
     返回：
         DynSys对象，其中的自由度的数量是mesh中node数量的二倍.
     """
+    warnings.warn("create2 is deprecated", DeprecationWarning, stacklevel=2)
+
     assert isinstance(mesh, Mesh3)
 
     # 生成face属性的接口函数.

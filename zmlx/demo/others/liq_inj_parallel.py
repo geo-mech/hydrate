@@ -11,8 +11,8 @@ def create():
     """
     # 大小具有随机性的Mesh
     mesh = create_cube(
-        np.linspace(0, 100 * random.uniform(0.8, 1.2), 100),
-        np.linspace(0, 100 * random.uniform(0.8, 1.2), 100), (-0.5, 0.5))
+        np.linspace(0, 100 * random.uniform(0.8, 1.2), 50),
+        np.linspace(0, 100 * random.uniform(0.8, 1.2), 50), (-0.5, 0.5))
 
     # 获得Mesh的坐标范围
     x0, x1 = mesh.get_pos_range(0)
@@ -88,7 +88,7 @@ def show_model(model: Seepage, folder=None):
 def main():
     # 创建多个模型分别计算的参数
     opt_list = []
-    for idx in range(10):
+    for idx in range(10):   # 创建多个模型
         model = create()
         opt_list.append(dict(
             model=model,
@@ -101,7 +101,7 @@ def main():
     pool = ThreadPool()
 
     # 向前迭代
-    for time in np.linspace(0, 3600 * 24 * 365, 50):
+    for time in np.linspace(0, 3600 * 24 * 365, 5):
         print(f'target time = {time2str(time)}')
         seepage.parallel_sync(*opt_list, target_time=time, pool=pool)
         for opt in opt_list:

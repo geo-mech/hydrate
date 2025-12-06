@@ -1,8 +1,10 @@
 """
-用于模拟砂的沉降及脱离（测试中）
+用于模拟砂的沉降及脱离（测试中）。
+
+存在已知问题，即梯度的计算不准确。造成无法很好地计算砂子的脱离
 """
 
-from zmlx.base.zml import Seepage, get_pointer64, np
+from zmlx.base.zml import Seepage, get_pointer64, np, clock
 from zmlx.config.alg import settings
 from zmlx.config.alg.pressure_gradient import get_face_pressure_gradient
 
@@ -50,7 +52,7 @@ def get_gradient(model: Seepage, fluid=None, use_average=False):
     return cell_f
 
 
-def iterate(model: Seepage):
+def iterate_1(model: Seepage):
     """
     更新砂
     """
@@ -80,3 +82,23 @@ def iterate(model: Seepage):
             ca_i0=ca_i0, ca_i1=ca_i1,
             force=get_pointer64(grad)
         )
+
+
+@clock
+def iterate(*models, check_slots=False):
+    """
+    更新砂. 先检查slots是否有更新砂的函数, 如果有, 则调用该函数. 否则, 调用iterate_1(还存在问题).
+    Args:
+        check_slots: bool = False, 默认为False
+    """
+    for model in models:
+        assert isinstance(model, Seepage), f'The model is not Seepage. model = {model}'
+        if check_slots:
+            slots = model.temps.get('slots')
+            if slots is not None:
+                assert isinstance(slots, dict)
+                fn = slots.get('update_sand')
+                if callable(fn):
+                    fn(model)
+                    continue
+        iterate_1(model)

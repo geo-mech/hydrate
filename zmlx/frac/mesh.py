@@ -4,7 +4,7 @@ from zmlx.exts.base import FractureNetwork, SeepageMesh, Coord3, Array3
 
 def create_mesh(
         network: FractureNetwork, *, coord=None, height=None, thick=None,
-        lmin=None, lmax=None) -> SeepageMesh:
+        l_min=None, l_max=None) -> SeepageMesh:
     """根据裂缝网络创建渗流网格(单层的渗流网络)。
 
     Args:
@@ -12,8 +12,8 @@ def create_mesh(
         coord: network所在的坐标体系
         height: 裂缝区域的高度(默认值为None，此时高度为1)
         thick: 裂缝区域的厚度(默认值为None，此时厚度为1)
-        lmin: 允许的最小的长度(默认值为None，此时长度为lave/2)
-        lmax: 允许的最大的长度(默认值为None，此时长度为lave*2)
+        l_min: 允许的最小的长度(默认值为None，此时长度为lave/2)
+        l_max: 允许的最大的长度(默认值为None，此时长度为lave*2)
 
     Returns:
         SeepageMesh: 生成的渗流网格对象
@@ -23,19 +23,21 @@ def create_mesh(
         return mesh
 
     # 计算单元长度的平均值
-    if lmin is None or lmax is None:
+    if l_min is None or l_max is None:
         lave = 0.0
         for fracture in network.fractures:  # 添加单元
             assert isinstance(fracture, FractureNetwork.Fracture)
             length = fracture.length
-            assert length > 0, f'Fracture length must > 0 but got {length}'
+            assert length > 0, (f'Fracture length must > 0 '
+                                f'but got {length}')
             lave += length
         lave /= network.fracture_number
         # 计算允许的最大的长度和最小的长度(限制在一定的范围内，从而保证计算的稳定性)
-        lmax = lave * 2.0
-        lmin = lave / 2.0
+        l_max = lave * 2.0
+        l_min = lave / 2.0
     else:
-        assert 0 < lmin <= lmax, f'lmin must in (0, lmax] but got lmin={lmin}, lmax={lmax}'
+        assert 0 < l_min <= l_max, (f'l_min must in (0, l_max] but '
+                                    f'got l_min={l_min}, l_max={l_max}')
 
     if height is None:
         height = 1.0
@@ -63,7 +65,7 @@ def create_mesh(
         else:
             pos = [x, y, z]
         cell.pos = pos  # 三维坐标
-        length = clamp(fracture.length, lmin, lmax)
+        length = clamp(fracture.length, l_min, l_max)
         cell.vol = length * height * thick
 
     for vertex in network.vertexes:  # 添加Face
@@ -78,7 +80,7 @@ def create_mesh(
                     f0.index,
                     f1.index
                 )
-                dist = clamp((f0.length + f1.length) / 2.0, lmin, lmax)
+                dist = clamp((f0.length + f1.length) / 2.0, l_min, l_max)
                 face.dist = dist
                 face.area = height * thick
 

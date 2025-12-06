@@ -156,6 +156,8 @@ def show(x, y, z, jx, jy, caption=None, cmap=None, label=None, title=None):
     """
     在一个标签内显示模型的状态
     """
+    if not gui:
+        return
     angles = np.linspace(0, 2 * np.pi, 100)
     items = [
         item('contourf', np.reshape(x, shape=[jx, jy]),
@@ -203,7 +205,7 @@ def solve(model: Seepage, jx, jy):
 
     for step in range(500):
         gui.break_point()
-        capillary.iterate(model, 1e5)
+        capillary.iterate(model, dt=1e5)
         if step % 20 == 0:
             print(f'step = {step}')
             show_s('实时饱和度', title=f'饱和度(红色为Gas), step = {step}')

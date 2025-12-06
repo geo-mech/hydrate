@@ -34,7 +34,9 @@ def show_dn(network, **opts):
     show_fn2(pos=pos, w=w, c=c, **opts)
 
 
-def show_pressure(network: FractureNetwork, flow: Seepage, **opts):
+def show_pressure(
+        network: FractureNetwork, flow: Seepage,
+        **opts):
     """
     二维绘图。其中颜色代表流体压力的值.
     这里，opts是传递给绘图内核show_fn2函数的参数

@@ -18,6 +18,7 @@
 """
 import ctypes
 import datetime
+import functools
 import hashlib
 import importlib
 import math
@@ -1324,7 +1325,7 @@ class Timer:
         """
         assert isinstance(
             co, DllCore), f'the type of <co> should be {type(DllCore)}'
-        co.use(c_char_p, 'timer_summary', c_void_p)
+        co.use(c_char_p, 'timer_summary')
         co.use(None, 'timer_log', c_char_p, c_double)
         co.use(None, 'timer_reset')
         co.use(c_bool, 'timer_enabled')
@@ -1366,7 +1367,7 @@ class Timer:
         Returns:
             str: 格式化字符串，包含各函数累计耗时和调用次数的统计信息
         """
-        return self.co.timer_summary(0).decode()
+        return self.co.timer_summary().decode()
 
     @property
     def key2nt(self):
@@ -1458,12 +1459,20 @@ def clock(func):
         my_function()  # 自动记录到timer实例
     """
 
+    @functools.wraps(func)
     def clocked(*args, **kwargs):
-        key = func.__name__
+        module_name = func.__module__
+        func_name = func.__name__
+        key = f"{module_name}.{func_name}"
+
         timer.beg(key)
-        result = func(*args, **kwargs)
-        timer.end(key)
-        return result
+        try:
+            result = func(*args, **kwargs)
+            timer.end(key)
+            return result
+        except Exception as e:
+            timer.end(key)
+            raise e
 
     return clocked
 
@@ -9745,11 +9754,17 @@ class DynSys(HasHandle):
         if handle is None:
             if isinstance(path, str):
                 self.load(path)
+        self.solver = None
         try:
             name = type(self).__name__
             log(f'{name} created', tag=f'{name}_Init')
         except:
             pass
+
+    def get_sol(self):
+        if not isinstance(self.solver, ConjugateGradientSolver):
+            self.solver = ConjugateGradientSolver(tolerance=1.0e-20)
+        return self.solver
 
     def __repr__(self):
         return f'{type(self).__name__}(handle={self.handle}, size={self.size})'
@@ -9850,7 +9865,7 @@ class DynSys(HasHandle):
     core.use(c_int, 'dynsys_iterate',
              c_void_p, c_double, c_void_p)
 
-    def iterate(self, dt, solver):
+    def iterate(self, dt, solver=None):
         """
         执行单次时间步长迭代。
 
@@ -9864,6 +9879,8 @@ class DynSys(HasHandle):
         Note:
             需要有效的求解器来处理线性方程组
         """
+        if not isinstance(solver, ConjugateGradientSolver):
+            solver = self.get_sol()
         return core.dynsys_iterate(self.handle, dt, solver.handle)
 
     core.use(c_size_t, 'dynsys_size', c_void_p)
@@ -13335,9 +13352,10 @@ class Seepage(HasHandle, HasCells):
                             lambda m, ind: m.get_inhibitor(ind))
 
         core.use(None, 'reaction_react',
-                 c_void_p, c_void_p, c_double, c_void_p)
+                 c_void_p, c_void_p, c_double, c_void_p, c_void_p
+                 )
 
-        def react(self, model, dt, buf=None):
+        def react(self, model, dt, buf=None, pool=None):
             """
             将该反应作用到Seepage的所有的Cell上dt时间。
 
@@ -13347,14 +13365,17 @@ class Seepage(HasHandle, HasCells):
                 buf (Any, optional): 一个缓冲区(double*)，
                     记录各个Cell上发生的反应的质量。务必确保此缓冲区的大小足够，
                     否则会出现致命的错误。默认为None。
+                pool: 线程池
 
             Returns:
                 float: 反应发生的总的质量。
             """
             self.adjust_weights()  # 确保权重正确，保证质量守恒
+            handle = pool.handle if isinstance(pool, ThreadPool) else 0
             core.reaction_react(
                 self.handle, model.handle, dt,
-                0 if buf is None else ctypes.cast(buf, c_void_p)
+                0 if buf is None else ctypes.cast(buf, c_void_p),
+                handle
             )
 
         core.use(None, 'reaction_adjust_weights',
@@ -16499,6 +16520,11 @@ class Seepage(HasHandle, HasCells):
             super().__init__(handle, core.new_seepage_fs, core.del_seepage_fs)
             self.solver = None
 
+        def get_sol(self):
+            if self.solver is None:
+                self.solver = ConjugateGradientSolver(tolerance=1.0e-25)
+            return self.solver
+
         core.use(None, 'seepage_fs_iterate',
                  c_void_p, c_void_p, c_void_p,
                  c_double, c_double,
@@ -16566,9 +16592,7 @@ class Seepage(HasHandle, HasCells):
             lic.check_once()
 
             if solver is None:
-                if self.solver is None:  # 第一次调用，创建默认的求解器
-                    self.solver = ConjugateGradientSolver(tolerance=1.0e-25)
-                solver = self.solver
+                solver = self.get_sol()
 
             # 如下几个属性，都不是必须的，这里，给出默认值
             if fa_s is None:
@@ -16656,6 +16680,11 @@ class Seepage(HasHandle, HasCells):
             super().__init__(handle, core.new_seepage_ts, core.del_seepage_ts)
             self.solver = None  # 线性求解器，线性方程组Ax=b的计算引擎
 
+        def get_sol(self):
+            if self.solver is None:
+                self.solver = ConjugateGradientSolver(tolerance=1.0e-25)
+            return self.solver
+
         core.use(None, 'seepage_ts_iterate',
                  c_void_p, c_void_p,
                  c_void_p,
@@ -16688,13 +16717,11 @@ class Seepage(HasHandle, HasCells):
             """
             lic.check_once()
 
-            if dt <= 0 or ca_t is None or ca_mc is None or fa_g is None:   # 此时无法迭代，直接返回
+            if dt <= 0 or ca_t is None or ca_mc is None or fa_g is None:  # 此时无法迭代，直接返回
                 return None
 
             if solver is None:
-                if self.solver is None:
-                    self.solver = ConjugateGradientSolver(tolerance=1.0e-25)
-                solver = self.solver
+                solver = self.get_sol()
 
             if isinstance(pool, ThreadPool):  # 将任务放入线程池，然后立即返回（需要在后续手动进行同步）
                 assert isinstance(report, Map), "report must be a Map object"
@@ -17273,15 +17300,16 @@ class Seepage(HasHandle, HasCells):
 
     core.use(None, 'seepage_apply_injs',
              c_void_p, c_double,
-             c_double)
+             c_double, c_void_p)
 
-    def apply_injectors(self, *, time=None, dt=None):
+    def apply_injectors(self, *, time=None, dt=None, pool=None):
         """
         所有的注入点执行注入操作.
 
         Args:
             time (float, optional): 时间。默认为 None。
             dt (float, optional): 时间步长。默认为 None。
+            pool: 线程池
         """
         if time is None:
             warnings.warn(
@@ -17289,7 +17317,10 @@ class Seepage(HasHandle, HasCells):
             time = 0
         if dt is None:
             return
-        core.seepage_apply_injs(self.handle, time, dt)
+        core.seepage_apply_injs(
+            self.handle, time, dt,
+            pool.handle if isinstance(pool, ThreadPool) else 0
+        )
 
     core.use(None, 'seepage_append',
              c_void_p, c_void_p, c_bool, c_size_t)
@@ -18455,11 +18486,11 @@ class Seepage(HasHandle, HasCells):
     core.use(None, 'seepage_update_den',
              c_void_p, c_size_t, c_size_t, c_size_t,
              c_void_p, c_size_t,
-             c_double, c_double, c_double)
+             c_double, c_double, c_double, c_void_p)
 
     def update_den(self, fluid_id=None, kernel=None,
                    relax_factor=1.0,
-                   fa_t=None, min=-1, max=-1):
+                   fa_t=None, min=-1, max=-1, pool=None):
         """
         更新流体的密度。其中
             fluid_id为需要更新的流体的ID (当None的时候，则更新所有)
@@ -18479,6 +18510,7 @@ class Seepage(HasHandle, HasCells):
             fa_t (int): 温度属性的ID
             min (float, optional): 密度的最小值，默认为-1
             max (float, optional): 密度的最大值，默认为-1
+            pool: 线程池. 如果给定，则此函数会立即退出。请在后续同步线程池内的任务
 
         Returns:
             None
@@ -18486,21 +18518,23 @@ class Seepage(HasHandle, HasCells):
         if relax_factor <= 0:
             return
         assert isinstance(fa_t, int)
-        core.seepage_update_den(self.handle, *parse_fid3(fluid_id),
-                                kernel.handle if isinstance(kernel,
-                                                            Interp2) else 0,
-                                fa_t, relax_factor, min, max)
+        core.seepage_update_den(
+            self.handle, *parse_fid3(fluid_id),
+            kernel.handle if isinstance(kernel, Interp2) else 0,
+            fa_t, relax_factor, min, max,
+            pool.handle if isinstance(pool, ThreadPool) else 0
+        )
 
     core.use(None, 'seepage_update_vis',
              c_void_p, c_size_t, c_size_t, c_size_t,
              c_void_p,
              c_size_t,
              c_size_t, c_double,
-             c_double, c_double)
+             c_double, c_double, c_void_p)
 
     def update_vis(self, fluid_id=None, kernel=None,
                    ca_p=None, fa_t=None,
-                   relax_factor=0.3, min=1.0e-7, max=1.0):
+                   relax_factor=0.3, min=1.0e-7, max=1.0, pool=None):
         """
         更新流体的粘性系数。
         Note:
@@ -18524,6 +18558,7 @@ class Seepage(HasHandle, HasCells):
                 限定粘性系数的最大变化幅度，默认为0.3
             min (float, optional): 粘性系数的最小值，默认为1.0e-7
             max (float, optional): 粘性系数的最大值，默认为1.0
+            pool: 线程池. 如果给定，则此函数会立即退出。请在后续同步线程池内的任务
 
         Returns:
             None
@@ -18542,9 +18577,12 @@ class Seepage(HasHandle, HasCells):
         else:
             assert isinstance(kernel, Interp2)
             kernel_handle = kernel.handle
-        core.seepage_update_vis(self.handle, *parse_fid3(fluid_id),
-                                kernel_handle, ca_p, fa_t,
-                                relax_factor, min, max)
+        core.seepage_update_vis(
+            self.handle, *parse_fid3(fluid_id),
+            kernel_handle, ca_p, fa_t,
+            relax_factor, min, max,
+            pool.handle if isinstance(pool, ThreadPool) else 0
+        )
 
     core.use(None, 'seepage_update_pore',
              c_void_p, c_size_t, c_size_t,
@@ -18575,12 +18613,13 @@ class Seepage(HasHandle, HasCells):
     core.use(None, 'seepage_exchange_heat',
              c_void_p, c_double,
              c_size_t, c_size_t,
-             c_size_t, c_size_t, c_size_t)
+             c_size_t, c_size_t, c_size_t, c_void_p)
 
     def exchange_heat(self, fid=None, thermal_model=None,
                       dt=None, ca_g=None,
                       ca_t=None, ca_mc=None,
-                      fa_t=None, fa_c=None):
+                      fa_t=None, fa_c=None, pool=None
+                      ):
         """
         流体和固体交换热量。
         注意：
@@ -18599,6 +18638,7 @@ class Seepage(HasHandle, HasCells):
             ca_mc (int, optional): 热容属性的ID，默认为None
             fa_t (int, optional): 面温度属性的ID，默认为None
             fa_c (int, optional): 面热容属性的ID，默认为None
+            pool: 线程池
 
         Returns:
             None
@@ -18627,9 +18667,12 @@ class Seepage(HasHandle, HasCells):
                 all_right = False
             if all_right:
                 core.seepage_exchange_heat(
-                    self.handle, dt, ca_g, ca_t, ca_mc, fa_t, fa_c)
+                    self.handle, dt, ca_g, ca_t, ca_mc, fa_t, fa_c,
+                    pool.handle if isinstance(pool, ThreadPool) else 0
+                )
             return
-        if isinstance(thermal_model, Thermal):
+        else:
+            assert isinstance(thermal_model, Thermal)
             if fid is None:
                 fid = 100000000  # exchange with all fluid when fid not exists
             core.seepage_thermal_exchange(
@@ -18638,9 +18681,9 @@ class Seepage(HasHandle, HasCells):
             return
 
     core.use(None, 'seepage_update_cond',
-             c_void_p, c_size_t, c_size_t, c_size_t, c_double)
+             c_void_p, c_size_t, c_size_t, c_size_t, c_double, c_void_p)
 
-    def update_cond(self, ca_v0, fa_g0, fa_igr, relax_factor=1.0):
+    def update_cond(self, ca_v0, fa_g0, fa_igr, relax_factor=1.0, pool=None):
         """
         给定初始时刻各Cell流体体积v0，各Face的导流g0，v/v0到g/g0的映射gr，
         来更新此刻Face的g.
@@ -18653,12 +18696,15 @@ class Seepage(HasHandle, HasCells):
             fa_g0 (int): 各Face的初始导流的属性ID
             fa_igr (int): 各Face选用的gr的序号属性的ID
             relax_factor (float, optional): 松弛因子，默认为1.0
+            pool: 线程池
 
         Returns:
             None
         """
-        core.seepage_update_cond(self.handle, ca_v0, fa_g0, fa_igr,
-                                 relax_factor)
+        core.seepage_update_cond(
+            self.handle, ca_v0, fa_g0, fa_igr, relax_factor,
+            pool.handle if isinstance(pool, ThreadPool) else 0
+        )
 
     core.use(None, 'seepage_update_g0',
              c_void_p, c_size_t, c_size_t, c_size_t,
@@ -18893,11 +18939,11 @@ class Seepage(HasHandle, HasCells):
             ctypes.cast(ratio, c_void_p))
 
     core.use(None, 'seepage_pop_fluids',
-             c_void_p, c_void_p)
+             c_void_p, c_void_p, c_void_p)
     core.use(None, 'seepage_push_fluids',
-             c_void_p, c_void_p)
+             c_void_p, c_void_p, c_void_p)
 
-    def pop_fluids(self, buffer):
+    def pop_fluids(self, buffer, *, pool=None):
         """
         将各个Cell中的最后一个流体暂存到buffer中。一般情况下，将固体作为最后一种流体。
         在计算流动的时候，如果这些固体存在，则会影响到相对渗透率。
@@ -18909,25 +18955,51 @@ class Seepage(HasHandle, HasCells):
 
         Args:
             buffer (Seepage.CellData): 用于暂存流体的缓冲区
+            pool: 线程池
 
         Returns:
             None
         """
         assert isinstance(buffer, Seepage.CellData)
-        core.seepage_pop_fluids(self.handle, buffer.handle)
+        core.seepage_pop_fluids(
+            self.handle, buffer.handle,
+            pool.handle if isinstance(pool, ThreadPool) else 0
+        )
 
-    def push_fluids(self, buffer):
+    def push_fluids(self, buffer, *, pool=None):
         """
         将buffer中暂存的流体追加到各个Cell中。和pop_fluids函数搭配使用。
 
         Args:
             buffer (Seepage.CellData): 暂存流体的缓冲区
+            pool: 线程池
 
         Returns:
             None
         """
         assert isinstance(buffer, Seepage.CellData)
-        core.seepage_push_fluids(self.handle, buffer.handle)
+        core.seepage_push_fluids(
+            self.handle, buffer.handle,
+            pool.handle if isinstance(pool, ThreadPool) else 0
+        )
+
+    def get_flow_sol(self):
+        flow_sol = self.temps.get('flow_sol')
+        if not isinstance(flow_sol, Seepage.FlowSol):
+            res = Seepage.FlowSol()
+            self.temps['flow_sol'] = res
+            return res
+        else:
+            return flow_sol
+
+    def get_thermal_sol(self):
+        thermal_sol = self.temps.get('thermal_sol')
+        if not isinstance(thermal_sol, Seepage.ThermalSol):
+            res = Seepage.ThermalSol()
+            self.temps['thermal_sol'] = res
+            return res
+        else:
+            return thermal_sol
 
     def iterate(self, dt, **opts):
         """
@@ -18937,12 +19009,7 @@ class Seepage(HasHandle, HasCells):
         Returns:
             迭代结果
         """
-        flow_sol = self.temps.get('flow_sol')
-        if flow_sol is None:
-            flow_sol = Seepage.FlowSol()
-            self.temps['flow_sol'] = flow_sol
-
-        return flow_sol.iterate(self, dt=dt, **opts)
+        return self.get_flow_sol().iterate(self, dt=dt, **opts)
 
     def iterate_thermal(self, dt, **opts):
         """
@@ -18954,12 +19021,7 @@ class Seepage(HasHandle, HasCells):
         Returns:
             热状态迭代结果
         """
-        thermal_sol = self.temps.get('thermal_sol')
-        if thermal_sol is None:
-            thermal_sol = Seepage.ThermalSol()
-            self.temps['thermal_sol'] = thermal_sol
-
-        return thermal_sol.iterate(self, dt=dt, **opts)
+        return self.get_thermal_sol().iterate(self, dt=dt, **opts)
 
     def get_recommended_dt(self, *args, ca_t=None, ca_mc=None, **kwargs):
         """

@@ -1,5 +1,5 @@
 from zmlx.base.seepage import as_numpy
-from zmlx.base.seepage import get_time
+from zmlx.base.seepage import get_time_str
 from zmlx.exts.base import Seepage, FractureNetwork
 from zmlx.plt.rc3 import show_rc3
 
@@ -14,9 +14,10 @@ def show_pressure(network: FractureNetwork, flow: Seepage, zr=None, **opts):
 
     if zr is None:
         zr = [-0.5, 0.5]
+    else:
+        assert len(zr) == 2, 'zr must be a list of two elements.'
 
     z0, z1 = zr
-
     rc3 = []
     for fracture in network.fractures:
         assert isinstance(fracture, FractureNetwork.Fracture)
@@ -28,9 +29,10 @@ def show_pressure(network: FractureNetwork, flow: Seepage, zr=None, **opts):
         rc3.append([*cent, *p0, *p1])
 
     default_opts = dict(
-        cbar=dict(label='The Pressure [MPa]'),
-        caption='The Pressure',
-        title=f'Time = {get_time(flow, as_str=True)}',
+        cbar=dict(label='Pressure [MPa]',
+                  shrink=0.5),
+        caption='Pressure',
+        title=f'Time = {get_time_str(flow)}',
         edge_width=0
     )
     opts = {**default_opts, **opts}

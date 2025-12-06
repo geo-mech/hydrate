@@ -1,10 +1,11 @@
 """
-创建3维的有限元模型
+创建3维的有限元模型。
 """
 
 from zmlx.base.zml import Mesh3, DynSys, LinearExpr
 from zmlx.fem.attr_getter import attr_getter
 from zmlx.fem.stiff3 import stiff3
+import warnings
 
 
 def create3(mesh, ba_E=None, ba_mu=None, ba_den=None, b_E=1.0, b_mu=0.2,
@@ -19,6 +20,8 @@ def create3(mesh, ba_E=None, ba_mu=None, ba_den=None, b_E=1.0, b_mu=0.2,
     返回：
         DynSys对象，其中的自由度的数量是mesh中node数量的二倍.
     """
+    warnings.warn("create3 is deprecated", DeprecationWarning, stacklevel=2)
+
     assert isinstance(mesh, Mesh3)
 
     # 生成body属性的接口函数.
@@ -27,8 +30,9 @@ def create3(mesh, ba_E=None, ba_mu=None, ba_den=None, b_E=1.0, b_mu=0.2,
     assert 0.01 <= b_mu <= 0.49
     get_b_mu = attr_getter(index=ba_mu, left=0.01, right=0.49, default=b_mu)
     assert 1.0e-8 <= b_den <= 1.0e8
-    get_b_den = attr_getter(index=ba_den, left=1.0e-8, right=1.0e8,
-                            default=b_den)
+    get_b_den = attr_getter(
+        index=ba_den, left=1.0e-8, right=1.0e8,
+        default=b_den)
 
     # 维度
     ndim = 3

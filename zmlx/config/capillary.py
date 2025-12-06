@@ -9,6 +9,7 @@
 
 from zmlx.base.seepage import get_face_sum, get_face_diff, get_dt, as_numpy
 from zmlx.base.zml import Seepage, Interp1, get_pointer64, np, Vector
+from zmlx.base.zml import clock
 
 # 用于存储毛管压力驱动下的流动设置（不可以修改，否则之前的设置失效）
 text_key = 'cap_settings'
@@ -159,8 +160,8 @@ def _get_face_gra(model: Seepage):
     return fa
 
 
-def iterate(
-        model: Seepage, dt=None, *, fid0=None, fid1=None,
+def iterate_1(
+        model=None, dt=None, fid0=None, fid1=None,
         ca_ipc=None, ds=0.05, gravity=None):
     """
     在毛管力驱动下的流动。如果只给定model，则根据model的设置进行迭代。
@@ -173,10 +174,13 @@ def iterate(
         ds: 线性化的时候饱和度的变化幅度
         gravity: 驱动流体交换的重力加速度
     """
+    assert isinstance(model, Seepage), f'The model is not Seepage. model = {model}'
     if dt is None:
-        dt = get_dt(model)
+        dt_used = get_dt(model)
+    else:
+        dt_used = dt
 
-    if dt <= 1.0e-30:
+    if dt_used <= 1.0e-30:
         return
 
     if fid0 is not None and fid1 is not None:
@@ -229,7 +233,7 @@ def iterate(
                 fid0=fid0, fid1=fid1,
                 buffer=vg)
             model.diffusion(
-                dt, fid0=fid0, fid1=fid1,
+                dt_used, fid0=fid0, fid1=fid1,
                 ps0=vs0.pointer, ls0=vs0.size,
                 pk=vk.pointer, lk=vk.size,
                 pg=vg.pointer, lg=vg.size,
@@ -243,7 +247,7 @@ def iterate(
                     buffer=vg)  # 用来交换的g
                 assert lpg == model.face_number
                 model.diffusion(
-                    dt, fid0=fid0, fid1=fid1,
+                    dt_used, fid0=fid0, fid1=fid1,
                     pg=vg.pointer, lg=vg.size,
                     ppg=ppg, lpg=lpg, ds_max=ds * 0.5
                 )
@@ -260,7 +264,19 @@ def iterate(
                 fid1 = model.find_fludef(fid1)
                 assert fid1 is not None
             gravity = setting.get('gravity')
-            iterate(
-                model=model, dt=dt, fid0=fid0, fid1=fid1,
+            iterate_1(
+                model=model, dt=dt_used, fid0=fid0, fid1=fid1,
                 ca_ipc=setting.get('ca_ipc'),
                 ds=ds, gravity=gravity)  # 执行迭代.
+
+
+@clock
+def iterate(*models, **opts):
+    """
+    在毛管力驱动下的流动。如果只给定model，则根据model的设置进行迭代。
+    Args:
+        models: Seepage 对象
+    """
+    for model in models:
+        assert isinstance(model, Seepage), f'The model is not Seepage. model = {model}'
+        iterate_1(model, **opts)

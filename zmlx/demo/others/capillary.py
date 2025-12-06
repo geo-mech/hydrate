@@ -135,7 +135,7 @@ def solve(model: Seepage):
 
     for step in range(2000):
         gui.break_point()
-        capillary.iterate(model, 1e5)
+        capillary.iterate(model, dt=1e5)
         if step % 30 == 0:
             print(f'step = {step}')
             show(x, y, seepage.get_v(model, 1), caption='饱和度')

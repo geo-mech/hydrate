@@ -37,9 +37,9 @@
 
 ### 安装/运行
 1. 确保操作系统为Windows 10/11, x64<sup>①</sup>;
-2. 安装[VC_redist.x64.exe](https://gitee.com/geomech/hydrate/attach_files)，下载地址：[https://gitee.com/geomech/hydrate/attach_files](https://gitee.com/geomech/hydrate/attach_files) 
+2. 安装[VC_redist.x64.exe](https://gitee.com/geomech/hydrate/attach_files); 
 3. 安装[Python](https://www.python.org/) (64位, 3.8+, 推荐3.10及以上版本)<sup>②</sup>; 
-4. 下载[IGG-Hydrate](https://gitee.com/geomech/hydrate)的zip包并解压；或者使用[git](https://git-scm.com/)来[clone](https://gitee.com/help/articles/4111#article-header0)代码;
+4. 下载[IGG-Hydrate](https://gitee.com/geomech/hydrate)的[zip包](https://gitee.com/geomech/hydrate/repository/archive/master.zip)并解压；或者使用[git](https://git-scm.com/)来[clone](https://gitee.com/help/articles/4111#article-header0)代码;
 5. 将`zmlx`所在的文件夹(**务必为纯英文路径**)添加到Python的搜索路径中; 
 6. 安装`PyQt6, numpy, scipy, matplotlib`等第三方的Python包<sup>③</sup>;  
 7. 参考[`zmlx/demo`](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)建模<sup>④</sup>; 运行[`zml_ui.pyw`](https://gitee.com/geomech/hydrate/blob/master/zml_ui.pyw)打开界面.

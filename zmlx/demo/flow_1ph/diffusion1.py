@@ -1,6 +1,7 @@
 # ** desc = '单相的流动。在单相的基础上，添加了盐度组分的扩散效应'
 
 from zmlx import *
+from zmlx.base.seepage import get_attr
 
 
 def set_cell(c: Seepage.CellData, x, y, v, p, s=0.0):
@@ -142,9 +143,10 @@ def main():
         model.iterate(dt=dt)
         dt1 = model.get_recommended_dt(previous_dt=dt, cfl=0.1)
 
-        r = diffusion.iterate(model, dt=dt)
-        dt2 = r[0].get('dt', dt)  # 第一个扩散过程的建议dt
+        diffusion.iterate(model, dt=dt, recommend_dt=True)
+        dt2 = diffusion.get_dt_next(model)
 
+        # print(f'dt1 = {time2str(dt1)}, dt2 = {time2str(dt2)}')
         dt = min(dt1, dt2, 1.0e9)
         if step % 10 == 0:
             show(model, jx, jy, time=time)

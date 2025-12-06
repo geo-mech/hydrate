@@ -3,9 +3,9 @@
 """
 
 from zmlx.base.seepage import get_time, get_dt
-from zmlx.base.zml import Seepage
+from zmlx.base.zml import Seepage, clock
 from zmlx.config.alg import settings as alg_settings
-from zmlx.config.slots import get_slot
+from zmlx.config.slots import get_slot, get_slots
 
 text_key = 'timers'
 
@@ -59,30 +59,32 @@ def replace(data, table):
         return data
 
 
-def iterate(
-        model: Seepage, *,
-        t0=None, t1=None, slots=None):
-    if t0 is None:
+@clock
+def iterate(*models):
+    for model in models:
+        assert isinstance(model, Seepage), f'The model is not Seepage. model = {model}'
+        # 所有的回调函数
+        slots = get_slots(model.temps.get('slots'))
+
         t0 = get_time(model)
-    if t1 is None:
         t1 = t0 + get_dt(model)
 
-    if t0 >= t1:
-        return
+        if t0 >= t1:
+            continue
 
-    settings = get_settings(model)
-    if len(settings) == 0:
-        return
+        settings = get_settings(model)
+        if len(settings) == 0:
+            continue
 
-    for setting in settings:
-        assert isinstance(setting, dict)
-        time = setting.get('time')
-        if t0 <= time < t1:
-            table = {'@time': time, '@model': model}  # 需要替换的数据表格
-            func = get_slot(setting.get('name'), slots=slots)
-            if func is not None:
-                args = get(setting, 'args', [])
-                kwds = get(setting, 'kwds', {})
-                args = replace(args, table)
-                kwds = replace(kwds, table)
-                func(*args, **kwds)
+        for setting in settings:
+            assert isinstance(setting, dict)
+            time = setting.get('time')
+            if t0 <= time < t1:
+                table = {'@time': time, '@model': model}  # 需要替换的数据表格
+                func = get_slot(setting.get('name'), slots=slots)
+                if func is not None:
+                    args = get(setting, 'args', [])
+                    kwds = get(setting, 'kwds', {})
+                    args = replace(args, table)
+                    kwds = replace(kwds, table)
+                    func(*args, **kwds)

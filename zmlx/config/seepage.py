@@ -43,16 +43,18 @@ Face的属性：
              变量速度。当Face同时定义了rate和inertia之后，才可以去考虑惯性效应。
 """
 from collections.abc import Iterable
+from typing import Optional
 
 from zmlx.alg.base import clamp, join_cols
 from zmlx.alg.fsys import join_paths, make_fname, print_tag
 from zmlx.base.seepage import *
 from zmlx.base.zml import (get_average_perm, Tensor3, ConjugateGradientSolver,
-                           make_parent, SeepageMesh)
-from zmlx.config import (capillary, prod, fluid_heating, timer,
-                         sand, step_iteration, diffusion, flu_buffer)
+                           make_parent, SeepageMesh, clock)
+from zmlx.config import (
+    capillary, prod, fluid_heating, timer,
+    sand, step_iteration, diffusion, solid_buffer, fluid, injector, cond
+)
 from zmlx.config.attr_keys import cell_keys, face_keys, flu_keys
-from zmlx.config.slots import get_slot
 from zmlx.geometry.base import point_distance
 from zmlx.plt.fig2 import tricontourf
 from zmlx.react.alg import add_reaction
@@ -69,19 +71,19 @@ def show_cells(
     """
     二维绘图显示
 
-    参数:
-    - model: Seepage 模型对象
-    - dim0: 第一个维度索引（0, 1, 2 分别对应 x, y, z 维度）
-    - dim1: 第二个维度索引（0, 1, 2 分别对应 x, y, z 维度）
-    - mask: 可选的掩码，用于筛选特定的单元格
-    - show_p: 是否显示压力（默认为 True）
-    - show_t: 是否显示温度（默认为 True）
-    - show_s: 是否显示饱和度（默认为 True）
-    - folder: 图像保存的文件夹路径（可选）
-    - use_mass: 是否使用质量饱和度（默认为 False）
+    Args:
+        model: Seepage 模型对象
+        dim0: 第一个维度索引（0, 1, 2 分别对应 x, y, z 维度）
+        dim1: 第二个维度索引（0, 1, 2 分别对应 x, y, z 维度）
+        mask: 可选的掩码，用于筛选特定的单元格
+        show_p: 是否显示压力（默认为 True）
+        show_t: 是否显示温度（默认为 True）
+        show_s: 是否显示饱和度（默认为 True）
+        folder: 图像保存的文件夹路径（可选）
+        use_mass: 是否使用质量饱和度（默认为 False）
 
-    返回值:
-    - 无
+    Returns:
+        None
 
     该函数通过获取模型中单元格的位置和属性值，使用 tricontourf 函数绘制二维等值线图，
     显示模型中单元格的压力、温度和饱和度分布。如果提供了文件夹路径，则将图像保存到指定文件夹中。
@@ -141,206 +143,307 @@ def show_cells(
                 **kw)
 
 
-def parallel_iterate(*args, pool=None):
+@clock
+def exchange_heat(*models, pool=None):
+    """
+    模型中流体和固体之间交换热
+
+    Args:
+        models: Seepage 模型对象列表
+        pool: 可选的线程池对象，用于并行计算（默认为 None）
+
+    Returns:
+        None
+
+    该函数通过遍历模型列表，检查每个模型是否启用了热交换功能（通过检查标签 'disable_heat_exchange'），
+    并检查模型中是否有定义的流体定义（通过检查 fludef_number 是否大于 0）。如果满足条件，则调用模型的
+    exchange_heat 方法进行热交换计算。计算时使用模型的时间步长（dt），以及热交换相关的单元格属性键（ca_g, ca_t, ca_mc）
+    和流体属性键（fa_t, fa_c）。如果提供了线程池对象，则并行计算热交换。
+    """
+    if len(models) <= 1:
+        pool = None
+
+    for model in models:
+        assert isinstance(model, Seepage), f'The model is not Seepage. model = {model}'
+        if model.not_has_tag('disable_heat_exchange') and model.fludef_number > 0:
+            model.exchange_heat(
+                dt=get_dt(model),
+                ca_g=model.get_cell_key('g_heat'),
+                ca_t=model.get_cell_key('temperature'),
+                ca_mc=model.get_cell_key('mc'),
+                fa_t=model.get_flu_key('temperature'),
+                fa_c=model.get_flu_key('specific_heat'),
+                pool=pool
+            )
+
+    if isinstance(pool, ThreadPool):
+        pool.sync()  # 等待放入pool中的任务执行完毕
+
+
+@clock
+def apply_reactions(*models, pool=None):
+    """
+    应用模型中的化学反应
+
+    Args:
+        *models: Seepage 模型对象列表
+        pool: 可选的线程池对象，用于并行计算（默认为 None）
+
+    Returns:
+        None
+
+    该函数通过遍历模型列表，检查每个模型是否有定义的化学反应（通过检查 reaction_number 是否大于 0）。
+    如果满足条件，则调用模型的 get_reaction 方法获取化学反应对象，并使用模型的时间步长（dt）和其他参数
+    调用化学反应对象的 react 方法进行化学反应计算。如果提供了线程池对象，则并行计算化学反应。
+    """
+    if len(models) <= 1:
+        pool = None
+
+    reaction_number = 0
+    for model in models:
+        assert isinstance(model, Seepage), f'The model is not Seepage. model = {model}'
+        reaction_number = max(reaction_number, model.reaction_number)
+
+    for idx in range(reaction_number):
+        for model in models:
+            assert isinstance(model, Seepage), f'The model is not Seepage. model = {model}'
+            opts = model.temps['iterate_opts']
+            if idx < model.reaction_number:
+                reaction = model.get_reaction(idx)
+                assert isinstance(reaction, Seepage.Reaction)
+                react_bufs = opts.get('react_bufs')
+                buf = None
+                if react_bufs is not None:
+                    if idx < len(react_bufs):
+                        # 使用这个buf
+                        #   (必须确保这个buf是一个double类型的指针，并且长度等于cell_number)
+                        buf = react_bufs[idx]
+                reaction.react(model, get_dt(model), buf=buf, pool=pool)
+
+        if isinstance(pool, ThreadPool):
+            pool.sync()  # 等待放入pool中的任务执行完毕
+
+
+@clock
+def update_time_state(*models):
+    """
+    更新模型的时间状态
+
+    Args:
+        *models: Seepage 模型对象列表
+
+    Returns:
+        None
+
+    该函数通过遍历模型列表，检查每个模型是否为 Seepage 类型。如果满足条件，则调用模型的 set_time 方法
+    更新模型的时间为当前时间加上时间步长（dt），并调用 set_step 方法将模型的步数增加 1。
+    """
+    # 更新模型的状态
+    for model in models:
+        assert isinstance(model, Seepage)
+        set_time(model, get_time(model) + get_dt(model))
+        set_step(model, get_step(model) + 1)
+
+
+@clock
+def update_dt(*models):
+    """
+    更新模型的时间步长（dt）
+
+    Args:
+        *models: Seepage 模型对象列表
+
+    Returns:
+        None
+
+    该函数通过遍历模型列表，检查每个模型是否启用了更新时间步长功能（通过检查标签 'disable_update_dt'）。
+    如果满足条件，则跳过该模型。否则，根据模型中定义的流、热和扩散等物理量，计算下一步建议的时间步长（dt）。
+    建议的时间步长取所有计算结果中的最小值，并确保在最小和最大时间步长之间。最后，调用模型的 set_dt 方法
+    更新模型的时间步长为建议值。
+    """
+    for model in models:
+        assert isinstance(model, Seepage)
+        if model.has_tag('disable_update_dt'):
+            continue
+
+        recommended_dts = []
+        dt = get_flow_dt_next(model)
+        if dt > 0:
+            recommended_dts.append(dt)
+
+        dt = get_thermal_dt_next(model)
+        if dt > 0:
+            recommended_dts.append(dt)
+
+        dt = diffusion.get_dt_next(model)
+        if dt > 0:
+            recommended_dts.append(dt)
+
+        if len(recommended_dts) > 0:
+            if len(recommended_dts) > 1:
+                recommended_dt = min(*recommended_dts)
+            else:
+                recommended_dt = recommended_dts[0]
+            dt = max(get_dt_min(model), min(get_dt_max(model), recommended_dt))
+            set_dt(model, dt)  # 修改dt为下一步建议使用的值
+
+
+@clock
+def apply_diffusions(*models):
+    """
+    应用模型中的扩散计算
+
+    Args:
+        *models: Seepage 模型对象列表
+
+    Returns:
+        None
+
+    该函数通过遍历模型列表，检查每个模型是否有定义的扩散计算（通过检查 diffusions 是否为空）。
+    如果满足条件，则调用模型的 get_diffusion 方法获取扩散计算对象，并使用模型的时间步长（dt）
+    调用扩散计算对象的 react 方法进行扩散计算。
+    """
+    for model in models:
+        diffusions = model.temps.get('diffusions')
+        if diffusions is None:
+            continue
+        for update in diffusions:
+            update(model, get_dt(model))
+
+
+def iterate(*local_opts, pool=None, **global_opts):
     """
     在时间上向前并行地迭代一次
+
+    Args:
+        *local_opts: 每个模型的迭代选项字典，或者 Seepage 模型对象
+        pool: 线程池对象，用于并行处理模型迭代
+        **global_opts: 全局迭代选项字典
+
+    Returns:
+        None
     """
     if gui.exists():  # 添加断点，从而使得在这里可以暂停和终止
         gui.break_point()
 
-    for kwargs in args:
-        if gui.exists():  # 添加断点，从而使得在这里可以暂停和终止
-            gui.break_point()
+    models = []
 
-        assert isinstance(kwargs, dict)
-        model = kwargs['model']
-        assert isinstance(model, Seepage)
+    for local_opt in local_opts:
+        # 解析出model
+        if isinstance(local_opt, dict):
+            model = local_opt.pop('model', None)
+            assert isinstance(model, Seepage), f'The model is not Seepage. model = {model}'
+        else:
+            assert isinstance(local_opt, Seepage)
+            model = local_opt
+            local_opt = {}
 
-        if kwargs.get('dt') is not None:
-            set_dt(model, kwargs.get('dt'))
+        # 记录模型
+        models.append(model)
 
-        assert get_dt(model) is not None, 'You must set dt before iterate'
+        # 设置slots(优先使用局部的值)
+        global_slots = global_opts.get('slots', None)
+        local_slots = local_opt.get('slots', None)
+        if not isinstance(global_slots, dict):
+            global_slots = {}
+        if not isinstance(local_slots, dict):
+            local_slots = {}
+        slots = {**global_slots, **local_slots}
+        model.temps['slots'] = slots
 
-        # 执行定时器函数.
-        timer.iterate(
-            model, t0=get_time(model), t1=get_time(model) + get_dt(model),
-            slots=kwargs.get('slots')
-        )
+        # 所有用来迭代的选项
+        opts = {**global_opts, **local_opt}
 
-        # 执行step迭代
-        step_iteration.iterate(
-            model=model,
-            current_step=get_step(model),
-            slots=kwargs.get('slots')
-        )
+        # 根据参数，设置dt
+        dt = opts.get('dt')
+        if dt is not None:
+            set_dt(model, dt)
 
-        if model.not_has_tag('disable_update_den') and model.fludef_number > 0:
-            model.update_den(
-                relax_factor=0.3, fa_t=model.get_flu_key('temperature'))
+        # 设置cond_updaters
+        model.temps['cond_updaters'] = opts.get('cond_updaters')
 
-        if model.not_has_tag('disable_update_vis') and model.fludef_number > 0:
-            # 更新流体的粘性系数(注意，当有固体存在的时候，务必将粘性系数的最大值设置为1.0e30)
-            model.update_vis(
-                ca_p=model.get_cell_key('pre'),  # 压力属性
-                fa_t=model.get_flu_key('temperature'),  # 温度属性
-                relax_factor=1.0,
-                min=kwargs.get('vis_min', 1.0e-7),
-                max=kwargs.get('vis_max', 1.0e30)
-            )
+        # 设置额外的diffusions
+        model.temps['diffusions'] = opts.get('diffusions')
 
-        if model.injector_number > 0:
-            # 实施流体的注入操作.
-            model.apply_injectors(dt=get_dt(model), time=get_time(model))
+        # 记录选项
+        model.temps['iterate_opts'] = opts
 
-        # 尝试修改边界的压力，从而使得流体生产 (使用模型内部定义的time)
-        #   since 2024-6-12
-        prod.iterate(model)
+    if len(models) <= 1:  # 此时不需要并行处理
+        pool = None
 
-        # 对流体进行加热
-        fluid_heating.iterate(model)
+    # 执行定时器函数 (读取slots)
+    timer.iterate(*models)
 
-        if model.has_tag('has_solid'):
-            flu_buffer.backup(model)
+    # 执行step迭代 (读取slots)
+    step_iteration.iterate(*models)
 
-        if model.gr_number > 0:
-            # 此时，各个Face的导流系数是可变的
-            #       (并且，这里由于已经弹出了固体，因此计算体积使用的是流体的数值).
-            # 注意：
-            #     在建模的时候，务必要设置Cell的v0属性，Face的g0属性和igr属性，
-            #     并且，在model中，应该有相应的gr和它对应。
-            if model.get_cell_key('fv0') is not None and model.get_face_key('g0') is not None and model.get_face_key(
-                    'igr') is not None:
-                model.update_cond(
-                    ca_v0=model.get_cell_key('fv0'),
-                    fa_g0=model.get_face_key('g0'),
-                    fa_igr=model.get_face_key('igr'),
-                    relax_factor=0.3)
+    # 迭代流体的性质
+    fluid.iterate(*models, pool=pool)
 
-        for update in kwargs.get('cond_updaters', []):  # 施加cond的更新操作
-            assert callable(
-                update), f'The update in cond_updaters must be callable. However, it is: {update}'
-            update(model)
+    # 流体注入
+    injector.iterate(*models, pool=pool)
 
-    parallel_opts = []
-    for kwargs in args:
-        assert isinstance(kwargs, dict)
-        model = kwargs['model']
-        opts = dict(
-            model=model, dt=get_dt(model),
-            ca_p=model.reg_cell_key('pre'),
-            solver=kwargs.get('solver'),
-            fa_s=kwargs.get('fa_s', model.get_face_key('area')),
-            fa_q=kwargs.get('fa_q', model.get_face_key('rate')),
-            fa_k=kwargs.get('fa_k', model.get_face_key('inertia')),
-        )
-        parallel_opts.append(opts)
+    # 尝试修改边界的压力，从而使得流体生产 (使用模型内部定义的time)
+    #   since 2024-6-12
+    prod.iterate(*models)
 
-    r1 = parallel_update_flow(*parallel_opts, pool=pool)
+    # 对流体进行加热
+    fluid_heating.iterate(*models)
 
-    for kwargs in args:
-        if gui.exists():  # 添加断点，从而使得在这里可以暂停和终止
-            gui.break_point()
+    # 备份固体  (注意，在solid_buffer.backup和solid_buffer.restore，最后一种物质不存在)
+    solid_buffer.backup(*models, pool=pool)
 
-        assert isinstance(kwargs, dict)
-        model = kwargs['model']
-        assert isinstance(model, Seepage)
+    # 更新cond(基于gr以及cond_updaters)
+    cond.iterate(*models, pool=pool)
 
-        # 执行所有的扩散操作，这一步需要在没有固体存在的条件下进行
-        for update in kwargs.get('diffusions', []):
-            update(model, get_dt(model))
+    # 迭代流体
+    iterate_flow(*models, pool=pool, recommend_dt=True)
 
-        # 执行毛管力相关的操作
-        capillary.iterate(model)
+    # 执行所有的扩散操作，这一步需要在没有固体存在的条件下进行
+    apply_diffusions(*models)
 
-        # 执行diffusion操作 （2025-11-25）
-        # 注意：1 这里的diffusion.iterate 会更新模型中的浓度属性 (依据model中存储的相关配置)
-        #      2 这里，假设扩散是慢的过程，因此，直接采用模型的dt (这在极端情况下，可能会有问题)
-        diffusion.iterate(model, dt=get_dt(model))
+    # 执行毛管力相关的操作
+    capillary.iterate(*models)
 
-        if model.has_tag('has_solid'):
-            flu_buffer.restore(model)
+    # 执行新版本的扩散操作
+    diffusion.iterate(*models, pool=pool, recommend_dt=True)
 
-        # 更新砂子的体积（优先使用自定义的update_sand）
-        update_sand = get_slot('update_sand',
-                               slots=kwargs.get('slots'))
-        if update_sand is None:
-            update_sand = sand.iterate  # 优先使用自定义的update_sand
-        update_sand(model=model)
+    # 恢复备份的固体
+    solid_buffer.restore(*models, pool=pool)
 
-    parallel_opts = []
-    for kwargs in args:
-        assert isinstance(kwargs, dict)
-        model = kwargs['model']
-        parallel_opts.append(dict(
-            model=kwargs['model'], dt=get_dt(model), ca_t=model.get_cell_key('temperature'),
-            ca_mc=model.get_cell_key('mc'), fa_g=model.get_face_key('g_heat'),
-            solver=kwargs.get('solver'),
-        ))
+    # 更新砂子的体积（检查在slots中是否有自定义的update_sand）
+    sand.iterate(*models, check_slots=True)
 
-    r2 = parallel_update_thermal(*parallel_opts, pool=pool)
+    # 更新传热
+    iterate_thermal(*models, pool=pool, recommend_dt=True)
 
-    for model_idx in range(len(args)):
-        if gui.exists():  # 添加断点，从而使得在这里可以暂停和终止
-            gui.break_point()
+    # 热交换
+    exchange_heat(*models, pool=pool)
 
-        kwargs = args[model_idx]
-        assert isinstance(kwargs, dict)
-        model = kwargs['model']
-        assert isinstance(model, Seepage)
+    # 化学反应
+    apply_reactions(*models, pool=pool)
 
-        if model.not_has_tag('disable_heat_exchange') and model.fludef_number > 0:
-            model.exchange_heat(
-                dt=get_dt(model), ca_g=model.get_cell_key('g_heat'),
-                ca_t=model.get_cell_key('temperature'),
-                ca_mc=model.get_cell_key('mc'),
-                fa_t=model.get_flu_key('temperature'), fa_c=model.get_flu_key('specific_heat')
-            )
+    # 更新模型的状态
+    update_time_state(*models)
 
-        # 反应
-        for idx in range(model.reaction_number):
-            reaction = model.get_reaction(idx)
-            assert isinstance(reaction, Seepage.Reaction)
-            react_bufs = kwargs.get('react_bufs')
-            buf = None
-            if react_bufs is not None:
-                if idx < len(react_bufs):
-                    # 使用这个buf
-                    #   (必须确保这个buf是一个double类型的指针，并且长度等于cell_number)
-                    buf = react_bufs[idx]
-            reaction.react(model, get_dt(model), buf=buf)
-
-        set_time(model, get_time(model) + get_dt(model))
-        set_step(model, get_step(model) + 1)
-
-        if not model.has_tag('disable_update_dt'):
-            # 只要不禁用dt更新，就尝试更新dt
-            assert model_idx < len(r1) and model_idx < len(r2)
-            using_flow = r1[model_idx] is not None
-            using_ther = r2[model_idx] is not None
-            if using_flow or using_ther:
-                # 只有当计算了流动或者传热过程，才可以使用自动的时间步长
-                dt = get_recommended_dt(
-                    model, get_dt(model), get_dv_relative(model),
-                    using_flow=using_flow,
-                    using_ther=using_ther
-                )
-                dt = max(get_dt_min(model), min(get_dt_max(model), dt))
-                set_dt(model, dt)  # 修改dt为下一步建议使用的值
-
-    return r1, r2
+    # 更新时间步长
+    update_dt(*models)
 
 
-def iterate(model, pool=None, **kwargs):
-    """
-    在时间上向前迭代
-    """
-    r1, r2 = parallel_iterate(dict(model=model, **kwargs), pool=pool)
-    return r1[0], r2[0]
+parallel_iterate = iterate
 
 
 def parallel_sync(*args, pool=None, target_time=None):
     """
     并行地迭代，直到给定的目标时间
+
+    Args:
+        *args: 每个模型的迭代选项字典，或者 Seepage 模型对象
+        pool: 线程池对象，用于并行处理模型迭代
+        target_time: 目标时间，默认值为 None
+
+    Returns:
+        None
     """
 
     def get(x: dict, key, default=None):
@@ -370,8 +473,8 @@ def parallel_sync(*args, pool=None, target_time=None):
         else:
             n_loop += 1
             n_iter += len(opt_list)
-            parallel_iterate(*opt_list,
-                             pool=pool if len(opt_list) > 1 else None)
+            iterate(*opt_list,
+                    pool=pool if len(opt_list) > 1 else None)
 
     return n_loop, n_iter
 
@@ -382,7 +485,23 @@ def get_inited(
         dt_max=None, dt_min=None,
         keys=None, tags=None, model_attrs=None):
     """
-    创建一个模型，初始化必要的属性.
+    创建一个模型，初始化必要的属性
+    Args:
+        fludefs: 流体定义列表，默认值为 None
+        reactions: 化学反应定义列表，默认值为 None
+        gravity: 重力向量，默认值为 None
+        path: 模型路径，默认值为 None
+        time: 初始时间，默认值为 None
+        dt: 初始时间步长，默认值为 None
+        dv_relative: 相对体积变化率，默认值为 None
+        dt_max: 最大时间步长，默认值为 None
+        dt_min: 最小时间步长，默认值为 None
+        keys: 模型键值对，默认值为 None
+        tags: 模型标签列表，默认值为 None
+        model_attrs: 模型额外属性列表，默认值为 None
+
+    Returns:
+        Seepage 模型对象
     """
     model = Seepage(path=path)
 
@@ -440,10 +559,10 @@ def get_inited(
 
 def add_injector(model: Seepage, data):
     """
-    向模型中添加注入器.
+    向模型中添加注入器
     Args:
         model: 渗流模型
-        data: 注入器的定义
+        data: 注入器的定义字典
 
     Returns:
         None
@@ -451,42 +570,77 @@ def add_injector(model: Seepage, data):
     if data is None:
         return
     elif isinstance(data, dict):
-        injector = model.add_injector(**data)
+        inj = model.add_injector(**data)
         flu = data.get('flu')
         if flu == 'insitu' and model.cell_number > 0 and len(
-                injector.fid) > 0:  # 找到要注入的那个cell
-            cell_id = injector.cell_id
+                inj.fid) > 0:  # 找到要注入的那个cell
+            cell_id = inj.cell_id
             if cell_id >= model.cell_number and point_distance(
-                    injector.pos, [0, 0, 0]) < 1e10:
-                cell = model.get_nearest_cell(pos=injector.pos)
-                if point_distance(cell.pos, injector.pos) < injector.radi:
+                    inj.pos, [0, 0, 0]) < 1e10:
+                cell = model.get_nearest_cell(pos=inj.pos)
+                if point_distance(cell.pos, inj.pos) < inj.radi:
                     cell_id = cell.index
             if cell_id < model.cell_number:
                 # 特别注意的是，这里找到的这个cell，和injector内部工作的时候的cell，可能并不完全相同.
                 cell = model.get_cell(cell_id)
-                temp = cell.get_fluid(*injector.fid)
+                temp = cell.get_fluid(*inj.fid)
                 if temp is not None:
-                    injector.flu.clone(temp)
+                    inj.flu.clone(temp)
     else:
         for item in data:
             add_injector(model, data=item)
 
 
 def create(
-        mesh=None,
-        disable_update_den=False, disable_update_vis=False,
-        disable_ther=False, disable_heat_exchange=False,
-        fludefs=None, has_solid=False, reactions=None,
+        mesh: Optional[SeepageMesh] = None,
+        *,
+        disable_update_den: bool = False,
+        disable_update_vis: bool = False,
+        disable_ther: bool = False,
+        disable_heat_exchange: bool = False,
+        fludefs=None,
+        has_solid: bool = False,
+        reactions=None,
         gravity=None,
         dt_max=None, dt_min=None, dt_ini=None, dv_relative=None,
         gr=None, bk_fv=None, bk_g=None, caps=None,
-        keys=None, tags=None, kr=None, default_kr=None,
-        model_attrs=None, prods=None,
+        keys: dict = None, tags: list[str] = None, kr=None, default_kr=None,
+        model_attrs: Optional[dict[str, float]] = None,
+        prods=None,
         warnings_ignored=None, injectors=None, texts=None,
-        **kwargs):
+        **kwargs) -> Seepage:
     """
-    利用给定的网格来创建一个模型.
-        其中gr用来计算孔隙体积变化之后的渗透率的改变量.  gr的类型是一个Interp1.
+    创建一个渗流模型。
+    Args:
+        mesh: SeepageMesh网格对象，默认值为 None
+        disable_update_den: 是否禁用密度更新，默认值为 False
+        disable_update_vis: 是否禁用粘度更新，默认值为 False
+        disable_ther: 是否禁用热更新，默认值为 False
+        disable_heat_exchange: 是否禁用热交换，默认值为 False
+        fludefs: 流体定义列表，默认值为 None
+        has_solid: 是否包含固体(将最后一种流体作为固体)，默认值为 False
+        reactions: 化学反应定义列表，默认值为 None
+        gravity: 重力向量，默认值为 None
+        dt_max: 最大时间步长，默认值为 None
+        dt_min: 最小时间步长，默认值为 None
+        dt_ini: 初始时间步长，默认值为 None
+        dv_relative: 在一个dt内，流过的最大体积和网格体积的比值，用以控制dt的大小，默认值为 None
+        gr: 绝对渗透率随着孔隙度的变化曲线，默认值为 None
+        bk_fv: 是否备份初始的流体体积，默认值为 None
+        bk_g: 是否备份初始的导流能力，默认值为 None
+        caps: 毛管压力的定义，默认值为 None
+        keys: 模型键值对(预先定义好，不需要后续在动态添加了)，默认值为 None
+        tags: 标签列表，默认值为 None
+        kr: 渗透率变化率，默认值为 None
+        default_kr: 默认渗透率变化率，默认值为 None
+        prods: 控制流体的产出，默认值为 None
+        warnings_ignored: 忽略的警告列表，默认值为 None
+        injectors: 注入器定义列表，默认值为 None
+        texts: 文本列表，默认值为 None
+        model_attrs: 模型额外属性列表，默认值为 None
+
+    Returns:
+        Seepage 模型对象
     """
     model = Seepage()
     if warnings_ignored is None:  # 忽略掉的警告
@@ -613,18 +767,18 @@ def create(
     return model
 
 
-def add_mesh(model: Seepage, mesh):
+def add_mesh(model: Seepage, mesh: SeepageMesh):
     """
-    根据给定的mesh，添加Cell和Face. 并对Cell和Face设置基本的属性.
+    根据给定的mesh，添加Cell和Face到Model. 并对Cell和Face设置基本的属性.
         对于Cell，仅仅设置位置和体积这两个属性.
         对于Face，仅仅设置面积和长度这两个属性.
 
-    参数:
-    - model: Seepage 模型对象
-    - mesh: 要添加的网格对象
+    Args:
+        model (Seepage): Seepage 模型对象
+        mesh (SeepageMesh): 要添加的网格对象
 
-    返回值:
-    - 无
+    Returns:
+        None
 
     该函数通过遍历网格中的单元格和面，将它们添加到模型中，并设置相应的属性。
     """
@@ -686,7 +840,7 @@ class AttrId:
 
 
 def set_model(
-        model: Seepage, porosity=0.1,
+        model: Seepage, *, porosity=0.1,
         pore_modulus=1000e6, denc=1.0e6, dist=0.1,
         temperature=280.0, p=None,
         s=None, perm=1e-14, heat_cond=1.0,
@@ -695,27 +849,34 @@ def set_model(
         bk_g=True, mesh=None, **ignores):
     """
     设置模型的网格，并顺便设置其初始的状态.
-    --
-    注意各个参数的含义：
+
+    Args:
+        model (Seepage): Seepage 模型对象
         porosity: 孔隙度；
-        pore_modulus：空隙的刚度，单位Pa；正常取值在100MPa到1000MPa之间；
-        denc：土体的密度和比热的乘积；
+        pore_modulus: 空隙的刚度，单位Pa；正常取值在100MPa到1000MPa之间；
+        denc: 土体的密度，单位kg/m^3；
                 假设土体密度2000kg/m^3，比热1000，denc取值就是2.0e6；
-        dist：一个单元包含土体和流体两个部分，dist是土体和流体换热的距离。
+        dist: 一个单元包含土体和流体两个部分，dist是土体和流体换热的距离。
                 这个值越大，换热就越慢。如果希望土体和流体的温度非常接近，
                 就可以把dist设置得比较小。一般，可以设置为网格大小的几分之一；
         temperature: 温度K
-        p：压力Pa
-        s：各个相的饱和度，tuple/list/dict；
-        perm：渗透率 m^2
+        p: 压力Pa
+        s: 各个相的饱和度，tuple/list/dict；
+        perm: 渗透率 m^2
         heat_cond: 热传导系数
-    -
-    注意：
+        sample_dist: 样本距离，单位m；
+        pore_modulus_range: 空隙的刚度范围，单位Pa；
+        igr: 相对导流能力曲线的ID
+        bk_fv: 是否备份初始的流体体积
+        bk_g: 是否备份初始的face的导流系数
+        mesh: 网格对象
+        **ignores: 其他忽略的参数
+
+    Notes:
         每一个参数，都可以是一个具体的数值，或者是一个和x，y，z坐标相关的一个分布
             (判断是否定义了obj.__call__这样的成员函数，有这个定义，则视为一个分布，
             否则是一个全场一定的值)
-    --
-    注意:
+
         在使用这个函数之前，请确保Cell需要已经正确设置了位置，并且具有网格体积vol这个自定义属性；
         对于Face，需要设置面积s和长度length这两个自定义属性。否则，此函数的执行会出现错误.
 
@@ -885,23 +1046,23 @@ def set_cell(
     """
     设置Cell的初始状态.
 
-    参数:
-    - cell: Seepage.Cell 类型的单元格对象
-    - pos: 单元格的位置，可选参数
-    - vol: 单元格的体积，可选参数
-    - porosity: 孔隙度，默认值为0.1
-    - pore_modulus: 孔隙模量，默认值为1000e6
-    - denc: 密度，默认值为1.0e6
-    - dist: 距离，默认值为0.1
-    - temperature: 温度，默认值为280.0
-    - p: 压力，默认值为1.0
-    - s: 饱和度，可选参数
-    - pore_modulus_range: 孔隙模量范围，可选参数
-    - bk_fv: 是否备份流体体积，默认值为True
-    - heat_cond: 热传导系数，默认值为1.0
+    Args:
+        cell: Seepage.Cell 类型的单元格对象
+        pos: 单元格的位置，可选参数
+        vol: 单元格的体积，可选参数
+        porosity: 孔隙度，默认值为0.1
+        pore_modulus: 孔隙模量，默认值为1000e6
+        denc: 密度，默认值为1.0e6
+        dist: 距离，默认值为0.1
+        temperature: 温度，默认值为280.0
+        p: 压力，默认值为1.0
+        s: 饱和度，可选参数
+        pore_modulus_range: 孔隙模量范围，可选参数
+        bk_fv: 是否备份流体体积，默认值为True
+        heat_cond: 热传导系数，默认值为1.0
 
-    返回值:
-    - 无
+    Returns:
+        None
 
     该函数通过设置单元格的位置、体积、孔隙度、孔隙模量、密度、距离、温度、压力、饱和度等属性，
     来初始化单元格的状态。
@@ -947,17 +1108,16 @@ def set_face(
     """
     对一个Face进行配置
 
-    参数:
-    - face: Seepage.Face 类型的面对象
-    - area: 面的面积，可选参数
-    - length: 面的长度，可选参数
-    - perm: 渗透率，可选参数
-    - heat_cond: 热传导系数，可选参数
-    - igr: 未知参数，可选参数
-    - bk_g: 是否备份渗透率，默认值为True
-
-    返回值:
-    - 无
+    Args:
+        face: Seepage.Face 类型的面对象
+        area: 面的面积，可选参数
+        length: 面的长度，可选参数
+        perm: 渗透率，可选参数
+        heat_cond: 热传导系数，可选参数
+        igr: 未知参数，可选参数
+        bk_g: 是否备份渗透率，默认值为True
+    Returns:
+        None
 
     该函数通过设置面的面积、长度、渗透率、热传导系数等属性，来初始化面的状态。
     """
@@ -1020,13 +1180,13 @@ def add_cell(model: Seepage, *args, **kwargs):
     """
     添加一个新的Cell，并返回Cell对象
 
-    参数:
-    - model: Seepage 模型对象
-    - *args: 传递给 set_cell 函数的位置参数
-    - **kwargs: 传递给 set_cell 函数的关键字参数
+    Args:
+        model: Seepage 模型对象
+        *args: 传递给 set_cell 函数的位置参数
+        **kwargs: 传递给 set_cell 函数的关键字参数
 
-    返回值:
-    - cell: 新添加的 Cell 对象
+    Returns:
+        cell: 新添加的 Cell 对象
 
     该函数通过调用模型的 add_cell 方法创建一个新的单元格，
     然后使用 set_cell 函数设置该单元格的初始状态，并返回这个单元格对象。
@@ -1040,15 +1200,15 @@ def add_face(model: Seepage, cell0, cell1, *args, **kwargs):
     """
     添加一个Face，并且返回
 
-    参数:
-    - model: Seepage 模型对象
-    - cell0: 第一个单元格对象
-    - cell1: 第二个单元格对象
-    - *args: 传递给 set_face 函数的位置参数
-    - **kwargs: 传递给 set_face 函数的关键字参数
+    Args:
+        model: Seepage 模型对象
+        cell0: 第一个单元格对象
+        cell1: 第二个单元格对象
+        *args: 传递给 set_face 函数的位置参数
+        **kwargs: 传递给 set_face 函数的关键字参数
 
-    返回值:
-    - face: 新添加的 Face 对象
+    Returns:
+        face: 新添加的 Face 对象
 
     该函数通过调用模型的 add_face 方法创建一个新的面，
     然后使用 set_face 函数设置该面的初始状态，并返回这个面对象。

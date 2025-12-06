@@ -1,4 +1,4 @@
-from zmlx.config.seepage import create as create_seepage_model
+from zmlx.config.seepage import create as create_seepage
 from zmlx.exts.base import FractureNetwork, Seepage
 from zmlx.frac.mesh import create_mesh
 
@@ -34,9 +34,9 @@ def create_flow(
         perm=1.0e-14,
         tags=['disable_ther', 'disable_heat_exchange']
     )
-    opts = {**default_opts, **opts}  # opts中的值会覆盖默认值
+    opts = {**default_opts, **opts}
 
-    return create_seepage_model(
+    return create_seepage(
         mesh=mesh,
         fludefs=fludefs,
         s=s,

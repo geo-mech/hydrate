@@ -158,9 +158,10 @@ def main():
         model.iterate(dt=dt)
         dt1 = model.get_recommended_dt(previous_dt=dt, cfl=0.2)
 
-        r = diffusion.iterate(model, dt=dt)
+        diffusion.iterate(model, dt=dt, recommend_dt=True)
+        dt2 = diffusion.get_dt_next(model)
 
-        dt = min(dt1, r[0].get('dt', dt), r[1].get('dt', dt), 1.0e9)
+        dt = min(dt1, dt2, 1.0e9)
         if step % 10 == 0:
             show(model, jx, jy, time=time)
 
