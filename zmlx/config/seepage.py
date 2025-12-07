@@ -100,9 +100,9 @@ def show_cells(
     year = get_time(model) / (365 * 24 * 3600)
 
     if show_p:  # 显示压力
-        v = get_cell_pre(model, mask=mask)
+        v = get_cell_pre(model, mask=mask) / 1e6
         tricontourf(
-            x, y, v, caption='pressure',
+            x, y, v, caption='pressure', cbar=dict(label='pressure (MPa)'),
             fname=make_fname(
                 year, join_paths(folder, 'pressure'),
                 '.jpg', 'y'),
@@ -111,7 +111,7 @@ def show_cells(
     if show_t:  # 显示温度
         v = get_cell_temp(model, mask=mask)
         tricontourf(
-            x, y, v, caption='temperature',
+            x, y, v, caption='temperature', cbar=dict(label='temperature (K)'),
             fname=make_fname(
                 year, join_paths(folder, 'temperature'),
                 '.jpg', 'y'),
@@ -136,7 +136,7 @@ def show_cells(
             v = fv / fv_all
             # 绘图
             tricontourf(
-                x, y, v, caption=name,
+                x, y, v, caption=name, cbar=dict(label='saturation'),
                 fname=make_fname(
                     year, join_paths(folder, name),
                     '.jpg', 'y'),

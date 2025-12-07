@@ -192,14 +192,14 @@ def create(
     model.set_kr(i_gas, vs, kg)
     model.set_kr(i_liq, vs, kw)
 
-    # 设置注入点 (co2). 注意: mass_rate可以是一条曲线.
+    # 设置注入点 (co2). 注意: mass_rate 可以是一条曲线.
     assert 50 <= depth_inj <= 500.0
-    assert 273 <= co2_temp <= 373
+    assert 200 <= co2_temp <= 373
     fid = model.find_fludef(name='co2')
     cell = model.get_nearest_cell(pos=[x_inj, y_inj, -depth_inj])
     flu = cell.get_fluid(*fid).get_copy()
-    flu.set_attr(index=model.reg_flu_key('temperature'),
-                 value=co2_temp)
+    flu.mass = 1  # 原始情况下，co2的饱和度是0，因此，此时flu的质量是0。现在，需要将它的质量设置为一个宏观的量，确保属性能传进去
+    flu.set_attr(index=model.get_flu_key('temperature'), value=co2_temp)
     try:  # 尝试将它作为曲线 (由两个list组成的)
         vt, vq = mass_rate
         assert len(vt) == len(vq) and len(vq) > 0
@@ -225,9 +225,24 @@ def create(
 
 
 def main():
-    model = create()
-    seepage.solve(model, close_after_done=False,
-                  folder=opath('co2_v1125'))
+    model = create(co2_temp=210)
+
+    co2_t0 = as_numpy(model).fluids('co2').get(index=model.get_flu_key('temperature'))
+
+    def show_co2_temp():
+        x = seepage.get_cell_pos(model=model, dim=0)
+        y = seepage.get_cell_pos(model=model, dim=2)
+        v = as_numpy(model).fluids('co2').get(index=model.get_flu_key('temperature'))
+        v -= co2_t0
+        tricontourf(
+            x, y, v, caption='co2 temperature change', cbar=dict(label='temperature (K)'),
+            title=f'time = {seepage.get_time(model, as_str=True)}'
+        )
+
+    seepage.solve(
+        model, close_after_done=False,
+        folder=opath('co2_v1125'), extra_plot=show_co2_temp
+    )
 
 
 if __name__ == '__main__':
