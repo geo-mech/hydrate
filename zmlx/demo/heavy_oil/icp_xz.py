@@ -99,7 +99,9 @@ def create(years_heating=5.0, years_max=8.0, power=5e3):
 
 def show(model: Seepage, caption=None):
     def on_figure(fig):
-        opts = dict(ncols=4, nrows=2, xlabel='x', ylabel='z', aspect='equal')
+        from zmlx.plt.subplot_layout import calculate_subplot_layout
+        n_rows, n_cols = calculate_subplot_layout(8, subplot_aspect_ratio=0.5, fig=fig)
+        opts = dict(ncols=n_cols, nrows=n_rows, xlabel='x', ylabel='z', aspect='equal')
         mask = get_cell_mask(model=model, yr=[-3, 3], zr=[-15, 15])
         x = seepage.get_x(model, mask=mask)
         z = seepage.get_z(model, mask=mask)

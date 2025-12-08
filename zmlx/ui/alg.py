@@ -3,7 +3,7 @@ from zmlx.ui.gui_buffer import gui
 from zmlx.ui.pyqt import QtWidgets
 
 
-def create_action(parent, text, icon=None, slot=None):
+def create_action(parent, text, *, icon=None, slot=None):
     from zmlx.ui.settings import load_icon
     from zmlx.ui.pyqt import QAction
     from zmlx.ui.gui_buffer import gui

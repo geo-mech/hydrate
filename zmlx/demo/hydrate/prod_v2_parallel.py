@@ -1,6 +1,7 @@
 # ** desc = '竖直方向二维的水合物开发过程（并行地执行多个模型，用于测试）'
 
 from zmlx import *
+from zmlx.config.hydrate import show_2d_v2
 from zmlx.seepage_mesh.hydrate import create_xz
 
 
@@ -88,47 +89,6 @@ def create():
     return model
 
 
-def show(model: Seepage, caption=None):
-    if not gui:
-        return
-
-    def on_figure(fig):
-        opts = dict(ncols=4, nrows=1, xlabel='x', ylabel='z', aspect='equal')
-        mask = seepage.get_cell_mask(model=model, yr=[-1, 1])
-        x = seepage.get_x(model, mask=mask)
-        z = seepage.get_z(model, mask=mask)
-        args = ['tricontourf', x, z, ]
-        t = seepage.get_t(model, mask=mask)
-        add_axes2(
-            fig, add_items,
-            item(*args, t, cbar=dict(shrink=0.6), cmap='coolwarm'),
-            title='温度', index=1, **opts)
-        p = seepage.get_p(model, mask=mask)
-        ax = add_axes2(
-            fig, add_items,
-            item(*args, p, cbar=dict(shrink=0.6), cmap='coolwarm'),
-            title='压力', index=2, **opts)
-        ax.set_yticks([])
-
-        v = seepage.get_v(model, mask=mask)
-        index = 3
-        for fid in ['ch4', 'ch4_hydrate']:
-            s = seepage.get_v(model, fid=fid, mask=mask) / v
-            ax = add_axes2(
-                fig, add_items,
-                item(*args, s, cbar=dict(shrink=0.6)),
-                title=f'{fid}饱和度', index=index, **opts)
-            ax.set_yticks([])
-            index += 1
-
-    if caption is None:
-        caption = f"Seepage(h={model.handle})"
-
-    plot(on_figure, caption=caption, clear=True,
-         suptitle=f'time = {seepage.get_time_str(model)}'
-         )
-
-
 def solve(*models):
     pool = ThreadPool()
 
@@ -137,7 +97,7 @@ def solve(*models):
 
     def show_x():
         for model in models:
-            show(model)
+            show_2d_v2(model, yr=[-1, 1], dim0=0, dim1=2)
 
     it = GuiIterator(iterate, show_x)
     for step in range(1000):

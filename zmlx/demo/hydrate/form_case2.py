@@ -1,6 +1,7 @@
 # ** desc = '纵向二维。浮力作用下气体运移、水合物成藏过程模拟（采用均匀的模型）'
 
 from zmlx import *
+from zmlx.config.hydrate import show_2d_v2
 
 
 def create(jx=150, jz=250):
@@ -52,37 +53,17 @@ def create(jx=150, jz=250):
 
 
 def show(model: Seepage, jx, jz, caption=None):
-    def on_figure(fig):
-        opts = dict(ncols=3, nrows=1, xlabel='x', ylabel='z', aspect='equal')
-        angles = np.linspace(0, np.pi, 100)
-        c1 = item('xy', np.cos(angles) * 50 + 150, np.sin(angles) * 50 + 10, 'r--')
-        x = seepage.get_x(model, shape=[jx, jz])
-        z = seepage.get_z(model, shape=[jx, jz])
-        args = ['contourf', x, z, ]
-        t = seepage.get_t(model, shape=[jx, jz])
-        add_axes2(fig, add_items,
-                  item(*args, t, cbar=dict(label='温度', shrink=0.6), cmap='coolwarm'), c1,
-                  title='温度', index=1, **opts)
-        v = seepage.get_v(model, shape=[jx, jz])
-        index = 2
-        for fid in ['ch4', 'ch4_hydrate']:
-            s = seepage.get_v(model, fid=fid, shape=[jx, jz]) / v
-            add_axes2(fig, add_items,
-                      item(*args, s, cbar=dict(label=f'{fid}饱和度', shrink=0.6), levels=30), c1,
-                      title=f'{fid}饱和度', index=index, **opts)
-            index += 1
-
-    plot(on_figure, caption=caption, clear=True, tight_layout=True,
-         suptitle=f'time = {seepage.get_time_str(model)}'
-         )
+    angles = np.linspace(0, np.pi, 100)
+    c1 = item('xy', np.cos(angles) * 50 + 150, np.sin(angles) * 50 + 10, 'r--')
+    show_2d_v2(
+        model, dim0=0, dim1=2, shape=[jx, jz], caption=caption, other_items=[c1]
+    )
 
 
 def main():
-    gui.hide_console()
     jx, jz = 50, 100
     model = create(jx, jz)
-    show(model, jx, jz, caption='初始状态')
-    seepage.solve(model=model, extra_plot=lambda: show(model, jx, jz, caption='当前状态'),
+    seepage.solve(model=model, extra_plot=lambda: show(model, jx, jz),
                   time_max=100 * 365 * 24 * 3600)
 
 

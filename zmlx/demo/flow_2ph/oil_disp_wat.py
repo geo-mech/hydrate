@@ -19,4 +19,4 @@ def oil_disp_wat():
 
 
 if __name__ == '__main__':
-    gui.execute(oil_disp_wat, close_after_done=False, )
+    gui.execute(oil_disp_wat, close_after_done=False)

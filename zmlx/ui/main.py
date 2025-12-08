@@ -5,6 +5,7 @@ import sys
 import zmlx.alg.sys as warnings
 from zmlx.alg.fsys import has_permission, samefile, time_string, print_tag
 from zmlx.base.zml import lic, core, app_data, read_text, get_dir, is_chinese
+from zmlx.io.env import plt_export_dpi
 from zmlx.ui import settings
 from zmlx.ui.alg import open_url, get_last_exec_history, install_package, set_plt_export_dpi, play_images
 from zmlx.ui.gui_buffer import gui
@@ -1025,21 +1026,29 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.add_task(lambda: oper(widget))
             return widget
 
-    def get_figure_widget(self, **kwargs):
+    def get_figure_widget(self, init=None, folder_save=None, **kwargs):
         """
         返回一个用以 matplotlib 绘图的控件
         """
         from zmlx.ui.widget.plt import MatplotWidget
         kwargs.setdefault('icon', 'matplotlib')
-        return self.get_widget(the_type=MatplotWidget, **kwargs)
+
+        def init_x(widget):
+            if callable(init):
+                init(widget)
+            if folder_save is not None:
+                widget.set_save_folder(folder_save)
+
+        return self.get_widget(the_type=MatplotWidget, init=init_x, **kwargs)
 
     def plot(
             self, kernel, *args, fname=None, dpi=None,
             caption=None, on_top=None, icon=None,
             clear=None,
             tight_layout=None,
-            suptitle=None,
-            **kwargs):
+            suptitle=None, folder_save=None,
+            **kwargs
+    ):
         """
         调用matplotlib执行绘图操作 注意，此函数会创建或者返回一个标签，并默认清除标签的绘图，返回使用回调函数
         在figure上绘图。
@@ -1057,6 +1066,7 @@ class MainWindow(QtWidgets.QMainWindow):
             clear: 是否清除之前的内容 (特别注意，默认是要清除之前的内容的，因此，如果要多个视图的时候，就不要使用clear)
             tight_layout: 是否自动调整子图参数，以防止重叠
             suptitle: 图表的标题
+            folder_save: 自动保存图的文件夹
 
         Returns:
             None
@@ -1064,7 +1074,9 @@ class MainWindow(QtWidgets.QMainWindow):
         if clear is None:  # 默认清除
             clear = True
         try:
-            widget = self.get_figure_widget(caption=caption, on_top=on_top, icon=icon)
+            widget = self.get_figure_widget(
+                caption=caption, on_top=on_top, icon=icon, folder_save=folder_save
+            )
 
             def on_figure(figure):
                 if clear:  # 清除
@@ -1082,7 +1094,7 @@ class MainWindow(QtWidgets.QMainWindow):
             widget.plot_on_figure(on_figure=on_figure)
             if fname is not None:
                 if dpi is None:
-                    dpi = 300
+                    dpi = plt_export_dpi.get_value()
                 widget.savefig(fname=fname, dpi=dpi)
 
             return widget.figure  # 返回Figure对象，后续进一步处理

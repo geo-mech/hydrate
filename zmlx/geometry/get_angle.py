@@ -1,6 +1,6 @@
 from zmlx.geometry.point import get_angle
 
-__all__ = ['get_angle']
+_keep = [get_angle]
 
 import zmlx.alg.sys as warnings
 

@@ -1,3 +1,5 @@
+import warnings
+
 from zmlx.geometry import rect_3d as rect3
 from zmlx.plt.cbar import add_cbar
 from zmlx.plt.cmap import get_cm
@@ -8,7 +10,8 @@ def add_rc3(
         ax, rc3, *, face_color=None, face_alpha=None, face_cmap=None,
         edge_width=0.1,
         edge_color=(0, 0, 0, 0.3),
-        cbar=None):
+        edge_only=False,
+        cbar=None, **deprecated_opts):
     """
     在指定的轴上绘制三维的矩形集合
     Args:
@@ -19,6 +22,7 @@ def add_rc3(
         face_cmap: 颜色表
         edge_width: 线的宽度
         edge_color: 边的颜色
+        edge_only: 是否只绘制边界（此参数为True的时候，所有的面都将是完全透明的）
         cbar: 颜色条的参数，例如{'label': 'label', 'title': 'title'}
 
     Returns:
@@ -27,6 +31,27 @@ def add_rc3(
     from matplotlib.colors import Normalize
     from mpl_toolkits.mplot3d.art3d import Poly3DCollection
     import numpy as np
+
+    if 'color' in deprecated_opts:
+        if face_color is None:
+            face_color = deprecated_opts['color']
+        else:
+            warnings.warn(f'Option <color> is deprecated (remove after 2026-12-9), use <face_color> instead',
+                          DeprecationWarning, stacklevel=2)
+
+    if 'alpha' in deprecated_opts:
+        if face_alpha is None:
+            face_alpha = deprecated_opts['alpha']
+        else:
+            warnings.warn(f'Option <alpha> is deprecated (remove after 2026-12-9), use <face_alpha> instead',
+                          DeprecationWarning, stacklevel=2)
+
+    if 'cmap' in deprecated_opts:
+        if face_cmap is None:
+            face_cmap = deprecated_opts['cmap']
+        else:
+            warnings.warn(f'Option <cmap> is deprecated (remove after 2026-12-9), use <face_cmap> instead',
+                          DeprecationWarning, stacklevel=2)
 
     if face_color is None:  # 此时用颜色来代替序号
         face_color = list(range(len(rc3)))
@@ -42,6 +67,9 @@ def add_rc3(
     face_c_min, face_c_max = face_color.min(), face_color.max()
     norm = Normalize(vmin=face_c_min, vmax=face_c_max)
     rgba_colors = face_cmap(norm(face_color))
+
+    if edge_only:
+        face_alpha = 0.0
 
     if isinstance(face_alpha, (list, np.ndarray)):
         # 独立透明度
@@ -108,7 +136,8 @@ def test():
         color.append(random.uniform(5, 9))
         alpha.append(random.uniform(0, 1))
     show_rc3(rc3, gui_mode=True,
-             cbar=dict(label='Index', title='Index', shrink=0.5), )
+             cbar=dict(label='Index', title='Index', shrink=0.5),
+             )
 
 
 if __name__ == '__main__':

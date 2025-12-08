@@ -1,19 +1,24 @@
 """
 用以构建DynSys对象
 """
+from typing import Optional
 
 from zmlx.base.zml import DynSys, LinearExpr
 
 
 def create_dyn(masses: list[float], elements: list[list[int]],
-               matrices, velocities=None, displacements=None):
+               matrices,
+               velocities: Optional[list[float]] = None,
+               displacements: Optional[list[float]] = None):
     """
-    创建DynSys对象. 其中DynSys的每一个自由度代表的是对应自由度的“位移”（或者“转角”），即相对于初始平衡位置的偏移的量。
+    创建DynSys对象. 其中DynSys的每一个自由度代表的是对应自由度的“位移”（或者“转角”），
+    即相对于初始平衡位置的偏移的量。
 
     Args:
         masses: 自由度的质量（或者转动惯量）列表。质量（或者转动惯量）是必须给定的。
         elements: 单元列表。其中的每一个元素都是一个列表，包含了该单元关联的自由度的索引。
-        matrices: 单元刚度矩阵列表，每个元素都是一个二维数组，代表该单元的刚度矩阵（矩阵的大小，等于该单元关联的自由度的数量）。
+        matrices: 单元刚度矩阵列表，每个元素都是一个二维数组，
+                代表该单元的刚度矩阵（矩阵的大小，等于该单元关联的自由度的数量）。
         displacements: 自由度的位移（或者转角）列表。如果为None，则默认所有自由度位移为0。
         velocities: 自由度的速度（或者角速度）列表。如果为None，则默认所有自由度速度为0。
 

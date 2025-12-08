@@ -414,7 +414,7 @@ class CodeEdit(_PythonEdit):
         menu.addSeparator()
         menu.addAction(
             create_action(
-                self, "运行", 'begin', self.console_exec))
+                self, "运行", icon='begin', slot=self.console_exec))
         if QsciScintilla is None and is_pyqt6:  # 尝试添加安装Qsci的动作
 
             def install_qsci():
@@ -429,7 +429,7 @@ class CodeEdit(_PythonEdit):
                 create_action(
                     self,
                     "安装PyQt6.Qsci以获得更好的代码编辑功能",
-                    'set', install_qsci))
+                    icon='set', slot=install_qsci))
 
         folder = self._history_folder()
         if os.path.isdir(folder):
@@ -828,7 +828,7 @@ class TextBrowser(QtWidgets.QTextBrowser):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._status = None
-        self.context_actions = [create_action(self, "清除内容", 'clean', self.clear)]
+        self.context_actions = [create_action(self, "清除内容", icon='clean', slot=self.clear)]
 
     def contextMenuEvent(self, event):
         # 创建菜单并添加清除动作

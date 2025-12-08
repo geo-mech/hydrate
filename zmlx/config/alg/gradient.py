@@ -78,18 +78,6 @@ def compute_pressure_gradient_2D(x, y, p):
     return grad
 
 
-if __name__ == "__main__":
-    # 示例数据
-    x_data = [0, 1, 2, 1]
-    y_data = [0, 0, 0, 1]
-    p_data = [1, 2, 3, 2.5]  # 压力值
-
-    gradients = compute_pressure_gradient_2D(x_data, y_data, p_data)
-    for i, (gx, gy) in enumerate(gradients):
-        print(f"Point {i}: (x={x_data[i]}, y={y_data[i]}), "
-              f"p={p_data[i]}, grad=({gx:.4f}, {gy:.4f})")
-
-
 def compute_pressure_gradient_3D(x, y, z, p):
     """
     根据散乱点 (x, y, z, p) 计算每个点上的压力梯度 (dp/dx, dp/dy, dp/dz)。
@@ -172,21 +160,3 @@ def compute_pressure_gradient_3D(x, y, z, p):
     grad[nonzero_mask] = grad_sum[nonzero_mask] / count[nonzero_mask, None]
 
     return grad
-
-
-if __name__ == "__main__":
-    # 构造一些简易示例数据：这里用几个点模拟一个立方体角上的变化
-    x_data = [0, 1, 1, 0, 0, 1, 1, 0]
-    y_data = [0, 0, 1, 1, 0, 0, 1, 1]
-    z_data = [0, 0, 0, 0, 1, 1, 1, 1]
-    # 构造一个简单的标量场，比如 p = x + 2y + 3z
-    p_data = [x_i + 2 * y_i + 3 * z_i for x_i, y_i, z_i in
-              zip(x_data, y_data, z_data)]
-
-    # 计算梯度
-    gradients = compute_pressure_gradient_3D(x_data, y_data, z_data, p_data)
-
-    # 输出
-    for i, (gx, gy, gz) in enumerate(gradients):
-        print(f"Point {i}: (x={x_data[i]}, y={y_data[i]}, z={z_data[i]}), "
-              f"p={p_data[i]}, gradient=({gx:.4f}, {gy:.4f}, {gz:.4f})")

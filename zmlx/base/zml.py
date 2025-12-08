@@ -884,7 +884,7 @@ class _NullFunction:
         Note:
             - 不会实际执行任何操作
             - 自动打印调用参数帮助调试
-            - 保持与正常函数相同的调用接口
+            - 保持与正常函数相同地调用接口
         """
         info = f'calling null function {self.name}(args={args}, kwargs={kwargs})'
         warnings.warn(info, stacklevel=2)
@@ -9716,7 +9716,7 @@ class DynSys(HasHandle):
     a是一个N*N的稀疏矩阵，b为一个长度为N的常向量。
 
     同时，在给定时间步长dt之后，一个自由度在dt之后的“位置”，也是dt之后“受力”的线性函数。
-    根据牛顿第2定律，有
+    根据牛顿第二定律，有
         x=x0 + v0*dt + 0.5*(f/m)*dt*dt                                   (2)
     整理可得:
         x = cf + d                                                       (3)
@@ -9729,11 +9729,6 @@ class DynSys(HasHandle):
     “受力”向量f，并进一步得到各个自由度的速度v.
 
     以上步骤完成一次迭代。
-
-    todo:
-        对于pos、vel和mas的读写，需要支持向量化操作. 对于p2f，
-        也尽量设计向量化操作的方法. @23-10-08
-
     """
     core.use(c_void_p, 'new_dynsys')
     core.use(None, 'del_dynsys', c_void_p)
@@ -9937,6 +9932,24 @@ class DynSys(HasHandle):
         if idx is not None:
             core.dynsys_set_pos(self.handle, idx, value)
 
+    core.use(None, 'dynsys_write_pos',
+             c_void_p, c_void_p)
+
+    def write_pos(self, pointer):
+        """
+        批量写入pos
+        """
+        core.dynsys_write_pos(self.handle, f64_ptr(pointer))
+
+    core.use(None, 'dynsys_read_pos',
+             c_void_p, c_void_p)
+
+    def read_pos(self, pointer):
+        """
+        批量读取pos
+        """
+        core.seepage_cells_read(self.handle, const_f64_ptr(pointer))
+
     core.use(c_double, 'dynsys_get_vel',
              c_void_p, c_size_t)
 
@@ -9970,6 +9983,24 @@ class DynSys(HasHandle):
         idx = get_index(idx, self.size)
         if idx is not None:
             core.dynsys_set_vel(self.handle, idx, value)
+
+    core.use(None, 'dynsys_write_vel',
+             c_void_p, c_void_p)
+
+    def write_vel(self, pointer):
+        """
+        批量写入vel
+        """
+        core.dynsys_write_vel(self.handle, f64_ptr(pointer))
+
+    core.use(None, 'dynsys_read_vel',
+             c_void_p, c_void_p)
+
+    def read_vel(self, pointer):
+        """
+        批量读取vel
+        """
+        core.seepage_cells_read(self.handle, const_f64_ptr(pointer))
 
     core.use(c_double, 'dynsys_get_mass',
              c_void_p, c_size_t)
@@ -10008,6 +10039,24 @@ class DynSys(HasHandle):
     get_mas = get_mass
     set_mas = set_mass
 
+    core.use(None, 'dynsys_write_mass',
+             c_void_p, c_void_p)
+
+    def write_mass(self, pointer):
+        """
+        批量写入mass
+        """
+        core.dynsys_write_mass(self.handle, f64_ptr(pointer))
+
+    core.use(None, 'dynsys_read_mass',
+             c_void_p, c_void_p)
+
+    def read_mass(self, pointer):
+        """
+        批量读取mass
+        """
+        core.seepage_cells_read(self.handle, const_f64_ptr(pointer))
+
     core.use(c_void_p, 'dynsys_get_p2f',
              c_void_p, c_size_t)
 
@@ -10030,6 +10079,18 @@ class DynSys(HasHandle):
                 return None
         else:
             return None
+
+    core.use(None, 'dynsys_write_p2f_c',
+             c_void_p, c_void_p)
+
+    def write_p2f_c(self, pointer):
+        core.dynsys_write_p2f_c(self.handle, f64_ptr(pointer))
+
+    core.use(None, 'dynsys_read_p2f_c',
+             c_void_p, c_void_p)
+
+    def read_p2f_c(self, pointer):
+        core.seepage_cells_read(self.handle, const_f64_ptr(pointer))
 
     core.use(c_double, 'dynsys_get_lexpr_value',
              c_void_p, c_void_p)
@@ -13188,7 +13249,7 @@ class Seepage(HasHandle, HasCells):
                 因此，才有一个基准温度的概念。而且，这个基准温度是和压力相关的。
                 比如说，1MPa下的基准温度是0度，2MPa下的基准温度是10度，那么后续计算反应
                 速率的时候，压力1MPa，温度1度的反应速率，将和压力2MPa，温度11度的反应速率相等。
-            此属性定义了一个曲线，其中：
+            此属性定义了一条曲线，其中：
                 自变量x: 压力（一个向量），单位是Pa
                 因变量y: 给定压力下对应的基准温度（一个向量，长度和x相等），单位是K
             """
@@ -13221,7 +13282,7 @@ class Seepage(HasHandle, HasCells):
         @property
         def t2qr(self):
             """
-            一个曲线，表示不同的温度(实际温度减去基准温度)下的逆向反应速率。参考t2q的说明。
+            一条曲线，表示不同的温度(实际温度减去基准温度)下的逆向反应速率。参考t2q的说明。
             """
             handle = core.reaction_get_t2qr(self.handle)
             return Interp1(handle=handle)
@@ -14347,7 +14408,7 @@ class Seepage(HasHandle, HasCells):
                 core.fluid_clone(self.handle, other.handle)
             return self
 
-        def get_copy(self):
+        def get_copy(self, mass=None):
             """
             获取当前对象的拷贝。
 
@@ -14356,6 +14417,8 @@ class Seepage(HasHandle, HasCells):
             """
             result = Seepage.FluData()
             result.clone(self)
+            if mass is not None:
+                result.mass = mass
             return result
 
         core.use(None, 'fluid_add',
@@ -17232,8 +17295,8 @@ class Seepage(HasHandle, HasCells):
             inj.cell_id = cell
 
         if fluid_id is not None:
-            if isinstance(fluid_id,
-                          str):  # 给定组分名字，则从model中查找   since 2023-10-24
+            if isinstance(fluid_id, str):
+                # 给定组分名字，则从model中查找   since 2023-10-24
                 fluid_id = self.find_fludef(name=fluid_id)
                 assert fluid_id is not None
             inj.set_fid(fluid_id)

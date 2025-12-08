@@ -1,8 +1,11 @@
+import datetime
 import os
 import sys
 import warnings
 
-from zmlx.base.zml import in_windows, in_linux, in_macos
+from zmlx.base.zml import in_windows, in_linux, in_macos, make_parent
+from zmlx.io import opath
+from zmlx.io.env import plt_export_dpi
 from zmlx.ui.alg import create_action
 from zmlx.ui.pyqt import QtWidgets
 
@@ -78,17 +81,37 @@ class MatplotWidget(QtWidgets.QWidget):
         self.context_actions = []  # 额外的右键菜单
         layout.addWidget(self.__canvas)
 
+        now = datetime.datetime.now()
+        name = now.strftime("%Y-%m-%d-%H-%M-%S-") + f"{now.microsecond:06d}"
+        self.__folder_save = opath('matplotlib', name)
+        self.__time_save = None
+
+    def set_save_folder(self, folder):
+        self.__folder_save = folder
+
     def draw(self):
         """
         绘图
         """
         self.__canvas.draw()
+        if self.__folder_save is not None:  # 尝试将绘图保存为图片(使用当前的时间)
+            now = datetime.datetime.now()
+            if self.__time_save is not None:
+                if abs(now - self.__time_save).total_seconds() < 5.0:
+                    return
+            name = now.strftime("%Y-%m-%d-%H-%M-%S-") + f"{now.microsecond:06d}.png"
+            path = make_parent(os.path.join(self.__folder_save, name))
+            self.savefig(fname=path, dpi=plt_export_dpi.get_value())
+            self.__time_save = now  # 记录时间
 
     def savefig(self, *args, **kwargs):
         """
         保存图片
         """
-        self.__figure.savefig(*args, **kwargs)
+        try:
+            self.__figure.savefig(*args, **kwargs)
+        except Exception as e:
+            print(f'Error when save figure: {e}')
 
     def savefig_by_dlg(self):
         fpath, _ = QtWidgets.QFileDialog.getSaveFileName(
@@ -97,7 +120,6 @@ class MatplotWidget(QtWidgets.QWidget):
             directory=os.getcwd(),
             filter='Jpg图片(*.jpg);;Png图片(*.png);;所有文件(*.*)')
         if fpath is not None and len(fpath) > 0:
-            from zmlx.io.env import plt_export_dpi
             self.savefig(
                 fname=fpath, dpi=plt_export_dpi.get_value())
 
@@ -132,6 +154,15 @@ class MatplotWidget(QtWidgets.QWidget):
             create_action(
                 self, '导出图', icon='export',
                 slot=self.savefig_by_dlg))
+
+        if self.__folder_save is not None:  # 打开自动保存目录
+            if isinstance(self.__folder_save, str):
+                def open_dir():
+                    os.startfile(self.__folder_save)
+                menu.addAction(
+                    create_action(
+                        self, '打开图片保存目录',
+                        slot=open_dir))
 
         # 尝试获得提前存储的额外的Action
         if len(self.context_actions) > 0:

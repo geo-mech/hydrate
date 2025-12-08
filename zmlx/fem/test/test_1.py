@@ -5,6 +5,7 @@ from zmlx.fem.dyn import create_dyn
 from zmlx.fem.elements.planar_strain_cst import stiffness
 from zmlx.fem import xy
 
+
 def create_mesh():
     """
     创建mesh
@@ -32,20 +33,12 @@ def create(mesh: Mesh3):
     根据mesh创建模型
     """
     face_n = mesh.face_number
-    masses = xy.get_masses(mesh, face_density=[1.0] * face_n, face_thickness=[1.0] * face_n)
 
-    velocities = [0.0] * mesh.node_number * 2
-    displacements = [0.0] * mesh.node_number * 2
-    elements = xy.get_elements(mesh)
-    matrices = xy.get_matrices(mesh, face_ym=[1.0] * face_n,
-                               face_mu=[0.2] * face_n,
-                               face_thickness=[1.0] * face_n)
-
-    model = create_dyn(
-        masses=masses, velocities=velocities,
-        displacements=displacements,
-        elements=elements,
-        matrices=matrices
+    model = xy.create_dyn(
+        mesh, face_ym=[1.0] * face_n,
+        face_mu=[0.2] * face_n,
+        face_thickness=[1.0] * face_n,
+        face_density=[1.0] * face_n
     )
 
     # 增大质量，以确保位置不变

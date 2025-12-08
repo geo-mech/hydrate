@@ -58,6 +58,10 @@ def get_path(*args, tag=None, key=None):
     return None
 
 
+# 别名
+opath = get_path
+
+
 def set_path(folder=None, tag=None, key=None):
     """
     设置输出目录＜等同于UI界面设置的工作目录＞

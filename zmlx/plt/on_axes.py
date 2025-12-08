@@ -3,11 +3,15 @@
 """
 import warnings
 
+from zmlx.plt.cbar import add_cbar
 from zmlx.plt.contourf import add_contourf as contourf
+from zmlx.plt.dfn2 import add_dfn2
+from zmlx.plt.field2 import add_field2
+from zmlx.plt.rc3 import add_rc3
 from zmlx.plt.scatter import add_scatter3 as scatter3
+from zmlx.plt.surf import add_surf
 from zmlx.plt.tricontourf import add_tricontourf as tricontourf
 from zmlx.plt.trisurf import add_trisurf as trisurf3
-from zmlx.plt.cbar import add_cbar
 
 _keep = [contourf, trisurf3, tricontourf, scatter3]
 
@@ -110,22 +114,15 @@ def get_kernels():
     Returns:
         一个字典，键为项目名称，值为对应的添加函数。
     """
-    from zmlx.plt.surf import add_surf
-    from zmlx.plt.cbar import add_cbar
-    from zmlx.plt.contourf import add_contourf
-    from zmlx.plt.tricontourf import add_tricontourf
-    from zmlx.plt.dfn2 import add_dfn2
-    from zmlx.plt.field2 import add_field2
-
-    # 准备“项目名称”到“内核函数”的映射表
     return dict(
-        tricontourf=add_tricontourf, tric=add_tricontourf,
+        tricontourf=tricontourf, tric=tricontourf,
         surface=add_surf, surf=add_surf,
         colorbar=add_cbar, cbar=add_cbar,
-        contourf=add_contourf, cont=add_contourf,
+        contourf=contourf, cont=contourf,
         curve2='plot', xy='plot',
         dfn2=add_dfn2,
         field2=add_field2,
+        rc3=add_rc3,  # 三维矩形集合
     )
 
 

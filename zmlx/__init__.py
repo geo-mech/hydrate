@@ -43,9 +43,9 @@ from zmlx.base.seepage import as_numpy, SeepageNumpy
 ########################################
 # config
 from zmlx.config import (
-    seepage, seepage as seepage_config, hydrate,
-    step_iteration, adjust_vis, icp, timer as timer_config,
-    sand as sand_config, diffusion, capillary
+    seepage, seepage as seepage_config,
+    step_iteration, adjust_vis, timer as timer_config,
+    sand as sand_config, diffusion, capillary, hydrate, icp
 )
 from zmlx.config.TherFlowConfig import TherFlowConfig, SeepageTher
 

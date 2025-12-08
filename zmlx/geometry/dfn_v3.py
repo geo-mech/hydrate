@@ -193,16 +193,17 @@ def create_demo(heights=None):
 
 
 def test_1():
-    from zmlx.pg.show_rc3 import show_rc3
+    from zmlx.plt.rc3 import show_rc3
     import random
     rc3 = to_rc3(create_demo(heights=linspace(5, 10, 30)))
     color = []
     alpha = []
     for _ in rc3:
         color.append(random.uniform(0, 1))
-        alpha.append(random.uniform(0, 1) ** 3)
+        alpha.append(random.uniform(0, 1) ** 3 + 0.5)
     show_rc3(rc3, color=color, alpha=alpha, caption='dfn_v3')
 
 
 if __name__ == '__main__':
-    np.savetxt('dfn_v3_demo.txt', to_rc3(create_demo()), fmt='%.3f')
+    from zmlx.ui import gui
+    gui.execute(test_1, close_after_done=False)
