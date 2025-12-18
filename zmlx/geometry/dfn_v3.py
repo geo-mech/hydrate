@@ -1,7 +1,6 @@
 import random
 
 from zmlx.alg.base import clamp, linspace
-from zmlx.base.zml import np
 from zmlx.geometry.dfn2 import dfn2
 from zmlx.geometry.rect_3d import from_v3
 from zmlx.geometry.rect_v3 import intersected, get_area
@@ -206,4 +205,5 @@ def test_1():
 
 if __name__ == '__main__':
     from zmlx.ui import gui
+
     gui.execute(test_1, close_after_done=False)

@@ -4,19 +4,21 @@
 from zmlx import *
 
 
-def create(jx, jz):
+def create(jx, jz, s=None):
     mesh = create_cube(
         x=np.linspace(0, 300, jx + 1),
         y=(-0.5, 0.5),
         z=np.linspace(-500, 0, jz + 1)
     )
+    if s is None:
+        s = {'ch4': 0.5, 'h2o': 0.5}
 
     model = seepage.create(
         mesh, porosity=0.1, pore_modulus=100e6,
         denc=1.0e6,
         temperature=280,
         p=10e6,
-        s={'ch4': 0.5, 'h2o': 0.5},
+        s=s,
         perm=1.0e-15,
         heat_cond=2.0,
         fludefs=[create_ch4(name='ch4'),
@@ -46,7 +48,6 @@ def show(model, jx, jz, caption=None):
 def main():
     jx, jz = 30, 100
     model = create(jx, jz)
-    gui.hide_console()
     show(model, jx, jz, caption='初始状态')
     seepage.solve(model, close_after_done=False, extra_plot=lambda: show(model, jx, jz, caption='当前状态'),
                   time_forward=3600 * 24 * 365 * 100

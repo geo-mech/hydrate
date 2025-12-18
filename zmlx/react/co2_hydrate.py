@@ -8,8 +8,8 @@ Zhou X, Fan S, Liang D, et al., 2008. . Energy Conversion and Management, 49(8):
 """
 
 import zmlx.react.hydrate as hydrate
+from zml import Interp1
 from zmlx.alg.interp import interp1
-from zmlx.base.zml import Interp1
 
 # 温度
 vt = [265, 273.25, 274.33, 275.6, 276.12, 276.63, 277.34, 278.09, 279.32,

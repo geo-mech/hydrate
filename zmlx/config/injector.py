@@ -1,5 +1,5 @@
+from zml import clock, ThreadPool
 from zmlx.base.seepage import Seepage, get_dt, get_time
-from zmlx.base.zml import clock, ThreadPool
 
 
 @clock

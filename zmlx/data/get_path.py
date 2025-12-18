@@ -1,8 +1,8 @@
 import os
 
 import zmlx.alg.sys as warnings
+from zml import make_parent
 from zmlx.alg.fsys import join_paths
-from zmlx.base.zml import make_parent
 
 warnings.warn(
     f'The {__name__} is deprecated, please use the "path.py" in the same folder instead. '

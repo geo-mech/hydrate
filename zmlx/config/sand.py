@@ -4,7 +4,7 @@
 存在已知问题，即梯度的计算不准确。造成无法很好地计算砂子的脱离
 """
 
-from zmlx.base.zml import Seepage, get_pointer64, np, clock
+from zml import Seepage, get_pointer64, np, clock
 from zmlx.config.alg import settings
 from zmlx.config.alg.pressure_gradient import get_face_pressure_gradient
 

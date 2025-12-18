@@ -2,10 +2,11 @@
 创建二维的有限元模型
 """
 
-from zmlx.base.zml import Mesh3, DynSys, LinearExpr
+import warnings
+
+from zml import Mesh3, DynSys, LinearExpr
 from zmlx.fem.attr_getter import attr_getter
 from zmlx.fem.stiff2 import stiff2
-import warnings
 
 
 def create2(mesh, fa_E=None, fa_mu=None, fa_den=None, fa_h=None,

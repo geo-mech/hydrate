@@ -10,9 +10,9 @@ import os
 from ctypes import c_void_p
 
 import zmlx.alg.sys as warnings
+from zml import Seepage, Vector, is_array, get_pointer64, Map, ThreadPool
+from zml import clock
 from zmlx.alg.base import time2str
-from zmlx.base.zml import Seepage, Vector, is_array, get_pointer64, Map, ThreadPool
-from zmlx.base.zml import clock
 
 try:
     import numpy as np
@@ -798,7 +798,7 @@ def iterate_flow(*local_opts, pool=None, **global_opts):
     """
     保持当前所有的流体性质不变，迭代模型的流动状态。如果给定pool，则尝试并行执行。
     """
-    if len(local_opts) <= 1:   # 仅有一个任务，则直接执行，不使用线程池
+    if len(local_opts) <= 1:  # 仅有一个任务，则直接执行，不使用线程池
         pool = None
 
     key_opt = 'flow_opt'
@@ -905,7 +905,7 @@ def iterate_thermal(*local_opts, pool=None, **global_opts):
     """
     对于多个模型，并行地更新模型的温度场
     """
-    if len(local_opts) <= 1:   # 仅有一个任务，则直接执行，不使用线程池
+    if len(local_opts) <= 1:  # 仅有一个任务，则直接执行，不使用线程池
         pool = None
 
     key_opt = 'thermal_opt'

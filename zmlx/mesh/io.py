@@ -1,4 +1,4 @@
-from zmlx.base.zml import Mesh3
+from zml import Mesh3
 
 
 def load_trimesh(node_file, triangle_file, i_beg=0, encoding=None):

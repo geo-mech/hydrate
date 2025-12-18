@@ -3,12 +3,12 @@
 
 @2025-10-2
 """
+from zml import clock
 from zmlx.base.seepage import (
     as_numpy, Seepage, reg_cell_tmp, reg_face_tmp,
     get_dt, get_func_opts, get_dv_relative, Map, ThreadPool,
     set_attr, get_attr
 )
-from zmlx.base.zml import clock
 from zmlx.config.alg import settings
 
 # 存储的text

@@ -9,7 +9,7 @@ warnings.warn(f'{__name__} will be removed after 2026-4-15, '
 
 
 def test():
-    from zmlx.base.zml import np
+    from zml import np
 
     x = np.linspace(0, 10, 100)
     y = np.sin(x)

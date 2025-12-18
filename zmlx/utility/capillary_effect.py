@@ -1,4 +1,4 @@
-from zmlx.base.zml import Interp1, Vector, UintVector, Seepage
+from zml import Interp1, Vector, UintVector, Seepage
 
 
 class CapillaryEffect:

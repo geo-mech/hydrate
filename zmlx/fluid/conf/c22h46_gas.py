@@ -7,7 +7,7 @@ Heavy Oil
 
 import zmlx.alg.sys as warnings
 
-from zmlx.base.zml import Interp2, Seepage
+from zml import Interp2, Seepage
 from zmlx.fluid.conf.gas_density.c22h46 import den_c22h46
 from zmlx.fluid.conf.gas_viscosity.c22h46 import gas_vis_c22h46
 

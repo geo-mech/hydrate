@@ -2,10 +2,11 @@
 创建3维的有限元模型。
 """
 
-from zmlx.base.zml import Mesh3, DynSys, LinearExpr
+import warnings
+
+from zml import Mesh3, DynSys, LinearExpr
 from zmlx.fem.attr_getter import attr_getter
 from zmlx.fem.stiff3 import stiff3
-import warnings
 
 
 def create3(mesh, ba_E=None, ba_mu=None, ba_den=None, b_E=1.0, b_mu=0.2,

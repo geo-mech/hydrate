@@ -1,6 +1,6 @@
 from typing import Optional
 
-from zmlx.base.zml import SeepageMesh
+from zml import SeepageMesh
 from zmlx.plt.cbar import add_cbar
 
 

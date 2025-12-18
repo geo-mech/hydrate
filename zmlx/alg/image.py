@@ -4,7 +4,7 @@
 import os
 
 import zmlx.alg.sys as warnings
-from zmlx.base.zml import make_parent, np
+from zml import make_parent, np
 from zmlx.io import json_ex
 
 try:

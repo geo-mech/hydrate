@@ -3,7 +3,6 @@ from zmlx.fluid.nist.co2 import create
 
 
 def main():
-    gui.hide_console()
     flu = create(name='co2')
     filename = app_data.temp('co2.xml')
     flu.save(filename)

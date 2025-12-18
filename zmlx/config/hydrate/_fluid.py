@@ -1,5 +1,5 @@
 import zmlx.alg.sys as warnings
-from zmlx.base.zml import Seepage
+from zml import Seepage
 from zmlx.fluid.ch4 import create as create_ch4
 from zmlx.fluid.ch4_hydrate import create as create_ch4_hydrate
 from zmlx.fluid.co2 import create as create_co2

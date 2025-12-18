@@ -3,18 +3,20 @@ import os
 import sys
 
 import zmlx.alg.sys as warnings
+from zml import lic, core, app_data, read_text, get_dir, is_chinese
 from zmlx.alg.fsys import has_permission, samefile, time_string, print_tag
-from zmlx.base.zml import lic, core, app_data, read_text, get_dir, is_chinese
 from zmlx.io.env import plt_export_dpi
 from zmlx.ui import settings
-from zmlx.ui.alg import open_url, get_last_exec_history, install_package, set_plt_export_dpi, play_images
+from zmlx.ui.alg import open_url, get_last_exec_history, install_package, set_plt_export_dpi, play_images, set_position, \
+    set_shape
+from zmlx.ui.console import Console
 from zmlx.ui.gui_buffer import gui
 from zmlx.ui.pyqt import (
     QtCore, QtWidgets, QtMultimedia, QAction, QtGui,
     is_pyqt6, QWebEngineView, QWebEngineSettings)
 from zmlx.ui.utils import TaskProc, GuiApi, FileHandler
 from zmlx.ui.widget import (
-    CodeEdit, Console, TabWidget, ConsoleStateLabel)
+    CodeEdit, TabWidget, ConsoleStateLabel, OutputWidget)
 
 
 class Action(QAction):
@@ -28,8 +30,7 @@ class Action(QAction):
         更新视图
         """
         is_enabled = self.is_enabled() if callable(self.is_enabled) else True
-        is_visible = self.is_visible() if callable(
-            self.is_visible) else is_enabled
+        is_visible = self.is_visible() if callable(self.is_visible) else is_enabled
         self.setEnabled(is_enabled)
         self.setVisible(is_visible)
         get_text = getattr(self, 'get_text', None)
@@ -49,15 +50,15 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setWindowIcon(settings.load_icon('app'))
         self.setToolButtonStyle(
             QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-        self.__task_proc = TaskProc(self)
+        self.task_proc = TaskProc(self)
 
-        self.__file_handler = FileHandler(self)
+        self.file_handler = FileHandler(self)
 
         def _do_nothing(fname):
             pass
 
         def new_empty_file(fname):
-            from zmlx.base.zml import make_parent
+            from zml import make_parent
             with open(make_parent(fname), 'w') as file:
                 pass
 
@@ -72,51 +73,53 @@ class MainWindow(QtWidgets.QMainWindow):
         ]:
             self.add_file_handler(**opt)
 
+        self.console = Console(self)
+
         widget = QtWidgets.QWidget(self)
         h_layout = QtWidgets.QVBoxLayout(widget)
         splitter = QtWidgets.QSplitter(widget)
         splitter.setOrientation(QtCore.Qt.Orientation.Horizontal)
-        self.__tab_widget = TabWidget(splitter)
-        self.__tab_widget.currentChanged.connect(self.refresh)
-        self.__console = Console(splitter)
-        self.__gui_api = GuiApi(
+        self.tab_widget = TabWidget(splitter)
+        self.tab_widget.currentChanged.connect(self.refresh)
+        self.side_tabs = TabWidget(splitter)
+        self.side_tabs.currentChanged.connect(self.refresh)
+        self.gui_api = GuiApi(
             widget,
-            self.__console.get_break_point(),
-            self.__console.get_flag_exit())
+            self.console.get_break_point(),
+            self.console.get_flag_exit())
         splitter.setStretchFactor(0, 1)
         splitter.setStretchFactor(1, 0)
         h_layout.addWidget(splitter)
         self.setCentralWidget(widget)
-        self.__title = None
+        self.title = None
         self.__init_gui_api()  # 在成员声明了之后，第一时间初始化API
         self.__init_actions()
 
+        set_position(self.tab_widget)
+        set_shape(self.tab_widget)
+
+        set_shape(self.side_tabs)
+        self.side_tabs.setTabPosition(QtWidgets.QTabWidget.TabPosition.East)
+
         self.sig_cwd_changed.connect(self.refresh)
         self.sig_cwd_changed.connect(self.view_cwd)
-        self.sig_cwd_changed.connect(self.__console.restore_code)
 
-        self.__console.sig_refresh.connect(self.refresh)
+        self.console.sig_refresh.connect(self.refresh)
         self.console_state_label = ConsoleStateLabel(self)
         self.statusBar().addPermanentWidget(self.console_state_label)
 
-        def show_text_on_console_state(text):
-            if not self.__console.output_widget.isVisible():
-                text = text.strip()[:50]
-                if len(text) > 0:
-                    self.console_state_label.setText(text)
-
-        self.__console.output_widget.sig_add_text.connect(show_text_on_console_state)  # 同时，尝试在控制台状态标签中显示
+        self.__output_widget = None
 
         # 用以播放声音
         if QtMultimedia is not None:
-            self.__sound = QtMultimedia.QSoundEffect()
+            self.sound = QtMultimedia.QSoundEffect()
         else:
-            self.__sound = None
+            self.sound = None
 
         def play(name):
-            if self.__sound is not None:
-                self.__sound.setSource(QtCore.QUrl.fromLocalFile(name))
-                self.__sound.play()
+            if self.sound is not None:
+                self.sound.setSource(QtCore.QUrl.fromLocalFile(name))
+                self.sound.play()
 
         self.sig_play_sound.connect(play)
 
@@ -137,8 +140,18 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.refresh()
 
+    def write(self, text):
+        self.add_task(lambda: self.get_output_widget().add_text(text))
+        if not self.get_output_widget().isVisible():
+            text = text.strip()[:50]
+            if len(text) > 0:
+                self.console_state_label.setText(text)
+
+    def flush(self):
+        pass
+
     def closeEvent(self, event):
-        if self.__console.is_running():
+        if self.console.is_running():
             reply = QtWidgets.QMessageBox.question(
                 self, '退出UI',
                 "内核似乎正在运行，确定要退出吗？"
@@ -160,25 +173,25 @@ class MainWindow(QtWidgets.QMainWindow):
         for key in self.list_member_functions():
             func = getattr(self, key)
             if callable(func):
-                self.__gui_api.add_func(key, func)
-        self.__gui_api.add_func('close', self.close)
-        self.__gui_api.add_func('show_next', self.__tab_widget.show_next)
-        self.__gui_api.add_func('show_prev', self.__tab_widget.show_prev)
-        self.__gui_api.add_func('status', self.show_status)
-        self.__gui_api.add_func('start', self.start_func)
-        self.__gui_api.add_func('tab_count', self.count_tabs)
-        self.__gui_api.add_func('title', self.set_title)
-        self.__gui_api.add_func('window', lambda: self)
-        self.__gui_api.add_func('is_maximized', lambda: self.isMaximized())
-        self.__gui_api.add_func('show_maximized', lambda: self.showMaximized())
-        self.__gui_api.add_func('resize', self.resize)
-        self.__gui_api.add_func('device_pixel_ratio', self.devicePixelRatioF)
+                self.gui_api.add_func(key, func)
+        self.gui_api.add_func('close', self.close)
+        self.gui_api.add_func('show_next', self.tab_widget.show_next)
+        self.gui_api.add_func('show_prev', self.tab_widget.show_prev)
+        self.gui_api.add_func('status', self.show_status)
+        self.gui_api.add_func('start', self.start_func)
+        self.gui_api.add_func('tab_count', self.count_tabs)
+        self.gui_api.add_func('title', self.set_title)
+        self.gui_api.add_func('window', lambda: self)
+        self.gui_api.add_func('is_maximized', lambda: self.isMaximized())
+        self.gui_api.add_func('show_maximized', lambda: self.showMaximized())
+        self.gui_api.add_func('resize', self.resize)
+        self.gui_api.add_func('device_pixel_ratio', self.devicePixelRatioF)
 
         try:
             from zmlx.ui.alg import reg_file_type, edit_in_tab
             for key, func in [('reg_file_type', reg_file_type),
                               ('edit_in_tab', edit_in_tab)]:
-                self.__gui_api.add_func(key, func)
+                self.gui_api.add_func(key, func)
                 gui.mark_direct(key)  # 直接调用的函数
         except Exception as err:
             print(err)
@@ -327,12 +340,17 @@ class MainWindow(QtWidgets.QMainWindow):
             slot=self.cls
         )
 
+        def exec_enabled():
+            if self.is_running():
+                return False
+            else:
+                f = getattr(self.get_current_widget(), 'console_exec', None)
+                return callable(f)
+
         def console_exec():
             f = getattr(self.get_current_widget(), 'console_exec', None)
             if callable(f):
                 f()
-            else:
-                self.get_console().exec_file(fname=None)
 
         self.add_action(
             menu='操作', name='console_exec', icon='begin',
@@ -340,8 +358,7 @@ class MainWindow(QtWidgets.QMainWindow):
             text='运行', shortcut='Ctrl+R',
             slot=console_exec,
             on_toolbar=True,
-            is_enabled=not_running,
-            is_visible=not_running,
+            is_enabled=exec_enabled,
         )
 
         def pause_enabled():
@@ -391,7 +408,7 @@ class MainWindow(QtWidgets.QMainWindow):
             tooltip='隐藏主窗口右侧的控制台', text='隐藏', shortcut='Ctrl+H',
             slot=self.hide_console,
             on_toolbar=True,
-            is_enabled=lambda: self.get_console().isVisible()
+            is_enabled=lambda: self.side_tabs.isVisible()
         )
 
         self.add_action(
@@ -400,7 +417,7 @@ class MainWindow(QtWidgets.QMainWindow):
             tooltip='显示主窗口右侧的控制台', text='显示', shortcut='Ctrl+H',
             slot=self.show_console,
             on_toolbar=True,
-            is_enabled=lambda: not self.get_console().isVisible()
+            is_enabled=lambda: not self.side_tabs.isVisible()
         )
 
         self.add_action(
@@ -819,31 +836,31 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         返回标签的数量
         """
-        return self.__tab_widget.count()
+        return self.tab_widget.count()
 
     def close_all_tabs(self):
         """
         关闭所有的标签
         """
-        self.__tab_widget.close_all_tabs()
+        self.tab_widget.close_all_tabs()
 
     def close_tab_object(self, widget):
         """
         关闭给定对象的标签页面
         """
-        return self.__tab_widget.close_tab_object(widget)
+        return self.tab_widget.close_tab_object(widget)
 
     def get_tab_caption(self, index):
         """
         返回给定位置tab的Caption
         """
-        return self.__tab_widget.tabText(index)
+        return self.tab_widget.tabText(index)
 
     def set_tab_caption(self, index, caption):
         """
         设置tab的文本
         """
-        self.__tab_widget.setTabText(index, caption)
+        self.tab_widget.setTabText(index, caption)
 
     def exec_tab_func(self, name):
         widget = self.get_current_widget()
@@ -851,11 +868,14 @@ class MainWindow(QtWidgets.QMainWindow):
             f = getattr(widget, name)
             f()
 
-    def get_tabs(self):
-        return self.__tab_widget
+    def get_tabs(self, at_side=False):
+        if at_side:
+            return self.side_tabs
+        else:
+            return self.tab_widget
 
     def cls(self):
-        self.__console.output_widget.clear()
+        self.get_output_widget().set_text('')
 
     def show_status(self, *args, **kwargs):
         self.statusBar().showMessage(*args, **kwargs)
@@ -873,7 +893,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.console_state_label.setText(text)
 
     def set_title(self, title):
-        self.__title = title
+        self.title = title
         self.refresh()
 
     @staticmethod
@@ -886,37 +906,84 @@ class MainWindow(QtWidgets.QMainWindow):
                     print(text)
 
     def get_console(self):
-        return self.__console
+        return self.console
 
     def is_running(self):
-        return self.__console.is_running()
+        return self.console.is_running()
+
+    def is_paused(self):
+        return self.console.get_pause()
+
+    def set_paused(self, value):
+        if self.is_running():
+            self.console.set_pause(value)
+
+    def stop_console(self):
+        if self.is_running():
+            self.console.stop()
+
+    def start_last(self):
+        self.console.start_last()
+
+    def set_side_tabs_visible(self, visible: bool):
+        """
+        设置控制台是否可见
+        """
+        self.side_tabs.setVisible(visible)
+        self.refresh()  # 刷新窗口
+
+    def set_console_visible(self, visible: bool):
+        """
+        设置控制台是否可见
+        """
+        self.set_side_tabs_visible(visible)
+
+    def hide_console(self):
+        """
+        隐藏控制台
+        """
+        self.set_console_visible(False)
+
+    def show_console(self):
+        """
+        显示控制台
+        """
+        self.set_console_visible(True)
 
     def click_pause(self):
         """
         在界面上点击暂停按钮
         """
         if self.is_running():
-            self.__console.set_pause(True)
+            self.console.set_pause(True)
 
     def exec_file(self, filename):
-        self.__console.exec_file(filename)
+        self.console.exec_file(filename)
 
     def start_func(self, *args, **kwargs):
         """
         在控制台执行代码
         """
-        self.__console.start_func(*args, **kwargs)
+        self.console.start_func(*args, **kwargs)
 
     def exec_current(self):
-        widget = self.__tab_widget.currentWidget()
+        widget = self.tab_widget.currentWidget()
         if isinstance(widget, CodeEdit):
             widget.save()
-            self.__console.exec_file(widget.get_fname())
+            self.console.exec_file(widget.get_fname())
         else:
-            self.__console.exec_file()
+            self.console.exec_file()
 
     def kill_thread(self):
-        self.__console.kill_thread()
+        if self.console.thread is not None:
+            reply = QtWidgets.QMessageBox.question(
+                self, '杀死进程',
+                "强制结束当前进程，可能会产生不可预期的影响，是否继续?")
+            if reply == QtWidgets.QMessageBox.StandardButton.Yes:
+                if self.thread is not None:
+                    thread = self.console.thread
+                    thread.sig_done.emit()
+                    thread.terminate()
 
     def refresh_action(self, name=None):
         """
@@ -943,88 +1010,45 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         尝试刷新标题以及当前的页面
         """
-        if self.__title is not None:
-            self.setWindowTitle(f'{self.__title}')
+        if self.title is not None:
+            self.setWindowTitle(f'{self.title}')
         else:
             self.setWindowTitle(f'WorkDir: {os.getcwd()}')
 
         try:  # 尝试刷新当前的页面（在定义refresh函数的情况下）
             current = self.get_current_widget()
             if hasattr(current, 'refresh'):
-                self.__task_proc.add(lambda: current.refresh())
+                self.task_proc.add(lambda: current.refresh())
         except Exception as err:
             print(f'Error: {err}')
 
         self.refresh_action()
 
         # 调用刷新
-        self.__console.refresh_view()
+        if not self.is_running():
+            self.get_output_widget().progress(visible=False)
 
-    def get_widget(
-            self, the_type, caption=None, on_top=None, init=None,
-            type_kw=None, oper=None, icon=None, caption_color=None,
-            set_parent=False, tooltip=None, is_ok=None):
-        """
-        返回一个控件，其中type为类型，caption为标题，现有的控件，只有类型和标题都满足，才会返回，否则就
-        创建新控件。
-        Args:
-            the_type: 控件的类型
-            caption: 标题
-            on_top: 是否将控件设置为当前的控件
-            init: 首次生成控件，在显示之前所做的操作
-            type_kw: 用于创建控件的关键字参数
-            oper: 每次调用都会执行，且在控件显示之后执行
-            icon: 图标
-            caption_color: 标题的颜色
-            set_parent: 是否将控件的父对象设置为当前的窗口
-            tooltip: 工具提示
-            is_ok: 一个函数，用于检查控件对象
+        running = self.is_running()
+        pause = self.is_paused()
 
-        Returns:
-            符合条件的Widget对象，否则返回None
-        """
-        if caption is None:
-            caption = 'untitled'
-        widget = self.__tab_widget.find_widget(the_type=the_type, text=caption, is_ok=is_ok)
-        if widget is None:
-            if self.__tab_widget.count() >= 200:
-                print(f'The current number of tabs has reached '
-                      f'the maximum allowed')
-                return None  # 为了稳定性，不允许标签页太多
-            if type_kw is None:
-                type_kw = {}
-            if set_parent:
-                type_kw['parent'] = self
-            try:
-                widget = the_type(**type_kw)
-                assert isinstance(widget, the_type)
-            except Exception as err:
-                print(f'Error: {err}')
-                return None
-            if init is not None:
-                try:
-                    init(widget)
-                except Exception as err:
-                    print(f'Error: {err}')
-            index = self.__tab_widget.addTab(widget, caption)
-            if icon is not None:
-                self.__tab_widget.setTabIcon(index, settings.load_icon(icon))
-            self.__tab_widget.setCurrentWidget(widget)
-            if tooltip is not None:
-                self.__tab_widget.setTabToolTip(index, tooltip)
-            if caption_color is not None:
-                self.__tab_widget.tabBar().setTabTextColor(
-                    index, QtGui.QColor(caption_color)
-                )
-            if oper is not None:
-                self.add_task(lambda: oper(widget))
-            return widget
+        if not running:  # 只要发现没有运行，就关闭进度条显示
+            self.console_state('')  # 显示默认
         else:
-            if on_top:
-                self.__tab_widget.setCurrentWidget(widget)
-            if oper is not None:
-                self.add_task(lambda: oper(widget))
-            return widget
+            if pause:
+                self.console_state('控制台：已暂停')
+            else:
+                self.console_state('控制台：运行中')
+
+        if running:
+            self.get_output_widget().text_browser.setStyleSheet("QTextBrowser {border: 1px solid red;}")
+        else:
+            self.get_output_widget().text_browser.setStyleSheet("QTextBrowser {border: 0px solid red;}")
+
+    def get_widget(self, *args, at_side=False, **kwargs):
+        if at_side:
+            return self.side_tabs.get_widget(*args, **kwargs)
+        else:
+            return self.tab_widget.get_widget(*args, **kwargs)
 
     def get_figure_widget(self, init=None, folder_save=None, **kwargs):
         """
@@ -1133,7 +1157,7 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         if duration is not None:
             warnings.warn('duration will not be used in future')
-        return self.__console.output_widget.progress(
+        return self.get_output_widget().progress(
             label=label, val_range=val_range, value=value, visible=visible)
 
     def open_code(self, fname, caption=None):
@@ -1141,8 +1165,8 @@ class MainWindow(QtWidgets.QMainWindow):
             return
 
         def get_widget(name_1):
-            for i in range(self.__tab_widget.count()):
-                widget_ = self.__tab_widget.widget(i)
+            for i in range(self.tab_widget.count()):
+                widget_ = self.tab_widget.widget(i)
                 if isinstance(widget_, CodeEdit):
                     if samefile(name_1, widget_.get_fname()):
                         return widget_
@@ -1151,11 +1175,9 @@ class MainWindow(QtWidgets.QMainWindow):
             return None
 
         if len(fname) > 0:
-            if samefile(fname, self.__console.get_fname()):
-                return
             widget = get_widget(fname)
             if widget is not None:
-                self.__tab_widget.setCurrentWidget(widget)
+                self.tab_widget.setCurrentWidget(widget)
                 return
             else:
                 def oper(x):
@@ -1185,11 +1207,11 @@ class MainWindow(QtWidgets.QMainWindow):
                 kwds = dict(fname=fname, caption=caption)
                 x.gui_restore = f"""gui.open_text(**{kwds})"""  # 用于重启
 
-            for i in range(self.__tab_widget.count()):
-                widget = self.__tab_widget.widget(i)
+            for i in range(self.tab_widget.count()):
+                widget = self.tab_widget.widget(i)
                 if isinstance(widget, TextFileEdit):
                     if samefile(fname, widget.get_fname()):
-                        self.__tab_widget.setCurrentWidget(widget)
+                        self.tab_widget.setCurrentWidget(widget)
                         oper(widget)
                         return
 
@@ -1267,7 +1289,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.open_code(fname)
 
     def new_file(self):
-        return self.__file_handler.new_file_by_dlg(
+        return self.file_handler.new_file_by_dlg(
             folder=os.getcwd())
 
     def add_file_handler(self, desc, exts, func):
@@ -1277,14 +1299,14 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             open_file = func.get('open_file', None)
             new_file = func.get('new_file', None)
-        return self.__file_handler.add(
+        return self.file_handler.add(
             desc=desc, exts=exts, open_file=open_file, new_file=new_file)
 
     def open_file(self, filepath):
-        return self.__file_handler.open_file(filepath)
+        return self.file_handler.open_file(filepath)
 
     def open_file_by_dlg(self, folder=None):
-        return self.__file_handler.open_file_by_dlg(folder=folder)
+        return self.file_handler.open_file_by_dlg(folder=folder)
 
     def set_cwd(self, folder):
         if isinstance(folder, str):
@@ -1306,22 +1328,26 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         返回当前的标签对象
         """
-        return self.__tab_widget.currentWidget()
+        return self.tab_widget.currentWidget()
 
     def get_current_tab_index(self):
         """
         返回当前标签的序号
         """
-        return self.__tab_widget.currentIndex()
+        return self.tab_widget.currentIndex()
 
     def get_output_widget(self):
-        return self.__console.output_widget
+        if self.__output_widget is None:
+            self.__output_widget = self.side_tabs.get_widget(
+                OutputWidget, caption='控制台输出', closeable=False
+            )
+        return self.__output_widget
 
     def add_task(self, task):
-        self.__task_proc.add(task)
+        self.task_proc.add(task)
 
     def get_gui_api(self):
-        return self.__gui_api
+        return self.gui_api
 
     def check_license(self):
         try:
@@ -1368,8 +1394,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.get_widget(
             the_type=TabDetailView, caption='标签列表', on_top=True,
-            type_kw={'obj': TabDetailView.TabWrapper(self.__tab_widget)},
-            oper=oper,
+            type_kw={'obj': TabDetailView.TabWrapper(self.tab_widget)},
+            oper=oper, at_side=True
         )
 
     def show_code_history(self, folder, caption=None):
@@ -1434,10 +1460,10 @@ class MainWindow(QtWidgets.QMainWindow):
             w.gui_restore = f"""gui.show_timer()"""
 
         self.get_widget(the_type=TimerView, caption='耗时', on_top=True,
-                        icon='clock', oper=oper)
+                        icon='clock', oper=oper, at_side=True)
 
     def show_pg_console(self):
-        from zmlx.ui.widget.base import PgConsole
+        from zmlx.ui.widget.pg import PgConsole
         if PgConsole is None:
             return
 
@@ -1577,25 +1603,6 @@ class MainWindow(QtWidgets.QMainWindow):
             the_type=QWebEngineView, caption=caption, on_top=on_top,
             oper=oper, icon=icon)
 
-    def set_console_visible(self, visible: bool):
-        """
-        设置控制台是否可见
-        """
-        self.get_console().setVisible(visible)
-        self.refresh()  # 刷新窗口
-
-    def hide_console(self):
-        """
-        隐藏控制台
-        """
-        self.set_console_visible(False)
-
-    def show_console(self):
-        """
-        显示控制台
-        """
-        self.set_console_visible(True)
-
 
 class MySplashScreen(QtWidgets.QSplashScreen):
     def mousePressEvent(self, event):
@@ -1649,7 +1656,7 @@ def __restore_history(win):
 
     # 输出历史显示之后，再输出当前时间
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-    win.get_output_widget().write(f'====== {now} ====== \n')
+    win.write(f'====== {now} ====== \n')
 
 
 def __save_history(win):
@@ -1673,12 +1680,12 @@ def __on_init(win):
     __restore_history(win)
 
     # step 5. stdout and stderr
-    sys.stdout = win.get_output_widget()
-    sys.stderr = win.get_output_widget()
+    sys.stdout = win
+    sys.stderr = win
 
 
 def __on_exit(win):
-    # step 5. stdout and stderr (此事，界面不应该再接收print，这是首先要做的)
+    # step 5. stdout and stderr (此时，界面不应该再接收print，这是首先要做的)
     sys.stdout = sys.__stdout__
     sys.stderr = sys.__stderr__
 
@@ -1817,6 +1824,12 @@ def __console_kernel(code):
     except Exception as err:
         print(f'Error when setup editors: {err}')
 
+    try:
+        from zmlx.ui.widget.seepage import setup_ui
+        setup_ui()
+    except Exception as err:
+        print(f'Error when setup editors: {err}')
+
     if app_data.get('run_setup', True):  # 执行额外的配置文件(默认执行)
         __gui_setup()
 
@@ -1846,12 +1859,13 @@ def __save_tabs(filename=None):
     保存标签状态
     """
     from zmlx.io.json_ex import write as write_json
-    tabs = gui.get_tabs()
+
     data = []
-    for idx in range(tabs.count()):
-        code = getattr(tabs.widget(idx), 'gui_restore', None)
-        if isinstance(code, str):
-            data.append(code)
+    for tabs in [gui.get_tabs(False), gui.get_tabs(True)]:
+        for idx in range(tabs.count()):
+            code = getattr(tabs.widget(idx), 'gui_restore', None)
+            if isinstance(code, str):
+                data.append(code)
     if filename is None:
         filename = app_data.temp('tab_start_code.json')
     write_json(filename, data)
@@ -1861,7 +1875,7 @@ def __on_close(win):
     # 存储是否显示控制台
     app_data.setenv(
         key='console_visible',
-        value='Yes' if win.get_console().isVisible() else 'No'
+        value='Yes' if win.get_output_widget().isVisible() else 'No'
     )
     settings.save_window_size(win)
     # 尝试保存tab

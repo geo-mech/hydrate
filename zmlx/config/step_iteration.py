@@ -2,8 +2,8 @@
 根据step，按照给定的间隔来执行操作
 """
 
+from zml import Seepage, clock
 from zmlx.base.seepage import get_step
-from zmlx.base.zml import Seepage, clock
 from zmlx.config.alg import settings as alg_settings
 from zmlx.config.slots import get_slots
 
@@ -18,7 +18,7 @@ def get_settings(model: Seepage):
 
 
 def add_setting(
-        model: Seepage, start=0, step=1, stop=999999999, name=None,
+        model: Seepage, *, start=0, step=1, stop=999999999, name=None,
         args=None, kwds=None):
     """
     添加设置

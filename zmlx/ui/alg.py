@@ -1,4 +1,4 @@
-from zmlx.base.zml import app_data, get_hash
+from zml import app_data, get_hash
 from zmlx.ui.gui_buffer import gui
 from zmlx.ui.pyqt import QtWidgets
 
@@ -28,7 +28,7 @@ def add_code_history(fname):
         import os
         import shutil
 
-        from zmlx.base.zml import app_data
+        from zml import app_data
         from zmlx.alg.fsys import time_string
         if os.path.isfile(fname):
             t_str = time_string()
@@ -142,7 +142,7 @@ def open_url(url: str, caption=None, on_top=None, zoom_factor=None,
 
     if use_web_engine is None:
         try:
-            from zmlx.base.zml import app_data
+            from zml import app_data
             use_web_engine = app_data.getenv(
                 key='use_web_engine',
                 default='Yes',
@@ -276,7 +276,12 @@ def reg_file_type(desc, exts, *, name=None, save=None, load=None, init=None, wid
                     def save_file():
                         try:
                             save(get_data(x), filename)
-                            print(f'成功保存到:\n{filename}')
+                            try:
+                                from zmlx.alg.fsys import getsize_str
+                                fs = getsize_str(filename)
+                                print(f'成功保存到:\n{filename} ({fs})')
+                            except:
+                                print(f'成功保存到:\n{filename}')
                         except Exception as e:
                             print(e)
 
@@ -312,7 +317,7 @@ def reg_file_type(desc, exts, *, name=None, save=None, load=None, init=None, wid
 
     if callable(init):
         def new_file(filename):
-            from zmlx.base.zml import make_parent
+            from zml import make_parent
             try:
                 save(init(), make_parent(filename))
             except Exception as e:
@@ -437,3 +442,31 @@ def play_images():
         gui.progress(visible=False)
 
     gui.start_func(task)
+
+
+def set_position(tab_widget):
+    try:
+        text = app_data.getenv('TabPosition', default='North',
+                               ignore_empty=True)
+        if text == 'North':
+            tab_widget.setTabPosition(QtWidgets.QTabWidget.TabPosition.North)
+        if text == 'South':
+            tab_widget.setTabPosition(QtWidgets.QTabWidget.TabPosition.South)
+        if text == 'East':
+            tab_widget.setTabPosition(QtWidgets.QTabWidget.TabPosition.East)
+        if text == 'West':
+            tab_widget.setTabPosition(QtWidgets.QTabWidget.TabPosition.West)
+    except Exception as err:
+        print(err)
+
+
+def set_shape(tab_widget):
+    try:
+        text = app_data.getenv('TabShape', default='Rounded',
+                               ignore_empty=True)
+        if text == 'Triangular':
+            tab_widget.setTabShape(QtWidgets.QTabWidget.TabShape.Triangular)
+        if text == 'Rounded':
+            tab_widget.setTabShape(QtWidgets.QTabWidget.TabShape.Rounded)
+    except Exception as err:
+        print(err)

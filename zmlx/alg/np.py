@@ -4,7 +4,7 @@
 from ctypes import c_double, POINTER
 
 import zmlx.alg.sys as warnings
-from zmlx.base.zml import get_pointer64, np
+from zml import get_pointer64, np
 
 
 def get_pointer(data, dtype=None):

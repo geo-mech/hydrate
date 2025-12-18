@@ -3,7 +3,7 @@ import os
 import sys
 import warnings
 
-from zmlx.base.zml import in_windows, in_linux, in_macos, make_parent
+from zml import in_windows, in_linux, in_macos, make_parent
 from zmlx.io import opath
 from zmlx.io.env import plt_export_dpi
 from zmlx.ui.alg import create_action
@@ -159,6 +159,7 @@ class MatplotWidget(QtWidgets.QWidget):
             if isinstance(self.__folder_save, str):
                 def open_dir():
                     os.startfile(self.__folder_save)
+
                 menu.addAction(
                     create_action(
                         self, '打开图片保存目录',

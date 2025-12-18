@@ -2,8 +2,8 @@
 迭代更新流体的性质
 """
 
+from zml import clock, ThreadPool
 from zmlx.base.seepage import Seepage, get_vis_min, get_vis_max
-from zmlx.base.zml import clock, ThreadPool
 
 
 @clock

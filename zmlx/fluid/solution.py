@@ -7,7 +7,7 @@
 @2025-11-20  张召彬
 """
 
-from zmlx.base.zml import Seepage
+from zml import Seepage
 
 
 def create_solute(

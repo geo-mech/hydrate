@@ -1,7 +1,6 @@
 # ** desc = '单相的流动。在单相的基础上，添加了盐度组分的扩散效应'
 
 from zmlx import *
-from zmlx.base.seepage import get_attr
 
 
 def set_cell(c: Seepage.CellData, x, y, v, p, s=0.0):

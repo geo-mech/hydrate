@@ -5,7 +5,7 @@
 
 import zmlx.alg.sys as warnings
 
-from zmlx.base.zml import Interp2, Seepage
+from zml import Interp2, Seepage
 from zmlx.fluid.conf.gas_density.co2 import den_co2
 from zmlx.fluid.conf.gas_viscosity.co2 import gas_vis_co2
 

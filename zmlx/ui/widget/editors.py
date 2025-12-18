@@ -4,32 +4,24 @@ try:
     import numpy as np
 except ImportError:
     np = None
-    print('numpy not installed')
 
-from zmlx.base.zml import Interp1, Interp2, Seepage
+from zml import Interp1, Interp2
 from zmlx.alg.numpy_algs import text_to_numpy, numpy_to_text
-from zmlx.ui.alg import create_action, h_spacer
+from zmlx.ui.alg import create_action
 from zmlx.ui.gui_buffer import gui
 from zmlx.ui.pyqt import QtCore, QtWidgets
 from zmlx.ui.widget import MatplotWidget
 from zmlx.plt.cmap import get_cm
 
 
-def set_axes(ax, keys, opts):
-    """
-    设置Axes的属性
-    """
-    for key in keys:
-        value = opts.get(key)
-        if value is not None:
-            getattr(ax, f'set_{key}')(value)
-
-
 class TextEdit(QtWidgets.QTextEdit):
+    sig_changed = QtCore.pyqtSignal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setLineWrapMode(QtWidgets.QTextEdit.LineWrapMode.NoWrap)
         self.setFontFamily("Courier New")  # 使用等宽字体
+        self.textChanged.connect(self.sig_changed.emit)
 
     def set_data(self, data):
         self.setText(str(data))
@@ -93,7 +85,7 @@ class ArrayEdit(QtWidgets.QTextBrowser):
     """
     Numpy矩阵的显示和编辑控件
     """
-    sig_changed = QtCore.pyqtSignal(object)
+    sig_changed = QtCore.pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -132,7 +124,7 @@ class ArrayEdit(QtWidgets.QTextBrowser):
     def _edit(self):
         def set_data(data):
             self.set_data(data)
-            self.sig_changed.emit(self.get_data())
+            self.sig_changed.emit()
 
         gui.edit_in_tab(
             widget_type=ArrayTextEdit, set_data=set_data,
@@ -148,7 +140,7 @@ class ArrayEdit(QtWidgets.QTextBrowser):
             data = NumpyAlgs.load(fname)
             if data is not None:
                 self.set_data(data)
-                self.sig_changed.emit(data)
+                self.sig_changed.emit()
 
     @staticmethod
     def setup_ui():
@@ -174,7 +166,7 @@ class DataEdit(QtWidgets.QWidget):
     """
     特定格式的Numpy矩阵的显示和编辑
     """
-    sig_changed = QtCore.pyqtSignal(object)
+    sig_changed = QtCore.pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -196,12 +188,12 @@ class DataEdit(QtWidgets.QWidget):
     def on_figure(self, fig, data):
         pass
 
-    def _show(self, data):
-        self.view.plot_on_figure(lambda fig: self.on_figure(fig, data))
+    def _show(self):
+        self.view.plot_on_figure(lambda fig: self.on_figure(fig, self.get_data()))
 
     def set_data(self, data):
         self.edit.set_data(data)
-        self._show(data)
+        self._show()
 
     def get_data(self):
         return self.edit.get_data()
@@ -219,11 +211,10 @@ class XyEdit(DataEdit):
         self.opts.update(opts)
 
     def on_figure(self, fig, data):
+        from zmlx.plt.on_figure import add_axes2
+        from zmlx.plt.curve2 import add_curve2
         fig.clear()
-        ax = fig.add_subplot(111)
-        ax.plot(data[:, 0], data[:, 1])
-        set_axes(ax, keys=['title', 'xlabel', 'ylabel'],
-                 opts=self.opts)
+        add_axes2(fig, add_curve2, data[:, 0], data[:, 1], **self.opts)
 
     @staticmethod
     def setup_ui():
@@ -256,19 +247,16 @@ class XyzEdit(DataEdit):
     def __init__(self, parent=None, **opts):
         super().__init__(parent)
         self.opts = dict(
-            xlabel='x', ylabel='y', zlabel='z', title='Xyz数据')
+            xlabel='x', ylabel='y', zlabel='z', title='Xyz数据', cmap='coolwarm',
+            cbar=dict()
+        )
         self.opts.update(opts)
 
     def on_figure(self, fig, data):
+        from zmlx.plt.on_figure import add_axes3
+        from zmlx.plt.trisurf import add_trisurf
         fig.clear()
-        ax = fig.add_subplot(111, projection='3d')
-        res = ax.plot_trisurf(
-            data[:, 0], data[:, 1], data[:, 2],
-            cmap=self.opts.get('cmap', 'coolwarm'),
-            antialiased=True)
-        fig.colorbar(res, ax=ax)
-        set_axes(ax, keys=['title', 'xlabel', 'ylabel', 'zlabel'],
-                 opts=self.opts)
+        add_axes3(fig, add_trisurf, data[:, 0], data[:, 1], data[:, 2], **self.opts)
 
     @staticmethod
     def setup_ui():
@@ -296,7 +284,7 @@ class XyzEdit(DataEdit):
 
 
 class Interp1Edit(MatplotWidget):
-    sig_changed = QtCore.pyqtSignal(object)
+    sig_changed = QtCore.pyqtSignal()
 
     def __init__(self, parent=None, **opts):
         super().__init__(parent)
@@ -316,14 +304,17 @@ class Interp1Edit(MatplotWidget):
                 slot=lambda: self.data.to_evenly_spaced()))
 
     def on_figure(self, figure):
+        from zmlx.plt.on_figure import add_axes2
         figure.clear()
-        ax = figure.add_subplot(111)
         d = self._get_xy()
-        if d is None:
-            ax.set_title('数据为空')
-        else:
-            ax.plot(d[:, 0], d[:, 1])
-            set_axes(ax, ['title', 'xlabel', 'ylabel'], opts=self.opts)
+
+        def on_ax(ax):
+            if d is None:
+                ax.set_title('数据为空')
+            else:
+                ax.plot(d[:, 0], d[:, 1])
+
+        add_axes2(figure, on_ax, **self.opts)
 
     def import_data(self):
         fname, _ = QtWidgets.QFileDialog.getOpenFileName(
@@ -351,7 +342,7 @@ class Interp1Edit(MatplotWidget):
             x = data[:, 0]
             y = data[:, 1]
             self.set_data(Interp1(x=x, y=y))
-            self.sig_changed.emit(self.get_data())
+            self.sig_changed.emit()
             print('成功')
         else:
             print('错误')
@@ -392,7 +383,7 @@ class Interp1Edit(MatplotWidget):
 
 
 class Interp2Edit(MatplotWidget):
-    sig_changed = QtCore.pyqtSignal(object)
+    sig_changed = QtCore.pyqtSignal()
 
     def __init__(self, parent=None, view_init=None, cmap=None, jx=None, jy=None, lutsize=None, **opts):
         super().__init__(parent)
@@ -415,51 +406,50 @@ class Interp2Edit(MatplotWidget):
         self.lutsize = lutsize
 
     def on_figure(self, figure):
+        from zmlx.plt.on_figure import add_axes3
+        def on_ax(ax):
+            if not isinstance(self.data, Interp2):
+                ax.set_title(f'类型错误, 当前数据为: {type(self.data).__name__}')
+                return
+
+            assert isinstance(self.data, Interp2)
+            if self.data.is_empty():
+                ax.set_title('数据为空')
+                return
+
+            x_min, x_max = self.data.xrange()
+            if x_min >= x_max:
+                ax.set_title('x轴范围错误')
+                return
+
+            y_min, y_max = self.data.yrange()
+            if y_min >= y_max:
+                ax.set_title('y轴范围错误')
+                return
+
+            x = np.linspace(x_min, x_max, 50 if self.jx is None else self.jx)
+            y = np.linspace(y_min, y_max, 50 if self.jy is None else self.jy)
+            x, y = np.meshgrid(x, y)
+
+            z = np.zeros_like(x)
+            shape = np.shape(z)
+            for i in range(shape[0]):
+                for j in range(shape[1]):
+                    z[i, j] = self.data.get(float(x[i, j]), float(y[i, j]))
+
+            cmap = self.cmap if self.cmap is not None else 'coolwarm'
+            cmap = get_cm(cmap)
+            if self.lutsize is not None:
+                cmap = cmap.resampled(self.lutsize)
+
+            surf = ax.plot_surface(x, y, z, cmap=cmap)
+            figure.colorbar(surf, ax=ax, shrink=0.5, aspect=10)
+
+            if self.view_init is not None:
+                ax.view_init(**self.view_init)
+
         figure.clear()
-
-        ax = figure.add_subplot(111, projection='3d')
-
-        if not isinstance(self.data, Interp2):
-            ax.set_title(f'类型错误, 当前数据为: {type(self.data).__name__}')
-            return
-
-        assert isinstance(self.data, Interp2)
-        if self.data.is_empty():
-            ax.set_title('数据为空')
-            return
-
-        x_min, x_max = self.data.xrange()
-        if x_min >= x_max:
-            ax.set_title('x轴范围错误')
-            return
-
-        y_min, y_max = self.data.yrange()
-        if y_min >= y_max:
-            ax.set_title('y轴范围错误')
-            return
-
-        x = np.linspace(x_min, x_max, 50 if self.jx is None else self.jx)
-        y = np.linspace(y_min, y_max, 50 if self.jy is None else self.jy)
-        x, y = np.meshgrid(x, y)
-
-        z = np.zeros_like(x)
-        shape = np.shape(z)
-        for i in range(shape[0]):
-            for j in range(shape[1]):
-                z[i, j] = self.data.get(float(x[i, j]), float(y[i, j]))
-
-        cmap = self.cmap if self.cmap is not None else 'coolwarm'
-        cmap = get_cm(cmap)
-        if self.lutsize is not None:
-            cmap = cmap.resampled(self.lutsize)
-
-        surf = ax.plot_surface(x, y, z, cmap=cmap)
-        figure.colorbar(surf, ax=ax, shrink=0.5, aspect=10)
-
-        if self.view_init is not None:
-            ax.view_init(**self.view_init)
-
-        set_axes(ax, ['title', 'xlabel', 'ylabel', 'zlabel'], opts=self.opts)
+        add_axes3(figure, on_ax, **self.opts)
 
     def set_data(self, data):
         if isinstance(data, Interp2):
@@ -498,7 +488,7 @@ class Interp2Edit(MatplotWidget):
                       ymin=y_min, dy=(y_max - y_min) / 30, ymax=y_max,
                       get_value=f)
             self.set_data(f2)
-            self.sig_changed.emit(self.get_data())
+            self.sig_changed.emit()
             print('成功')
         else:
             print('错误')
@@ -518,107 +508,13 @@ class Interp2Edit(MatplotWidget):
             f.den.save('Example.interp2')
             gui.open_interp2('Example.interp2')
 
-        gui.add_action(menu=['帮助', '生成测试数据'],
-                       text='Example.interp2', slot=test_data)
-
-
-class FludefEdit(QtWidgets.QWidget):
-    sig_changed = QtCore.pyqtSignal(object)
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.data = Seepage.FluDef()
-
-        layout = QtWidgets.QVBoxLayout(self)
-        self.setLayout(layout)
-
-        layout1 = QtWidgets.QHBoxLayout(self)
-        layout.addLayout(layout1)
-
-        self.den_view = Interp2Edit(
-            self, title='密度 (kg/m^3)', xlabel='压力 (Pa)', ylabel='温度 (K)',
-            zlabel='密度',
-            view_init={'elev': 30, 'azim': -120},
-        )
-        layout1.addWidget(self.den_view)
-
-        self.vis_view = Interp2Edit(
-            self, title='粘性 (Pa.s)', xlabel='压力 (Pa)', ylabel='温度 (K)',
-            zlabel='粘性',
-            view_init={'elev': 30, 'azim': -120},
-        )
-        layout1.addWidget(self.vis_view)
-
-        layout2 = QtWidgets.QHBoxLayout(self)
-        layout.addLayout(layout2)
-
-        layout2.addItem(h_spacer())
-        layout2.addWidget(QtWidgets.QLabel('流体名字: '))
-        self.name_edit = QtWidgets.QLineEdit(self)
-        layout2.addWidget(self.name_edit)
-        layout2.addWidget(QtWidgets.QLabel('比热: '))
-        self.c_edit = QtWidgets.QLineEdit(self)
-        layout2.addWidget(self.c_edit)
-
-        self.den_view.sig_changed.connect(self._den_changed)
-        self.vis_view.sig_changed.connect(self._vis_changed)
-        self.name_edit.editingFinished.connect(self._name_changed)
-        self.c_edit.editingFinished.connect(self._specific_heat_changed)
-
-    def set_data(self, data):
-        if isinstance(data, Seepage.FluDef):
-            self.data = data
-            self.name_edit.setText(self.data.name)
-            self.den_view.set_data(self.data.den)
-            self.vis_view.set_data(self.data.vis)
-            self.c_edit.setText(f'{self.data.specific_heat:.2f}')
-
-    def get_data(self):
-        return self.data
-
-    def _den_changed(self, data):
-        self.data.den.clone(data)
-        self.sig_changed.emit(self.get_data())
-        print('更新了密度数据')
-
-    def _vis_changed(self, data):
-        self.data.vis.clone(data)
-        self.sig_changed.emit(self.get_data())
-        print('更新了粘度数据')
-
-    def _name_changed(self):
-        self.data.name = self.name_edit.text()
-        self.sig_changed.emit(self.get_data())
-        print('更改了名字')
-
-    def _specific_heat_changed(self):
-        self.data.specific_heat = float(self.c_edit.text())
-        self.sig_changed.emit(self.get_data())
-        print('更改了比热')
-
-    @staticmethod
-    def setup_ui():
-        gui.reg_file_type(
-            '流体定义 FluDef', ['.fludef', '.xml', '.txt'],
-            name='fludef',
-            init=Seepage.FluDef,
-            widget_type=FludefEdit
-        )
-
-        fname = 'Example.fludef'
-
-        def test_data():
-            from zmlx.fluid import ch4
-            f = ch4.create(name='Methane')
-            f.save(fname)
-            gui.open_fludef(fname)
-
-        gui.add_action(menu=['帮助', '生成测试数据'],
-                       text=f'流体定义: {fname}', slot=test_data)
+        gui.add_action(
+            menu=['帮助', '生成测试数据'],
+            text='Example.interp2', slot=test_data)
 
 
 def setup_ui():
-    for obj in [ArrayEdit, XyEdit, XyzEdit, Interp1Edit, Interp2Edit, FludefEdit]:
+    for obj in [ArrayEdit, XyEdit, XyzEdit, Interp1Edit, Interp2Edit]:
         try:
             obj.setup_ui()
         except Exception as e:

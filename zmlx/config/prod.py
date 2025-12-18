@@ -2,9 +2,9 @@
 控制用来生产的Cell的压力.
 """
 
+from zml import clock
 from zmlx.alg.interp import interp1
 from zmlx.base.seepage import get_time, Seepage
-from zmlx.base.zml import clock
 from zmlx.config.alg import settings
 
 text_key = 'prod_settings'

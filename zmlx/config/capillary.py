@@ -7,9 +7,9 @@
 
 """
 
+from zml import Seepage, Interp1, get_pointer64, np, Vector
+from zml import clock
 from zmlx.base.seepage import get_face_sum, get_face_diff, get_dt, as_numpy
-from zmlx.base.zml import Seepage, Interp1, get_pointer64, np, Vector
-from zmlx.base.zml import clock
 
 # 用于存储毛管压力驱动下的流动设置（不可以修改，否则之前的设置失效）
 text_key = 'cap_settings'

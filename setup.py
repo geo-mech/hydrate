@@ -4,8 +4,9 @@ import sys
 from setuptools import setup, find_packages
 
 install_requires = [
-    'numpy', 'scipy', 'matplotlib',
-    'pyqtgraph', 'PyOpenGL', 'pypiwin32', 'pywin32', 'dulwich'
+    'numpy', 'scipy', 'matplotlib', 'pyqtgraph',
+    'PyOpenGL', 'pypiwin32', 'pywin32', 'dulwich',
+    'pillow', 'pyvista', 'pyvistaqt', 'vtk', 'pandas', 'openpyxl'
 ]
 if sys.version_info >= (3, 8):  # 尽可能使用PyQt6
     install_requires.extend(['PyQt6', 'PyQt6-WebEngine', 'pyqt6-qscintilla'])
@@ -27,7 +28,7 @@ package_data = {
 # 使用 setup() 函数定义包的元数据
 setup(
     name='IggHydrate',  # 包名称
-    version='1.4.62',  # 包版本
+    version='1.4.64',  # 包版本
     description='IggHydrate',  # 描述
     author='Zhaobin Zhang',  # 作者名称
     author_email='zhangzhaobin@mail.iggcas.ac.cn',  # 作者邮箱

@@ -1,9 +1,9 @@
 """
 处理FractureNetwork以及相应的Seepage模型。包括创建，显示等基本的操作。
 """
+from zml import Seepage, FractureNetwork, SeepageMesh, Coord3, Array3
 from zmlx.alg.base import clamp
 from zmlx.base.frac import get_fn2
-from zmlx.base.zml import Seepage, FractureNetwork, SeepageMesh, Coord3, Array3
 from zmlx.config.seepage import create as create_seepage, as_numpy, get_time, get_time_str
 from zmlx.geometry.dfn2 import get_avg_length as get_dfn2_avg_length
 from zmlx.plt.fig2 import show_fn2

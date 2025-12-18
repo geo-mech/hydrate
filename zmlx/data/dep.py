@@ -3,7 +3,7 @@ package_names = [
     'numpy', 'scipy', 'matplotlib', 'pyqtgraph',
     'PyQt6', 'PyQt6-WebEngine', 'pyqt6-qscintilla',
     'PyOpenGL', 'pypiwin32', 'pywin32', 'dulwich',
-    'pillow', 'pyvista', 'pyvistaqt', 'vtk',
+    'pillow', 'pyvista', 'pyvistaqt', 'vtk', 'pandas', 'openpyxl'
 ]
 
 # zmlx 计算模块运行所需要的第三方的包的导入名(根据包名)
@@ -20,4 +20,6 @@ import_names = {
     'PyQt6-WebEngine': 'PyQt6.QtWebEngineWidgets',
     'pyqt6-qscintilla': 'PyQt6.Qsci',
     'PyQt6': 'PyQt6',
+    'pandas': 'pandas',
+    'openpyxl': 'openpyxl'
 }

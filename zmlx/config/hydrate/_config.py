@@ -2,8 +2,11 @@
 用于水合物计算的配置.
 """
 import zmlx.alg.sys as warnings
-from zmlx.base.zml import Seepage, log
+from zml import Seepage, log
 from zmlx.config.TherFlowConfig import TherFlowConfig
+from zmlx.config.hydrate._cap import create_caps
+from zmlx.config.hydrate._fluid import create_fludefs
+from zmlx.config.hydrate._react import create_reactions
 from zmlx.fluid.ch4 import create as create_ch4
 from zmlx.fluid.ch4_hydrate import create as create_ch4_hydrate
 from zmlx.fluid.co2 import create as create_co2
@@ -12,9 +15,6 @@ from zmlx.fluid.h2o import create as create_h2o
 from zmlx.fluid.h2o_gas import create as create_h2o_gas
 from zmlx.fluid.h2o_ice import create as create_h2o_ice
 from zmlx.kr.base import create_krf
-from zmlx.config.hydrate._cap import create_caps
-from zmlx.config.hydrate._fluid import create_fludefs
-from zmlx.config.hydrate._react import create_reactions
 from zmlx.react import ch4_hydrate as ch4_hydrate_react
 from zmlx.react import co2_hydrate as co2_hydrate_react
 from zmlx.react import dissolution

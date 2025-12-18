@@ -1,7 +1,7 @@
 import os
 
 import zmlx.alg.sys as warnings
-from zmlx.base.zml import Interp2
+from zml import Interp2
 from zmlx.config.TherFlowConfig import TherFlowConfig
 
 

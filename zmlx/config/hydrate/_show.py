@@ -1,8 +1,8 @@
+from zml import Seepage
 from zmlx.alg.base import time2str
 from zmlx.alg.fsys import join_paths
 from zmlx.alg.fsys import make_fname
 from zmlx.base.seepage import as_numpy
-from zmlx.base.zml import Seepage
 from zmlx.config import seepage
 from zmlx.plt.fig2 import tricontourf
 from zmlx.plt.on_axes import add_items, item

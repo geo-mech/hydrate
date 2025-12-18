@@ -1,4 +1,4 @@
-from zmlx.base.zml import SeepageMesh, np
+from zml import SeepageMesh, np
 
 
 def create_cube(x=(-0.5, 0.5), y=(-0.5, 0.5), z=(-0.5, 0.5), boxes=None,

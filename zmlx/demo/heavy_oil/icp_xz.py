@@ -126,7 +126,6 @@ def show(model: Seepage, caption=None):
 
 
 def main():
-    gui.hide_console()
     model = create()
     seepage.solve(model=model, extra_plot=lambda: show(model, caption='当前状态'))
 

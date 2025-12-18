@@ -1,6 +1,6 @@
 import zmlx.alg.sys as warnings
 
-from zmlx.base.zml import Seepage
+from zml import Seepage
 from zmlx.react.alg import add_reaction
 
 

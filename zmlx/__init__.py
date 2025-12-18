@@ -5,8 +5,8 @@
 """
 
 ########################################
-# zmlx.base.zml 中的内容
-from zmlx.base.zml import *
+# zml 中的内容
+from zml import *
 
 if is_chinese(get_dir()):
     warnings.warn('Please make sure to install zmlx in a pure English path, '
@@ -177,8 +177,6 @@ def get_path(*args):
     """
     return make_parent(join_paths(os.path.dirname(__file__), *args))
 
-
-import zmlx.base.zml as zml
 
 ########################################
 # deprecated

@@ -3,11 +3,16 @@
 """
 from typing import Optional
 
+from zml import Seepage, SeepageMesh, Coord3, Array3, get_norm, ThreadPool
 from zmlx.alg.base import linspace
-from zmlx.base.zml import Seepage, SeepageMesh, Coord3, Array3, get_norm
-from zmlx.config.seepage import create as create_seepage, as_numpy, get_time_str
+from zmlx.config import seepage
 from zmlx.plt.on_axes import item, plot3d
 from zmlx.seepage_mesh.cube import create_cube
+
+try:
+    import numpy as np
+except ImportError:
+    np = None
 
 
 def create_mesh(rc3, d0: float, d1: float, *, thick: Optional[float] = None):
@@ -93,7 +98,7 @@ def create_flow(rc3, d0, d1, *,
     )
     opts = {**default_opts, **opts}
 
-    model = create_seepage(
+    model = seepage.create(
         mesh=mesh,
         fludefs=fludefs,
         s=s,
@@ -106,48 +111,64 @@ def create_flow(rc3, d0, d1, *,
     return model
 
 
-def show_pressure3(model: Seepage, **opts):
+def pressure_items(*models, **opts):
     """
     二维绘图。其中颜色代表流体压力的值.
     这里，opts是传递给绘图内核show_fn2函数的参数
     """
-    rc3_offsets = eval(model.get_text('rc3_offsets'))
-    dx = rc3_offsets[0: 3]
-    dy = rc3_offsets[3: 6]
-
+    items = []
     rc3 = []
-    for cell in model.cells:
-        cent = cell.pos
-        p0 = [cent[i] + dx[i] for i in range(3)]
-        p1 = [cent[i] + dy[i] for i in range(3)]
-        rc3.append([*cent, *p0, *p1])
+    vp = None
+    for model in models:
+        assert isinstance(model, Seepage)
+        text = model.get_text('rc3')
+        if len(text) > 0:
+            items.append(item('rc3', [eval(text)], edge_only=True, edge_width=0.5, edge_color='red'))
+
+        rc3_offsets = eval(model.get_text('rc3_offsets'))
+        dx = rc3_offsets[0: 3]
+        dy = rc3_offsets[3: 6]
+
+        for cell in model.cells:
+            cent = cell.pos
+            p0 = [cent[i] + dx[i] for i in range(3)]
+            p1 = [cent[i] + dy[i] for i in range(3)]
+            rc3.append([*cent, *p0, *p1])
+        if vp is None:
+            vp = seepage.as_numpy(model).cells.pre / 1e6
+        else:
+            vp = np.concatenate([vp, seepage.as_numpy(model).cells.pre / 1e6])
 
     default_opts = dict(
         cbar=dict(label='Pressure [MPa]', shrink=0.5),
-        caption='Pressure',
-        title=f'Time = {get_time_str(model)}',
         edge_width=0,
-        face_alpha=0.7
+        face_alpha=0.9
     )
     opts = {**default_opts, **opts}
-    p = as_numpy(model).cells.pre / 1e6
+    items.append(item('rc3', rc3, face_color=vp, **opts))
 
-    items = [item('rc3', rc3, face_color=p, **opts)]
-    text = model.get_text('rc3')
-    if len(text) > 0:
-        items.append(item('rc3', [eval(text)], edge_only=True, edge_width=0.5, edge_color='red'))
+    return items
 
+
+def show_pressure3(*models, **opts):
+    """
+    二维绘图。其中颜色代表流体压力的值.
+    这里，opts是传递给绘图内核show_fn2函数的参数
+    """
+    items = pressure_items(*models, **opts)
     plot3d(*items, aspect='equal', tight_layout=True,
-           xlabel='x/m', ylabel='y/m', zlabel='z/m',
+           xlabel='x/m', ylabel='y/m', zlabel='z/m', caption='Pressure'
            )
 
 
 def test_2():
     from zmlx.fluid.ch4 import create as create_ch4
-    from zmlx.config.seepage import solve
+    from zmlx.ui import gui
 
-    rc3 = [0, 0, 0, 20, 20, 0, -5, 5, 5]
-    model = create_flow(
+    v_rc3 = [[0, 0, 0, 20, 20, 0, -5, 5, 5],
+             [0, 0, 0, -10, 30, 0, 0, 0, 7]
+             ]
+    models = [create_flow(
         rc3=rc3, d0=2, d1=1.2, thick=1,
         fludefs=[create_ch4(name='ch4')],
         s=dict(ch4=1.0),
@@ -160,11 +181,17 @@ def test_2():
             flu='insitu',
             value=10.0 / 60)
         ],
-    )
+    ) for rc3 in v_rc3]
 
-    solve(model, close_after_done=False,
-          extra_plot=lambda: show_pressure3(model),
-          time_forward=6000)
+    def run():
+        pool = ThreadPool()
+        for target_time in np.linspace(0, 6000, 5):
+            print(f'Iterate until target_time: {target_time} .. ', end='')
+            seepage.iterate_until(*models, target_time=target_time, pool=pool)
+            show_pressure3(*models)
+            print('Done.')
+
+    gui.execute(run, close_after_done=False)
 
 
 if __name__ == '__main__':

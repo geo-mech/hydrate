@@ -1,4 +1,4 @@
-from zmlx.base.zml import Seepage, clock, ThreadPool
+from zml import Seepage, clock, ThreadPool
 
 
 @clock

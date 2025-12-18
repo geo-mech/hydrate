@@ -72,8 +72,7 @@ def main():
     """
     jx, jy = 100, 50
     model = create(jx=jx, jy=jy)
-    seepage.solve(model, close_after_done=False, extra_plot=lambda: show(model, jx, jy),
-                  hide_console_when_done=True)
+    seepage.solve(model, close_after_done=False, extra_plot=lambda: show(model, jx, jy))
 
 
 if __name__ == '__main__':

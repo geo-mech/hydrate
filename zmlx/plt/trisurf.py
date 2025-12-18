@@ -1,5 +1,5 @@
-from zmlx.plt.on_figure import add_axes3
 from zmlx.plt.cbar import add_cbar
+from zmlx.plt.on_figure import add_axes3
 
 
 def add_trisurf(ax, *args, cbar=None, **kwargs):

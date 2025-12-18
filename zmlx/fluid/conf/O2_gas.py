@@ -9,7 +9,7 @@ https://www.engineeringtoolbox.com/oxygen-d_978.html
 import matplotlib.pyplot as plt
 
 import zmlx.alg.sys as warnings
-from zmlx.base.zml import Interp2, Seepage, np
+from zml import Interp2, Seepage, np
 from zmlx.fluid.conf.gas_density.O2_density import *
 from zmlx.fluid.conf.gas_viscosity.O2_viscosity import *
 

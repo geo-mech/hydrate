@@ -3,7 +3,7 @@
 1列数据，用于定义裂缝的颜色（如压力）
 """
 
-from zmlx.base.zml import is_array
+from zml import is_array
 from zmlx.plt.cmap import get_cm, get_color
 
 

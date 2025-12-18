@@ -9,23 +9,23 @@ import time
 import timeit
 from datetime import datetime
 
-from zmlx.alg.base import fsize2str, time2str, clamp
-from zmlx.alg.fsys import samefile, time_string
-from zmlx.alg.search_paths import choose_path
-from zmlx.base.zml import (
+from zml import (
     core, lic, get_dir, make_parent, reg, timer, app_data,
     write_text, read_text)
+from zmlx.alg.base import fsize2str, time2str, clamp
+from zmlx.alg.fsys import time_string
+from zmlx.alg.search_paths import choose_path
 from zmlx.ui import setup_files
+
 from zmlx.ui.alg import (
-    add_code_history, create_action, add_exec_history,
-    get_last_exec_history)
+    create_action)
 from zmlx.ui.gui_buffer import gui
 from zmlx.ui.pyqt import (
     QWebEngineView, is_pyqt6, QtCore, QtGui, QtWidgets, qt_name, QAction)
 from zmlx.ui.settings import (
-    get_default_code, load_icon, get_text, play_error,
-    load_priority, priority_value)
-from zmlx.ui.utils import CodeFile, SharedValue, BreakPoint
+    get_default_code)
+from zmlx.ui import settings
+from zmlx.ui.utils import TaskProc
 
 try:  # 尝试基于QsciScintilla实现Python编辑器
     if is_pyqt6:
@@ -942,7 +942,8 @@ class TabDetailView(QtWidgets.QTableWidget):
             # 类型列（使用type获取类型）
             self.setItem(row, 1, QtWidgets.QTableWidgetItem(name))
             # 删除按钮
-            btn = QtWidgets.QPushButton('移除', self)
+            btn = QtWidgets.QToolButton(self)
+            btn.setText('x')
             btn.clicked.connect(lambda _, r=row: self._handle_delete(r))
             self.setCellWidget(row, 2, btn)
 
@@ -1046,7 +1047,7 @@ class OutputHistoryView(QtWidgets.QWidget):
         self.main_layout.addWidget(self.file_list, stretch=2)
 
         # 右侧文本显示
-        self.text_view = ConsoleOutput(self)
+        self.text_view = TextBrowser(self)
         self.main_layout.addWidget(self.text_view, stretch=5)
 
         self.clear_display()
@@ -1054,7 +1055,7 @@ class OutputHistoryView(QtWidgets.QWidget):
 
     def clear_display(self):
         self.file_list.clear()
-        self.text_view.load_text('')
+        self.text_view.clear()
 
     def set_folder(self, folder=None):
         if folder is None:
@@ -1095,7 +1096,9 @@ class OutputHistoryView(QtWidgets.QWidget):
     def show_file_content(self, item):
         file_path = item.data(QtCore.Qt.ItemDataRole.UserRole)
         try:
-            self.text_view.load_text(file_path)
+            with open(file_path, "r") as f:
+                text = f.read()
+                self.text_view.setText(text)
         except Exception as err:
             self.text_view.setText(
                 f"读取文件错误：{str(err)}. file_path={file_path}")
@@ -1549,7 +1552,7 @@ class FeedbackTool(QtWidgets.QWidget):
 {self.feedback_edit.toPlainText()}"""
 
         try:
-            from zmlx.base.zml import sendmail
+            from zml import sendmail
             success = sendmail(
                 address="zhangzhaobin@mail.iggcas.ac.cn",
                 subject=subject,
@@ -1663,11 +1666,10 @@ class ConsoleStateLabel(Label):
 class TabWidget(QtWidgets.QTabWidget):
     def __init__(self, parent=None):
         super(TabWidget, self).__init__(parent)
+        self.task_proc = TaskProc(self)
         self.setTabsClosable(True)
         self.tabCloseRequested.connect(self.close_tab)
         self.setMovable(True)
-        self.set_position()
-        self.set_shape()
         self.context_actions = []  # 附加的命令
 
     def contextMenuEvent(self, event):
@@ -1679,7 +1681,7 @@ class TabWidget(QtWidgets.QTabWidget):
         menu = QtWidgets.QMenu(self)
         if self.count() >= 1:
             menu.addAction(
-                create_action(self, '关闭所有', slot=gui.close_all_tabs))
+                create_action(self, '关闭所有', slot=self.close_all_tabs))
             menu.addAction(
                 create_action(self, '列出标签', slot=gui.show_tab_details))
             if tab_index is not None:
@@ -1696,8 +1698,6 @@ class TabWidget(QtWidgets.QTabWidget):
                     self, text='关闭其它',
                     slot=lambda: self._close_all_except(tab_index))
                 )
-        else:
-            self._add_extra(menu)
 
         if len(self.context_actions) > 0:
             menu.addSeparator()
@@ -1706,58 +1706,16 @@ class TabWidget(QtWidgets.QTabWidget):
 
         menu.exec(event.globalPos())
 
-    def _add_extra(self, menu):
-        menu.addAction(create_action(self, text='ReadMe', slot=gui.show_readme))
-        menu.addAction(create_action(self, text='关于', slot=gui.show_about))
-        menu.addSeparator()
-        menu.addAction(create_action(self, text='打开', slot=gui.open_file_by_dlg))
-        menu.addAction(create_action(self, text='新建', slot=gui.new_file))
-        menu.addAction(create_action(self, text='浏览', slot=gui.view_cwd))
-        menu.addSeparator()
-        menu.addAction(create_action(self, text='刷新', slot=gui.refresh))
-        menu.addAction(create_action(self, text='变量', slot=gui.show_memory))
-        menu.addAction(create_action(self, text='耗时', slot=gui.show_timer))
-        menu.addAction(create_action(self, text='Python控制台(测试)', slot=gui.show_pg_console))
-        menu.addSeparator()
-        menu.addAction(create_action(self, text='设置系统变量', slot=gui.show_env_edit))
-        menu.addAction(create_action(self, text='设置启动文件', slot=gui.edit_setup_files))
-        menu.addSeparator()
-        menu.addAction(create_action(self, text='显示Demos', slot=gui.show_demo))
-        menu.addAction(create_action(self, text='注册', slot=gui.show_reg_tool))
-        menu.addAction(create_action(self, text='反馈', slot=gui.show_feedback))
-
-    def set_position(self):
-        try:
-            text = app_data.getenv('TabPosition', default='North',
-                                   ignore_empty=True)
-            if text == 'North':
-                self.setTabPosition(QtWidgets.QTabWidget.TabPosition.North)
-            if text == 'South':
-                self.setTabPosition(QtWidgets.QTabWidget.TabPosition.South)
-            if text == 'East':
-                self.setTabPosition(QtWidgets.QTabWidget.TabPosition.East)
-            if text == 'West':
-                self.setTabPosition(QtWidgets.QTabWidget.TabPosition.West)
-        except Exception as err:
-            print(err)
-
-    def set_shape(self):
-        try:
-            text = app_data.getenv('TabShape', default='Rounded',
-                                   ignore_empty=True)
-            if text == 'Triangular':
-                self.setTabShape(QtWidgets.QTabWidget.TabShape.Triangular)
-            if text == 'Rounded':
-                self.setTabShape(QtWidgets.QTabWidget.TabShape.Rounded)
-        except Exception as err:
-            print(err)
-
     def close_tab(self, index):
         if index < self.count():
             widget = self.widget(index)
-            widget.deleteLater()
-            self.removeTab(index)
-            return True
+            closeable = getattr(widget, 'tab_closeable', None)
+            if closeable or closeable is None:
+                widget.deleteLater()
+                self.removeTab(index)
+                return True
+            else:
+                return False
         else:
             return False
 
@@ -1767,6 +1725,9 @@ class TabWidget(QtWidgets.QTabWidget):
             return self.close_tab(index)
         else:
             return False
+
+    def add_task(self, task):
+        self.task_proc.add(task)
 
     def find_widget(self, the_type=None, text=None, is_ok=None):
         """
@@ -1794,6 +1755,75 @@ class TabWidget(QtWidgets.QTabWidget):
             return widget
         return None
 
+    def get_widget(
+            self, the_type, caption=None, on_top=None, init=None,
+            type_kw=None, oper=None, icon=None, caption_color=None,
+            set_parent=False, tooltip=None, is_ok=None, closeable=None):
+        """
+        返回一个控件，其中type为类型，caption为标题，现有的控件，只有类型和标题都满足，才会返回，否则就
+        创建新控件。
+        Args:
+            the_type: 控件的类型
+            caption: 标题
+            on_top: 是否将控件设置为当前的控件
+            init: 首次生成控件，在显示之前所做的操作
+            type_kw: 用于创建控件的关键字参数
+            oper: 每次调用都会执行，且在控件显示之后执行
+            icon: 图标
+            caption_color: 标题的颜色
+            set_parent: 是否将控件的父对象设置为当前的窗口
+            tooltip: 工具提示
+            is_ok: 一个函数，用于检查控件对象
+            closeable: 是否允许关闭
+
+        Returns:
+            符合条件的Widget对象，否则返回None
+        """
+        if caption is None:
+            caption = 'untitled'
+        widget = self.find_widget(the_type=the_type, text=caption, is_ok=is_ok)
+        if widget is None:
+            if self.count() >= 200:
+                print(f'The current number of tabs has reached '
+                      f'the maximum allowed')
+                return None  # 为了稳定性，不允许标签页太多
+            if type_kw is None:
+                type_kw = {}
+            if set_parent:
+                type_kw['parent'] = self
+            try:
+                widget = the_type(**type_kw)
+                assert isinstance(widget, the_type)
+                if closeable is not None:
+                    widget.tab_closeable = closeable
+            except Exception as err:
+                print(f'Error: {err}')
+                return None
+            if init is not None:
+                try:
+                    init(widget)
+                except Exception as err:
+                    print(f'Error: {err}')
+            index = self.addTab(widget, caption)
+            if icon is not None:
+                self.setTabIcon(index, settings.load_icon(icon))
+            self.setCurrentWidget(widget)
+            if tooltip is not None:
+                self.setTabToolTip(index, tooltip)
+            if caption_color is not None:
+                self.tabBar().setTabTextColor(
+                    index, QtGui.QColor(caption_color)
+                )
+            if oper is not None:
+                self.add_task(lambda: oper(widget))
+            return widget
+        else:
+            if on_top:
+                self.setCurrentWidget(widget)
+            if oper is not None:
+                self.add_task(lambda: oper(widget))
+            return widget
+
     def get_tab_index(self, widget):
         for idx in range(self.count()):
             if id(self.widget(idx)) == id(widget):
@@ -1813,8 +1843,15 @@ class TabWidget(QtWidgets.QTabWidget):
                 self.setCurrentIndex(index - 1)
 
     def close_all_tabs(self):
-        while self.count() > 0:
-            self.close_tab(0)
+        """
+        关闭所有可以被关闭的标签页
+        """
+        idx = self.count() - 1
+        while idx >= 0:
+            succeed = self.close_tab(idx)
+            if not succeed:
+                print(f'failed to close tab {idx}')
+            idx -= 1
 
     def _close_all_except(self, index):
         if 0 <= index < self.count():
@@ -1844,15 +1881,13 @@ class TabWidget(QtWidgets.QTabWidget):
         super().mousePressEvent(event)
 
 
-class ConsoleOutput(QtWidgets.QWidget):
-    sig_add_text = QtCore.pyqtSignal(str)
-
-    def __init__(self, parent=None, console=None):
+class OutputWidget(QtWidgets.QWidget):
+    def __init__(self, parent=None):
         super().__init__(parent)
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(layout)
-        self.text_browser = TextBrowser()
+        self.text_browser = TextBrowser(self)
         layout.addWidget(self.text_browser)
         # 添加进度条（这也是作为标准输出）
         self.progress_label = QtWidgets.QLabel(self)
@@ -1871,11 +1906,6 @@ class ConsoleOutput(QtWidgets.QWidget):
             return menu
 
         self.text_browser.get_context_menu = f2  # 替换
-        # 其它初始化
-        self.__length = 0
-        self.__length_max = 100000
-        self.sig_add_text.connect(self.__add_text)
-        self.console = console
 
     def progress(
             self, label=None, val_range=None, value=None, visible=None):
@@ -1897,72 +1927,57 @@ class ConsoleOutput(QtWidgets.QWidget):
             self.progress_label.setVisible(visible)
 
     def get_context_actions(self):
-        result = []
-        if isinstance(self.console, Console):
-            result.append(create_action(
-                self, '隐藏', icon='console',
-                slot=lambda: self.console.setVisible(False))
-            )
-            if self.console.is_running():
-                if self.console.get_pause():
-                    result.append(create_action(
-                        self, '继续', icon='begin',
-                        slot=lambda: self.console.set_pause(False))
-                    )
-                else:
-                    result.append(create_action(
-                        self, '暂停', icon='pause',
-                        slot=lambda: self.console.set_pause(True))
-                    )
+        result = [create_action(
+            self, '隐藏', icon='console',
+            slot=lambda: gui.hide_console())]
+        if gui.is_running():
+            if gui.is_paused():
                 result.append(create_action(
-                    self, '停止', icon='stop',
-                    slot=lambda: self.console.stop())
+                    self, '继续', icon='begin',
+                    slot=lambda: gui.set_paused(False))
                 )
             else:
                 result.append(create_action(
-                    self, '重新执行', slot=self.console.start_last)
+                    self, '暂停', icon='pause',
+                    slot=lambda: gui.set_paused(True))
                 )
-                result.append(create_action(
-                    self, '运行历史',
-                    slot=lambda: gui.show_code_history(
-                        folder=app_data.root('console_history'),
-                        caption='运行历史'))
-                )
-                result.append(create_action(
-                    self, '输出历史',
-                    slot=gui.show_output_history)
-                )
+            result.append(create_action(
+                self, '停止', icon='stop',
+                slot=lambda: gui.stop_console())
+            )
+        else:
+            result.append(create_action(
+                self, '重新执行', slot=lambda: gui.start_last())
+            )
+            result.append(create_action(
+                self, '运行历史',
+                slot=lambda: gui.show_code_history(
+                    folder=app_data.root('console_history'),
+                    caption='运行历史'))
+            )
+            result.append(create_action(
+                self, '输出历史',
+                slot=gui.show_output_history)
+            )
         return result
 
-    def write(self, text):
-        self.sig_add_text.emit(text)
-
-    def flush(self):
-        pass
-
-    def __check_length(self):
-        while self.__length > self.__length_max:
-            fulltext = self.text_browser.toPlainText()
-            fulltext = fulltext[-int(len(fulltext) / 2): -1]
-            self.text_browser.clear()
-            self.text_browser.setPlainText(fulltext)
-            self.__length = len(fulltext)
-
-    def __add_text(self, text):
-        self.__check_length()
+    def add_text(self, text):
         self.text_browser.moveCursor(QtGui.QTextCursor.MoveOperation.End)
         self.text_browser.insertPlainText(text)
-        self.__length += len(text)
+        while self.text_browser.document().characterCount() > 10000:
+            fulltext = self.text_browser.toPlainText()
+            fulltext = fulltext[-int(len(fulltext) / 2): -1]
+            self.text_browser.setPlainText(fulltext)
+
+    def set_text(self, text):
+        self.text_browser.setPlainText(text)
+        self.text_browser.moveCursor(QtGui.QTextCursor.MoveOperation.End)
 
     def load_text(self, filename):
         try:
             if os.path.isfile(filename):
                 with open(filename, 'r') as file:
-                    text = file.read()
-                    self.text_browser.setPlainText(text)
-                    self.__length = len(text)
-                    self.__check_length()
-                    self.text_browser.moveCursor(QtGui.QTextCursor.MoveOperation.End)
+                    self.set_text(file.read())
         except Exception as err2:
             print(err2)
             self.text_browser.setPlainText('')
@@ -1974,314 +1989,3 @@ class ConsoleOutput(QtWidgets.QWidget):
         except Exception as err2:
             print(err2)
 
-
-class ConsoleThread(QtCore.QThread):
-    sig_done = QtCore.pyqtSignal()
-    sig_err = QtCore.pyqtSignal(str)
-
-    def __init__(self, code):
-        super(ConsoleThread, self).__init__()
-        self.code = code
-        self.result = None
-        self.post_task = None
-        self.text_end = None
-        self.time_beg = None
-
-    def run(self):
-        if self.code is not None:
-            try:
-                self.result = self.code()
-            except KeyboardInterrupt:
-                print('KeyboardInterrupt')
-            except Exception as err:
-                self.sig_err.emit(f'{err}')
-        self.sig_done.emit()
-
-
-class Console(QtWidgets.QWidget):
-    sig_kernel_started = QtCore.pyqtSignal()
-    sig_kernel_done = QtCore.pyqtSignal()
-    sig_kernel_err = QtCore.pyqtSignal(str)
-    sig_refresh = QtCore.pyqtSignal()
-
-    def __init__(self, parent):
-        super(Console, self).__init__(parent)
-
-        main_layout = QtWidgets.QVBoxLayout(self)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        self.splitter = QtWidgets.QSplitter(self)
-        self.splitter.setOrientation(QtCore.Qt.Orientation.Vertical)
-        main_layout.addWidget(self.splitter)
-
-        self.widget_1 = QtWidgets.QWidget(self.splitter)  # 在这个控件上，放置多个控件
-        output_layout = QtWidgets.QVBoxLayout(self.widget_1)
-        output_layout.setContentsMargins(0, 0, 0, 0)
-        self.output_widget = ConsoleOutput(self.widget_1, console=self)
-        output_layout.addWidget(self.output_widget)
-
-        self.input_editor = CodeEdit(self.splitter)
-
-        self.splitter.setStretchFactor(0, 3)
-        self.splitter.setStretchFactor(1, 1)
-
-        h_layout = QtWidgets.QHBoxLayout()
-        h_layout.addItem(QtWidgets.QSpacerItem(
-            40, 20,
-            QtWidgets.QSizePolicy.Policy.Expanding,
-            QtWidgets.QSizePolicy.Policy.Minimum))
-
-        def add_button(text, icon, slot):
-            button = QtWidgets.QPushButton(self)
-            button.setText(get_text(text))
-            button.setIcon(load_icon(icon))
-            button.clicked.connect(slot)
-            h_layout.addWidget(button)
-            return button
-
-        # 开始运行
-        self.button_exec = add_button(
-            '运行', 'begin',
-            lambda: self.exec_file(fname=None))
-        self.button_exec.setToolTip(
-            '运行此按钮上方输入框内的脚本. 如需要运行标签页的脚本，请点击工具栏的运行按钮')
-        self.button_exec.setShortcut('Ctrl+Return')
-        # 暂停/继续：两者只显示一个
-        self.button_pause = add_button(
-            '暂停', 'pause', lambda: self.set_pause(True))
-        self.button_continue = add_button(
-            '继续', 'begin', lambda: self.set_pause(False))
-        self.button_continue.setVisible(False)
-        # 终止
-        self.button_exit = add_button('终止', 'stop', self.stop)
-        self.button_exit.setToolTip(
-            '安全地终止内核的执行 (需要提前在脚本内设置break_point)')
-
-        h_layout.addItem(QtWidgets.QSpacerItem(
-            40, 20,
-            QtWidgets.QSizePolicy.Policy.Expanding,
-            QtWidgets.QSizePolicy.Policy.Minimum))
-        main_layout.addLayout(h_layout)
-
-        self.kernel_err = None
-        self.thread = None
-        self.result = None
-
-        self.restore_code()
-
-        self.break_point = BreakPoint(self)
-        self.flag_exit = SharedValue(False)
-
-    def refresh_view(self):
-        running = self.is_running()
-        pause = self.get_pause()
-        self.button_exec.setEnabled(not running)
-
-        self.button_pause.setVisible(not pause)
-        self.button_pause.setEnabled(running)
-        self.button_continue.setVisible(pause)
-        self.button_continue.setEnabled(running)
-        self.button_exit.setEnabled(running)
-
-        self.input_editor.setVisible(
-            True if not running else samefile(
-                app_data.get('__file__', ''),
-                self.input_editor.get_fname()))
-        if not running:  # 只要发现没有运行，就关闭进度条显示
-            self.output_widget.progress(visible=False)
-            gui.console_state('', is_direct=True)  # 显示默认
-        else:
-            if pause:
-                gui.console_state('控制台：已暂停', is_direct=True)
-            else:
-                gui.console_state('控制台：运行中', is_direct=True)
-
-    def get_pause(self):
-        return self.break_point.locked()
-
-    def set_pause(self, value):
-        if value != self.get_pause():
-            if self.break_point.locked():
-                self.break_point.unlock()
-            else:
-                self.break_point.lock()
-            self.sig_refresh.emit()
-
-    def get_stop(self):
-        return self.flag_exit.get()
-
-    def set_stop(self, value):
-        self.flag_exit.set(value)
-        if value:
-            self.set_pause(False)
-        self.sig_refresh.emit()
-
-    def stop(self):
-        app_data.log(f'execute <stop_clicked> of {self}')
-        self.set_stop(not self.get_stop())
-
-    def exec_file(self, fname=None):
-        if fname is None:
-            fname = self.input_editor.get_fname()
-            self.input_editor.save()
-            if fname is None:
-                return
-        if os.path.isfile(fname):
-            self.start_func(CodeFile(fname), name='__main__')
-
-    def start_func(self, code, text_beg=None, text_end=None,
-                   post_task=None, file=None, name=None):
-        """
-        启动方程，注意，这个函数的调用不支持多线程（务必再主线程中调用）
-        """
-        if code is None:  # 清除最后一次调用的信息
-            add_exec_history(None)
-            return
-
-        if self.is_running():
-            play_error()
-            return
-
-        add_exec_history(dict(
-            code=code, text_beg=text_beg, text_end=text_end,
-            post_task=post_task, file=file, name=name))
-
-        if isinstance(code, CodeFile):  # 此时，执行脚本文件
-            if not code.exists():
-                add_exec_history(None)
-                return
-            file = code.abs_path()
-            code = code.get_text()
-            text_beg = f"Start: {file}"
-            text_end = 'Done'
-            add_code_history(file)  # 记录代码历史
-            app_data.log(f'execute file: {file}')  # since 230923
-
-        self.result = None
-        self.kernel_err = None
-
-        app_data.space['__file__'] = file if isinstance(file, str) else ''
-        app_data.space['__name__'] = name if isinstance(name, str) else ''
-
-        if isinstance(code, str):
-            self.thread = ConsoleThread(lambda: exec(code, app_data.space))
-        else:
-            self.thread = ConsoleThread(code)
-
-        self.thread.post_task = post_task
-        self.thread.text_end = text_end
-        self.thread.sig_done.connect(self.__kernel_exited)
-        self.thread.sig_err.connect(self.__kernel_err)
-        priority = load_priority()
-        if text_beg is not None:
-            print(f'{text_beg} ({priority})')
-        self.thread.time_beg = timeit.default_timer()
-        self.set_stop(False)
-        self.set_pause(False)
-        self.thread.start(priority_value(priority))
-        self.sig_kernel_started.emit()
-        self.sig_refresh.emit()
-
-    def start_last(self):
-        last_history = get_last_exec_history()
-        if last_history is not None:
-            self.start_func(**last_history)
-
-    def __kernel_exited(self):
-        if self.thread is not None:
-            self.result = self.thread.result  # 首先，要获得结果
-
-            self.set_stop(False)
-            self.set_pause(False)
-
-            if self.thread.text_end is not None:
-                print(self.thread.text_end)
-
-            time_end = timeit.default_timer()
-            if self.thread.time_beg is not None and time_end is not None:
-                t = time2str(time_end - self.thread.time_beg)
-                print(f'Time used = {t}\n')
-
-            post_task = self.thread.post_task
-            self.thread = None  # 到此未知，线程结束
-
-            self.sig_kernel_done.emit()
-            self.sig_refresh.emit()
-
-            try:  # 完成了所有的工作，再执行善后
-                if callable(post_task):
-                    post_task()
-            except Exception as err:
-                print(err)
-
-    def __kernel_err(self, err):
-        self.kernel_err = err
-        print(f'Error: {err}')
-        self.sig_kernel_err.emit(err)
-        try:
-            app_data.log(f'meet exception: {err}')
-        except Exception as err:
-            print(err)
-
-    def kill_thread(self):
-        """
-        杀死线程；一种非常不安全的一种终止方法
-        """
-        if self.thread is not None:
-            reply = QtWidgets.QMessageBox.question(
-                self, '杀死进程',
-                "强制结束当前进程，可能会产生不可预期的影响，是否继续?")
-            if reply == QtWidgets.QMessageBox.StandardButton.Yes:
-                if self.thread is not None:
-                    thread = self.thread
-                    thread.sig_done.emit()
-                    thread.terminate()
-
-    def writeline(self, text):
-        self.output_widget.write(f'{text}\n')
-
-    def restore_code(self):
-        try:
-            self.input_editor.open(
-                os.path.join(os.getcwd(), 'code_in_editor.py'))
-        except Exception as err:
-            print(err)
-
-    def get_fname(self):
-        return self.input_editor.get_fname()
-
-    def is_running(self):
-        return self.thread is not None
-
-    def get_break_point(self):
-        return self.break_point
-
-    def get_flag_exit(self):
-        return self.flag_exit
-
-
-try:
-    from pyqtgraph.console import ConsoleWidget
-
-
-    class PgConsole(ConsoleWidget):
-        def __init__(self, parent=None):
-            text = app_data.getenv(
-                key='PgConsoleText',
-                encoding='utf-8',
-                default="""
-这是一个交互的Python控制台。请在输入框输入Python命令并开始！
-
----\n\n""")
-            code = app_data.getenv(
-                key='PgConsoleInit',
-                encoding='utf-8',
-                default="from zmlx import *"
-            )
-            super().__init__(parent, namespace=app_data.space, text=text)
-            try:
-                exec(code, app_data.space)
-            except Exception as err:
-                print(err)
-
-except ImportError:
-    PgConsole = None

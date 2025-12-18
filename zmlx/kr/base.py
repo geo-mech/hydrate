@@ -1,5 +1,5 @@
+from zml import Interp1
 from zmlx.alg.base import linspace
-from zmlx.base.zml import Interp1
 
 
 def create_fracture_kr():

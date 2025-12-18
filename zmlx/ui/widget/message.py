@@ -1,7 +1,7 @@
 import os
 import time
 
-from zmlx.base.zml import app_data, get_hash, log as zml_log
+from zml import app_data, get_hash, log as zml_log
 from zmlx.io.json_ex import read, write
 from zmlx.ui import gui
 from zmlx.ui.alg import create_action

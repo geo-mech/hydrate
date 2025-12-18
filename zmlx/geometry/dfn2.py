@@ -1,5 +1,5 @@
+from zml import Dfn2
 from zmlx.alg.base import linspace
-from zmlx.base.zml import Dfn2
 from zmlx.geometry.base import point_distance
 
 

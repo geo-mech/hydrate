@@ -45,11 +45,11 @@ Face的属性：
 from collections.abc import Iterable
 from typing import Optional
 
+from zml import (
+    get_average_perm, Tensor3, make_parent, SeepageMesh)
 from zmlx.alg.base import clamp, join_cols
 from zmlx.alg.fsys import join_paths, print_tag
 from zmlx.base.seepage import *
-from zmlx.base.zml import (
-    get_average_perm, Tensor3, make_parent, SeepageMesh)
 from zmlx.config import (
     capillary, prod, fluid_heating, timer,
     sand, step_iteration, diffusion, solid_buffer, fluid, injector, cond
@@ -254,10 +254,11 @@ def iterate(*local_opts, pool=None, **global_opts):
     for local_opt in local_opts:
         # 解析出model
         if isinstance(local_opt, dict):
+            local_opt = local_opt.copy()  # 使得这个列表，后续还可以使用
             model = local_opt.pop('model', None)
             assert isinstance(model, Seepage), f'The model is not Seepage. model = {model}'
         else:
-            assert isinstance(local_opt, Seepage)
+            assert isinstance(local_opt, Seepage), f'The model is not Seepage. model = {local_opt}'
             model = local_opt
             local_opt = {}
 
@@ -370,46 +371,37 @@ def parallel_iterate(*args, **kwargs):
     return iterate(*args, **kwargs)
 
 
-def parallel_sync(*local_opts, pool=None, target_time=None):
+def iterate_until(*local_opts, pool=None, target_time=None, n_loop_max=None, **global_opts):
     """
     并行地迭代，直到给定的目标时间
-
-    Args:
-        *local_opts: 每个模型的迭代选项字典，或者 Seepage 模型对象
-        pool: 线程池对象，用于并行处理模型迭代
-        target_time: 目标时间，默认值为 None
-
-    Returns:
-        None
     """
+    if target_time is not None:
+        def condition(m: Seepage):
+            return get_time(m) < target_time
+    else:
+        condition = None
 
-    def get(x: dict, key, default=None):
-        value = x.get(key, default)
-        if value is None:
-            return default
-        else:
-            return value
+    if n_loop_max is None:
+        n_loop_max = 9999999999
 
-    n_loop = 0
     n_iter = 0
-
-    while True:
-        opt_list = []
-        for local_opt in local_opts:
-            assert isinstance(local_opt, dict), f'The given argument is not a dict. it is: {local_opt}'
-            opt = local_opt.copy()
-            model = opt.get('model')
-            assert isinstance(model, Seepage)
-            if get_time(model) < get(opt, 'target_time', target_time):
-                opt_list.append(opt)
-        if len(opt_list) == 0:
-            break
+    for n_loop in range(n_loop_max):
+        n = iterate(*local_opts, pool=pool, condition=condition, **global_opts)
+        if n == 0:
+            return n_loop, n_iter
         else:
-            n_loop += 1
-            n_iter += len(opt_list)
-            iterate(*opt_list, pool=pool)
+            n_iter += n
+    return n_loop_max, n_iter
 
-    return n_loop, n_iter
+
+def parallel_sync(*args, **kwargs):
+    """
+    并行地迭代，直到给定的目标时间
+    """
+    warnings.warn(
+        'parallel_sync is deprecated (will be removed after 2026-12-9), use iterate_until instead',
+        DeprecationWarning, stacklevel=2)
+    return iterate_until(*args, **kwargs)
 
 
 def print_cells(path, model, ca_keys=None, fa_keys=None,

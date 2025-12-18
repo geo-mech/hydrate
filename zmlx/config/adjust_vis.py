@@ -6,8 +6,8 @@
 最后修改：2025-11-25
 """
 
+from zml import Seepage
 from zmlx.base.seepage import as_numpy
-from zmlx.base.zml import Seepage
 from zmlx.config.alg import settings
 
 text_key = 'adjust_vis'

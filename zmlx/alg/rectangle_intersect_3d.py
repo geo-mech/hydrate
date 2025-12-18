@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 
-from zmlx.base.zml import np
+from zml import np
 
 """
 计算两个三维空间的矩形的相交情况，相交返回交点，不相交返回None

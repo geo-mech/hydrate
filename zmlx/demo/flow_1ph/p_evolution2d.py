@@ -91,8 +91,6 @@ def test():
              xlabel="x/m", ylabel="y/m", title=f'Pressure, step = {step}',
              aspect='equal', tight_layout=True,
              caption='压力场')
-        if step % 10 == 0:
-            gui.pause()
 
 
 if __name__ == '__main__':

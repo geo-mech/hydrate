@@ -1,6 +1,6 @@
+from zml import Seepage, np, clock
 from zmlx.base.seepage import get_dt, as_numpy
 from zmlx.base.vector import to_numpy
-from zmlx.base.zml import Seepage, np, clock
 from zmlx.config.alg import settings as _settings
 
 text_key = 'fluid_heating'

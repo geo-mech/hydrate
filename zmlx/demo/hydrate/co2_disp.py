@@ -1,6 +1,6 @@
 # ** desc = '水平井注采。向水合物储层注入co2，并在另外一口水平井降压开发水合物'
 
-from zmlx.base.zml import Tensor3, Seepage
+from zml import Tensor3, Seepage
 from zmlx.config import timer, seepage
 from zmlx.demo.hydrate.co2 import create, solve
 from zmlx.io import opath

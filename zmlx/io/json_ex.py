@@ -1,7 +1,7 @@
 from json import *
 
 import zmlx.alg.sys as warnings
-from zmlx.base.zml import make_parent
+from zml import make_parent
 
 
 def write(path, obj, encoding=None, indent=2):

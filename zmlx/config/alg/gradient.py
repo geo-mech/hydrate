@@ -5,7 +5,7 @@ todo:
 """
 from scipy.spatial import Delaunay
 
-from zmlx.base.zml import np
+from zml import np
 
 
 def compute_pressure_gradient_2D(x, y, p):

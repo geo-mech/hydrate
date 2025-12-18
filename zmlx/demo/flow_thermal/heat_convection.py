@@ -74,7 +74,6 @@ def show(model, jx, jz, caption=None):
 
 
 def main():
-    gui.hide_console()
     jx, jz = 60, 100
     model = create(jx, jz)
     show(model, jx, jz, caption='初始状态')

@@ -1,4 +1,4 @@
-from zmlx.base.zml import c_double, POINTER, np, Vector
+from zml import c_double, POINTER, np, Vector
 
 
 def read_numpy(vec: Vector, data):

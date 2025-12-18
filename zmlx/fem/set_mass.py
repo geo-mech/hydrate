@@ -1,4 +1,4 @@
-from zmlx.base.zml import DynSys
+from zml import DynSys
 
 
 def set_mass(dyn: DynSys, ids, mas):

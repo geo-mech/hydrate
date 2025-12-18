@@ -1,8 +1,6 @@
 # ** desc = '二维有限元模型(两个三角形有两个顶点固定，另外两个顶点振动过程)'
 
 from zmlx import *
-from zmlx.fem.dyn import create_dyn
-from zmlx.fem.elements.planar_strain_cst import stiffness
 from zmlx.fem import xy
 
 

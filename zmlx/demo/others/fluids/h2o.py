@@ -3,7 +3,6 @@ from zmlx.fluid.nist.h2o import create
 
 
 def main():
-    gui.hide_console()
     flu = create(name='h2o')
     filename = app_data.temp('h2o.xml')
     flu.save(filename)

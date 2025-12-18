@@ -147,8 +147,6 @@ def main():
     dt = 1.0
     time = 0.0
 
-    gui.hide_console()  # 隐藏控制台，从而增大绘图的区域
-
     for step in range(step_max):
         gui.progress(label='计算进度', val_range=[0, step_max], value=step)
         print(f'step = {step}/{step_max}, dt = {time2str(dt)}')
