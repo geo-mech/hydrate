@@ -1,7 +1,7 @@
 # ** desc = '测试：流动以及sand的沉降'
 
 from zmlx import *
-from zmlx.config import settle
+from zmlx.tfc import _settle
 
 
 def create():
@@ -14,7 +14,7 @@ def create():
     def get_fai(x, y, z):
         return 1.0e20 if abs(x - x_max) < 0.1 else 0.2
 
-    model = seepage.create(
+    model = tfc.create(
         mesh=mesh, dv_relative=0.2,
         fludefs=[Seepage.FluDef(name='h2o', den=1000.0, vis=1.0e-3),
                  Seepage.FluDef(name='sand', den=2000.0, vis=1.0e-2)],
@@ -38,24 +38,24 @@ def show(model):
         y = numpy.cells.y
         tricontourf(x, y, numpy.cells.pre,
                     caption='pressure',
-                    title=f'time = {time2str(seepage.get_time(model))}')
+                    title=f'time = {time2str(tfc.get_time(model))}')
         tricontourf(x, y, numpy.fluids(1).vol / numpy.cells.fluid_vol,
                     caption='v1',
-                    title=f'time = {time2str(seepage.get_time(model))}')
+                    title=f'time = {time2str(tfc.get_time(model))}')
 
 
 def solve(model):
     solver = ConjugateGradientSolver(tolerance=1.0e-20)
-    iterate = GuiIterator(seepage.iterate, lambda: show(model))
+    iterate = GuiIterator(tfc.iterate, lambda: show(model))
 
-    while seepage.get_time(model) < 3600 * 24 * 3000:
+    while tfc.get_time(model) < 3600 * 24 * 3000:
         iterate(model, solver=solver)
-        dt = seepage.get_dt(model)
+        dt = tfc.get_dt(model)
         settle.iterate(model, dt=dt, fid0=1, fid1=0, rate=5.0e-7)
-        step = seepage.get_step(model)
+        step = tfc.get_step(model)
         if step % 10 == 0:
             print(
-                f'step = {step}, dt = {time2str(seepage.get_dt(model))}, time = {time2str(seepage.get_time(model))}')
+                f'step = {step}, dt = {time2str(tfc.get_dt(model))}, time = {time2str(tfc.get_time(model))}')
 
     show(model)
 

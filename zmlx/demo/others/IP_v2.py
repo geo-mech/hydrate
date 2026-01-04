@@ -5,6 +5,7 @@ from zmlx import *
 
 
 def create(jx=100, jy=300):
+    assert np is not None
     import random
     mesh = create_cube(
         x=np.linspace(0, 100, jx + 1),
@@ -34,22 +35,20 @@ def create(jx=100, jy=300):
     model.set_density(1, 0.1)
 
     model.outlet_n = 1
-    model.read_outlet(get_pointer64(np.asarray(
-        [model.get_nearest_node(pos=(50, 300, 0)).index], dtype=np.float64))
-    )
+    model.read_outlet(const_f64_ptr([model.get_nearest_node(pos=(50, 300, 0)).index]))
 
     i0 = model.get_nearest_node(pos=(30, 0, 0)).index
     i1 = model.get_nearest_node(pos=(70, 0, 0)).index
 
     model.inj_n = 2
     model.read_inj_node_id(
-        get_pointer64(np.asarray([i0, i1], dtype=np.float64))
+        const_f64_ptr([i0, i1])
     )
     model.read_inj_phase(
-        get_pointer64(np.asarray([1, 1], dtype=np.float64))
+        const_f64_ptr([1, 1])
     )
     model.read_inj_q(
-        get_pointer64(np.asarray([1, 0.5], dtype=np.float64))
+        const_f64_ptr([1, 0.5])
     )
     return model
 

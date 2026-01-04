@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
 
-from zmlx.alg.rectangle_intersect_3d import calculate_rectangle_vertices, \
-    calculate_3d_rectangle_intersect
 from zmlx.data import rect_intersec_3d as rect
+from zmlx.geometry.rect_3d_intersection import calculate_rectangle_vertices, \
+    calculate_3d_rectangle_intersect
 
 """
 单独绘制两个矩形，观察相交情况是否与计算一致、

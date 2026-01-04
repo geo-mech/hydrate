@@ -43,8 +43,15 @@ def show_pressure(model: Seepage):
     """
     x = as_numpy(model).cells.x
     p = as_numpy(model).cells.pre / 1e6
-    plot(add_axes2, curve, x, p, xlabel="x/m", ylabel="p/MPa", title='Pressure Distribution',
-         caption='压力分布')
+    fig.show(
+        fig.axes2(
+            fig.curve(
+                x, p
+            ),
+            xlabel="x/m", ylabel="p/MPa", title='Pressure Distribution'
+        ),
+        caption='压力分布'
+    )
 
 
 def main():

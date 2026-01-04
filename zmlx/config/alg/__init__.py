@@ -1,1 +1,3 @@
-from zmlx.config.alg._opts import merge_opts
+from zmlx.tfc._opts import merge_opts
+
+_keep = [merge_opts]

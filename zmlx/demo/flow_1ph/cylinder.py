@@ -32,38 +32,28 @@ def create(jx=100, jy=50):
     def get_k(x, y, z):
         return 0 if get_distance([x, y], [50, 25]) < 15 else 1e-14
 
-    model = seepage.create(mesh=mesh, dv_relative=0.2,
-                           fludefs=[h2o.create(name='h2o', density=1000.0,
-                                               viscosity=1.0e-3)],
-                           porosity=get_fai, pore_modulus=200e6, p=get_p, s=1.0,
-                           perm=get_k
-                           )
+    model = tfc.create(mesh=mesh, dv_relative=0.2,
+                       fludefs=[h2o.create(name='h2o', density=1000.0,
+                                           viscosity=1.0e-3)],
+                       porosity=get_fai, pore_modulus=200e6, p=get_p, s=1.0,
+                       perm=get_k
+                       )
 
-    seepage.set_solve(model, time_max=3600 * 24 * 30)
+    tfc.set_solve(model, time_max=3600 * 24 * 30)
     return model
 
 
-def show(model, jx, jy):
-    """
-    在界面上显示模型的状态.
-    Args:
-        model: 模型对象
-        jx: 模型的x方向的单元格数量
-        jy: 模型的y方向的单元格数量
-    """
-
-    def on_figure(fig):
-        x = seepage.get_x(model, shape=(jx, jy))
-        y = seepage.get_y(model, shape=(jx, jy))
-        p = seepage.get_p(model, shape=(jx, jy))
-        ax = add_axes2(fig, add_contourf, x, y, p, cbar=dict(label='Pressure', shrink=0.7),
-                       title=f'Pressure. Time={seepage.get_time(model, as_str=True)}',
-                       cmap='coolwarm', aspect='equal', xlabel='x/m', ylabel='y/m'
-                       )
-        angles = np.linspace(0, 2 * np.pi, 100)
-        ax.plot(50 + 15 * np.cos(angles), 25 + 15 * np.sin(angles), 'k--')
-
-    plot(on_figure, caption='模型状态')
+def fig_data(model, jx, jy):
+    x = tfc.get_x(model, shape=(jx, jy))
+    y = tfc.get_y(model, shape=(jx, jy))
+    p = tfc.get_p(model, shape=(jx, jy))
+    angles = np.linspace(0, 2 * np.pi, 100)
+    return fig.axes2(
+        fig.contourf(x, y, p, cbar=dict(label='Pressure', shrink=0.7), cmap='coolwarm'),
+        fig.curve(50 + 15 * np.cos(angles), 25 + 15 * np.sin(angles), 'k--'),
+        aspect='equal', xlabel='x/m', ylabel='y/m',
+        title=f'Pressure. Time={tfc.get_time(model, as_str=True)}'
+    )
 
 
 def main():
@@ -72,7 +62,8 @@ def main():
     """
     jx, jy = 100, 50
     model = create(jx=jx, jy=jy)
-    seepage.solve(model, close_after_done=False, extra_plot=lambda: show(model, jx, jy))
+    tfc.solve(model, close_after_done=False,
+              extra_plot=lambda: fig.show(fig_data(model, jx, jy), caption='模型状态'))
 
 
 if __name__ == '__main__':

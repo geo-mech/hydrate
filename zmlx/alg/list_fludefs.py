@@ -1,6 +1,6 @@
 import zmlx.alg.sys as warnings
 
-from zmlx.base.seepage import list_fludefs
+from zmlx.tfc._base import list_fludefs
 
 __all__ = [
     'list_fludefs'

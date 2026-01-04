@@ -34,15 +34,15 @@ def main(jx, jy):
         f.set_attr(fa_q, 0)
         f.set_attr(fa_s, 1)
 
-    x = seepage.get_x(model, shape=[jx, jy])
-    y = seepage.get_y(model, shape=[jx, jy])
+    x = tfc.get_x(model, shape=[jx, jy])
+    y = tfc.get_y(model, shape=[jx, jy])
 
     for step in range(200):
         r = model.iterate(dt=0.1, fa_s=fa_s, fa_q=fa_q, fa_k=fa_k, ca_p=ca_p)
         print(f'step = {step}, r = {r}')
         gui.break_point()
         if step % 5 == 0:
-            plot(add_axes2, add_contourf, x, y, seepage.get_p(model, shape=[jx, jy]), xlabel='x', ylabel='y',
+            plot(add_axes2, add_contourf, x, y, tfc.get_p(model, shape=[jx, jy]), xlabel='x', ylabel='y',
                  cbar=dict(label='Pressure', shrink=0.8), aspect='equal', tight_layout=True, caption='流体压力'
                  )
 

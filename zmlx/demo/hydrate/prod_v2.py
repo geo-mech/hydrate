@@ -1,7 +1,6 @@
 # ** desc = '竖直方向二维的水合物开发过程'
 
 from zmlx import *
-from zmlx.config.hydrate import show_2d_v2
 from zmlx.seepage_mesh.hydrate import create_xz
 
 
@@ -59,7 +58,7 @@ def create():
         return 1.0 if abs(y) < 2 else 0.0
 
     # 关键词
-    kw = hydrate.create_kwargs(
+    model = hydrate.create(
         gravity=[0, 0, -10],
         dt_min=1,
         dt_max=24 * 3600,
@@ -76,8 +75,6 @@ def create():
         prods=[{'index': mesh.cell_number - 1,
                 't': [0, 1e20], 'p': [3e6, 3e6]}]
     )
-    model = seepage.create(**kw)
-
     # 用于solve的选项
     model.set_text(
         key='solve',
@@ -91,7 +88,7 @@ def create():
 
 def main():
     model = create()
-    seepage.solve(model, extra_plot=lambda: show_2d_v2(model, yr=[-1, 1], dim0=0, dim1=2))
+    hydrate.solve(model, extra_plot=lambda: hydrate.show_2d_v2(model, yr=[-1, 1], dim0=0, dim1=2))
 
 
 if __name__ == '__main__':

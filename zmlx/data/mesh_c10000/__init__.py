@@ -1,6 +1,6 @@
 import os
 
-from zml import read_text, Mesh3
+from zmlx.exts import read_text, Mesh3
 from zmlx.seepage_mesh.mesh3 import face_centered
 
 

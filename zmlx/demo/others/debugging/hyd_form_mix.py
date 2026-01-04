@@ -64,7 +64,7 @@ def create():
     ))
 
     # 创建模型，返回Seepage对象
-    return seepage.create(**kw)
+    return tfc.create(**kw)
 
 
 def show(model: Seepage, folder=None):
@@ -73,7 +73,7 @@ def show(model: Seepage, folder=None):
     """
     if not gui.exists():
         return
-    time = seepage.get_time(model)
+    time = tfc.get_time(model)
     kwargs = {'title': f'plot when time={time2str(time)}'}
     x = as_numpy(model).cells.x
     z = as_numpy(model).cells.z
@@ -83,7 +83,7 @@ def show(model: Seepage, folder=None):
                           folder=join_paths(folder, key),
                           ext='.jpg', unit='y')
 
-    cell_keys = seepage.cell_keys(model)
+    cell_keys = tfc.cell_keys(model)
 
     def show_key(key):
         tricontourf(x, z,
@@ -112,7 +112,7 @@ def solve(model, folder=None, step_max=None):
     solver = ConjugateGradientSolver(tolerance=1.0e-30)
 
     iterate = GuiIterator(
-        lambda m: seepage.iterate(m, solver=solver),
+        lambda m: tfc.iterate(m, solver=solver),
         plot=lambda: show(
             model,
             folder=join_paths(folder, 'figures')))
@@ -126,7 +126,7 @@ def solve(model, folder=None, step_max=None):
         ext='.seepage',
         time_unit='y',
         dtime=lambda time: min(5.0, max(0.1, time * 0.1)),
-        get_time=lambda: seepage.get_time(model) / (
+        get_time=lambda: tfc.get_time(model) / (
                 3600 * 24 * 365),
     )
 
@@ -138,8 +138,8 @@ def solve(model, folder=None, step_max=None):
         save()
         if step % 10 == 0:
             print(f'step = {step}, '
-                  f'dt = {seepage.get_dt(model, as_str=True)}, '
-                  f'time = {seepage.get_time(model, as_str=True)}')
+                  f'dt = {tfc.get_dt(model, as_str=True)}, '
+                  f'time = {tfc.get_time(model, as_str=True)}')
     show(model, folder=join_paths(folder, 'figures'))
     save(check_dt=False)  # 保存最终状态
     print(iterate.time_info())

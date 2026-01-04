@@ -82,9 +82,9 @@ def test():
         print(f'step = {step}/{step_max}')
         model.iterate(dt=1.0e6)
 
-        x = seepage.get_x(model, shape=[jx, jy])
-        y = seepage.get_y(model, shape=[jx, jy])
-        p = seepage.get_p(model, shape=[jx, jy]) / 1e6
+        x = tfc.get_x(model, shape=[jx, jy])
+        y = tfc.get_y(model, shape=[jx, jy])
+        p = tfc.get_p(model, shape=[jx, jy]) / 1e6
 
         plot(add_axes2, add_items,
              item('contourf', x, y, p, cbar={'label': 'Pressure/MPa', 'shrink': 0.7}),

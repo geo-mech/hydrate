@@ -1,4 +1,4 @@
-from zml import Seepage, Interp1
+from zmlx.exts import Seepage, Interp1
 
 
 class PressureController(Seepage.CellData):

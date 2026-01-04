@@ -1,5 +1,4 @@
-from zmlx.ui.pyqt import (
-    QtCore, QtGui, QtWidgets)
+from zmlx.ui.pyqt import QtCore, QtGui, QtWidgets
 
 
 class ImageView(QtWidgets.QGraphicsView):

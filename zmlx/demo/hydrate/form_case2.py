@@ -1,10 +1,10 @@
 # ** desc = '纵向二维。浮力作用下气体运移、水合物成藏过程模拟（采用均匀的模型）'
 
 from zmlx import *
-from zmlx.config.hydrate import show_2d_v2
 
 
 def create(jx=150, jz=250):
+    assert np is not None
     mesh = create_cube(
         x=np.linspace(0, 300, jx + 1),
         y=(-0.5, 0.5),
@@ -36,7 +36,7 @@ def create(jx=150, jz=250):
     def get_porosity(*pos):
         return 0.5 if is_gas_region(*pos) else 0.1
 
-    opts = hydrate.create_opts(
+    model = hydrate.create(
         has_inh=True,  # 存在抑制剂
         has_ch4_in_liq=True,  # 存在溶解气
         gravity=[0, 0, -10],
@@ -48,14 +48,14 @@ def create(jx=150, jz=250):
         temperature=get_t, p=get_p, s=get_s,
         perm=get_k, heat_cond=2.0, dt_max=3600 * 24 * 30
     )
-    model = seepage.create(**opts)
     return model
 
 
 def show(model: Seepage, jx, jz, caption=None):
+    assert np is not None
     angles = np.linspace(0, np.pi, 100)
     c1 = item('xy', np.cos(angles) * 50 + 150, np.sin(angles) * 50 + 10, 'r--')
-    show_2d_v2(
+    hydrate.show_2d_v2(
         model, dim0=0, dim1=2, shape=[jx, jz], caption=caption, other_items=[c1]
     )
 
@@ -63,8 +63,8 @@ def show(model: Seepage, jx, jz, caption=None):
 def main():
     jx, jz = 50, 100
     model = create(jx, jz)
-    seepage.solve(model=model, extra_plot=lambda: show(model, jx, jz),
-                  time_max=100 * 365 * 24 * 3600)
+    hydrate.solve(model=model, extra_plot=lambda: show(model, jx, jz),
+              time_max=100 * 365 * 24 * 3600)
 
 
 if __name__ == '__main__':

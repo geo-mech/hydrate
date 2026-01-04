@@ -2,7 +2,7 @@ from typing import List, Dict
 
 import numpy as np
 
-from zml import Seepage
+from zmlx.exts import Seepage
 from zmlx.react import alg
 
 # ---------- 全局常量 ----------

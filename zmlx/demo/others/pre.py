@@ -31,7 +31,7 @@ def create():
         return 3e6 if is_prod(*args) else 10e6
 
     # 创建模型
-    model = seepage.create(
+    model = tfc.create(
         mesh=mesh,
         fludefs=[create_ch4(name='ch4')],
         porosity=porosity,
@@ -44,7 +44,7 @@ def create():
         dt_min=1, dt_max=24 * 3600, dv_relative=0.1,
     )
     # 用于solve的选项
-    seepage.set_text(
+    tfc.set_text(
         model,
         solve=dict(
             show_cells=dict(
@@ -57,6 +57,6 @@ def create():
 
 
 if __name__ == '__main__':
-    seepage.solve(create(), close_after_done=False,
-                  folder=opath('pressure_funnel'),
-                  time_unit='d')
+    tfc.solve(create(), close_after_done=False,
+              folder=opath('pressure_funnel'),
+              time_unit='d')

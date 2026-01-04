@@ -1,9 +1,10 @@
 # ** desc = '页岩水力压裂 （拟三维）'
 
-from zmlx.config.attr_keys import *
 from zmlx.exts.frac import *
 from zmlx.plt.fig2 import show_fn2
+from zmlx.tfc import *
 from zmlx.ui import gui
+from zmlx import tfc
 
 stress = Tensor2(xx=-10e6, yy=-11e6)
 kic = Tensor2(xx=1e6, yy=1e6)
@@ -21,7 +22,7 @@ for x, y in [(-4, 0), (4, 0)]:
     network.add_fracture(
         pos=(x, y - 1, x, y + 1),
         lave=lave)
-    seepage.add_injector(
+    tfc.add_injector(
         pos=(x, y, 0), radi=lave * 3,
         fluid_id=0,
         flu=Seepage.FluData(den=1000, vis=0.001, vol=1.0),
@@ -50,8 +51,8 @@ def iterate():
     Hf2Alg.update_cond(
         seepage=seepage, network=network,
         fa_id=frac_keys(seepage).id, fw_max=0.0001)
-    seepage.apply_injectors(dt=dt)
-    seepage.iterate(dt=dt, ca_p=cell_keys(seepage).pre)
+    tfc.apply_injectors(dt=dt)
+    tfc.iterate(dt=dt, ca_p=cell_keys(seepage).pre)
 
     # 更新固体
     network.update_boundary(

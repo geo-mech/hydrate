@@ -3,17 +3,16 @@ import os
 import sys
 import warnings
 
-from zml import in_windows, in_linux, in_macos, make_parent
+from zmlx.exts import in_windows, in_linux, in_macos, make_parent
 from zmlx.io import opath
 from zmlx.io.env import plt_export_dpi
 from zmlx.ui.alg import create_action
-from zmlx.ui.pyqt import QtWidgets
+from zmlx.ui.pyqt import QtWidgets, QtGui
 
-try:
-    import matplotlib
-    import matplotlib.pyplot as plt
 
+def set_chinese_font():
     try:  # 设置Matplotlib支持中文显示
+        import matplotlib
         if in_windows():
             matplotlib.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei',
                                                       'SimSun']  # 指定字体
@@ -51,33 +50,31 @@ try:
     except Exception as font_err:
         print(f'Error when set font: {font_err}')
 
-except ImportError:
-    matplotlib = None
-    plt = None
-    print(f'Error when import matplotlib')
-
-for backend in ['QtAgg', 'Qt5Agg']:
-    try:
-        matplotlib.use(backend)
-        break
-    except Exception as err:
-        print(f'Error (when use backend {backend}): {err}')
-
 
 class MatplotWidget(QtWidgets.QWidget):
+    support_sub_menu = True  # 支持子菜单(since 2026-1-5)
 
     def __init__(self, parent=None):
         """
         初始化
         """
         super(MatplotWidget, self).__init__(parent)
+        set_chinese_font()
+        for backend in ['QtAgg', 'Qt5Agg']:
+            try:
+                import matplotlib
+                matplotlib.use(backend)
+                break
+            except Exception as err:
+                print(f'Error (when use backend {backend}): {err}')
         from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
+        import matplotlib.pyplot as plt
+
         layout = QtWidgets.QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)  # 2025-7-5
         self.setLayout(layout)
         self.__figure = plt.figure()
         self.__canvas = FigureCanvasQTAgg(self.__figure)
-        self.__right_menu = None
         self.context_actions = []  # 额外的右键菜单
         layout.addWidget(self.__canvas)
 
@@ -85,6 +82,14 @@ class MatplotWidget(QtWidgets.QWidget):
         name = now.strftime("%Y-%m-%d-%H-%M-%S-") + f"{now.microsecond:06d}"
         self.__folder_save = opath('matplotlib', name)
         self.__time_save = None
+
+        # 设置主题
+        bg_color = self.palette().color(QtGui.QPalette.ColorRole.Window)
+        if bg_color.lightness() < 128:  # 处于暗色主题
+            # 应用暗色主题
+            plt.style.use('dark_background')
+            # 额外设置，确保所有元素适配暗色
+            self.figure.patch.set_facecolor('#1e1e1e')  # 设置画布背景色
 
     def set_save_folder(self, folder):
         self.__folder_save = folder
@@ -169,7 +174,18 @@ class MatplotWidget(QtWidgets.QWidget):
         if len(self.context_actions) > 0:
             menu.addSeparator()
             for action in self.context_actions:
-                menu.addAction(action)
+                if isinstance(action, dict):
+                    name = action.get('name', None)
+                    if name is not None:
+                        sub_menu = menu.addMenu(name)
+                        assert isinstance(sub_menu, QtWidgets.QMenu)
+                        for item in action.get('items', []):
+                            sub_menu.addAction(item)
+                elif isinstance(action, str):
+                    if action == '':
+                        menu.addSeparator()
+                else:
+                    menu.addAction(action)
 
         return menu
 
@@ -200,6 +216,8 @@ def test():
         ax = fig.subplots()
         ax.plot([1, 2, 3], [4, 5, 6])
         ax.plot([1, 2, 3], [1, 3, 8])
+        ax.set_xlabel('x坐标轴')
+        ax.set_ylabel('y坐标轴')
 
     w.plot_on_figure(on_figure)
     w.show()

@@ -62,8 +62,11 @@ class GuiIterator:
         if self.iterate is None:  # 此时不需要迭代
             return None
 
-        assert self.iterate is not None
-        t, r = GuiIterator.timing(lambda: self.iterate(*args, **kwargs))
+        def f():  # 不带参数的内核函数
+            assert callable(self.iterate), 'The iterate function should be callable.'
+            return self.iterate(*args, **kwargs)
+
+        t, r = GuiIterator.timing(f)
         self.step += 1
         self.time_iter += t
 

@@ -271,7 +271,7 @@ def create():
         return 1.0 if abs(y) < 2 else 0.0
 
     # 创建后续建立计算模型的关键词
-    kw = hydrate.create_kwargs(
+    kw = hydrate.create_opts(
         gravity=[0, 0, -10],  # 重力
         dt_min=1,  # 最小时间步长
         dt_max=24 * 3600,  # 最大时间步长
@@ -293,7 +293,7 @@ def create():
     )
 
     # 根据上述关键词建立模型
-    model = seepage.create(**kw)
+    model = tfc.create(**kw)
 
     # 放入相渗 --------
     x, y = parse_coordinates(krw01)
@@ -322,10 +322,10 @@ def create():
     model.set_text(
         key='solve',
         text={'monitor': {'cell_ids': [model.cell_number - 1]},
-              # 在计算的过程中，如何绘图. 这里给出的，是zmlx.seepage.show_cells函数所需要的参数
+              # 在计算的过程中，如何绘图. 这里给出的，是zmlx.tfc.show_cells函数所需要的参数
               'show_cells': {'dim0': 0,
                              'dim1': 2,
-                             'mask': seepage.get_cell_mask(
+                             'mask': tfc.get_cell_mask(
                                  model=model, yr=[-1, 1])},
               # 求解的时间长度 (此处求解3年)
               'time_max': 3 * 365 * 24 * 3600,
@@ -363,10 +363,10 @@ def main():
     主函数
     """
     model = create()
-    seepage.solve(model, close_after_done=True,
-                  slots={'update_ikr': update_ikr}
-                  # 将update_ikr通过参数传递给solve函数，从而可以在求解的过程中被调用
-                  )
+    tfc.solve(model, close_after_done=True,
+              slots={'update_ikr': update_ikr}
+              # 将update_ikr通过参数传递给solve函数，从而可以在求解的过程中被调用
+              )
 
 
 if __name__ == '__main__':

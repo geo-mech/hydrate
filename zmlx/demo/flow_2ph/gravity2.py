@@ -15,9 +15,9 @@ def main():
     jx, jz = 30, 100
     model = create(jx, jz, s=get_s)
     show(model, jx, jz, caption='初始状态')
-    seepage.solve(model, close_after_done=False, extra_plot=lambda: show(model, jx, jz, caption='当前状态'),
-                  time_forward=3600 * 24 * 365 * 100
-                  )
+    tfc.solve(model, close_after_done=False, extra_plot=lambda: show(model, jx, jz, caption='当前状态'),
+              time_forward=3600 * 24 * 365 * 100
+              )
 
 
 if __name__ == '__main__':

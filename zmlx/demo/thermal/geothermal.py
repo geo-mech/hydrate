@@ -29,7 +29,7 @@ def create_well(rate_inj=None, temp_inj=None, heat_cond=2.0, dist=0.1):
         temp_inj = 273.15 + 50  # 默认注入50摄氏度的水
 
     # 创建水的单相流动计算模型
-    model = seepage.create(
+    model = tfc.create(
         mesh=mesh,
         dv_relative=0.8,
         dt_max=3600 * 24.0,
@@ -69,7 +69,7 @@ def create_well(rate_inj=None, temp_inj=None, heat_cond=2.0, dist=0.1):
     model.set_text('swap', swap)
 
     # 配置求解的选项
-    seepage.set_solve(model, time_forward=mesh_vol / rate_inj)
+    tfc.set_solve(model, time_forward=mesh_vol / rate_inj)
 
     return model
 
@@ -80,7 +80,7 @@ def solve_well(model, close_after_done=None, folder=None, gui_iter=None,
 
     def plot():
         if gui.exists():
-            title = f'time = {seepage.get_time(model, as_str=True)}'
+            title = f'time = {tfc.get_time(model, as_str=True)}'
             x = as_numpy(model).cells.x[swap]
             p = as_numpy(model).cells.pre[swap]
             plot_xy(x, p, caption='well_p', title=title)
@@ -89,9 +89,9 @@ def solve_well(model, close_after_done=None, folder=None, gui_iter=None,
                 index=model.reg_flu_key('temperature'))[swap]
             plot_xy(x, t, caption='well_T', title=title)
 
-    seepage.solve(model, extra_plot=plot, close_after_done=close_after_done,
-                  folder=folder, gui_iter=gui_iter, state_hint='well',
-                  **kwargs)
+    tfc.solve(model, extra_plot=plot, close_after_done=close_after_done,
+              folder=folder, gui_iter=gui_iter, state_hint='well',
+              **kwargs)
 
 
 def create_res(well: Seepage, heat_cond=2.0):
@@ -129,7 +129,7 @@ def create_res(well: Seepage, heat_cond=2.0):
         i_swap.append(True)  # 这些cell用来交换
         o_index.append(c2.index)
 
-    model = seepage.create(
+    model = tfc.create(
         mesh=mesh,
         temperature=273.15 + 200.0,  # 200摄氏度
         denc=5.0e6,
@@ -148,14 +148,14 @@ def create_res(well: Seepage, heat_cond=2.0):
     model.set_text('o_index', o_index)
 
     # 用于求解的选项
-    mask = seepage.get_cell_mask(model,
-                                 xr=[-1000, 1000])
-    seepage.set_solve(model,
-                      show_cells={'dim0': 0, 'dim1': 1,
-                                  'show_p': False,
-                                  'mask': mask},
-                      time_forward=60 * 24 * 3600
-                      )
+    mask = tfc.get_cell_mask(model,
+                             xr=[-1000, 1000])
+    tfc.set_solve(model,
+                  show_cells={'dim0': 0, 'dim1': 1,
+                              'show_p': False,
+                              'mask': mask},
+                  time_forward=60 * 24 * 3600
+                  )
     return model
 
 
@@ -213,10 +213,10 @@ def test_2():
     swap = eval(res.get_text('swap'))
     vt = [300 for x in swap if x]
     set_cell_t(res, vt)
-    seepage.set_solve(res,
-                      time_forward=6000 * 24 * 3600
-                      )
-    seepage.solve(res, close_after_done=False)
+    tfc.set_solve(res,
+                  time_forward=6000 * 24 * 3600
+                  )
+    tfc.solve(res, close_after_done=False)
 
 
 def main(folder=None):
@@ -230,8 +230,8 @@ def main(folder=None):
         # 从time到power和出口温度的映射
         vtime, vpower, vtemp = [], [], []
 
-        while seepage.get_time(res) < 50 * 365 * 24 * 3600:
-            seepage.set_time(well, seepage.get_time(res))  # 同步时间
+        while tfc.get_time(res) < 50 * 365 * 24 * 3600:
+            tfc.set_time(well, tfc.get_time(res))  # 同步时间
 
             # 读取储层温度并设置给井筒
             set_cell_t(well, get_cell_t(res))
@@ -243,11 +243,11 @@ def main(folder=None):
 
             # 储层迭代
             energy0 = get_res_heat(model=res)
-            time0 = seepage.get_time(res)
-            seepage.solve(res, folder=join_paths(folder, 'res'),
-                          gui_iter=gui_iter, state_hint='res')
+            time0 = tfc.get_time(res)
+            tfc.solve(res, folder=join_paths(folder, 'res'),
+                      gui_iter=gui_iter, state_hint='res')
             energy1 = get_res_heat(model=res)
-            time1 = seepage.get_time(res)
+            time1 = tfc.get_time(res)
 
             # 从time0到time1，储层显热释放的功率
             power = (energy0 - energy1) / (time1 - time0)

@@ -1,10 +1,10 @@
 # ** desc = '纵向二维。浮力作用下气体运移、水合物成藏过程模拟（在模型的顶部设置盖层）'
 
 from zmlx import *
-from zmlx.config.hydrate import show_2d_v2
 
 
 def create(jx=150, jz=250):
+    assert np is not None
     mesh = create_cube(
         x=np.linspace(0, 300, jx + 1),
         y=(-0.5, 0.5),
@@ -39,7 +39,7 @@ def create(jx=150, jz=250):
         else:
             return 0.0
 
-    opts = hydrate.create_opts(
+    model = hydrate.create(
         has_inh=True,  # 存在抑制剂
         has_ch4_in_liq=True,  # 存在溶解气
         gravity=[0, 0, -10],
@@ -51,17 +51,17 @@ def create(jx=150, jz=250):
         temperature=get_t, p=get_p, s=get_s,
         perm=get_k, heat_cond=2.0, dt_max=3600 * 24 * 30
     )
-    model = seepage.create(**opts)
     return model
 
 
 def show(model: Seepage, jx, jz, caption=None):
+    assert np is not None
     angles = np.linspace(0, np.pi, 100)
     c1 = item('xy', np.cos(angles) * 50 + 150, np.sin(angles) * 50 + 10, 'r--')
     vx = np.linspace(10, 290, 100)
     vy = np.cos((vx - 150) * np.pi * 0.5 / 150) * 80 + 350
     c2 = item('xy', vx, vy, 'k--')
-    show_2d_v2(
+    hydrate.show_2d_v2(
         model, dim0=0, dim1=2, shape=[jx, jz], caption=caption, other_items=[c1, c2]
     )
 
@@ -69,7 +69,7 @@ def show(model: Seepage, jx, jz, caption=None):
 def main():
     jx, jz = 50, 100
     model = create(jx, jz)
-    seepage.solve(model=model, extra_plot=lambda: show(model, jx, jz),
+    hydrate.solve(model=model, extra_plot=lambda: show(model, jx, jz),
                   time_max=100 * 365 * 24 * 3600)
 
 

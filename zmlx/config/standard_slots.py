@@ -1,4 +1,4 @@
-from zmlx.config.slots import standard_slots
+from zmlx.tfc._slots import standard_slots
 
 __all__ = [
     "standard_slots"

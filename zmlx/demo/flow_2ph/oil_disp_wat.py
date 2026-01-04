@@ -14,7 +14,7 @@ def oil_disp_wat():
     """
     jx, jy = 30, 30
     model = create(jx, jy, s=(0, 1), fid_inj=0)
-    seepage.solve(model, extra_plot=lambda: show(model, jx, jy), time_forward=100 * 24 * 3600)
+    tfc.solve(model, extra_plot=lambda: show(model, jx, jy), time_forward=100 * 24 * 3600)
 
 
 if __name__ == '__main__':

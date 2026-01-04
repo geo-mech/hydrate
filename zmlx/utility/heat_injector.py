@@ -1,4 +1,4 @@
-from zmlx.alg.alpha import get_velocity_after_slowdown_by_viscosity
+from zmlx.alg import get_velocity_after_slowdown_by_viscosity
 
 
 class HeatInjector:

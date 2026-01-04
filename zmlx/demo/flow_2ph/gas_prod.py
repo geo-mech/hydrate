@@ -56,7 +56,7 @@ def create(jx, jz):
             return {'wat': 1}
 
     # 创建模型
-    model = seepage.create(
+    model = tfc.create(
         mesh=mesh,
         fludefs=fludefs,
         porosity=porosity,
@@ -73,19 +73,19 @@ def create(jx, jz):
 
 def show(model: Seepage, jx, jz, folder=None):
     def on_figure(fig):
-        fig.suptitle(f'Model when time = {seepage.get_time(model, as_str=True)}')
+        fig.suptitle(f'Model when time = {tfc.get_time(model, as_str=True)}')
         opts = dict(ncols=2, nrows=1, xlabel='x/m', ylabel='z/m', aspect='equal')
         shape = [jx, jz]
-        x = seepage.get_x(model, shape=shape)
-        y = seepage.get_z(model, shape=shape)
-        p = seepage.get_p(model, shape=shape) / 1e6
-        v = seepage.get_v(model, shape=shape)
-        s = seepage.get_v(model, shape=shape, fid=1) / v
+        x = tfc.get_x(model, shape=shape)
+        y = tfc.get_z(model, shape=shape)
+        p = tfc.get_p(model, shape=shape) / 1e6
+        v = tfc.get_v(model, shape=shape)
+        s = tfc.get_v(model, shape=shape, fid=1) / v
         args = [fig, add_contourf, x, y]
         add_axes2(*args, p, title='压力 (MPa)', cbar=dict(label='Pressure', shrink=0.5), index=1, **opts)
         add_axes2(*args, s, title='水饱和度', cbar=dict(label='Saturation', shrink=0.5), index=2, **opts)
 
-    fname = make_fname(time=seepage.get_time(model) / (3600 * 24), folder=folder, ext='jpg', unit='d')
+    fname = make_fname(time=tfc.get_time(model) / (3600 * 24), folder=folder, ext='jpg', unit='d')
     plot(on_figure, caption=f'Seepage({model.handle})', clear=True, fname=fname, tight_layout=True)
 
 
@@ -93,7 +93,7 @@ def main(folder=None):
     fig_folder = os.path.join(folder, 'all_figures') if folder is not None else None
     jx, jz = 100, 30
     model = create(jx, jz)
-    seepage.solve(
+    tfc.solve(
         model, close_after_done=False,
         folder=folder,
         time_unit='d',

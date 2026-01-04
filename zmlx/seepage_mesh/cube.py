@@ -1,4 +1,4 @@
-from zml import SeepageMesh, np
+from zmlx.exts import SeepageMesh, np
 
 
 def create_cube(x=(-0.5, 0.5), y=(-0.5, 0.5), z=(-0.5, 0.5), boxes=None,
@@ -76,9 +76,7 @@ def create_cube(x=(-0.5, 0.5), y=(-0.5, 0.5), z=(-0.5, 0.5), boxes=None,
                 i0 = get_id(ix, iy, iz)
                 i1 = get_id(ix + 1, iy, iz)
                 assert i0 < cell_n and i1 < cell_n
-                face = mesh.add_face(
-                    mesh.get_cell(i0),
-                    mesh.get_cell(i1))
+                face = mesh.add_face(i0, i1)
                 assert face is not None
                 face.area = dy * dz
                 face.length = dx
@@ -92,9 +90,7 @@ def create_cube(x=(-0.5, 0.5), y=(-0.5, 0.5), z=(-0.5, 0.5), boxes=None,
                 i0 = get_id(ix, iy, iz)
                 i1 = get_id(ix, iy + 1, iz)
                 assert i0 < cell_n and i1 < cell_n
-                face = mesh.add_face(
-                    mesh.get_cell(i0),
-                    mesh.get_cell(i1))
+                face = mesh.add_face(i0, i1)
                 assert face is not None
                 face.area = dx * dz
                 face.length = dy
@@ -108,9 +104,7 @@ def create_cube(x=(-0.5, 0.5), y=(-0.5, 0.5), z=(-0.5, 0.5), boxes=None,
                 i0 = get_id(ix, iy, iz)
                 i1 = get_id(ix, iy, iz + 1)
                 assert i0 < cell_n and i1 < cell_n
-                face = mesh.add_face(
-                    mesh.get_cell(i0),
-                    mesh.get_cell(i1))
+                face = mesh.add_face(i0, i1)
                 assert face is not None
                 face.area = dx * dy
                 face.length = dz
@@ -118,8 +112,11 @@ def create_cube(x=(-0.5, 0.5), y=(-0.5, 0.5), z=(-0.5, 0.5), boxes=None,
     return mesh
 
 
-def create_xyz(*, x_min, dx, x_max, y_min, dy, y_max, z_min, dz, z_max,
-               show_details=False, **kwargs):
+def create_xyz(*, x_min: float, dx: float, x_max: float,
+               y_min: float, dy: float, y_max: float,
+               z_min: float, dz: float, z_max: float,
+               show_details: bool = False, **kwargs
+               ):
     """
     创建三维网格（采用完全均匀的网格）
 
@@ -143,6 +140,7 @@ def create_xyz(*, x_min, dx, x_max, y_min, dy, y_max, z_min, dz, z_max,
     - 网格间距必须大于0
     - 网格数量必须大于0
     """
+    assert np is not None
     jx = max(round((x_max - x_min) / dx), 1) + 1
     jy = max(round((y_max - y_min) / dy), 1) + 1
     jz = max(round((z_max - z_min) / dz), 1) + 1
@@ -159,7 +157,9 @@ def create_xyz(*, x_min, dx, x_max, y_min, dy, y_max, z_min, dz, z_max,
     return create_cube(x, y, z, **kwargs)
 
 
-def create_xy(*, x_min, dx, x_max, y_min, dy, y_max, z_min, z_max,
+def create_xy(*, x_min: float, dx: float, x_max: float,
+              y_min: float, dy: float, y_max: float,
+              z_min: float, z_max: float,
               **kwargs):
     """
     创建xy平面内的二维的网格
@@ -188,7 +188,9 @@ def create_xy(*, x_min, dx, x_max, y_min, dy, y_max, z_min, z_max,
         z_min=z_min, dz=1e20, z_max=z_max, **kwargs)
 
 
-def create_xz(*, x_min, dx, x_max, z_min, dz, z_max, y_min, y_max,
+def create_xz(*, x_min: float, dx: float, x_max: float,
+              z_min: float, dz: float, z_max: float,
+              y_min: float, y_max: float,
               **kwargs):
     """
     创建xz平面内的二维的网格

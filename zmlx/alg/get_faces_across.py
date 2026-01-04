@@ -1,6 +1,6 @@
 import zmlx.alg.sys as warnings
 
-from zmlx.base.faces_across import get_faces_across
+from zmlx.alg.faces_across import get_faces_across
 
 __all__ = ['get_faces_across']
 warnings.warn('The modulus get_faces_across is deprecated '

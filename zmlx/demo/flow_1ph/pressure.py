@@ -98,11 +98,11 @@ def test():
 
     # 迭代并且绘图显示
     step_max = 50
-    seepage.set_dt(model, 1e9)
-    seepage.set_dv_relative(model, 0.5)
+    tfc.set_dt(model, 1e9)
+    tfc.set_dv_relative(model, 0.5)
     for step in range(step_max):
-        seepage.iterate_flow(model, recommend_dt=True, check_dt=True, modify_dt=True)
-        print(f'step = {step}/{step_max}, dt = {seepage.get_dt(model, True)}')
+        tfc.iterate_flow(model, recommend_dt=True, check_dt=True, modify_dt=True)
+        print(f'step = {step}/{step_max}, dt = {tfc.get_dt(model, True)}')
         items = pressure_items(model, jx, jy)
         plot(add_axes3, add_items, *items,
              xlabel="x/m", ylabel="y/m",

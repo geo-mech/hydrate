@@ -1,19 +1,7 @@
 """
 二维的曲线
 """
-
-
-def add_curve2(ax, *args, **kwargs):
-    """
-    在ax上添加曲线
-    Args:
-        ax: Axes对象，用于绘制曲线图
-        *args: 传递给ax.plot函数的参数
-        **kwargs: 传递给ax.plot函数的关键字参数
-    Returns:
-        绘制的曲线对象
-    """
-    return ax.plot(*args, **kwargs)
+from zmlx.plt.on_axes import add_curve2, plot_on_axes
 
 
 def plot_xy(
@@ -33,8 +21,6 @@ def plot_xy(
     **opts :
         传递给底层plot的附加参数
     """
-    from zmlx.plt.on_figure import add_axes2
-    from zmlx.ui import plot
     # 文件数据加载处理
     if ipath is not None:
         try:
@@ -50,7 +36,7 @@ def plot_xy(
     if x is None or y is None:
         raise ValueError("必须提供x/y数据或有效文件路径")
 
-    plot(add_axes2, on_axes=lambda ax: ax.plot(x, y), **opts)
+    plot_on_axes(add_curve2, x, y, dim=2, **opts)
 
 
 def plotxy(*args, **kwargs):

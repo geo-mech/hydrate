@@ -1,6 +1,6 @@
 try:
     from pyqtgraph.console import ConsoleWidget
-    from zml import app_data
+    from zmlx.exts import app_data
 
 
     class PgConsole(ConsoleWidget):

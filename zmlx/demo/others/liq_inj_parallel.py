@@ -12,7 +12,7 @@ def main():
     # 向前迭代
     for time in np.linspace(0, 3600 * 24 * 365, 5):
         print(f'target time = {time2str(time)}')
-        seepage.iterate_until(*models, target_time=time, pool=pool)
+        tfc.iterate_until(*models, target_time=time, pool=pool)
         for model in models:
             show_model(model)
 

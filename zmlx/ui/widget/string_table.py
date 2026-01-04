@@ -20,17 +20,14 @@ class StringTable(QtWidgets.QTableWidget):
             ['序号'] + [f'数据 {i + 1}' for i in range(self.data_columns)])
 
         # 设置列宽：序号列尽可能窄
-        self.horizontalHeader().setSectionResizeMode(0,
-                                                     QtWidgets.QHeaderView.ResizeMode.Fixed)
+        self.horizontalHeader().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeMode.Fixed)
         self.setColumnWidth(0, 40)  # 40像素宽度的序号列
         for i in range(1, self.columnCount()):
-            self.horizontalHeader().setSectionResizeMode(i,
-                                                         QtWidgets.QHeaderView.ResizeMode.Stretch)
+            self.horizontalHeader().setSectionResizeMode(i, QtWidgets.QHeaderView.ResizeMode.Stretch)
 
         # 表格样式设置
         self.verticalHeader().setVisible(False)
-        self.setEditTriggers(
-            QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
         self.setAlternatingRowColors(True)
 
     def set_data(self, data):

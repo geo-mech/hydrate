@@ -36,8 +36,8 @@ def create():
 
 
 def show(model):
-    tricontourf(seepage.get_x(model), seepage.get_y(model),
-                seepage.get_ca(model, CellAttrs.temperature), caption='temperature',
+    tricontourf(tfc.get_x(model), tfc.get_y(model),
+                tfc.get_ca(model, CellAttrs.temperature), caption='temperature',
                 xlabel='x (m)', ylabel='y (m)', clabel='temperature (K)')
 
 

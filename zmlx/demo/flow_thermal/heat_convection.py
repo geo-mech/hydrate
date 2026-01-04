@@ -28,7 +28,7 @@ def create(jx, jz):
     def dist(x, y, z):
         return 1.0
 
-    model = seepage.create(
+    model = tfc.create(
         mesh=mesh, dv_relative=0.5,
         fludefs=[h2o.create(t_min=272.0, t_max=340.0, p_min=1e6, p_max=40e6,
                             name='h2o')],
@@ -41,27 +41,29 @@ def create(jx, jz):
     )
 
     model.add_tag('disable_ther')
-    seepage.set_fa(model, 0, 'z0', seepage.get_z(model))
+    tfc.set_fa(model, 0, 'z0', tfc.get_z(model))
 
     return model
 
 
 def show(model, jx, jz, caption=None):
     def on_figure(figure):
-        opts = dict(ncols=3, nrows=1, xlabel='x', ylabel='z', aspect='equal')
-        x = seepage.get_x(model, shape=[jx, jz])
-        z = seepage.get_z(model, shape=[jx, jz])
+        from zmlx.plt.on_figure import calc_best_layout
+        nrows, ncols = calc_best_layout(figure, 3, 0.6)
+        opts = dict(nrows=nrows, ncols=ncols, xlabel='x', ylabel='z', aspect='equal')
+        x = tfc.get_x(model, shape=[jx, jz])
+        z = tfc.get_z(model, shape=[jx, jz])
         args = ['contourf', x, z, ]
 
         angles = linspace(0, np.pi * 2, 100)
         c1 = item('xy', 0.2 * np.cos(angles) + 0.1, 0.2 * np.sin(angles) - 0.5, 'r--')
         c2 = item('xy', 0.2 * np.cos(angles) - 0.1, 0.2 * np.sin(angles) + 0.5, 'k--')
 
-        temp = item(*args, seepage.get_fa(model, 0, 'temperature', shape=[jx, jz]),
+        temp = item(*args, tfc.get_fa(model, 0, 'temperature', shape=[jx, jz]),
                     cbar=dict(label='温度', shrink=0.6))
-        den = item(*args, seepage.get_den(model, 0, shape=[jx, jz]),
+        den = item(*args, tfc.get_den(model, 0, shape=[jx, jz]),
                    cbar=dict(label='密度', shrink=0.6))
-        z0 = item(*args, seepage.get_fa(model, 0, 'z0', shape=[jx, jz]),
+        z0 = item(*args, tfc.get_fa(model, 0, 'z0', shape=[jx, jz]),
                   cbar=dict(label='z0', shrink=0.6))
 
         add_axes2(figure, add_items, temp, c1, c2, title='流体温度', index=1, **opts)
@@ -69,7 +71,7 @@ def show(model, jx, jz, caption=None):
         add_axes2(figure, add_items, z0, c1, c2, title='流体z0', index=3, **opts)
 
     plot(on_figure, caption=caption, clear=True, tight_layout=True,
-         suptitle=f'time = {seepage.get_time(model, as_str=True)}'
+         suptitle=f'time = {tfc.get_time(model, as_str=True)}'
          )
 
 
@@ -77,7 +79,7 @@ def main():
     jx, jz = 60, 100
     model = create(jx, jz)
     show(model, jx, jz, caption='初始状态')
-    seepage.solve(model, time_max=3600 * 24 * 500, extra_plot=lambda: show(model, jx, jz, caption='实时状态'))
+    tfc.solve(model, time_max=3600 * 24 * 500, extra_plot=lambda: show(model, jx, jz, caption='实时状态'))
 
 
 if __name__ == '__main__':

@@ -1,6 +1,6 @@
 import math
 
-from zml import Mesh3, np
+from zmlx.exts import Mesh3, np
 
 
 def create_ring(vr, angle_step=math.pi / 20.0, z=0.0):
@@ -45,6 +45,7 @@ def create_ring(vr, angle_step=math.pi / 20.0, z=0.0):
 
 
 def _test1():
+    assert np is not None
     vr = np.linspace(1.0, 2.0, 20)
     mesh = create_ring(vr)
     print(mesh)

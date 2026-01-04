@@ -41,16 +41,16 @@ def create():
     def get_s(x, y, z):
         return {'h2o': 0.9, 'sol_sand': 0.1}
 
-    model = seepage.create(mesh=mesh, dv_relative=0.2,
-                           fludefs=fludefs,
-                           porosity=get_fai, pore_modulus=200e6,
-                           p=get_p, s=get_s, perm=get_k,
-                           has_solid=True)
+    model = tfc.create(mesh=mesh, dv_relative=0.2,
+                       fludefs=fludefs,
+                       porosity=get_fai, pore_modulus=200e6,
+                       p=get_p, s=get_s, perm=get_k,
+                       has_solid=True)
 
-    seepage.set_solve(model,
-                      show_cells={'dim0': 0, 'dim1': 1, 'show_t': False},
-                      time_max=3600 * 24 * 365 * 30
-                      )
+    tfc.set_solve(model,
+                  show_cells={'dim0': 0, 'dim1': 1, 'show_t': False},
+                  time_max=3600 * 24 * 365 * 30
+                  )
 
     # 添加压力梯度到饱和度的映射.
     x = [0, 0.01e6, 0.03e6, 0.1e6]
@@ -99,10 +99,10 @@ def test_1():
     def extra_plot():
         show_gradient(model)
 
-    seepage.solve(model, close_after_done=False,
-                  extra_plot=extra_plot,
-                  slots={'update_sand': update_sand}
-                  )
+    tfc.solve(model, close_after_done=False,
+              extra_plot=extra_plot,
+              slots={'update_sand': update_sand}
+              )
 
 
 if __name__ == '__main__':

@@ -26,7 +26,7 @@ def create():
         else:
             return 0.2
 
-    model = seepage.create(
+    model = tfc.create(
         mesh=mesh, dv_relative=0.5,
         fludefs=[Seepage.FluDef(name='h2o')],
         porosity=porosity,
@@ -56,18 +56,18 @@ def create():
 
 
 def set_fluid_time(model, top_ids, btm_ids, key):
-    time = seepage.get_time(model)
+    time = tfc.get_time(model)
     for idx in top_ids:
         model.get_cell(idx).get_fluid(0).set_attr(key, time)
     value = 0
     for idx in btm_ids:
         value += model.get_cell(idx).get_fluid(0).get_attr(key)
     if value > 1.0e-4:
-        seepage.set_step(model, STEP_MAX * 2)
+        tfc.set_step(model, STEP_MAX * 2)
 
 
 def show(model):
-    title = f'Time = {seepage.get_time(model, as_str=True)}'
+    title = f'Time = {tfc.get_time(model, as_str=True)}'
     x = as_numpy(model).cells.x
     z = as_numpy(model).cells.z
     time = as_numpy(model).fluids(0).get_attr(model.get_flu_key('time'))
@@ -77,10 +77,10 @@ def show(model):
 
 def main():
     model = create()
-    seepage.solve(model, close_after_done=False, step_max=STEP_MAX,
-                  extra_plot=lambda: show(model),
-                  slots={'set_fluid_time': set_fluid_time}
-                  )
+    tfc.solve(model, close_after_done=False, step_max=STEP_MAX,
+              extra_plot=lambda: show(model),
+              slots={'set_fluid_time': set_fluid_time}
+              )
 
 
 if __name__ == '__main__':

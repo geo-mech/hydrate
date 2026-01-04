@@ -1,6 +1,6 @@
 import os
 
-from zml import Seepage
+from zmlx.exts import Seepage
 
 
 def get_path(*args):

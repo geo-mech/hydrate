@@ -36,7 +36,7 @@ def create():
         else:
             return 1.0e-15
 
-    model = seepage.create(
+    model = tfc.create(
         mesh, porosity=0.1, pore_modulus=100e6,
         denc=get_denc, dist=0.1,
         temperature=get_t, p=get_p, s=get_s,
@@ -57,4 +57,4 @@ def create():
 
 
 if __name__ == '__main__':
-    seepage.solve(create(), close_after_done=False)
+    tfc.solve(create(), close_after_done=False)

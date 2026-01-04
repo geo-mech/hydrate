@@ -1,3 +1,4 @@
+from zmlx.exts import f64_ptr
 from zmlx.react import endothermic
 from zmlx.react.alg import add_reaction
 
@@ -44,7 +45,7 @@ def test(t_ini=510):
     except ImportError:
         np = None
     print(f'\n\nTest when initial temperature is {t_ini}')
-    from zml import Seepage, get_pointer64
+    from zmlx.exts import Seepage
 
     model = Seepage()
     cell = model.add_cell()
@@ -62,7 +63,7 @@ def test(t_ini=510):
 
     buf = np.zeros(shape=model.cell_number)
     for step in range(20):
-        model.get_reaction(0).react(model, 1.0, buf=get_pointer64(buf))
+        model.get_reaction(0).react(model, 1.0, buf=f64_ptr(buf))
         print(
             f'{buf}:  {cell.get_fluid(0).mass}  {cell.get_fluid(1).mass}  {cell.get_fluid(2).mass}  {cell.get_fluid(0).get_attr(fa_t)}  {cell.get_fluid(1).get_attr(fa_t)}  {cell.get_fluid(2).get_attr(fa_t)}')
 

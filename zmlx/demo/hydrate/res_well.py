@@ -27,6 +27,7 @@ def create_mesh(radius, hyd_bottom, under_h, hyd_h):
         under_h：    下伏层厚度
         hyd_h：      水合物层的厚度
     """
+    assert np is not None
     z = [hyd_bottom - under_h, hyd_bottom - 10, hyd_bottom + hyd_h + 10, 0]
     z1 = np.linspace(z[0], z[1], 10)
     z2 = np.linspace(z[1], z[2], 50)
@@ -219,7 +220,7 @@ def create_model(
     ))
 
     # 创建模型
-    model = seepage.create(mesh=mesh, **kw)
+    model = tfc.create(mesh=mesh, **kw)
 
     # 设置相渗
     vs, kg, kw = create_kr(srg=0.01, srw=0.4, ag=3.5, aw=4.5)
@@ -241,8 +242,8 @@ def plot_cells(model: Seepage, monitor=None, folder=None):
     if not gui.exists():
         return
 
-    time = time2str(seepage.get_time(model))
-    year = seepage.get_time(model) / (3600 * 24 * 365)
+    time = time2str(tfc.get_time(model))
+    year = tfc.get_time(model) / (3600 * 24 * 365)
 
     x = as_numpy(model).cells.x
     y = as_numpy(model).cells.y
@@ -326,7 +327,7 @@ def solve(model, time_forward=3600.0 * 24.0 * 365.0 * 10, folder=None,
 
     # 执行迭代
     iterate = GuiIterator(
-        seepage.iterate,
+        tfc.iterate,
         lambda: plot_cells(
             model, folder=path.join(folder, 'figures')))
 
@@ -337,7 +338,7 @@ def solve(model, time_forward=3600.0 * 24.0 * 365.0 * 10, folder=None,
     save_model = SaveManager(
         folder=path.join(folder, 'models'),
         dtime=day_save,
-        get_time=lambda: seepage.get_time(model) / (24 * 3600),
+        get_time=lambda: tfc.get_time(model) / (24 * 3600),
         save=model.save, ext='.seepage', time_unit='d',
         always_save=False)
 
@@ -345,21 +346,21 @@ def solve(model, time_forward=3600.0 * 24.0 * 365.0 * 10, folder=None,
     save_cells = SaveManager(
         folder=path.join(folder, 'cells'),
         dtime=day_save,
-        get_time=lambda: seepage.get_time(model) / (24 * 3600),
-        save=lambda name: seepage.print_cells(name, model),
+        get_time=lambda: tfc.get_time(model) / (24 * 3600),
+        save=lambda name: tfc.print_cells(name, model),
         ext='.txt', time_unit='d', always_save=False)
 
     # 最终停止时的时间.
-    time_max = time_forward + seepage.get_time(model)
+    time_max = time_forward + tfc.get_time(model)
 
-    while seepage.get_time(model) < time_max:
+    while tfc.get_time(model) < time_max:
         iterate(model, solver=solver)
         save_model()
         save_cells()
-        step = seepage.get_step(model)
+        step = tfc.get_step(model)
         if step % 10 == 0:
-            time = time2str(seepage.get_time(model))
-            dt = time2str(seepage.get_dt(model))
+            time = time2str(tfc.get_time(model))
+            dt = time2str(tfc.get_dt(model))
             print(f'step = {step}, dt = {dt}, time = {time}')
 
 

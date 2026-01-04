@@ -1,6 +1,6 @@
 import os
 
-from zml import Interp2, Seepage, np
+from zmlx.exts import Interp2, Seepage, np
 from zmlx.io import json_ex
 from zmlx.utility.interp import Interp2 as Interpolator
 
@@ -214,6 +214,7 @@ def from_file(fname, t_min=None, t_max=None, p_min=None, p_max=None, name=None,
         第三列: 密度[kg/m^3]
         第四列: 粘性系数 [Pa.s]
     """
+    assert np is not None, "from_file: numpy is not installed"
     data = np.loadtxt(fname=fname).tolist()
     return from_data(
         data=data, get_t=_Getter(0), get_p=_Getter(1),

@@ -42,7 +42,7 @@ def create(jx, jz):
         else:
             return 0.1
 
-    model = seepage.create(
+    model = tfc.create(
         mesh, porosity=get_porosity, pore_modulus=100e6,
         denc=get_denc, dist=0.1,
         temperature=get_t, p=get_p, s=get_s,
@@ -63,11 +63,11 @@ def create(jx, jz):
 
 def show(model, jx, jz):
     def on_figure(fig):
-        x = seepage.get_x(model, shape=(jx, jz))
-        z = seepage.get_z(model, shape=(jx, jz))
-        p = seepage.get_p(model, shape=(jx, jz))
-        v0 = seepage.get_v(model, fid=0, shape=(jx, jz))
-        v1 = seepage.get_v(model, fid=1, shape=(jx, jz))
+        x = tfc.get_x(model, shape=(jx, jz))
+        z = tfc.get_z(model, shape=(jx, jz))
+        p = tfc.get_p(model, shape=(jx, jz))
+        v0 = tfc.get_v(model, fid=0, shape=(jx, jz))
+        v1 = tfc.get_v(model, fid=1, shape=(jx, jz))
         v = v0 + v1
         args = [fig, add_contourf, x, z]
         opts = dict(aspect='equal', xlabel='x/m', ylabel='z/m', nrows=1, ncols=3)
@@ -79,13 +79,14 @@ def show(model, jx, jz):
         ax = add_axes2(*args, v1 / v, cbar=dict(label='s1', shrink=0.6), title='h2o saturation', index=3, **opts)
         ax.plot(150 + 50 * np.cos(angles), -500 + 50 * np.sin(angles), 'r--')
 
-    plot(on_figure, caption=f'Seepage({model.handle})', suptitle=f'时间: {seepage.get_time(model, as_str=True)}', tight_layout=True)
+    plot(on_figure, caption=f'Seepage({model.handle})', suptitle=f'时间: {tfc.get_time(model, as_str=True)}',
+         tight_layout=True)
 
 
 def main():
     jx, jz = 60, 100
     model = create(jx, jz)
-    seepage.solve(model, close_after_done=False, extra_plot=lambda: show(model, jx, jz))
+    tfc.solve(model, close_after_done=False, extra_plot=lambda: show(model, jx, jz))
 
 
 if __name__ == '__main__':

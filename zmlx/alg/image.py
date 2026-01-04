@@ -3,21 +3,18 @@
 """
 import os
 
-import zmlx.alg.sys as warnings
-from zml import make_parent, np
+from zmlx.exts import make_parent, np
 from zmlx.io import json_ex
 
 try:
     from PIL import Image
 except ImportError as err:
     Image = None
-    warnings.warn(f'{err}', ImportWarning)
 
 try:
     from scipy.interpolate import NearestNDInterpolator
 except ImportError as err:
     NearestNDInterpolator = None
-    warnings.warn(f'{err}', ImportWarning)
 
 import glob
 

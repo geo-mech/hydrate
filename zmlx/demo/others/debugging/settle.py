@@ -1,7 +1,7 @@
 # ** desc = '测试：纵向二维。重力驱动下的沉降过程'
 
 from zmlx import *
-from zmlx.config import settle
+from zmlx.tfc import _settle
 
 
 def create():
@@ -10,7 +10,7 @@ def create():
         y=(-0.5, 0.5),
         z=np.linspace(-500, 0, 125)
     )
-    model = seepage.create(
+    model = tfc.create(
         mesh, porosity=0.1, pore_modulus=100e6, denc=1.0e6, dist=0.1,
         temperature=280, p=1e6, s={'sand': 0.5, 'h2o': 0.5},
         perm=1.0e-13, heat_cond=2.0,
@@ -26,7 +26,7 @@ def show(model):
     绘图，且当folder给定的时候，将绘图结果保存到给定的文件夹
     """
     if gui.exists():
-        title = f'plot when model.time={time2str(seepage.get_time(model))}'
+        title = f'plot when model.time={time2str(tfc.get_time(model))}'
         numpy = as_numpy(model)
         x, z = numpy.cells.x, numpy.cells.z
         s = numpy.fluids(0).vol / numpy.cells.fluid_vol
@@ -42,8 +42,8 @@ def solve(model):
         gui.break_point()
         settle.iterate(model, dt=10000, fid0=0, fid1=1, rate=1.0e-6)
         if step % 10 == 0:
-            print(f'step = {step}, dt = {seepage.get_dt(model, as_str=True)}, '
-                  f'time = {seepage.get_time(model, as_str=True)}')
+            print(f'step = {step}, dt = {tfc.get_dt(model, as_str=True)}, '
+                  f'time = {tfc.get_time(model, as_str=True)}')
             show(model)
     show(model)
 

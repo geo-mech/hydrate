@@ -8,7 +8,7 @@
     Node只有质量，不考虑转动惯量。
 """
 
-from zml import Mesh3
+from zmlx.exts import Mesh3
 from zmlx.fem import dyn
 
 

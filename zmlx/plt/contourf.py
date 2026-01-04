@@ -1,22 +1,4 @@
-from zmlx.plt.cbar import add_cbar
-
-
-def add_contourf(ax, *args, cbar=None, **kwargs):
-    """
-    绘制二维填充等高线图（云图）。
-    Args:
-        ax: Axes对象，用于绘制二维填充等高线图
-        cbar: 颜色条的配置参数，字典形式
-        *args: 传递给ax.contourf函数的参数
-        **kwargs: 传递给ax.contourf函数的关键字参数
-    Returns:
-        绘制的填充等高线图对象
-    """
-    obj = ax.contourf(*args, **kwargs)
-    if cbar is not None:
-        add_cbar(ax, obj=obj, **cbar)
-    return obj
-
+from zmlx.plt.on_axes import add_contourf, plot_on_axes
 
 on_axes = add_contourf
 
@@ -28,7 +10,7 @@ def plot_contourf(
         clabel=None,
         **opts):
     """
-    绘制二维填充等高线图（云图），支持灵活的参数配置
+    绘制二维填充等高线图（云图）
     Args:
         x : array-like, optional
             坐标数组，形状需与z的维度匹配。若未提供，将自动生成基于z的索引坐标
@@ -47,10 +29,7 @@ def plot_contourf(
         **opts :
             传递给底层plot函数的附加参数
     """
-    from zmlx.plt.on_figure import add_axes2
-    from zmlx.ui import plot
-
-    plot(add_axes2, add_contourf, x, y, z,
+    plot_on_axes(add_contourf, x, y, z,
          levels=levels, cmap=cmap, antialiased=True,
          cbar=dict(label=clabel), **opts
          )
@@ -61,7 +40,7 @@ contourf = plot_contourf
 
 def test():
     from zmlx.plt.on_figure import add_axes2
-    from zmlx.plt import tricontourf
+    from zmlx.plt.on_axes.tricontourf import add_tricontourf
     import numpy as np
     from zmlx.ui import plot, gui
     def f():
@@ -80,7 +59,7 @@ def test():
              title='contourf',
              index=1, **opts
              )
-        plot(add_axes2, tricontourf.on_axes,
+        plot(add_axes2, add_tricontourf,
              x.flatten(), y.flatten(), z.flatten(),
              title='Triangle Contourf',
              index=2, **opts

@@ -78,8 +78,8 @@ def show(model, time):
             ax.set_ylabel('temperature (K)')
 
         c = plt.cm.tab20.colors[fig.my_idx]
-        x1 = seepage.get_x(model)
-        t1 = seepage.get_ca(model, CellAttrs.temperature)
+        x1 = tfc.get_x(model)
+        t1 = tfc.get_ca(model, CellAttrs.temperature)
         ax.plot(x1[::20], t1[::20], 'o', c=c)
         x2, t2 = get_theory(time)
         ax.plot(x2, t2, c=c, label=f'{time / 3600 / 24:.0f} d')

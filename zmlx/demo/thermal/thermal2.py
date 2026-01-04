@@ -4,7 +4,7 @@ from zmlx import *
 
 
 def create():
-    return seepage.create(
+    return tfc.create(
         mesh=create_cube(
             np.linspace(-50, 50, 50),
             np.linspace(-50, 50, 50),
@@ -20,8 +20,8 @@ def create():
 
 def show(model: Seepage):
     def on_figure(fig):
-        add_axes2(fig, add_tricontourf, seepage.get_x(model), seepage.get_y(model),
-                  seepage.get_ca(model, model.get_cell_key('temperature')),
+        add_axes2(fig, add_tricontourf, tfc.get_x(model), tfc.get_y(model),
+                  tfc.get_ca(model, model.get_cell_key('temperature')),
                   caption='temperature',
                   xlabel='x (m)', ylabel='y (m)', aspect='equal',
                   cbar={'label': 'temperature (K)'}, cmap='coolwarm',
@@ -32,7 +32,7 @@ def show(model: Seepage):
 
 def main():
     model = create()
-    seepage.solve(model, close_after_done=False, extra_plot=lambda: show(model))
+    tfc.solve(model, close_after_done=False, extra_plot=lambda: show(model))
 
 
 if __name__ == '__main__':

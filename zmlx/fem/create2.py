@@ -4,7 +4,7 @@
 
 import warnings
 
-from zml import Mesh3, DynSys, LinearExpr
+from zmlx.exts import Mesh3, DynSys, LinearExpr
 from zmlx.fem.attr_getter import attr_getter
 from zmlx.fem.stiff2 import stiff2
 

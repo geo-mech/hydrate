@@ -58,12 +58,12 @@ def sample_delete(folder, ratio_keep=None, count_keep=None):
         print(f'Succeed delete {count} Files in Folder {folder}')
 
 
-def get_new_files(folder, mt=0):
+def get_new_files(folder, mt: float = 0.0):
     """
     在给定的文件夹内，查找修改时间比给定的时间更晚的所有晚间。其中当前的时间由time.time()给定
     Args:
         folder: 文件夹的路径
-        mt: 给定的时间
+        mt: 给定的时间，默认为0，即查找所有文件
     Returns:
         list: 包含所有修改时间比给定时间更晚的文件的路径
     """
@@ -82,7 +82,7 @@ def get_new_files(folder, mt=0):
     return files
 
 
-def monitor_files(folder, func, ratio=0.1):
+def monitor_files(folder, func, ratio: float = 0.1):
     """
     持续监控一个文件夹，并且当检测到新文件的时候执行给定的函数
     Args:

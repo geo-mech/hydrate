@@ -1,12 +1,12 @@
 # ** desc = '水平井注采。向水合物储层注入co2，并在另外一口水平井降压开发水合物'
 
-from zml import Tensor3, Seepage
-from zmlx.config import timer, seepage
+from zmlx import tfc, Tensor3, Seepage
 from zmlx.demo.hydrate.co2 import create, solve
 from zmlx.io import opath
 from zmlx.seepage_mesh.edit import add_cell_face
 from zmlx.seepage_mesh.xz_half import create_xz_half
-from zmlx.utility.gui_iterator import GuiIterator
+from zmlx.tfc import timer
+from zmlx.utility import GuiIterator
 
 
 def execute(
@@ -100,14 +100,14 @@ def execute(
     # 修改求解选项
     opt = eval(model.get_text('solve'))
     opt['monitor'] = {'cell_ids': [model.cell_number - 1]}  # 监视生产过程
-    seepage.set_solve(model, **opt)
+    tfc.set_solve(model, **opt)
 
     # 添加定时操作，用来管理生产的开启和闭合
     timer.add_setting(model, time=year_prod * 365 * 24 * 3600, name='close_prod', args=['@model'])
 
     # 关闭生产井
     def close_prod(m: Seepage):
-        seepage.set_face(face=m.get_face(-1), area=0)
+        tfc.set_face(face=m.get_face(-1), area=0)
 
     # 执行模型的求解
     solve(

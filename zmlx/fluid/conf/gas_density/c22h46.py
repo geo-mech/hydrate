@@ -13,7 +13,7 @@ w = adimentional
 """
 "peng-robinson EOS"
 
-from zml import np
+from zmlx.exts import np
 
 
 def den_c22h46(P, T):

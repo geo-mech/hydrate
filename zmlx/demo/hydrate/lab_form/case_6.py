@@ -43,10 +43,10 @@ def create():
         dist=0.001,
         heat_cond=heat_cond,
     )
-    model = seepage.create(**kw,
-                           warnings_ignored={'gravity'})
+    model = tfc.create(**kw,
+                       warnings_ignored={'gravity'})
 
-    seepage.add_injector(
+    tfc.add_injector(
         model, data=dict(
             flu='insitu',
             fluid_id='co2',
@@ -68,4 +68,4 @@ def create():
 
 
 if __name__ == '__main__':
-    seepage.solve(create(), close_after_done=False)
+    tfc.solve(create(), close_after_done=False)

@@ -1,4 +1,4 @@
-from zmlx.alg.base import clamp
+from zmlx.alg import clamp
 
 try:
     import matplotlib
@@ -76,11 +76,13 @@ def get_cm(name=None):
     异常:
         ValueError: 如果名称对应的 Colormap 不存在
     """
+    import matplotlib
     if isinstance(name, matplotlib.colors.Colormap):
         return name
     else:
         import matplotlib.pyplot as plt
         return plt.get_cmap(name if name is not None else "coolwarm")
+
 
 
 def resample(cmap, lutsize):

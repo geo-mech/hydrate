@@ -4,7 +4,7 @@
 from ctypes import c_double, POINTER
 
 import zmlx.alg.sys as warnings
-from zml import get_pointer64, np
+from zmlx.exts import get_pointer64, np
 
 
 def get_pointer(data, dtype=None):
@@ -15,6 +15,8 @@ def get_pointer(data, dtype=None):
         f'The {__name__}.get_pointer will be removed after 2026-4-17, '
         f'please use zmlx.get_pointer64 instead.',
         DeprecationWarning, stacklevel=2)
+
+    assert np is not None
 
     if dtype is None or dtype == c_double or dtype == float or dtype == np.float64:
         return get_pointer64(data)
@@ -29,6 +31,7 @@ def get_pointer(data, dtype=None):
 
 
 if __name__ == '__main__':
+    assert np is not None
     a = np.linspace(0, 3, 10)
     print(a)
     p = get_pointer(a)

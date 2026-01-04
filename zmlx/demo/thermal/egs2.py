@@ -53,7 +53,7 @@ def create_model(dx=100.0, dy=100.0, dz=100.0, temp=500.0, pre=10.0e6,
     y_min, y_max = mesh.get_pos_range(1)
 
     # 创建模型
-    model = seepage.create(
+    model = tfc.create(
         mesh=mesh, dt_min=1.0, dt_max=3600 * 24, dv_relative=0.5,
         fludefs=[h2o.create(name='h2o', density=1000.0, viscosity=1.0e-3)],
         porosity=porosity, pore_modulus=200e6, p=pre, temperature=temp,
@@ -100,7 +100,7 @@ def create_model(dx=100.0, dy=100.0, dz=100.0, temp=500.0, pre=10.0e6,
                     idx = i
             cell = cell_beg.get_cell(idx)
             face = model.add_face(cell_beg, cell)
-            seepage.set_face(face=face, perm=f_perm)
+            tfc.set_face(face=face, perm=f_perm)
             count += 1
             cell_beg = cell
         print(f'count of face modified: {count}')
@@ -116,12 +116,12 @@ def create_model(dx=100.0, dy=100.0, dz=100.0, temp=500.0, pre=10.0e6,
         value=vol_day / (3600 * 24))
 
     # 添加虚拟Cell用于产出
-    virtual_cell = seepage.add_cell(
+    virtual_cell = tfc.add_cell(
         model, pos=[x_max, y_max, 1000.0], porosity=1.0, pore_modulus=100e6,
         vol=1.0e6,
         temperature=temp, p=p_prod, s=1.0)
     cell = model.get_nearest_cell([x_max, y_max, 0])
-    seepage.add_face(
+    tfc.add_face(
         model, virtual_cell, cell, heat_cond=0, perm=max(perm, f_perm),
         area=1.0, length=1.0)
 
@@ -138,8 +138,8 @@ def plot_cells(model, folder=None):
     from zmlx.plt.fig2 import tricontourf
     assert isinstance(model, Seepage)
 
-    time = time2str(seepage.get_time(model))
-    year = seepage.get_time(model) / (3600 * 24 * 365)
+    time = time2str(tfc.get_time(model))
+    year = tfc.get_time(model) / (3600 * 24 * 365)
 
     x = as_numpy(model).cells.x
     y = as_numpy(model).cells.y
@@ -182,7 +182,7 @@ def solve(model: Seepage, time_max=3600 * 24 * 365 * 30, folder=None,
 
     solver = ConjugateGradientSolver(tolerance=1.0e-14)
     iterate = GuiIterator(
-        seepage.iterate,
+        tfc.iterate,
         lambda: plot_cells(model, folder=path.join(folder, 'figures')))
 
     # 创建压力的控制(维持最后一个Cell的压力);
@@ -196,21 +196,21 @@ def solve(model: Seepage, time_max=3600 * 24 * 365 * 30, folder=None,
     if folder is not None:
         save = SaveManager(
             folder=path.join(folder, 'models'), dtime=day_save,
-            get_time=lambda: seepage.get_time(model) / (24 * 3600),
+            get_time=lambda: tfc.get_time(model) / (24 * 3600),
             save=model.save, ext='.seepage', time_unit='d')
     else:
         save = None
 
     # 迭代到给定的时间
-    while seepage.get_time(model) < time_max:
+    while tfc.get_time(model) < time_max:
         iterate(model, solver=solver)
-        p_ctrl.update(t=seepage.get_time(model), modify_pore=True)  # 控制出口的压力
+        p_ctrl.update(t=tfc.get_time(model), modify_pore=True)  # 控制出口的压力
         if save is not None:
             save()
-        step = seepage.get_step(model)
+        step = tfc.get_step(model)
         if step % 10 == 0:
-            time = time2str(seepage.get_time(model))
-            dt = time2str(seepage.get_dt(model))
+            time = time2str(tfc.get_time(model))
+            dt = time2str(tfc.get_dt(model))
             print(
                 f'step = {step}, dt = {dt}, time = {time}, p_out = {virtual_cell.pre / 1e6} MPa')
 

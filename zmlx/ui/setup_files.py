@@ -1,6 +1,6 @@
 import os
 
-from zml import app_data, get_hash
+from zmlx.exts import app_data, get_hash
 from zmlx.alg.base import clamp
 
 

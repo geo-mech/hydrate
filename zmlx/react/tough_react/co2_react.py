@@ -1,8 +1,6 @@
 # co2_react.py  ───────────────────────────────────────────
 # --------------------------------------------------------
 
-from typing import List, Dict
-
 from zmlx import *  # 网格/水合物建模
 from zmlx.react import alg  # 反应模块
 

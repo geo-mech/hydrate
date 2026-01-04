@@ -64,8 +64,8 @@ def create():
                 't': [0, 1e20],
                 'p': [0.3e6, 0.3e6]}]
     )
-    model = seepage.create(**kw,
-                           warnings_ignored={'gravity'})
+    model = tfc.create(**kw,
+                       warnings_ignored={'gravity'})
 
     # 用于solve的选项
     model.set_text(
@@ -73,7 +73,7 @@ def create():
         text={'monitor': {'cell_ids': [model.cell_number - 1]},
               'show_cells': {'dim0': 0,
                              'dim1': 2,
-                             'mask': seepage.get_cell_mask(
+                             'mask': tfc.get_cell_mask(
                                  model=model, yr=[-1, 1])},
               'time_max': 24 * 3600 * 3,
               }
@@ -84,4 +84,4 @@ def create():
 
 
 if __name__ == '__main__':
-    seepage.solve(create(), close_after_done=False)
+    tfc.solve(create(), close_after_done=False)

@@ -2,10 +2,10 @@
 
 
 from zmlx import *
-from zmlx.config.hydrate import show_2d_v2
 
 
 def create(jx, jy, xr=None, yr=None):
+    assert np is not None
     if xr is None:
         xr = (-50, 50)
     if yr is None:
@@ -35,7 +35,7 @@ def create(jx, jy, xr=None, yr=None):
     def heat_cond(x, y, z):
         return 1.0 if abs(z) < 1 else 0.0
 
-    kw = hydrate.create_kwargs(
+    return hydrate.create(
         gravity=[0, 0, 0],
         mesh=mesh,
         porosity=lambda *args: 1e6 if boundary(*args) or is_prod(*args) else 0.3,
@@ -50,17 +50,15 @@ def create(jx, jy, xr=None, yr=None):
         dt_max=24 * 3600 * 10,
         dv_relative=0.1)
 
-    return seepage.create(**kw)
-
 
 def show(model: Seepage, jx, jy, caption=None):
-    show_2d_v2(model, shape=(jx, jy), dim0=0, dim1=1, zr=[-1, 1], caption=caption)
+    hydrate.show_2d_v2(model, shape=(jx, jy), dim0=0, dim1=1, zr=[-1, 1], caption=caption)
 
 
 def main():
     jx, jy = 70, 50
     model = create(jx, jy, xr=[-70, 70], yr=[-50, 50])
-    seepage.solve(model, extra_plot=lambda: show(model, jx, jy))
+    hydrate.solve(model, extra_plot=lambda: show(model, jx, jy))
 
 
 if __name__ == '__main__':

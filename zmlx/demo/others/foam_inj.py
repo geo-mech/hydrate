@@ -26,21 +26,21 @@ def create():
                Seepage.FluDef(den=1000, vis=1.0e-2, name='foam')]
 
     # 创建模型.
-    model = seepage.create(mesh, porosity=0.1, pore_modulus=100e6,
-                           p=1e6,
-                           temperature=280,
-                           s=get_s,
-                           perm=Tensor3(xx=5.0e-14,
-                                        yy=5.0e-14,
-                                        zz=1.0e-14),
-                           disable_update_den=True,
-                           disable_update_vis=True,
-                           disable_ther=True,
-                           disable_heat_exchange=True,
-                           fludefs=fludefs,
-                           gravity=[0, 0, -10],
-                           dt_max=3600 * 24,
-                           )
+    model = tfc.create(mesh, porosity=0.1, pore_modulus=100e6,
+                       p=1e6,
+                       temperature=280,
+                       s=get_s,
+                       perm=Tensor3(xx=5.0e-14,
+                                    yy=5.0e-14,
+                                    zz=1.0e-14),
+                       disable_update_den=True,
+                       disable_update_vis=True,
+                       disable_ther=True,
+                       disable_heat_exchange=True,
+                       fludefs=fludefs,
+                       gravity=[0, 0, -10],
+                       dt_max=3600 * 24,
+                       )
 
     # 添加注入点.
     cell = model.get_nearest_cell([0, 0, 12.5])
@@ -59,4 +59,4 @@ def create():
 
 
 if __name__ == '__main__':
-    seepage.solve(create(), folder=opath('foam_inj'), close_after_done=True)
+    tfc.solve(create(), folder=opath('foam_inj'), close_after_done=True)

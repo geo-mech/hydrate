@@ -1,6 +1,6 @@
 from scipy.interpolate import NearestNDInterpolator, LinearNDInterpolator
 
-from zml import Interp3, np
+from zmlx.exts import Interp3, np
 from zmlx.alg.base import join_cols
 from zmlx.alg.fsys import *
 from zmlx.ptree.array import array

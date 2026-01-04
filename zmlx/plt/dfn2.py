@@ -1,27 +1,16 @@
-def add_dfn2(ax, dfn2, **opts):
-    """
-    将一个二维的离散裂缝网络添加到Axes上.
-    注意：
-        此函数效率有待优化
-    """
-    for pos in dfn2:
-        ax.plot([pos[0], pos[2]], [pos[1], pos[3]], **opts)
+from zmlx.plt.on_axes import add_dfn2, plot_on_axes
 
 
 def show_dfn2(dfn2, **opts):
     """
     利用画线的方式显示一个二维的离散裂缝网络. 主要用于测试.
     """
-    from zmlx.plt.on_figure import add_axes2
-    from zmlx.ui import plot
-
     default_opts = dict(
         aspect='equal',
         xlabel='x / m', ylabel='y / m',
         title='Discrete Fracture Network', tight_layout=True)
     opts = {**default_opts, **opts}
-
-    plot(add_axes2, add_dfn2, dfn2, **opts)
+    plot_on_axes(add_dfn2, dfn2, **opts)
 
 
 def test():

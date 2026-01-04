@@ -94,20 +94,6 @@ def create(
         ),
     )
 
-    opts = {**default_opts, **opts}  # 使用给定的参数覆盖默认的参数
-
-    # 生成用于建立水合物模型的关键词.
-    opts = hydrate.create_opts(
-        mesh=mesh,
-        porosity=get_porosity,
-        denc=get_denc,
-        temperature=get_t,
-        p=get_p,
-        s=s_ini,  # 初始饱和度自定义
-        perm=perm,
-        **opts
-    )
-
     # 用于求解的选项
     if save_dt_min is None:
         save_dt_min = 365.0 * 24.0 * 3600.0
@@ -120,8 +106,20 @@ def create(
         'save_dt_max': save_dt_max,
     }
 
-    # 创建模型
-    model = seepage.create(texts={'solve': solve_opts}, **opts)
+    opts = {**default_opts, **opts}  # 使用给定的参数覆盖默认的参数
+
+    # 生成用于建立水合物模型的关键词.
+    model = hydrate.create(
+        mesh=mesh,
+        porosity=get_porosity,
+        denc=get_denc,
+        temperature=get_t,
+        p=get_p,
+        s=s_ini,  # 初始饱和度自定义
+        perm=perm,
+        texts={'solve': solve_opts},
+        **opts
+    )
 
     # 添加溶解态co2的扩散 (2025-11-25)
     diffusion.add_setting(
@@ -178,7 +176,7 @@ def create(
         opers.append([years_inj * 3600.0 * 24.0 * 365.0, '0'])
     except:  # 失败了之后，再作为一个数字来对待
         vol_rate = mass_rate / flu.den
-        opers = [[0, f'{vol_rate}'], [years_inj * 3600.0 * 24.0 * 365.0, '0']]
+        opers = [[0.0, f'{vol_rate}'], [years_inj * 3600.0 * 24.0 * 365.0, '0']]
     model.add_injector(
         cell=cell,
         value=0,
@@ -205,7 +203,7 @@ def solve(model, *args, extra_plot=None, **kwargs):
         if callable(extra_plot):
             extra_plot()
 
-    seepage.solve(model, *args, extra_plot=x, **kwargs)
+    hydrate.solve(model, *args, extra_plot=x, **kwargs)
 
 
 def main():

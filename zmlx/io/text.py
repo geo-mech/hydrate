@@ -1,3 +1,3 @@
-from zml import read_text, write_text
+from zmlx.exts import read_text, write_text
 
 __all__ = ['read_text', 'write_text']

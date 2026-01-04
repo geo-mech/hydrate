@@ -1,3 +1,11 @@
+from typing import Optional, Tuple, List, Union
+
+try:
+    from zmlx.exts import app_data
+except ImportError:
+    app_data = None
+
+
 class GuiBuffer:
     def __init__(self):
         self.__api = None
@@ -66,7 +74,12 @@ class GuiBuffer:
         """
         if message is not None:
             print(message)
-        self.command('click_pause')
+        if app_data is not None:
+            disable = app_data.get('DISABLE_PAUSE', False)  # 禁止内核的暂停
+        else:
+            disable = False
+        if not disable:
+            self.command('click_pause')
         self.break_point()
 
     class Agent:
@@ -156,7 +169,7 @@ class GuiBuffer:
 gui = GuiBuffer()
 
 try:
-    from zml import app_data
+    from zmlx.exts import app_data
 
     app_data.put('gui', gui)
 except Exception as err:
@@ -184,7 +197,8 @@ def question(info):
         return y == 'y' or y == 'Y'
 
 
-def plot_no_gui(kernel, *args, fname=None, dpi=300, caption=None, tight_layout=None, suptitle=None, **kwargs):
+def plot_no_gui(kernel, *args, fname=None, dpi=300, caption=None, clear=None, tight_layout=None, suptitle=None,
+                **kwargs):
     """
     在非GUI模式下绘图(或者显示并阻塞程序执行，或者输出文件但不显示).
     Args:
@@ -195,6 +209,7 @@ def plot_no_gui(kernel, *args, fname=None, dpi=300, caption=None, tight_layout=N
         **kwargs: 传递给kernel函数的关键字参数
         tight_layout: 是否自动调整子图参数，以防止重叠
         caption: 图表的标题
+        clear: 是否清除当前figure的内容，默认清除
         dpi: 输出图片的分辨率
         fname: 输出的文件名
         suptitle: 图表的标题
@@ -202,7 +217,7 @@ def plot_no_gui(kernel, *args, fname=None, dpi=300, caption=None, tight_layout=N
     try:
         import matplotlib.pyplot as plt
     except Exception as e:
-        from zml import log
+        from zmlx.exts import log
         log(text=f'{e}', tag='matplotlib_import_error')
         plt = None
 
@@ -267,6 +282,37 @@ def plot(kernel, *args, gui_only=False, gui_mode=None,
         return plot_no_gui(kernel, *args, fname=fname, dpi=dpi, **kwargs)
 
 
+def progress(
+        label: Optional[str] = None, val_range: Optional[Union[List[int], Tuple[int, int]]] = None,
+        value: Optional[int] = None, visible: Optional[bool] = None
+):
+    """
+    显示(或者隐藏进度条(如果gui模式下)
+    Args:
+        label: 进度条的标签
+        val_range: 进度条的范围
+        value: 当前进度
+        visible: 是否可见
+    Returns:
+        None
+    """
+    if gui.exists():
+        gui.progress(label=label, val_range=val_range, value=value, visible=visible)
+
+
+def show_attrs(clear: bool = False, **attrs):
+    """
+    在控制台内核运行的过程中，在控制台的输出窗口显示的一些动态的属性值（在控制台运行结束之后隐藏）
+    Args:
+        clear: 是否清除已有的参数
+        **attrs: 要显示的参数
+    Returns:
+        None
+    """
+    if gui.exists():
+        gui.show_attrs(clear=clear, **attrs)
+
+
 def gui_exec(*args, **kwargs):
     """
     调用gui来执行一个函数，并返回函数的执行结果
@@ -278,7 +324,7 @@ def open_gui(argv=None):
     """
     打开gui
     """
-    from zml import app_data
+    from zmlx.exts import app_data
     app_data.put('argv', argv)
     # 是否需要恢复标签
     app_data.put('restore_tabs',
@@ -294,7 +340,7 @@ def open_gui_without_setup(argv=None):
     """
     打开gui
     """
-    from zml import app_data
+    from zmlx.exts import app_data
     app_data.put('argv', argv)
     app_data.put('restore_tabs', False)
     app_data.put('run_setup', False)

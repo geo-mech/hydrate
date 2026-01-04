@@ -138,7 +138,7 @@ def create(jx, jy):
         linspace(-50, 50, jy + 1),
         (-0.5, 0.5))
 
-    model = seepage.create(
+    model = tfc.create(
         mesh=mesh, porosity=0.2, pore_modulus=100e6,
         p=1e6, temperature=280, perm=1e-14, s=get_s, fludefs=fludefs
     )
@@ -160,9 +160,9 @@ def show(x, y, z, jx, jy, caption=None, cmap=None, label=None, title=None):
         return
     angles = np.linspace(0, 2 * np.pi, 100)
     items = [
-        item('contourf', np.reshape(x, shape=[jx, jy]),
-             np.reshape(y, shape=[jx, jy]),
-             np.reshape(z, shape=[jx, jy]),
+        item('contourf', np.reshape(x, [jx, jy]),
+             np.reshape(y, [jx, jy]),
+             np.reshape(z, [jx, jy]),
              cmap=cmap, cbar=dict(label=label)
              ),
         item('xy', 20 * np.cos(angles), 20 * np.sin(angles), 'r--'),
@@ -186,17 +186,17 @@ def solve(model: Seepage, jx, jy):
     求解给定的模型. 这里，并没有计算渗流的过程。作为Capillary过程的示例，仅仅调用了capillary.iterate。
     如果需要完整的计算（包含渗流、化学过程），可以调用seepage.iterate。
     """
-    x = seepage.get_x(model)
-    y = seepage.get_y(model)
-    z = seepage.get_z(model)
+    x = tfc.get_x(model)
+    y = tfc.get_y(model)
+    z = tfc.get_z(model)
 
     show(x, y, [get_idx(x[i], y[i], z[i]) for i in range(len(x))],
          jx, jy, caption='岩石ID', cmap='jet')
 
-    v = seepage.get_v(model)
+    v = tfc.get_v(model)
 
     def show_s(caption, title=None):
-        show(x, y, seepage.get_v(model, 0) / v, jx, jy,
+        show(x, y, tfc.get_v(model, 0) / v, jx, jy,
              caption=caption, cmap='coolwarm',
              label='饱和度(Gas)', title=title
              )

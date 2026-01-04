@@ -24,7 +24,7 @@ def create():
                 y - y1) < 0.1:
             cell.vol = 1.0e8
 
-    model = seepage.create(
+    model = tfc.create(
         mesh, porosity=0.2, pore_modulus=100e6,
         p=1e6, temperature=280,
         s=(1, 0), perm=1e-14,
@@ -44,7 +44,7 @@ def create():
     model.add_injector(fluid_id=1, flu=cell.get_fluid(1),
                        pos=cell.pos,
                        radi=0.1, opers=[(0, 1.0e-5)])
-    seepage.set_dt_max(model, 3600 * 24)
+    tfc.set_dt_max(model, 3600 * 24)
 
     # 返回最终的模型
     return model
@@ -55,16 +55,18 @@ def show_model(model: Seepage):
     if not gui:
         return
 
-    x = seepage.get_cell_pos(model, dim=0)
-    y = seepage.get_cell_pos(model, dim=1)
-    p = seepage.get_cell_pre(model)
-    s = seepage.get_cell_fv(model, fid=1) / seepage.get_cell_fv(model)
+    x = tfc.get_cell_pos(model, dim=0)
+    y = tfc.get_cell_pos(model, dim=1)
+    p = tfc.get_cell_pre(model)
+    s = tfc.get_cell_fv(model, fid=1) / tfc.get_cell_fv(model)
 
     def on_figure(figure):
+        from zmlx.plt.on_figure import calc_best_layout
+        nrows, ncols = calc_best_layout(figure, 2)
         figure.suptitle(
-            f'Model when time = {seepage.get_time(model, as_str=True)}')
+            f'Model when time = {tfc.get_time(model, as_str=True)}')
         opts = dict(
-            ncols=2, nrows=1, xlabel='x', ylabel='y', aspect='equal'
+            ncols=ncols, nrows=nrows, xlabel='x', ylabel='y', aspect='equal'
         )
         add_axes2(figure, tricontourf, x, y, p, title='Pressure',
                   cbar=dict(label='Pressure'),
@@ -81,7 +83,7 @@ def show_model(model: Seepage):
 def main():
     from zmlx.demo.opath import opath
     model = create()
-    seepage.solve(
+    tfc.solve(
         model, folder=opath('liq_inj'),
         close_after_done=False,
         time_max=3600 * 24 * 365,  # 求解终止时的时间

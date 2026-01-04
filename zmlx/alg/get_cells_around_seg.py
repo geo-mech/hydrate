@@ -1,6 +1,6 @@
 import zmlx.alg.sys as warnings
 
-from zmlx.base.around_seg import get_cells_around_seg, get_cell_ids_around_seg
+from zmlx.alg.around_seg import get_cells_around_seg, get_cell_ids_around_seg
 
 __all__ = ['get_cells_around_seg', 'get_cell_ids_around_seg']
 warnings.warn('The module zmlx.alg.get_cells_around_seg is deprecated '

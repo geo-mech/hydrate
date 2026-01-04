@@ -3,7 +3,7 @@
 """
 from typing import Optional
 
-from zml import DynSys, LinearExpr
+from zmlx.exts import DynSys, LinearExpr
 
 
 def create_dyn(masses: list[float], elements: list[list[int]],

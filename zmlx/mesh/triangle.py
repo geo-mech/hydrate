@@ -2,10 +2,12 @@
 处理三角形网格相关的算法
 """
 import math
+try:
+    from scipy.spatial import Delaunay
+except ImportError:
+    Delaunay = None
 
-from scipy.spatial import Delaunay
-
-from zml import Mesh3, np
+from zmlx.exts import Mesh3, np
 
 
 def get_triangles(nodes):
@@ -19,14 +21,17 @@ def get_triangles(nodes):
     Returns:
         三角形列表，格式 [[i,j,k], ...]，其中i,j,k为点索引
     """
+    assert np is not None, 'numpy is not installed'
     if len(nodes) < 3:
         return []
 
     points_array = np.array(nodes)
 
     try:
+        assert Delaunay is not None, 'scipy is not installed'
         tri = Delaunay(points_array)
-    except:
+    except Exception as e:
+        print(e)
         return []
 
     triangles = []
@@ -65,6 +70,7 @@ def layered_triangles(x_min, x_max, nx, y_min, y_max, ny, as_mesh=False):
         faces (list): 各个三角形的顶点的索引 (从0开始编号)
         nodes (list): 各个顶点的x, y坐标
     """
+    assert np is not None, 'numpy is not installed'
 
     # 计算x方向的网格节点
     dx = (x_max - x_min) / nx
@@ -104,13 +110,13 @@ def layered_triangles(x_min, x_max, nx, y_min, y_max, ny, as_mesh=False):
         return faces, nodes
 
 
-def mesh3_from_triangles(faces, nodes, ibeg=0):
+def mesh3_from_triangles(faces, nodes, i_beg=0):
     """
     根据三角形和顶点的索引，生成Mesh3对象.
     Args:
-        faces: 各个三角形的顶点的索引 (从ibeg开始编号)
+        faces: 各个三角形的顶点的索引 (从i_beg开始编号)
         nodes: 各个顶点的x, y坐标
-        ibeg: 在faces中的索引的起始值
+        i_beg: 在faces中的索引的起始值
 
     Returns:
         Mesh3对象
@@ -130,7 +136,7 @@ def mesh3_from_triangles(faces, nodes, ibeg=0):
 
     for face in faces:
         if len(face) == 3:
-            nodes = [round(x - ibeg) for x in face]
+            nodes = [round(x - i_beg) for x in face]
             l01 = mesh.add_link(nodes=[nodes[0], nodes[1]])
             l12 = mesh.add_link(nodes=[nodes[1], nodes[2]])
             l20 = mesh.add_link(nodes=[nodes[2], nodes[0]])

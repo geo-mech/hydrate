@@ -9,7 +9,7 @@ def create():
         y=[-0.5, 0.5],
         z=[-0.5, 0.5])
 
-    model = seepage.create(
+    model = tfc.create(
         mesh=mesh,
         dv_relative=0.2,
         fludefs=[h2o.create(
@@ -23,9 +23,9 @@ def create():
         perm=1e-14,
         gravity=[-10, 0, 0],
     )
-    seepage.set_solve(model,
-                      time_max=3600 * 24 * 30
-                      )
+    tfc.set_solve(model,
+                  time_max=3600 * 24 * 30
+                  )
     return model
 
 
@@ -37,7 +37,7 @@ def show_model(model: Seepage):
 
 def main():
     model = create()
-    seepage.solve(
+    tfc.solve(
         model, close_after_done=False,
         extra_plot=lambda: show_model(model))
 

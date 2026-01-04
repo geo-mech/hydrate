@@ -1,6 +1,6 @@
 from PIL import Image
 
-from zml import np
+from zmlx.exts import np
 from zmlx.alg.image import get_data
 
 

@@ -60,7 +60,7 @@ def create():
         return 1.0 if abs(y) < 2 else 0.0
 
     # 关键词
-    kw = hydrate.create_kwargs(
+    model = hydrate.create(
         gravity=[0, 0, -10],
         dt_min=1,
         dt_max=24 * 3600,
@@ -78,7 +78,6 @@ def create():
                 't': [0, 1e20],
                 'p': [3e6, 3e6]}]
     )
-    model = seepage.create(**kw)
 
     # 用于solve的选项
     model.set_text(
@@ -86,7 +85,7 @@ def create():
         text={'monitor': {'cell_ids': [model.cell_number - 1]},
               'show_cells': {'dim0': 0,
                              'dim1': 2,
-                             'mask': seepage.get_cell_mask(
+                             'mask': tfc.get_cell_mask(
                                  model=model,
                                  yr=[-1, 1])},
               'time_max': 3 * 365 * 24 * 3600,
@@ -117,11 +116,12 @@ def update_k(model: Seepage):
     """
     根据压力的梯度，来调整vis_times
     """
+    assert np is not None
     # 压力
     pre = as_numpy(model).cells.pre + as_numpy(model).cells.z * 1e4
     # 计算压力梯度
     dp0 = np.zeros(np.shape(pre))
-    model.get_cell_gradient(data=get_pointer64(pre), buf=get_pointer64(dp0))
+    model.get_cell_gradient(data=const_f64_ptr(pre), buf=f64_ptr(dp0))
     dp0[dp0 < 1] = 1
 
     dp1 = dp0 - 0.5e6
@@ -142,7 +142,7 @@ def update_k(model: Seepage):
 def main():
     model = create()
     slots = {'update_k': update_k}
-    seepage.solve(model, close_after_done=True, slots=slots)
+    hydrate.solve(model, close_after_done=True, slots=slots)
 
 
 if __name__ == '__main__':

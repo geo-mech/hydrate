@@ -1,6 +1,6 @@
 import sys
 
-from zmlx.base.seepage import seepage2txt, txt2seepage
+from zmlx.tfc._base import seepage2txt, txt2seepage
 
 if __name__ == '__main__':
     if len(sys.argv) >= 2:

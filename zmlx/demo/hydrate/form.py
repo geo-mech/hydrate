@@ -1,10 +1,10 @@
 # ** desc = '纵向二维。浮力作用下气体运移、水合物成藏过程模拟（在模型的中间设置高渗透率的通道）'
 
 from zmlx import *
-from zmlx.config.hydrate import show_2d_v2
 
 
 def create(jx=150, jz=250):
+    assert np is not None
     mesh = create_cube(
         x=np.linspace(0, 300, jx + 1),
         y=(-0.5, 0.5),
@@ -39,7 +39,7 @@ def create(jx=150, jz=250):
     def get_porosity(*pos):
         return 0.1
 
-    opts = hydrate.create_opts(
+    model = hydrate.create(
         has_inh=True,  # 存在抑制剂
         has_ch4_in_liq=True,  # 存在溶解气
         gravity=[0, 0, -10],
@@ -51,16 +51,16 @@ def create(jx=150, jz=250):
         temperature=get_t, p=get_p, s=get_s,
         perm=get_k, heat_cond=2.0
     )
-    model = seepage.create(**opts)
     return model
 
 
 def show(model: Seepage, jx, jz, caption=None):
+    assert np is not None
     angles = np.linspace(0, np.pi * 2, 100)
     c1 = item('xy', np.cos(angles) * 50 + 150, np.sin(angles) * 50 + 100, 'r--', linewidth=0.5)
     c2 = item('xy', [130, 130], [10, 490], 'k--', linewidth=0.5)
     c3 = item('xy', [170, 170], [10, 490], 'k--', linewidth=0.5)
-    show_2d_v2(
+    hydrate.show_2d_v2(
         model, dim0=0, dim1=2, shape=[jx, jz], caption=caption, other_items=[c1, c2, c3]
     )
 
@@ -68,7 +68,7 @@ def show(model: Seepage, jx, jz, caption=None):
 def main():
     jx, jz = 150, 250
     model = create(jx, jz)
-    seepage.solve(model=model, extra_plot=lambda: show(model, jx, jz), step_max=10000)
+    hydrate.solve(model=model, extra_plot=lambda: show(model, jx, jz), step_max=10000)
 
 
 if __name__ == '__main__':
