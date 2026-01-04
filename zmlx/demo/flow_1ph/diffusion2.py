@@ -73,17 +73,19 @@ def show(model: Seepage, jx, jy, time=None):
     y = np.reshape(cells.y, (jx, jy))
     s = np.reshape(as_numpy(model).fluids(0, 1).vol / as_numpy(model).fluids(0).vol, (jx, jy))
 
-    def on_figure(fig):
-        """
-        用于在matplotlib中绘图的回调函数
-        """
-        add_axes2(fig, add_contourf, x, y, s, title=f'盐度. 时间={time2str(time)}', cmap='coolwarm',
-                  cbar={'label': 'Salt Ratio', 'shrink': 0.7}, xlabel="x/m", ylabel="y/m",
-                  aspect='equal')
-        fig.tight_layout()
-
     # 实施绘图
-    plot(on_figure, caption='盐度分布')
+    fig.show(
+        fig.axes2(
+            fig.contourf(
+                x, y, s, cmap='coolwarm',
+                cbar={'label': 'Salt Ratio', 'shrink': 0.7},
+            ),
+            title=f'盐度. 时间={time2str(time)}', xlabel="x/m", ylabel="y/m",
+            aspect='equal'
+        ),
+        fig.tight_layout(),
+        caption='盐度分布'
+    )
 
 
 def main():

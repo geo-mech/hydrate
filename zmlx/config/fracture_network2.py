@@ -217,7 +217,9 @@ def show_pressure(
     show_fn2(pos=pos, w=w, c=c, **opts)
 
 
-def show_pressure3(network: FractureNetwork, flow: Seepage, zr=None, **opts):
+def show_3d(network: FractureNetwork, flow: Seepage, c_values, zr=None,
+            clable=None, caption=None,
+            **opts):
     """
     二维绘图。其中颜色代表流体压力的值.
     这里，opts是传递给绘图内核show_fn2函数的参数
@@ -241,16 +243,29 @@ def show_pressure3(network: FractureNetwork, flow: Seepage, zr=None, **opts):
         p1 = [(x0 + x1) / 2, (y0 + y1) / 2, z1]
         rc3.append([*cent, *p0, *p1])
 
+    if clable is None:
+        clable = 'Pressure [MPa]'
+
+    if caption is None:
+        caption = 'Pressure'
+
     default_opts = dict(
-        cbar=dict(label='Pressure [MPa]',
+        cbar=dict(label=clable,
                   shrink=0.5),
-        caption='Pressure',
+        caption=caption,
         title=f'Time = {get_time_str(flow)}',
         edge_width=0
     )
     opts = {**default_opts, **opts}
-    p = as_numpy(flow).cells.pre / 1e6
-    show_rc3(rc3, face_color=p, **opts)
+    show_rc3(rc3, face_color=c_values, **opts)
+
+
+def show_pressure3(network: FractureNetwork, flow: Seepage, zr=None, **opts):
+    """
+    二维绘图。其中颜色代表流体压力的值.
+    这里，opts是传递给绘图内核show_fn2函数的参数
+    """
+    show_3d(network, flow, as_numpy(flow).cells.pre / 1e6, zr=zr, **opts)
 
 
 def test(show3d=True):

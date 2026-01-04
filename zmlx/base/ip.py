@@ -5,8 +5,7 @@
 from ctypes import c_double, POINTER
 
 from zml import InvasionPercolation, get_pointer64, np
-from zmlx.plt.on_axes import item, add_items
-from zmlx.plt.on_figure import add_axes2
+from zmlx import fig
 from zmlx.ui import plot
 
 
@@ -140,19 +139,21 @@ def set_bonds(model: InvasionPercolation, count, node0, node1, radi=None):
 
 def show_xy(model: InvasionPercolation, caption='侵入过程',
             jx=None, jy=None, cmap=None, clabel='Phase', grid=True,
-            xlabel='x (m)', ylabel='y (m)', title='Fluid Invasion',
-            **kwargs):
+            xlabel='x (m)', ylabel='y (m)', title='Fluid Invasion'):
     x = get_x(model)
     y = get_y(model)
     v = get_phase(model)
     if cmap is None:
         cmap = 'coolwarm'
     if jx is not None and jy is not None:
-        o = item('contourf', np.reshape(x, shape=(jx, jy)),
-                 np.reshape(y, shape=(jx, jy)),
-                 np.reshape(v, shape=(jx, jy)), cmap=cmap, cbar=dict(label=clabel))
+        o = fig.contourf(np.reshape(x, shape=(jx, jy)),
+                         np.reshape(y, shape=(jx, jy)),
+                         np.reshape(v, shape=(jx, jy)), cmap=cmap, cbar=dict(label=clabel))
     else:
-        o = item('tricontourf', x, y, v, cmap=cmap, cbar=dict(label=clabel))
-    plot(add_axes2, add_items, o, aspect='equal', caption=caption, grid=grid,
-         xlabel=xlabel, ylabel=ylabel, title=title,
-         **kwargs)
+        o = fig.tricontourf(x, y, v, cmap=cmap, cbar=dict(label=clabel))
+    fig.plt_show(
+        fig.axes2(
+            o, aspect='equal', xlabel=xlabel, ylabel=ylabel, title=title, grid=grid
+        ),
+        caption=caption
+    )

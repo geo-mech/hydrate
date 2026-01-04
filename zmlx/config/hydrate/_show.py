@@ -4,11 +4,8 @@ from zmlx.alg.fsys import join_paths
 from zmlx.alg.fsys import make_fname
 from zmlx.base.seepage import as_numpy
 from zmlx.config import seepage
-from zmlx.plt.fig2 import tricontourf
-from zmlx.plt.on_axes import add_items, item
-from zmlx.plt.on_figure import add_axes2
-from zmlx.plt.subplot_layout import calculate_subplot_layout
-from zmlx.ui import gui, plot
+from zmlx.ui import gui
+from zmlx import fig
 
 try:
     import numpy as np
@@ -71,42 +68,47 @@ def show_2d_v2(
     if other_items is None:
         other_items = []
 
-    def on_figure(fig):
-        n_rows, n_cols = calculate_subplot_layout(
-            num_plots=len(fids) + 2, subplot_aspect_ratio=subplot_aspect_ratio, fig=fig)
+    ax_opts = dict(xlabel=get_label(dim0), ylabel=get_label(dim1), aspect='equal')
+    t = seepage.get_t(model, mask=mask, shape=shape)
+    p = seepage.get_p(model, mask=mask, shape=shape)
+    face = fig.tricontourf if shape is None else fig.contourf
+    ax_items = [
+        fig.axes2(
+            face(x, y, t, cbar=dict(shrink=0.6), cmap='coolwarm'),
+            *other_items,
+            title='温度', **ax_opts
+        ),
+        fig.axes2(
+            face(x, y, p, cbar=dict(shrink=0.6), cmap='coolwarm'),
+            *other_items,
+            title='压力', **ax_opts
+        ),
+    ]
+    v = seepage.get_v(model, mask=mask, shape=shape)
+    for fid in fids:
+        s = seepage.get_v(model, fid=fid, mask=mask, shape=shape) / v
+        ax_items.append(
+            fig.axes2(
+                face(x, y, s, cbar=dict(shrink=0.6), cmap='coolwarm'),
+                *other_items,
+                title=f'{fid}饱和度', **ax_opts
+            )
+        )
 
-        opts = dict(ncols=n_cols, nrows=n_rows, xlabel=get_label(dim0),
-                    ylabel=get_label(dim1), aspect='equal'
-                    )
-        args = ['tricontourf' if shape is None else 'contourf', x, y]
-
-        t = seepage.get_t(model, mask=mask, shape=shape)
-        add_axes2(
-            fig, add_items,
-            item(*args, t, cbar=dict(shrink=0.6), cmap='coolwarm'), *other_items,
-            title='温度', index=1, **opts)
-        p = seepage.get_p(model, mask=mask, shape=shape)
-        add_axes2(
-            fig, add_items,
-            item(*args, p, cbar=dict(shrink=0.6), cmap='coolwarm'), *other_items,
-            title='压力', index=2, **opts)
-
-        v = seepage.get_v(model, mask=mask, shape=shape)
-        index = 3
-        for fid in fids:
-            s = seepage.get_v(model, fid=fid, mask=mask, shape=shape) / v
-            add_axes2(
-                fig, add_items,
-                item(*args, s, cbar=dict(shrink=0.6)), *other_items,
-                title=f'{fid}饱和度', index=index, **opts)
-            index += 1
+    if tight_layout is not None:
+        ax_items.append(fig.tight_layout())
 
     if caption is None:
         caption = f"Seepage({model.handle})"
 
-    plot(on_figure, caption=caption, clear=True, tight_layout=tight_layout,
-         suptitle=f'time = {seepage.get_time_str(model)}'
-         )
+    fig.show(
+        fig.auto_layout(
+            *ax_items,
+            aspect_ratio=subplot_aspect_ratio
+        ),
+        fig.suptitle(f'time = {seepage.get_time_str(model)}'),
+        caption=caption, clear=True
+    )
 
 
 def show_2d(model: Seepage, folder=None, xdim=0, ydim=1):
@@ -117,7 +119,6 @@ def show_2d(model: Seepage, folder=None, xdim=0, ydim=1):
         return
 
     time = seepage.get_time(model)
-    options = {'title': f'plot when time={time2str(time)}'}
     x = as_numpy(model).cells.get(-(xdim + 1))
     y = as_numpy(model).cells.get(-(ydim + 1))
 
@@ -130,10 +131,13 @@ def show_2d(model: Seepage, folder=None, xdim=0, ydim=1):
     cell_keys = seepage.cell_keys(model)
 
     def show_key(key):
-        tricontourf(
-            x, y, as_numpy(model).cells.get(cell_keys[key]),
-            caption=key,
-            fname=fname(key), **options)
+        fig.show(
+            fig.axes2(
+                fig.tricontourf(x, y, as_numpy(model).cells.get(cell_keys[key])),
+                title=f'plot when time={time2str(time)}',
+            ),
+            caption=key, fname=fname(key),
+        )
 
     show_key('pre')
     show_key('temperature')
@@ -142,9 +146,13 @@ def show_2d(model: Seepage, folder=None, xdim=0, ydim=1):
 
     def show_s(flu_name):
         s = as_numpy(model).fluids(*model.find_fludef(flu_name)).vol / fv_all
-        tricontourf(
-            x, y, s, caption=flu_name,
-            fname=fname(flu_name), **options)
+        fig.show(
+            fig.axes2(
+                fig.tricontourf(x, y, s),
+                title=f'plot when time={time2str(time)}',
+            ),
+            caption=flu_name, fname=fname(flu_name),
+        )
 
     for item in ['ch4', 'liq', 'ch4_hydrate']:
         show_s(item)

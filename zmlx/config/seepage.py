@@ -301,6 +301,9 @@ def iterate(*local_opts, pool=None, **global_opts):
 
     if len(models) <= 1:  # 不需要并行
         pool = None
+    elif pool is None:
+        warnings.warn(
+            'The pool is None, but there are more than 1 models to iterate.', UserWarning, stacklevel=2)
 
     # 执行定时器函数 (此过程会读取model.temps['slots'])
     timer.iterate(*models)

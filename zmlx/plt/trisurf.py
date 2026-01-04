@@ -1,23 +1,5 @@
-from zmlx.plt.cbar import add_cbar
+from zmlx.fig.plt_render.trisurf import add_trisurf
 from zmlx.plt.on_figure import add_axes3
-
-
-def add_trisurf(ax, *args, cbar=None, **kwargs):
-    """
-    绘制三维三角化曲面图.
-    Args:
-        ax: Axes对象，用于绘制三维三角化曲面图
-        cbar: 颜色条的配置参数，字典形式
-        *args: 传递给ax.plot_trisurf函数的参数
-        **kwargs: 传递给ax.plot_trisurf函数的关键字参数
-    Returns:
-        绘制的三维三角化曲面图对象
-    """
-    kwargs.setdefault('antialiased', False)
-    obj = ax.plot_trisurf(*args, **kwargs)
-    if cbar is not None:
-        add_cbar(ax, obj=obj, **cbar)
-    return obj
 
 
 def plot_trisurf(*args, **kwargs):
@@ -30,10 +12,25 @@ def plot_trisurf(*args, **kwargs):
 
 def test():
     from zmlx.plt.data.surf import get_data
+    from zmlx.fig import trisurf
+    from zmlx.plt.on_axes import plot3d
     x, y, z, _ = get_data(jx=40, jy=20, xr=(-5, 5), yr=(-3, 3))
-    plot_trisurf(x.flatten(), y.flatten(), z.flatten(),
-                 gui_mode=True, cbar={}, cmap='viridis')
+    obj = trisurf(x.flatten(), y.flatten(), z.flatten(), cbar={}, cmap='viridis')
+    plot3d(obj, gui_mode=True)
+
+
+def test2():
+    from zmlx.fig import plt_show, trisurf, axes3, tight_layout
+    from zmlx.plt.data.surf import get_data
+
+    x, y, z, _ = get_data(jx=40, jy=20, xr=(-5, 5), yr=(-3, 3))
+
+    item = axes3(
+        trisurf(x.flatten(), y.flatten(), z.flatten(), cbar={}, cmap='viridis'),
+        xlabel='x', ylabel='y', zlabel='z',
+    )
+    plt_show(item, tight_layout(), gui_mode=True)
 
 
 if __name__ == '__main__':
-    test()
+    test2()

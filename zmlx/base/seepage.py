@@ -1847,6 +1847,29 @@ class CellCopyTask:
         assert len(sources) == len(targets)
         self._count = len(sources)
 
+        # 检查所有handle是否重复
+        all_handles = []
+
+        # 收集所有source handle
+        for cell in sources:
+            all_handles.append(cell.handle)
+
+        # 收集所有target handle
+        for cell in targets:
+            all_handles.append(cell.handle)
+
+        # 检查是否有重复
+        if len(set(all_handles)) != len(all_handles):
+            # 找出重复的handle
+            seen = set()
+            duplicates = set()
+            for handle in all_handles:
+                if handle in seen:
+                    duplicates.add(handle)
+                else:
+                    seen.add(handle)
+            raise ValueError(f"发现重复的handle: {duplicates}")
+
         self._sources = (ctypes.c_void_p * self._count)()
         self._targets = (ctypes.c_void_p * self._count)()
 
@@ -1864,6 +1887,19 @@ class CellCopyTask:
         else:
             Seepage.Cell.clone_all(sources=self._targets, targets=self._sources, count=self._count)
         return self
+
+
+def create_copy_task(sources, targets):
+    """
+    创建Cell的拷贝任务
+    Args:
+        sources: 所有作为的源的Cells
+        targets: 所有作为目标的Cells
+
+    Returns:
+        CellCopyTask
+    """
+    return CellCopyTask(sources=sources, targets=targets)
 
 
 def reg_cell_tmp(model: Seepage, index):

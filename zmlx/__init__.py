@@ -68,6 +68,10 @@ from zmlx.data.igg import load_igg  # 加载igg.png
 # fem
 
 ########################################
+# fig
+from zmlx import fig
+
+########################################
 # filesys
 
 
@@ -119,12 +123,9 @@ from zmlx.plt.fig2 import (
 )
 from zmlx.plt.fig3 import plot_trisurf, scatter, show_rc3
 # 在ax上添加项目
-from zmlx.plt.tricontourf import add_tricontourf
-from zmlx.plt.contourf import add_contourf
+from zmlx.fig.plt_render import add_tricontourf, add_contourf, add_surf, add_cbar
 from zmlx.plt.curve2 import add_curve2
-from zmlx.plt.surf import add_surf
 from zmlx.plt.legend import add_legend
-from zmlx.plt.cbar import add_cbar
 
 ########################################
 # ptree

@@ -76,25 +76,25 @@ def show(model: Seepage, jx, jy, time=None):
     y = np.reshape(cells.y, (jx, jy))
     s1 = np.reshape(as_numpy(model).fluids(0, 1).vol / as_numpy(model).fluids(0).vol, (jx, jy))
     s2 = np.reshape(as_numpy(model).fluids(0, 2).vol / as_numpy(model).fluids(0).vol, (jx, jy))
-
-    def on_figure(fig):
-        """
-        用于在matplotlib中绘图的回调函数
-        Args:
-            fig: matplotlib.figure.Figure类的对象，用于绘图
-        """
-        args = [fig, add_contourf, x, y]
-        opts = dict(nrows=1, ncols=2, xlabel="x/m", ylabel="y/m", aspect='equal', cmap='coolwarm')
-        add_axes2(*args, s1, index=1, title='溶质1',
-                  cbar={'label': '浓度', 'shrink': 0.7}, **opts)
-        add_axes2(*args, s2, index=2, title='溶质2',
-                  cbar={'label': '浓度', 'shrink': 0.7}, **opts)
-        if time is not None:
-            fig.suptitle(f'时间：{time2str(time)}')
-        fig.tight_layout()
-
-    # 实施绘图
-    plot(on_figure, caption='溶质浓度分布')
+    fig.show(
+        fig.auto_layout(
+            fig.axes2(
+                fig.contourf(
+                    x, y, s1, cbar={'label': '浓度', 'shrink': 0.7}, cmap='coolwarm'
+                ),
+                xlabel="x/m", ylabel="y/m", aspect='equal'
+            ),
+            fig.axes2(
+                fig.contourf(
+                    x, y, s2, cbar={'label': '浓度', 'shrink': 0.7}, cmap='coolwarm'
+                ),
+                xlabel="x/m", ylabel="y/m", aspect='equal'
+            ),
+            fig.tight_layout(),
+            fig.suptitle(f'时间：{time2str(time)}'),
+        ),
+        caption='溶质浓度分布'
+    )
 
 
 def main():

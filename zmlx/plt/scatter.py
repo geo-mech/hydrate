@@ -1,30 +1,9 @@
-from zmlx.plt.cbar import add_cbar
-
-
-def add_scatter3(ax, *args, cbar=None, **kwargs):
-    """
-    在给定Axes上绘制散点图.
-    Args:
-        ax: Axes对象，用于绘制散点图
-        cbar: 创建colorbar的参数
-        *args: 传递给ax.scatter的参数
-        **kwargs: 传递给ax.scatter函数的关键字参数
-    Returns:
-        绘制的散点图对象
-    """
-    obj = ax.scatter(*args, **kwargs)
-    if cbar is not None:
-        add_cbar(ax, obj=obj, **cbar)
-    return obj
-
-
 def scatter(
         items=None, get_val=None, x=None, y=None, z=None, c=None, get_pos=None, cb_label=None, **opts):
     """
     绘制三维的散点图
     """
-    from zmlx.plt.on_figure import add_axes3
-    from zmlx.ui import plot
+    from zmlx.fig import scatter, plt_show, axes3
     if x is None or y is None or z is None:
         if get_pos is None:
             def get_pos(item):
@@ -37,22 +16,26 @@ def scatter(
         assert get_val is not None
         c = [get_val(item) for item in items]
 
-    plot(add_axes3, add_scatter3, x, y, z, c=c,
-         cbar=dict(label=cb_label), **opts)
+    item = axes3(
+        scatter(x, y, z, c=c, cbar=dict(label=cb_label))
+    )
+    plt_show(item, **opts)
 
 
 def test():
-    from zmlx.ui import plot
-    from zmlx.plt.on_figure import add_axes3
     import numpy as np
+    from zmlx.fig import scatter, plt_show, axes3
 
     x = np.random.rand(100)
     y = np.random.rand(100)
     z = np.random.rand(100)
     c = np.random.rand(100)
-    plot(add_axes3, add_scatter3, x, y, z, c=c,
-         gui_mode=True, clear=True, caption='MyTest', title='My Scatter Plot', xlabel='x/m',
-         cbar=dict(label='label', title='title'))
+    obj = axes3(
+        scatter(x, y, z, c=c, cbar=dict(label='label', title='title')),
+        title='My Scatter Plot',
+        xlabel='x/m',
+    )
+    plt_show(obj, gui_mode=True, clear=True, caption='MyTest')
 
 
 if __name__ == '__main__':

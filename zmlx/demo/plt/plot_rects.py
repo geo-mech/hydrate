@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 
-from zmlx.alg.rectangle_intersect_3d import calculate_rectangle_vertices, \
+from zmlx.geometry.rect_3d_intersection import calculate_rectangle_vertices, \
     calculate_3d_rectangle_intersect
 from zmlx.data import rect_intersec_3d as rect
 

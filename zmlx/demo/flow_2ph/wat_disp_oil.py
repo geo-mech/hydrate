@@ -74,20 +74,31 @@ def show(model, jx, jy):
         jx: 模型的x方向的单元格数量
         jy: 模型的y方向的单元格数量
     """
+    from zmlx.fig import contourf, axes2, plt_show, suptitle, tight_layout, comb, auto_layout
 
-    def on_figure(fig):
-        x = seepage.get_x(model, shape=(jx, jy))
-        y = seepage.get_y(model, shape=(jx, jy))
-        p = seepage.get_p(model, shape=(jx, jy))
-        s = seepage.get_v(model, 1, shape=(jx, jy)) / seepage.get_v(model, None, shape=(jx, jy))
-        args = [fig, add_contourf, x, y]
-        opts = dict(aspect='equal', xlabel='x/m', ylabel='y/m', nrows=1, ncols=2)
-        add_axes2(*args, p, cbar=dict(label='Pressure', shrink=0.7), title='Pressure',
-                  index=1, cmap='coolwarm', **opts)
-        add_axes2(*args, s, cbar=dict(label='Saturation', shrink=0.7), title='water saturation',
-                  index=2, **opts)
+    x = seepage.get_x(model, shape=(jx, jy))
+    y = seepage.get_y(model, shape=(jx, jy))
+    p = seepage.get_p(model, shape=(jx, jy))
+    s = seepage.get_v(model, 1, shape=(jx, jy)) / seepage.get_v(model, None, shape=(jx, jy))
 
-    plot(on_figure, caption='模型状态', tight_layout=True, suptitle=f'时间: {seepage.get_time(model, as_str=True)}')
+    opts = dict(aspect='equal', xlabel='x/m', ylabel='y/m')
+    obj = auto_layout(
+        axes2(
+            contourf(x, y, p, cbar=dict(label='Pressure', shrink=0.7)),
+            index=1,
+            title='Pressure', **opts
+        ),
+        axes2(
+            contourf(x, y, s, cbar=dict(label='Saturation', shrink=0.7), cmap='coolwarm'),
+            index=2,
+            title='water saturation', **opts
+        ),
+        suptitle(f'时间: {seepage.get_time(model, as_str=True)}'),
+        tight_layout(),
+        aspect_ratio=1,
+    )
+
+    plt_show(obj, caption='模型状态')
 
 
 def wat_disp_oil():

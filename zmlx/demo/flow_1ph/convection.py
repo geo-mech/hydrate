@@ -29,28 +29,34 @@ def create(jx, jz):
     return model
 
 
-def show(model, jx, jz, caption=None):
-    def on_figure(figure):
-        figure.suptitle(f'Model when time = {seepage.get_time(model, as_str=True)}')
-        angles = linspace(0, np.pi * 2, 100)
-        c1 = item('xy', np.cos(angles) * 0.3, np.sin(angles) * 0.3 + 1.5, 'k--')
-        c2 = item('xy', np.cos(angles) * 0.3, np.sin(angles) * 0.3 - 1.5, 'r--')
-        shape = [jx, jz]
-        xy = [seepage.get_x(model, shape=shape), seepage.get_z(model, shape=shape)]
-        f1 = item('contourf', *xy, seepage.get_den(model, 0, shape=shape), cbar=dict(label='密度'))
-        f2 = item('contourf', *xy, seepage.get_fa(model, 0, 'z0', shape=shape), cbar=dict(label='流体z0'))
-        opts = dict(ncols=2, nrows=1, xlabel='x / m', ylabel='z / m', aspect='equal')
-        add_axes2(figure, add_items, f1, c1, c2, title='密度', index=1, **opts)
-        add_axes2(figure, add_items, f2, c1, c2, title='流体Z0', index=2, **opts)
-
-    plot(on_figure, caption=caption, clear=True)
+def fig_data(model, jx, jz):
+    angles = linspace(0, np.pi * 2, 100)
+    c1 = fig.curve(np.cos(angles) * 0.3, np.sin(angles) * 0.3 + 1.5, 'k--')
+    c2 = fig.curve(np.cos(angles) * 0.3, np.sin(angles) * 0.3 - 1.5, 'r--')
+    shape = [jx, jz]
+    xy = [seepage.get_x(model, shape=shape), seepage.get_z(model, shape=shape)]
+    f1 = fig.contourf(*xy, seepage.get_den(model, 0, shape=shape), cbar=dict(label='密度'))
+    f2 = fig.contourf(*xy, seepage.get_fa(model, 0, 'z0', shape=shape), cbar=dict(label='流体z0'))
+    opts = dict(xlabel='x / m', ylabel='z / m', aspect='equal')
+    return fig.auto_layout(
+        fig.axes2(
+            f1, c1, c2, title='密度', **opts
+        ),
+        fig.axes2(
+            f2, c1, c2, title='流体Z0', **opts
+        ),
+        fig.suptitle(f'Model when time = {seepage.get_time(model, as_str=True)}'),
+        aspect_ratio=0.5,
+    )
 
 
 def main():
     jx, jz = 50, 100
     model = create(jx, jz)
-    show(model, jx, jz, caption='初始状态')
-    seepage.solve(model, time_max=3600 * 24 * 500, extra_plot=lambda: show(model, jx, jz, caption='最新状态'))
+    fig.show(fig_data(model, jx, jz), caption='初始状态', clear=True)
+    seepage.solve(model, time_max=3600 * 24 * 500,
+                  extra_plot=lambda: fig.show(fig_data(model, jx, jz), caption='最新状态', clear=True)
+                  )
 
 
 if __name__ == '__main__':

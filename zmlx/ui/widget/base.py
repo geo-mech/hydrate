@@ -15,8 +15,8 @@ from zml import (
 from zmlx.alg.base import fsize2str, time2str, clamp
 from zmlx.alg.fsys import time_string
 from zmlx.alg.search_paths import choose_path
+from zmlx.ui import settings
 from zmlx.ui import setup_files
-
 from zmlx.ui.alg import (
     create_action)
 from zmlx.ui.gui_buffer import gui
@@ -24,7 +24,6 @@ from zmlx.ui.pyqt import (
     QWebEngineView, is_pyqt6, QtCore, QtGui, QtWidgets, qt_name, QAction)
 from zmlx.ui.settings import (
     get_default_code)
-from zmlx.ui import settings
 from zmlx.ui.utils import TaskProc
 
 try:  # 尝试基于QsciScintilla实现Python编辑器
@@ -883,21 +882,40 @@ class ReadMeBrowser(TextBrowser):
 
 class TabDetailView(QtWidgets.QTableWidget):
     class TabWrapper:
-        def __init__(self, data):
-            self.data = data
+        def __init__(self, *tab_widgets):
+            self.tab_widgets = tab_widgets
 
         def count(self):
-            return self.data.count()
+            return sum([w.count() for w in self.tab_widgets])
 
         def get(self, index):
-            return self.data.tabText(index), type(
-                self.data.widget(index)).__name__
+            for widget_idx in range(len(self.tab_widgets)):
+                widget = self.tab_widgets[widget_idx]
+                if index < widget.count():
+                    return widget.tabText(index), type(widget.widget(index)).__name__
+                else:
+                    index -= widget.count()
+            return "", ""
 
         def remove(self, index):
-            self.data.close_tab(index)
+            for widget_idx in range(len(self.tab_widgets)):
+                widget = self.tab_widgets[widget_idx]
+                if index < widget.count():
+                    widget.close_tab(index)
+                    break
+                else:
+                    index -= widget.count()
 
         def show(self, index):
-            self.data.setCurrentIndex(index)
+            for widget_idx in range(len(self.tab_widgets)):
+                widget = self.tab_widgets[widget_idx]
+                if index < widget.count():
+                    if not widget.isVisible():
+                        widget.setVisible(True)
+                    widget.setCurrentIndex(index)
+                    break
+                else:
+                    index -= widget.count()
 
     def __init__(self, parent=None, obj=None, header_labels=None):
         super().__init__(parent)
@@ -1988,4 +2006,3 @@ class OutputWidget(QtWidgets.QWidget):
                 file.write(self.text_browser.toPlainText())
         except Exception as err2:
             print(err2)
-

@@ -77,24 +77,25 @@ def show(model: Seepage, jx, jy, time=None):
     p = np.reshape(cells.pre / 1e6, (jx, jy))
     s = np.reshape(as_numpy(model).fluids(0, 1).vol / as_numpy(model).fluids(0).vol, (jx, jy))
 
-    def on_figure(fig):
-        """
-        用于在matplotlib中绘图的回调函数
-        Args:
-            fig: matplotlib.figure.Figure类的对象，用于绘图
-        """
-        args = [fig, add_contourf, x, y]
-        opts = dict(nrows=1, ncols=2, xlabel="x/m", ylabel="y/m", aspect='equal')
-        add_axes2(*args, p, index=1, title='流体压力',
-                  cbar={'label': 'Pressure/MPa', 'shrink': 0.7}, **opts)
-        add_axes2(*args, s, index=2, title='盐度', cmap='coolwarm',
-                  cbar={'label': 'Salt Ratio', 'shrink': 0.7}, **opts)
-        if time is not None:
-            fig.suptitle(f'时间：{time2str(time)}')
-        fig.tight_layout()
+    items = [
+        fig.axes2(
+            fig.contourf(x, y, p, cbar={'label': 'Pressure/MPa', 'shrink': 0.7}),
+            xlabel="x/m", ylabel="y/m", aspect='equal', title='流体压力'
+        ),
+        fig.axes2(
+            fig.contourf(x, y, s, cbar={'label': 'Salt Ratio', 'shrink': 0.7}, cmap='coolwarm'),
+            xlabel="x/m", ylabel="y/m", aspect='equal', title='盐度'
+        ),
+        fig.tight_layout(),
+    ]
+    if time is not None:
+        items.append(fig.suptitle(f'时间：{time2str(time)}'))
 
-    # 实施绘图
-    plot(on_figure)
+    fig.show(
+        fig.auto_layout(
+            *items
+        )
+    )
 
 
 def main():

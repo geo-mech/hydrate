@@ -1046,6 +1046,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def get_widget(self, *args, at_side=False, **kwargs):
         if at_side:
+            if not self.side_tabs.isVisible():  # 确保可见
+                self.side_tabs.setVisible(True)
             return self.side_tabs.get_widget(*args, **kwargs)
         else:
             return self.tab_widget.get_widget(*args, **kwargs)
@@ -1394,7 +1396,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.get_widget(
             the_type=TabDetailView, caption='标签列表', on_top=True,
-            type_kw={'obj': TabDetailView.TabWrapper(self.tab_widget)},
+            type_kw={'obj': TabDetailView.TabWrapper(self.tab_widget, self.side_tabs)},
             oper=oper, at_side=True
         )
 
