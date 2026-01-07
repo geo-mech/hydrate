@@ -52,6 +52,7 @@ def set_chinese_font():
 
 
 class MatplotWidget(QtWidgets.QWidget):
+    support_sub_menu = True  # 支持子菜单(since 2026-1-5)
 
     def __init__(self, parent=None):
         """
@@ -173,7 +174,18 @@ class MatplotWidget(QtWidgets.QWidget):
         if len(self.context_actions) > 0:
             menu.addSeparator()
             for action in self.context_actions:
-                menu.addAction(action)
+                if isinstance(action, dict):
+                    name = action.get('name', None)
+                    if name is not None:
+                        sub_menu = menu.addMenu(name)
+                        assert isinstance(sub_menu, QtWidgets.QMenu)
+                        for item in action.get('items', []):
+                            sub_menu.addAction(item)
+                elif isinstance(action, str):
+                    if action == '':
+                        menu.addSeparator()
+                else:
+                    menu.addAction(action)
 
         return menu
 

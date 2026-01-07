@@ -494,7 +494,8 @@ class MainWindow(QtWidgets.QMainWindow):
             menu='帮助', name='demo', icon='demo',
             tooltip=None, text='示例',
             slot=self.show_demo,
-            on_toolbar=True, is_enabled=None, is_visible=lambda: True
+            on_toolbar=True, is_enabled=None,
+            is_visible=lambda: not app_data.get('HIDE_DEMO_MENU', False)
         )
 
         self.add_action(
@@ -1365,17 +1366,21 @@ class MainWindow(QtWidgets.QMainWindow):
             print(f'Error: {err}')
 
     def show_about(self):
-        from zmlx.ui.widget.base import About
-        self.check_license()
+        f = app_data.get('show_about')
+        if callable(f):
+            f()
+        else:
+            from zmlx.ui.widget.base import About
+            self.check_license()
 
-        def oper(widget):
-            widget.gui_restore = f"""gui.show_about()"""
+            def oper(widget):
+                widget.gui_restore = f"""gui.show_about()"""
 
-        self.get_widget(
-            the_type=About, caption='关于', on_top=True,
-            icon='info', type_kw=dict(lic_desc=lic.desc),
-            oper=oper
-        )
+            self.get_widget(
+                the_type=About, caption='关于', on_top=True,
+                icon='info', type_kw=dict(lic_desc=lic.desc),
+                oper=oper
+            )
 
     def play_sound(self, filename):
         """
@@ -1435,15 +1440,18 @@ class MainWindow(QtWidgets.QMainWindow):
         )
 
     def show_demo(self):
-        from zmlx.ui.widget import DemoView
+        f = app_data.get('show_demo')
+        if callable(f):
+            f()
+        else:
+            from zmlx.ui.widget import DemoView
+            def oper(w):
+                w.refresh()
+                w.gui_restore = f"""gui.show_demo()"""
 
-        def oper(w):
-            w.refresh()
-            w.gui_restore = f"""gui.show_demo()"""
-
-        self.get_widget(the_type=DemoView, caption='示例', on_top=True,
-                        oper=oper, icon='demo',
-                        tooltip='内置在模型中的示例。单击条目可以打开，然后，请点击工具条的运行按钮来执行')
+            self.get_widget(the_type=DemoView, caption='示例', on_top=True,
+                            oper=oper, icon='demo',
+                            tooltip='内置在模型中的示例。单击条目可以打开，然后，请点击工具条的运行按钮来执行')
 
     def show_memory(self):
         from zmlx.ui.widget import MemView
@@ -1536,15 +1544,19 @@ class MainWindow(QtWidgets.QMainWindow):
             icon='set', oper=oper)
 
     def show_readme(self):
-        from zmlx.ui.widget import ReadMeBrowser
+        f = app_data.get('show_readme')
+        if callable(f):
+            f()
+        else:
+            from zmlx.ui.widget import ReadMeBrowser
 
-        def oper(w):
-            w.gui_restore = f"""gui.show_readme()"""
+            def oper(w):
+                w.gui_restore = f"""gui.show_readme()"""
 
-        self.get_widget(
-            the_type=ReadMeBrowser, caption='ReadMe', on_top=True,
-            icon='info', oper=oper,
-            tooltip='显示ReadMe信息，与IGG-Hydrate网站首页的ReadMe保持一致')
+            self.get_widget(
+                the_type=ReadMeBrowser, caption='ReadMe', on_top=True,
+                icon='info', oper=oper,
+                tooltip='显示ReadMe信息，与IGG-Hydrate网站首页的ReadMe保持一致')
 
     def show_reg_tool(self):
         from zmlx.ui.widget import RegTool
@@ -1752,9 +1764,24 @@ def __gui_setup():
                 sys.path.append(folder)  # 确保包含zml_gui_setup.py的包能够被正确import
 
             the_logs.append(f'Exec File: {path}')
-            space = {'__name__': '__main__', '__file__': path}
-            exec(read_text(path, encoding='utf-8'),
-                 space)
+            # 备份app_data
+            name = app_data.space.get('__name__', None)
+            file = app_data.space.get('__file__', None)
+            # 针对此文件，设置name和file
+            app_data.space['__name__'] = '__main__'
+            app_data.space['__file__'] = path
+            # 运行此文件
+            try:
+                exec(read_text(path, encoding='utf-8'), app_data.space)
+                error = None
+            except Exception as e:
+                error = e
+            # 恢复app_data
+            app_data.space['__name__'] = name
+            app_data.space['__file__'] = file
+            # 处理错误
+            if error is not None:
+                raise error
         except Exception as err:
             the_logs.append(f'Failed: {err}')
             gui.add_message(f'path = {path}, error = {err}')
@@ -1873,6 +1900,18 @@ def __save_tabs(filename=None):
     write_json(filename, data)
 
 
+def __save_tab_files():
+    for tabs in [gui.get_tabs(False), gui.get_tabs(True)]:
+        for idx in range(tabs.count()):
+            widget = tabs.widget(idx)
+            f = getattr(widget, 'save_file', None)
+            if callable(f):
+                try:
+                    f()
+                except Exception as e:
+                    print(e)
+
+
 def __on_close(win):
     # 存储是否显示控制台
     app_data.setenv(
@@ -1883,6 +1922,10 @@ def __on_close(win):
     # 尝试保存tab
     if app_data.get('restore_tabs', False):
         __save_tabs()
+
+    # 尝试保存文件
+    if app_data.getenv(key='disable_auto_save_file', default='No') != 'Yes':
+        __save_tab_files()
 
 
 def execute(code=None, keep_cwd=True, close_after_done=True):
