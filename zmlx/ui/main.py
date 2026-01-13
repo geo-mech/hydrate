@@ -1617,6 +1617,35 @@ class MainWindow(QtWidgets.QMainWindow):
             the_type=QWebEngineView, caption=caption, on_top=on_top,
             oper=oper, icon=icon)
 
+    def in_dark_mode(self):
+        """
+        判断目前界面是否处于暗色模式.
+        """
+        bg_color = self.palette().color(QtGui.QPalette.ColorRole.Window)
+        return bg_color.lightness() < 128
+
+    def show_text_in_tab(self, text, caption=None, on_top=None):
+        """
+        在一个标签页中显示文本
+        Args:
+            text: 要显示的文本
+            caption: 标签页的标题
+            on_top: 是否将标签页置顶
+
+        Returns:
+            None
+        """
+        from zmlx.ui.widget import TextBrowser
+
+        opts = dict(text=text, caption=caption, on_top=on_top)
+
+        def oper(w: TextBrowser):
+            w.gui_restore = f"""gui.show_text_in_tab(**{opts})"""
+            w.setPlainText(text)
+
+        self.get_widget(
+            the_type=TextBrowser, caption=caption, on_top=on_top, oper=oper)
+
 
 class MySplashScreen(QtWidgets.QSplashScreen):
     def mousePressEvent(self, event):

@@ -1,3 +1,9 @@
+try:
+    from zml import app_data
+except ImportError:
+    app_data = None
+
+
 class GuiBuffer:
     def __init__(self):
         self.__api = None
@@ -66,7 +72,12 @@ class GuiBuffer:
         """
         if message is not None:
             print(message)
-        self.command('click_pause')
+        if app_data is not None:
+            disable = app_data.get('DISABLE_PAUSE', False)  # 禁止内核的暂停
+        else:
+            disable = False
+        if not disable:
+            self.command('click_pause')
         self.break_point()
 
     class Agent:

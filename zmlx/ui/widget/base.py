@@ -1729,6 +1729,12 @@ class TabWidget(QtWidgets.QTabWidget):
             widget = self.widget(index)
             closeable = getattr(widget, 'tab_closeable', None)
             if closeable or closeable is None:
+                f = getattr(widget, 'save_file', None)  # 尝试调用save_file
+                if callable(f):
+                    try:
+                        f()
+                    except Exception as e:
+                        print(e)
                 widget.deleteLater()
                 self.removeTab(index)
                 return True
@@ -1977,6 +1983,16 @@ class OutputWidget(QtWidgets.QWidget):
                 self, '输出历史',
                 slot=gui.show_output_history)
             )
+
+        if app_data.get('DISABLE_PAUSE', False):
+            result.append(create_action(
+                self, '启用pause', slot=lambda: app_data.put('DISABLE_PAUSE', False))
+            )
+        else:
+            result.append(create_action(
+                self, '禁用pause', slot=lambda: app_data.put('DISABLE_PAUSE', True))
+            )
+
         return result
 
     def add_text(self, text):

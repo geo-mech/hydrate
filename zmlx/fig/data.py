@@ -145,6 +145,16 @@ def xy(*args, **kwargs):
     return curve(*args, **kwargs)
 
 
+def text(*args, **kwargs):
+    """
+    显示文本.
+
+    Example:
+        text(0.5, 0.5, 'Hello World')
+    """
+    return item('text', *args, **kwargs)
+
+
 def field2(*args, **kwargs):
     return item('field2', *args, **kwargs)
 
