@@ -9,7 +9,7 @@ from zmlx.ui.pyqt import QtWidgets
 from zmlx.ui.widget import Label
 
 
-def add_message(text, code=None, color=None):
+def add_message(text, *, code=None, color=None):
     fname = app_data.root('message', get_hash(text) + '.json')
     data = dict(text=text, code=code, color=color)
     write(fname, data)
@@ -182,13 +182,17 @@ def test_4():
 
 
 def setup_ui():
-    def show_messages():
+    def show_messages(on_top=True):
+        """
+        显示消息标签，默认在前端显示
+        """
+
         def oper(w):
             w.gui_restore = 'gui.show_messages()'
             w.refresh()
 
         gui.get_widget(MessageEdit, caption='通知', oper=oper,
-                       on_top=True, caption_color='red', icon='info')
+                       on_top=on_top, caption_color='red', icon='info')
 
     gui.add_func('show_messages', show_messages)
 
@@ -202,10 +206,14 @@ def setup_ui():
         on_toolbar=True, icon='info',
     )
 
-    def add_and_show(text, code=None, color=None):
-        add_message(text, code, color)
-        show_messages()
+    def add_and_show(text, *, code=None, color=None):
+        add_message(text, code=code, color=color)
+        # 为了避免某些频繁的消息，对于添加消息的时候，默认不再强制在前端显示
+        # 2026-1-14
+        # 如果某个标签在显示的时候，会添加消息，那么，on_top=True会使得这个标签无法正常显示
+        show_messages(on_top=False)
         zml_log(text)
         gui.refresh_action('show_messages')
 
     gui.add_func('add_message', add_and_show)
+    gui.add_func('message', add_and_show)
