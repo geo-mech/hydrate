@@ -1,8 +1,8 @@
 import warnings
 
 from zmlx.geometry import rect_3d as rect3
-from zmlx.fig.plt_render.cmap import get_cm
-from zmlx.fig.plt_render.cbar import add_cbar
+from zmlx.plt.cmap import get_cm
+from zmlx.plt.on_axes.cbar import add_cbar
 
 
 def add_rc3(

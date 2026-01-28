@@ -1,4 +1,4 @@
-from zmlx.fig.plt_render.dfn2 import add_dfn2
+from zmlx.plt.on_axes.dfn2 import add_dfn2
 
 
 def show_dfn2(dfn2, **opts):

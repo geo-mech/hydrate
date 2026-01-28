@@ -48,7 +48,9 @@ def create(jx, jz):
 
 def show(model, jx, jz, caption=None):
     def on_figure(figure):
-        opts = dict(ncols=3, nrows=1, xlabel='x', ylabel='z', aspect='equal')
+        from zmlx.plt.on_figure import calc_best_layout
+        nrows, ncols = calc_best_layout(figure, 3, 0.6)
+        opts = dict(nrows=nrows, ncols=ncols, xlabel='x', ylabel='z', aspect='equal')
         x = seepage.get_x(model, shape=[jx, jz])
         z = seepage.get_z(model, shape=[jx, jz])
         args = ['contourf', x, z, ]

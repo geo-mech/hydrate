@@ -1,4 +1,4 @@
-from zmlx.fig.plt_render.cbar import add_cbar
+from zmlx.plt.on_axes.cbar import add_cbar
 
 
 def add_contourf(ax, *args, cbar=None, **kwargs):

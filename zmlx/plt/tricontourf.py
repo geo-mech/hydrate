@@ -1,5 +1,5 @@
-from zmlx.fig.plt_render.tricontourf import add_tricontourf
 from zmlx.io.xyz import load_xyz
+from zmlx.plt.on_axes.tricontourf import add_tricontourf
 
 on_axes = add_tricontourf
 
@@ -14,7 +14,8 @@ def tricontourf(
     """
     利用给定的x，y，z来画一个二维的云图.
     """
-    from zmlx.fig import tric, axes2, plt_show
+    from zmlx.plt.on_axes.data import tric
+    from zmlx.plt.on_axes import plot2d
 
     if ipath is not None:
         x, y, z = load_xyz(ipath, ix, iy, iz)
@@ -31,8 +32,7 @@ def tricontourf(
     else:
         o = tric(triangulation, z, cbar=cbar, antialiased=True)
 
-    plt_show(axes2(o, **opts),
-             gui_mode=gui_mode, caption=caption)
+    plot2d(o, gui_mode=gui_mode, caption=caption, **opts)
 
 
 def test():

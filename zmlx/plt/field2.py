@@ -1,4 +1,4 @@
-from zmlx.fig.plt_render.field2 import add_field2
+from zmlx.plt.on_axes.field2 import add_field2
 
 
 def show_field2(f, xr, yr, **opts):

@@ -1753,6 +1753,34 @@ class TabWidget(QtWidgets.QTabWidget):
     def add_task(self, task):
         self.task_proc.add(task)
 
+    def find_widgets(self, the_type=None, text=None, is_ok=None):
+        """
+        返回给定条件的所有Widget对象。给定的所有条件需要同时满足
+        Args:
+            the_type: 控件的类型
+            text: 标题
+            is_ok: 一个函数，用于检查控件对象
+
+        Returns:
+            符合条件的所有Widget对象
+            符合条件的所有Widget对象，否则返回None
+        """
+        assert the_type is not None or text is not None or is_ok is not None
+        widgets = []
+        for i in range(self.count()):
+            widget = self.widget(i)
+            if the_type is not None:
+                if not isinstance(widget, the_type):
+                    continue
+            if text is not None:
+                if text != self.tabText(i):
+                    continue
+            if callable(is_ok):
+                if not is_ok(widget):
+                    continue
+            widgets.append(widget)
+        return widgets
+
     def find_widget(self, the_type=None, text=None, is_ok=None):
         """
         返回给定条件的Widget。给定的所有条件需要同时满足
@@ -1903,6 +1931,84 @@ class TabWidget(QtWidgets.QTabWidget):
                 if self.tabBar().tabRect(i).contains(event.pos()):
                     self.close_tab(i)
         super().mousePressEvent(event)
+
+    def get_figure_widget(self, init=None, folder_save=None, **kwargs):
+        """
+        返回一个用以 matplotlib 绘图的控件
+        """
+        from zmlx.ui.widget.plt import MatplotWidget
+        kwargs.setdefault('icon', 'matplotlib')
+
+        def init_x(widget):
+            if callable(init):
+                init(widget)
+            if folder_save is not None:
+                widget.set_save_folder(folder_save)
+
+        return self.get_widget(the_type=MatplotWidget, init=init_x, **kwargs)
+
+    def plot(
+            self, kernel, *args, fname=None, dpi=None,
+            caption=None, on_top=None, icon=None,
+            clear=None,
+            tight_layout=None,
+            suptitle=None, folder_save=None,
+            **kwargs
+    ):
+        """
+        调用matplotlib执行绘图操作 注意，此函数会创建或者返回一个标签，并默认清除标签的绘图，返回使用回调函数
+        在figure上绘图。
+        Args:
+            kernel: 绘图的回调函数，函数的原型为：
+                def kernel(figure, *args, **kwargs):
+                    ...
+            fname: 输出的文件名
+            dpi: 输出的分辨率
+            *args: 传递给kernel函数的参数
+            **kwargs: 传递给kernel函数的关键字参数
+            caption: 窗口的标题
+            on_top: 是否置顶
+            icon: 窗口的图标
+            clear: 是否清除之前的内容 (特别注意，默认是要清除之前的内容的，因此，如果要多个视图的时候，就不要使用clear)
+            tight_layout: 是否自动调整子图参数，以防止重叠
+            suptitle: 图表的标题
+            folder_save: 自动保存图的文件夹
+
+        Returns:
+            None
+        """
+        if clear is None:  # 默认清除
+            clear = True
+        try:
+            widget = self.get_figure_widget(
+                caption=caption, on_top=on_top, icon=icon, folder_save=folder_save
+            )
+
+            def on_figure(figure):
+                if clear:  # 清除
+                    figure.clear()
+                if callable(kernel):
+                    try:
+                        kernel(figure, *args, **kwargs)  # 这里，并不会传入clear参数
+                    except Exception as kernel_err:
+                        print(kernel_err)
+                if isinstance(suptitle, str):
+                    figure.suptitle(suptitle)
+                if tight_layout:
+                    figure.tight_layout()
+
+            widget.plot_on_figure(on_figure=on_figure)
+            if fname is not None:
+                if dpi is None:
+                    from zmlx.io.env import plt_export_dpi
+                    dpi = plt_export_dpi.get_value()
+                widget.savefig(fname=fname, dpi=dpi)
+
+            return widget.figure  # 返回Figure对象，后续进一步处理
+        except Exception as err:
+            import zmlx.alg.sys as warnings
+            warnings.warn(f'meet exception <{err}> when run <{kernel}>')
+            return None
 
 
 class OutputWidget(QtWidgets.QWidget):

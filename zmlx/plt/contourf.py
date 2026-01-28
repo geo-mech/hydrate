@@ -1,4 +1,4 @@
-from zmlx.fig.plt_render.contourf import add_contourf
+from zmlx.plt.on_axes.contourf import add_contourf
 
 on_axes = add_contourf
 

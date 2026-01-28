@@ -1,4 +1,4 @@
-from zmlx.fig.plt_render.cbar import add_cbar
+from zmlx.plt.on_axes.cbar import add_cbar
 
 
 def add_surf(ax, x, y, z, c, *, alpha=None, clim=None, cmap=None, cbar=None,

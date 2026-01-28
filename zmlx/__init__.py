@@ -3,7 +3,7 @@
     1. 优先从zmlx中import，只有当zmlx中没有定义，再考虑从次一级文件夹import；
     2. 用户可添加文件，但勿修改现有文件内容；
 """
-
+import zml
 ########################################
 # zml 中的内容
 from zml import *
@@ -149,6 +149,10 @@ from zmlx.seepage_mesh.edit import (
     swap_xy as seepage_mesh_swap_xy,
     swap_xz as seepage_mesh_swap_xz)
 from zmlx.seepage_mesh.edit import add_cell_face
+
+########################################
+# ui
+from zmlx.sys.version import get_version
 
 ########################################
 # ui

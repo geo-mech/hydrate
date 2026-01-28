@@ -203,19 +203,20 @@ def modify_file_exts(exts):
 
 
 def reg_file_type(desc, exts, *, name=None, save=None, load=None, init=None, widget_type=None,
-                  get_data=None, set_data=None):
+                  get_data=None, set_data=None, icon=None):
     """
     注册一种文件类型，设置其保存、新建、打开等过程的行为.
     Args:
         desc: 文件类型的描述
         exts: 支持的扩展名列表
         name: 文件的名字. 和desc不同，这里的name必须是一个变量，从而用户注册 open_xxx这样的函数
-        save: save(data, filename)，用于将数据存储到文件
-        load: load(filename) 读取文件的函数
+        save: save(data, filename)，用于将数据存储到文件。 如果为None，则使用数据类自身定义的save函数
+        load: load(filename) 读取文件的函数. 如果为None，则使用数据类自身定义的load函数
         init: init() 返回初始化之后的数据的函数
-        get_data: data=get_data(view), 从控件获取数据
-        set_data: set_data(view, data) 将数据推送到控件上显示
+        get_data: data=get_data(view), 从控件获取数据。如果为None，则使用widget_type的get_data函数
+        set_data: set_data(view, data) 将数据推送到控件上显示. 如果为None，则使用widget_type的set_data函数
         widget_type: 编辑器控件类型。如果没有给定set_data和get_data，则此类需要有set_data和get_data函数
+        icon: 图标名称
     Returns:
         None
     """
@@ -260,6 +261,13 @@ def reg_file_type(desc, exts, *, name=None, save=None, load=None, init=None, wid
             return view.get_data()
 
     def open_file(filename):
+        if widget_type is None:
+            if callable(load):
+                try:
+                    load(filename)
+                except Exception as e:
+                    print(e)
+            return
         import os
         def oper(x):
             if callable(load) and callable(set_data):  # 只有此时，才能够导入数据
@@ -313,7 +321,7 @@ def reg_file_type(desc, exts, *, name=None, save=None, load=None, init=None, wid
 
                     x.import_data = import_data
 
-        gui.get_widget(widget_type, os.path.basename(filename), oper=oper)
+        gui.get_widget(widget_type, os.path.basename(filename), oper=oper, icon=icon)
 
     if callable(init):
         def new_file(filename):

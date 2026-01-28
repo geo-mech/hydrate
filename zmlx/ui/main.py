@@ -5,7 +5,6 @@ import sys
 import zmlx.alg.sys as warnings
 from zml import lic, core, app_data, read_text, get_dir, is_chinese
 from zmlx.alg.fsys import has_permission, samefile, time_string, print_tag
-from zmlx.io.env import plt_export_dpi
 from zmlx.ui import settings
 from zmlx.ui.alg import open_url, get_last_exec_history, install_package, set_plt_export_dpi, play_images, set_position, \
     set_shape
@@ -230,6 +229,14 @@ class MainWindow(QtWidgets.QMainWindow):
             menu='文件', name='new_file', icon='new',
             text='新建', shortcut=QtGui.QKeySequence.StandardKey.New,
             slot=self.new_file,
+            on_toolbar=True,
+            is_enabled=not_running,
+        )
+
+        self.add_action(
+            menu='文件', name='temp_code', icon='open',
+            text='临时脚本',
+            slot=lambda: self.open_code("temp_code.py"),
             on_toolbar=True,
             is_enabled=not_running,
         )
@@ -1045,6 +1052,34 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             self.get_output_widget().text_browser.setStyleSheet("QTextBrowser {border: 0px solid red;}")
 
+    def find_widget(self, the_type=None, text=None, is_ok=None, *, at_side=False):
+        """
+        返回给定条件的Widget。给定的所有条件需要同时满足
+        Args:
+            at_side: 是否在侧边栏查找
+            the_type: 控件的类型
+            text: 标题
+            is_ok: 一个函数，用于检查控件对象
+
+        Returns:
+            符合条件的Widget对象，否则返回None
+        """
+        return self.get_tabs(at_side=at_side).find_widget(the_type=the_type, text=text, is_ok=is_ok)
+
+    def find_widgets(self, the_type=None, text=None, is_ok=None, *, at_side=False):
+        """
+        返回所有符合条件的Widget。给定的所有条件需要同时满足
+        Args:
+            at_side: 是否在侧边栏查找
+            the_type: 控件的类型
+            text: 标题
+            is_ok: 一个函数，用于检查控件对象
+
+        Returns:
+            符合条件的Widget对象列表，否则返回空列表
+        """
+        return self.get_tabs(at_side=at_side).find_widgets(the_type=the_type, text=text, is_ok=is_ok)
+
     def get_widget(self, *args, at_side=False, **kwargs):
         if at_side:
             if not self.side_tabs.isVisible():  # 确保可见
@@ -1057,16 +1092,7 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         返回一个用以 matplotlib 绘图的控件
         """
-        from zmlx.ui.widget.plt import MatplotWidget
-        kwargs.setdefault('icon', 'matplotlib')
-
-        def init_x(widget):
-            if callable(init):
-                init(widget)
-            if folder_save is not None:
-                widget.set_save_folder(folder_save)
-
-        return self.get_widget(the_type=MatplotWidget, init=init_x, **kwargs)
+        return self.tab_widget.get_figure_widget(init=init, folder_save=folder_save, **kwargs)
 
     def plot(
             self, kernel, *args, fname=None, dpi=None,
@@ -1098,36 +1124,11 @@ class MainWindow(QtWidgets.QMainWindow):
         Returns:
             None
         """
-        if clear is None:  # 默认清除
-            clear = True
-        try:
-            widget = self.get_figure_widget(
-                caption=caption, on_top=on_top, icon=icon, folder_save=folder_save
-            )
-
-            def on_figure(figure):
-                if clear:  # 清除
-                    figure.clear()
-                if callable(kernel):
-                    try:
-                        kernel(figure, *args, **kwargs)  # 这里，并不会传入clear参数
-                    except Exception as kernel_err:
-                        print(kernel_err)
-                if isinstance(suptitle, str):
-                    figure.suptitle(suptitle)
-                if tight_layout:
-                    figure.tight_layout()
-
-            widget.plot_on_figure(on_figure=on_figure)
-            if fname is not None:
-                if dpi is None:
-                    dpi = plt_export_dpi.get_value()
-                widget.savefig(fname=fname, dpi=dpi)
-
-            return widget.figure  # 返回Figure对象，后续进一步处理
-        except Exception as err:
-            warnings.warn(f'meet exception <{err}> when run <{kernel}>')
-            return None
+        return self.tab_widget.plot(kernel, *args, fname=fname, dpi=dpi,
+                                    caption=caption, on_top=on_top, icon=icon,
+                                    clear=clear, tight_layout=tight_layout,
+                                    suptitle=suptitle, folder_save=folder_save,
+                                    **kwargs)
 
     def show_fn2(self, filepath, **kwargs):
         warnings.warn('gui.show_fn2 will be removed after 2026-3-5, '
@@ -1948,6 +1949,7 @@ def __on_close(win):
         value='Yes' if win.get_output_widget().isVisible() else 'No'
     )
     settings.save_window_size(win)
+
     # 尝试保存tab
     if app_data.get('restore_tabs', False):
         __save_tabs()
@@ -1955,6 +1957,26 @@ def __on_close(win):
     # 尝试保存文件
     if app_data.getenv(key='disable_auto_save_file', default='No') != 'Yes':
         __save_tab_files()
+
+    # 尝试其他操作
+    try:
+        tasks_when_close = app_data.get("tasks_when_close", [])
+
+        if isinstance(tasks_when_close, (list, tuple)):  # 尝试作为函数列表
+            for task in tasks_when_close:
+                try:
+                    task()
+                except Exception as err:
+                    print(f'Error: {err}')
+
+        elif callable(tasks_when_close):  # 尝试作为函数
+            try:
+                tasks_when_close()
+            except Exception as err:
+                print(f'Error: {err}')
+
+    except Exception as err2:
+        print(f'Error: {err2}')
 
 
 def execute(code=None, keep_cwd=True, close_after_done=True):

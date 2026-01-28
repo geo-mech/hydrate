@@ -5,8 +5,6 @@
 from ctypes import c_double, POINTER
 
 from zml import InvasionPercolation, get_pointer64, np
-from zmlx import fig
-from zmlx.ui import plot
 
 
 def ip_nodes_write(model: InvasionPercolation, index, pointer=None, buf=None):
@@ -140,20 +138,18 @@ def set_bonds(model: InvasionPercolation, count, node0, node1, radi=None):
 def show_xy(model: InvasionPercolation, caption='侵入过程',
             jx=None, jy=None, cmap=None, clabel='Phase', grid=True,
             xlabel='x (m)', ylabel='y (m)', title='Fluid Invasion'):
+    from zmlx.plt.on_axes.data import contourf, tricontourf
+    from zmlx.plt.on_axes import plot2d
     x = get_x(model)
     y = get_y(model)
     v = get_phase(model)
     if cmap is None:
         cmap = 'coolwarm'
     if jx is not None and jy is not None:
-        o = fig.contourf(np.reshape(x, shape=(jx, jy)),
-                         np.reshape(y, shape=(jx, jy)),
-                         np.reshape(v, shape=(jx, jy)), cmap=cmap, cbar=dict(label=clabel))
+        o = contourf(np.reshape(x, shape=(jx, jy)),
+                     np.reshape(y, shape=(jx, jy)),
+                     np.reshape(v, shape=(jx, jy)), cmap=cmap, cbar=dict(label=clabel))
     else:
-        o = fig.tricontourf(x, y, v, cmap=cmap, cbar=dict(label=clabel))
-    fig.plt_show(
-        fig.axes2(
-            o, aspect='equal', xlabel=xlabel, ylabel=ylabel, title=title, grid=grid
-        ),
-        caption=caption
-    )
+        o = tricontourf(x, y, v, cmap=cmap, cbar=dict(label=clabel))
+
+    plot2d(o, aspect='equal', xlabel=xlabel, ylabel=ylabel, title=title, grid=grid, caption=caption)

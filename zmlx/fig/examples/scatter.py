@@ -11,7 +11,7 @@ def test():
         title='My Scatter',
         xlabel='x/m', ylabel='y/m', zlabel='z/m',
     )
-    plt_show(obj, gui_mode=True)
+    plt_show(obj)
 
 
 if __name__ == '__main__':

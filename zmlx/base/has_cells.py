@@ -1,6 +1,5 @@
 from zmlx.geometry.base import point_distance
 from zmlx.ui import gui
-from zmlx import fig
 
 
 def get_nearest_cell(model, pos, mask=None):
@@ -199,6 +198,8 @@ def plot_tricontourf(model, get, caption=None, gui_only=False, title=None,
     异常:
     - 无异常抛出
     """
+    from zmlx.plt.on_axes.data import tricontourf
+    from zmlx.plt.on_figure import add_axes2, plot_on_figure
     if gui_only and not gui.exists():
         return
     z = [get(cell) for cell in model.cells]
@@ -206,12 +207,9 @@ def plot_tricontourf(model, get, caption=None, gui_only=False, title=None,
         pos = [cell.pos for cell in model.cells]
         x = [p[0] for p in pos]
         y = [p[1] for p in pos]
-        o = fig.tricontourf(x=x, y=y, z=z, triangulation=None, levels=20, cmap='coolwarm')
+        o = tricontourf(x=x, y=y, z=z, triangulation=None, levels=20, cmap='coolwarm')
     else:
-        o = fig.tricontourf(z=z, triangulation=triangulation, levels=20, cmap='coolwarm')
-    fig.show(
-        fig.axes2(
-            o, xlabel='x/m', ylabel='y/m', aspect='equal', title=title
-        ),
-        caption=caption, gui_only=gui_only, fname=fname, dpi=dpi
-    )
+        o = tricontourf(z=z, triangulation=triangulation, levels=20, cmap='coolwarm')
+
+    plot_on_figure(add_axes2, o, xlabel='x/m', ylabel='y/m', aspect='equal', title=title,
+                   caption=caption, gui_only=gui_only, fname=fname, dpi=dpi)

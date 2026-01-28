@@ -61,10 +61,12 @@ def show_model(model: Seepage):
     s = seepage.get_cell_fv(model, fid=1) / seepage.get_cell_fv(model)
 
     def on_figure(figure):
+        from zmlx.plt.on_figure import calc_best_layout
+        nrows, ncols = calc_best_layout(figure, 2)
         figure.suptitle(
             f'Model when time = {seepage.get_time(model, as_str=True)}')
         opts = dict(
-            ncols=2, nrows=1, xlabel='x', ylabel='y', aspect='equal'
+            ncols=ncols, nrows=nrows, xlabel='x', ylabel='y', aspect='equal'
         )
         add_axes2(figure, tricontourf, x, y, p, title='Pressure',
                   cbar=dict(label='Pressure'),

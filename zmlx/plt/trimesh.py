@@ -19,19 +19,18 @@ def trimesh(triangles, points, linewidth=1.0, gui_mode=None, **opts):
         此函数主要用于测试显示二维三角形网格的结构，类似与Matlab的trimesh函数，主要画出
         三角形的边，并且为了显示得更加清晰，边的颜色是随机的。
     """
-    from zmlx.fig import trimesh, plt_show, axes2, tight_layout
+    from zmlx.plt.on_axes.data import trimesh
+    from zmlx.plt.on_axes import plot2d
 
     default_opts = dict(
         aspect='equal',
         xlabel='x / m', ylabel='y / m', title='Triangle Mesh')
     opts = {**default_opts, **opts}
 
-    item = axes2(
-        trimesh(triangles, points, linewidth=linewidth),
+    plot2d(
+        trimesh(triangles, points, linewidth=linewidth), gui_mode=gui_mode,
         **opts
     )
-
-    plt_show(item, tight_layout(), gui_mode=gui_mode)
 
 
 def test():

@@ -1,4 +1,4 @@
-from zmlx.fig.plt_render.trisurf import add_trisurf
+from zmlx.plt.on_axes.trisurf import add_trisurf
 from zmlx.plt.on_figure import add_axes3
 
 
@@ -11,8 +11,8 @@ def plot_trisurf(*args, **kwargs):
 
 
 def test():
-    from zmlx.plt.data.surf import get_data
-    from zmlx.fig import trisurf
+    from zmlx.data.surf import get_data
+    from zmlx.plt.on_axes.data import trisurf
     from zmlx.plt.on_axes import plot3d
     x, y, z, _ = get_data(jx=40, jy=20, xr=(-5, 5), yr=(-3, 3))
     obj = trisurf(x.flatten(), y.flatten(), z.flatten(), cbar={}, cmap='viridis')
@@ -20,16 +20,13 @@ def test():
 
 
 def test2():
-    from zmlx.fig import plt_show, trisurf, axes3, tight_layout
-    from zmlx.plt.data.surf import get_data
+    from zmlx.data.surf import get_data
+    from zmlx.plt.on_axes import plot3d
+    from zmlx.plt.on_axes.data import trisurf
 
     x, y, z, _ = get_data(jx=40, jy=20, xr=(-5, 5), yr=(-3, 3))
-
-    item = axes3(
-        trisurf(x.flatten(), y.flatten(), z.flatten(), cbar={}, cmap='viridis'),
-        xlabel='x', ylabel='y', zlabel='z',
-    )
-    plt_show(item, tight_layout(), gui_mode=True)
+    plot3d(trisurf(x.flatten(), y.flatten(), z.flatten(), cbar={}, cmap='viridis'),
+           xlabel='x', ylabel='y', zlabel='z', )
 
 
 if __name__ == '__main__':

@@ -1,4 +1,4 @@
-from zmlx.fig.plt_render import add_rc3
+from zmlx.plt.on_axes.rc3 import add_rc3
 from zmlx.plt.on_figure import add_axes3
 
 

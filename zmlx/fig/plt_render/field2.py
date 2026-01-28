@@ -1,4 +1,4 @@
-from zmlx.fig.plt_render.tricontourf import add_tricontourf
+from zmlx.plt.on_axes.tricontourf import add_tricontourf
 
 
 def add_field2(ax, f, xr, yr, *, cmap=None, levels=None, clabel=None, cbar=None,

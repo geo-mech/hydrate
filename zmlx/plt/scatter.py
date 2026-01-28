@@ -3,7 +3,8 @@ def scatter(
     """
     绘制三维的散点图
     """
-    from zmlx.fig import scatter, plt_show, axes3
+    from zmlx.plt.on_axes.data import scatter
+    from zmlx.plt.on_axes import plot3d
     if x is None or y is None or z is None:
         if get_pos is None:
             def get_pos(item):
@@ -16,26 +17,23 @@ def scatter(
         assert get_val is not None
         c = [get_val(item) for item in items]
 
-    item = axes3(
-        scatter(x, y, z, c=c, cbar=dict(label=cb_label))
-    )
-    plt_show(item, **opts)
+    plot3d(scatter(x, y, z, c=c, cbar=dict(label=cb_label)))
 
 
 def test():
     import numpy as np
-    from zmlx.fig import scatter, plt_show, axes3
+    from zmlx.plt.on_axes.data import scatter
+    from zmlx.plt.on_axes import plot3d
 
     x = np.random.rand(100)
     y = np.random.rand(100)
     z = np.random.rand(100)
     c = np.random.rand(100)
-    obj = axes3(
+    plot3d(
         scatter(x, y, z, c=c, cbar=dict(label='label', title='title')),
         title='My Scatter Plot',
-        xlabel='x/m',
+        xlabel='x/m', gui_mode=True, clear=True, caption='MyTest'
     )
-    plt_show(obj, gui_mode=True, clear=True, caption='MyTest')
 
 
 if __name__ == '__main__':
