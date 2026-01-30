@@ -78,28 +78,44 @@ class MainWindow(QtWidgets.QMainWindow):
         h_layout = QtWidgets.QVBoxLayout(widget)
         splitter = QtWidgets.QSplitter(widget)
         splitter.setOrientation(QtCore.Qt.Orientation.Horizontal)
-        self.tab_widget = TabWidget(splitter)
-        self.tab_widget.currentChanged.connect(self.refresh)
-        self.side_tabs = TabWidget(splitter)
-        self.side_tabs.currentChanged.connect(self.refresh)
+        # 左侧标签页
+        self.left_tabs = TabWidget(splitter)
+        self.left_tabs.currentChanged.connect(self.refresh)
+
+        # 顶部标签页
+        self.top_tabs = TabWidget(splitter)
+        self.top_tabs.currentChanged.connect(self.refresh)
+
+        # 右侧标签页
+        self.right_tabs = TabWidget(splitter)
+        self.right_tabs.currentChanged.connect(self.refresh)
+
         self.gui_api = GuiApi(
             widget,
             self.console.get_break_point(),
             self.console.get_flag_exit())
-        splitter.setStretchFactor(0, 1)
-        splitter.setStretchFactor(1, 0)
+
+        splitter.setStretchFactor(0, 0)
+        splitter.setStretchFactor(1, 1)
+        splitter.setStretchFactor(2, 0)
+
         h_layout.addWidget(splitter)
         self.setCentralWidget(widget)
         self.title = None
         self.__init_gui_api()  # 在成员声明了之后，第一时间初始化API
         self.__init_actions()
 
-        set_position(self.tab_widget)
-        set_shape(self.tab_widget)
+        # 设置标签的形状和位置
+        set_shape(self.left_tabs)
+        self.left_tabs.setTabPosition(QtWidgets.QTabWidget.TabPosition.West)
 
-        set_shape(self.side_tabs)
-        self.side_tabs.setTabPosition(QtWidgets.QTabWidget.TabPosition.East)
+        set_position(self.top_tabs)
+        set_shape(self.top_tabs)
 
+        set_shape(self.right_tabs)
+        self.right_tabs.setTabPosition(QtWidgets.QTabWidget.TabPosition.East)
+
+        # 连接信号
         self.sig_cwd_changed.connect(self.refresh)
         self.sig_cwd_changed.connect(self.view_cwd)
 
@@ -107,6 +123,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.console_state_label = ConsoleStateLabel(self)
         self.statusBar().addPermanentWidget(self.console_state_label)
 
+        # 初始为None，当首次调用get_output_widget的时候，创建控件
         self.__output_widget = None
 
         # 用以播放声音
@@ -174,8 +191,6 @@ class MainWindow(QtWidgets.QMainWindow):
             if callable(func):
                 self.gui_api.add_func(key, func)
         self.gui_api.add_func('close', self.close)
-        self.gui_api.add_func('show_next', self.tab_widget.show_next)
-        self.gui_api.add_func('show_prev', self.tab_widget.show_prev)
         self.gui_api.add_func('status', self.show_status)
         self.gui_api.add_func('start', self.start_func)
         self.gui_api.add_func('tab_count', self.count_tabs)
@@ -237,7 +252,7 @@ class MainWindow(QtWidgets.QMainWindow):
             menu='文件', name='temp_code', icon='open',
             text='临时脚本',
             slot=lambda: self.open_code("temp_code.py"),
-            on_toolbar=True,
+            on_toolbar=False,  # 临时脚本，不添加到工具栏
             is_enabled=not_running,
         )
 
@@ -415,7 +430,7 @@ class MainWindow(QtWidgets.QMainWindow):
             tooltip='隐藏主窗口右侧的控制台', text='隐藏', shortcut='Ctrl+H',
             slot=self.hide_console,
             on_toolbar=True,
-            is_enabled=lambda: self.side_tabs.isVisible()
+            is_enabled=lambda: self.right_tabs.isVisible()
         )
 
         self.add_action(
@@ -424,7 +439,7 @@ class MainWindow(QtWidgets.QMainWindow):
             tooltip='显示主窗口右侧的控制台', text='显示', shortcut='Ctrl+H',
             slot=self.show_console,
             on_toolbar=True,
-            is_enabled=lambda: not self.side_tabs.isVisible()
+            is_enabled=lambda: not self.right_tabs.isVisible()
         )
 
         self.add_action(
@@ -840,35 +855,41 @@ class MainWindow(QtWidgets.QMainWindow):
         if hasattr(action, 'trigger'):
             action.trigger()
 
-    def count_tabs(self):
+    def show_next(self, position=None):
+        self.get_tab_widget(position=position).show_next()
+
+    def show_prev(self, position=None):
+        self.get_tab_widget(position=position).show_prev()
+
+    def count_tabs(self, position=None):
         """
         返回标签的数量
         """
-        return self.tab_widget.count()
+        return self.get_tab_widget(position=position).count()
 
-    def close_all_tabs(self):
+    def close_all_tabs(self, position=None):
         """
         关闭所有的标签
         """
-        self.tab_widget.close_all_tabs()
+        self.get_tab_widget(position=position).close_all_tabs()
 
-    def close_tab_object(self, widget):
+    def close_tab_object(self, widget, position=None):
         """
         关闭给定对象的标签页面
         """
-        return self.tab_widget.close_tab_object(widget)
+        return self.get_tab_widget(position=position).close_tab_object(widget)
 
-    def get_tab_caption(self, index):
+    def get_tab_caption(self, index, position=None):
         """
         返回给定位置tab的Caption
         """
-        return self.tab_widget.tabText(index)
+        return self.get_tab_widget(position=position).tabText(index)
 
-    def set_tab_caption(self, index, caption):
+    def set_tab_caption(self, index, caption, position=None):
         """
         设置tab的文本
         """
-        self.tab_widget.setTabText(index, caption)
+        self.get_tab_widget(position=position).setTabText(index, caption)
 
     def exec_tab_func(self, name):
         widget = self.get_current_widget()
@@ -876,11 +897,23 @@ class MainWindow(QtWidgets.QMainWindow):
             f = getattr(widget, name)
             f()
 
-    def get_tabs(self, at_side=False):
-        if at_side:
-            return self.side_tabs
+    def get_tab_widgets(self):
+        return [self.top_tabs, self.left_tabs, self.right_tabs]
+
+    def get_tab_widget(self, *, position=None, at_side=False):
+        if position is None:
+            position = 'right' if at_side else 'top'
+        if not isinstance(position, str):
+            return self.top_tabs  # 默认返回顶部的控件
+        elif position == 'left':
+            return self.left_tabs
+        elif position == 'right':
+            return self.right_tabs
         else:
-            return self.tab_widget
+            return self.top_tabs
+
+    def get_tabs(self, at_side=False):
+        return self.get_tab_widget(position='left' if at_side else 'top')
 
     def cls(self):
         self.get_output_widget().set_text('')
@@ -937,7 +970,7 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         设置控制台是否可见
         """
-        self.side_tabs.setVisible(visible)
+        self.right_tabs.setVisible(visible)
         self.refresh()  # 刷新窗口
 
     def set_console_visible(self, visible: bool):
@@ -974,8 +1007,8 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         self.console.start_func(*args, **kwargs)
 
-    def exec_current(self):
-        widget = self.tab_widget.currentWidget()
+    def exec_current(self, position=None):
+        widget = self.get_current_widget(position=position)
         if isinstance(widget, CodeEdit):
             widget.save()
             self.console.exec_file(widget.get_fname())
@@ -1030,6 +1063,12 @@ class MainWindow(QtWidgets.QMainWindow):
         except Exception as err:
             print(f'Error: {err}')
 
+        # 尝试修改左侧标签页的可见性
+        try:
+            self.left_tabs.setVisible(self.left_tabs.count() > 0)
+        except Exception as err:
+            print(f'Error: {err}')
+
         self.refresh_action()
 
         # 调用刷新
@@ -1052,7 +1091,7 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             self.get_output_widget().text_browser.setStyleSheet("QTextBrowser {border: 0px solid red;}")
 
-    def find_widget(self, the_type=None, text=None, is_ok=None, *, at_side=False):
+    def find_widget(self, the_type=None, text=None, is_ok=None, *, at_side=False, position=None):
         """
         返回给定条件的Widget。给定的所有条件需要同时满足
         Args:
@@ -1060,13 +1099,15 @@ class MainWindow(QtWidgets.QMainWindow):
             the_type: 控件的类型
             text: 标题
             is_ok: 一个函数，用于检查控件对象
+            position: 标签页的位置
 
         Returns:
             符合条件的Widget对象，否则返回None
         """
-        return self.get_tabs(at_side=at_side).find_widget(the_type=the_type, text=text, is_ok=is_ok)
+        return self.get_tab_widget(position=position, at_side=at_side).find_widget(the_type=the_type, text=text,
+                                                                                   is_ok=is_ok)
 
-    def find_widgets(self, the_type=None, text=None, is_ok=None, *, at_side=False):
+    def find_widgets(self, the_type=None, text=None, is_ok=None, *, at_side=False, position=None):
         """
         返回所有符合条件的Widget。给定的所有条件需要同时满足
         Args:
@@ -1074,32 +1115,33 @@ class MainWindow(QtWidgets.QMainWindow):
             the_type: 控件的类型
             text: 标题
             is_ok: 一个函数，用于检查控件对象
+            position: 标签页的位置
 
         Returns:
             符合条件的Widget对象列表，否则返回空列表
         """
-        return self.get_tabs(at_side=at_side).find_widgets(the_type=the_type, text=text, is_ok=is_ok)
+        return self.get_tab_widget(position=position, at_side=at_side).find_widgets(
+            the_type=the_type, text=text, is_ok=is_ok)
 
-    def get_widget(self, *args, at_side=False, **kwargs):
-        if at_side:
-            if not self.side_tabs.isVisible():  # 确保可见
-                self.side_tabs.setVisible(True)
-            return self.side_tabs.get_widget(*args, **kwargs)
-        else:
-            return self.tab_widget.get_widget(*args, **kwargs)
+    def get_widget(self, *args, at_side=False, position=None, **kwargs):
+        tab_widget = self.get_tab_widget(position=position, at_side=at_side)
+        if not tab_widget.isVisible():  # 确保可见
+            tab_widget.setVisible(True)
+        return tab_widget.get_widget(*args, **kwargs)
 
-    def get_figure_widget(self, init=None, folder_save=None, **kwargs):
+    def get_figure_widget(self, init=None, folder_save=None, position=None, **kwargs):
         """
         返回一个用以 matplotlib 绘图的控件
         """
-        return self.tab_widget.get_figure_widget(init=init, folder_save=folder_save, **kwargs)
+        return self.get_tab_widget(position=position).get_figure_widget(
+            init=init, folder_save=folder_save, **kwargs)
 
     def plot(
             self, kernel, *args, fname=None, dpi=None,
             caption=None, on_top=None, icon=None,
             clear=None,
             tight_layout=None,
-            suptitle=None, folder_save=None,
+            suptitle=None, folder_save=None, position=None,
             **kwargs
     ):
         """
@@ -1120,15 +1162,17 @@ class MainWindow(QtWidgets.QMainWindow):
             tight_layout: 是否自动调整子图参数，以防止重叠
             suptitle: 图表的标题
             folder_save: 自动保存图的文件夹
+            position: 标签页的位置
 
         Returns:
             None
         """
-        return self.tab_widget.plot(kernel, *args, fname=fname, dpi=dpi,
-                                    caption=caption, on_top=on_top, icon=icon,
-                                    clear=clear, tight_layout=tight_layout,
-                                    suptitle=suptitle, folder_save=folder_save,
-                                    **kwargs)
+        return self.get_tab_widget(position=position).plot(
+            kernel, *args, fname=fname, dpi=dpi,
+            caption=caption, on_top=on_top, icon=icon,
+            clear=clear, tight_layout=tight_layout,
+            suptitle=suptitle, folder_save=folder_save,
+            **kwargs)
 
     def show_fn2(self, filepath, **kwargs):
         warnings.warn('gui.show_fn2 will be removed after 2026-3-5, '
@@ -1164,13 +1208,14 @@ class MainWindow(QtWidgets.QMainWindow):
         return self.get_output_widget().progress(
             label=label, val_range=val_range, value=value, visible=visible)
 
-    def open_code(self, fname, caption=None):
+    def open_code(self, fname, caption=None, position=None):
         if not isinstance(fname, str):
             return
+        tab_widget = self.get_tab_widget(position=position)
 
         def get_widget(name_1):
-            for i in range(self.tab_widget.count()):
-                widget_ = self.tab_widget.widget(i)
+            for i in range(tab_widget.count()):
+                widget_ = tab_widget.widget(i)
                 if isinstance(widget_, CodeEdit):
                     if samefile(name_1, widget_.get_fname()):
                         return widget_
@@ -1181,12 +1226,12 @@ class MainWindow(QtWidgets.QMainWindow):
         if len(fname) > 0:
             widget = get_widget(fname)
             if widget is not None:
-                self.tab_widget.setCurrentWidget(widget)
+                tab_widget.setCurrentWidget(widget)
                 return
             else:
                 def oper(x):
                     x.open(fname)
-                    kwds = dict(fname=fname, caption=caption)
+                    kwds = dict(fname=fname, caption=caption, position=position)
                     x.gui_restore = f"""gui.open_code(**{kwds})"""  # 用于重启
 
                 if caption is None:
@@ -1201,21 +1246,23 @@ class MainWindow(QtWidgets.QMainWindow):
                     print(
                         f'文件已打开: \n\t{fname}\n\n请点击工具栏上的<运行>按钮以运行!\n\n')
 
-    def open_text(self, fname, caption=None):
+    def open_text(self, fname, caption=None, position=None):
         from zmlx.ui.widget.base import TextFileEdit
         if not isinstance(fname, str):
             return
         if len(fname) > 0:
             def oper(x: TextFileEdit):
                 x.set_fname(fname)
-                kwds = dict(fname=fname, caption=caption)
+                kwds = dict(fname=fname, caption=caption, position=position)
                 x.gui_restore = f"""gui.open_text(**{kwds})"""  # 用于重启
 
-            for i in range(self.tab_widget.count()):
-                widget = self.tab_widget.widget(i)
+            tab_widget = self.get_tab_widget(position=position)
+
+            for i in range(tab_widget.count()):
+                widget = tab_widget.widget(i)
                 if isinstance(widget, TextFileEdit):
                     if samefile(fname, widget.get_fname()):
-                        self.tab_widget.setCurrentWidget(widget)
+                        tab_widget.setCurrentWidget(widget)
                         oper(widget)
                         return
 
@@ -1328,21 +1375,23 @@ class MainWindow(QtWidgets.QMainWindow):
             self, settings.get_text('请选择工程文件夹'), os.getcwd())
         self.set_cwd(folder)
 
-    def get_current_widget(self):
+    def get_current_widget(self, position=None):
         """
         返回当前的标签对象
         """
-        return self.tab_widget.currentWidget()
+        tab_widget = self.get_tab_widget(position=position)
+        return tab_widget.currentWidget()
 
-    def get_current_tab_index(self):
+    def get_current_tab_index(self, position=None):
         """
         返回当前标签的序号
         """
-        return self.tab_widget.currentIndex()
+        tab_widget = self.get_tab_widget(position=position)
+        return tab_widget.currentIndex()
 
     def get_output_widget(self):
         if self.__output_widget is None:
-            self.__output_widget = self.side_tabs.get_widget(
+            self.__output_widget = self.right_tabs.get_widget(
                 OutputWidget, caption='控制台输出', closeable=False
             )
         return self.__output_widget
@@ -1402,7 +1451,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.get_widget(
             the_type=TabDetailView, caption='标签列表', on_top=True,
-            type_kw={'obj': TabDetailView.TabWrapper(self.tab_widget, self.side_tabs)},
+            type_kw={'obj': TabDetailView.TabWrapper(*self.get_tab_widgets())},
             oper=oper, at_side=True
         )
 
@@ -1450,9 +1499,10 @@ class MainWindow(QtWidgets.QMainWindow):
                 w.refresh()
                 w.gui_restore = f"""gui.show_demo()"""
 
-            self.get_widget(the_type=DemoView, caption='示例', on_top=True,
-                            oper=oper, icon='demo',
-                            tooltip='内置在模型中的示例。单击条目可以打开，然后，请点击工具条的运行按钮来执行')
+            self.get_widget(
+                the_type=DemoView, caption='示例', on_top=True,
+                oper=oper, icon='demo',
+                tooltip='内置在模型中的示例。单击条目可以打开，然后，请点击工具条的运行按钮来执行')
 
     def show_memory(self):
         from zmlx.ui.widget import MemView
@@ -1460,8 +1510,9 @@ class MainWindow(QtWidgets.QMainWindow):
             w.refresh()
             w.gui_restore = f"""gui.show_memory()"""
 
-        self.get_widget(the_type=MemView, caption='变量', on_top=True,
-                        icon='variables', oper=oper)
+        self.get_widget(
+            the_type=MemView, caption='变量', on_top=True,
+            icon='variables', oper=oper)
 
     def show_timer(self):
         from zmlx.ui.widget import TimerView
@@ -1889,6 +1940,12 @@ def __console_kernel(code):
     except Exception as err:
         print(f'Error when setup editors: {err}')
 
+    try:
+        from zmlx.ui.widget.mem_view import setup_ui
+        setup_ui()
+    except Exception as err:
+        print(f'Error when setup mem_view: {err}')
+
     if app_data.get('run_setup', True):  # 执行额外的配置文件(默认执行)
         __gui_setup()
 
@@ -1920,7 +1977,7 @@ def __save_tabs(filename=None):
     from zmlx.io.json_ex import write as write_json
 
     data = []
-    for tabs in [gui.get_tabs(False), gui.get_tabs(True)]:
+    for tabs in gui.get_tab_widgets():
         for idx in range(tabs.count()):
             code = getattr(tabs.widget(idx), 'gui_restore', None)
             if isinstance(code, str):
@@ -1931,7 +1988,7 @@ def __save_tabs(filename=None):
 
 
 def __save_tab_files():
-    for tabs in [gui.get_tabs(False), gui.get_tabs(True)]:
+    for tabs in gui.get_tab_widgets():
         for idx in range(tabs.count()):
             widget = tabs.widget(idx)
             f = getattr(widget, 'save_file', None)

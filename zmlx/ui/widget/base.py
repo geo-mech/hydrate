@@ -1185,64 +1185,6 @@ class DemoView(QtWidgets.QTableWidget):
             print(err)
 
 
-class MemView(QtWidgets.QTableWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.horizontalHeader().setSectionResizeMode(
-            QtWidgets.QHeaderView.ResizeMode.Stretch)
-        self.setEditTriggers(
-            QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
-
-        self.timer = QtCore.QTimer()
-        self.timer.timeout.connect(self.refresh)
-        self.timer.start(500)
-        self.refresh()
-
-    def __refresh(self):
-        names_ignored = app_data.get('names_ignored', None)
-        if names_ignored is None:
-            space = {}
-            exec('from zmlx import *', space)
-            names_ignored = set(space.keys())
-            app_data.put('names_ignored', names_ignored)
-        data = []
-        for key, value in app_data.space.items():
-            if len(key) > 2:
-                if key[0:2] == '__':
-                    continue
-            if key in names_ignored:
-                continue
-            data.append([key, f'{value}', f'{type(value)}'])
-
-        self.setRowCount(len(data))
-        self.setColumnCount(3)
-        self.setHorizontalHeaderLabels(['名称', '值', '类型'])
-        self.horizontalHeader().setSectionResizeMode(
-            0, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
-
-        for i_row in range(len(data)):
-            for i_col in range(3):
-                self.setItem(
-                    i_row, i_col,
-                    QtWidgets.QTableWidgetItem(data[i_row][i_col]))
-
-    def refresh(self):
-        """
-        更新
-        """
-        if not self.isVisible():
-            return
-        cpu_t = timeit.default_timer()
-        try:
-            self.__refresh()
-        except Exception as err:
-            print(err)
-            self.clear()
-        cpu_t = timeit.default_timer() - cpu_t
-        msec = clamp(int(cpu_t * 200 / 0.001), 200, 8000)
-        self.timer.setInterval(msec)
-
-
 class CwdView(QtWidgets.QTableWidget):
     def __init__(self, parent=None):
         super(CwdView, self).__init__(parent)
