@@ -217,7 +217,6 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         初始化内置的菜单动作
         """
-        from zmlx.alg.sys import create_ui_lnk_on_desktop
 
         def not_running():
             return not self.is_running()
@@ -458,12 +457,6 @@ class MainWindow(QtWidgets.QMainWindow):
         )
 
         self.add_action(
-            menu='操作', name='play_images',
-            text='播放图片',
-            slot=play_images
-        )
-
-        self.add_action(
             menu='设置', name='env', icon='set',
             text='系统变量', shortcut='Ctrl+E',
             slot=self.show_env_edit
@@ -479,13 +472,6 @@ class MainWindow(QtWidgets.QMainWindow):
             menu='设置', name='search', icon='set',
             text='搜索路径',
             slot=self.show_file_finder
-        )
-
-        self.add_action(
-            menu='设置', name='edit_window_style',
-            text='窗口风格',
-            slot=lambda: self.open_text(
-                app_data.temp('zml_window_style.qss'), '窗口风格')
         )
 
         self.add_action(
@@ -538,6 +524,32 @@ class MainWindow(QtWidgets.QMainWindow):
             icon='info',
             slot=self.show_feedback,
             is_enabled=not_running,
+        )
+
+        show_admin_actions = app_data.getenv(key='show_admin_actions', default='No', ignore_empty=True) == 'Yes'
+        if show_admin_actions or lic.is_admin:
+            self.__add_admin_actions()
+
+    def __add_admin_actions(self):
+        """
+        定义一些并不常用的测试的功能
+        """
+        from zmlx.alg.sys import create_ui_lnk_on_desktop
+
+        def not_running():
+            return not self.is_running()
+
+        self.add_action(
+            menu='操作', name='play_images',
+            text='播放图片',
+            slot=play_images
+        )
+
+        self.add_action(
+            menu='设置', name='edit_window_style',
+            text='窗口风格',
+            slot=lambda: self.open_text(
+                app_data.temp('zml_window_style.qss'), '窗口风格')
         )
 
         self.add_action(
@@ -653,6 +665,17 @@ class MainWindow(QtWidgets.QMainWindow):
             menu=['帮助', '打开'], name='open_cwd',
             text='工作路径',
             slot=open_cwd
+        )
+
+        def open_opath():
+            from zmlx.io import opath
+            print(f'数据目录：\n{opath()}\n')
+            os.startfile(opath())
+
+        self.add_action(
+            menu=['帮助', '打开'], name='open_opath',
+            text='数据目录(zmlx.io.opath)',
+            slot=open_opath
         )
 
         self.add_action(
@@ -774,8 +797,12 @@ class MainWindow(QtWidgets.QMainWindow):
         if callable(is_visible):  # 作为一个函数，动态地判断是否可见
             action.is_visible = is_visible
 
-        action.setIcon(settings.load_icon(
-            icon if icon is not None else 'python'))
+        if icon is not None:
+            action.setIcon(settings.load_icon(icon))
+        else:
+            icon = app_data.getenv(key='default_action_icon', default='python')
+            if icon is not None:
+                action.setIcon(settings.load_icon(icon))
 
         if tooltip is not None:
             action.setToolTip(settings.get_text(tooltip))
@@ -1186,7 +1213,7 @@ class MainWindow(QtWidgets.QMainWindow):
         widget.open_fn2_file(filepath)
 
     def view_cwd(self):
-        from zmlx.ui.widget.base import CwdView
+        from zmlx.ui.widget import CwdView
 
         def oper(w):
             w.refresh()
@@ -1247,7 +1274,7 @@ class MainWindow(QtWidgets.QMainWindow):
                         f'文件已打开: \n\t{fname}\n\n请点击工具栏上的<运行>按钮以运行!\n\n')
 
     def open_text(self, fname, caption=None, position=None):
-        from zmlx.ui.widget.base import TextFileEdit
+        from zmlx.ui.widget import TextFileEdit
         if not isinstance(fname, str):
             return
         if len(fname) > 0:
@@ -1392,7 +1419,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def get_output_widget(self):
         if self.__output_widget is None:
             self.__output_widget = self.right_tabs.get_widget(
-                OutputWidget, caption='控制台输出', closeable=False
+                OutputWidget, caption='控制台输出', closeable=False, icon='console'
             )
         return self.__output_widget
 
@@ -1420,7 +1447,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if callable(f):
             f()
         else:
-            from zmlx.ui.widget.base import About
+            from zmlx.ui.widget import About
             self.check_license()
 
             def oper(widget):
@@ -1445,7 +1472,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.sig_play_sound.emit(filename)
 
     def show_tab_details(self):
-        from zmlx.ui.widget.base import TabDetailView
+        from zmlx.ui.widget import TabDetailView
         def oper(w):
             w.gui_restore = f"""gui.show_tab_details()"""
 
@@ -1456,7 +1483,7 @@ class MainWindow(QtWidgets.QMainWindow):
         )
 
     def show_code_history(self, folder, caption=None):
-        from zmlx.ui.widget.base import CodeHistoryView
+        from zmlx.ui.widget import CodeHistoryView
         if not isinstance(folder, str):
             return
 

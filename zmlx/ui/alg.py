@@ -7,17 +7,27 @@ def create_action(parent, text, *, icon=None, slot=None):
     from zmlx.ui.settings import load_icon
     from zmlx.ui.pyqt import QAction
     from zmlx.ui.gui_buffer import gui
+
     ac = QAction(text, parent)
     if icon is not None:
         ac.setIcon(load_icon(icon))
     else:
-        ac.setIcon(load_icon('python'))
+        icon = app_data.getenv(key='default_action_icon', default='python')
+        if icon is not None:
+            ac.setIcon(load_icon(icon))
+
     if slot is not None:
-        assert callable(slot), 'slot must be callable'
+        assert callable(slot), f'slot must be callable when create action {text}'
 
         def func():
-            slot()
-            gui.refresh()
+            try:  # 尝试刷新界面
+                slot()
+                app_data.log(f'run <{text}>')
+                gui.refresh()
+            except Exception as e2:
+                info = f'meet error when run <{text}>. \nInfo = \n {e2}'
+                print(info)
+                app_data.log(info)
 
         ac.triggered.connect(func)
     return ac

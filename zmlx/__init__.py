@@ -3,9 +3,12 @@
     1. 优先从zmlx中import，只有当zmlx中没有定义，再考虑从次一级文件夹import；
     2. 用户可添加文件，但勿修改现有文件内容；
 """
+# 单独导入zml
 import zml
+
+_keep = [zml]  # 使得不会被Pycharm删除
 ########################################
-# zml 中的内容
+# 导入zml中的内容
 from zml import *
 
 if is_chinese(get_dir()):
@@ -59,9 +62,6 @@ from zmlx.data.igg import load_igg  # 加载igg.png
 # demo
 
 ########################################
-# project
-
-########################################
 # exts
 
 ########################################
@@ -73,7 +73,6 @@ from zmlx import fig
 
 ########################################
 # filesys
-
 
 ########################################
 # fluid
@@ -95,11 +94,12 @@ from zmlx.geometry.base import (
     get_angle, get_center, get_seg_angle,
     seg_intersection, triangle_area,
     point_distance, seg_point_distance,
-    get_norm)
+    get_norm
+)
 
 ########################################
 # io
-from zmlx.io.path import get_path as opath
+from zmlx.io.path import get_path as opath  # 数据输出的路径
 from zmlx.io import json_ex
 
 ########################################
@@ -152,14 +152,11 @@ from zmlx.seepage_mesh.edit import add_cell_face
 
 ########################################
 # ui
-from zmlx.sys.version import get_version
-
-########################################
-# ui
 from zmlx.ui import (
     gui, information, question,
     plot as do_plot, plot, break_point, gui_exec,
-    open_gui, open_gui_without_setup)
+    open_gui, open_gui_without_setup
+)
 
 ########################################
 # utility
@@ -178,7 +175,7 @@ from zmlx.utility.capillary_effect import CapillaryEffect
 # 其它
 def get_path(*args):
     """
-    返回数据目录
+    返回代码目录
     """
     return make_parent(join_paths(os.path.dirname(__file__), *args))
 

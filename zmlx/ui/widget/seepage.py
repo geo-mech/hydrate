@@ -1,4 +1,4 @@
-from zmlx import Seepage, gui
+from zml import Seepage
 from zmlx.config import seepage
 from zmlx.ui.alg import h_spacer
 from zmlx.ui.widget.editors import *
@@ -95,8 +95,10 @@ class FludefEdit(QtWidgets.QWidget):
             f.save(fname)
             gui.open_fludef(fname)
 
-        gui.add_action(menu=['帮助', '生成测试数据'],
-                       text=f'流体定义: {fname}', slot=test_data)
+        show_admin_actions = app_data.getenv(key='show_admin_actions', default='No', ignore_empty=True) == 'Yes'
+        if show_admin_actions:
+            gui.add_action(menu=['帮助', '生成测试数据'],
+                           text=f'流体定义: {fname}', slot=test_data)
 
 
 class SeepageTextEdit(QtWidgets.QTextEdit):

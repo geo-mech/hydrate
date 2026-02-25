@@ -5,7 +5,7 @@ try:
 except ImportError:
     np = None
 
-from zml import Interp1, Interp2
+from zml import Interp1, Interp2, app_data
 from zmlx.alg.numpy_algs import text_to_numpy, numpy_to_text
 from zmlx.ui.alg import create_action
 from zmlx.ui.gui_buffer import gui
@@ -152,14 +152,17 @@ class ArrayEdit(QtWidgets.QTextBrowser):
             widget_type=ArrayEdit
         )
 
-        def test_data1():
-            data = np.random.uniform(0, 2, size=[10, 3])
-            fname = os.path.abspath('ArrayExample.npy')
-            NumpyAlgs.save(data, fname)
-            gui.open_numpy_array(fname)
+        show_admin_actions = app_data.getenv(key='show_admin_actions', default='No', ignore_empty=True) == 'Yes'
 
-        gui.add_action(menu=['帮助', '生成测试数据'],
-                       text='ArrayExample.npy', slot=test_data1)
+        if show_admin_actions:
+            def test_data1():
+                data = np.random.uniform(0, 2, size=[10, 3])
+                fname = os.path.abspath('ArrayExample.npy')
+                NumpyAlgs.save(data, fname)
+                gui.open_numpy_array(fname)
+
+            gui.add_action(menu=['帮助', '生成测试数据'],
+                           text='ArrayExample.npy', slot=test_data1)
 
 
 class DataEdit(QtWidgets.QWidget):
@@ -226,6 +229,7 @@ class XyEdit(DataEdit):
             init=lambda: np.array([]),
             widget_type=XyEdit
         )
+        show_admin_actions = app_data.getenv(key='show_admin_actions', default='No', ignore_empty=True) == 'Yes'
 
         def test_data2():
             x = np.linspace(0, 10, 100)
@@ -235,8 +239,9 @@ class XyEdit(DataEdit):
             np.save(fname, data)
             gui.open_xy_data(fname)
 
-        gui.add_action(menu=['帮助', '生成测试数据'],
-                       text='XY数据.npy', slot=test_data2)
+        if show_admin_actions:
+            gui.add_action(menu=['帮助', '生成测试数据'],
+                           text='XY数据.npy', slot=test_data2)
 
 
 class XyzEdit(DataEdit):
@@ -279,8 +284,10 @@ class XyzEdit(DataEdit):
             np.save(fname, data)
             gui.open_xyz_data(fname)
 
-        gui.add_action(menu=['帮助', '生成测试数据'],
-                       text='XYZ数据.npy', slot=test_data3)
+        show_admin_actions = app_data.getenv(key='show_admin_actions', default='No', ignore_empty=True) == 'Yes'
+        if show_admin_actions:
+            gui.add_action(menu=['帮助', '生成测试数据'],
+                           text='XYZ数据.npy', slot=test_data3)
 
 
 class Interp1Edit(MatplotWidget):
@@ -378,8 +385,10 @@ class Interp1Edit(MatplotWidget):
             data.save(fname)
             gui.open_interp1(fname)
 
-        gui.add_action(menu=['帮助', '生成测试数据'],
-                       text='Example.interp1', slot=test_data)
+        show_admin_actions = app_data.getenv(key='show_admin_actions', default='No', ignore_empty=True) == 'Yes'
+        if show_admin_actions:
+            gui.add_action(menu=['帮助', '生成测试数据'],
+                           text='Example.interp1', slot=test_data)
 
 
 class Interp2Edit(MatplotWidget):
@@ -508,9 +517,11 @@ class Interp2Edit(MatplotWidget):
             f.den.save('Example.interp2')
             gui.open_interp2('Example.interp2')
 
-        gui.add_action(
-            menu=['帮助', '生成测试数据'],
-            text='Example.interp2', slot=test_data)
+        show_admin_actions = app_data.getenv(key='show_admin_actions', default='No', ignore_empty=True) == 'Yes'
+        if show_admin_actions:
+            gui.add_action(
+                menu=['帮助', '生成测试数据'],
+                text='Example.interp2', slot=test_data)
 
 
 def setup_ui():

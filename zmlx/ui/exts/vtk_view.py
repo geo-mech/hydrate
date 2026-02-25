@@ -1,5 +1,6 @@
 from pyvistaqt import QtInteractor
 
+from zml import app_data
 from zmlx.ui import gui
 
 
@@ -20,13 +21,18 @@ def setup_ui():
         plotter.add_axes()
         plotter.add_scalar_bar("高程")
 
-    gui.add_action(
-        menu=['帮助', 'VtkView'], text='显示球体1', slot=lambda: gui.get_vtk_view(caption='球体1', init=show_sphere),
-    )
+    show_admin_actions = app_data.getenv(key='show_admin_actions', default='No', ignore_empty=True) == 'Yes'
 
-    gui.add_action(
-        menu=['帮助', 'VtkView'], text='显示球体2', slot=lambda: gui.get_vtk_view(caption='球体2', init=show_sphere),
-    )
+    if not app_data.get("HIDE_TESTING_MENUS", False) and show_admin_actions:
+        gui.add_action(
+            menu=['帮助', 'VtkView'], text='显示球体1',
+            slot=lambda: gui.get_vtk_view(caption='球体1', init=show_sphere),
+        )
+
+        gui.add_action(
+            menu=['帮助', 'VtkView'], text='显示球体2',
+            slot=lambda: gui.get_vtk_view(caption='球体2', init=show_sphere),
+        )
 
 
 def main():

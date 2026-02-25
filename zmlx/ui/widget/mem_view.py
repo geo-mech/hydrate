@@ -21,6 +21,37 @@ class MemView(QtWidgets.QTableWidget):
         # 连接双击信号
         self.doubleClicked.connect(self.on_double_click)
 
+        # 启用右键菜单
+        self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.show_context_menu)
+
+    def show_context_menu(self, position):
+        """
+        显示右键菜单
+        """
+        index = self.indexAt(position)
+        has_selection = index.isValid()
+
+        menu = QtWidgets.QMenu(self)
+        menu.addAction('刷新', self.refresh)
+        if has_selection and index.column() == 1:
+            menu.addAction('编辑', lambda: self.on_double_click(self.model().index(index.row(), 1)))
+        if has_selection and index.column() == 0:
+            menu.addAction('删除', lambda: self.delete_item(index))
+        # 显示菜单
+        menu.exec(self.mapToGlobal(position))
+
+    def delete_item(self, index):
+        if index.isValid():
+            key = self.item(index.row(), 0).text()
+            if key in app_data.space:
+                reply = QtWidgets.QMessageBox.question(
+                    self, '确认删除', f'是否删除变量 {key}？',
+                    QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No)
+                if reply == QtWidgets.QMessageBox.StandardButton.Yes:
+                    del app_data.space[key]
+                    self.refresh()
+
     def on_double_click(self, index):
         """
         双击单元格时执行的操作
@@ -43,11 +74,18 @@ class MemView(QtWidgets.QTableWidget):
                 if isinstance(app_data_edits, dict):
                     value = app_data.get(key)
                     edit = app_data_edits.get(type(value))
-                    if callable(edit):
+                    if callable(edit):  # 找到了针对性的编辑器
                         try:
                             edit(key)
                         except Exception as e:
                             print(f"调用编辑方法(key={key}, edit={edit})时出错: {e}")
+                    else:  # 没有针对性的编辑器，调用默认编辑器
+                        default_app_data_edit = app_data.get('default_app_data_edit')
+                        if callable(default_app_data_edit):
+                            try:
+                                default_app_data_edit(key)
+                            except Exception as e:
+                                print(f"调用编辑方法(key={key}, edit={default_app_data_edit})时出错: {e}")
             except Exception as err:
                 print(err)
 
@@ -144,3 +182,18 @@ def setup_ui():
     app_data_edits[str] = edit_str
     # 保存编辑方法字典
     app_data.put('app_data_edits', app_data_edits)
+
+    def default_app_data_edit(key):
+        from zmlx.ui.alg import edit_in_tab
+        from zmlx.ui.widget.edit_by_text import ObjEditByText
+        def set_data(value):
+            app_data.put(key, value)
+
+        def get_data():
+            return app_data.get(key)
+
+        edit_in_tab(ObjEditByText, set_data=set_data, get_data=get_data, caption=f'编辑变量{key}',
+                    support_refresh=False)
+
+    # 添加默认的编辑器
+    app_data.put('default_app_data_edit', default_app_data_edit)

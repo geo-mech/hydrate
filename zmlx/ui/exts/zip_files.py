@@ -1,6 +1,7 @@
 import os
 import zipfile
 
+from zml import app_data
 from zmlx.alg.fsys import is_time_string
 from zmlx.ui.gui_buffer import gui
 
@@ -131,25 +132,27 @@ def execute_unzip(folder, this_only=False):
 
 
 def setup_ui():
-    def func1():
-        if not gui.question(
-                f'危险操作：\n\n会将当前目录下({os.getcwd()})的零碎文件压缩到一个zip文件中，并显著修改文件结构. \n\n是否继续？'):
-            return
-        execute_zip(os.getcwd())
+    show_admin_actions = app_data.getenv(key='show_admin_actions', default='No', ignore_empty=True) == 'Yes'
+    if not app_data.get("HIDE_TESTING_MENUS", False) and show_admin_actions:
+        def func1():
+            if not gui.question(
+                    f'危险操作：\n\n会将当前目录下({os.getcwd()})的零碎文件压缩到一个zip文件中，并显著修改文件结构. \n\n是否继续？'):
+                return
+            execute_zip(os.getcwd())
 
-    gui.add_action(
-        menu=['帮助', '零碎文件处理'], text='压缩', slot=lambda: gui.start(func1),
-    )
+        gui.add_action(
+            menu=['帮助', '零碎文件处理'], text='压缩', slot=lambda: gui.start(func1),
+        )
 
-    def func2():
-        if not gui.question(
-                f'危险操作：\n\n会将当前目录下({os.getcwd()})的zip文件解压，并显著修改文件结构. \n\n是否继续？'):
-            return
-        execute_unzip(os.getcwd())
+        def func2():
+            if not gui.question(
+                    f'危险操作：\n\n会将当前目录下({os.getcwd()})的zip文件解压，并显著修改文件结构. \n\n是否继续？'):
+                return
+            execute_unzip(os.getcwd())
 
-    gui.add_action(
-        menu=['帮助', '零碎文件处理'], text='解压', slot=lambda: gui.start(func2),
-    )
+        gui.add_action(
+            menu=['帮助', '零碎文件处理'], text='解压', slot=lambda: gui.start(func2),
+        )
 
 
 def main():
