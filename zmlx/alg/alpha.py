@@ -5,7 +5,7 @@
 import math
 
 
-def get_velocity_after_slowdown_by_viscosity(v0, a0, time):
+def get_velocity_after_slowdown_by_viscosity(v0: float, a0: float, time: float):
     # 确保时间非负
     assert time >= 0.0, "time must be non-negative"
 

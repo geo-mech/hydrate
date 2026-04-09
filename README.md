@@ -1,10 +1,10 @@
 ### 简介
 
-[**IGG-Hydrate**](https://gitee.com/geomech/hydrate): 天然气水合物成藏/开发计算模块。
+[**IGG-Hydrate**](https://gitee.com/geomech/hydrate): 储层多场耦合计算模块。
 用于：
 1、天然气水合物[成藏](https://doi.org/10.3390/w16192822)/[开发](https://doi.org/10.1016/j.apenergy.2024.122963)/[碳封存](https://doi.org/10.1021/acs.energyfuels.4c04288); 
 2、页岩油[原位转化](https://doi.org/10.1016/j.petsci.2024.05.025)；
-3、其他流动/传热/化学/变形(THMC)耦合问题.
+3、储层内的其他流动/传热/化学/变形(THMC)耦合问题.
 
 ### 作者
 
@@ -47,7 +47,7 @@
 **注**：<sup>①</sup> 如有在Linux上运行的需求，请联系作者; 
 <sup>②</sup> 推荐使用[WinPython](https://gitee.com/geomech/hydrate/attach_files) (绿色免安装，且是IGG-Hydrate开发者使用的Python环境);
 <sup>③</sup> 运行脚本`zmlx/script/install_dep.py`来可自动安装所有依赖包(基于[pip](https://pypi.org/project/pip/))；另外，`PyQt5`将不再支持;
-<sup>④</sup> 建议在[demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)的基础上，向前追溯函数的实现;
+<sup>④</sup> 建议在[demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)的基础上，向前追溯函数的实现; [demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)中案例仅供测试，作者不保证其参数的合理性. 
 
 ### 开发
 
@@ -58,4 +58,10 @@
 3. 如果直接向[IGG-Hydrate](https://gitee.com/geomech/hydrate)推送代码，可能会报错（因为没有权限）。此时，可以在页面右上角，点击[申请加入仓库](https://gitee.com/geomech/hydrate)，成为开发者；或者，你也可以使用[Fork + Pull 模式](https://help.gitee.com/base/pullrequest/Fork+Pull)<sup>②</sup>参与开发。
 
 **注**：<sup>①</sup> 在[Gitee帮助中心](https://gitee.com/help#article-header0)有不少git的入门资料；新手建议安装[TortoiseGit](https://tortoisegit.org/)，它会在文件管理器添加右键菜单，可以满足大部分操作;
-<sup>②</sup>[Fork + Pull 模式](https://help.gitee.com/base/pullrequest/Fork+Pull)是Gitee建议的一种参与开发的方式;
+<sup>②</sup>[Fork + Pull 模式](https://help.gitee.com/base/pullrequest/Fork+Pull)是Gitee建议的一种参与开发的方式. 
+
+### 仓库的镜像
+
+仓库主网址为: [gitee.com/geomech/hydrate](https://gitee.com/geomech/hydrate), 镜像仓库<sup>①</sup>: [github.com/geo-mech/hydrate](https://github.com/geo-mech/hydrate). 
+
+**注**：<sup>①</sup> 反馈或推送给代码，务必在[主仓库](https://gitee.com/geomech/hydrate)进行，作者不会关注[镜像仓库](https://github.com/geo-mech/hydrate)的变化. 

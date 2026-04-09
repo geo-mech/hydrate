@@ -12,7 +12,9 @@ from zmlx.plt.on_axes.trimesh import add_trimesh
 from zmlx.plt.on_axes.trisurf import add_trisurf
 from zmlx.plt.on_figure.data import add_to_figure, show
 
-_keep = [get_cm, add_cbar, add_contourf, add_dfn2, add_field2, add_rc3, add_scatter,
-         add_surf, add_tricontourf, add_trimesh, add_trisurf,
-         add_to_axes, add_to_figure, show
-         ]
+__all__ = [
+    'get_cm', 'add_cbar', 'add_contourf', 'add_dfn2', 'add_field2',
+    'add_rc3', 'add_scatter',
+    'add_surf', 'add_tricontourf', 'add_trimesh', 'add_trisurf',
+    'add_to_axes', 'add_to_figure', 'show'
+]
