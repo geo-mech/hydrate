@@ -43,7 +43,7 @@ Face的属性：
              变量速度。当Face同时定义了rate和inertia之后，才可以去考虑惯性效应。
 """
 from collections.abc import Iterable
-from typing import Optional
+from typing import Optional, Dict, List
 
 from zml import (
     get_average_perm, Tensor3, make_parent, SeepageMesh)
@@ -826,11 +826,11 @@ def create(
         gravity=None,
         dt_max=None, dt_min=None, dt_ini=None, dv_relative=None,
         gr=None, bk_fv=None, bk_g=None, caps=None,
-        keys: Optional[dict[str, int]] = None,
-        tags: Optional[list[str]] = None,
+        keys: Optional[Dict[str, int]] = None,
+        tags: Optional[List[str]] = None,
         kr=None,
         default_kr=None,
-        model_attrs: Optional[dict[str, float]] = None,
+        model_attrs: Optional[Dict[str, float]] = None,
         prods=None,
         warnings_ignored=None, injectors=None, texts=None,
         **kwargs) -> Seepage:

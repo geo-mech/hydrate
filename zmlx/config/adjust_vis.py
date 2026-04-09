@@ -5,6 +5,7 @@
 
 最后修改：2025-11-25
 """
+from typing import Optional
 
 from zml import Seepage
 from zmlx.base.seepage import as_numpy
@@ -31,8 +32,8 @@ def get_settings(model: Seepage):
 
 def add_setting(
         model: Seepage,
-        name: str | None = None,
-        key: str | None = None):
+        name: Optional[str] = None,
+        key: Optional[str] = None):
     """
     添加设置. 其中name为流体的名字，key为cell的属性.
 
@@ -86,7 +87,7 @@ def adjust(model: Seepage):
             flu = model.find_fludef(name=flu)
         if isinstance(flu, int):
             flu = [flu]
-        if not isinstance(flu, list | tuple):
+        if not isinstance(flu, (list, tuple)):
             print(f'未识别的流体{flu}. 必须是流体的名字或ID')
             vis_backups.append(None)
             continue

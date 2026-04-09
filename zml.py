@@ -28,11 +28,10 @@ import shutil
 import sys
 import timeit
 import warnings
-from collections.abc import Iterable
 from ctypes import (cdll, c_void_p, c_char_p, c_int, c_int64, c_bool, c_double,
                     c_size_t, c_uint, CFUNCTYPE, POINTER)
 from pathlib import Path
-from typing import Optional, Any, List, Callable, Dict, Tuple, Union
+from typing import Optional, Any, List, Callable, Dict, Tuple, Union, Iterable
 
 try:
     import numpy as np
@@ -774,7 +773,7 @@ class _AppData(Object):
                     pass
         return results
 
-    def get(self, *args: str | int, **kwargs) -> Any:
+    def get(self, *args: Union[str, int], **kwargs) -> Any:
         """从内存空间中读取数据。
 
         Args:
@@ -792,7 +791,7 @@ class _AppData(Object):
         else:
             return self.space.get(*args, **kwargs)
 
-    def put(self, key: str | int, value: Any):
+    def put(self, key: Union[str, int], value: Any):
         """存储数据到内存空间。
 
         Args:
@@ -1451,7 +1450,7 @@ class Timer:
         """
         t0 = self.__key2t.get(key)
         if t0 is not None:
-            assert isinstance(t0, float | int), f"t0 must be float|int, but got {type(t0)}"
+            assert isinstance(t0, (float, int)), f"t0 must be float|int, but got {type(t0)}"
             cpu_t = timeit.default_timer() - t0
             self.log(key, cpu_t)
 
@@ -5700,7 +5699,7 @@ class Array2(HasHandle):
         return self[0], self[1]
 
     @staticmethod
-    def from_list(values: list | tuple):
+    def from_list(values: Union[list, tuple]):
         """从列表创建 Array2 实例。
 
         Args:
@@ -5937,7 +5936,7 @@ class Array3(HasHandle):
         return self[0], self[1], self[2]
 
     @staticmethod
-    def from_list(values: list | tuple):
+    def from_list(values: Union[list, tuple]):
         """从列表创建 Array3 实例。
 
         Args:
@@ -7492,13 +7491,13 @@ class Coord3(HasHandle):
             ydir (Array3|list|tuple): Y轴方向向量，自动转换为Array3类型
         """
         if not isinstance(origin, Array3):
-            assert isinstance(origin, list | tuple)
+            assert isinstance(origin, (list, tuple))
             origin = Array3.from_list(origin)
         if not isinstance(xdir, Array3):
-            assert isinstance(xdir, list | tuple)
+            assert isinstance(xdir, (list, tuple))
             xdir = Array3.from_list(xdir)
         if not isinstance(ydir, Array3):
-            assert isinstance(ydir, list | tuple)
+            assert isinstance(ydir, (list, tuple))
             ydir = Array3.from_list(ydir)
         core.coord3_set(self.handle, origin.handle, xdir.handle, ydir.handle)
 
@@ -7689,7 +7688,7 @@ class Mesh3(HasHandle):
                  c_void_p, c_size_t)
 
         @property
-        def link_number(self):
+        def link_number(self) -> int:
             """
             返回与节点相连的线的数量。
 
@@ -7703,7 +7702,7 @@ class Mesh3(HasHandle):
                  c_void_p, c_size_t)
 
         @property
-        def face_number(self):
+        def face_number(self) -> int:
             """
             返回与节点相连的面的数量。
 
@@ -7717,7 +7716,7 @@ class Mesh3(HasHandle):
                  c_void_p, c_size_t)
 
         @property
-        def body_number(self):
+        def body_number(self) -> int:
             """
             返回与节点相连的体的数量。
 
@@ -7731,7 +7730,7 @@ class Mesh3(HasHandle):
                  c_void_p, c_size_t,
                  c_size_t)
 
-        def get_link(self, index):
+        def get_link(self, index) -> Optional['Mesh3.Link']:
             """
             根据索引获取与节点相连的线。
 
@@ -7753,7 +7752,7 @@ class Mesh3(HasHandle):
                  c_void_p, c_size_t,
                  c_size_t)
 
-        def get_face(self, index):
+        def get_face(self, index) -> Optional['Mesh3.Face']:
             """
             根据索引获取与节点相连的面。
 
@@ -7775,7 +7774,7 @@ class Mesh3(HasHandle):
                  c_void_p, c_size_t,
                  c_size_t)
 
-        def get_body(self, index):
+        def get_body(self, index) -> Optional['Mesh3.Body']:
             """
             根据索引获取与节点相连的体。
 
@@ -7898,7 +7897,7 @@ class Mesh3(HasHandle):
                  c_void_p, c_size_t)
 
         @property
-        def node_number(self):
+        def node_number(self) -> int:
             """
             返回线所连接的节点数量。
 
@@ -7912,7 +7911,7 @@ class Mesh3(HasHandle):
                  c_void_p, c_size_t)
 
         @property
-        def face_number(self):
+        def face_number(self) -> int:
             """
             返回与线相连的面的数量。
 
@@ -7926,7 +7925,7 @@ class Mesh3(HasHandle):
                  c_void_p, c_size_t)
 
         @property
-        def body_number(self):
+        def body_number(self) -> int:
             """
             返回与线相连的体的数量。
 
@@ -7940,7 +7939,7 @@ class Mesh3(HasHandle):
                  c_void_p, c_size_t,
                  c_size_t)
 
-        def get_node(self, index):
+        def get_node(self, index) -> Optional['Mesh3.Node']:
             """
             根据索引获取线所连接的节点。
 
@@ -7962,7 +7961,7 @@ class Mesh3(HasHandle):
                  c_void_p, c_size_t,
                  c_size_t)
 
-        def get_face(self, index):
+        def get_face(self, index) -> Optional['Mesh3.Face']:
             """
             根据索引获取与线相连的面。
 
@@ -7984,7 +7983,7 @@ class Mesh3(HasHandle):
                  c_void_p, c_size_t,
                  c_size_t)
 
-        def get_body(self, index):
+        def get_body(self, index) -> Optional['Mesh3.Body']:
             """
             根据索引获取与线相连的体。
 
@@ -8036,7 +8035,7 @@ class Mesh3(HasHandle):
                             lambda m, ind: m.get_body(ind))
 
         @property
-        def length(self):
+        def length(self) -> float:
             """
             返回线的长度。
 
@@ -8130,7 +8129,7 @@ class Mesh3(HasHandle):
                  c_void_p, c_size_t)
 
         @property
-        def node_number(self):
+        def node_number(self) -> int:
             """
             返回面所包含的节点数量。
 
@@ -8144,7 +8143,7 @@ class Mesh3(HasHandle):
                  c_void_p, c_size_t)
 
         @property
-        def link_number(self):
+        def link_number(self) -> int:
             """
             返回面所包含的线的数量。
 
@@ -8158,7 +8157,7 @@ class Mesh3(HasHandle):
                  c_void_p, c_size_t)
 
         @property
-        def body_number(self):
+        def body_number(self) -> int:
             """
             返回与面相连的体的数量。
 
@@ -8172,7 +8171,7 @@ class Mesh3(HasHandle):
                  c_void_p, c_size_t,
                  c_size_t)
 
-        def get_node(self, index):
+        def get_node(self, index) -> Optional['Mesh3.Node']:
             """
             根据索引获取面所包含的节点。
 
@@ -8194,7 +8193,7 @@ class Mesh3(HasHandle):
                  c_void_p, c_size_t,
                  c_size_t)
 
-        def get_link(self, index):
+        def get_link(self, index) -> Optional['Mesh3.Link']:
             """
             根据索引获取面所包含的线。
 
@@ -8216,7 +8215,7 @@ class Mesh3(HasHandle):
                  c_void_p, c_size_t,
                  c_size_t)
 
-        def get_body(self, index):
+        def get_body(self, index) -> Optional['Mesh3.Body']:
             """
             根据索引获取与面相连的体。
 
@@ -8271,7 +8270,7 @@ class Mesh3(HasHandle):
                  c_void_p, c_size_t)
 
         @property
-        def area(self):
+        def area(self) -> float:
             """
             返回面的面积。
 
@@ -8373,7 +8372,7 @@ class Mesh3(HasHandle):
                  c_void_p, c_size_t)
 
         @property
-        def node_number(self):
+        def node_number(self) -> int:
             """
             返回体所包含的节点数量。
 
@@ -8387,7 +8386,7 @@ class Mesh3(HasHandle):
                  c_void_p, c_size_t)
 
         @property
-        def link_number(self):
+        def link_number(self) -> int:
             """
             返回体所包含的线的数量。
 
@@ -8401,7 +8400,7 @@ class Mesh3(HasHandle):
                  c_void_p, c_size_t)
 
         @property
-        def face_number(self):
+        def face_number(self) -> int:
             """
             返回体所包含的面的数量。
 
@@ -8415,7 +8414,7 @@ class Mesh3(HasHandle):
                  c_void_p, c_size_t,
                  c_size_t)
 
-        def get_node(self, index):
+        def get_node(self, index) -> Optional['Mesh3.Node']:
             """
             根据索引获取体所包含的节点。
 
@@ -8437,7 +8436,7 @@ class Mesh3(HasHandle):
                  c_void_p, c_size_t,
                  c_size_t)
 
-        def get_link(self, index):
+        def get_link(self, index) -> Optional['Mesh3.Link']:
             """
             根据索引获取体所包含的线。
 
@@ -8459,7 +8458,7 @@ class Mesh3(HasHandle):
                  c_void_p, c_size_t,
                  c_size_t)
 
-        def get_face(self, index):
+        def get_face(self, index) -> Optional['Mesh3.Face']:
             """
             根据索引获取体所包含的面。
 
@@ -8638,7 +8637,7 @@ class Mesh3(HasHandle):
     core.use(None, 'mesh3_save',
              c_void_p, c_char_p)
 
-    def save(self, path):
+    def save(self, path: str):
         """
         序列化保存网格数据。
 
@@ -8665,7 +8664,7 @@ class Mesh3(HasHandle):
     core.use(None, 'mesh3_load',
              c_void_p, c_char_p)
 
-    def load(self, path):
+    def load(self, path: str):
         """
         读取序列化的网格文件。
 
@@ -8682,7 +8681,7 @@ class Mesh3(HasHandle):
              c_void_p)
 
     @property
-    def node_number(self):
+    def node_number(self) -> int:
         """
         返回网格中的节点数量。
 
@@ -8695,7 +8694,7 @@ class Mesh3(HasHandle):
              c_void_p)
 
     @property
-    def link_number(self):
+    def link_number(self) -> int:
         """
         返回网格中的线的数量。
 
@@ -8708,7 +8707,7 @@ class Mesh3(HasHandle):
              c_void_p)
 
     @property
-    def face_number(self):
+    def face_number(self) -> int:
         """
         返回网格中的面的数量。
 
@@ -8721,7 +8720,7 @@ class Mesh3(HasHandle):
              c_void_p)
 
     @property
-    def body_number(self):
+    def body_number(self) -> int:
         """
         返回网格中的体的数量。
 
@@ -8730,7 +8729,7 @@ class Mesh3(HasHandle):
         """
         return core.mesh3_get_body_number(self.handle)
 
-    def get_node(self, index):
+    def get_node(self, index) -> Optional['Mesh3.Node']:
         """
         根据索引获取网格中的节点。
 
@@ -8746,7 +8745,7 @@ class Mesh3(HasHandle):
         else:
             return None
 
-    def get_link(self, index):
+    def get_link(self, index) -> Optional['Mesh3.Link']:
         """
         根据索引获取网格中的线。
 
@@ -8762,7 +8761,7 @@ class Mesh3(HasHandle):
         else:
             return None
 
-    def get_face(self, index):
+    def get_face(self, index) -> Optional['Mesh3.Face']:
         """
         根据索引获取网格中的面。
 
@@ -8778,7 +8777,7 @@ class Mesh3(HasHandle):
         else:
             return None
 
-    def get_body(self, index):
+    def get_body(self, index) -> Optional['Mesh3.Body']:
         """
         根据索引获取网格中的体。
 
@@ -8841,7 +8840,7 @@ class Mesh3(HasHandle):
     core.use(c_size_t, 'mesh3_add_node',
              c_void_p, c_double, c_double, c_double)
 
-    def add_node(self, x, y, z):
+    def add_node(self, x: float, y: float, z: float) -> Optional['Mesh3.Node']:
         """
         在网格中添加一个节点。
 
@@ -8859,7 +8858,7 @@ class Mesh3(HasHandle):
     core.use(c_size_t, 'mesh3_add_link',
              c_void_p, c_size_t, c_size_t)
 
-    def add_link(self, nodes):
+    def add_link(self, nodes) -> Optional['Mesh3.Link']:
         """
         在网格中添加一条线。
 
@@ -8886,7 +8885,7 @@ class Mesh3(HasHandle):
              c_void_p, c_size_t, c_size_t,
              c_size_t, c_size_t)
 
-    def add_face(self, links):
+    def add_face(self, links) -> Optional['Mesh3.Face']:
         """
         根据给定的线创建一个面并返回。
 
@@ -8922,7 +8921,7 @@ class Mesh3(HasHandle):
              c_size_t, c_size_t,
              c_size_t, c_size_t)
 
-    def add_body(self, faces):
+    def add_body(self, faces) -> Optional['Mesh3.Body']:
         """
         根据给定的面创建一个体并返回。
 
@@ -8953,7 +8952,7 @@ class Mesh3(HasHandle):
     core.use(None, 'mesh3_change_view',
              c_void_p, c_void_p, c_void_p)
 
-    def change_view(self, c_new, c_old):
+    def change_view(self, c_new, c_old) -> 'Mesh3':
         """
         改变网格的视图。
 
@@ -8972,7 +8971,7 @@ class Mesh3(HasHandle):
     core.use(None, 'mesh3_get_slice',
              c_void_p, c_void_p, c_void_p)
 
-    def get_slice(self, node_kept):
+    def get_slice(self, node_kept) -> 'Mesh3':
         """
         获取网格的切片。
 
@@ -8990,7 +8989,7 @@ class Mesh3(HasHandle):
     core.use(None, 'mesh3_append',
              c_void_p, c_void_p)
 
-    def append(self, other):
+    def append(self, other) -> 'Mesh3':
         """
         将另一个网格对象追加到当前网格对象中。
 
@@ -9151,7 +9150,7 @@ class Mesh3(HasHandle):
              c_double, c_double, c_double, c_double)
 
     @staticmethod
-    def create_tetra(x1, y1, z1, x2, y2, z2, edge_length):
+    def create_tetra(x1, y1, z1, x2, y2, z2, edge_length) -> 'Mesh3':
         """
         在三维区域生成四面体网格。
 
@@ -9184,7 +9183,7 @@ class Mesh3(HasHandle):
     @staticmethod
     def create_cube(x1=None, y1=None, z1=None, x2=None, y2=None, z2=None,
                     dx=None,
-                    dy=None, dz=None, lat=None, buffer=None):
+                    dy=None, dz=None, lat=None, buffer=None) -> 'Mesh3':
         """
         创建立方体结构网格。
 
@@ -9230,7 +9229,7 @@ class Mesh3(HasHandle):
              c_void_p, c_double,
              c_double, c_double)
 
-    def get_nearest_node(self, pos):
+    def get_nearest_node(self, pos) -> Optional['Mesh3.Node']:
         """
         获取距离给定位置最近的节点。
 
@@ -9238,7 +9237,7 @@ class Mesh3(HasHandle):
             pos (list/tuple): 三维坐标(x, y, z)
 
         Returns:
-            Node/None: 最近节点对象，若无节点返回None
+            Mesh3.Node/None: 最近节点对象，若无节点返回None
         """
         if self.node_number > 0:
             index = core.mesh3_get_nearest_node_id(
@@ -9251,7 +9250,7 @@ class Mesh3(HasHandle):
              c_void_p, c_double,
              c_double, c_double)
 
-    def get_nearest_link(self, pos):
+    def get_nearest_link(self, pos) -> Optional['Mesh3.Link']:
         """
         获取距离给定位置最近的线。
 
@@ -9272,7 +9271,7 @@ class Mesh3(HasHandle):
              c_void_p, c_double,
              c_double, c_double)
 
-    def get_nearest_face(self, pos):
+    def get_nearest_face(self, pos) -> Optional['Mesh3.Face']:
         """
         获取距离给定位置最近的面。
 
@@ -9293,7 +9292,7 @@ class Mesh3(HasHandle):
              c_void_p, c_double,
              c_double, c_double)
 
-    def get_nearest_body(self, pos):
+    def get_nearest_body(self, pos) -> Optional['Mesh3.Body']:
         """
         获取距离给定位置最近的体。
 
@@ -9313,7 +9312,7 @@ class Mesh3(HasHandle):
     core.use(None, 'mesh3_get_loc_range',
              c_void_p, c_void_p, c_void_p)
 
-    def get_pos_range(self, lr=None, rr=None):
+    def get_pos_range(self, lr=None, rr=None) -> Tuple[List[float], List[float]]:
         """
         获取所有节点的空间坐标范围。
 
@@ -9416,13 +9415,11 @@ class LinearExpr(HasHandle):
     core.use(None, 'del_lexpr', c_void_p)
 
     def __init__(self, handle: Optional[c_void_p] = None):
-        super().__init__(
-            handle, core.new_lexpr, core.del_lexpr)
+        super().__init__(handle, core.new_lexpr, core.del_lexpr)
 
-    core.use(None, 'lexpr_save',
-             c_void_p, c_char_p)
+    core.use(None, 'lexpr_save', c_void_p, c_char_p)
 
-    def save(self, path):
+    def save(self, path: str):
         """
         将线性表达式序列化到指定路径。
 
@@ -9439,10 +9436,9 @@ class LinearExpr(HasHandle):
             make_parent(path)
             core.lexpr_save(self.handle, make_c_char_p(path))
 
-    core.use(None, 'lexpr_load',
-             c_void_p, c_char_p)
+    core.use(None, 'lexpr_load', c_void_p, c_char_p)
 
-    def load(self, path):
+    def load(self, path: str):
         """
         从文件加载线性表达式数据。
 
@@ -9462,7 +9458,7 @@ class LinearExpr(HasHandle):
     core.use(None, 'lexpr_read_fmap',
              c_void_p, c_void_p, c_char_p)
 
-    def to_fmap(self, fmt='binary'):
+    def to_fmap(self, fmt: str = 'binary') -> FileMap:
         """
         将表达式序列化到文件映射对象。
 
@@ -9477,7 +9473,7 @@ class LinearExpr(HasHandle):
                               make_c_char_p(fmt))
         return fmap
 
-    def from_fmap(self, fmap: FileMap, fmt='binary'):
+    def from_fmap(self, fmap: FileMap, fmt: str = 'binary'):
         """
         从文件映射对象加载表达式。
 
@@ -9489,26 +9485,25 @@ class LinearExpr(HasHandle):
             TypeError: 当fmap参数类型错误时抛出
         """
         assert isinstance(fmap, FileMap)
-        core.lexpr_read_fmap(self.handle, fmap.handle,
-                             make_c_char_p(fmt))
+        core.lexpr_read_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
 
     @property
-    def fmap(self):
+    def fmap(self) -> FileMap:
         return self.to_fmap(fmt='binary')
 
     @fmap.setter
-    def fmap(self, value):
+    def fmap(self, value: FileMap):
         self.from_fmap(value, fmt='binary')
 
-    def __eq__(self, rhs):
+    def __eq__(self, rhs: 'LinearExpr'):
         """判断两个线性表达式是否指向同一内存对象"""
         return self.handle == rhs.handle
 
-    def __ne__(self, rhs):
+    def __ne__(self, rhs: 'LinearExpr'):
         """判断两个线性表达式是否不同对象"""
         return not (self == rhs)
 
-    def __str__(self):
+    def __str__(self) -> str:
         """
         获取线性表达式的字符串表示。
 
@@ -9524,11 +9519,10 @@ class LinearExpr(HasHandle):
             return f'{type(self).__name__}({self.c})'
 
     core.use(c_double, 'lexpr_get_c', c_void_p)
-    core.use(None, 'lexpr_set_c',
-             c_void_p, c_double)
+    core.use(None, 'lexpr_set_c', c_void_p, c_double)
 
     @property
-    def c(self):
+    def c(self) -> float:
         """
         线性表达式的常数项。
 
@@ -9538,7 +9532,7 @@ class LinearExpr(HasHandle):
         return core.lexpr_get_c(self.handle)
 
     @c.setter
-    def c(self, value):
+    def c(self, value: float):
         """
         设置线性表达式的常数项。
 
@@ -9547,7 +9541,7 @@ class LinearExpr(HasHandle):
         """
         core.lexpr_set_c(self.handle, value)
 
-    def set_c(self, value):
+    def set_c(self, value: float):
         """
         设置常数项并返回当前实例以便链式调用。
 
@@ -9563,7 +9557,7 @@ class LinearExpr(HasHandle):
     core.use(c_size_t, 'lexpr_get_length', c_void_p)
 
     @property
-    def length(self):
+    def length(self) -> int:
         """
         获取线性项的数量（不包括常数项）。
 
@@ -9572,7 +9566,7 @@ class LinearExpr(HasHandle):
         """
         return core.lexpr_get_length(self.handle)
 
-    def __len__(self):
+    def __len__(self) -> int:
         """
         获取线性项的数量（与length属性一致）。
 
@@ -9602,10 +9596,9 @@ class LinearExpr(HasHandle):
         else:
             return None
 
-    core.use(None, 'lexpr_add',
-             c_void_p, c_size_t, c_double)
+    core.use(None, 'lexpr_add', c_void_p, c_size_t, c_double)
 
-    def add(self, index: int, weight: float):
+    def add(self, index: int, weight: float) -> "LinearExpr":
         """
         添加线性项到表达式。
 
@@ -9645,10 +9638,8 @@ class LinearExpr(HasHandle):
         """
         core.lexpr_merge(self.handle)
 
-    core.use(None, 'lexpr_plus',
-             c_void_p, c_size_t, c_size_t)
-    core.use(None, 'lexpr_multiply',
-             c_void_p, c_size_t, c_double)
+    core.use(None, 'lexpr_plus', c_void_p, c_size_t, c_size_t)
+    core.use(None, 'lexpr_multiply', c_void_p, c_size_t, c_double)
 
     def __add__(self, other: "LinearExpr") -> "LinearExpr":
         """
@@ -9734,8 +9725,7 @@ class LinearExpr(HasHandle):
         lexpr.c = c
         return lexpr
 
-    core.use(None, 'lexpr_clone',
-             c_void_p, c_void_p)
+    core.use(None, 'lexpr_clone', c_void_p, c_void_p)
 
     def clone(self, other: "LinearExpr") -> "LinearExpr":
         """
@@ -9817,8 +9807,7 @@ class DynSys(HasHandle):
         Raises:
             FileNotFoundError: 当指定path但文件不存在时抛出
         """
-        super().__init__(
-            handle, core.new_dynsys, core.del_dynsys)
+        super().__init__(handle, core.new_dynsys, core.del_dynsys)
         if handle is None:
             if isinstance(path, str):
                 self.load(path)
@@ -9829,12 +9818,18 @@ class DynSys(HasHandle):
         except:
             pass
 
-    def get_sol(self):
+    def get_sol(self) -> 'ConjugateGradientSolver':
         if not isinstance(self.solver, ConjugateGradientSolver):
             self.solver = ConjugateGradientSolver(tolerance=1.0e-20)
         return self.solver
 
     def __repr__(self) -> str:
+        """
+        返回系统的详细字符串表示。
+
+        Returns:
+            str: 包含系统信息的详细字符串
+        """
         return f'{type(self).__name__}(handle={self.handle}, size={self.size})'
 
     def __str__(self) -> str:
@@ -9845,8 +9840,7 @@ class DynSys(HasHandle):
         """
         return f'{type(self).__name__}(size={self.size})'
 
-    core.use(None, 'dynsys_save',
-             c_void_p, c_char_p)
+    core.use(None, 'dynsys_save', c_void_p, c_char_p)
 
     def save(self, path: str):
         """
@@ -9865,8 +9859,7 @@ class DynSys(HasHandle):
             make_parent(path)
             core.dynsys_save(self.handle, make_c_char_p(path))
 
-    core.use(None, 'dynsys_load',
-             c_void_p, c_char_p)
+    core.use(None, 'dynsys_load', c_void_p, c_char_p)
 
     def load(self, path: str):
         """
@@ -9883,10 +9876,8 @@ class DynSys(HasHandle):
             _check_ipath(path, self)
             core.dynsys_load(self.handle, make_c_char_p(path))
 
-    core.use(None, 'dynsys_write_fmap',
-             c_void_p, c_void_p, c_char_p)
-    core.use(None, 'dynsys_read_fmap',
-             c_void_p, c_void_p, c_char_p)
+    core.use(None, 'dynsys_write_fmap', c_void_p, c_void_p, c_char_p)
+    core.use(None, 'dynsys_read_fmap', c_void_p, c_void_p, c_char_p)
 
     def to_fmap(self, fmt: str = 'binary') -> FileMap:
         """
@@ -9930,8 +9921,7 @@ class DynSys(HasHandle):
     def fmap(self, value: FileMap):
         self.from_fmap(value, fmt='binary')
 
-    core.use(c_int, 'dynsys_iterate',
-             c_void_p, c_double, c_void_p)
+    core.use(c_int, 'dynsys_iterate', c_void_p, c_double, c_void_p)
 
     def iterate(self, dt: float, solver: Optional['ConjugateGradientSolver'] = None) -> int:
         """
@@ -9949,6 +9939,7 @@ class DynSys(HasHandle):
         """
         if not isinstance(solver, ConjugateGradientSolver):
             solver = self.get_sol()
+            assert isinstance(solver, ConjugateGradientSolver)
         return core.dynsys_iterate(self.handle, dt, solver.handle)
 
     core.use(c_size_t, 'dynsys_size', c_void_p)
@@ -9964,15 +9955,13 @@ class DynSys(HasHandle):
         """
         return core.dynsys_size(self.handle)
 
-    core.use(None, 'dynsys_resize',
-             c_void_p, c_size_t)
+    core.use(None, 'dynsys_resize', c_void_p, c_size_t)
 
     @size.setter
     def size(self, value: int):
         core.dynsys_resize(self.handle, value)
 
-    core.use(c_double, 'dynsys_get_pos',
-             c_void_p, c_size_t)
+    core.use(c_double, 'dynsys_get_pos', c_void_p, c_size_t)
 
     def get_pos(self, idx: int) -> Optional[float]:
         """
@@ -9990,8 +9979,7 @@ class DynSys(HasHandle):
         else:
             return None
 
-    core.use(None, 'dynsys_set_pos',
-             c_void_p, c_size_t, c_double)
+    core.use(None, 'dynsys_set_pos', c_void_p, c_size_t, c_double)
 
     def set_pos(self, idx: int, value: float):
         """
@@ -10005,8 +9993,7 @@ class DynSys(HasHandle):
         if idx_ is not None:
             core.dynsys_set_pos(self.handle, idx_, value)
 
-    core.use(None, 'dynsys_write_pos',
-             c_void_p, c_void_p)
+    core.use(None, 'dynsys_write_pos', c_void_p, c_void_p)
 
     def write_pos(self, pointer):
         """
@@ -10014,8 +10001,7 @@ class DynSys(HasHandle):
         """
         core.dynsys_write_pos(self.handle, f64_ptr(pointer))
 
-    core.use(None, 'dynsys_read_pos',
-             c_void_p, c_void_p)
+    core.use(None, 'dynsys_read_pos', c_void_p, c_void_p)
 
     def read_pos(self, pointer):
         """
@@ -10023,8 +10009,7 @@ class DynSys(HasHandle):
         """
         core.seepage_cells_read(self.handle, const_f64_ptr(pointer))
 
-    core.use(c_double, 'dynsys_get_vel',
-             c_void_p, c_size_t)
+    core.use(c_double, 'dynsys_get_vel', c_void_p, c_size_t)
 
     def get_vel(self, idx):
         """
@@ -10036,14 +10021,13 @@ class DynSys(HasHandle):
         Returns:
             float: 当前速度值
         """
-        idx = get_index(idx, self.size)
-        if idx is not None:
-            return core.dynsys_get_vel(self.handle, idx)
+        idx_ = get_index(idx, self.size)
+        if idx_ is not None:
+            return core.dynsys_get_vel(self.handle, idx_)
         else:
             return None
 
-    core.use(None, 'dynsys_set_vel',
-             c_void_p, c_size_t, c_double)
+    core.use(None, 'dynsys_set_vel', c_void_p, c_size_t, c_double)
 
     def set_vel(self, idx, value):
         """
@@ -10053,12 +10037,11 @@ class DynSys(HasHandle):
             idx (int): 自由度索引（0 <= idx < size）
             value (float): 新速度值
         """
-        idx = get_index(idx, self.size)
-        if idx is not None:
-            core.dynsys_set_vel(self.handle, idx, value)
+        idx_ = get_index(idx, self.size)
+        if idx_ is not None:
+            core.dynsys_set_vel(self.handle, idx_, value)
 
-    core.use(None, 'dynsys_write_vel',
-             c_void_p, c_void_p)
+    core.use(None, 'dynsys_write_vel', c_void_p, c_void_p)
 
     def write_vel(self, pointer):
         """
@@ -10066,8 +10049,7 @@ class DynSys(HasHandle):
         """
         core.dynsys_write_vel(self.handle, f64_ptr(pointer))
 
-    core.use(None, 'dynsys_read_vel',
-             c_void_p, c_void_p)
+    core.use(None, 'dynsys_read_vel', c_void_p, c_void_p)
 
     def read_vel(self, pointer):
         """
@@ -10075,10 +10057,9 @@ class DynSys(HasHandle):
         """
         core.seepage_cells_read(self.handle, const_f64_ptr(pointer))
 
-    core.use(c_double, 'dynsys_get_mass',
-             c_void_p, c_size_t)
+    core.use(c_double, 'dynsys_get_mass', c_void_p, c_size_t)
 
-    def get_mass(self, idx):
+    def get_mass(self, idx: int) -> Optional[float]:
         """
         获取指定自由度的质量。
 
@@ -10088,16 +10069,15 @@ class DynSys(HasHandle):
         Returns:
             float: 质量值
         """
-        idx = get_index(idx, self.size)
-        if idx is not None:
-            return core.dynsys_get_mass(self.handle, idx)
+        idx_ = get_index(idx, self.size)
+        if idx_ is not None:
+            return core.dynsys_get_mass(self.handle, idx_)
         else:
             return None
 
-    core.use(None, 'dynsys_set_mass',
-             c_void_p, c_size_t, c_double)
+    core.use(None, 'dynsys_set_mass', c_void_p, c_size_t, c_double)
 
-    def set_mass(self, idx, value):
+    def set_mass(self, idx: int, value: float):
         """
         设置指定自由度的质量。
 
@@ -10105,15 +10085,14 @@ class DynSys(HasHandle):
             idx (int): 自由度索引（0 <= idx < size）
             value (float): 新质量值
         """
-        idx = get_index(idx, self.size)
-        if idx is not None:
-            core.dynsys_set_mass(self.handle, idx, value)
+        idx_ = get_index(idx, self.size)
+        if idx_ is not None:
+            core.dynsys_set_mass(self.handle, idx_, value)
 
     get_mas = get_mass
     set_mas = set_mass
 
-    core.use(None, 'dynsys_write_mass',
-             c_void_p, c_void_p)
+    core.use(None, 'dynsys_write_mass', c_void_p, c_void_p)
 
     def write_mass(self, pointer):
         """
@@ -10121,8 +10100,7 @@ class DynSys(HasHandle):
         """
         core.dynsys_write_mass(self.handle, f64_ptr(pointer))
 
-    core.use(None, 'dynsys_read_mass',
-             c_void_p, c_void_p)
+    core.use(None, 'dynsys_read_mass', c_void_p, c_void_p)
 
     def read_mass(self, pointer):
         """
@@ -10130,8 +10108,7 @@ class DynSys(HasHandle):
         """
         core.seepage_cells_read(self.handle, const_f64_ptr(pointer))
 
-    core.use(c_void_p, 'dynsys_get_p2f',
-             c_void_p, c_size_t)
+    core.use(c_void_p, 'dynsys_get_p2f', c_void_p, c_size_t)
 
     def get_p2f(self, idx: int) -> Optional[LinearExpr]:
         """
@@ -10153,8 +10130,7 @@ class DynSys(HasHandle):
         else:
             return None
 
-    core.use(None, 'dynsys_write_p2f_c',
-             c_void_p, c_void_p)
+    core.use(None, 'dynsys_write_p2f_c', c_void_p, c_void_p)
 
     def write_p2f_c(self, pointer):
         """
@@ -10162,8 +10138,7 @@ class DynSys(HasHandle):
         """
         core.dynsys_write_p2f_c(self.handle, f64_ptr(pointer))
 
-    core.use(None, 'dynsys_read_p2f_c',
-             c_void_p, c_void_p)
+    core.use(None, 'dynsys_read_p2f_c', c_void_p, c_void_p)
 
     def read_p2f_c(self, pointer):
         """
@@ -10171,8 +10146,7 @@ class DynSys(HasHandle):
         """
         core.seepage_cells_read(self.handle, const_f64_ptr(pointer))
 
-    core.use(c_double, 'dynsys_get_lexpr_value',
-             c_void_p, c_void_p)
+    core.use(c_double, 'dynsys_get_lexpr_value', c_void_p, c_void_p)
 
     def get_lexpr_value(self, lexpr: LinearExpr) -> float:
         """
@@ -11604,7 +11578,7 @@ class SeepageMesh(HasHandle, HasCells):
                 for i in range(3)]
 
         @pos.setter
-        def pos(self, value: List[float] | Tuple[float, float, float]):
+        def pos(self, value: Union[List[float], Tuple[float, float, float]]):
             """设置单元格中心点坐标。
 
             Args:
@@ -13845,7 +13819,7 @@ class Seepage(HasHandle, HasCells):
             return Interp2(handle=core.fludef_get_den(self.handle))
 
         @den.setter
-        def den(self, value: Optional[float] | Optional[Interp2] = None):
+        def den(self, value: Optional[Union[float, Interp2]] = None):
             """
             设置密度数据。
 
@@ -13884,7 +13858,7 @@ class Seepage(HasHandle, HasCells):
             return Interp2(handle=core.fludef_get_vis(self.handle))
 
         @vis.setter
-        def vis(self, value: Optional[float] | Optional[Interp2] = None):
+        def vis(self, value: Optional[Union[float, Interp2]] = None):
             """
             设置粘性数据。
 
@@ -14803,7 +14777,7 @@ class Seepage(HasHandle, HasCells):
                     for i in range(3)]
 
         @pos.setter
-        def pos(self, value: List[float] | Tuple[float]):
+        def pos(self, value: Union[List[float], Tuple[float]]):
             """
             设置该Cell在三维空间的坐标。
 
@@ -14929,7 +14903,7 @@ class Seepage(HasHandle, HasCells):
         core.use(None, 'seepage_cell_fill',
                  c_void_p, c_double, c_void_p)
 
-        def fill(self, p: float, s: Vector | list) -> 'Seepage.CellData':
+        def fill(self, p: float, s: Union[Vector, list, tuple]) -> 'Seepage.CellData':
             """
             根据此时流体的密度，孔隙的v0和k，给定的目标压力和流体饱和度，设置各个组分的质量。
                 这里p为目标压力，s为目标饱和度；
@@ -14994,7 +14968,7 @@ class Seepage(HasHandle, HasCells):
             assert 0 <= value < 10
             core.seepage_cell_set_fluid_n(self.handle, value)
 
-        def get_fluid(self, *args) -> Optional['Seepage.Fluid'] | Optional['Seepage.FluData']:
+        def get_fluid(self, *args) -> Optional[Union['Seepage.Fluid', 'Seepage.FluData']]:
             """
             返回给定序号的流体。(当参数数量为1的时候，返回Seepage.Fluid对象；
             当参数数量大于1的时候，返回Seepage.FluData对象)
@@ -15022,7 +14996,7 @@ class Seepage(HasHandle, HasCells):
                 return None
 
         @property
-        def fluids(self) -> Iterable['Seepage.Fluid'] | Iterable['Seepage.FluData']:
+        def fluids(self) -> Iterable[Union['Seepage.Fluid', 'Seepage.FluData']]:
             """
             单元格内的所有流体
 
@@ -15032,7 +15006,7 @@ class Seepage(HasHandle, HasCells):
             return Iterator(self, self.fluid_number,
                             lambda m, ind: m.get_fluid(ind))
 
-        def get_component(self, indexes: int | list) -> Optional['Seepage.FluData']:
+        def get_component(self, indexes: Union[int, list]) -> Optional[Union['Seepage.FluData']]:
             """
             返回给定序号的组分。
 
@@ -15115,7 +15089,7 @@ class Seepage(HasHandle, HasCells):
             """
             return core.seepage_cell_get_attr_n(self.handle)
 
-        def get_attr(self, index: int | str, default_val: float = None,
+        def get_attr(self, index: Union[int, str], default_val: float = None,
                      **valid_range) -> Optional[float]:
             """
             该Cell的第 attr_id个自定义属性值。
@@ -15153,7 +15127,7 @@ class Seepage(HasHandle, HasCells):
             else:
                 return default_val
 
-        def set_attr(self, index: int | str, value: float) -> 'Seepage.CellData':
+        def set_attr(self, index: Union[int, str], value: float) -> 'Seepage.CellData':
             """
             该Cell的第 attr_id个自定义属性值。当不存在时，
             默认为一个无穷大的值(大于1.0e100)
@@ -15732,7 +15706,7 @@ class Seepage(HasHandle, HasCells):
         core.use(None, 'seepage_face_set_attr',
                  c_void_p, c_size_t, c_double)
 
-        def get_attr(self, index: int | str, default_val: float = None,
+        def get_attr(self, index: Union[int, str], default_val: float = None,
                      **valid_range):
             """
             该Face的第 attr_id个自定义属性值。
@@ -15758,7 +15732,7 @@ class Seepage(HasHandle, HasCells):
             else:
                 return default_val
 
-        def set_attr(self, index: int | str, value: float):
+        def set_attr(self, index: Union[int, str], value: float):
             """
             该Face的第 attr_id个自定义属性值。
             当不存在时，默认为一个无穷大的值(大于1.0e100)
@@ -16215,7 +16189,7 @@ class Seepage(HasHandle, HasCells):
         core.use(None, 'injector_set_fid',
                  c_void_p, c_size_t, c_size_t, c_size_t)
 
-        def set_fid(self, fluid_id: int | List[int] | Tuple[int, ...]):
+        def set_fid(self, fluid_id: Union[int, List[int], Tuple[int, ...]]):
             """
             设置注入的流体的ID。注意：如果需要注热的是热量，则将fluid_id设置为None。
             注：在没有做特殊设置的时候，fid默认为[]
@@ -16254,7 +16228,7 @@ class Seepage(HasHandle, HasCells):
             return self.get_fid()
 
         @fid.setter
-        def fid(self, value: int | List[int] | Tuple[int, ...]):
+        def fid(self, value: Union[int, List[int], Tuple[int, ...]]):
             """
             设置注入的流体的ID。注意：如果需要注热的是热量，则将fluid_id设置为None。
             注：在没有做特殊设置的时候，fid默认为[]
@@ -16346,7 +16320,7 @@ class Seepage(HasHandle, HasCells):
             return [core.injector_get_pos(self.handle, i) for i in range(3)]
 
         @pos.setter
-        def pos(self, value: List[float] | Tuple[float, ...]):
+        def pos(self, value: Union[List[float], Tuple[float], Tuple[float, ...]]):
             """
             设置该Injector在三维空间的坐标。
             注：
@@ -16511,7 +16485,7 @@ class Seepage(HasHandle, HasCells):
         core.use(None, 'injector_add_oper',
                  c_void_p, c_double, c_char_p)
 
-        def add_oper(self, time: float, oper: str | float):
+        def add_oper(self, time: float, oper: Union[str, float]):
             """
             添加在time时刻的一个操作。注意，oper支持如下关键词
                 value
@@ -17004,7 +16978,7 @@ class Seepage(HasHandle, HasCells):
         return core.seepage_get_text(self.handle,
                                      make_c_char_p(key)).decode()
 
-    def set_text(self, key: str, text: str | Any):
+    def set_text(self, key: str, text: Union[str, Any]):
         """
         设置模型中存储的文本数据
 
@@ -17257,11 +17231,11 @@ class Seepage(HasHandle, HasCells):
 
     core.use(c_size_t, 'seepage_add_inj', c_void_p)
 
-    def add_injector(self, cell: Optional['Seepage.Cell | int'] = None,
-                     fluid_id: Optional[str | List[int] | Tuple[int]] = None,
+    def add_injector(self, cell: Optional[Union['Seepage.Cell', int]] = None,
+                     fluid_id: Optional[Union[str, List[int], Tuple[int]]] = None,
                      flu: Optional['Seepage.FluData'] = None,
                      data: Optional['Seepage.Injector'] = None,
-                     pos: Optional[List | Tuple] = None,
+                     pos: Optional[Union[List[float], Tuple[float]]] = None,
                      radi: Optional[float] = None,
                      opers: Optional[List[Tuple[float, str]]] = None,
                      ca_mc: Optional[int] = None,
@@ -17467,9 +17441,9 @@ class Seepage(HasHandle, HasCells):
                 core.seepage_get_gravity(self.handle, 2))
 
     @gravity.setter
-    def gravity(self, value: Tuple[float, float, float] | List[float]):
+    def gravity(self, value: Union[Tuple[float], List[float]]):
         """
-        重力加速度，默认为(0.0, 0.0, 0.0.0)
+        重力加速度，默认为(0.0, 0.0, 0.0)
 
         Args:
             value (tuple): 要设置的重力加速度的三维向量。
@@ -23255,15 +23229,14 @@ class DDMSolution2(HasHandle):
     core.use(c_void_p, 'new_ddm_sol2')
     core.use(None, 'del_ddm_sol2', c_void_p)
 
-    def __init__(self, handle=None):
+    def __init__(self, handle: Optional[c_void_p]=None):
         """
         初始化DDMSolution2对象
 
         Args:
-            handle: 句柄对象。默认为None。
+            handle (Optional[c_void_p], optional): 句柄对象。默认为None。
         """
-        super().__init__(handle, core.new_ddm_sol2,
-                         core.del_ddm_sol2)
+        super().__init__(handle, core.new_ddm_sol2, core.del_ddm_sol2)
 
     def __repr__(self):
         return (f'{type(self).__name__}(handle={self.handle}, '
@@ -23272,12 +23245,10 @@ class DDMSolution2(HasHandle):
                 f'poisson_ratio={self.poisson_ratio}, '
                 f'adjust_coeff={self.adjust_coeff})')
 
-    core.use(None, 'ddm_sol2_save',
-             c_void_p, c_char_p)
-    core.use(None, 'ddm_sol2_load',
-             c_void_p, c_char_p)
+    core.use(None, 'ddm_sol2_save', c_void_p, c_char_p)
+    core.use(None, 'ddm_sol2_load', c_void_p, c_char_p)
 
-    def save(self, path):
+    def save(self, path: str):
         """
         序列化保存。可选扩展格式：
             1：.txt
@@ -23299,7 +23270,7 @@ class DDMSolution2(HasHandle):
             make_parent(path)
             core.ddm_sol2_save(self.handle, make_c_char_p(path))
 
-    def load(self, path):
+    def load(self, path: str):
         """
         读取序列化文件。
             根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
@@ -23310,12 +23281,11 @@ class DDMSolution2(HasHandle):
         if isinstance(path, str):
             core.ddm_sol2_load(self.handle, make_c_char_p(path))
 
-    core.use(None, 'ddm_sol2_set_alpha',
-             c_void_p, c_double)
+    core.use(None, 'ddm_sol2_set_alpha', c_void_p, c_double)
     core.use(c_double, 'ddm_sol2_get_alpha', c_void_p)
 
     @property
-    def alpha(self):
+    def alpha(self) -> float:
         """
         获取alpha值
 
@@ -23325,7 +23295,7 @@ class DDMSolution2(HasHandle):
         return core.ddm_sol2_get_alpha(self.handle)
 
     @alpha.setter
-    def alpha(self, value):
+    def alpha(self, value: float):
         """
         设置alpha值
 
@@ -23334,12 +23304,11 @@ class DDMSolution2(HasHandle):
         """
         core.ddm_sol2_set_alpha(self.handle, value)
 
-    core.use(None, 'ddm_sol2_set_beta',
-             c_void_p, c_double)
+    core.use(None, 'ddm_sol2_set_beta', c_void_p, c_double)
     core.use(c_double, 'ddm_sol2_get_beta', c_void_p)
 
     @property
-    def beta(self):
+    def beta(self) -> float:
         """
         获取beta值
 
@@ -23349,7 +23318,7 @@ class DDMSolution2(HasHandle):
         return core.ddm_sol2_get_beta(self.handle)
 
     @beta.setter
-    def beta(self, value):
+    def beta(self, value: float):
         """
         设置beta值
 
@@ -23358,12 +23327,11 @@ class DDMSolution2(HasHandle):
         """
         core.ddm_sol2_set_beta(self.handle, value)
 
-    core.use(None, 'ddm_sol2_set_shear_modulus',
-             c_void_p, c_double)
+    core.use(None, 'ddm_sol2_set_shear_modulus', c_void_p, c_double)
     core.use(c_double, 'ddm_sol2_get_shear_modulus', c_void_p)
 
     @property
-    def shear_modulus(self):
+    def shear_modulus(self) -> float:
         """
         获取剪切模量
 
@@ -23373,7 +23341,7 @@ class DDMSolution2(HasHandle):
         return core.ddm_sol2_get_shear_modulus(self.handle)
 
     @shear_modulus.setter
-    def shear_modulus(self, value):
+    def shear_modulus(self, value: float):
         """
         设置剪切模量
 
@@ -23382,12 +23350,11 @@ class DDMSolution2(HasHandle):
         """
         core.ddm_sol2_set_shear_modulus(self.handle, value)
 
-    core.use(None, 'ddm_sol2_set_poisson_ratio',
-             c_void_p, c_double)
+    core.use(None, 'ddm_sol2_set_poisson_ratio', c_void_p, c_double)
     core.use(c_double, 'ddm_sol2_get_poisson_ratio', c_void_p)
 
     @property
-    def poisson_ratio(self):
+    def poisson_ratio(self) -> float:
         """
         获取泊松比
 
@@ -23397,7 +23364,7 @@ class DDMSolution2(HasHandle):
         return core.ddm_sol2_get_poisson_ratio(self.handle)
 
     @poisson_ratio.setter
-    def poisson_ratio(self, value):
+    def poisson_ratio(self, value: float):
         """
         设置泊松比
 
@@ -23406,12 +23373,11 @@ class DDMSolution2(HasHandle):
         """
         core.ddm_sol2_set_poisson_ratio(self.handle, value)
 
-    core.use(None, 'ddm_sol2_set_adjust_coeff',
-             c_void_p, c_double)
+    core.use(None, 'ddm_sol2_set_adjust_coeff', c_void_p, c_double)
     core.use(c_double, 'ddm_sol2_get_adjust_coeff', c_void_p)
 
     @property
-    def adjust_coeff(self):
+    def adjust_coeff(self) -> float:
         """
         获取调整系数
 
@@ -23421,7 +23387,7 @@ class DDMSolution2(HasHandle):
         return core.ddm_sol2_get_adjust_coeff(self.handle)
 
     @adjust_coeff.setter
-    def adjust_coeff(self, value):
+    def adjust_coeff(self, value: float):
         """
         设置调整系数
 
@@ -23436,30 +23402,36 @@ class DDMSolution2(HasHandle):
              c_double, c_double, c_double, c_double,
              c_double, c_double, c_double)
 
-    def get_induced(self, pos, fracture, ds, dn, height):
+    def get_induced(self, pos: List[float], fracture: List[float], ds: float, dn: float, height: float,
+                    buffer: Optional[Tensor2] = None) -> Tensor2:
         """
         返回一个裂缝单元的诱导应力
 
         Args:
-            pos (list): 位置信息，长度可以为2或4。
-            fracture (list): 裂缝信息，长度必须为4。
+            buffer: 用于存储结果的张量
+            pos (List[float]): 位置信息，长度可以为2或4。
+            fracture (List[float]): 裂缝信息，长度必须为4。
             ds (float): 未知含义的参数
             dn (float): 未知含义的参数
             height (float): 高度
 
         Returns:
-            Tensor2: 诱导应力张量
+            Tensor2: 结果张量
         """
-        assert len(fracture) == 4
-        stress = Tensor2()
+        assert len(fracture) == 4, "fracture must have 4 elements"
+        if isinstance(buffer, Tensor2):
+            res = buffer
+        else:
+            res = Tensor2()
+        assert isinstance(res, Tensor2)
         if len(pos) == 2:
-            core.ddm_sol2_get_induced(self.handle, stress.handle, *pos, *pos,
+            core.ddm_sol2_get_induced(self.handle, res.handle, *pos, *pos,
                                       *fracture, ds, dn, height)
         else:
-            assert len(pos) == 4
-            core.ddm_sol2_get_induced(self.handle, stress.handle, *pos,
+            assert len(pos) == 4, "pos must have 4 or 2elements"
+            core.ddm_sol2_get_induced(self.handle, res.handle, *pos,
                                       *fracture, ds, dn, height)
-        return stress
+        return res
 
 
 class FractureNetwork(HasHandle):
@@ -23472,7 +23444,7 @@ class FractureNetwork(HasHandle):
         顶点的数据
         """
 
-        def __init__(self, handle):
+        def __init__(self, handle: c_void_p):
             """
             初始化顶点数据对象
 
@@ -23481,11 +23453,10 @@ class FractureNetwork(HasHandle):
             """
             self.handle = handle
 
-        core.use(c_double, 'frac_nd_get_pos',
-                 c_void_p, c_size_t)
+        core.use(c_double, 'frac_nd_get_pos', c_void_p, c_size_t)
 
         @property
-        def x(self):
+        def x(self) -> float:
             """
             获取顶点的x坐标
 
@@ -23495,7 +23466,7 @@ class FractureNetwork(HasHandle):
             return core.frac_nd_get_pos(self.handle, 0)
 
         @property
-        def y(self):
+        def y(self) -> float:
             """
             获取顶点的y坐标
 
@@ -23505,28 +23476,28 @@ class FractureNetwork(HasHandle):
             return core.frac_nd_get_pos(self.handle, 1)
 
         @property
-        def pos(self):
+        def pos(self) -> Tuple[float, float]:
             """
             获取顶点的位置
 
             Returns:
-                tuple: 包含顶点x和y坐标的元组
+                Tuple[float, float]: 包含顶点x和y坐标的元组
             """
             return self.x, self.y
 
-        core.use(c_double, 'frac_nd_get_attr',
-                 c_void_p, c_size_t)
-        core.use(None, 'frac_nd_set_attr',
-                 c_void_p, c_size_t, c_double)
+        core.use(c_double, 'frac_nd_get_attr', c_void_p, c_size_t)
+        core.use(None, 'frac_nd_set_attr', c_void_p, c_size_t, c_double)
 
-        def get_attr(self, index, default_val=None, **valid_range):
+        def get_attr(self, index: int, default_val: Optional[float] = None, *,
+                     left: float = -1.0e100, right: float = 1.0e100) -> Optional[float]:
             """
             获取第index个自定义属性
 
             Args:
                 index (int): 自定义属性的索引
                 default_val (float, optional): 属性不存在时的默认值，默认为None
-                **valid_range: 属性的有效范围
+                left (float): 属性的左边界，默认为-1.0e100
+                right (float): 属性的右边界，默认为1.0e100
 
             Returns:
                 float: 如果属性存在且在有效范围内，返回属性值；否则返回默认值
@@ -23534,13 +23505,14 @@ class FractureNetwork(HasHandle):
             if index is None:
                 return default_val
             # 当index个属性不存在时，默认为无穷大的一个值(1.0e100以上的浮点数)
+            assert index >= 0, "属性索引必须大于等于0"
             value = core.frac_nd_get_attr(self.handle, index)
-            if _attr_in_range(value, **valid_range):
+            if left <= value <= right:
                 return value
             else:
                 return default_val
 
-        def set_attr(self, index, value):
+        def set_attr(self, index: int, value: float):
             """
             设置第index个自定义属性
 
@@ -23555,6 +23527,7 @@ class FractureNetwork(HasHandle):
                 return self
             if value is None:
                 value = 1.0e200
+            assert index >= 0, "属性索引必须大于等于0"
             core.frac_nd_set_attr(self.handle, index, value)
             return self
 
@@ -23565,31 +23538,28 @@ class FractureNetwork(HasHandle):
         core.use(c_void_p, 'new_frac_bd')
         core.use(None, 'del_frac_bd', c_void_p)
 
-        def __init__(self, handle=None):
+        def __init__(self, handle: Optional[c_void_p] = None):
             """
             初始化裂缝数据对象
 
             Args:
                 handle: 裂缝数据的句柄，默认为None
             """
-            super().__init__(
-                handle,
-                core.new_frac_bd,
-                core.del_frac_bd)
+            super().__init__(handle, core.new_frac_bd, core.del_frac_bd)
 
-        core.use(c_double, 'frac_bd_get_attr',
-                 c_void_p, c_size_t)
-        core.use(None, 'frac_bd_set_attr',
-                 c_void_p, c_size_t, c_double)
+        core.use(c_double, 'frac_bd_get_attr', c_void_p, c_size_t)
+        core.use(None, 'frac_bd_set_attr', c_void_p, c_size_t, c_double)
 
-        def get_attr(self, index, default_val=None, **valid_range):
+        def get_attr(self, index: int, default_val: Optional[float] = None, *,
+                     left: float = -1.0e100, right: float = 1.0e100) -> Optional[float]:
             """
             获取第index个自定义属性
 
             Args:
                 index (int): 自定义属性的索引
                 default_val (float, optional): 属性不存在时的默认值，默认为None
-                **valid_range: 属性的有效范围
+                left (float): 属性的左边界，默认为-1.0e100
+                right (float): 属性的右边界，默认为1.0e100
 
             Returns:
                 float: 如果属性存在且在有效范围内，返回属性值；否则返回默认值
@@ -23597,13 +23567,14 @@ class FractureNetwork(HasHandle):
             if index is None:
                 return default_val
             # 当index个属性不存在时，默认为无穷大的一个值(1.0e100以上的浮点数)
+            assert index >= 0, "属性索引必须大于等于0"
             value = core.frac_bd_get_attr(self.handle, index)
-            if _attr_in_range(value, **valid_range):
+            if left <= value <= right:
                 return value
             else:
                 return default_val
 
-        def set_attr(self, index, value):
+        def set_attr(self, index: int, value: float):
             """
             设置第index个自定义属性
 
@@ -23616,25 +23587,23 @@ class FractureNetwork(HasHandle):
             """
             if index is None:
                 return self
-            if value is None:
+            if value is None:  # 此时，相当于移除属性
                 value = 1.0e200
             core.frac_bd_set_attr(self.handle, index, value)
             return self
 
-        core.use(c_double, 'frac_bd_get_ds',
-                 c_void_p)
-        core.use(None, 'frac_bd_set_ds',
-                 c_void_p, c_double)
+        core.use(c_double, 'frac_bd_get_ds', c_void_p)
+        core.use(None, 'frac_bd_set_ds', c_void_p, c_double)
 
         @property
-        def ds(self):
+        def ds(self) -> float:
             """
             ds属性
             """
             return core.frac_bd_get_ds(self.handle)
 
         @ds.setter
-        def ds(self, value):
+        def ds(self, value: float):
             """
             设置裂缝的ds属性
 
@@ -23643,13 +23612,11 @@ class FractureNetwork(HasHandle):
             """
             core.frac_bd_set_ds(self.handle, value)
 
-        core.use(c_double, 'frac_bd_get_dn',
-                 c_void_p)
-        core.use(None, 'frac_bd_set_dn',
-                 c_void_p, c_double)
+        core.use(c_double, 'frac_bd_get_dn', c_void_p)
+        core.use(None, 'frac_bd_set_dn', c_void_p, c_double)
 
         @property
-        def dn(self):
+        def dn(self) -> float:
             """
             获取裂缝的dn属性
 
@@ -23659,7 +23626,7 @@ class FractureNetwork(HasHandle):
             return core.frac_bd_get_dn(self.handle)
 
         @dn.setter
-        def dn(self, value):
+        def dn(self, value: float):
             """
             设置裂缝的dn属性
 
@@ -23668,13 +23635,11 @@ class FractureNetwork(HasHandle):
             """
             core.frac_bd_set_dn(self.handle, value)
 
-        core.use(c_double, 'frac_bd_get_h',
-                 c_void_p)
-        core.use(None, 'frac_bd_set_h',
-                 c_void_p, c_double)
+        core.use(c_double, 'frac_bd_get_h', c_void_p)
+        core.use(None, 'frac_bd_set_h', c_void_p, c_double)
 
         @property
-        def h(self):
+        def h(self) -> float:
             """
             获取裂缝的高度
 
@@ -23684,7 +23649,7 @@ class FractureNetwork(HasHandle):
             return core.frac_bd_get_h(self.handle)
 
         @h.setter
-        def h(self, value):
+        def h(self, value: float):
             """
             设置裂缝的高度
 
@@ -23693,13 +23658,11 @@ class FractureNetwork(HasHandle):
             """
             core.frac_bd_set_h(self.handle, value)
 
-        core.use(c_double, 'frac_bd_get_fric',
-                 c_void_p)
-        core.use(None, 'frac_bd_set_fric',
-                 c_void_p, c_double)
+        core.use(c_double, 'frac_bd_get_fric', c_void_p)
+        core.use(None, 'frac_bd_set_fric', c_void_p, c_double)
 
         @property
-        def f(self):
+        def f(self) -> float:
             """
             获取裂缝的摩擦系数
 
@@ -23709,7 +23672,7 @@ class FractureNetwork(HasHandle):
             return core.frac_bd_get_fric(self.handle)
 
         @f.setter
-        def f(self, value):
+        def f(self, value: float):
             """
             设置裂缝的摩擦系数
 
@@ -23718,13 +23681,11 @@ class FractureNetwork(HasHandle):
             """
             core.frac_bd_set_fric(self.handle, value)
 
-        core.use(c_double, 'frac_bd_get_p0',
-                 c_void_p)
-        core.use(None, 'frac_bd_set_p0',
-                 c_void_p, c_double)
+        core.use(c_double, 'frac_bd_get_p0', c_void_p)
+        core.use(None, 'frac_bd_set_p0', c_void_p, c_double)
 
         @property
-        def p0(self):
+        def p0(self) -> float:
             """
             获取裂缝内流体压力公式中的p0参数: fp = p0 + k * dn
 
@@ -23734,7 +23695,7 @@ class FractureNetwork(HasHandle):
             return core.frac_bd_get_p0(self.handle)
 
         @p0.setter
-        def p0(self, value):
+        def p0(self, value: float):
             """
             设置裂缝内流体压力公式中的p0参数: fp = p0 + k * dn
 
@@ -23743,13 +23704,11 @@ class FractureNetwork(HasHandle):
             """
             core.frac_bd_set_p0(self.handle, value)
 
-        core.use(c_double, 'frac_bd_get_k',
-                 c_void_p)
-        core.use(None, 'frac_bd_set_k',
-                 c_void_p, c_double)
+        core.use(c_double, 'frac_bd_get_k', c_void_p)
+        core.use(None, 'frac_bd_set_k', c_void_p, c_double)
 
         @property
-        def k(self):
+        def k(self) -> float:
             """
             获取裂缝内流体压力公式中的k参数: fp = p0 + k * dn
 
@@ -23759,7 +23718,7 @@ class FractureNetwork(HasHandle):
             return core.frac_bd_get_k(self.handle)
 
         @k.setter
-        def k(self, value):
+        def k(self, value: float):
             """
             设置裂缝内流体压力公式中的k参数: fp = p0 + k * dn
 
@@ -23771,7 +23730,7 @@ class FractureNetwork(HasHandle):
         core.use(c_double, 'frac_bd_get_fp', c_void_p)
 
         @property
-        def fp(self):
+        def fp(self) -> float:
             """
             根据当前的dn、p0和k计算得到的裂缝内流体压力: fp = p0 + k * dn
 
@@ -23783,7 +23742,7 @@ class FractureNetwork(HasHandle):
         core.use(c_void_p, 'frac_bd_get_flu', c_void_p)
 
         @property
-        def flu_expr(self):
+        def flu_expr(self) -> Optional[LinearExpr]:
             """
             返回流体的映射数据. 用于在裂缝扩展的时候，跟踪流体的数据
 
@@ -23797,16 +23756,17 @@ class FractureNetwork(HasHandle):
                 return None
 
         @flu_expr.setter
-        def flu_expr(self, value):
+        def flu_expr(self, value: LinearExpr):
             """
             设置流体的映射数据. 用于在裂缝扩展的时候，跟踪流体的数据
 
             Args:
                 value: 要设置的流体映射数据对象
             """
-            left = self.flu_expr
-            if left is not None:
-                left.clone(value)
+            if isinstance(value, LinearExpr):
+                left = self.flu_expr
+                if left is not None:
+                    left.clone(value)
 
         @property
         def flu(self):
@@ -23856,10 +23816,9 @@ class FractureNetwork(HasHandle):
         """
         顶点
         """
-        core.use(c_void_p, 'frac_nt_get_nd',
-                 c_void_p, c_size_t)
+        core.use(c_void_p, 'frac_nt_get_nd', c_void_p, c_size_t)
 
-        def __init__(self, network, index):
+        def __init__(self, network: "FractureNetwork", index: int):
             """
             初始化顶点对象
 
@@ -23872,24 +23831,21 @@ class FractureNetwork(HasHandle):
             assert index < network.vertex_number
             self.network = network
             self.index = index
-            super().__init__(
-                handle=core.frac_nt_get_nd(network.handle, index))
+            super().__init__(handle=core.frac_nt_get_nd(network.handle, index))
 
-        def __str__(self):
+        def __str__(self) -> str:
             """
             返回顶点对象的字符串表示
 
             Returns:
                 str: 包含顶点索引和位置的字符串
             """
-            return (f'zml.FractureNetwork.Vertex(index={self.index},'
-                    f' pos=[{self.x}, {self.y}])')
+            return f'zml.FractureNetwork.Vertex(index={self.index}, pos=[{self.x}, {self.y}])'
 
-        core.use(c_size_t, 'frac_nt_nd_get_bd_n',
-                 c_void_p, c_size_t)
+        core.use(c_size_t, 'frac_nt_nd_get_bd_n', c_void_p, c_size_t)
 
         @property
-        def fracture_number(self):
+        def fracture_number(self) -> int:
             """
             获取共享此顶点的裂缝单元的数量
 
@@ -23898,10 +23854,9 @@ class FractureNetwork(HasHandle):
             """
             return core.frac_nt_nd_get_bd_n(self.network.handle, self.index)
 
-        core.use(c_size_t, 'frac_nt_nd_get_bd_i',
-                 c_void_p, c_size_t, c_size_t)
+        core.use(c_size_t, 'frac_nt_nd_get_bd_i', c_void_p, c_size_t, c_size_t)
 
-        def get_fracture(self, index):
+        def get_fracture(self, index: int) -> Optional["FractureNetwork.Fracture"]:
             """
             获取此顶点周边的裂缝单元
 
@@ -23911,11 +23866,9 @@ class FractureNetwork(HasHandle):
             Returns:
                 Fracture: 此顶点周边的裂缝单元对象，如果索引无效则返回None
             """
-            index = get_index(index, self.fracture_number)
-            if index is not None:
-                return self.network.get_fracture(
-                    core.frac_nt_nd_get_bd_i(self.network.handle, self.index,
-                                             index))
+            index_ = get_index(index, self.fracture_number)
+            if index_ is not None:
+                return self.network.get_fracture(core.frac_nt_nd_get_bd_i(self.network.handle, self.index, index_))
             else:
                 return None
 
@@ -23923,10 +23876,9 @@ class FractureNetwork(HasHandle):
         """
         裂缝.
         """
-        core.use(c_void_p, 'frac_nt_get_bd',
-                 c_void_p, c_size_t)
+        core.use(c_void_p, 'frac_nt_get_bd', c_void_p, c_size_t)
 
-        def __init__(self, network, index):
+        def __init__(self, network: "FractureNetwork", index: int):
             """
             初始化裂缝对象
 
@@ -23937,23 +23889,21 @@ class FractureNetwork(HasHandle):
             assert isinstance(network, FractureNetwork)
             assert isinstance(index, int)
             assert index < network.fracture_number
-            super().__init__(
-                handle=core.frac_nt_get_bd(network.handle, index))
+            super().__init__(handle=core.frac_nt_get_bd(network.handle, index))
             self.network = network
             self.index = index
 
-        def __str__(self):
+        def __str__(self) -> str:
             """
             返回裂缝对象的字符串表示
 
             Returns:
                 str: 包含裂缝索引、位置、ds和dn属性的字符串
             """
-            return (f'zml.FractureNetwork.Fracture(index={self.index}, '
-                    f'pos={self.pos}, ds={self.ds}, dn={self.dn})')
+            return f'zml.FractureNetwork.Fracture(index={self.index}, pos={self.pos}, ds={self.ds}, dn={self.dn})'
 
         @property
-        def vertex_number(self):
+        def vertex_number(self) -> int:
             """
             获取裂缝顶点的数量
 
@@ -23962,10 +23912,9 @@ class FractureNetwork(HasHandle):
             """
             return 2
 
-        core.use(c_size_t, 'frac_nt_bd_get_nd_i',
-                 c_void_p, c_size_t, c_size_t)
+        core.use(c_size_t, 'frac_nt_bd_get_nd_i', c_void_p, c_size_t, c_size_t)
 
-        def get_vertex(self, index):
+        def get_vertex(self, index: int) -> Optional["FractureNetwork.Vertex"]:
             """
             获取裂缝的顶点
 
@@ -23975,56 +23924,64 @@ class FractureNetwork(HasHandle):
             Returns:
                 Vertex: 裂缝的顶点对象，如果索引无效则返回None
             """
-            index = get_index(index, self.vertex_number)
-            if index is not None:
-                return self.network.get_vertex(
-                    core.frac_nt_bd_get_nd_i(self.network.handle,
-                                             self.index,
-                                             index))
+            index_ = get_index(index, self.vertex_number)
+            if index_ is not None:
+                return self.network.get_vertex(core.frac_nt_bd_get_nd_i(self.network.handle, self.index, index_))
             else:
                 return None
 
         @property
-        def pos(self):
+        def pos(self) -> Tuple[float, float, float, float]:
             """
             获取裂缝的位置
 
             Returns:
                 tuple: 包含裂缝两个端点的x和y坐标的元组，格式为 (x0, y0, x1, y1)
             """
-            p0 = self.get_vertex(0).pos
-            p1 = self.get_vertex(1).pos
+            v0 = self.get_vertex(0)
+            v1 = self.get_vertex(1)
+            assert isinstance(v0, FractureNetwork.Vertex)
+            assert isinstance(v1, FractureNetwork.Vertex)
+            p0 = v0.pos
+            p1 = v1.pos
             return p0[0], p0[1], p1[0], p1[1]
 
         @property
-        def length(self):
+        def length(self) -> float:
             """
             获取裂缝的长度
 
             Returns:
                 float: 裂缝的长度，根据裂缝两个端点的位置计算
             """
-            p0 = self.get_vertex(0).pos
-            p1 = self.get_vertex(1).pos
+            v0 = self.get_vertex(0)
+            v1 = self.get_vertex(1)
+            assert isinstance(v0, FractureNetwork.Vertex)
+            assert isinstance(v1, FractureNetwork.Vertex)
+            p0 = v0.pos
+            p1 = v1.pos
             return get_distance(p0, p1)
 
         @property
-        def center(self):
+        def center(self) -> Tuple[float, float]:
             """
             获取裂缝的中心点坐标
 
             Returns:
                 tuple: 包含裂缝中心点的x和y坐标的元组
             """
-            p0 = self.get_vertex(0).pos
-            p1 = self.get_vertex(1).pos
+            v0 = self.get_vertex(0)
+            v1 = self.get_vertex(1)
+            assert isinstance(v0, FractureNetwork.Vertex)
+            assert isinstance(v1, FractureNetwork.Vertex)
+            p0 = v0.pos
+            p1 = v1.pos
             return (p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2
 
-        core.use(c_double, 'frac_nt_get_bd_angle',
-                 c_void_p, c_size_t)
+        core.use(c_double, 'frac_nt_get_bd_angle', c_void_p, c_size_t)
 
         @property
-        def angle(self):
+        def angle(self) -> float:
             """
             获取裂缝的方向角度
 
@@ -24036,16 +23993,15 @@ class FractureNetwork(HasHandle):
     core.use(c_void_p, 'new_frac_nt')
     core.use(None, 'del_frac_nt', c_void_p)
 
-    def __init__(self, path=None, handle=None):
+    def __init__(self, path: Optional[str] = None, handle: Optional[c_void_p] = None):
         """
         初始化裂缝网络对象
 
         Args:
             path (str, optional): 序列化文件的路径，用于加载数据，默认为None
-            handle: 裂缝网络的句柄，默认为None
+            handle (c_void_p, optional): 裂缝网络的句柄，默认为None
         """
-        super().__init__(handle, core.new_frac_nt,
-                         core.del_frac_nt)
+        super().__init__(handle, core.new_frac_nt, core.del_frac_nt)
         if handle is None:
             if isinstance(path, str):
                 self.load(path)
@@ -24055,15 +24011,12 @@ class FractureNetwork(HasHandle):
         except:
             pass
 
-    def __repr__(self):
-        return (f'{type(self).__name__}(handle={self.handle}, '
-                f'vertex_n={self.vertex_number}, '
-                f'fracture_n={self.fracture_number})')
+    def __repr__(self) -> str:
+        return f'{type(self).__name__}(handle={self.handle}, vertex_n={self.vertex_number}, fracture_n={self.fracture_number})'
 
-    core.use(None, 'frac_nt_save',
-             c_void_p, c_char_p)
+    core.use(None, 'frac_nt_save', c_void_p, c_char_p)
 
-    def save(self, path):
+    def save(self, path: str):
         """
         序列化保存裂缝网络数据
 
@@ -24087,10 +24040,9 @@ class FractureNetwork(HasHandle):
             make_parent(path)
             core.frac_nt_save(self.handle, make_c_char_p(path))
 
-    core.use(None, 'frac_nt_load',
-             c_void_p, c_char_p)
+    core.use(None, 'frac_nt_load', c_void_p, c_char_p)
 
-    def load(self, path):
+    def load(self, path: str):
         """
         读取序列化文件来加载裂缝网络数据
 
@@ -24103,12 +24055,10 @@ class FractureNetwork(HasHandle):
             _check_ipath(path, self)
             core.frac_nt_load(self.handle, make_c_char_p(path))
 
-    core.use(None, 'frac_nt_write_fmap',
-             c_void_p, c_void_p, c_char_p)
-    core.use(None, 'frac_nt_read_fmap',
-             c_void_p, c_void_p, c_char_p)
+    core.use(None, 'frac_nt_write_fmap', c_void_p, c_void_p, c_char_p)
+    core.use(None, 'frac_nt_read_fmap', c_void_p, c_void_p, c_char_p)
 
-    def to_fmap(self, fmt='binary'):
+    def to_fmap(self, fmt: str = 'binary') -> FileMap:
         """
         将裂缝网络数据序列化到一个Filemap中
 
@@ -24120,11 +24070,10 @@ class FractureNetwork(HasHandle):
             FileMap: 包含序列化数据的Filemap对象
         """
         fmap = FileMap()
-        core.frac_nt_write_fmap(
-            self.handle, fmap.handle, make_c_char_p(fmt))
+        core.frac_nt_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
         return fmap
 
-    def from_fmap(self, fmap: FileMap, fmt='binary'):
+    def from_fmap(self, fmap: FileMap, fmt: str = 'binary'):
         """
         从Filemap中读取序列化的裂缝网络数据
 
@@ -24137,7 +24086,7 @@ class FractureNetwork(HasHandle):
         core.frac_nt_read_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
 
     @property
-    def fmap(self):
+    def fmap(self) -> FileMap:
         """
         获取裂缝网络数据的二进制序列化Filemap对象
 
@@ -24147,7 +24096,7 @@ class FractureNetwork(HasHandle):
         return self.to_fmap(fmt='binary')
 
     @fmap.setter
-    def fmap(self, value):
+    def fmap(self, value: FileMap):
         """
         从Filemap中加载二进制序列化的裂缝网络数据
 
@@ -24168,7 +24117,7 @@ class FractureNetwork(HasHandle):
         """
         return core.frac_nt_get_nd_n(self.handle)
 
-    def get_vertex(self, index):
+    def get_vertex(self, index: int) -> Optional['FractureNetwork.Vertex']:
         """
         获取指定索引的顶点
 
@@ -24178,15 +24127,16 @@ class FractureNetwork(HasHandle):
         Returns:
             Vertex: 顶点对象，如果索引无效则返回None
         """
-        index = get_index(index, self.vertex_number)
-        if index is not None:
-            return FractureNetwork.Vertex(self, index)
-        return None
+        index_ = get_index(index, self.vertex_number)
+        if index_ is not None:
+            return FractureNetwork.Vertex(self, index_)
+        else:
+            return None
 
     core.use(c_size_t, 'frac_nt_get_bd_n', c_void_p)
 
     @property
-    def fracture_number(self):
+    def fracture_number(self) -> int:
         """
         获取裂缝单元(线段)的数量
 
@@ -24195,7 +24145,7 @@ class FractureNetwork(HasHandle):
         """
         return core.frac_nt_get_bd_n(self.handle)
 
-    def get_fracture(self, index):
+    def get_fracture(self, index: int) -> Optional['FractureNetwork.Fracture']:
         """
         获取指定索引的裂缝单元
 
@@ -24205,14 +24155,13 @@ class FractureNetwork(HasHandle):
         Returns:
             Fracture: 裂缝单元对象，如果索引无效则返回None
         """
-        index = get_index(index, self.fracture_number)
-        if index is not None:
-            return FractureNetwork.Fracture(self, index)
+        index_ = get_index(index, self.fracture_number)
+        if index_ is not None:
+            return FractureNetwork.Fracture(self, index_)
         else:
             return None
 
-    core.use(c_size_t, 'frac_nt_add_nd',
-             c_void_p, c_double, c_double)
+    core.use(c_size_t, 'frac_nt_add_nd', c_void_p, c_double, c_double)
 
     def add_vertex(self, x, y):
         """
@@ -24228,18 +24177,15 @@ class FractureNetwork(HasHandle):
         index = core.frac_nt_add_nd(self.handle, x, y)
         return self.get_vertex(index)
 
-    core.use(c_size_t, 'frac_nt_add_bd',
-             c_void_p, c_size_t, c_size_t)
+    core.use(c_size_t, 'frac_nt_add_bd', c_void_p, c_size_t, c_size_t)
     core.use(None, 'frac_nt_add_frac',
-             c_void_p,
-             c_double, c_double, c_double, c_double,
-             c_double, c_void_p)
+             c_void_p, c_double, c_double, c_double, c_double, c_double, c_void_p)
 
     def add_fracture(self, first=None, second=None, *,
                      lave=None, data=None,
-                     pos=None):
+                     pos=None) -> Optional['FractureNetwork.Fracture']:
         """
-        添加裂缝单元
+        添加裂缝单元(线段)
 
         注意：
             当给定lave的时候，将根据给定的lave来分割单元，并自动处理和已有裂缝之间的位置关系。
@@ -24249,32 +24195,30 @@ class FractureNetwork(HasHandle):
             second (tuple, optional): 第二个顶点的坐标，默认为None
             lave (float, optional): 分割单元的参数，默认为None
             data (FractureData, optional): 裂缝数据对象，默认为None
-            pos (tuple, optional): 裂缝的位置，格式为 (x0, y0, x1, y1)，
-                默认为None
+            pos (tuple, optional): 裂缝的位置，格式为 (x0, y0, x1, y1)， 默认为None
 
         Returns:
-            Fracture: 新添加的裂缝单元对象，如果使用lave参数则不返回
+            Fracture: 新添加的裂缝单元对象，如果使用lave参数则返回None
         """
+        if pos is not None:
+            assert len(pos) == 4
+            assert first is None and second is None, \
+                'you should not set first and second when pos is given'
+            first = pos[0: 2]
+            second = pos[2: 4]
+
         if lave is None:
             index = core.frac_nt_add_bd(self.handle, first, second)
             return self.get_fracture(index)
         else:
-            if pos is not None:
-                assert len(pos) == 4
-                assert first is None and second is None, \
-                    'you should not set first and second when pos is given'
-                first = pos[0: 2]
-                second = pos[2: 4]
             if data is not None:
                 assert isinstance(data, FractureNetwork.FractureData)
-            core.frac_nt_add_frac(self.handle, first[0], first[1],
-                                  second[0], second[1],
-                                  lave,
-                                  0 if data is None else data.handle)
+            core.frac_nt_add_frac(
+                self.handle, first[0], first[1], second[0], second[1], lave,
+                0 if data is None else data.handle)
             return None
 
-    core.use(None, 'frac_nt_clear',
-             c_void_p)
+    core.use(None, 'frac_nt_clear', c_void_p)
 
     def clear(self):
         """
@@ -24290,9 +24234,7 @@ class FractureNetwork(HasHandle):
         Returns:
             Iterator: 包含所有顶点的迭代器对象
         """
-        return Iterator(model=self,
-                        count=self.vertex_number,
-                        get=lambda m, ind: m.get_vertex(ind))
+        return Iterator(model=self, count=self.vertex_number, get=lambda m, ind: m.get_vertex(ind))
 
     @property
     def fractures(self) -> Iterable['FractureNetwork.Fracture']:
@@ -24302,18 +24244,13 @@ class FractureNetwork(HasHandle):
         Returns:
             Iterator: 包含所有裂缝的迭代器对象
         """
-        return Iterator(model=self,
-                        count=self.fracture_number,
-                        get=lambda m, ind: m.get_fracture(ind))
+        return Iterator(model=self, count=self.fracture_number, get=lambda m, ind: m.get_fracture(ind))
 
-    core.use(None, 'frac_nt_get_induced_at',
-             c_void_p, c_void_p, c_double, c_double, c_void_p)
+    core.use(None, 'frac_nt_get_induced_at', c_void_p, c_void_p, c_double, c_double, c_void_p)
     core.use(None, 'frac_nt_get_induced_along',
-             c_void_p, c_void_p,
-             c_double, c_double, c_double, c_double, c_void_p)
+             c_void_p, c_void_p, c_double, c_double, c_double, c_double, c_void_p)
     core.use(None, 'frac_nt_get_induced',
-             c_void_p,
-             c_size_t, c_size_t, c_void_p)
+             c_void_p, c_size_t, c_size_t, c_void_p)
 
     def get_induced(self, pos=None, sol2=None, buf=None, *,
                     fa_xy=None, fa_yy=None, matrix=None):
@@ -24392,8 +24329,7 @@ class FractureNetwork(HasHandle):
             ratio_max, dist_max, dn_max, ds_max)
 
     core.use(None, 'frac_nt_extend_tip',
-             c_void_p, c_void_p, c_void_p,
-             c_double, c_double, c_size_t, c_double)
+             c_void_p, c_void_p, c_void_p, c_double, c_double, c_size_t, c_double)
 
     def extend_tip(self, kic, sol2, l_extend, va_wmin=99999999,
                    angle_max=0.6,
@@ -24429,10 +24365,9 @@ class FractureNetwork(HasHandle):
                                 l_extend,
                                 va_wmin, angle_max)
 
-    core.use(None, 'frac_nt_get_sub_network',
-             c_void_p, c_size_t, c_void_p)
+    core.use(None, 'frac_nt_get_sub_network', c_void_p, c_size_t, c_void_p)
 
-    def get_sub_network(self, fa_key, sub=None):
+    def get_sub_network(self, fa_key: int, sub: 'FractureNetwork' = None) -> 'FractureNetwork':
         """
         创建一个子网络
 
@@ -24450,11 +24385,9 @@ class FractureNetwork(HasHandle):
         core.frac_nt_get_sub_network(self.handle, fa_key, sub.handle)
         return sub
 
-    core.use(None, 'frac_nt_copy_fracture_from_sub_network',
-             c_void_p, c_size_t,
-             c_void_p)
+    core.use(None, 'frac_nt_copy_fracture_from_sub_network', c_void_p, c_size_t, c_void_p)
 
-    def copy_fracture_from_sub_network(self, fa_key, sub):
+    def copy_fracture_from_sub_network(self, fa_key: int, sub: 'FractureNetwork'):
         """
         从子网络中拷贝裂缝数据
 
@@ -24463,8 +24396,7 @@ class FractureNetwork(HasHandle):
             sub (FractureNetwork): 子裂缝网络对象
         """
         if isinstance(sub, FractureNetwork):
-            core.frac_nt_copy_fracture_from_sub_network(self.handle, fa_key,
-                                                        sub.handle)
+            core.frac_nt_copy_fracture_from_sub_network(self.handle, fa_key, sub.handle)
 
 
 class InfMatrix(HasHandle):
@@ -24487,19 +24419,17 @@ class InfMatrix(HasHandle):
             AssertionError: 如果 network 不是 FractureNetwork 类型，
             或者 sol2 不是 DDMSolution2 类型。
         """
-        super().__init__(handle, core.new_frac_mat,
-                         core.del_frac_mat)
+        super().__init__(handle, core.new_frac_mat, core.del_frac_mat)
         if network is not None and sol2 is not None:
             self.update(network=network, sol2=sol2)
 
     def __repr__(self):
-        return (f'{type(self).__name__}(handle={self.handle}, '
-                f'size={self.size})')
+        return f'{type(self).__name__}(handle={self.handle}, size={self.size})'
 
     core.use(c_size_t, 'frac_mat_size', c_void_p)
 
     @property
-    def size(self):
+    def size(self) -> int:
         """
         获取裂缝单元的数量
 
@@ -24508,8 +24438,7 @@ class InfMatrix(HasHandle):
         """
         return core.frac_mat_size(self.handle)
 
-    core.use(None, 'frac_mat_create',
-             c_void_p, c_void_p, c_void_p)
+    core.use(None, 'frac_mat_create', c_void_p, c_void_p, c_void_p)
 
     def update(self, network, sol2):
         """

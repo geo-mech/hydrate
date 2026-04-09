@@ -3,6 +3,8 @@
 
 @2025-10-2
 """
+from typing import Optional
+
 from zml import clock
 from zmlx.base.seepage import (
     as_numpy, Seepage, reg_cell_tmp, reg_face_tmp,
@@ -22,7 +24,7 @@ def get_settings(model: Seepage) -> list:
     return settings.get(model, text_key=text_key)
 
 
-def set_settings(model: Seepage, data: list | None):
+def set_settings(model: Seepage, data: Optional[list] = None):
     """
     写入设置
     """

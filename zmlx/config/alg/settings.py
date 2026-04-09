@@ -7,6 +7,7 @@
 元素，都代表这一类操作中的一个（每一类的操作都可以有很多个）；而每个dict，都代表这一个操作的参数。
 """
 from zml import Seepage
+from typing import Optional
 
 
 def get(model: Seepage, *, text_key: str) -> list:
@@ -23,7 +24,7 @@ def get(model: Seepage, *, text_key: str) -> list:
         return []
 
 
-def put(model: Seepage, *, data: list | None, text_key: str):
+def put(model: Seepage, *, data: Optional[list] = None, text_key: str):
     """
     写入设置
     """
