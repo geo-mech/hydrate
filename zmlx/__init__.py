@@ -11,7 +11,7 @@ _keep = [zml]  # 使得不会被Pycharm删除
 # 导入zml中的内容
 from zml import *
 
-if is_chinese(get_dir()):
+if contain_chinese(get_dir()):
     warnings.warn('Please make sure to install zmlx in a pure English path, '
                   'otherwise it may cause unpredictable errors.')
 

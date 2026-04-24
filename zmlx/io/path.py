@@ -1,7 +1,7 @@
 import os
 
 import zmlx.alg.sys as warnings
-from zml import app_data, get_dir, is_chinese, make_parent, make_dirs
+from zml import app_data, get_dir, contain_chinese, make_parent, make_dirs
 from zmlx.alg.fsys import in_directory, join_paths
 
 
@@ -31,7 +31,7 @@ def get_path(*args, tag=None, key=None):
         # warnings.warn(f'The root is None. (key={key})')
         return None
 
-    if is_chinese(root):
+    if contain_chinese(root):
         warnings.warn(f'The root contains Chinese. key={key}, root = {root}')
         return None
 
@@ -45,7 +45,7 @@ def get_path(*args, tag=None, key=None):
     # 找到所需要的路径
     if len(args) > 0:
         for arg in args:
-            if is_chinese(arg):
+            if contain_chinese(arg):
                 warnings.warn(f'String contains Chinese. args = {args}')
                 return None
         path = join_paths(root, *args)
@@ -73,7 +73,7 @@ def set_path(folder=None, tag=None, key=None):
     # 转化为绝对路径，这很重要
     folder = os.path.abspath(folder)
 
-    assert not is_chinese(
+    assert not contain_chinese(
         folder), f'Error: folder contains Chinese. folder = {folder}'
 
     # 尝试创建目录

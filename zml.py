@@ -2266,7 +2266,7 @@ except:
     pass
 
 
-def is_chinese(string: str) -> bool:
+def contain_chinese(string: str) -> bool:
     """检查字符串是否包含中文字符。
 
     Args:
@@ -2276,6 +2276,12 @@ def is_chinese(string: str) -> bool:
         bool: 如果字符串包含中文字符，则返回 True；否则返回 False。
     """
     return bool(re.search('[\u4e00-\u9fff]', string))
+
+
+def is_chinese(string: str) -> bool:
+    warnings.warn("is_chinese is deprecated (will be removed after 2027-4-14), use contain_chinese instead", DeprecationWarning,
+                  stacklevel=2)
+    return contain_chinese(string)
 
 
 class ThreadPool(HasHandle):
@@ -2399,8 +2405,7 @@ class FileMap(HasHandle):
         else:
             return None
 
-    core.use(None, 'fmap_set',
-             c_void_p, c_void_p, c_char_p)
+    core.use(None, 'fmap_set', c_void_p, c_void_p, c_char_p)
 
     def set(self, key: str, fmap: Union[str, 'FileMap', Any]):
         """设置键值映射。
@@ -2423,8 +2428,7 @@ class FileMap(HasHandle):
             assert isinstance(fmap, FileMap), "Failed to create FileMap from data"
             core.fmap_set(self.handle, fmap.handle, make_c_char_p(key))
 
-    core.use(None, 'fmap_erase',
-             c_void_p, c_char_p)
+    core.use(None, 'fmap_erase', c_void_p, c_char_p)
 
     def erase(self, key: str):
         """删除指定键的映射。
@@ -2434,8 +2438,7 @@ class FileMap(HasHandle):
         """
         core.fmap_erase(self.handle, make_c_char_p(key))
 
-    core.use(None, 'fmap_write',
-             c_void_p, c_char_p)
+    core.use(None, 'fmap_write', c_void_p, c_char_p)
 
     def write(self, path: str):
         """将映射内容提取到文件系统。
@@ -2445,8 +2448,7 @@ class FileMap(HasHandle):
         """
         core.fmap_write(self.handle, make_c_char_p(path))
 
-    core.use(None, 'fmap_read',
-             c_void_p, c_char_p)
+    core.use(None, 'fmap_read', c_void_p, c_char_p)
 
     def read(self, path: str):
         """从文件系统读取内容到映射。
@@ -2456,8 +2458,7 @@ class FileMap(HasHandle):
         """
         core.fmap_read(self.handle, make_c_char_p(path))
 
-    core.use(None, 'fmap_save',
-             c_void_p, c_char_p)
+    core.use(None, 'fmap_save', c_void_p, c_char_p)
 
     def save(self, path: str):
         """序列化保存为二进制格式。
@@ -2474,8 +2475,7 @@ class FileMap(HasHandle):
             make_parent(path)
             core.fmap_save(self.handle, make_c_char_p(path))
 
-    core.use(None, 'fmap_load',
-             c_void_p, c_char_p)
+    core.use(None, 'fmap_load', c_void_p, c_char_p)
 
     def load(self, path: str):
         """从文件加载序列化数据。
@@ -2487,8 +2487,7 @@ class FileMap(HasHandle):
             _check_ipath(path, self)
             core.fmap_load(self.handle, make_c_char_p(path))
 
-    core.use(c_char_p, 'fmap_get_char_p',
-             c_void_p)
+    core.use(c_char_p, 'fmap_get_char_p', c_void_p)
 
     @property
     def data(self) -> str:
@@ -2499,8 +2498,7 @@ class FileMap(HasHandle):
         """
         return core.fmap_get_char_p(self.handle).decode()
 
-    core.use(None, 'fmap_set_char_p',
-             c_void_p, c_char_p)
+    core.use(None, 'fmap_set_char_p', c_void_p, c_char_p)
 
     @data.setter
     def data(self, value: Union[str, Any]):
@@ -2524,8 +2522,7 @@ class FileMap(HasHandle):
         """
         return String(handle=core.fmap_get_data(self.handle))
 
-    core.use(None, 'fmap_clone',
-             c_void_p, c_void_p)
+    core.use(None, 'fmap_clone', c_void_p, c_void_p)
 
     def clone(self, other: Optional['FileMap']) -> 'FileMap':
         """克隆另一个文件映射对象的数据。
@@ -4444,8 +4441,7 @@ class Interp1(HasHandle):
             path (str, optional): 从文件加载数据的路径。
             handle: 已有的句柄。如果提供，则忽略其他参数。
         """
-        super().__init__(handle, core.new_interp1,
-                         core.del_interp1)
+        super().__init__(handle, core.new_interp1, core.del_interp1)
         if handle is None:
             self.set(xmin=xmin, dx=dx, x=x, y=y, value=value)
             if isinstance(path, str):
@@ -4453,7 +4449,7 @@ class Interp1(HasHandle):
 
     core.use(None, 'interp1_save', c_void_p, c_char_p)
 
-    def save(self, path):
+    def save(self, path: str):
         """将插值数据序列化保存到文件。
 
         支持以下文件格式：
@@ -4468,10 +4464,9 @@ class Interp1(HasHandle):
             make_parent(path)
             core.interp1_save(self.handle, make_c_char_p(path))
 
-    core.use(None, 'interp1_load',
-             c_void_p, c_char_p)
+    core.use(None, 'interp1_load', c_void_p, c_char_p)
 
-    def load(self, path):
+    def load(self, path: str):
         """从文件加载序列化的插值数据。
 
         根据文件扩展名确定文件格式（txt、xml 和二进制），请参考 `save` 函数。
@@ -4483,12 +4478,10 @@ class Interp1(HasHandle):
             _check_ipath(path, self)
             core.interp1_load(self.handle, make_c_char_p(path))
 
-    core.use(None, 'interp1_write_fmap',
-             c_void_p, c_void_p, c_char_p)
-    core.use(None, 'interp1_read_fmap',
-             c_void_p, c_void_p, c_char_p)
+    core.use(None, 'interp1_write_fmap', c_void_p, c_void_p, c_char_p)
+    core.use(None, 'interp1_read_fmap', c_void_p, c_void_p, c_char_p)
 
-    def to_fmap(self, fmt='binary'):
+    def to_fmap(self, fmt='binary') -> FileMap:
         """将插值数据序列化到 FileMap 中。
 
         Args:
@@ -4514,7 +4507,7 @@ class Interp1(HasHandle):
         core.interp1_read_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
 
     @property
-    def fmap(self):
+    def fmap(self) -> FileMap:
         """获取插值数据的二进制序列化表示。
 
         Returns:
@@ -4523,7 +4516,7 @@ class Interp1(HasHandle):
         return self.to_fmap(fmt='binary')
 
     @fmap.setter
-    def fmap(self, value):
+    def fmap(self, value: FileMap):
         """从二进制序列化数据加载插值。
 
         Args:
@@ -4531,16 +4524,13 @@ class Interp1(HasHandle):
         """
         self.from_fmap(value, fmt='binary')
 
-    core.use(None, 'interp1_set', c_void_p,
-             POINTER(c_double), c_size_t,
-             POINTER(c_double), c_size_t)
+    core.use(None, 'interp1_set', c_void_p, POINTER(c_double), c_size_t, POINTER(c_double), c_size_t)
 
     def set_xy(self, x, y):
         """
         设置x和y的数据
         """
-        core.interp1_set(self.handle, const_f64_ptr(x), len(x),
-                         const_f64_ptr(y), len(y))
+        core.interp1_set(self.handle, const_f64_ptr(x), len(x), const_f64_ptr(y), len(y))
 
     def set(self, xmin=None, dx=None, x=None, y=None, value=None):
         """设置插值数据，支持多种初始化方式。
@@ -4570,14 +4560,14 @@ class Interp1(HasHandle):
             self.set_xy([], [value])
             return
 
-    def create(self, xmin, dx, xmax, get_value):
+    def create(self, xmin: float, dx: float, xmax: float, get_value: Callable[[float], float]):
         """通过回调函数创建插值数据。
 
         Args:
             xmin (float): 插值区间的最小 x 值。
             dx (float): 采样步长。
             xmax (float): 插值区间的最大 x 值。
-            get_value (callable): 函数指针，格式为 y = get_value(x)。
+            get_value (Callable): 函数指针，格式为 y = get_value(x)。
 
         Note:
             需要保证 xmin < xmax 且 dx > 0。
@@ -4614,10 +4604,8 @@ class Interp1(HasHandle):
         """清空插值数据。"""
         core.interp1_clear(self.handle)
 
-    core.use(None, 'interp1_get_vx',
-             c_void_p, c_void_p)
-    core.use(None, 'interp1_get_vy',
-             c_void_p, c_void_p)
+    core.use(None, 'interp1_get_vx', c_void_p, c_void_p)
+    core.use(None, 'interp1_get_vy', c_void_p, c_void_p)
 
     def get_data(self, x=None, y=None):
         """获取插值数据的拷贝。
@@ -4637,8 +4625,7 @@ class Interp1(HasHandle):
         core.interp1_get_vy(self.handle, y.handle)
         return x, y
 
-    core.use(c_double, 'interp1_get',
-             c_void_p, c_double, c_bool)
+    core.use(c_double, 'interp1_get', c_void_p, c_double, c_bool)
 
     def get(self, x, no_external=True):
         """执行插值计算。
@@ -4651,8 +4638,7 @@ class Interp1(HasHandle):
             float/list: 插值结果。输入为单个值时返回 float，输入为集合时返回 list。
         """
         if isinstance(x, Iterable):
-            return [core.interp1_get(self.handle, scale, no_external) for scale
-                    in x]
+            return [core.interp1_get(self.handle, scale, no_external) for scale in x]
         else:
             return core.interp1_get(self.handle, x, no_external)
 
@@ -4660,8 +4646,7 @@ class Interp1(HasHandle):
         """使实例可调用，等效于 get 方法。"""
         return self.get(*args, **kwargs)
 
-    core.use(c_bool, 'interp1_is_inner',
-             c_void_p, c_double)
+    core.use(c_bool, 'interp1_is_inner', c_void_p, c_double)
 
     def is_inner(self, x):
         """检查给定 x 坐标是否在插值区间内。
@@ -4677,17 +4662,15 @@ class Interp1(HasHandle):
     core.use(c_double, 'interp1_get_xmin', c_void_p)
     core.use(c_double, 'interp1_get_xmax', c_void_p)
 
-    def xrange(self):
+    def xrange(self) -> Tuple[float, float]:
         """获取插值区间的 x 范围。
 
         Returns:
             tuple: (xmin, xmax) 组成的元组。
         """
-        return core.interp1_get_xmin(self.handle), core.interp1_get_xmax(
-            self.handle)
+        return core.interp1_get_xmin(self.handle), core.interp1_get_xmax(self.handle)
 
-    core.use(None, 'interp1_to_evenly_spaced',
-             c_void_p, c_size_t, c_size_t)
+    core.use(None, 'interp1_to_evenly_spaced', c_void_p, c_size_t, c_size_t)
 
     def to_evenly_spaced(self, nmin=100, nmax=1000):
         """将插值数据转换为均匀间隔格式以加速查找。
@@ -4702,10 +4685,9 @@ class Interp1(HasHandle):
         core.interp1_to_evenly_spaced(self.handle, nmin, nmax)
         return self
 
-    core.use(None, 'interp1_clone',
-             c_void_p, c_void_p)
+    core.use(None, 'interp1_clone', c_void_p, c_void_p)
 
-    def clone(self, other):
+    def clone(self, other: 'Interp1') -> 'Interp1':
         """克隆另一个插值对象的数据到当前对象。
 
         Args:
@@ -4719,7 +4701,7 @@ class Interp1(HasHandle):
             core.interp1_clone(self.handle, other.handle)
         return self
 
-    def get_copy(self):
+    def get_copy(self) -> 'Interp1':
         """创建当前对象的深拷贝。
 
         Returns:
@@ -4825,14 +4807,12 @@ class Interp2(HasHandle):
             path (str, optional): 从文件加载数据的路径。
             handle: 已有的句柄。如果提供，则忽略其他参数。
         """
-        super().__init__(handle, core.new_interp2,
-                         core.del_interp2)
+        super().__init__(handle, core.new_interp2, core.del_interp2)
         if handle is None:
             if isinstance(path, str):
                 self.load(path)
 
-    core.use(None, 'interp2_save',
-             c_void_p, c_char_p)
+    core.use(None, 'interp2_save', c_void_p, c_char_p)
 
     def save(self, path):
         """将插值数据序列化保存到文件。
@@ -4849,8 +4829,7 @@ class Interp2(HasHandle):
             make_parent(path)
             core.interp2_save(self.handle, make_c_char_p(path))
 
-    core.use(None, 'interp2_load',
-             c_void_p, c_char_p)
+    core.use(None, 'interp2_load', c_void_p, c_char_p)
 
     def load(self, path):
         """从文件加载序列化的插值数据。
@@ -4864,12 +4843,10 @@ class Interp2(HasHandle):
             _check_ipath(path, self)
             core.interp2_load(self.handle, make_c_char_p(path))
 
-    core.use(None, 'interp2_write_fmap',
-             c_void_p, c_void_p, c_char_p)
-    core.use(None, 'interp2_read_fmap',
-             c_void_p, c_void_p, c_char_p)
+    core.use(None, 'interp2_write_fmap', c_void_p, c_void_p, c_char_p)
+    core.use(None, 'interp2_read_fmap', c_void_p, c_void_p, c_char_p)
 
-    def to_fmap(self, fmt='binary'):
+    def to_fmap(self, fmt='binary') -> FileMap:
         """将插值数据序列化到 FileMap 中。
 
         Args:
@@ -4895,7 +4872,7 @@ class Interp2(HasHandle):
         core.interp2_read_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
 
     @property
-    def fmap(self):
+    def fmap(self) -> FileMap:
         """获取插值数据的二进制序列化表示。
 
         Returns:
@@ -4904,7 +4881,7 @@ class Interp2(HasHandle):
         return self.to_fmap(fmt='binary')
 
     @fmap.setter
-    def fmap(self, value):
+    def fmap(self, value: FileMap):
         """从二进制序列化数据加载插值。
 
         Args:
@@ -4935,11 +4912,10 @@ class Interp2(HasHandle):
         assert xmin <= xmax and dx >= 0
         assert ymin <= ymax and dy >= 0
         kernel = CFUNCTYPE(c_double, c_double, c_double)
-        core.interp2_create(self.handle, xmin, dx, xmax, ymin, dy, ymax,
-                            kernel(get_value))
+        core.interp2_create(self.handle, xmin, dx, xmax, ymin, dy, ymax, kernel(get_value))
 
     @staticmethod
-    def create_const(value):
+    def create_const(value: float) -> 'Interp2':
         """创建常数值插值场。
 
         Args:
@@ -4949,13 +4925,12 @@ class Interp2(HasHandle):
             Interp2: 创建的常数值插值对象。
         """
         f = Interp2()
-        f.create(xmin=0, dx=0, xmax=0, ymin=0, dy=0, ymax=0,
-                 get_value=lambda *args: value)
+        f.create(xmin=0, dx=0, xmax=0, ymin=0, dy=0, ymax=0, get_value=lambda *args: value)
         return f
 
     core.use(c_bool, 'interp2_empty', c_void_p)
 
-    def is_empty(self):
+    def is_empty(self) -> bool:
         """检查插值数据是否为空。
 
         Returns:
@@ -4964,7 +4939,7 @@ class Interp2(HasHandle):
         return core.interp2_empty(self.handle)
 
     @property
-    def empty(self):
+    def empty(self) -> bool:
         """检查插值数据是否为空。
 
         Returns:
@@ -4978,8 +4953,7 @@ class Interp2(HasHandle):
         """清空插值数据。"""
         core.interp2_clear(self.handle)
 
-    core.use(c_double, 'interp2_get',
-             c_void_p, c_double, c_double, c_bool)
+    core.use(c_double, 'interp2_get', c_void_p, c_double, c_double, c_bool)
 
     def get(self, x, y, no_external=True):
         """获取指定坐标点的插值结果。
@@ -4998,8 +4972,7 @@ class Interp2(HasHandle):
         """使实例可调用，等效于 get 方法。"""
         return self.get(*args, **kwargs)
 
-    core.use(c_bool, 'interp2_is_inner',
-             c_void_p, c_double, c_double)
+    core.use(c_bool, 'interp2_is_inner', c_void_p, c_double, c_double)
 
     def is_inner(self, x, y):
         """判断坐标点是否在插值域内部。
@@ -5018,28 +4991,25 @@ class Interp2(HasHandle):
     core.use(c_double, 'interp2_get_ymin', c_void_p)
     core.use(c_double, 'interp2_get_ymax', c_void_p)
 
-    def xrange(self):
+    def xrange(self) -> Tuple[float, float]:
         """获取 X 轴的有效范围。
 
         Returns:
             tuple: (xmin, xmax) 组成的元组。
         """
-        return core.interp2_get_xmin(self.handle), core.interp2_get_xmax(
-            self.handle)
+        return core.interp2_get_xmin(self.handle), core.interp2_get_xmax(self.handle)
 
-    def yrange(self):
+    def yrange(self) -> Tuple[float, float]:
         """获取 Y 轴的有效范围。
 
         Returns:
             tuple: (ymin, ymax) 组成的元组。
         """
-        return core.interp2_get_ymin(self.handle), core.interp2_get_ymax(
-            self.handle)
+        return core.interp2_get_ymin(self.handle), core.interp2_get_ymax(self.handle)
 
-    core.use(None, 'interp2_clone',
-             c_void_p, c_void_p)
+    core.use(None, 'interp2_clone', c_void_p, c_void_p)
 
-    def clone(self, other):
+    def clone(self, other: 'Interp2') -> 'Interp2':
         """克隆另一个插值对象的数据到当前对象。
 
         Args:
@@ -5053,7 +5023,7 @@ class Interp2(HasHandle):
             core.interp2_clone(self.handle, other.handle)
         return self
 
-    def get_copy(self):
+    def get_copy(self) -> 'Interp2':
         """创建当前对象的深拷贝。
 
         Returns:
@@ -5065,7 +5035,7 @@ class Interp2(HasHandle):
 
     core.use(None, 'interp2_iadd', c_void_p, c_double)
 
-    def __iadd__(self, value):
+    def __iadd__(self, value: float) -> 'Interp2':
         """实现 += 操作，将值添加到所有 z 坐标上。
 
         Args:
@@ -5079,7 +5049,7 @@ class Interp2(HasHandle):
 
     core.use(None, 'interp2_imul', c_void_p, c_double)
 
-    def __imul__(self, value):
+    def __imul__(self, value: float) -> 'Interp2':
         """实现 *= 操作，将值乘以所有 z 坐标上。
 
         Args:
@@ -5091,7 +5061,7 @@ class Interp2(HasHandle):
         core.interp2_imul(self.handle, value)
         return self
 
-    def __add__(self, value):
+    def __add__(self, value: float) -> 'Interp2':
         """
         实现加法操作，将当前对象的值加上指定值。
 
@@ -5105,7 +5075,7 @@ class Interp2(HasHandle):
         result += value
         return result
 
-    def __radd__(self, value):
+    def __radd__(self, value: float) -> 'Interp2':
         """
         实现右加法操作，将指定值加上当前对象的值。
 
@@ -5117,7 +5087,7 @@ class Interp2(HasHandle):
         """
         return self + value
 
-    def __mul__(self, value):
+    def __mul__(self, value: float) -> 'Interp2':
         """
         实现乘法操作，将当前对象的值乘以指定值。
 
@@ -5131,7 +5101,7 @@ class Interp2(HasHandle):
         result *= value
         return result
 
-    def __rmul__(self, value):
+    def __rmul__(self, value: float) -> 'Interp2':
         """
         实现右乘法操作，将当前对象的值乘以指定值。
 
@@ -5150,26 +5120,23 @@ class Interp3(HasHandle):
     该类用于三维插值计算，支持从文件加载数据、创建插值函数及空间插值查询等功能。
     """
     core.use(c_void_p, 'new_interp3')
-    core.use(None, 'del_interp3',
-             c_void_p)
+    core.use(None, 'del_interp3', c_void_p)
 
-    def __init__(self, path=None, handle=None):
+    def __init__(self, path: Optional[str] = None, handle: Optional[c_void_p] = None):
         """初始化三维插值对象。
 
         Args:
             path (str, optional): 从文件加载数据的路径。
             handle: 已有的句柄。如果提供，则忽略其他参数。
         """
-        super().__init__(handle, core.new_interp3,
-                         core.del_interp3)
+        super().__init__(handle, core.new_interp3, core.del_interp3)
         if handle is None:
             if isinstance(path, str):
                 self.load(path)
 
-    core.use(None, 'interp3_save',
-             c_void_p, c_char_p)
+    core.use(None, 'interp3_save', c_void_p, c_char_p)
 
-    def save(self, path):
+    def save(self, path: str):
         """将插值数据序列化保存到文件。
 
         支持以下文件格式：
@@ -5184,10 +5151,9 @@ class Interp3(HasHandle):
             make_parent(path)
             core.interp3_save(self.handle, make_c_char_p(path))
 
-    core.use(None, 'interp3_load',
-             c_void_p, c_char_p)
+    core.use(None, 'interp3_load', c_void_p, c_char_p)
 
-    def load(self, path):
+    def load(self, path: str):
         """从文件加载序列化的插值数据。
 
         根据文件扩展名确定文件格式（txt、xml 和二进制），请参考 `save` 函数。
@@ -5199,12 +5165,10 @@ class Interp3(HasHandle):
             _check_ipath(path, self)
             core.interp3_load(self.handle, make_c_char_p(path))
 
-    core.use(None, 'interp3_write_fmap',
-             c_void_p, c_void_p, c_char_p)
-    core.use(None, 'interp3_read_fmap',
-             c_void_p, c_void_p, c_char_p)
+    core.use(None, 'interp3_write_fmap', c_void_p, c_void_p, c_char_p)
+    core.use(None, 'interp3_read_fmap', c_void_p, c_void_p, c_char_p)
 
-    def to_fmap(self, fmt='binary'):
+    def to_fmap(self, fmt: str = 'binary') -> FileMap:
         """将插值数据序列化到 FileMap 中。
 
         Args:
@@ -5218,7 +5182,7 @@ class Interp3(HasHandle):
         core.interp3_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
         return fmap
 
-    def from_fmap(self, fmap: FileMap, fmt='binary'):
+    def from_fmap(self, fmap: FileMap, fmt: str = 'binary'):
         """从 FileMap 中读取序列化的插值数据。
 
         Args:
@@ -5230,7 +5194,7 @@ class Interp3(HasHandle):
         core.interp3_read_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
 
     @property
-    def fmap(self):
+    def fmap(self) -> FileMap:
         """获取插值数据的二进制序列化表示。
 
         Returns:
@@ -5239,7 +5203,7 @@ class Interp3(HasHandle):
         return self.to_fmap(fmt='binary')
 
     @fmap.setter
-    def fmap(self, value):
+    def fmap(self, value: FileMap):
         """从二进制序列化数据加载插值。
 
         Args:
@@ -5283,7 +5247,7 @@ class Interp3(HasHandle):
                             kernel(get_value))
 
     @staticmethod
-    def create_const(value):
+    def create_const(value: float) -> 'Interp3':
         """创建常数值插值场。
 
         Args:
@@ -5300,7 +5264,7 @@ class Interp3(HasHandle):
 
     core.use(c_bool, 'interp3_empty', c_void_p)
 
-    def is_empty(self):
+    def is_empty(self) -> bool:
         """检查插值数据是否为空。
 
         Returns:
@@ -5309,7 +5273,7 @@ class Interp3(HasHandle):
         return core.interp3_empty(self.handle)
 
     @property
-    def empty(self):
+    def empty(self) -> bool:
         """检查插值数据是否为空。
 
         Returns:
@@ -5323,9 +5287,7 @@ class Interp3(HasHandle):
         """清空插值数据。"""
         core.interp3_clear(self.handle)
 
-    core.use(c_double, 'interp3_get',
-             c_void_p, c_double, c_double, c_double,
-             c_bool)
+    core.use(c_double, 'interp3_get', c_void_p, c_double, c_double, c_double, c_bool)
 
     def get(self, x, y, z, no_external=True):
         """获取三维空间点的插值结果。
@@ -5345,8 +5307,7 @@ class Interp3(HasHandle):
         """使实例可调用，等效于 get 方法。"""
         return self.get(*args, **kwargs)
 
-    core.use(c_bool, 'interp3_is_inner',
-             c_void_p, c_double, c_double, c_double)
+    core.use(c_bool, 'interp3_is_inner', c_void_p, c_double, c_double, c_double)
 
     def is_inner(self, x, y, z):
         """判断坐标点是否在插值域内部。
@@ -5368,37 +5329,33 @@ class Interp3(HasHandle):
     core.use(c_double, 'interp3_get_zmin', c_void_p)
     core.use(c_double, 'interp3_get_zmax', c_void_p)
 
-    def xrange(self):
+    def xrange(self) -> Tuple[float, float]:
         """获取 X 轴的有效范围。
 
         Returns:
             tuple: (xmin, xmax) 组成的元组。
         """
-        return core.interp3_get_xmin(self.handle), core.interp3_get_xmax(
-            self.handle)
+        return core.interp3_get_xmin(self.handle), core.interp3_get_xmax(self.handle)
 
-    def yrange(self):
+    def yrange(self) -> Tuple[float, float]:
         """获取 Y 轴的有效范围。
 
         Returns:
             tuple: (ymin, ymax) 组成的元组。
         """
-        return core.interp3_get_ymin(self.handle), core.interp3_get_ymax(
-            self.handle)
+        return core.interp3_get_ymin(self.handle), core.interp3_get_ymax(self.handle)
 
-    def zrange(self):
+    def zrange(self) -> Tuple[float, float]:
         """获取 Z 轴的有效范围。
 
         Returns:
             tuple: (zmin, zmax) 组成的元组。
         """
-        return core.interp3_get_zmin(self.handle), core.interp3_get_zmax(
-            self.handle)
+        return core.interp3_get_zmin(self.handle), core.interp3_get_zmax(self.handle)
 
-    core.use(None, 'interp3_clone',
-             c_void_p, c_void_p)
+    core.use(None, 'interp3_clone', c_void_p, c_void_p)
 
-    def clone(self, other):
+    def clone(self, other: 'Interp3') -> 'Interp3':
         """克隆另一个插值对象的数据到当前对象。
 
         Args:
@@ -5412,7 +5369,7 @@ class Interp3(HasHandle):
             core.interp3_clone(self.handle, other.handle)
         return self
 
-    def get_copy(self):
+    def get_copy(self) -> 'Interp3':
         """创建当前对象的深拷贝。
 
         Returns:
@@ -5531,10 +5488,9 @@ class Array2(HasHandle):
         else:
             assert x is None and y is None and path is None
 
-    core.use(None, 'array2_save',
-             c_void_p, c_char_p)
+    core.use(None, 'array2_save', c_void_p, c_char_p)
 
-    def save(self, path):
+    def save(self, path: str):
         """将数据序列化保存到文件。
 
         支持以下文件格式：
@@ -5549,10 +5505,9 @@ class Array2(HasHandle):
             make_parent(path)
             core.array2_save(self.handle, make_c_char_p(path))
 
-    core.use(None, 'array2_load',
-             c_void_p, c_char_p)
+    core.use(None, 'array2_load', c_void_p, c_char_p)
 
-    def load(self, path):
+    def load(self, path: str):
         """从文件加载序列化数据。
 
         根据文件扩展名确定文件格式（txt、xml 和二进制），请参考 `save` 函数。
@@ -5564,12 +5519,10 @@ class Array2(HasHandle):
             _check_ipath(path, self)
             core.array2_load(self.handle, make_c_char_p(path))
 
-    core.use(None, 'array2_write_fmap',
-             c_void_p, c_void_p, c_char_p)
-    core.use(None, 'array2_read_fmap',
-             c_void_p, c_void_p, c_char_p)
+    core.use(None, 'array2_write_fmap', c_void_p, c_void_p, c_char_p)
+    core.use(None, 'array2_read_fmap', c_void_p, c_void_p, c_char_p)
 
-    def to_fmap(self, fmt='binary'):
+    def to_fmap(self, fmt: str = 'binary') -> 'FileMap':
         """将数据序列化到 FileMap 中。
 
         Args:
@@ -5583,7 +5536,7 @@ class Array2(HasHandle):
         core.array2_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
         return fmap
 
-    def from_fmap(self, fmap: FileMap, fmt='binary'):
+    def from_fmap(self, fmap: FileMap, fmt: str = 'binary'):
         """从 FileMap 中读取序列化数据。
 
         Args:
@@ -5595,7 +5548,7 @@ class Array2(HasHandle):
         core.array2_read_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
 
     @property
-    def fmap(self):
+    def fmap(self) -> 'FileMap':
         """获取二进制序列化表示。
 
         Returns:
@@ -5604,7 +5557,7 @@ class Array2(HasHandle):
         return self.to_fmap(fmt='binary')
 
     @fmap.setter
-    def fmap(self, value):
+    def fmap(self, value: 'FileMap'):
         """从二进制数据加载。
 
         Args:
@@ -5612,7 +5565,7 @@ class Array2(HasHandle):
         """
         self.from_fmap(value, fmt='binary')
 
-    def __str__(self):
+    def __str__(self) -> str:
         """返回对象的字符串表示。
 
         Returns:
@@ -5620,10 +5573,10 @@ class Array2(HasHandle):
         """
         return f'{type(self).__name__}({self[0]}, {self[1]})'
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'{type(self).__name__}(handle={self.handle}, x={self[0]}, y={self[1]})'
 
-    def __len__(self):
+    def __len__(self) -> int:
         """获取数组长度。
 
         Returns:
@@ -5633,47 +5586,46 @@ class Array2(HasHandle):
 
     core.use(c_double, 'array2_get', c_void_p, c_size_t)
 
-    def get(self, dim):
+    def get(self, dim: int) -> Optional[float]:
         """获取指定维度的值。
 
         Args:
             dim (int): 维度索引 (0 或 1)。
 
         Returns:
-            float: 对应维度的值。
+            float | None: 对应维度的值，或 None 表示索引无效。
         """
-        dim = get_index(dim, 2)
-        if dim is not None:
-            return core.array2_get(self.handle, dim)
+        dim_ = get_index(dim, 2)
+        if dim_ is not None:
+            return core.array2_get(self.handle, dim_)
         else:
             return None
 
-    core.use(None, 'array2_set',
-             c_void_p, c_size_t, c_double)
+    core.use(None, 'array2_set', c_void_p, c_size_t, c_double)
 
-    def set(self, dim, value):
+    def set(self, dim: int, value: float):
         """设置指定维度的值。
 
         Args:
             dim (int): 维度索引 (0 或 1)。
             value (float): 要设置的值。
         """
-        dim = get_index(dim, 2)
-        if dim is not None:
-            core.array2_set(self.handle, dim, value)
+        dim_ = get_index(dim, 2)
+        if dim_ is not None:
+            core.array2_set(self.handle, dim_, value)
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: int) -> Optional[float]:
         """通过索引访问元素。
 
         Args:
             key (int): 维度索引 (0 或 1)。
 
         Returns:
-            float: 对应维度的值。
+            float | None: 对应维度的值，或 None 表示索引无效。
         """
         return self.get(key)
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: int, value: float):
         """通过索引设置元素。
 
         Args:
@@ -5682,21 +5634,27 @@ class Array2(HasHandle):
         """
         self.set(key, value)
 
-    def to_list(self):
+    def to_list(self) -> List[float]:
         """转换为列表格式。
 
         Returns:
             list: 包含两个元素的列表 [x, y]。
         """
-        return [self[0], self[1]]
+        x = self[0]
+        y = self[1]
+        assert x is not None and y is not None
+        return [x, y]
 
-    def to_tuple(self):
+    def to_tuple(self) -> Tuple[Optional[float], Optional[float]]:
         """转换为元组格式。
 
         Returns:
             tuple: 包含两个元素的元组 (x, y)。
         """
-        return self[0], self[1]
+        x = self[0]
+        y = self[1]
+        assert x is not None and y is not None
+        return x, y
 
     @staticmethod
     def from_list(values: Union[list, tuple]):
@@ -5725,12 +5683,14 @@ class Array2(HasHandle):
         """
         if other is not None:
             for i in range(2):
-                self.set(i, other[i])
+                value = other[i]
+                assert value is not None
+                self.set(i, value)
         return self
 
     core.use(c_double, 'array2_get_angle', c_void_p)
 
-    def get_angle(self):
+    def get_angle(self) -> float:
         """计算与 X 轴正方向的夹角。
 
         Returns:
@@ -5801,12 +5761,10 @@ class Array3(HasHandle):
             _check_ipath(path, self)
             core.array3_load(self.handle, make_c_char_p(path))
 
-    core.use(None, 'array3_write_fmap',
-             c_void_p, c_void_p, c_char_p)
-    core.use(None, 'array3_read_fmap',
-             c_void_p, c_void_p, c_char_p)
+    core.use(None, 'array3_write_fmap', c_void_p, c_void_p, c_char_p)
+    core.use(None, 'array3_read_fmap', c_void_p, c_void_p, c_char_p)
 
-    def to_fmap(self, fmt='binary'):
+    def to_fmap(self, fmt: str = 'binary') -> 'FileMap':
         """将数据序列化到 FileMap 中。
 
         Args:
@@ -5820,7 +5778,7 @@ class Array3(HasHandle):
         core.array3_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
         return fmap
 
-    def from_fmap(self, fmap: FileMap, fmt='binary'):
+    def from_fmap(self, fmap: FileMap, fmt: str = 'binary'):
         """从 FileMap 中读取序列化数据。
 
         Args:
@@ -5832,7 +5790,7 @@ class Array3(HasHandle):
         core.array3_read_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
 
     @property
-    def fmap(self):
+    def fmap(self) -> 'FileMap':
         """获取二进制序列化表示。
 
         Returns:
@@ -5841,7 +5799,7 @@ class Array3(HasHandle):
         return self.to_fmap(fmt='binary')
 
     @fmap.setter
-    def fmap(self, value):
+    def fmap(self, value: 'FileMap'):
         """从二进制数据加载。
 
         Args:
@@ -5849,10 +5807,10 @@ class Array3(HasHandle):
         """
         self.from_fmap(value, fmt='binary')
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'{type(self).__name__}(handle={self.handle}, x={self[0]}, y={self[1]}, z={self[2]})'
 
-    def __str__(self):
+    def __str__(self) -> str:
         """返回对象的字符串表示。
 
         Returns:
@@ -5860,7 +5818,7 @@ class Array3(HasHandle):
         """
         return f'{type(self).__name__}({self[0]}, {self[1]}, {self[2]})'
 
-    def __len__(self):
+    def __len__(self) -> int:
         """获取数组长度。
 
         Returns:
@@ -5870,7 +5828,7 @@ class Array3(HasHandle):
 
     core.use(c_double, 'array3_get', c_void_p, c_size_t)
 
-    def get(self, dim):
+    def get(self, dim: int) -> Optional[float]:
         """获取指定维度的值。
 
         Args:
@@ -5879,27 +5837,26 @@ class Array3(HasHandle):
         Returns:
             float: 对应维度的值。
         """
-        dim = get_index(dim, 3)
-        if dim is not None:
-            return core.array3_get(self.handle, dim)
+        dim_ = get_index(dim, 3)
+        if dim_ is not None:
+            return core.array3_get(self.handle, dim_)
         else:
             return None
 
-    core.use(None, 'array3_set',
-             c_void_p, c_size_t, c_double)
+    core.use(None, 'array3_set', c_void_p, c_size_t, c_double)
 
-    def set(self, dim, value):
+    def set(self, dim: int, value: float):
         """设置指定维度的值。
 
         Args:
             dim (int): 维度索引 (0, 1 或 2)。
             value (float): 要设置的值。
         """
-        dim = get_index(dim, 3)
-        if dim is not None:
-            core.array3_set(self.handle, dim, value)
+        dim_ = get_index(dim, 3)
+        if dim_ is not None:
+            core.array3_set(self.handle, dim_, value)
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: int) -> Optional[float]:
         """通过索引访问元素。
 
         Args:
@@ -5910,7 +5867,7 @@ class Array3(HasHandle):
         """
         return self.get(key)
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: int, value: float):
         """通过索引设置元素。
 
         Args:
@@ -5919,28 +5876,36 @@ class Array3(HasHandle):
         """
         self.set(key, value)
 
-    def to_list(self):
+    def to_list(self) -> List[float]:
         """转换为列表格式。
 
         Returns:
             list: 包含三个元素的列表 [x, y, z]。
         """
-        return [self[0], self[1], self[2]]
+        x = self.get(0)
+        y = self.get(1)
+        z = self.get(2)
+        assert x is not None and y is not None and z is not None
+        return [x, y, z]
 
-    def to_tuple(self):
+    def to_tuple(self) -> Tuple[float, float, float]:
         """转换为元组格式。
 
         Returns:
             tuple: 包含三个元素的元组 (x, y, z)。
         """
-        return self[0], self[1], self[2]
+        x = self.get(0)
+        y = self.get(1)
+        z = self.get(2)
+        assert x is not None and y is not None and z is not None
+        return x, y, z
 
     @staticmethod
     def from_list(values: Union[list, tuple]):
         """从列表创建 Array3 实例。
 
         Args:
-            values (list): 必须包含三个元素的列表。
+            values (list, tuple): 必须包含三个元素的列表。
 
         Returns:
             Array3: 新创建的实例。
@@ -5951,7 +5916,7 @@ class Array3(HasHandle):
         assert len(values) == 3
         return Array3(x=values[0], y=values[1], z=values[2])
 
-    def clone(self, other):
+    def clone(self, other: 'Array3'):
         """克隆另一个 Array3 对象的数据。
 
         Args:
@@ -5962,7 +5927,9 @@ class Array3(HasHandle):
         """
         if other is not None:
             for i in range(3):
-                self.set(i, other[i])
+                value = other[i]
+                assert value is not None, "Array3.clone: other[i] is None"
+                self.set(i, value)
         return self
 
 
@@ -5974,8 +5941,7 @@ class Tensor2(HasHandle):
     core.use(c_void_p, 'new_tensor2')
     core.use(None, 'del_tensor2', c_void_p)
 
-    def __init__(self, xx=None, yy=None, xy=None, path=None,
-                 handle=None):
+    def __init__(self, xx=None, yy=None, xy=None, path=None, handle=None):
         """初始化二维张量对象。
 
         Args:
@@ -5985,8 +5951,7 @@ class Tensor2(HasHandle):
             path (str, optional): 从文件加载数据的路径。
             handle: 已有的句柄。如果提供，则忽略其他参数。
         """
-        super().__init__(handle, core.new_tensor2,
-                         core.del_tensor2)
+        super().__init__(handle, core.new_tensor2, core.del_tensor2)
         if handle is None:
             if isinstance(path, str):
                 self.load(path)
@@ -5999,10 +5964,9 @@ class Tensor2(HasHandle):
         else:
             assert xx is None and yy is None and xy is None and path is None
 
-    core.use(None, 'tensor2_save',
-             c_void_p, c_char_p)
+    core.use(None, 'tensor2_save', c_void_p, c_char_p)
 
-    def save(self, path):
+    def save(self, path: str):
         """序列化保存张量数据。
 
         支持以下文件格式：
@@ -6017,10 +5981,9 @@ class Tensor2(HasHandle):
             make_parent(path)
             core.tensor2_save(self.handle, make_c_char_p(path))
 
-    core.use(None, 'tensor2_load',
-             c_void_p, c_char_p)
+    core.use(None, 'tensor2_load', c_void_p, c_char_p)
 
-    def load(self, path):
+    def load(self, path: str):
         """从文件加载序列化数据。
 
         根据文件扩展名确定文件格式（txt、xml 和二进制），请参考 `save` 函数。
@@ -6032,12 +5995,10 @@ class Tensor2(HasHandle):
             _check_ipath(path, self)
             core.tensor2_load(self.handle, make_c_char_p(path))
 
-    core.use(None, 'tensor2_write_fmap',
-             c_void_p, c_void_p, c_char_p)
-    core.use(None, 'tensor2_read_fmap',
-             c_void_p, c_void_p, c_char_p)
+    core.use(None, 'tensor2_write_fmap', c_void_p, c_void_p, c_char_p)
+    core.use(None, 'tensor2_read_fmap', c_void_p, c_void_p, c_char_p)
 
-    def to_fmap(self, fmt='binary'):
+    def to_fmap(self, fmt: str = 'binary') -> FileMap:
         """将张量数据序列化到 FileMap 中。
 
         Args:
@@ -6051,7 +6012,7 @@ class Tensor2(HasHandle):
         core.tensor2_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
         return fmap
 
-    def from_fmap(self, fmap: FileMap, fmt='binary'):
+    def from_fmap(self, fmap: FileMap, fmt: str = 'binary'):
         """从 FileMap 中读取序列化数据。
 
         Args:
@@ -6063,7 +6024,7 @@ class Tensor2(HasHandle):
         core.tensor2_read_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
 
     @property
-    def fmap(self):
+    def fmap(self) -> FileMap:
         """获取二进制序列化表示。
 
         Returns:
@@ -6072,7 +6033,7 @@ class Tensor2(HasHandle):
         return self.to_fmap(fmt='binary')
 
     @fmap.setter
-    def fmap(self, value):
+    def fmap(self, value: FileMap):
         """从二进制数据加载张量。
 
         Args:
@@ -6080,10 +6041,10 @@ class Tensor2(HasHandle):
         """
         self.from_fmap(value, fmt='binary')
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'{type(self).__name__}(handle={self.handle}, xx={self.xx}, yy={self.yy}, xy={self.xy})'
 
-    def __str__(self):
+    def __str__(self) -> str:
         """返回张量的字符串表示。
 
         Returns:
@@ -6091,14 +6052,13 @@ class Tensor2(HasHandle):
         """
         return f'{type(self).__name__}({self.xx}, {self.yy}, {self.xy})'
 
-    core.use(c_double, 'tensor2_get',
-             c_void_p, c_size_t, c_size_t)
+    core.use(c_double, 'tensor2_get', c_void_p, c_size_t, c_size_t)
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: Tuple[int, int]) -> Optional[float]:
         """通过二维索引访问张量分量。
 
         Args:
-            key (tuple): 二维索引元组，如 (0,0) 表示 xx 分量。
+            key (tuple[int, int]): 二维索引元组，如 (0,0) 表示 xx 分量。
 
         Returns:
             float: 对应分量的值。
@@ -6114,14 +6074,13 @@ class Tensor2(HasHandle):
         else:
             return None
 
-    core.use(None, 'tensor2_set',
-             c_void_p, c_size_t, c_size_t, c_double)
+    core.use(None, 'tensor2_set', c_void_p, c_size_t, c_size_t, c_double)
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: Tuple[int, int], value: float):
         """通过二维索引设置张量分量。
 
         Args:
-            key (tuple): 二维索引元组，如 (0,0) 表示 xx 分量。
+            key (tuple[int, int]): 二维索引元组，如 (0,0) 表示 xx 分量。
             value (float): 要设置的值。
 
         Raises:
@@ -6133,12 +6092,9 @@ class Tensor2(HasHandle):
         if i is not None and j is not None:
             core.tensor2_set(self.handle, i, j, value)
 
-    core.use(None, 'tensor2_set_max_min_angle',
-             c_void_p, c_double, c_double,
-             c_double)
+    core.use(None, 'tensor2_set_max_min_angle', c_void_p, c_double, c_double, c_double)
 
-    def set_max_min_angle(self, max_value=None, min_value=None,
-                          angle=None):
+    def set_max_min_angle(self, max_value=None, min_value=None, angle=None):
         """通过主值和方向角设置张量。
 
         Args:
@@ -6146,36 +6102,40 @@ class Tensor2(HasHandle):
             min_value (float): 最小主应力/应变值。
             angle (float): 最大主值方向与x轴正方向的夹角（弧度，逆时针方向为正）。
         """
-        if (max_value is not None and min_value is not None
-                and angle is not None):
-            core.tensor2_set_max_min_angle(
-                self.handle, max_value, min_value, angle)
+        if max_value is not None and min_value is not None and angle is not None:
+            core.tensor2_set_max_min_angle(self.handle, max_value, min_value, angle)
 
     @property
-    def xx(self):
+    def xx(self) -> float:
         """获取或设置xx分量。"""
-        return self[(0, 0)]
+        res = self[(0, 0)]
+        assert res is not None, "Tensor2.xx: res is None"
+        return res
 
     @xx.setter
-    def xx(self, value):
+    def xx(self, value: float):
         self[0, 0] = value
 
     @property
-    def yy(self):
+    def yy(self) -> float:
         """获取或设置yy分量。"""
-        return self[(1, 1)]
+        res = self[(1, 1)]
+        assert res is not None, "Tensor2.yy: res is None"
+        return res
 
     @yy.setter
-    def yy(self, value):
+    def yy(self, value: float):
         self[(1, 1)] = value
 
     @property
-    def xy(self):
+    def xy(self) -> float:
         """获取或设置xy分量。"""
-        return self[(0, 1)]
+        res = self[(0, 1)]
+        assert res is not None, "Tensor2.xy: res is None"
+        return res
 
     @xy.setter
-    def xy(self, value):
+    def xy(self, value: float):
         self[(0, 1)] = value
 
     @staticmethod
@@ -6250,8 +6210,7 @@ class Tensor2(HasHandle):
         xy = self.xy / value
         return Tensor2(xx=xx, yy=yy, xy=xy)
 
-    core.use(None, 'tensor2_clone',
-             c_void_p, c_void_p)
+    core.use(None, 'tensor2_clone', c_void_p, c_void_p)
 
     def clone(self, other):
         """克隆另一个张量的数据。
@@ -6267,8 +6226,7 @@ class Tensor2(HasHandle):
             core.tensor2_clone(self.handle, other.handle)
         return self
 
-    core.use(None, 'tensor2_rotate',
-             c_void_p, c_void_p, c_double)
+    core.use(None, 'tensor2_rotate', c_void_p, c_void_p, c_double)
 
     def get_rotate(self, angle, buffer=None):
         """获取旋转后的张量。
@@ -6285,8 +6243,7 @@ class Tensor2(HasHandle):
         core.tensor2_rotate(self.handle, buffer.handle, angle)
         return buffer
 
-    core.use(c_double, 'tensor2_get_max_principle_value',
-             c_void_p)
+    core.use(c_double, 'tensor2_get_max_principle_value', c_void_p)
 
     @property
     def max_principle_value(self):
@@ -6297,8 +6254,7 @@ class Tensor2(HasHandle):
         """
         return core.tensor2_get_max_principle_value(self.handle)
 
-    core.use(c_double, 'tensor2_get_min_principle_value',
-             c_void_p)
+    core.use(c_double, 'tensor2_get_min_principle_value', c_void_p)
 
     @property
     def min_principle_value(self):
@@ -6309,8 +6265,7 @@ class Tensor2(HasHandle):
         """
         return core.tensor2_get_min_principle_value(self.handle)
 
-    core.use(c_double, 'tensor2_get_principle_angle',
-             c_void_p)
+    core.use(c_double, 'tensor2_get_principle_angle', c_void_p)
 
     @property
     def principle_angle(self):
@@ -6328,8 +6283,7 @@ class Tensor3(HasHandle):
     支持张量分量存取、方向投影计算及序列化操作。
     """
     core.use(c_void_p, 'new_tensor3')
-    core.use(None, 'del_tensor3',
-             c_void_p)
+    core.use(None, 'del_tensor3', c_void_p)
 
     def __init__(self, xx=None, yy=None, zz=None,
                  xy=None, yz=None, zx=None,
@@ -6346,8 +6300,7 @@ class Tensor3(HasHandle):
             path (str, optional): 从文件加载数据的路径。
             handle: 已有的句柄。如果提供，则忽略其他参数。
         """
-        super().__init__(handle, core.new_tensor3,
-                         core.del_tensor3)
+        super().__init__(handle, core.new_tensor3, core.del_tensor3)
         if handle is None:
             if isinstance(path, str):
                 self.load(path)
@@ -6364,11 +6317,9 @@ class Tensor3(HasHandle):
             if zx is not None:
                 self.zx = zx
         else:
-            assert (xx is None and yy is None and zz is None
-                    and xy is None and yz is None and zx is None)
+            assert xx is None and yy is None and zz is None and xy is None and yz is None and zx is None
 
-    core.use(None, 'tensor3_save',
-             c_void_p, c_char_p)
+    core.use(None, 'tensor3_save', c_void_p, c_char_p)
 
     def save(self, path):
         """序列化保存张量数据。
@@ -6400,10 +6351,8 @@ class Tensor3(HasHandle):
             _check_ipath(path, self)
             core.tensor3_load(self.handle, make_c_char_p(path))
 
-    core.use(None, 'tensor3_write_fmap',
-             c_void_p, c_void_p, c_char_p)
-    core.use(None, 'tensor3_read_fmap',
-             c_void_p, c_void_p, c_char_p)
+    core.use(None, 'tensor3_write_fmap', c_void_p, c_void_p, c_char_p)
+    core.use(None, 'tensor3_read_fmap', c_void_p, c_void_p, c_char_p)
 
     def to_fmap(self, fmt='binary'):
         """将张量数据序列化到 FileMap 中。
@@ -6465,7 +6414,7 @@ class Tensor3(HasHandle):
     core.use(c_double, 'tensor3_get',
              c_void_p, c_size_t, c_size_t)
 
-    def __getitem__(self, key):
+    def __getitem__(self, key) -> Optional[float]:
         """通过二维索引访问张量分量。
 
         Args:
@@ -6485,8 +6434,7 @@ class Tensor3(HasHandle):
         else:
             return None
 
-    core.use(None, 'tensor3_set',
-             c_void_p, c_size_t, c_size_t, c_double)
+    core.use(None, 'tensor3_set', c_void_p, c_size_t, c_size_t, c_double)
 
     def __setitem__(self, key, value):
         """通过二维索引设置张量分量。
@@ -6505,13 +6453,15 @@ class Tensor3(HasHandle):
             core.tensor3_set(self.handle, i, j, value)
 
     @property
-    def xx(self):
+    def xx(self) -> float:
         """获取或设置xx分量。
 
         Returns:
             float: xx分量的值。
         """
-        return self[(0, 0)]
+        res = self[(0, 0)]
+        assert res is not None, "Tensor3.xx is None"
+        return res
 
     @xx.setter
     def xx(self, value):
@@ -6523,13 +6473,15 @@ class Tensor3(HasHandle):
         self[0, 0] = value
 
     @property
-    def yy(self):
+    def yy(self) -> float:
         """获取或设置yy分量。
 
         Returns:
             float: yy分量的值。
         """
-        return self[(1, 1)]
+        res = self[(1, 1)]
+        assert res is not None, "Tensor3.yy is None"
+        return res
 
     @yy.setter
     def yy(self, value):
@@ -6541,13 +6493,15 @@ class Tensor3(HasHandle):
         self[(1, 1)] = value
 
     @property
-    def zz(self):
+    def zz(self) -> float:
         """获取或设置zz分量。
 
         Returns:
             float: zz分量的值。
         """
-        return self[(2, 2)]
+        res = self[(2, 2)]
+        assert res is not None, "Tensor3.zz is None"
+        return res
 
     @zz.setter
     def zz(self, value):
@@ -6559,13 +6513,15 @@ class Tensor3(HasHandle):
         self[(2, 2)] = value
 
     @property
-    def xy(self):
+    def xy(self) -> float:
         """获取或设置xy分量。
 
         Returns:
             float: xy分量的值。
         """
-        return self[(0, 1)]
+        res = self[(0, 1)]
+        assert res is not None, "Tensor3.xy is None"
+        return res
 
     @xy.setter
     def xy(self, value):
@@ -6577,13 +6533,15 @@ class Tensor3(HasHandle):
         self[(0, 1)] = value
 
     @property
-    def yz(self):
+    def yz(self) -> float:
         """获取或设置yz分量。
 
         Returns:
             float: yz分量的值。
         """
-        return self[(1, 2)]
+        res = self[(1, 2)]
+        assert res is not None, "Tensor3.yz is None"
+        return res
 
     @yz.setter
     def yz(self, value):
@@ -6595,13 +6553,15 @@ class Tensor3(HasHandle):
         self[(1, 2)] = value
 
     @property
-    def zx(self):
+    def zx(self) -> float:
         """获取或设置zx分量。
 
         Returns:
             float: zx分量的值。
         """
-        return self[(2, 0)]
+        res = self[(2, 0)]
+        assert res is not None, "Tensor3.zx is None"
+        return res
 
     @zx.setter
     def zx(self, value):
@@ -6693,9 +6653,7 @@ class Tensor3(HasHandle):
                        zx=self.zx / value,
                        )
 
-    core.use(c_double, 'tensor3_get_along',
-             c_void_p, c_double, c_double,
-             c_double)
+    core.use(c_double, 'tensor3_get_along', c_void_p, c_double, c_double, c_double)
 
     def get_along(self, *args):
         """计算给定方向上的投影值。
@@ -6717,8 +6675,7 @@ class Tensor3(HasHandle):
             x = args[0]
             return core.tensor3_get_along(self.handle, x[0], x[1], x[2])
 
-    core.use(None, 'tensor3_clone',
-             c_void_p, c_void_p)
+    core.use(None, 'tensor3_clone', c_void_p, c_void_p)
 
     def clone(self, other):
         """克隆另一个张量的数据到当前对象。
@@ -6741,26 +6698,23 @@ class Tensor2Interp2(HasHandle):
     支持从函数创建插值、范围查询、插值计算及序列化操作。
     """
     core.use(c_void_p, 'new_tensor2interp2')
-    core.use(None, 'del_tensor2interp2',
-             c_void_p)
+    core.use(None, 'del_tensor2interp2', c_void_p)
 
-    def __init__(self, path=None, handle=None):
+    def __init__(self, path: str = None, handle: Optional[c_void_p] = None):
         """初始化二维张量插值对象。
 
         Args:
             path (str, optional): 从文件加载数据的路径。
-            handle: 已有的句柄。如果提供，则忽略其他参数。
+            handle (c_void_p, optional): 已有的C句柄。如果提供，则忽略其他参数。
         """
-        super().__init__(
-            handle, core.new_tensor2interp2, core.del_tensor2interp2)
+        super().__init__(handle, core.new_tensor2interp2, core.del_tensor2interp2)
         if handle is None:
             if isinstance(path, str):
                 self.load(path)
 
-    core.use(None, 'tensor2interp2_save',
-             c_void_p, c_char_p)
+    core.use(None, 'tensor2interp2_save', c_void_p, c_char_p)
 
-    def save(self, path):
+    def save(self, path: str):
         """序列化保存插值数据。
 
         支持以下文件格式：
@@ -6778,10 +6732,9 @@ class Tensor2Interp2(HasHandle):
             make_parent(path)
             core.tensor2interp2_save(self.handle, make_c_char_p(path))
 
-    core.use(None, 'tensor2interp2_load',
-             c_void_p, c_char_p)
+    core.use(None, 'tensor2interp2_load', c_void_p, c_char_p)
 
-    def load(self, path):
+    def load(self, path: str):
         """从文件加载序列化数据。
 
         根据扩展名自动判断文件格式（txt/xml/二进制）
@@ -6796,12 +6749,10 @@ class Tensor2Interp2(HasHandle):
             _check_ipath(path, self)
             core.tensor2interp2_load(self.handle, make_c_char_p(path))
 
-    core.use(None, 'tensor2interp2_write_fmap',
-             c_void_p, c_void_p, c_char_p)
-    core.use(None, 'tensor2interp2_read_fmap',
-             c_void_p, c_void_p, c_char_p)
+    core.use(None, 'tensor2interp2_write_fmap', c_void_p, c_void_p, c_char_p)
+    core.use(None, 'tensor2interp2_read_fmap', c_void_p, c_void_p, c_char_p)
 
-    def to_fmap(self, fmt='binary'):
+    def to_fmap(self, fmt: str = 'binary') -> FileMap:
         """将插值数据序列化到FileMap。
 
         Args:
@@ -6811,26 +6762,24 @@ class Tensor2Interp2(HasHandle):
             FileMap: 包含序列化数据的文件映射对象
         """
         fmap = FileMap()
-        core.tensor2interp2_write_fmap(self.handle, fmap.handle,
-                                       make_c_char_p(fmt))
+        core.tensor2interp2_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
         return fmap
 
-    def from_fmap(self, fmap: FileMap, fmt='binary'):
+    def from_fmap(self, fmap: FileMap, fmt: str = 'binary'):
         """从FileMap反序列化数据。
 
         Args:
             fmap (FileMap): 包含序列化数据的文件映射对象
-            fmt (str, optional): 序列化格式，需与写入时一致
+            fmt (str, optional): 序列化格式，需与写入时一致，可选 'text'/'xml'/'binary'，默认二进制
 
         Raises:
             TypeError: 如果fmap参数类型错误
         """
         assert isinstance(fmap, FileMap)
-        core.tensor2interp2_read_fmap(self.handle, fmap.handle,
-                                      make_c_char_p(fmt))
+        core.tensor2interp2_read_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
 
     @property
-    def fmap(self):
+    def fmap(self) -> FileMap:
         """获取二进制格式的序列化表示。
 
         Returns:
@@ -6839,7 +6788,7 @@ class Tensor2Interp2(HasHandle):
         return self.to_fmap(fmt='binary')
 
     @fmap.setter
-    def fmap(self, value):
+    def fmap(self, value: FileMap):
         """从二进制FileMap加载数据。
 
         Args:
@@ -6873,11 +6822,10 @@ class Tensor2Interp2(HasHandle):
             self.handle, xmin, dx, xmax, ymin, dy, ymax,
             kernel(get_value))
 
-    core.use(c_bool, 'tensor2interp2_empty',
-             c_void_p)
+    core.use(c_bool, 'tensor2interp2_empty', c_void_p)
 
     @property
-    def empty(self):
+    def empty(self) -> bool:
         """检查插值场是否为空。
 
         Returns:
@@ -6913,8 +6861,7 @@ class Tensor2Interp2(HasHandle):
         """使实例可调用，等效于get方法。"""
         return self.get(*args, **kwargs)
 
-    core.use(c_bool, 'tensor2interp2_is_inner',
-             c_void_p, c_double, c_double)
+    core.use(c_bool, 'tensor2interp2_is_inner', c_void_p, c_double, c_double)
 
     def is_inner(self, x, y):
         """判断坐标是否在有效插值域内。
@@ -6933,23 +6880,21 @@ class Tensor2Interp2(HasHandle):
     core.use(c_double, 'tensor2interp2_get_ymin', c_void_p)
     core.use(c_double, 'tensor2interp2_get_ymax', c_void_p)
 
-    def xrange(self):
+    def xrange(self) -> Tuple[float, float]:
         """获取X轴的有效范围。
 
         Returns:
             tuple: (xmin, xmax) 组成的元组
         """
-        return core.tensor2interp2_get_xmin(
-            self.handle), core.tensor2interp2_get_xmax(self.handle)
+        return core.tensor2interp2_get_xmin(self.handle), core.tensor2interp2_get_xmax(self.handle)
 
-    def yrange(self):
+    def yrange(self) -> Tuple[float, float]:
         """获取Y轴的有效范围。
 
         Returns:
             tuple: (ymin, ymax) 组成的元组
         """
-        return core.tensor2interp2_get_ymin(
-            self.handle), core.tensor2interp2_get_ymax(self.handle)
+        return core.tensor2interp2_get_ymin(self.handle), core.tensor2interp2_get_ymax(self.handle)
 
 
 class Tensor3Interp3(HasHandle):
@@ -6964,14 +6909,12 @@ class Tensor3Interp3(HasHandle):
             path (str, optional): 数据文件路径，支持序列化文件加载
             handle: 已有句柄，用于包装现有底层对象
         """
-        super().__init__(handle, core.new_tensor3interp3,
-                         core.del_tensor3interp3)
+        super().__init__(handle, core.new_tensor3interp3, core.del_tensor3interp3)
         if handle is None:
             if isinstance(path, str):
                 self.load(path)
 
-    core.use(None, 'tensor3interp3_save',
-             c_void_p, c_char_p)
+    core.use(None, 'tensor3interp3_save', c_void_p, c_char_p)
 
     def save(self, path):
         """保存插值器数据到文件。
@@ -6983,8 +6926,7 @@ class Tensor3Interp3(HasHandle):
             make_parent(path)
             core.tensor3interp3_save(self.handle, make_c_char_p(path))
 
-    core.use(None, 'tensor3interp3_load',
-             c_void_p, c_char_p)
+    core.use(None, 'tensor3interp3_load', c_void_p, c_char_p)
 
     def load(self, path):
         """从文件加载插值器数据。
@@ -6996,10 +6938,8 @@ class Tensor3Interp3(HasHandle):
             _check_ipath(path, self)
             core.tensor3interp3_load(self.handle, make_c_char_p(path))
 
-    core.use(None, 'tensor3interp3_write_fmap',
-             c_void_p, c_void_p, c_char_p)
-    core.use(None, 'tensor3interp3_read_fmap',
-             c_void_p, c_void_p, c_char_p)
+    core.use(None, 'tensor3interp3_write_fmap', c_void_p, c_void_p, c_char_p)
+    core.use(None, 'tensor3interp3_read_fmap', c_void_p, c_void_p, c_char_p)
 
     def to_fmap(self, fmt='binary'):
         """序列化到文件映射对象。
@@ -7011,8 +6951,7 @@ class Tensor3Interp3(HasHandle):
             FileMap: 包含序列化数据的文件映射对象
         """
         fmap = FileMap()
-        core.tensor3interp3_write_fmap(self.handle, fmap.handle,
-                                       make_c_char_p(fmt))
+        core.tensor3interp3_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
         return fmap
 
     def from_fmap(self, fmap: FileMap, fmt='binary'):
@@ -7023,8 +6962,7 @@ class Tensor3Interp3(HasHandle):
             fmt (str): 必须与写入时的序列化格式一致
         """
         assert isinstance(fmap, FileMap)
-        core.tensor3interp3_read_fmap(self.handle, fmap.handle,
-                                      make_c_char_p(fmt))
+        core.tensor3interp3_read_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
 
     @property
     def fmap(self):
@@ -7041,8 +6979,7 @@ class Tensor3Interp3(HasHandle):
              c_double, c_double, c_double,
              c_double, c_double, c_double, c_void_p)
 
-    def create(self, xmin, dx, xmax, ymin, dy, ymax, zmin, dz, zmax,
-               get_value):
+    def create(self, xmin, dx, xmax, ymin, dy, ymax, zmin, dz, zmax, get_value):
         """创建插值场。
 
         Args:
@@ -7058,8 +6995,7 @@ class Tensor3Interp3(HasHandle):
             get_value (callable): 形如f(x,y,z,i)->float的回调函数，
                 i∈[0,5]对应6个张量分量
         """
-        kernel = CFUNCTYPE(c_double, c_double, c_double,
-                           c_double, c_size_t)
+        kernel = CFUNCTYPE(c_double, c_double, c_double, c_double, c_size_t)
         core.tensor3interp3_create(self.handle, xmin, dx, xmax,
                                    ymin, dy, ymax,
                                    zmin, dz, zmax,
@@ -7081,8 +7017,7 @@ class Tensor3Interp3(HasHandle):
             return value[i]
 
         vmax = 1e10
-        self.create(-vmax, vmax, vmax, -vmax, vmax, vmax, -vmax, vmax, vmax,
-                    get_value)
+        self.create(-vmax, vmax, vmax, -vmax, vmax, vmax, -vmax, vmax, vmax, get_value)
 
     core.use(c_bool, 'tensor3interp3_empty', c_void_p)
 
@@ -7122,9 +7057,7 @@ class Tensor3Interp3(HasHandle):
         """调用接口，等效于get方法。"""
         return self.get(*args, **kwargs)
 
-    core.use(c_bool, 'tensor3interp3_is_inner',
-             c_void_p, c_double, c_double,
-             c_double)
+    core.use(c_bool, 'tensor3interp3_is_inner', c_void_p, c_double, c_double, c_double)
 
     def is_inner(self, x, y, z):
         """判断坐标是否在插值域内。
@@ -7141,32 +7074,29 @@ class Tensor3Interp3(HasHandle):
     core.use(c_double, 'tensor3interp3_get_zmin', c_void_p)
     core.use(c_double, 'tensor3interp3_get_zmax', c_void_p)
 
-    def xrange(self):
+    def xrange(self) -> Tuple[float, float]:
         """获取X轴有效范围。
 
         Returns:
             tuple: (最小值, 最大值)
         """
-        return core.tensor3interp3_get_xmin(
-            self.handle), core.tensor3interp3_get_xmax(self.handle)
+        return core.tensor3interp3_get_xmin(self.handle), core.tensor3interp3_get_xmax(self.handle)
 
-    def yrange(self):
+    def yrange(self) -> Tuple[float, float]:
         """获取Y轴有效范围。
 
         Returns:
             tuple: (最小值, 最大值)
         """
-        return core.tensor3interp3_get_ymin(
-            self.handle), core.tensor3interp3_get_ymax(self.handle)
+        return core.tensor3interp3_get_ymin(self.handle), core.tensor3interp3_get_ymax(self.handle)
 
-    def zrange(self):
+    def zrange(self) -> Tuple[float, float]:
         """获取Z轴有效范围。
 
         Returns:
             tuple: (最小值, 最大值)
         """
-        return core.tensor3interp3_get_zmin(
-            self.handle), core.tensor3interp3_get_zmax(self.handle)
+        return core.tensor3interp3_get_zmin(self.handle), core.tensor3interp3_get_zmax(self.handle)
 
 
 class Coord2(HasHandle):
@@ -7190,8 +7120,7 @@ class Coord2(HasHandle):
             if origin is not None and xdir is not None:
                 self.set(origin, xdir)
 
-    core.use(None, 'coord2_save',
-             c_void_p, c_char_p)
+    core.use(None, 'coord2_save', c_void_p, c_char_p)
 
     def save(self, path):
         """保存坐标系数据到文件。
@@ -7203,8 +7132,7 @@ class Coord2(HasHandle):
             make_parent(path)
             core.coord2_save(self.handle, make_c_char_p(path))
 
-    core.use(None, 'coord2_load',
-             c_void_p, c_char_p)
+    core.use(None, 'coord2_load', c_void_p, c_char_p)
 
     def load(self, path):
         """从文件加载坐标系数据。
@@ -7216,10 +7144,8 @@ class Coord2(HasHandle):
             _check_ipath(path, self)
             core.coord2_load(self.handle, make_c_char_p(path))
 
-    core.use(None, 'coord2_write_fmap',
-             c_void_p, c_void_p, c_char_p)
-    core.use(None, 'coord2_read_fmap',
-             c_void_p, c_void_p, c_char_p)
+    core.use(None, 'coord2_write_fmap', c_void_p, c_void_p, c_char_p)
+    core.use(None, 'coord2_read_fmap', c_void_p, c_void_p, c_char_p)
 
     def to_fmap(self, fmt='binary'):
         """序列化到文件映射对象。
@@ -7265,8 +7191,7 @@ class Coord2(HasHandle):
         """
         return f'{type(self).__name__}(origin = {self.origin}, xdir = {self.xdir})'
 
-    core.use(None, 'coord2_set',
-             c_void_p, c_size_t, c_size_t)
+    core.use(None, 'coord2_set', c_void_p, c_size_t, c_size_t)
 
     def set(self, origin, xdir):
         """设置坐标系参数。
@@ -7281,11 +7206,10 @@ class Coord2(HasHandle):
             xdir = Array2.from_list(xdir)
         core.coord2_set(self.handle, origin.handle, xdir.handle)
 
-    core.use(c_void_p, 'coord2_get_origin',
-             c_void_p)
+    core.use(c_void_p, 'coord2_get_origin', c_void_p)
 
     @property
-    def origin(self):
+    def origin(self) -> Array2:
         """获取坐标系原点。
 
         Returns:
@@ -7297,7 +7221,7 @@ class Coord2(HasHandle):
              c_void_p, c_size_t)
 
     @property
-    def xdir(self):
+    def xdir(self) -> Array2:
         """获取X轴单位方向向量。
 
         Returns:
@@ -7307,11 +7231,10 @@ class Coord2(HasHandle):
         core.coord2_get_xdir(self.handle, temp.handle)
         return temp
 
-    core.use(None, 'coord2_get_ydir',
-             c_void_p, c_size_t)
+    core.use(None, 'coord2_get_ydir', c_void_p, c_size_t)
 
     @property
-    def ydir(self):
+    def ydir(self) -> Array2:
         """获取Y轴单位方向向量（自动正交化）。
 
         Returns:
@@ -7321,11 +7244,8 @@ class Coord2(HasHandle):
         core.coord2_get_ydir(self.handle, temp.handle)
         return temp
 
-    core.use(None, 'coord2_view_array2',
-             c_void_p, c_size_t, c_size_t, c_size_t)
-    core.use(None, 'coord2_view_tensor2',
-             c_void_p, c_size_t, c_size_t,
-             c_size_t)
+    core.use(None, 'coord2_view_array2', c_void_p, c_size_t, c_size_t, c_size_t)
+    core.use(None, 'coord2_view_tensor2', c_void_p, c_size_t, c_size_t, c_size_t)
 
     def view(self, coord, o, buffer=None):
         """执行坐标系转换。
@@ -7357,8 +7277,7 @@ class Coord2(HasHandle):
         else:
             return None
 
-    core.use(None, 'coord2_clone',
-             c_void_p, c_void_p)
+    core.use(None, 'coord2_clone', c_void_p, c_void_p)
 
     def clone(self, other):
         """
@@ -7383,8 +7302,7 @@ class Coord3(HasHandle):
     core.use(c_void_p, 'new_coord3')
     core.use(None, 'del_coord3', c_void_p)
 
-    def __init__(self, origin=None, xdir=None, ydir=None, path=None,
-                 handle=None):
+    def __init__(self, origin=None, xdir=None, ydir=None, path=None, handle=None):
         """初始化三维坐标系。
 
         Args:
@@ -7403,8 +7321,7 @@ class Coord3(HasHandle):
         else:
             assert origin is None and xdir is None and ydir is None
 
-    core.use(None, 'coord3_save',
-             c_void_p, c_char_p)
+    core.use(None, 'coord3_save', c_void_p, c_char_p)
 
     def save(self, path):
         """保存坐标系数据到文件。
@@ -7416,8 +7333,7 @@ class Coord3(HasHandle):
             make_parent(path)
             core.coord3_save(self.handle, make_c_char_p(path))
 
-    core.use(None, 'coord3_load',
-             c_void_p, c_char_p)
+    core.use(None, 'coord3_load', c_void_p, c_char_p)
 
     def load(self, path):
         """从文件加载坐标系数据。
@@ -7429,10 +7345,8 @@ class Coord3(HasHandle):
             _check_ipath(path, self)
             core.coord3_load(self.handle, make_c_char_p(path))
 
-    core.use(None, 'coord3_write_fmap',
-             c_void_p, c_void_p, c_char_p)
-    core.use(None, 'coord3_read_fmap',
-             c_void_p, c_void_p, c_char_p)
+    core.use(None, 'coord3_write_fmap', c_void_p, c_void_p, c_char_p)
+    core.use(None, 'coord3_read_fmap', c_void_p, c_void_p, c_char_p)
 
     def to_fmap(self, fmt='binary'):
         """序列化到文件映射对象。
@@ -7479,8 +7393,7 @@ class Coord3(HasHandle):
         return (f'{type(self).__name__}(origin = {self.origin}, '
                 f'xdir = {self.xdir}, ydir = {self.ydir})')
 
-    core.use(None, 'coord3_set',
-             c_void_p, c_void_p, c_void_p, c_void_p)
+    core.use(None, 'coord3_set', c_void_p, c_void_p, c_void_p, c_void_p)
 
     def set(self, origin, xdir, ydir):
         """设置坐标系参数。
@@ -7491,13 +7404,10 @@ class Coord3(HasHandle):
             ydir (Array3|list|tuple): Y轴方向向量，自动转换为Array3类型
         """
         if not isinstance(origin, Array3):
-            assert isinstance(origin, (list, tuple))
             origin = Array3.from_list(origin)
         if not isinstance(xdir, Array3):
-            assert isinstance(xdir, (list, tuple))
             xdir = Array3.from_list(xdir)
         if not isinstance(ydir, Array3):
-            assert isinstance(ydir, (list, tuple))
             ydir = Array3.from_list(ydir)
         core.coord3_set(self.handle, origin.handle, xdir.handle, ydir.handle)
 
@@ -7512,8 +7422,7 @@ class Coord3(HasHandle):
         """
         return Array3(handle=core.coord3_get_origin(self.handle))
 
-    core.use(None, 'coord3_get_xdir',
-             c_void_p, c_size_t)
+    core.use(None, 'coord3_get_xdir', c_void_p, c_size_t)
 
     @property
     def xdir(self):
@@ -7526,8 +7435,7 @@ class Coord3(HasHandle):
         core.coord3_get_xdir(self.handle, temp.handle)
         return temp
 
-    core.use(None, 'coord3_get_ydir',
-             c_void_p, c_size_t)
+    core.use(None, 'coord3_get_ydir', c_void_p, c_size_t)
 
     @property
     def ydir(self):
@@ -7540,11 +7448,8 @@ class Coord3(HasHandle):
         core.coord3_get_ydir(self.handle, temp.handle)
         return temp
 
-    core.use(None, 'coord3_view_array3',
-             c_void_p, c_size_t, c_size_t, c_size_t)
-    core.use(None, 'coord3_view_tensor3',
-             c_void_p, c_size_t, c_size_t,
-             c_size_t)
+    core.use(None, 'coord3_view_array3', c_void_p, c_size_t, c_size_t, c_size_t)
+    core.use(None, 'coord3_view_tensor3', c_void_p, c_size_t, c_size_t, c_size_t)
 
     def view(self, coord, o, buffer=None):
         """执行坐标系间对象转换。
@@ -7576,8 +7481,7 @@ class Coord3(HasHandle):
         else:
             return None
 
-    core.use(None, 'coord3_clone',
-             c_void_p, c_void_p)
+    core.use(None, 'coord3_clone', c_void_p, c_void_p)
 
     def clone(self, other):
         """
@@ -7653,8 +7557,7 @@ class Mesh3(HasHandle):
             self.model = model
             self.index = index
 
-        core.use(c_double, 'mesh3_get_node_pos',
-                 c_void_p, c_size_t, c_size_t)
+        core.use(c_double, 'mesh3_get_node_pos', c_void_p, c_size_t, c_size_t)
 
         @property
         def pos(self):
@@ -7664,12 +7567,9 @@ class Mesh3(HasHandle):
             Returns:
                 list: 包含节点三个坐标的列表。
             """
-            return [core.mesh3_get_node_pos(self.model.handle, self.index, i)
-                    for i in range(3)]
+            return [core.mesh3_get_node_pos(self.model.handle, self.index, i) for i in range(3)]
 
-        core.use(None, 'mesh3_set_node_pos',
-                 c_void_p, c_size_t, c_size_t,
-                 c_double)
+        core.use(None, 'mesh3_set_node_pos', c_void_p, c_size_t, c_size_t, c_double)
 
         @pos.setter
         def pos(self, value):
@@ -7681,11 +7581,9 @@ class Mesh3(HasHandle):
             """
             assert len(value) == 3
             for i in range(3):
-                core.mesh3_set_node_pos(self.model.handle, self.index, i,
-                                        value[i])
+                core.mesh3_set_node_pos(self.model.handle, self.index, i, value[i])
 
-        core.use(c_size_t, 'mesh3_get_node_link_number',
-                 c_void_p, c_size_t)
+        core.use(c_size_t, 'mesh3_get_node_link_number', c_void_p, c_size_t)
 
         @property
         def link_number(self) -> int:
@@ -7695,11 +7593,9 @@ class Mesh3(HasHandle):
             Returns:
                 int: 与节点相连的线的数量。
             """
-            return core.mesh3_get_node_link_number(self.model.handle,
-                                                   self.index)
+            return core.mesh3_get_node_link_number(self.model.handle, self.index)
 
-        core.use(c_size_t, 'mesh3_get_node_face_number',
-                 c_void_p, c_size_t)
+        core.use(c_size_t, 'mesh3_get_node_face_number', c_void_p, c_size_t)
 
         @property
         def face_number(self) -> int:
@@ -7709,11 +7605,9 @@ class Mesh3(HasHandle):
             Returns:
                 int: 与节点相连的面的数量。
             """
-            return core.mesh3_get_node_face_number(self.model.handle,
-                                                   self.index)
+            return core.mesh3_get_node_face_number(self.model.handle, self.index)
 
-        core.use(c_size_t, 'mesh3_get_node_body_number',
-                 c_void_p, c_size_t)
+        core.use(c_size_t, 'mesh3_get_node_body_number', c_void_p, c_size_t)
 
         @property
         def body_number(self) -> int:
@@ -7723,12 +7617,9 @@ class Mesh3(HasHandle):
             Returns:
                 int: 与节点相连的体的数量。
             """
-            return core.mesh3_get_node_body_number(self.model.handle,
-                                                   self.index)
+            return core.mesh3_get_node_body_number(self.model.handle, self.index)
 
-        core.use(c_size_t, 'mesh3_get_node_link_id',
-                 c_void_p, c_size_t,
-                 c_size_t)
+        core.use(c_size_t, 'mesh3_get_node_link_id', c_void_p, c_size_t, c_size_t)
 
         def get_link(self, index) -> Optional['Mesh3.Link']:
             """
@@ -7748,9 +7639,7 @@ class Mesh3(HasHandle):
             else:
                 return None
 
-        core.use(c_size_t, 'mesh3_get_node_face_id',
-                 c_void_p, c_size_t,
-                 c_size_t)
+        core.use(c_size_t, 'mesh3_get_node_face_id', c_void_p, c_size_t, c_size_t)
 
         def get_face(self, index) -> Optional['Mesh3.Face']:
             """
@@ -7770,9 +7659,7 @@ class Mesh3(HasHandle):
             else:
                 return None
 
-        core.use(c_size_t, 'mesh3_get_node_body_id',
-                 c_void_p, c_size_t,
-                 c_size_t)
+        core.use(c_size_t, 'mesh3_get_node_body_id', c_void_p, c_size_t, c_size_t)
 
         def get_body(self, index) -> Optional['Mesh3.Body']:
             """
@@ -7800,8 +7687,7 @@ class Mesh3(HasHandle):
             Returns:
                 Iterator: 与节点相连的所有线的迭代器。
             """
-            return Iterator(self, self.link_number,
-                            lambda m, ind: m.get_link(ind))
+            return Iterator(self, self.link_number, lambda m, ind: m.get_link(ind))
 
         @property
         def faces(self) -> Iterable['Mesh3.Face']:
@@ -7811,8 +7697,7 @@ class Mesh3(HasHandle):
             Returns:
                 Iterator: 与节点相连的所有面的迭代器。
             """
-            return Iterator(self, self.face_number,
-                            lambda m, ind: m.get_face(ind))
+            return Iterator(self, self.face_number, lambda m, ind: m.get_face(ind))
 
         @property
         def bodies(self) -> Iterable['Mesh3.Body']:
@@ -7822,14 +7707,10 @@ class Mesh3(HasHandle):
             Returns:
                 Iterator: 与节点相连的所有体的迭代器。
             """
-            return Iterator(self, self.body_number,
-                            lambda m, ind: m.get_body(ind))
+            return Iterator(self, self.body_number, lambda m, ind: m.get_body(ind))
 
-        core.use(c_double, 'mesh3_get_node_attr',
-                 c_void_p, c_size_t, c_size_t)
-        core.use(None, 'mesh3_set_node_attr',
-                 c_void_p, c_size_t, c_size_t,
-                 c_double)
+        core.use(c_double, 'mesh3_get_node_attr', c_void_p, c_size_t, c_size_t)
+        core.use(None, 'mesh3_set_node_attr', c_void_p, c_size_t, c_size_t, c_double)
 
         def get_attr(self, index, default_val=None, **valid_range):
             """
@@ -7867,8 +7748,7 @@ class Mesh3(HasHandle):
                 return self
             if value is None:
                 value = 1.0e200
-            core.mesh3_set_node_attr(self.model.handle, self.index, index,
-                                     value)
+            core.mesh3_set_node_attr(self.model.handle, self.index, index, value)
             return self
 
     class Link(Object):
@@ -7893,8 +7773,7 @@ class Mesh3(HasHandle):
             self.model = model
             self.index = index
 
-        core.use(c_size_t, 'mesh3_get_link_node_number',
-                 c_void_p, c_size_t)
+        core.use(c_size_t, 'mesh3_get_link_node_number', c_void_p, c_size_t)
 
         @property
         def node_number(self) -> int:
@@ -7904,11 +7783,9 @@ class Mesh3(HasHandle):
             Returns:
                 int: 线所连接的节点数量。
             """
-            return core.mesh3_get_link_node_number(self.model.handle,
-                                                   self.index)
+            return core.mesh3_get_link_node_number(self.model.handle, self.index)
 
-        core.use(c_size_t, 'mesh3_get_link_face_number',
-                 c_void_p, c_size_t)
+        core.use(c_size_t, 'mesh3_get_link_face_number', c_void_p, c_size_t)
 
         @property
         def face_number(self) -> int:
@@ -7918,11 +7795,9 @@ class Mesh3(HasHandle):
             Returns:
                 int: 与线相连的面的数量。
             """
-            return core.mesh3_get_link_face_number(self.model.handle,
-                                                   self.index)
+            return core.mesh3_get_link_face_number(self.model.handle, self.index)
 
-        core.use(c_size_t, 'mesh3_get_link_body_number',
-                 c_void_p, c_size_t)
+        core.use(c_size_t, 'mesh3_get_link_body_number', c_void_p, c_size_t)
 
         @property
         def body_number(self) -> int:
@@ -7932,12 +7807,9 @@ class Mesh3(HasHandle):
             Returns:
                 int: 与线相连的体的数量。
             """
-            return core.mesh3_get_link_body_number(self.model.handle,
-                                                   self.index)
+            return core.mesh3_get_link_body_number(self.model.handle, self.index)
 
-        core.use(c_size_t, 'mesh3_get_link_node_id',
-                 c_void_p, c_size_t,
-                 c_size_t)
+        core.use(c_size_t, 'mesh3_get_link_node_id', c_void_p, c_size_t, c_size_t)
 
         def get_node(self, index) -> Optional['Mesh3.Node']:
             """
@@ -7951,15 +7823,12 @@ class Mesh3(HasHandle):
             """
             index = get_index(index, self.node_number)
             if index is not None:
-                i = core.mesh3_get_link_node_id(self.model.handle, self.index,
-                                                index)
+                i = core.mesh3_get_link_node_id(self.model.handle, self.index, index)
                 return self.model.get_node(i)
             else:
                 return None
 
-        core.use(c_size_t, 'mesh3_get_link_face_id',
-                 c_void_p, c_size_t,
-                 c_size_t)
+        core.use(c_size_t, 'mesh3_get_link_face_id', c_void_p, c_size_t, c_size_t)
 
         def get_face(self, index) -> Optional['Mesh3.Face']:
             """
@@ -7973,15 +7842,12 @@ class Mesh3(HasHandle):
             """
             index = get_index(index, self.face_number)
             if index is not None:
-                i = core.mesh3_get_link_face_id(self.model.handle, self.index,
-                                                index)
+                i = core.mesh3_get_link_face_id(self.model.handle, self.index, index)
                 return self.model.get_face(i)
             else:
                 return None
 
-        core.use(c_size_t, 'mesh3_get_link_body_id',
-                 c_void_p, c_size_t,
-                 c_size_t)
+        core.use(c_size_t, 'mesh3_get_link_body_id', c_void_p, c_size_t, c_size_t)
 
         def get_body(self, index) -> Optional['Mesh3.Body']:
             """
@@ -7995,8 +7861,7 @@ class Mesh3(HasHandle):
             """
             index = get_index(index, self.body_number)
             if index is not None:
-                i = core.mesh3_get_link_body_id(
-                    self.model.handle, self.index, index)
+                i = core.mesh3_get_link_body_id(self.model.handle, self.index, index)
                 return self.model.get_body(i)
             else:
                 return None
@@ -8009,8 +7874,7 @@ class Mesh3(HasHandle):
             Returns:
                 Iterator: 线所连接的所有节点的迭代器。
             """
-            return Iterator(self, self.node_number,
-                            lambda m, ind: m.get_node(ind))
+            return Iterator(self, self.node_number, lambda m, ind: m.get_node(ind))
 
         @property
         def faces(self) -> Iterable['Mesh3.Face']:
@@ -8020,8 +7884,7 @@ class Mesh3(HasHandle):
             Returns:
                 Iterator: 与线相连的所有面的迭代器。
             """
-            return Iterator(self, self.face_number,
-                            lambda m, ind: m.get_face(ind))
+            return Iterator(self, self.face_number, lambda m, ind: m.get_face(ind))
 
         @property
         def bodies(self) -> Iterable['Mesh3.Body']:
@@ -8031,8 +7894,7 @@ class Mesh3(HasHandle):
             Returns:
                 Iterator: 与线相连的所有体的迭代器。
             """
-            return Iterator(self, self.body_number,
-                            lambda m, ind: m.get_body(ind))
+            return Iterator(self, self.body_number, lambda m, ind: m.get_body(ind))
 
         @property
         def length(self) -> float:
@@ -8057,11 +7919,8 @@ class Mesh3(HasHandle):
             p0, p1 = self.get_node(0).pos, self.get_node(1).pos
             return tuple([(p0[i] + p1[i]) / 2 for i in range(len(p0))])
 
-        core.use(c_double, 'mesh3_get_link_attr',
-                 c_void_p, c_size_t, c_size_t)
-        core.use(None, 'mesh3_set_link_attr',
-                 c_void_p, c_size_t, c_size_t,
-                 c_double)
+        core.use(c_double, 'mesh3_get_link_attr', c_void_p, c_size_t, c_size_t)
+        core.use(None, 'mesh3_set_link_attr', c_void_p, c_size_t, c_size_t, c_double)
 
         def get_attr(self, index, default_val=None, **valid_range):
             """
@@ -8077,8 +7936,7 @@ class Mesh3(HasHandle):
             """
             if index is None:
                 return default_val
-            value = core.mesh3_get_link_attr(self.model.handle, self.index,
-                                             index)
+            value = core.mesh3_get_link_attr(self.model.handle, self.index, index)
             if _attr_in_range(value, **valid_range):
                 return value
             else:
@@ -8099,8 +7957,7 @@ class Mesh3(HasHandle):
                 return self
             if value is None:
                 value = 1.0e200
-            core.mesh3_set_link_attr(self.model.handle, self.index, index,
-                                     value)
+            core.mesh3_set_link_attr(self.model.handle, self.index, index, value)
             return self
 
     class Face(Object):
@@ -8136,11 +7993,9 @@ class Mesh3(HasHandle):
             Returns:
                 int: 面所包含的节点数量。
             """
-            return core.mesh3_get_face_node_number(self.model.handle,
-                                                   self.index)
+            return core.mesh3_get_face_node_number(self.model.handle, self.index)
 
-        core.use(c_size_t, 'mesh3_get_face_link_number',
-                 c_void_p, c_size_t)
+        core.use(c_size_t, 'mesh3_get_face_link_number', c_void_p, c_size_t)
 
         @property
         def link_number(self) -> int:
@@ -8150,11 +8005,9 @@ class Mesh3(HasHandle):
             Returns:
                 int: 面所包含的线的数量。
             """
-            return core.mesh3_get_face_link_number(self.model.handle,
-                                                   self.index)
+            return core.mesh3_get_face_link_number(self.model.handle, self.index)
 
-        core.use(c_size_t, 'mesh3_get_face_body_number',
-                 c_void_p, c_size_t)
+        core.use(c_size_t, 'mesh3_get_face_body_number', c_void_p, c_size_t)
 
         @property
         def body_number(self) -> int:
@@ -8164,12 +8017,9 @@ class Mesh3(HasHandle):
             Returns:
                 int: 与面相连的体的数量。
             """
-            return core.mesh3_get_face_body_number(self.model.handle,
-                                                   self.index)
+            return core.mesh3_get_face_body_number(self.model.handle, self.index)
 
-        core.use(c_size_t, 'mesh3_get_face_node_id',
-                 c_void_p, c_size_t,
-                 c_size_t)
+        core.use(c_size_t, 'mesh3_get_face_node_id', c_void_p, c_size_t, c_size_t)
 
         def get_node(self, index) -> Optional['Mesh3.Node']:
             """
@@ -8183,15 +8033,12 @@ class Mesh3(HasHandle):
             """
             index = get_index(index, self.node_number)
             if index is not None:
-                i = core.mesh3_get_face_node_id(self.model.handle, self.index,
-                                                index)
+                i = core.mesh3_get_face_node_id(self.model.handle, self.index, index)
                 return self.model.get_node(i)
             else:
                 return None
 
-        core.use(c_size_t, 'mesh3_get_face_link_id',
-                 c_void_p, c_size_t,
-                 c_size_t)
+        core.use(c_size_t, 'mesh3_get_face_link_id', c_void_p, c_size_t, c_size_t)
 
         def get_link(self, index) -> Optional['Mesh3.Link']:
             """
@@ -8205,15 +8052,12 @@ class Mesh3(HasHandle):
             """
             index = get_index(index, self.link_number)
             if index is not None:
-                i = core.mesh3_get_face_link_id(self.model.handle, self.index,
-                                                index)
+                i = core.mesh3_get_face_link_id(self.model.handle, self.index, index)
                 return self.model.get_link(i)
             else:
                 return None
 
-        core.use(c_size_t, 'mesh3_get_face_body_id',
-                 c_void_p, c_size_t,
-                 c_size_t)
+        core.use(c_size_t, 'mesh3_get_face_body_id', c_void_p, c_size_t, c_size_t)
 
         def get_body(self, index) -> Optional['Mesh3.Body']:
             """
@@ -8227,8 +8071,7 @@ class Mesh3(HasHandle):
             """
             index = get_index(index, self.body_number)
             if index is not None:
-                i = core.mesh3_get_face_body_id(
-                    self.model.handle, self.index, index)
+                i = core.mesh3_get_face_body_id(self.model.handle, self.index, index)
                 return self.model.get_body(i)
             else:
                 return None
@@ -8241,8 +8084,7 @@ class Mesh3(HasHandle):
             Returns:
                 Iterator: 面所包含的所有节点的迭代器。
             """
-            return Iterator(self, self.node_number,
-                            lambda m, ind: m.get_node(ind))
+            return Iterator(self, self.node_number, lambda m, ind: m.get_node(ind))
 
         @property
         def links(self) -> Iterable['Mesh3.Link']:
@@ -8252,8 +8094,7 @@ class Mesh3(HasHandle):
             Returns:
                 Iterator: 面所包含的所有线的迭代器。
             """
-            return Iterator(self, self.link_number,
-                            lambda m, ind: m.get_link(ind))
+            return Iterator(self, self.link_number, lambda m, ind: m.get_link(ind))
 
         @property
         def bodies(self) -> Iterable['Mesh3.Body']:
@@ -8263,11 +8104,9 @@ class Mesh3(HasHandle):
             Returns:
                 Iterator: 与面相连的所有体的迭代器。
             """
-            return Iterator(self, self.body_number,
-                            lambda m, ind: m.get_body(ind))
+            return Iterator(self, self.body_number, lambda m, ind: m.get_body(ind))
 
-        core.use(c_double, 'mesh3_get_face_area',
-                 c_void_p, c_size_t)
+        core.use(c_double, 'mesh3_get_face_area', c_void_p, c_size_t)
 
         @property
         def area(self) -> float:
@@ -8300,11 +8139,8 @@ class Mesh3(HasHandle):
             else:
                 return None
 
-        core.use(c_double, 'mesh3_get_face_attr',
-                 c_void_p, c_size_t, c_size_t)
-        core.use(None, 'mesh3_set_face_attr',
-                 c_void_p, c_size_t, c_size_t,
-                 c_double)
+        core.use(c_double, 'mesh3_get_face_attr', c_void_p, c_size_t, c_size_t)
+        core.use(None, 'mesh3_set_face_attr', c_void_p, c_size_t, c_size_t, c_double)
 
         def get_attr(self, index, default_val=None, **valid_range):
             """
@@ -8320,8 +8156,7 @@ class Mesh3(HasHandle):
             """
             if index is None:
                 return default_val
-            value = core.mesh3_get_face_attr(
-                self.model.handle, self.index, index)
+            value = core.mesh3_get_face_attr(self.model.handle, self.index, index)
             if _attr_in_range(value, **valid_range):
                 return value
             else:
@@ -8342,8 +8177,7 @@ class Mesh3(HasHandle):
                 return self
             if value is None:
                 value = 1.0e200
-            core.mesh3_set_face_attr(self.model.handle, self.index, index,
-                                     value)
+            core.mesh3_set_face_attr(self.model.handle, self.index, index, value)
             return self
 
     class Body(Object):
@@ -8368,8 +8202,7 @@ class Mesh3(HasHandle):
             self.model = model
             self.index = index
 
-        core.use(c_size_t, 'mesh3_get_body_node_number',
-                 c_void_p, c_size_t)
+        core.use(c_size_t, 'mesh3_get_body_node_number', c_void_p, c_size_t)
 
         @property
         def node_number(self) -> int:
@@ -8379,11 +8212,9 @@ class Mesh3(HasHandle):
             Returns:
                 int: 体所包含的节点数量。
             """
-            return core.mesh3_get_body_node_number(self.model.handle,
-                                                   self.index)
+            return core.mesh3_get_body_node_number(self.model.handle, self.index)
 
-        core.use(c_size_t, 'mesh3_get_body_link_number',
-                 c_void_p, c_size_t)
+        core.use(c_size_t, 'mesh3_get_body_link_number', c_void_p, c_size_t)
 
         @property
         def link_number(self) -> int:
@@ -8393,11 +8224,9 @@ class Mesh3(HasHandle):
             Returns:
                 int: 体所包含的线的数量。
             """
-            return core.mesh3_get_body_link_number(self.model.handle,
-                                                   self.index)
+            return core.mesh3_get_body_link_number(self.model.handle, self.index)
 
-        core.use(c_size_t, 'mesh3_get_body_face_number',
-                 c_void_p, c_size_t)
+        core.use(c_size_t, 'mesh3_get_body_face_number', c_void_p, c_size_t)
 
         @property
         def face_number(self) -> int:
@@ -8407,12 +8236,9 @@ class Mesh3(HasHandle):
             Returns:
                 int: 体所包含的面的数量。
             """
-            return core.mesh3_get_body_face_number(self.model.handle,
-                                                   self.index)
+            return core.mesh3_get_body_face_number(self.model.handle, self.index)
 
-        core.use(c_size_t, 'mesh3_get_body_node_id',
-                 c_void_p, c_size_t,
-                 c_size_t)
+        core.use(c_size_t, 'mesh3_get_body_node_id', c_void_p, c_size_t, c_size_t)
 
         def get_node(self, index) -> Optional['Mesh3.Node']:
             """
@@ -8426,15 +8252,12 @@ class Mesh3(HasHandle):
             """
             index = get_index(index, self.node_number)
             if index is not None:
-                i = core.mesh3_get_body_node_id(
-                    self.model.handle, self.index, index)
+                i = core.mesh3_get_body_node_id(self.model.handle, self.index, index)
                 return self.model.get_node(i)
             else:
                 return None
 
-        core.use(c_size_t, 'mesh3_get_body_link_id',
-                 c_void_p, c_size_t,
-                 c_size_t)
+        core.use(c_size_t, 'mesh3_get_body_link_id', c_void_p, c_size_t, c_size_t)
 
         def get_link(self, index) -> Optional['Mesh3.Link']:
             """
@@ -8448,15 +8271,12 @@ class Mesh3(HasHandle):
             """
             index = get_index(index, self.link_number)
             if index is not None:
-                i = core.mesh3_get_body_link_id(
-                    self.model.handle, self.index, index)
+                i = core.mesh3_get_body_link_id(self.model.handle, self.index, index)
                 return self.model.get_link(i)
             else:
                 return None
 
-        core.use(c_size_t, 'mesh3_get_body_face_id',
-                 c_void_p, c_size_t,
-                 c_size_t)
+        core.use(c_size_t, 'mesh3_get_body_face_id', c_void_p, c_size_t, c_size_t)
 
         def get_face(self, index) -> Optional['Mesh3.Face']:
             """
@@ -8470,8 +8290,7 @@ class Mesh3(HasHandle):
             """
             index = get_index(index, self.face_number)
             if index is not None:
-                i = core.mesh3_get_body_face_id(
-                    self.model.handle, self.index, index)
+                i = core.mesh3_get_body_face_id(self.model.handle, self.index, index)
                 return self.model.get_face(i)
             else:
                 return None
@@ -8484,8 +8303,7 @@ class Mesh3(HasHandle):
             Returns:
                 Iterator: 体所包含的所有节点的迭代器。
             """
-            return Iterator(self, self.node_number,
-                            lambda m, ind: m.get_node(ind))
+            return Iterator(self, self.node_number, lambda m, ind: m.get_node(ind))
 
         @property
         def links(self) -> Iterable['Mesh3.Link']:
@@ -8495,8 +8313,7 @@ class Mesh3(HasHandle):
             Returns:
                 Iterator: 体所包含的所有线的迭代器。
             """
-            return Iterator(self, self.link_number,
-                            lambda m, ind: m.get_link(ind))
+            return Iterator(self, self.link_number, lambda m, ind: m.get_link(ind))
 
         @property
         def faces(self) -> Iterable['Mesh3.Face']:
@@ -8506,8 +8323,7 @@ class Mesh3(HasHandle):
             Returns:
                 Iterator: 体所包含的所有面的迭代器。
             """
-            return Iterator(self, self.face_number,
-                            lambda m, ind: m.get_face(ind))
+            return Iterator(self, self.face_number, lambda m, ind: m.get_face(ind))
 
         @property
         def pos(self):
@@ -8530,8 +8346,7 @@ class Mesh3(HasHandle):
             else:
                 return None
 
-        core.use(c_double, 'mesh3_get_body_volume',
-                 c_void_p, c_size_t)
+        core.use(c_double, 'mesh3_get_body_volume', c_void_p, c_size_t)
 
         @property
         def volume(self):
@@ -8543,11 +8358,8 @@ class Mesh3(HasHandle):
             """
             return core.mesh3_get_body_volume(self.model.handle, self.index)
 
-        core.use(c_double, 'mesh3_get_body_attr',
-                 c_void_p, c_size_t, c_size_t)
-        core.use(None, 'mesh3_set_body_attr',
-                 c_void_p, c_size_t, c_size_t,
-                 c_double)
+        core.use(c_double, 'mesh3_get_body_attr', c_void_p, c_size_t, c_size_t)
+        core.use(None, 'mesh3_set_body_attr', c_void_p, c_size_t, c_size_t, c_double)
 
         def get_attr(self, index, default_val=None, **valid_range):
             """
@@ -8563,8 +8375,7 @@ class Mesh3(HasHandle):
             """
             if index is None:
                 return default_val
-            value = core.mesh3_get_body_attr(self.model.handle, self.index,
-                                             index)
+            value = core.mesh3_get_body_attr(self.model.handle, self.index, index)
             if _attr_in_range(value, **valid_range):
                 return value
             else:
@@ -8585,13 +8396,10 @@ class Mesh3(HasHandle):
                 return self
             if value is None:
                 value = 1.0e200
-            core.mesh3_set_body_attr(self.model.handle, self.index, index,
-                                     value)
+            core.mesh3_set_body_attr(self.model.handle, self.index, index, value)
             return self
 
-        core.use(c_bool, 'mesh3_body_contains',
-                 c_void_p, c_size_t, c_double,
-                 c_double, c_double)
+        core.use(c_bool, 'mesh3_body_contains', c_void_p, c_size_t, c_double, c_double, c_double)
 
         def contains(self, pos):
             """
@@ -8604,8 +8412,7 @@ class Mesh3(HasHandle):
                 bool: 如果位置包含在体中返回 True，否则返回 False。
             """
             assert len(pos) == 3, f'pos = {pos}'
-            return core.mesh3_body_contains(
-                self.model.handle, self.index, *pos)
+            return core.mesh3_body_contains(self.model.handle, self.index, *pos)
 
     core.use(c_void_p, 'new_mesh3')
     core.use(None, 'del_mesh3', c_void_p)
@@ -8634,8 +8441,7 @@ class Mesh3(HasHandle):
             f'node_n={self.node_number}, link_n={self.link_number}, '
             f'face_n={self.face_number}, body_n={self.body_number})')
 
-    core.use(None, 'mesh3_save',
-             c_void_p, c_char_p)
+    core.use(None, 'mesh3_save', c_void_p, c_char_p)
 
     def save(self, path: str):
         """
@@ -8661,8 +8467,7 @@ class Mesh3(HasHandle):
             make_parent(path)
             core.mesh3_save(self.handle, make_c_char_p(path))
 
-    core.use(None, 'mesh3_load',
-             c_void_p, c_char_p)
+    core.use(None, 'mesh3_load', c_void_p, c_char_p)
 
     def load(self, path: str):
         """
@@ -8677,8 +8482,7 @@ class Mesh3(HasHandle):
             _check_ipath(path, self)
             core.mesh3_load(self.handle, make_c_char_p(path))
 
-    core.use(c_size_t, 'mesh3_get_node_number',
-             c_void_p)
+    core.use(c_size_t, 'mesh3_get_node_number', c_void_p)
 
     @property
     def node_number(self) -> int:
@@ -8690,8 +8494,7 @@ class Mesh3(HasHandle):
         """
         return core.mesh3_get_node_number(self.handle)
 
-    core.use(c_size_t, 'mesh3_get_link_number',
-             c_void_p)
+    core.use(c_size_t, 'mesh3_get_link_number', c_void_p)
 
     @property
     def link_number(self) -> int:
@@ -8703,8 +8506,7 @@ class Mesh3(HasHandle):
         """
         return core.mesh3_get_link_number(self.handle)
 
-    core.use(c_size_t, 'mesh3_get_face_number',
-             c_void_p)
+    core.use(c_size_t, 'mesh3_get_face_number', c_void_p)
 
     @property
     def face_number(self) -> int:
@@ -8716,8 +8518,7 @@ class Mesh3(HasHandle):
         """
         return core.mesh3_get_face_number(self.handle)
 
-    core.use(c_size_t, 'mesh3_get_body_number',
-             c_void_p)
+    core.use(c_size_t, 'mesh3_get_body_number', c_void_p)
 
     @property
     def body_number(self) -> int:
@@ -8801,8 +8602,7 @@ class Mesh3(HasHandle):
         Returns:
             Iterator: 网格中所有节点的迭代器。
         """
-        return Iterator(self, self.node_number,
-                        lambda m, ind: m.get_node(ind))
+        return Iterator(self, self.node_number, lambda m, ind: m.get_node(ind))
 
     @property
     def links(self) -> Iterable['Mesh3.Link']:
@@ -8812,8 +8612,7 @@ class Mesh3(HasHandle):
         Returns:
             Iterator: 网格中所有线的迭代器。
         """
-        return Iterator(self, self.link_number,
-                        lambda m, ind: m.get_link(ind))
+        return Iterator(self, self.link_number, lambda m, ind: m.get_link(ind))
 
     @property
     def faces(self) -> Iterable['Mesh3.Face']:
@@ -8823,8 +8622,7 @@ class Mesh3(HasHandle):
         Returns:
             Iterator: 网格中所有面的迭代器。
         """
-        return Iterator(self, self.face_number,
-                        lambda m, ind: m.get_face(ind))
+        return Iterator(self, self.face_number, lambda m, ind: m.get_face(ind))
 
     @property
     def bodies(self) -> Iterable['Mesh3.Body']:
@@ -8834,11 +8632,9 @@ class Mesh3(HasHandle):
         Returns:
             Iterator: 网格中所有体的迭代器。
         """
-        return Iterator(self, self.body_number,
-                        lambda m, ind: m.get_body(ind))
+        return Iterator(self, self.body_number, lambda m, ind: m.get_body(ind))
 
-    core.use(c_size_t, 'mesh3_add_node',
-             c_void_p, c_double, c_double, c_double)
+    core.use(c_size_t, 'mesh3_add_node', c_void_p, c_double, c_double, c_double)
 
     def add_node(self, x: float, y: float, z: float) -> Optional['Mesh3.Node']:
         """
@@ -8855,8 +8651,7 @@ class Mesh3(HasHandle):
         index = core.mesh3_add_node(self.handle, x, y, z)
         return self.get_node(index)
 
-    core.use(c_size_t, 'mesh3_add_link',
-             c_void_p, c_size_t, c_size_t)
+    core.use(c_size_t, 'mesh3_add_link', c_void_p, c_size_t, c_size_t)
 
     def add_link(self, nodes) -> Optional['Mesh3.Link']:
         """
@@ -8870,20 +8665,14 @@ class Mesh3(HasHandle):
         Returns:
             Link: 新添加的线对象。
         """
-        assert len(
-            nodes) == 2, f'The count of nodes must be 2, but got {len(nodes)}'
-        node_ids = [node.index if isinstance(node, Mesh3.Node) else node
-                    for node in nodes]
+        assert len(nodes) == 2, f'The count of nodes must be 2, but got {len(nodes)}'
+        node_ids = [node.index if isinstance(node, Mesh3.Node) else node for node in nodes]
         index = core.mesh3_add_link(
             self.handle, node_ids[0], node_ids[1])
         return self.get_link(index)
 
-    core.use(c_size_t, 'mesh3_add_face3',
-             c_void_p, c_size_t, c_size_t,
-             c_size_t)
-    core.use(c_size_t, 'mesh3_add_face4',
-             c_void_p, c_size_t, c_size_t,
-             c_size_t, c_size_t)
+    core.use(c_size_t, 'mesh3_add_face3', c_void_p, c_size_t, c_size_t, c_size_t)
+    core.use(c_size_t, 'mesh3_add_face4', c_void_p, c_size_t, c_size_t, c_size_t, c_size_t)
 
     def add_face(self, links) -> Optional['Mesh3.Face']:
         """
@@ -8898,8 +8687,7 @@ class Mesh3(HasHandle):
         Returns:
             Face: 新创建的面对象。
         """
-        link_ids = [link.index if isinstance(link, Mesh3.Link) else link
-                    for link in links]
+        link_ids = [link.index if isinstance(link, Mesh3.Link) else link for link in links]
         if len(link_ids) == 3:
             index = core.mesh3_add_face3(
                 self.handle, link_ids[0],
@@ -8913,13 +8701,9 @@ class Mesh3(HasHandle):
         else:
             return None
 
-    core.use(c_size_t, 'mesh3_add_body4',
-             c_void_p, c_size_t, c_size_t,
-             c_size_t, c_size_t)
-    core.use(c_size_t, 'mesh3_add_body6',
-             c_void_p, c_size_t, c_size_t,
-             c_size_t, c_size_t,
-             c_size_t, c_size_t)
+    core.use(c_size_t, 'mesh3_add_body4', c_void_p, c_size_t, c_size_t, c_size_t, c_size_t)
+    core.use(c_size_t, 'mesh3_add_body6', c_void_p, c_size_t, c_size_t,
+             c_size_t, c_size_t, c_size_t, c_size_t)
 
     def add_body(self, faces) -> Optional['Mesh3.Body']:
         """
@@ -8949,8 +8733,7 @@ class Mesh3(HasHandle):
         else:
             return None
 
-    core.use(None, 'mesh3_change_view',
-             c_void_p, c_void_p, c_void_p)
+    core.use(None, 'mesh3_change_view', c_void_p, c_void_p, c_void_p)
 
     def change_view(self, c_new, c_old) -> 'Mesh3':
         """
@@ -8968,8 +8751,7 @@ class Mesh3(HasHandle):
         core.mesh3_change_view(self.handle, c_new.handle, c_old.handle)
         return self
 
-    core.use(None, 'mesh3_get_slice',
-             c_void_p, c_void_p, c_void_p)
+    core.use(None, 'mesh3_get_slice', c_void_p, c_void_p, c_void_p)
 
     def get_slice(self, node_kept) -> 'Mesh3':
         """
@@ -8986,8 +8768,7 @@ class Mesh3(HasHandle):
         core.mesh3_get_slice(data.handle, self.handle, kernel(node_kept))
         return data
 
-    core.use(None, 'mesh3_append',
-             c_void_p, c_void_p)
+    core.use(None, 'mesh3_append', c_void_p, c_void_p)
 
     def append(self, other) -> 'Mesh3':
         """
@@ -9003,10 +8784,8 @@ class Mesh3(HasHandle):
         core.mesh3_append(self.handle, other.handle)
         return self
 
-    core.use(None, 'mesh3_del_nodes',
-             c_void_p, c_void_p)
-    core.use(None, 'mesh3_del_isolated_nodes',
-             c_void_p)
+    core.use(None, 'mesh3_del_nodes', c_void_p, c_void_p)
+    core.use(None, 'mesh3_del_isolated_nodes', c_void_p)
 
     def del_nodes(self, should_del=None):
         """
@@ -9021,10 +8800,8 @@ class Mesh3(HasHandle):
             kernel = CFUNCTYPE(c_bool, c_size_t)
             core.mesh3_del_nodes(self.handle, kernel(should_del))
 
-    core.use(None, 'mesh3_del_links',
-             c_void_p, c_void_p)
-    core.use(None, 'mesh3_del_isolated_links',
-             c_void_p)
+    core.use(None, 'mesh3_del_links', c_void_p, c_void_p)
+    core.use(None, 'mesh3_del_isolated_links', c_void_p)
 
     def del_links(self, should_del=None):
         """
@@ -9040,10 +8817,8 @@ class Mesh3(HasHandle):
             kernel = CFUNCTYPE(c_bool, c_size_t)
             core.mesh3_del_links(self.handle, kernel(should_del))
 
-    core.use(None, 'mesh3_del_faces',
-             c_void_p, c_void_p)
-    core.use(None, 'mesh3_del_isolated_faces',
-             c_void_p)
+    core.use(None, 'mesh3_del_faces', c_void_p, c_void_p)
+    core.use(None, 'mesh3_del_isolated_faces', c_void_p)
 
     def del_faces(self, should_del=None):
         """
@@ -9059,8 +8834,7 @@ class Mesh3(HasHandle):
             kernel = CFUNCTYPE(c_bool, c_size_t)
             core.mesh3_del_faces(self.handle, kernel(should_del))
 
-    core.use(None, 'mesh3_del_bodies',
-             c_void_p, c_void_p)
+    core.use(None, 'mesh3_del_bodies', c_void_p, c_void_p)
 
     def del_bodies(self, should_del=None):
         """
@@ -17009,28 +16783,27 @@ class Seepage(HasHandle, HasCells):
         """
         return self.get_text('note')
 
-    core.use(None, 'seepage_clear',
-             c_void_p)
+    core.use(None, 'seepage_clear', c_void_p)
 
-    def clear(self):
+    def clear(self) -> 'Seepage':
         """
         删除所有的Cell、Face和Injector。其它所有的数据保持不变。
         """
         core.seepage_clear(self.handle)
+        return self
 
-    core.use(None, 'seepage_clear_cells_and_faces',
-             c_void_p)
+    core.use(None, 'seepage_clear_cells_and_faces', c_void_p)
 
-    def clear_cells_and_faces(self):
+    def clear_cells_and_faces(self) -> 'Seepage':
         """
         删除所有的Cell和Face。其它所有的数据保持不变。
         """
         core.seepage_clear_cells_and_faces(self.handle)
+        return self
 
-    core.use(None, 'seepage_remove_cell',
-             c_void_p, c_size_t)
+    core.use(None, 'seepage_remove_cell', c_void_p, c_size_t)
 
-    def remove_cell(self, cell_id: int):
+    def remove_cell(self, cell_id: int) -> 'Seepage':
         """
         移除给定id的(孤立的)cell
         注意：
@@ -17043,11 +16816,11 @@ class Seepage(HasHandle, HasCells):
             cell_id (int): 要移除的单元的 ID。
         """
         core.seepage_remove_cell(self.handle, cell_id)
+        return self
 
-    core.use(None, 'seepage_remove_face',
-             c_void_p, c_size_t)
+    core.use(None, 'seepage_remove_face', c_void_p, c_size_t)
 
-    def remove_face(self, face_id: int):
+    def remove_face(self, face_id: int) -> 'Seepage':
         """
         移除给定id的face
         注意：
@@ -17057,11 +16830,11 @@ class Seepage(HasHandle, HasCells):
             face_id (int): 要移除的面的 ID。
         """
         core.seepage_remove_face(self.handle, face_id)
+        return self
 
-    core.use(None, 'seepage_remove_faces_of_cell',
-             c_void_p, c_size_t)
+    core.use(None, 'seepage_remove_faces_of_cell', c_void_p, c_size_t)
 
-    def remove_faces_of_cell(self, cell_id: int):
+    def remove_faces_of_cell(self, cell_id: int) -> 'Seepage':
         """
         移除给定id的cell的所有的face，使其成为一个孤立的cell
         注意：
@@ -17071,6 +16844,7 @@ class Seepage(HasHandle, HasCells):
             cell_id (int): 要移除面的单元的 ID。
         """
         core.seepage_remove_faces_of_cell(self.handle, cell_id)
+        return self
 
     core.use(c_size_t, 'seepage_get_cell_n', c_void_p)
 
@@ -17096,10 +16870,8 @@ class Seepage(HasHandle, HasCells):
         """
         return core.seepage_get_face_n(self.handle)
 
-    core.use(c_size_t, 'seepage_get_inj_n',
-             c_void_p)
-    core.use(None, 'seepage_set_inj_n',
-             c_void_p, c_size_t)
+    core.use(c_size_t, 'seepage_get_inj_n', c_void_p)
+    core.use(None, 'seepage_set_inj_n', c_void_p, c_size_t)
 
     @property
     def injector_number(self) -> int:
@@ -17195,8 +16967,7 @@ class Seepage(HasHandle, HasCells):
             cell.clone(data)
         return cell
 
-    core.use(c_size_t, 'seepage_add_face',
-             c_void_p, c_size_t, c_size_t)
+    core.use(c_size_t, 'seepage_add_face', c_void_p, c_size_t, c_size_t)
 
     def add_face(self, cell0, cell1,
                  data: Optional['Seepage.FaceData'] = None) -> Optional['Seepage.Face']:
@@ -17219,12 +16990,15 @@ class Seepage(HasHandle, HasCells):
             assert cell1.model.handle == self.handle
             cell1 = cell1.index
 
-        assert cell0 < self.cell_number
-        assert cell1 < self.cell_number
-        assert cell0 != cell1
+        # 检查cell0和cell1是否有效索引
+        assert cell0 < self.cell_number, f'cell0={cell0} >= cell_number={self.cell_number}'
+        assert cell1 < self.cell_number, f'cell1={cell1} >= cell_number={self.cell_number}'
+        assert cell0 != cell1, f'cell0={cell0} == cell1={cell1}'
 
+        # 返回新添加的face，或者已经存在的face
         face_id = core.seepage_add_face(self.handle, cell0, cell1)
         face = self.get_face(face_id)
+        # todo: 检查，这里的face应该必然不是None. @26-4-17
         if face is not None and data is not None:
             face.clone(data)
         return face
@@ -17232,12 +17006,12 @@ class Seepage(HasHandle, HasCells):
     core.use(c_size_t, 'seepage_add_inj', c_void_p)
 
     def add_injector(self, cell: Optional[Union['Seepage.Cell', int]] = None,
-                     fluid_id: Optional[Union[str, List[int], Tuple[int]]] = None,
+                     fluid_id: Optional[Union[int, str, List[int], Tuple[int, ...]]] = None,
                      flu: Optional['Seepage.FluData'] = None,
                      data: Optional['Seepage.Injector'] = None,
                      pos: Optional[Union[List[float], Tuple[float]]] = None,
                      radi: Optional[float] = None,
-                     opers: Optional[List[Tuple[float, str]]] = None,
+                     opers: Optional[List[Tuple[float, Union[str, float]]]] = None,
                      ca_mc: Optional[int] = None,
                      ca_t: Optional[int] = None,
                      g_heat: Optional[float] = None, value: Optional[float] = None
@@ -17288,10 +17062,10 @@ class Seepage(HasHandle, HasCells):
             inj.cell_id = cell
 
         if fluid_id is not None:
-            if isinstance(fluid_id, str):
-                # 给定组分名字，则从model中查找   since 2023-10-24
+            if isinstance(fluid_id, str): # 给定组分名字，则从model中查找   since 2023-10-24
                 fluid_id = self.find_fludef(name=fluid_id)
                 assert fluid_id is not None
+            assert isinstance(fluid_id, (int, tuple, list)), f'fluid_id must be int, tuple, or list, but got {type(fluid_id)}'
             inj.set_fid(fluid_id)
 
         if isinstance(flu, Seepage.FluData):  # 只有在等于FluData的时候才使用.
@@ -17376,10 +17150,9 @@ class Seepage(HasHandle, HasCells):
             pool.handle if isinstance(pool, ThreadPool) else 0
         )
 
-    core.use(None, 'seepage_append',
-             c_void_p, c_void_p, c_bool, c_size_t)
+    core.use(None, 'seepage_append', c_void_p, c_void_p, c_bool, c_size_t)
 
-    def append(self, other: "Seepage", cell_i0: Optional[int] = None, with_faces: bool = True):
+    def append(self, other: "Seepage", cell_i0: Optional[int] = None, with_faces: bool = True) -> 'Seepage':
         """
         将other中所有的Cell和Face追加到这个模型中，并且从这个模型的cell_i0开始，
         和从other新添加的cell之间
@@ -17402,11 +17175,15 @@ class Seepage(HasHandle, HasCells):
             other (Seepage): 要追加的另一个 Seepage 对象。
             cell_i0 (int, optional): 开始建立连接的单元索引。默认为 None。
             with_faces (bool, optional): 是否追加面。默认为 True。
+
+        Returns:
+            Seepage: 当前 Seepage 对象。
         """
         assert isinstance(other, Seepage)
         if cell_i0 is None:
             cell_i0 = self.cell_number
         core.seepage_append(self.handle, other.handle, with_faces, cell_i0)
+        return self
 
     core.use(None, 'seepage_pop_cells', c_void_p, c_size_t)
 
@@ -17423,10 +17200,8 @@ class Seepage(HasHandle, HasCells):
         core.seepage_pop_cells(self.handle, count)
         return self
 
-    core.use(c_double, 'seepage_get_gravity',
-             c_void_p, c_size_t)
-    core.use(None, 'seepage_set_gravity',
-             c_void_p, c_size_t, c_double)
+    core.use(c_double, 'seepage_get_gravity', c_void_p, c_size_t)
+    core.use(None, 'seepage_set_gravity', c_void_p, c_size_t, c_double)
 
     @property
     def gravity(self) -> Tuple[float, float, float]:
@@ -17694,8 +17469,7 @@ class Seepage(HasHandle, HasCells):
         """
         return core.seepage_get_curve_n(self.handle)
 
-    core.use(c_void_p, 'seepage_get_curve',
-             c_void_p, c_size_t)
+    core.use(c_void_p, 'seepage_get_curve', c_void_p, c_size_t)
 
     def get_curve(self, index):
         """
@@ -17769,8 +17543,7 @@ class Seepage(HasHandle, HasCells):
             buffer = UintVector()
         else:
             buffer.size = 0
-        found = core.seepage_find_fludef(self.handle, make_c_char_p(name),
-                                         buffer.handle)
+        found = core.seepage_find_fludef(self.handle, make_c_char_p(name), buffer.handle)
         if found:
             return buffer.to_list()
         return None
@@ -17985,7 +17758,7 @@ class Seepage(HasHandle, HasCells):
             else:
                 return self.get_reaction(idx)
 
-    def clear_reactions(self):
+    def clear_reactions(self) -> 'Seepage':
         """
         清除所有的反应
 
@@ -17993,11 +17766,12 @@ class Seepage(HasHandle, HasCells):
             None
         """
         self.reaction_number = 0
+        return self
 
     core.use(None, 'seepage_remove_reaction',
              c_void_p, c_size_t)
 
-    def remove_reaction(self, idx):
+    def remove_reaction(self, idx) -> 'Seepage':
         """
         移除给定序号的一个反应
 
@@ -18010,6 +17784,7 @@ class Seepage(HasHandle, HasCells):
         idx = get_index(idx, self.reaction_number)
         if idx is not None:
             core.seepage_remove_reaction(self.handle, idx)
+        return self
 
     def create_reaction(self, **kwargs):
         """
@@ -18141,10 +17916,9 @@ class Seepage(HasHandle, HasCells):
                 self.del_tag(tag=tag)
         return self
 
-    core.use(None, 'seepage_clear_tags',
-             c_void_p)
+    core.use(None, 'seepage_clear_tags', c_void_p)
 
-    def clear_tags(self):
+    def clear_tags(self) -> 'Seepage':
         """
         清除模型中的所有标签
 
@@ -18152,9 +17926,9 @@ class Seepage(HasHandle, HasCells):
             None
         """
         core.seepage_clear_tags(self.handle)
+        return self
 
-    core.use(c_int64, 'seepage_reg_key',
-             c_void_p, c_char_p, c_char_p)
+    core.use(c_int64, 'seepage_reg_key', c_void_p, c_char_p, c_char_p)
 
     def reg_key(self, ty, key):
         """
@@ -18179,11 +17953,9 @@ class Seepage(HasHandle, HasCells):
         Returns:
             int: 注册的键值
         """
-        return core.seepage_reg_key(self.handle, make_c_char_p(ty),
-                                    make_c_char_p(key))
+        return core.seepage_reg_key(self.handle, make_c_char_p(ty), make_c_char_p(key))
 
-    core.use(c_int64, 'seepage_get_key',
-             c_void_p, c_char_p)
+    core.use(c_int64, 'seepage_get_key', c_void_p, c_char_p)
 
     def get_key(self, key):
         """
@@ -18201,8 +17973,7 @@ class Seepage(HasHandle, HasCells):
         else:
             return None
 
-    core.use(None, 'seepage_set_key',
-             c_void_p, c_char_p, c_int64)
+    core.use(None, 'seepage_set_key', c_void_p, c_char_p, c_int64)
 
     def set_key(self, key, value):
         """
@@ -18225,8 +17996,7 @@ class Seepage(HasHandle, HasCells):
             core.seepage_set_key(self.handle, make_c_char_p(key), value)
             return self
 
-    core.use(None, 'seepage_del_key',
-             c_void_p, c_char_p)
+    core.use(None, 'seepage_del_key', c_void_p, c_char_p)
 
     def del_key(self, key, *keys):
         """
@@ -18245,8 +18015,7 @@ class Seepage(HasHandle, HasCells):
                 self.del_key(key=key)
         return self
 
-    core.use(None, 'seepage_clear_keys',
-             c_void_p)
+    core.use(None, 'seepage_clear_keys', c_void_p)
 
     def clear_keys(self):
         """
@@ -18354,8 +18123,7 @@ class Seepage(HasHandle, HasCells):
         """
         return self.get_key('f_' + key)
 
-    core.use(None, 'seepage_get_keys',
-             c_void_p, c_void_p)
+    core.use(None, 'seepage_get_keys', c_void_p, c_void_p)
 
     def get_keys(self):
         """
@@ -18382,8 +18150,7 @@ class Seepage(HasHandle, HasCells):
             self.set_key(key, value)
         return self
 
-    core.use(None, 'seepage_get_tags',
-             c_void_p, c_void_p)
+    core.use(None, 'seepage_get_tags', c_void_p, c_void_p)
 
     def get_tags(self):
         """
@@ -18396,10 +18163,8 @@ class Seepage(HasHandle, HasCells):
         core.seepage_get_tags(self.handle, s.handle)
         return eval(s.to_str())
 
-    core.use(c_double, 'seepage_get_attr',
-             c_void_p, c_size_t)
-    core.use(None, 'seepage_set_attr',
-             c_void_p, c_size_t, c_double)
+    core.use(c_double, 'seepage_get_attr', c_void_p, c_size_t)
+    core.use(None, 'seepage_set_attr', c_void_p, c_size_t, c_double)
 
     def get_attr(self, index, default_val=None, **valid_range):
         """
@@ -18444,11 +18209,9 @@ class Seepage(HasHandle, HasCells):
         core.seepage_set_attr(self.handle, index, value)
         return self
 
-    core.use(c_size_t, 'seepage_get_nearest_cell_id',
-             c_void_p, c_double, c_double, c_double,
-             c_size_t, c_size_t)
+    core.use(c_size_t, 'seepage_get_nearest_cell_id', c_void_p, c_double, c_double, c_double, c_size_t, c_size_t)
 
-    def get_nearest_cell(self, pos, i_beg=None, i_end=None):
+    def get_nearest_cell(self, pos, i_beg=None, i_end=None) -> Optional['Seepage.Cell']:
         """
         返回与给定位置距离最近的cell (在[i_beg, i_end)的范围内搜索)
 
@@ -18471,10 +18234,9 @@ class Seepage(HasHandle, HasCells):
         else:
             return None
 
-    core.use(None, 'seepage_clone',
-             c_void_p, c_void_p)
+    core.use(None, 'seepage_clone', c_void_p, c_void_p)
 
-    def clone(self, other):
+    def clone(self, other: 'Seepage') -> 'Seepage':
         """
         从另外一个模型克隆数据.
 
@@ -18489,22 +18251,20 @@ class Seepage(HasHandle, HasCells):
             core.seepage_clone(self.handle, other.handle)
         return self
 
-    def get_copy(self):
+    def get_copy(self) -> 'Seepage':
         """
         返回一个拷贝.
 
         Returns:
             Seepage: 当前模型的拷贝对象
         """
-        temp = Seepage()
-        temp.clone(self)
-        return temp
+        res = Seepage()
+        res.clone(self)
+        return res
 
-    core.use(None, 'seepage_clone_cells',
-             c_void_p, c_void_p, c_size_t,
-             c_size_t, c_size_t)
+    core.use(None, 'seepage_clone_cells', c_void_p, c_void_p, c_size_t, c_size_t, c_size_t)
 
-    def clone_cells(self, ibeg0, other, ibeg1, count):
+    def clone_cells(self, ibeg0: int, other: 'Seepage', ibeg1: int, count: int) -> 'Seepage':
         """
         拷贝Cell数据:
             将other的[ibeg1, ibeg1+count)范围内的Cell的数据，
@@ -18521,17 +18281,14 @@ class Seepage(HasHandle, HasCells):
         Returns:
             None
         """
-        if count <= 0:
-            return
-        assert isinstance(other, Seepage)
-        core.seepage_clone_cells(self.handle, other.handle,
-                                 ibeg0, ibeg1, count)
+        if count > 0:
+            assert isinstance(other, Seepage), 'other must be a Seepage object'
+            core.seepage_clone_cells(self.handle, other.handle, ibeg0, ibeg1, count)
+        return self
 
-    core.use(None, 'seepage_clone_inner_faces',
-             c_void_p, c_void_p, c_size_t,
-             c_size_t, c_size_t)
+    core.use(None, 'seepage_clone_inner_faces', c_void_p, c_void_p, c_size_t, c_size_t, c_size_t)
 
-    def clone_inner_faces(self, ibeg0, other, ibeg1, count):
+    def clone_inner_faces(self, ibeg0: int, other: 'Seepage', ibeg1: int, count: int):
         """
         拷贝Face数据:
             将other的[ibeg1, ibeg1+count)范围内的Cell对应的Face，
@@ -18550,10 +18307,8 @@ class Seepage(HasHandle, HasCells):
         """
         if count <= 0:
             return
-        assert isinstance(other, Seepage)
-        core.seepage_clone_inner_faces(self.handle, other.handle,
-                                       ibeg0, ibeg1,
-                                       count)
+        assert isinstance(other, Seepage), 'other must be a Seepage object'
+        core.seepage_clone_inner_faces(self.handle, other.handle, ibeg0, ibeg1, count)
 
     core.use(None, 'seepage_update_den',
              c_void_p, c_size_t, c_size_t, c_size_t,
@@ -18599,13 +18354,10 @@ class Seepage(HasHandle, HasCells):
 
     core.use(None, 'seepage_update_vis',
              c_void_p, c_size_t, c_size_t, c_size_t,
-             c_void_p,
-             c_size_t,
-             c_size_t, c_double,
+             c_void_p, c_size_t, c_size_t, c_double,
              c_double, c_double, c_void_p)
 
-    def update_vis(self, fluid_id=None, kernel=None,
-                   ca_p=None, fa_t=None,
+    def update_vis(self, fluid_id=None, kernel=None, ca_p=None, fa_t=None,
                    relax_factor=0.3, min=1.0e-7, max=1.0, pool=None):
         """
         更新流体的粘性系数。
@@ -18656,11 +18408,9 @@ class Seepage(HasHandle, HasCells):
             pool.handle if isinstance(pool, ThreadPool) else 0
         )
 
-    core.use(None, 'seepage_update_pore',
-             c_void_p, c_size_t, c_size_t,
-             c_double)
+    core.use(None, 'seepage_update_pore', c_void_p, c_size_t, c_size_t, c_double)
 
-    def update_pore(self, ca_v0, ca_k, relax_factor=0.01):
+    def update_pore(self, ca_v0, ca_k, relax_factor=0.01) -> 'Seepage':
         """
         更新pore的属性，使得当前压力下，孔隙空间的体积可以逐渐逼近真实值
         (真实值由ca_v0和ca_k定义的属性给定).
@@ -18755,7 +18505,7 @@ class Seepage(HasHandle, HasCells):
     core.use(None, 'seepage_update_cond',
              c_void_p, c_size_t, c_size_t, c_size_t, c_double, c_void_p)
 
-    def update_cond(self, ca_v0, fa_g0, fa_igr, relax_factor=1.0, pool=None):
+    def update_cond(self, ca_v0, fa_g0, fa_igr, relax_factor=1.0, pool=None) -> 'Seepage':
         """
         给定初始时刻各Cell流体体积v0，各Face的导流g0，v/v0到g/g0的映射gr，
         来更新此刻Face的g.
@@ -18771,18 +18521,18 @@ class Seepage(HasHandle, HasCells):
             pool: 线程池
 
         Returns:
-            None
+            self: 返回当前对象
         """
         core.seepage_update_cond(
             self.handle, ca_v0, fa_g0, fa_igr, relax_factor,
             pool.handle if isinstance(pool, ThreadPool) else 0
         )
+        return self
 
     core.use(None, 'seepage_update_g0',
-             c_void_p, c_size_t, c_size_t, c_size_t,
-             c_size_t)
+             c_void_p, c_size_t, c_size_t, c_size_t, c_size_t)
 
-    def update_g0(self, fa_g0, fa_k, fa_s, fa_l):
+    def update_g0(self, fa_g0, fa_k, fa_s, fa_l) -> 'Seepage':
         """
         对于所有的face，根据它的渗透率，面积和长度来计算cond (流体饱和的时候的cond).
             ---
@@ -18795,9 +18545,10 @@ class Seepage(HasHandle, HasCells):
             fa_l (int): 各Face的长度属性的ID
 
         Returns:
-            None
+            self: 返回当前对象
         """
         core.seepage_update_g0(self.handle, fa_g0, fa_k, fa_s, fa_l)
+        return self
 
     core.use(None, 'seepage_diffusion',
              c_void_p, c_double,
@@ -18939,10 +18690,9 @@ class Seepage(HasHandle, HasCells):
             0 if face_groups is None else face_groups.handle)
 
     core.use(None, 'seepage_heating',
-             c_void_p, c_size_t, c_size_t, c_size_t,
-             c_double)
+             c_void_p, c_size_t, c_size_t, c_size_t, c_double)
 
-    def heating(self, ca_mc, ca_t, ca_p, dt):
+    def heating(self, ca_mc, ca_t, ca_p, dt) -> 'Seepage':
         """
         按照各个Cell给定的功率来对各个Cell进行加热 (此功能非必须，可以借助numpy实现).
         其中：
@@ -18958,6 +18708,7 @@ class Seepage(HasHandle, HasCells):
             None
         """
         core.seepage_heating(self.handle, ca_mc, ca_t, ca_p, dt)
+        return self
 
     core.use(None, 'seepage_update_sand',
              c_void_p,
@@ -19010,10 +18761,8 @@ class Seepage(HasHandle, HasCells):
             ctypes.cast(force, c_void_p),
             ctypes.cast(ratio, c_void_p))
 
-    core.use(None, 'seepage_pop_fluids',
-             c_void_p, c_void_p, c_void_p)
-    core.use(None, 'seepage_push_fluids',
-             c_void_p, c_void_p, c_void_p)
+    core.use(None, 'seepage_pop_fluids', c_void_p, c_void_p, c_void_p)
+    core.use(None, 'seepage_push_fluids', c_void_p, c_void_p, c_void_p)
 
     def pop_fluids(self, buffer, *, pool=None):
         """
@@ -19118,8 +18867,7 @@ class Seepage(HasHandle, HasCells):
             return flow_sol.get_recommended_dt(*args, **kwargs)
 
     core.use(c_double, 'seepage_get_fluid_mass',
-             c_void_p, c_size_t, c_size_t,
-             c_size_t)
+             c_void_p, c_size_t, c_size_t, c_size_t)
 
     def get_fluid_mass(self, fluid_id=None):
         """
@@ -19132,8 +18880,7 @@ class Seepage(HasHandle, HasCells):
         Returns:
             float: 流体的总质量
         """
-        return core.seepage_get_fluid_mass(
-            self.handle, *parse_fid3(fluid_id))
+        return core.seepage_get_fluid_mass(self.handle, *parse_fid3(fluid_id))
 
     @property
     def fluid_mass(self):
@@ -19145,11 +18892,9 @@ class Seepage(HasHandle, HasCells):
         """
         return self.get_fluid_mass()
 
-    core.use(c_double, 'seepage_get_fluid_vol',
-             c_void_p, c_size_t, c_size_t,
-             c_size_t)
+    core.use(c_double, 'seepage_get_fluid_vol', c_void_p, c_size_t, c_size_t, c_size_t)
 
-    def get_fluid_vol(self, fluid_id=None):
+    def get_fluid_vol(self, fluid_id=None) -> float:
         """
         返回模型中所有Cell内的流体vol的和
             当fluid_id指定的时候，则仅仅对给定的流体进行加和，否则，将加和所有的流体
@@ -19160,11 +18905,10 @@ class Seepage(HasHandle, HasCells):
         Returns:
             float: 流体的总体积
         """
-        return core.seepage_get_fluid_vol(
-            self.handle, *parse_fid3(fluid_id))
+        return core.seepage_get_fluid_vol(self.handle, *parse_fid3(fluid_id))
 
     @property
-    def fluid_vol(self):
+    def fluid_vol(self) -> float:
         """
         返回模型中所有Cell内的流体vol的和
 
@@ -19173,8 +18917,7 @@ class Seepage(HasHandle, HasCells):
         """
         return self.get_fluid_vol()
 
-    core.use(None, 'seepage_find_inner_face_ids',
-             c_void_p, c_void_p, c_void_p)
+    core.use(None, 'seepage_find_inner_face_ids', c_void_p, c_void_p, c_void_p)
 
     def find_inner_face_ids(self, cell_ids, buffer=None):
         """
@@ -19190,8 +18933,7 @@ class Seepage(HasHandle, HasCells):
         assert isinstance(cell_ids, UintVector)
         if not isinstance(buffer, UintVector):
             buffer = UintVector()
-        core.seepage_find_inner_face_ids(self.handle, buffer.handle,
-                                         cell_ids.handle)
+        core.seepage_find_inner_face_ids(self.handle, buffer.handle, cell_ids.handle)
         return buffer
 
     core.use(None, 'seepage_get_cond_for_exchange',
@@ -19213,8 +18955,7 @@ class Seepage(HasHandle, HasCells):
         """
         if not isinstance(buffer, Vector):
             buffer = Vector()
-        core.seepage_get_cond_for_exchange(self.handle, buffer.handle,
-                                           *parse_fid3(fid0), *parse_fid3(fid1))
+        core.seepage_get_cond_for_exchange(self.handle, buffer.handle, *parse_fid3(fid0), *parse_fid3(fid1))
         return buffer
 
     core.use(None, 'seepage_get_linear_dpre',
@@ -19259,8 +19000,7 @@ class Seepage(HasHandle, HasCells):
         return vs0, vk
 
     core.use(None, 'seepage_get_vol_fraction',
-             c_void_p, c_void_p, c_size_t,
-             c_size_t, c_size_t)
+             c_void_p, c_void_p, c_size_t, c_size_t, c_size_t)
 
     def get_vol_fraction(self, fid, buffer=None):
         """
@@ -19279,8 +19019,7 @@ class Seepage(HasHandle, HasCells):
                                       *parse_fid3(fid))
         return buffer
 
-    core.use(None, 'seepage_cells_write',
-             c_void_p, c_void_p, c_int64)
+    core.use(None, 'seepage_cells_write', c_void_p, c_void_p, c_int64)
 
     def cells_write(self, *, index, pointer):
         """
@@ -19303,11 +19042,9 @@ class Seepage(HasHandle, HasCells):
         if isinstance(index, str):
             index = self.get_cell_key(key=index)
             assert index is not None
-        core.seepage_cells_write(self.handle,
-                                 f64_ptr(pointer), index)
+        core.seepage_cells_write(self.handle, f64_ptr(pointer), index)
 
-    core.use(None, 'seepage_cells_read',
-             c_void_p, c_void_p, c_double, c_int64)
+    core.use(None, 'seepage_cells_read', c_void_p, c_void_p, c_double, c_int64)
 
     def cells_read(self, *, index, pointer=None, value=None):
         """
@@ -19326,9 +19063,7 @@ class Seepage(HasHandle, HasCells):
         if isinstance(index, str):
             index = self.reg_cell_key(key=index)
         if pointer is not None:
-            core.seepage_cells_read(self.handle,
-                                    const_f64_ptr(pointer),
-                                    0, index)
+            core.seepage_cells_read(self.handle, const_f64_ptr(pointer), 0, index)
         else:
             assert value is not None
             core.seepage_cells_read(self.handle, 0, value, index)
@@ -19360,11 +19095,9 @@ class Seepage(HasHandle, HasCells):
         if isinstance(index, str):
             index = self.get_face_key(key=index)
             assert index is not None
-        core.seepage_faces_write(self.handle, f64_ptr(pointer),
-                                 index)
+        core.seepage_faces_write(self.handle, f64_ptr(pointer), index)
 
-    core.use(None, 'seepage_faces_read',
-             c_void_p, c_void_p, c_double, c_int64)
+    core.use(None, 'seepage_faces_read', c_void_p, c_void_p, c_double, c_int64)
 
     def faces_read(self, *, index, pointer=None, value=None):
         """
@@ -19380,9 +19113,7 @@ class Seepage(HasHandle, HasCells):
         if isinstance(index, str):
             index = self.reg_face_key(key=index)
         if pointer is not None:
-            core.seepage_faces_read(self.handle,
-                                    const_f64_ptr(pointer),
-                                    0, index)
+            core.seepage_faces_read(self.handle, const_f64_ptr(pointer), 0, index)
         else:
             assert value is not None
             core.seepage_faces_read(self.handle, 0, value, index)
@@ -19407,16 +19138,13 @@ class Seepage(HasHandle, HasCells):
         if isinstance(index, str):
             index = self.get_flu_key(key=index)
             assert index is not None
-        core.seepage_fluids_write(self.handle,
-                                  f64_ptr(pointer),
-                                  index, *parse_fid3(fluid_id))
+        core.seepage_fluids_write(self.handle, f64_ptr(pointer), index, *parse_fid3(fluid_id))
 
     core.use(None, 'seepage_fluids_read',
              c_void_p, c_void_p, c_double, c_int64,
              c_size_t, c_size_t, c_size_t)
 
-    def fluids_read(self, *, fluid_id, index, pointer=None,
-                    value=None):
+    def fluids_read(self, *, fluid_id, index, pointer=None, value=None):
         """
         导入属性
 
@@ -19429,13 +19157,10 @@ class Seepage(HasHandle, HasCells):
         if isinstance(index, str):
             index = self.reg_flu_key(key=index)
         if pointer is not None:
-            core.seepage_fluids_read(self.handle,
-                                     const_f64_ptr(pointer), 0, index,
-                                     *parse_fid3(fluid_id))
+            core.seepage_fluids_read(self.handle, const_f64_ptr(pointer), 0, index, *parse_fid3(fluid_id))
         else:
             assert value is not None
-            core.seepage_fluids_read(self.handle, 0, value, index,
-                                     *parse_fid3(fluid_id))
+            core.seepage_fluids_read(self.handle, 0, value, index, *parse_fid3(fluid_id))
 
     @property
     def numpy(self):
@@ -19576,8 +19301,7 @@ class Seepage(HasHandle, HasCells):
                         file.write(f'\t{prop(cell)}')
                 file.write('\n')
 
-    core.use(None, 'seepage_group_cells',
-             c_void_p, c_void_p)
+    core.use(None, 'seepage_group_cells', c_void_p, c_void_p)
 
     def get_cell_groups(self):
         """
@@ -19591,8 +19315,7 @@ class Seepage(HasHandle, HasCells):
         core.seepage_group_cells(self.handle, g.handle)
         return g
 
-    core.use(None, 'seepage_group_faces',
-             c_void_p, c_void_p)
+    core.use(None, 'seepage_group_faces', c_void_p, c_void_p)
 
     def get_face_groups(self):
         """
@@ -19607,8 +19330,7 @@ class Seepage(HasHandle, HasCells):
         return g
 
     core.use(None, 'seepage_get_cell_flu_vel',
-             c_void_p, c_void_p,
-             c_size_t, c_double)
+             c_void_p, c_void_p, c_size_t, c_double)
 
     def get_cell_flu_vel(self, fid, last_dt, buf=None):
         """
@@ -19642,8 +19364,7 @@ class Seepage(HasHandle, HasCells):
             core.seepage_get_cell_flu_vel(self.handle, buf, fid, last_dt)
             return None
 
-    core.use(None, 'seepage_get_cell_gradient',
-             c_void_p, c_void_p, c_void_p)
+    core.use(None, 'seepage_get_cell_gradient', c_void_p, c_void_p, c_void_p)
 
     def get_cell_gradient(self, data, buf=None):
         """
@@ -19671,8 +19392,7 @@ class Seepage(HasHandle, HasCells):
             core.seepage_get_cell_gradient(self.handle, buf, data)
             return None
 
-    core.use(None, 'seepage_get_cell_average',
-             c_void_p, c_void_p, c_void_p)
+    core.use(None, 'seepage_get_cell_average', c_void_p, c_void_p, c_void_p)
 
     def get_cell_average(self, fa, *, buf=None):
         """
@@ -19695,13 +19415,10 @@ class Seepage(HasHandle, HasCells):
         else:
             data = None
         assert buf is not None
-        core.seepage_get_cell_average(self.handle,
-                                      ctypes.cast(buf, c_void_p),
-                                      ctypes.cast(fa, c_void_p))
+        core.seepage_get_cell_average(self.handle, ctypes.cast(buf, c_void_p), ctypes.cast(fa, c_void_p))
         return data
 
-    core.use(None, 'seepage_get_cell_max',
-             c_void_p, c_void_p, c_void_p)
+    core.use(None, 'seepage_get_cell_max', c_void_p, c_void_p, c_void_p)
 
     def get_cell_max(self, fa, *, buf=None):
         """
@@ -19724,13 +19441,10 @@ class Seepage(HasHandle, HasCells):
         else:
             data = None
         assert buf is not None
-        core.seepage_get_cell_max(self.handle,
-                                  ctypes.cast(buf, c_void_p),
-                                  ctypes.cast(fa, c_void_p))
+        core.seepage_get_cell_max(self.handle, ctypes.cast(buf, c_void_p), ctypes.cast(fa, c_void_p))
         return data
 
-    core.use(None, 'seepage_get_face_gradient',
-             c_void_p, c_void_p, c_void_p)
+    core.use(None, 'seepage_get_face_gradient', c_void_p, c_void_p, c_void_p)
 
     def get_face_gradient(self, ca, *, buf=None):
         """
@@ -19756,13 +19470,10 @@ class Seepage(HasHandle, HasCells):
         else:
             data = None
         assert buf is not None
-        core.seepage_get_face_gradient(self.handle,
-                                       ctypes.cast(buf, c_void_p),
-                                       ctypes.cast(ca, c_void_p))
+        core.seepage_get_face_gradient(self.handle, ctypes.cast(buf, c_void_p), ctypes.cast(ca, c_void_p))
         return data
 
-    core.use(None, 'seepage_get_face_diff',
-             c_void_p, c_void_p, c_void_p)
+    core.use(None, 'seepage_get_face_diff', c_void_p, c_void_p, c_void_p)
 
     def get_face_diff(self, ca, *, buf=None):
         """
@@ -19788,13 +19499,10 @@ class Seepage(HasHandle, HasCells):
         else:
             data = None
         assert buf is not None
-        core.seepage_get_face_diff(self.handle,
-                                   ctypes.cast(buf, c_void_p),
-                                   ctypes.cast(ca, c_void_p))
+        core.seepage_get_face_diff(self.handle, ctypes.cast(buf, c_void_p), ctypes.cast(ca, c_void_p))
         return data
 
-    core.use(None, 'seepage_get_face_sum',
-             c_void_p, c_void_p, c_void_p)
+    core.use(None, 'seepage_get_face_sum', c_void_p, c_void_p, c_void_p)
 
     def get_face_sum(self, ca, *, buf=None):
         """
@@ -19817,13 +19525,10 @@ class Seepage(HasHandle, HasCells):
         else:
             data = None
         assert buf is not None
-        core.seepage_get_face_sum(self.handle,
-                                  ctypes.cast(buf, c_void_p),
-                                  ctypes.cast(ca, c_void_p))
+        core.seepage_get_face_sum(self.handle, ctypes.cast(buf, c_void_p), ctypes.cast(ca, c_void_p))
         return data
 
-    core.use(None, 'seepage_get_face_average',
-             c_void_p, c_void_p, c_void_p)
+    core.use(None, 'seepage_get_face_average', c_void_p, c_void_p, c_void_p)
 
     def get_face_average(self, ca, *, buf=None):
         """
@@ -19846,13 +19551,10 @@ class Seepage(HasHandle, HasCells):
         else:
             data = None
         assert buf is not None
-        core.seepage_get_face_average(self.handle,
-                                      ctypes.cast(buf, c_void_p),
-                                      ctypes.cast(ca, c_void_p))
+        core.seepage_get_face_average(self.handle, ctypes.cast(buf, c_void_p), ctypes.cast(ca, c_void_p))
         return data
 
-    core.use(None, 'seepage_get_face_left',
-             c_void_p, c_void_p, c_void_p)
+    core.use(None, 'seepage_get_face_left', c_void_p, c_void_p, c_void_p)
 
     def get_face_left(self, ca, *, buf=None):
         """
@@ -19875,13 +19577,10 @@ class Seepage(HasHandle, HasCells):
         else:
             data = None
         assert buf is not None
-        core.seepage_get_face_left(self.handle,
-                                   ctypes.cast(buf, c_void_p),
-                                   ctypes.cast(ca, c_void_p))
+        core.seepage_get_face_left(self.handle, ctypes.cast(buf, c_void_p), ctypes.cast(ca, c_void_p))
         return data
 
-    core.use(None, 'seepage_get_face_right',
-             c_void_p, c_void_p, c_void_p)
+    core.use(None, 'seepage_get_face_right', c_void_p, c_void_p, c_void_p)
 
     def get_face_right(self, ca, *, buf=None):
         """
@@ -19904,9 +19603,7 @@ class Seepage(HasHandle, HasCells):
         else:
             data = None
         assert buf is not None
-        core.seepage_get_face_right(self.handle,
-                                    ctypes.cast(buf, c_void_p),
-                                    ctypes.cast(ca, c_void_p))
+        core.seepage_get_face_right(self.handle, ctypes.cast(buf, c_void_p), ctypes.cast(ca, c_void_p))
         return data
 
 
@@ -23229,7 +22926,7 @@ class DDMSolution2(HasHandle):
     core.use(c_void_p, 'new_ddm_sol2')
     core.use(None, 'del_ddm_sol2', c_void_p)
 
-    def __init__(self, handle: Optional[c_void_p]=None):
+    def __init__(self, handle: Optional[c_void_p] = None):
         """
         初始化DDMSolution2对象
 

@@ -498,7 +498,7 @@ def set_attr(model: Seepage, key=None, value=None, **key_values):
             set_attr(model, key=key, value=value)
 
 
-def set_dt(model: Seepage, dt):
+def set_dt(model: Seepage, dt: float):
     """
     设置模型的时间步长。
 
@@ -1887,6 +1887,12 @@ class CellCopyTask:
         else:
             Seepage.Cell.clone_all(sources=self._targets, targets=self._sources, count=self._count)
         return self
+
+    def __call__(self, *args, **kwargs):
+        """
+        执行任务
+        """
+        return self.run(*args, **kwargs)
 
 
 def create_copy_task(sources, targets):

@@ -160,9 +160,9 @@ def show(x, y, z, jx, jy, caption=None, cmap=None, label=None, title=None):
         return
     angles = np.linspace(0, 2 * np.pi, 100)
     items = [
-        item('contourf', np.reshape(x, shape=[jx, jy]),
-             np.reshape(y, shape=[jx, jy]),
-             np.reshape(z, shape=[jx, jy]),
+        item('contourf', np.reshape(x, [jx, jy]),
+             np.reshape(y, [jx, jy]),
+             np.reshape(z, [jx, jy]),
              cmap=cmap, cbar=dict(label=label)
              ),
         item('xy', 20 * np.cos(angles), 20 * np.sin(angles), 'r--'),

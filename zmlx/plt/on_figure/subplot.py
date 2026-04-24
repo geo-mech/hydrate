@@ -40,7 +40,7 @@ def add_subplot(
         *args: 传递给on_axes函数的参数
         **kwargs: 传递给on_axes函数的关键字参数
     """
-    ax = None
+    ax = None  # 子图的Axes实例
     if label is not None:  # 给定了label，则优先去找到已经存在的Axes
         for item in figure.axes:
             if item.get_label() == label:
@@ -48,11 +48,14 @@ def add_subplot(
                 break
     if ax is None:
         ax = figure.add_subplot(nrows, ncols, index, projection=projection, label=label)
-    try:
+    try: # 尝试调用 on_axes 函数绘图
         if callable(on_axes):
             on_axes(ax, *args, **kwargs)
+        else:
+            assert on_axes is None, 'on_axes must be callable or None.'
     except Exception as err:
         print(err)
+
     if xlabel:
         ax.set_xlabel(xlabel)
     if ylabel:
@@ -77,7 +80,8 @@ def add_subplot(
         ax.grid(grid)
     if axis is not None:
         ax.axis(axis)
-    if tight_layout:
+
+    if tight_layout:  # 是否调用figure.tight_layout
         opt = tight_layout if isinstance(tight_layout, dict) else {}
         figure.tight_layout(**opt)
     return ax  # 返回去，方便后续的操作

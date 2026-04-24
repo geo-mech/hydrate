@@ -3,7 +3,7 @@ import os
 import sys
 
 import zmlx.alg.sys as warnings
-from zml import lic, core, app_data, read_text, get_dir, is_chinese
+from zml import lic, core, app_data, read_text, get_dir, contain_chinese
 from zmlx.alg.fsys import has_permission, samefile, time_string, print_tag
 from zmlx.ui import settings
 from zmlx.ui.alg import open_url, get_last_exec_history, install_package, set_plt_export_dpi, play_images, set_position, \
@@ -1903,7 +1903,7 @@ def __check():
         messages.append(
             '界面将在2026年6月之后停止支持PyQt5，请更新至PyQt6')
 
-    if is_chinese(get_dir()):
+    if contain_chinese(get_dir()):
         messages.append(
             '程序安装路径包含中文，请务必安装在纯英文路径下. ')
 

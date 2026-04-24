@@ -43,7 +43,7 @@ Face的属性：
              变量速度。当Face同时定义了rate和inertia之后，才可以去考虑惯性效应。
 """
 from collections.abc import Iterable
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Union
 
 from zml import (
     get_average_perm, Tensor3, make_parent, SeepageMesh)
@@ -230,11 +230,13 @@ def _update_dt(*models):
                 recommended_dt = min(*recommended_dts)
             else:
                 recommended_dt = recommended_dts[0]
+
             dt = max(get_dt_min(model), min(get_dt_max(model), recommended_dt))
+            assert isinstance(dt, float), f'dt must be float. dt = {dt}'
             set_dt(model, dt)  # 修改dt为下一步建议使用的值
 
 
-def iterate(*local_opts, pool=None, **global_opts):
+def iterate(*local_opts: Union[Seepage, dict], pool: Optional[ThreadPool] = None, **global_opts) -> int:
     """
     在时间上向前并行地迭代一次
 
@@ -244,14 +246,16 @@ def iterate(*local_opts, pool=None, **global_opts):
         **global_opts: 全局迭代选项字典
 
     Returns:
-        int: 执行迭代的模型的数量
+        int: 执行了迭代的模型的数量 (如果所有的模型都不需要迭代，则返回0)
     """
     if gui.exists():  # 添加断点，从而使得在这里可以暂停和终止
         gui.break_point()
 
+    # 需要被迭代的模型列表
     models = []
 
     for local_opt in local_opts:
+        assert isinstance(local_opt, (Seepage, dict)), f'local_opt must be Seepage or dict. local_opt = {local_opt}'
         # 解析出model
         if isinstance(local_opt, dict):
             local_opt = local_opt.copy()  # 使得这个列表，后续还可以使用
@@ -265,7 +269,7 @@ def iterate(*local_opts, pool=None, **global_opts):
         # 所有用来迭代的选项
         opts = merge_opts(global_opts, local_opt)
 
-        # 判断是否满足迭代的条件
+        # 判断是否满足迭代的条件. 如果满足条件，则继续迭代；否则，跳过该模型。
         condition = opts.pop('condition', None)
         if callable(condition):
             if not condition(model):  # 不满足需要迭代的条件，则直接退出迭代
@@ -291,6 +295,7 @@ def iterate(*local_opts, pool=None, **global_opts):
 
         dt = opts.get('dt')
         if dt is not None:  # 在参数中给定了dt，则直接使用给定的dt
+            assert isinstance(dt, float), f'dt must be float. dt = {dt} ({type(dt)})'
             set_dt(model, dt)
 
         # 记录模型，这些模型将在后续被迭代
@@ -374,23 +379,25 @@ def parallel_iterate(*args, **kwargs):
     return iterate(*args, **kwargs)
 
 
-def iterate_until(*local_opts, pool=None, target_time=None, n_loop_max=None, **global_opts):
+def iterate_until(*local_opts: Union[Seepage, dict], pool: Optional[ThreadPool] = None,
+                  target_time: float = 1.0e200,
+                  n_loop_max: int = 9999999999, **global_opts):
     """
     并行地迭代，直到给定的目标时间
     """
-    if target_time is not None:
+    if target_time < 1.0e30:
         def condition(m: Seepage):
             return get_time(m) < target_time
-    else:
+    else:  # 目标时间永远无法达到
+        warnings.warn('target_time is infinite, so the condition is None.', UserWarning, stacklevel=2)
+        # 此时，由于不检查时间终点，因此，必须对迭代次数有限制，以防止死循环
+        assert n_loop_max < 999999999, f'n_loop_max must be less than 999999999 when target_time is infinite. n_loop_max = {n_loop_max}'
         condition = None
 
-    if n_loop_max is None:
-        n_loop_max = 9999999999
-
-    n_iter = 0
+    n_iter = 0  # 执行迭代的model的数量
     for n_loop in range(n_loop_max):
         n = iterate(*local_opts, pool=pool, condition=condition, **global_opts)
-        if n == 0:
+        if n == 0:  # 所有的目标都已经实现了
             return n_loop, n_iter
         else:
             n_iter += n
@@ -1439,7 +1446,8 @@ def add_face(model: Seepage, cell0, cell1, *args, **kwargs):
     然后使用 set_face 函数设置该面的初始状态，并返回这个面对象。
     """
     face = model.add_face(cell0, cell1)
-    set_face(face, *args, **kwargs)
+    if face is not None:  # 应该是必然不为None的
+        set_face(face, *args, **kwargs)
     return face
 
 

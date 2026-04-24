@@ -1,3 +1,7 @@
+"""
+安全地打开zmlx的GUI界面。不加载任何配置文件。
+"""
+
 import sys
 from os.path import dirname, abspath
 
