@@ -195,7 +195,7 @@ def question(info):
         return y == 'y' or y == 'Y'
 
 
-def plot_no_gui(kernel, *args, fname=None, dpi=300, caption=None, tight_layout=None, suptitle=None, **kwargs):
+def plot_no_gui(kernel, *args, fname=None, dpi=300, caption=None, clear=None, tight_layout=None, suptitle=None, **kwargs):
     """
     在非GUI模式下绘图(或者显示并阻塞程序执行，或者输出文件但不显示).
     Args:
@@ -206,6 +206,7 @@ def plot_no_gui(kernel, *args, fname=None, dpi=300, caption=None, tight_layout=N
         **kwargs: 传递给kernel函数的关键字参数
         tight_layout: 是否自动调整子图参数，以防止重叠
         caption: 图表的标题
+        clear: 是否清除当前figure的内容，默认清除
         dpi: 输出图片的分辨率
         fname: 输出的文件名
         suptitle: 图表的标题

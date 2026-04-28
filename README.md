@@ -2,7 +2,7 @@
 
 [**IGG-Hydrate**](https://gitee.com/geomech/hydrate): 储层多场耦合计算模块。
 用于：
-1、天然气水合物[成藏](https://doi.org/10.3390/w16192822)/[开发](https://doi.org/10.1016/j.apenergy.2024.122963)/[碳封存](https://doi.org/10.1021/acs.energyfuels.4c04288); 
+1、天然气水合物[成藏](https://doi.org/10.3390/w16192822)/[开发](https://doi.org/10.1016/j.apenergy.2024.122963)/[碳封存](https://doi.org/10.1016/j.fuel.2025.137599); 
 2、页岩油[原位转化](https://doi.org/10.1016/j.petsci.2024.05.025)；
 3、储层内的其他流动/传热/化学/变形(THMC)耦合问题.
 
@@ -15,11 +15,11 @@
 <sup>2</sup>[中国科学院大学](https://www.ucas.ac.cn/)(北京, 101408).
 
 <sup>x</sup>
-联系人: [张召彬](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/201703/t20170306_4755492.html), 邮箱: [zhangzhaobin@mail.iggcas.ac.cn](zhangzhaobin@mail.iggcas.ac.cn); [或添加**微信**](https://gitee.com/geomech/hydrate/issues/ID5HZX).   
+联系人: [张召彬](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/201703/t20170306_4755492.html), 邮箱: [zhangzhaobin@mail.iggcas.ac.cn](zhangzhaobin@mail.iggcas.ac.cn); [或添加微信](https://gitee.com/geomech/hydrate/issues/ID5HZX).   
 
 ### 反馈
 
-技术问题(bug反馈/建模咨询等)请[**新建Issue**](https://gitee.com/geomech/hydrate/issues/new)<sup>①</sup>，其他问题请[联系作者](https://gitee.com/geomech/hydrate/issues/ID5HZX).
+技术问题(bug反馈/建模咨询等)请[新建Issue](https://gitee.com/geomech/hydrate/issues/new)<sup>①</sup>，其他问题请[联系作者](https://gitee.com/geomech/hydrate/issues/ID5HZX).
 
 **注**：<sup>①</sup> 在[新建Issue](https://gitee.com/geomech/hydrate/issues/new)之前，建议浏览[已有的Issues](https://gitee.com/geomech/hydrate/issues).
 
@@ -40,7 +40,7 @@
 2. 安装[VC_redist.x64.exe](https://gitee.com/geomech/hydrate/attach_files); 
 3. 安装[Python](https://www.python.org/) (64位, 3.8+, 推荐3.10及以上版本)<sup>②</sup>; 
 4. 下载[IGG-Hydrate](https://gitee.com/geomech/hydrate)的[zip包](https://gitee.com/geomech/hydrate/repository/archive/master.zip)并解压；或者使用[git](https://git-scm.com/)来[clone](https://gitee.com/help/articles/4111#article-header0)代码;
-5. 将`zmlx`所在的文件夹(**务必为纯英文路径**)添加到Python的搜索路径中; 
+5. 将`zmlx`所在的文件夹(务必为纯英文路径)添加到Python的搜索路径中; 
 6. 安装`PyQt6, numpy, scipy, matplotlib`等第三方的Python包<sup>③</sup>;  
 7. 参考[`zmlx/demo`](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)建模<sup>④</sup>; 运行[`zml_ui.pyw`](https://gitee.com/geomech/hydrate/blob/master/zml_ui.pyw)打开界面.
 

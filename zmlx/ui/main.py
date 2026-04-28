@@ -1549,7 +1549,7 @@ class MainWindow(QtWidgets.QMainWindow):
             w.gui_restore = f"""gui.show_timer()"""
 
         self.get_widget(the_type=TimerView, caption='耗时', on_top=True,
-                        icon='clock', oper=oper, at_side=True)
+                        icon='clock', oper=oper)
 
     def show_pg_console(self):
         from zmlx.ui.widget.pg import PgConsole

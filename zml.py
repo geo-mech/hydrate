@@ -2286,7 +2286,7 @@ def is_chinese(string: str) -> bool:
 
 class ThreadPool(HasHandle):
     """
-    封装 zml::thread_pool_ty
+    封装 zml::thread_pool_ty.
     """
     core.use(c_void_p, 'new_thread_pool', c_int)
     core.use(None, 'del_thread_pool', c_void_p)
