@@ -1,4 +1,4 @@
-# ** desc = '竖直方向二维的水合物开发过程（并行地执行多个模型，用于测试。注意，此案例存在已知的bug）'
+# ** desc = '竖直方向二维的水合物开发过程（并行地执行多个模型，用于测试）'
 
 from zmlx import *
 from zmlx.config.hydrate import show_2d_v2

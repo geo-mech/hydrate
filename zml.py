@@ -22722,7 +22722,7 @@ class Lattice3(HasHandle):
     core.use(c_void_p, 'new_lat3')
     core.use(None, 'del_lat3', c_void_p)
 
-    def __init__(self, box=None, shape=None, handle=None):
+    def __init__(self, box=None, shape=None, handle: Optional[c_void_p]=None):
         """
         初始化Lattice3对象
 
@@ -22738,20 +22738,18 @@ class Lattice3(HasHandle):
             if box is not None and shape is not None:
                 self.create(box, shape)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         返回对象的字符串表示形式
 
         Returns:
             str: 包含盒子范围、形状和大小的字符串。
         """
-        return (f'{type(self).__name__}(box={self.box}, '
-                f'shape={self.shape}, size={self.size})')
+        return f'{type(self).__name__}(box={self.box}, shape={self.shape}, size={self.size})'
 
-    core.use(None, 'lat3_save',
-             c_void_p, c_char_p)
+    core.use(None, 'lat3_save', c_void_p, c_char_p)
 
-    def save(self, path):
+    def save(self, path: str):
         """
         序列化保存。可选扩展格式：
             1：.txt
@@ -22773,10 +22771,9 @@ class Lattice3(HasHandle):
             make_parent(path)
             core.lat3_save(self.handle, make_c_char_p(path))
 
-    core.use(None, 'lat3_load',
-             c_void_p, c_char_p)
+    core.use(None, 'lat3_load', c_void_p, c_char_p)
 
-    def load(self, path):
+    def load(self, path: str):
         """
         读取序列化文件。
             根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
@@ -22788,11 +22785,10 @@ class Lattice3(HasHandle):
             _check_ipath(path, self)
             core.lat3_load(self.handle, make_c_char_p(path))
 
-    core.use(c_double, 'lat3_lrange',
-             c_void_p, c_size_t)
+    core.use(c_double, 'lat3_lrange', c_void_p, c_size_t)
 
     @property
-    def box(self):
+    def box(self) -> List[float]:
         """
         数据在三维空间内的范围，格式为：
             x0, y0, z0, x1, y1, z1
@@ -22807,11 +22803,10 @@ class Lattice3(HasHandle):
         rr = [lr[i] + sh[i] * sz[i] for i in range(3)]
         return lr + rr
 
-    core.use(c_double, 'lat3_shape',
-             c_void_p, c_size_t)
+    core.use(c_double, 'lat3_shape', c_void_p, c_size_t)
 
     @property
-    def shape(self):
+    def shape(self) -> List[float]:
         """
         返回每个网格在三个维度上的大小
 
@@ -22820,11 +22815,10 @@ class Lattice3(HasHandle):
         """
         return [core.lat3_shape(self.handle, i) for i in range(3)]
 
-    core.use(c_size_t, 'lat3_size',
-             c_void_p, c_size_t)
+    core.use(c_size_t, 'lat3_size', c_void_p, c_size_t)
 
     @property
-    def size(self):
+    def size(self) -> List[int]:
         """
         返回三维维度上网格的数量<至少为1>
 
@@ -22833,10 +22827,8 @@ class Lattice3(HasHandle):
         """
         return [core.lat3_size(self.handle, i) for i in range(3)]
 
-    core.use(c_double, 'lat3_get_center',
-             c_void_p, c_size_t, c_size_t)
-    core.use(None, 'lat3_get_centers',
-             c_void_p, c_void_p, c_void_p, c_void_p)
+    core.use(c_double, 'lat3_get_center', c_void_p, c_size_t, c_size_t)
+    core.use(None, 'lat3_get_centers', c_void_p, c_void_p, c_void_p, c_void_p)
 
     def get_center(self, index=None, x=None, y=None, z=None):
         """
@@ -22855,8 +22847,7 @@ class Lattice3(HasHandle):
         """
         if index is not None:
             assert len(index) == 3
-            return [core.lat3_get_center(self.handle, index[i], i) for i in
-                    range(3)]
+            return [core.lat3_get_center(self.handle, index[i], i) for i in range(3)]
         else:
             if not isinstance(x, Vector):
                 x = Vector()
@@ -22868,29 +22859,31 @@ class Lattice3(HasHandle):
             return x, y, z
 
     core.use(None, 'lat3_create',
-             c_void_p, c_double, c_double, c_double,
-             c_double, c_double, c_double,
+             c_void_p, c_double, c_double, c_double, c_double, c_double, c_double,
              c_double, c_double, c_double)
 
-    def create(self, box, shape):
+    def create(self, box: List[float], shape: Union[List[float], Tuple[float], float]):
         """
         创建网格. 其中box为即将划分网格的区域的范围，参考box属性的注释.
         shape为单个网格的大小.
 
         Args:
             box (list): 包含六个浮点数的列表，表示数据在三维空间内的范围。
-            shape (list or float): 单个网格的大小。如果是列表，长度应为3；
+            shape (list or tuple or float): 单个网格的大小。如果是列表或元组，长度应为3；
                 如果是浮点数，则表示三个维度上的大小相同。
 
         Raises:
             AssertionError: 如果box的长度不为6或shape的长度不为3。
         """
-        assert len(box) == 6
+        assert len(box) == 6, f'box size must be 6, but box = {box}'
         if not is_array(shape):
             core.lat3_create(self.handle, *box, shape, shape, shape)
         else:
-            assert len(shape) == 3
-            core.lat3_create(self.handle, *box, *shape)
+            assert len(shape) == 3, f'shape size must be 3, but shape = {shape}'
+            jx = shape[0]
+            jy = shape[1]
+            jz = shape[2]
+            core.lat3_create(self.handle, *box, jx, jy, jz)
 
     core.use(None, 'lat3_random_shuffle', c_void_p)
 
@@ -22901,8 +22894,7 @@ class Lattice3(HasHandle):
         core.lat3_random_shuffle(self.handle)
 
     core.use(None, 'lat3_add_point',
-             c_void_p, c_double, c_double, c_double,
-             c_size_t)
+             c_void_p, c_double, c_double, c_double, c_size_t)
 
     def add_point(self, pos, index):
         """
@@ -22916,7 +22908,7 @@ class Lattice3(HasHandle):
             AssertionError: 如果pos的长度不为3。
         """
         assert len(pos) == 3, f'pos = {pos}'
-        core.lat3_add_point(self.handle, *pos, index)
+        core.lat3_add_point(self.handle, pos[0], pos[1], pos[2], index)
 
 
 class DDMSolution2(HasHandle):
@@ -23860,7 +23852,7 @@ class FractureNetwork(HasHandle):
 
     core.use(c_size_t, 'frac_nt_add_nd', c_void_p, c_double, c_double)
 
-    def add_vertex(self, x, y):
+    def add_vertex(self, x, y) -> 'FractureNetwork.Vertex':
         """
         添加顶点(要添加裂缝单元，必须首先添加顶点)
 
@@ -23872,7 +23864,9 @@ class FractureNetwork(HasHandle):
             Vertex: 新添加的顶点对象
         """
         index = core.frac_nt_add_nd(self.handle, x, y)
-        return self.get_vertex(index)
+        res = self.get_vertex(index)
+        assert res is not None
+        return res
 
     core.use(c_size_t, 'frac_nt_add_bd', c_void_p, c_size_t, c_size_t)
     core.use(None, 'frac_nt_add_frac',
@@ -23888,8 +23882,8 @@ class FractureNetwork(HasHandle):
             当给定lave的时候，将根据给定的lave来分割单元，并自动处理和已有裂缝之间的位置关系。
 
         Args:
-            first (tuple, optional): 第一个顶点的坐标，默认为None
-            second (tuple, optional): 第二个顶点的坐标，默认为None
+            first (tuple, optional): 第一个顶点的坐标或者序号，默认为None
+            second (tuple, optional): 第二个顶点的坐标或者序号，默认为None
             lave (float, optional): 分割单元的参数，默认为None
             data (FractureData, optional): 裂缝数据对象，默认为None
             pos (tuple, optional): 裂缝的位置，格式为 (x0, y0, x1, y1)， 默认为None
@@ -23991,7 +23985,7 @@ class FractureNetwork(HasHandle):
              c_size_t, c_size_t, c_double, c_double,
              c_double, c_double)
 
-    def update_disp(self, matrix, fa_yy=99999999, fa_xy=99999999,
+    def update_disp(self, matrix: 'InfMatrix', fa_yy=99999999, fa_xy=99999999,
                     gradw_max=0, err_max=0.1, iter_min=10,
                     iter_max=10000,
                     ratio_max=0.99, dist_max=1.0e6,
@@ -24058,9 +24052,7 @@ class FractureNetwork(HasHandle):
         """
         assert isinstance(kic, Tensor2)
         assert isinstance(sol2, DDMSolution2)
-        core.frac_nt_extend_tip(self.handle, kic.handle, sol2.handle, lave,
-                                l_extend,
-                                va_wmin, angle_max)
+        core.frac_nt_extend_tip(self.handle, kic.handle, sol2.handle, lave, l_extend, va_wmin, angle_max)
 
     core.use(None, 'frac_nt_get_sub_network', c_void_p, c_size_t, c_void_p)
 
