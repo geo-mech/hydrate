@@ -10,14 +10,8 @@ import os
 from ctypes import c_void_p
 
 import zmlx.alg.sys as warnings
-from zml import Seepage, Vector, is_array, get_pointer64, Map, ThreadPool
-from zml import clock
+from zml import Seepage, Vector, is_array, Map, ThreadPool, np, clock, f64_ptr, const_f64_ptr
 from zmlx.alg.base import time2str
-
-try:
-    import numpy as np
-except ImportError:
-    np = None
 
 
 class SeepageNumpy:
@@ -44,16 +38,13 @@ class SeepageNumpy:
             Returns:
                 如果buf为None，则返回一个新的numpy数组，否则将数据写入buf并返回buf
             """
-            if np is not None:
-                if buf is None:
-                    buf = np.zeros(shape=self.model.cell_number, dtype=float)
-                else:
-                    assert len(buf) == self.model.cell_number
-                self.model.cells_write(
-                    pointer=get_pointer64(buf),
-                    index=index)
-                return buf
-            return None
+            assert np is not None
+            if buf is None:
+                buf = np.zeros(shape=self.model.cell_number, dtype=float)
+            else:
+                assert len(buf) == self.model.cell_number
+            self.model.cells_write(pointer=f64_ptr(buf), index=index)
+            return buf
 
         def set(self, index, buf):
             """
@@ -67,18 +58,15 @@ class SeepageNumpy:
             """
             if not is_array(buf):
                 self.model.cells_read(value=buf, index=index)
-                return
             else:
                 assert len(buf) == self.model.cell_number
-                self.model.cells_read(
-                    pointer=get_pointer64(buf, readonly=True),
-                    index=index)
+                self.model.cells_read(pointer=const_f64_ptr(buf), index=index)
 
         def get_attr(self, *args, **kwargs):
             return self.get(*args, **kwargs)
 
         def set_attr(self, *args, **kwargs):
-            return self.set(*args, **kwargs)
+            self.set(*args, **kwargs)
 
         @property
         def x(self):
@@ -192,16 +180,13 @@ class SeepageNumpy:
             Returns:
                 如果buf为None，则返回一个新的numpy数组，否则将数据写入buf并返回buf
             """
-            if np is not None:
-                if buf is None:
-                    buf = np.zeros(shape=self.model.face_number, dtype=float)
-                else:
-                    assert len(buf) == self.model.face_number
-                self.model.faces_write(
-                    pointer=get_pointer64(buf),
-                    index=index)
-                return buf
-            return None
+            assert np is not None
+            if buf is None:
+                buf = np.zeros(shape=self.model.face_number, dtype=float)
+            else:
+                assert len(buf) == self.model.face_number
+            self.model.faces_write(pointer=f64_ptr(buf), index=index)
+            return buf
 
         def set(self, index, buf):
             """
@@ -215,18 +200,15 @@ class SeepageNumpy:
             """
             if not is_array(buf):
                 self.model.faces_read(value=buf, index=index)
-                return
             else:
                 assert len(buf) == self.model.face_number
-                self.model.faces_read(
-                    pointer=get_pointer64(buf, readonly=True),
-                    index=index)
+                self.model.faces_read(pointer=const_f64_ptr(buf), index=index)
 
         def get_attr(self, *args, **kwargs):
             return self.get(*args, **kwargs)
 
         def set_attr(self, *args, **kwargs):
-            return self.set(*args, **kwargs)
+            self.set(*args, **kwargs)
 
         @property
         def cond(self):
@@ -300,16 +282,15 @@ class SeepageNumpy:
             Returns:
                 如果buf为None，则返回一个新的numpy数组，否则将数据写入buf并返回buf
             """
-            if np is not None:
-                if buf is None:
-                    buf = np.zeros(shape=self.model.cell_number, dtype=float)
-                else:
-                    assert len(buf) == self.model.cell_number
-                self.model.fluids_write(
-                    fluid_id=self.fluid_id, index=index,
-                    pointer=get_pointer64(buf))
-                return buf
-            return None
+            assert np is not None
+            if buf is None:
+                buf = np.zeros(shape=self.model.cell_number, dtype=float)
+            else:
+                assert len(buf) == self.model.cell_number
+            self.model.fluids_write(
+                fluid_id=self.fluid_id, index=index,
+                pointer=f64_ptr(buf))
+            return buf
 
         def set(self, index, buf):
             """
@@ -325,18 +306,17 @@ class SeepageNumpy:
                 self.model.fluids_read(
                     fluid_id=self.fluid_id, value=buf,
                     index=index)
-                return
             else:
                 assert len(buf) == self.model.cell_number
                 self.model.fluids_read(
                     fluid_id=self.fluid_id, index=index,
-                    pointer=get_pointer64(buf, readonly=True))
+                    pointer=const_f64_ptr(buf))
 
         def get_attr(self, *args, **kwargs):
             return self.get(*args, **kwargs)
 
         def set_attr(self, *args, **kwargs):
-            return self.set(*args, **kwargs)
+            self.set(*args, **kwargs)
 
         @property
         def mass(self):
@@ -1478,6 +1458,7 @@ def get_cell_pos(model: Seepage, dim, mask=None, shape=None):
     v = as_numpy(model).cells.get(-(dim + 1))
     res = v if mask is None else v[mask]
     if shape is not None:
+        assert np is not None
         res = np.reshape(res, shape)
     return res
 
@@ -1545,6 +1526,7 @@ def get_cell_pre(model: Seepage, mask=None, shape=None):
     v = as_numpy(model).cells.pre
     res = v if mask is None else v[mask]
     if shape is not None:
+        assert np is not None
         res = np.reshape(res, shape)
     return res
 
@@ -1567,6 +1549,7 @@ def get_cell_temp(model: Seepage, mask=None, shape=None):
     v = as_numpy(model).cells.get(model.get_cell_key('temperature'))
     res = v if mask is None else v[mask]
     if shape is not None:
+        assert np is not None
         res = np.reshape(res, shape)
     return res
 
@@ -1599,6 +1582,7 @@ def get_cell_fv(model: Seepage, fid=None, mask=None, shape=None):
         v = as_numpy(model).fluids(*fid).vol
     res = v if mask is None else v[mask]
     if shape is not None:
+        assert np is not None
         res = np.reshape(res, shape)
     return res
 
@@ -1630,6 +1614,7 @@ def get_cell_fm(model: Seepage, fid=None, mask=None, shape=None):
         v = as_numpy(model).fluids(*fid).mass
     res = v if mask is None else v[mask]
     if shape is not None:
+        assert np is not None
         res = np.reshape(res, shape)
     return res
 
@@ -1654,6 +1639,7 @@ def get_ca(model: Seepage, ca, mask=None, shape=None):
     v = as_numpy(model).cells.get(ca)
     res = v if mask is None else v[mask]
     if shape is not None:
+        assert np is not None
         res = np.reshape(res, shape)
     return res
 
@@ -1681,6 +1667,7 @@ def get_den(model: Seepage, fid, mask=None, shape=None):
     v = as_numpy(model).fluids(*fid).den
     res = v if mask is None else v[mask]
     if shape is not None:
+        assert np is not None
         res = np.reshape(res, shape)
     return res
 
@@ -1726,6 +1713,7 @@ def get_fa(model: Seepage, fid, fa, mask=None, shape=None):
     v = as_numpy(model).fluids(*fid).get(fa)
     res = v if mask is None else v[mask]
     if shape is not None:
+        assert np is not None
         res = np.reshape(res, shape)
     return res
 

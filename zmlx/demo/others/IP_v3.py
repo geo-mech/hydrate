@@ -5,6 +5,7 @@ from zmlx import *
 
 
 def create(jx=100, jy=300):
+    assert np is not None
     import random
     mesh = create_cube(
         x=np.linspace(0, 100, jx + 1),
@@ -12,7 +13,7 @@ def create(jx=100, jy=300):
         z=(0, 1))
 
     node_pos = np.asarray([c.pos for c in mesh.cells])
-    lnks = np.asarray([f.link for f in mesh.faces])
+    links = np.asarray([f.link for f in mesh.faces])
 
     model = InvasionPercolation()
     random.seed(1000000)
@@ -25,7 +26,7 @@ def create(jx=100, jy=300):
     print(f'Load nodes. Count = {node_n}')
 
     ip.set_bonds(
-        model, mesh.face_number, node0=lnks[:, 0], node1=lnks[:, 1],
+        model, mesh.face_number, node0=links[:, 0], node1=links[:, 1],
         radi=[random.uniform(0.5, 1.0) for _ in range(mesh.face_number)])
     bond_n = model.bond_n
     print(f'Load bonds. Count = {bond_n}')
@@ -36,19 +37,18 @@ def create(jx=100, jy=300):
 
     model.outlet_n = 1
     model.read_outlet(
-        get_pointer64([model.get_nearest_node(pos=(50, 300, 0)).index],
-                      readonly=True))
+        const_f64_ptr([model.get_nearest_node(pos=(50, 300, 0)).index]))
 
     i0 = model.get_nearest_node(pos=(30, 0, 0)).index
     i1 = model.get_nearest_node(pos=(70, 0, 0)).index
 
     model.inj_n = 2
     model.read_inj_node_id(
-        get_pointer64([i0, i1], readonly=True))
+        const_f64_ptr([i0, i1]))
     model.read_inj_phase(
-        get_pointer64([1, 1], readonly=True))
+        const_f64_ptr([1, 1]))
     model.read_inj_q(
-        get_pointer64([1, 0.5], readonly=True))
+        const_f64_ptr([1, 0.5]))
     return model
 
 

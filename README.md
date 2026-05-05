@@ -15,7 +15,7 @@
 <sup>2</sup>[中国科学院大学](https://www.ucas.ac.cn/)(北京, 101408).
 
 <sup>x</sup>
-联系人: [张召彬](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/201703/t20170306_4755492.html), 邮箱: [zhangzhaobin@mail.iggcas.ac.cn](zhangzhaobin@mail.iggcas.ac.cn); [或添加微信](https://gitee.com/geomech/hydrate/issues/ID5HZX).   
+联系人: [张召彬](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/201703/t20170306_4755492.html), 邮箱: [zhangzhaobin@mail.iggcas.ac.cn](zhangzhaobin@mail.iggcas.ac.cn); 或添加[微信](https://gitee.com/geomech/hydrate/issues/ID5HZX).   
 
 ### 反馈
 
@@ -37,19 +37,16 @@
 
 ### 安装/运行
 1. 确保操作系统为Windows 10/11, x64<sup>①</sup>;
-2. 安装[VC_redist.x64.exe](https://gitee.com/geomech/hydrate/attach_files); 
-3. 安装[Python](https://www.python.org/) (64位, 3.8+, 推荐3.10及以上版本)<sup>②</sup>; 
-4. 下载[IGG-Hydrate](https://gitee.com/geomech/hydrate)的[zip包](https://gitee.com/geomech/hydrate/repository/archive/master.zip)并解压；或者使用[git](https://git-scm.com/)来[clone](https://gitee.com/help/articles/4111#article-header0)代码;
-5. 将`zmlx`所在的文件夹(务必为纯英文路径)添加到Python的搜索路径中; 
-6. 安装`PyQt6, numpy, scipy, matplotlib`等第三方的Python包<sup>③</sup>;  
-7. 参考[`zmlx/demo`](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)建模<sup>④</sup>; 运行[`zml_ui.pyw`](https://gitee.com/geomech/hydrate/blob/master/zml_ui.pyw)打开界面.
+2. 安装[Python](https://www.python.org/) (64位, 3.8+, 推荐3.12+)<sup>②</sup> 并安装`PyQt6, pyqt6-qscintilla, PyQt6-WebEngine, numpy, scipy, matplotlib`等Python包<sup>③</sup>; 
+3. 下载[IGG-Hydrate](https://gitee.com/geomech/hydrate)的[zip包](https://gitee.com/geomech/hydrate/repository/archive/master.zip)并解压(或者使用[git](https://git-scm.com/)来[clone](https://gitee.com/help/articles/4111#article-header0)代码); 之后，将`zml.py`所在的文件夹(建议纯英文路径)添加到Python的搜索路径中; 
+4. 参考[`zmlx/demo`](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)建模<sup>④</sup>; 运行[`zml_ui.pyw`](https://gitee.com/geomech/hydrate/blob/master/zml_ui.pyw)打开界面.
 
-**注**：<sup>①</sup> 如有在Linux上运行的需求，请联系作者; 
-<sup>②</sup> 推荐使用[WinPython](https://gitee.com/geomech/hydrate/attach_files) (绿色免安装，且是IGG-Hydrate开发者使用的Python环境);
-<sup>③</sup> 运行脚本`zmlx/script/install_dep.py`来可自动安装所有依赖包(基于[pip](https://pypi.org/project/pip/))；另外，`PyQt5`将不再支持;
+**注**：<sup>①</sup> 如有在Linux上运行的需求，请[联系作者](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/201703/t20170306_4755492.html); 
+<sup>②</sup> 推荐使用[WinPython](https://gitee.com/geomech/hydrate/attach_files) (绿色免安装);
+<sup>③</sup> 运行脚本`zmlx/script/install_dep.py`来可自动安装所有依赖包(基于[pip](https://pypi.org/project/pip/))；另外，`PyQt5`不再支持;
 <sup>④</sup> 建议在[demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)的基础上，向前追溯函数的实现; [demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)中案例仅供测试，作者不保证其参数的合理性. 
 
-### 开发
+### 协作/开发
 
 欢迎并感谢您成为[IGG-Hydrate](https://gitee.com/geomech/hydrate)的开发者：
 
@@ -65,3 +62,7 @@
 仓库主网址为: [gitee.com/geomech/hydrate](https://gitee.com/geomech/hydrate), 镜像仓库<sup>①</sup>: [github.com/geo-mech/hydrate](https://github.com/geo-mech/hydrate). 
 
 **注**：<sup>①</sup> 反馈或推送给代码，务必在[主仓库](https://gitee.com/geomech/hydrate)进行，作者不会关注[镜像仓库](https://github.com/geo-mech/hydrate)的变化. 
+
+
+### 授权
+大部分功能可自由使用. 但是，不同的模块可能有不同的授权要求，建议使用前先联系作者.

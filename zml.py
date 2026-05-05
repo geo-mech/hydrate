@@ -196,27 +196,17 @@ def get_hash(text: str, length: Optional[int] = None) -> str:
 
 
 class Object:
-    """提供受限属性管理的对象基类。
-
-    通过白名单机制限制属性修改，防止意外添加新属性。
     """
-
+    提供受限属性管理的对象基类。
+    """
     def set(self, **kwargs):
-        """安全更新现有对象属性。
-
-        Args:
-            **kwargs: 要更新的属性键值对
-
-        Returns:
-            Object: 返回自身以支持链式调用
-
-        Raises:
-            AssertionError: 尝试添加不存在的新属性时抛出
+        """
+        更新现有对象属性
         """
         current_keys = dir(self)
         for key, value in kwargs.items():
             assert key in current_keys, (f"add new attribution '{key}' "
-                                         f"to {type(self)} is forbidden")
+                                         f"to {type(self).__name__} is forbidden")
             setattr(self, key, value)
         return self
 
@@ -1649,7 +1639,7 @@ class HasHandle(Object):
         return self.__handle
 
     def __repr__(self) -> str:
-        return f'{type(self).__name__}(handle={self.handle})'
+        return f'{type(self).__name__}(handle={int(self.handle)})'
 
     def __str__(self) -> str:
         return repr(self)
@@ -1677,7 +1667,7 @@ class String(HasHandle):
                 self.assign(value)
 
     def __repr__(self) -> str:
-        return f"{type(self).__name__}(handle={self.handle}, str='{self.to_str()}')"
+        return f"{type(self).__name__}(handle={int(self.handle)}, str='{self.to_str()}')"
 
     def __str__(self) -> str:
         """返回字符串对象的字符串表示。
@@ -2174,15 +2164,15 @@ def get_average_perm(p0, p1, get_perm, sample_dist=None, depth=0):
     return k1 * k2 * 2.0 / (k1 + k2)
 
 
-def get_index(index: int, count: Optional[int] = None) -> Optional[int]:
+def get_index(index: Optional[int], count: Optional[int] = None) -> Optional[int]:
     """返回修正后的序号，确保返回的序号满足 0 <= index < count。
 
     Args:
-        index (int): 原始序号。
-        count (int, optional): 总数。默认为 None。
+        index (Optional[int]): 原始序号。
+        count (Optional[int]): 总数。默认为 None。
 
     Returns:
-        int: 修正后的序号。如果无法修正，则返回 None。
+        Optional[int]: 修正后的序号。如果无法修正，则返回 None。
     """
     if index is None:
         return None
@@ -2279,7 +2269,8 @@ def contain_chinese(string: str) -> bool:
 
 
 def is_chinese(string: str) -> bool:
-    warnings.warn("is_chinese is deprecated (will be removed after 2027-4-14), use contain_chinese instead", DeprecationWarning,
+    warnings.warn("is_chinese is deprecated (will be removed after 2027-4-14), use contain_chinese instead",
+                  DeprecationWarning,
                   stacklevel=2)
     return contain_chinese(string)
 
@@ -2649,7 +2640,7 @@ class Vector(HasHandle):
             assert value is None and path is None and size is None, "Vector: handle must be None if value, path, and size are not None"
 
     def __repr__(self) -> str:
-        return f'{type(self).__name__}(handle={self.handle}, size={self.size})'
+        return f'{type(self).__name__}(handle={int(self.handle)}, size={self.size})'
 
     def __str__(self) -> str:
         """返回 Vector 的字符串表示。
@@ -2910,7 +2901,7 @@ class IntVector(HasHandle):
                 self.set(value)
 
     def __repr__(self) -> str:
-        return f'{type(self).__name__}(handle={self.handle}, size={self.size})'
+        return f'{type(self).__name__}(handle={int(self.handle)}, size={self.size})'
 
     core.use(None, 'vi_save', c_void_p, c_char_p)
 
@@ -3088,7 +3079,7 @@ class UintVector(HasHandle):
                 self.set(value)
 
     def __repr__(self) -> str:
-        return f'{type(self).__name__}(handle={self.handle}, size={self.size})'
+        return f'{type(self).__name__}(handle={int(self.handle)}, size={self.size})'
 
     core.use(None, 'vui_save', c_void_p, c_char_p)
 
@@ -3274,7 +3265,7 @@ class StrVector(HasHandle):
         super().__init__(handle, core.new_vs, core.del_vs)
 
     def __repr__(self):
-        return f'{type(self).__name__}(handle={self.handle}, size={self.size})'
+        return f'{type(self).__name__}(handle={int(self.handle)}, size={self.size})'
 
     core.use(c_size_t, 'vs_size', c_void_p)
 
@@ -3394,7 +3385,7 @@ class PtrVector(HasHandle):
                 self.set(value)
 
     def __repr__(self):
-        return f'{type(self).__name__}(handle={self.handle}, size={self.size})'
+        return f'{type(self).__name__}(handle={int(self.handle)}, size={self.size})'
 
     core.use(c_size_t, 'vp_size', c_void_p)
 
@@ -3644,7 +3635,7 @@ class Matrix2(HasHandle):
                 self.fill(value)
 
     def __repr__(self):
-        return f'{type(self).__name__}(handle={self.handle}, size={self.size})'
+        return f'{type(self).__name__}(handle={int(self.handle)}, size={self.size})'
 
     def __str__(self):
         """返回 Matrix2 的字符串表示。
@@ -3915,7 +3906,7 @@ class Matrix3(HasHandle):
                 self.fill(value)
 
     def __repr__(self):
-        return f'{type(self).__name__}(handle={self.handle}, size={self.size})'
+        return f'{type(self).__name__}(handle={int(self.handle)}, size={self.size})'
 
     def __str__(self):
         """返回 Matrix3 的字符串表示。
@@ -4187,7 +4178,7 @@ class Tensor3Matrix3(HasHandle):
                 self.load(path)
 
     def __repr__(self):
-        return f'{type(self).__name__}(handle={self.handle}, size={self.size})'
+        return f'{type(self).__name__}(handle={int(self.handle)}, size={self.size})'
 
     core.use(None, 'ts3mat3_save',
              c_void_p, c_char_p)
@@ -5574,7 +5565,7 @@ class Array2(HasHandle):
         return f'{type(self).__name__}({self[0]}, {self[1]})'
 
     def __repr__(self) -> str:
-        return f'{type(self).__name__}(handle={self.handle}, x={self[0]}, y={self[1]})'
+        return f'{type(self).__name__}(handle={int(self.handle)}, x={self[0]}, y={self[1]})'
 
     def __len__(self) -> int:
         """获取数组长度。
@@ -5808,7 +5799,7 @@ class Array3(HasHandle):
         self.from_fmap(value, fmt='binary')
 
     def __repr__(self) -> str:
-        return f'{type(self).__name__}(handle={self.handle}, x={self[0]}, y={self[1]}, z={self[2]})'
+        return f'{type(self).__name__}(handle={int(self.handle)}, x={self[0]}, y={self[1]}, z={self[2]})'
 
     def __str__(self) -> str:
         """返回对象的字符串表示。
@@ -6042,7 +6033,7 @@ class Tensor2(HasHandle):
         self.from_fmap(value, fmt='binary')
 
     def __repr__(self) -> str:
-        return f'{type(self).__name__}(handle={self.handle}, xx={self.xx}, yy={self.yy}, xy={self.xy})'
+        return f'{type(self).__name__}(handle={int(self.handle)}, xx={self.xx}, yy={self.yy}, xy={self.xy})'
 
     def __str__(self) -> str:
         """返回张量的字符串表示。
@@ -6398,7 +6389,7 @@ class Tensor3(HasHandle):
         self.from_fmap(value, fmt='binary')
 
     def __repr__(self):
-        return (f'{type(self).__name__}(handle={self.handle}, '
+        return (f'{type(self).__name__}(handle={int(self.handle)}, '
                 f'xx={self.xx}, yy={self.yy}, zz={self.zz}, '
                 f'xy={self.xy}, yz={self.yz}, zx={self.zx})')
 
@@ -7180,7 +7171,7 @@ class Coord2(HasHandle):
         self.from_fmap(value, fmt='binary')
 
     def __repr__(self):
-        return (f'{type(self).__name__}(handle={self.handle}, '
+        return (f'{type(self).__name__}(handle={int(self.handle)}, '
                 f'origin={self.origin}, xdir={self.xdir})')
 
     def __str__(self):
@@ -7381,7 +7372,7 @@ class Coord3(HasHandle):
         self.from_fmap(value, fmt='binary')
 
     def __repr__(self):
-        return (f'{type(self).__name__}(handle={self.handle}, '
+        return (f'{type(self).__name__}(handle={int(self.handle)}, '
                 f'origin={self.origin}, xdir={self.xdir}, ydir={self.ydir})')
 
     def __str__(self):
@@ -8437,7 +8428,7 @@ class Mesh3(HasHandle):
 
     def __repr__(self):
         return (
-            f'{type(self).__name__}(handle={self.handle}, '
+            f'{type(self).__name__}(handle={int(self.handle)}, '
             f'node_n={self.node_number}, link_n={self.link_number}, '
             f'face_n={self.face_number}, body_n={self.body_number})')
 
@@ -9604,7 +9595,7 @@ class DynSys(HasHandle):
         Returns:
             str: 包含系统信息的详细字符串
         """
-        return f'{type(self).__name__}(handle={self.handle}, size={self.size})'
+        return f'{type(self).__name__}(handle={int(self.handle)}, size={self.size})'
 
     def __str__(self) -> str:
         """
@@ -10526,7 +10517,7 @@ class SpringSys(HasHandle):
 
     def __repr__(self):
         return (
-            f'{type(self).__name__}(handle={self.handle}, '
+            f'{type(self).__name__}(handle={int(self.handle)}, '
             f'node_n={self.node_number}, '
             f'virtual_node_n={self.virtual_node_number}, '
             f'spring_n={self.spring_number})')
@@ -11312,8 +11303,8 @@ class SeepageMesh(HasHandle, HasCells):
             assert isinstance(model, SeepageMesh)
             assert isinstance(index, int)
             assert index < model.cell_number
-            self.model = model
-            self.index = index
+            self.model: SeepageMesh = model
+            self.index: int = index
 
         def __str__(self) -> str:
             """生成单元格的字符串表示。
@@ -11326,15 +11317,8 @@ class SeepageMesh(HasHandle, HasCells):
                 f'index = {self.index}, '
                 f'pos = {self.pos}, volume={self.vol})')
 
-        core.use(c_double, 'seepage_mesh_get_cell_pos',
-                 c_void_p,
-                 c_size_t,
-                 c_size_t)
-        core.use(None, 'seepage_mesh_set_cell_pos',
-                 c_void_p,
-                 c_size_t,
-                 c_size_t,
-                 c_double)
+        core.use(c_double, 'seepage_mesh_get_cell_pos', c_void_p, c_size_t, c_size_t)
+        core.use(None, 'seepage_mesh_set_cell_pos', c_void_p, c_size_t, c_size_t, c_double)
 
         @property
         def pos(self) -> List[float]:
@@ -11346,10 +11330,7 @@ class SeepageMesh(HasHandle, HasCells):
             Note:
                 设置新坐标时会自动更新关联的Face属性，可能影响计算精度
             """
-            return [
-                core.seepage_mesh_get_cell_pos(self.model.handle,
-                                               self.index, i)
-                for i in range(3)]
+            return [core.seepage_mesh_get_cell_pos(self.model.handle, self.index, i) for i in range(3)]
 
         @pos.setter
         def pos(self, value: Union[List[float], Tuple[float, float, float]]):
@@ -11363,15 +11344,13 @@ class SeepageMesh(HasHandle, HasCells):
             """
             assert len(value) == 3
             for dim in range(3):
-                core.seepage_mesh_set_cell_pos(
-                    self.model.handle, self.index,
-                    dim, value[dim])
+                core.seepage_mesh_set_cell_pos(self.model.handle, self.index, dim, value[dim])
 
-        def distance(self, other: Union["SeepageMesh.Cell", Iterable[float]]) -> float:
+        def distance(self, other) -> float:
             """计算到另一单元格或坐标点的欧氏距离。
 
             Args:
-                other (Cell|Iterable[float]): 目标单元格或三维坐标
+                other: 目标单元格或三维坐标
 
             Returns:
                 float: 三维空间中的直线距离，单位：米
@@ -11381,20 +11360,14 @@ class SeepageMesh(HasHandle, HasCells):
                 p1 = other.pos
             else:
                 p1 = other
-            return ((p0[0] - p1[0]) ** 2 + (p0[1] - p1[1]) ** 2 + (
-                    p0[2] - p1[2]) ** 2) ** 0.5
+            return ((p0[0] - p1[0]) ** 2 + (p0[1] - p1[1]) ** 2 + (p0[2] - p1[2]) ** 2) ** 0.5
 
-        core.use(None, 'seepage_mesh_set_cell_volume',
-                 c_void_p,
-                 c_size_t,
-                 c_double)
-        core.use(c_double, 'seepage_mesh_get_cell_volume',
-                 c_void_p,
-                 c_size_t)
+        core.use(None, 'seepage_mesh_set_cell_volume', c_void_p, c_size_t, c_double)
+        core.use(c_double, 'seepage_mesh_get_cell_volume', c_void_p, c_size_t)
 
         @property
         def vol(self) -> float:
-            """获取/设置单元格体积。
+            """获取/设置单元格体积
 
             Returns:
                 float: 单元格体积，单位：立方米
@@ -11402,12 +11375,11 @@ class SeepageMesh(HasHandle, HasCells):
             Note:
                 修改体积值会影响质量守恒计算，建议通过网格生成工具统一设置
             """
-            return core.seepage_mesh_get_cell_volume(self.model.handle,
-                                                     self.index)
+            return core.seepage_mesh_get_cell_volume(self.model.handle, self.index)
 
         @vol.setter
         def vol(self, value: float):
-            """设置单元格体积。
+            """设置单元格体积
 
             Args:
                 value (float): 新的体积值，必须大于等于0
@@ -11415,12 +11387,9 @@ class SeepageMesh(HasHandle, HasCells):
             Raises:
                 ValueError: 如果输入负值
             """
-            core.seepage_mesh_set_cell_volume(self.model.handle, self.index,
-                                              value)
+            core.seepage_mesh_set_cell_volume(self.model.handle, self.index, value)
 
-        core.use(c_double, 'seepage_mesh_get_cell_attr',
-                 c_void_p, c_size_t,
-                 c_size_t)
+        core.use(c_double, 'seepage_mesh_get_cell_attr', c_void_p, c_size_t, c_size_t)
 
         def get_attr(self, index, default_val=None, **valid_range):
             """
@@ -11436,16 +11405,13 @@ class SeepageMesh(HasHandle, HasCells):
             """
             if index is None:
                 return default_val
-            value = core.seepage_mesh_get_cell_attr(self.model.handle,
-                                                    self.index, index)
+            value = core.seepage_mesh_get_cell_attr(self.model.handle, self.index, index)
             if _attr_in_range(value, **valid_range):
                 return value
             else:
                 return default_val
 
-        core.use(None, 'seepage_mesh_set_cell_attr',
-                 c_void_p, c_size_t,
-                 c_size_t, c_double)
+        core.use(None, 'seepage_mesh_set_cell_attr', c_void_p, c_size_t, c_size_t, c_double)
 
         def set_attr(self, index, value):
             """
@@ -11462,12 +11428,10 @@ class SeepageMesh(HasHandle, HasCells):
                 return self
             if value is None:
                 value = 1.0e200
-            core.seepage_mesh_set_cell_attr(self.model.handle, self.index,
-                                            index, value)
+            core.seepage_mesh_set_cell_attr(self.model.handle, self.index, index, value)
             return self
 
-        core.use(c_size_t, 'seepage_mesh_cell_get_face_n',
-                 c_void_p, c_size_t)
+        core.use(c_size_t, 'seepage_mesh_cell_get_face_n', c_void_p, c_size_t)
 
         @property
         def face_number(self):
@@ -11477,8 +11441,7 @@ class SeepageMesh(HasHandle, HasCells):
             Returns:
                 int: 周边 Face 的数量。
             """
-            return core.seepage_mesh_cell_get_face_n(self.model.handle,
-                                                     self.index)
+            return core.seepage_mesh_cell_get_face_n(self.model.handle, self.index)
 
         @property
         def cell_number(self):
@@ -11490,9 +11453,7 @@ class SeepageMesh(HasHandle, HasCells):
             """
             return self.face_number
 
-        core.use(c_size_t, 'seepage_mesh_cell_get_face_id',
-                 c_void_p, c_size_t,
-                 c_size_t)
+        core.use(c_size_t, 'seepage_mesh_cell_get_face_id', c_void_p, c_size_t, c_size_t)
 
         def get_face(self, index: int) -> Optional["SeepageMesh.Face"]:
             """
@@ -11511,9 +11472,7 @@ class SeepageMesh(HasHandle, HasCells):
             return self.model.get_face(
                 core.seepage_mesh_cell_get_face_id(self.model.handle, self.index, index_))
 
-        core.use(c_size_t, 'seepage_mesh_cell_get_cell_id',
-                 c_void_p, c_size_t,
-                 c_size_t)
+        core.use(c_size_t, 'seepage_mesh_cell_get_cell_id', c_void_p, c_size_t, c_size_t)
 
         def get_cell(self, index: int) -> Optional["SeepageMesh.Cell"]:
             """
@@ -11540,8 +11499,7 @@ class SeepageMesh(HasHandle, HasCells):
             Returns:
                 Iterator[Cell]: 相邻单元格迭代器。
             """
-            return Iterator(self, self.cell_number,
-                            lambda m, ind: m.get_cell(ind))
+            return Iterator(self, self.cell_number, lambda m, ind: m.get_cell(ind))
 
         @property
         def faces(self) -> Iterable['SeepageMesh.Face']:
@@ -11551,31 +11509,26 @@ class SeepageMesh(HasHandle, HasCells):
             Returns:
                 Iterator[Face]: 此 Cell 周围的所有 Face 的迭代器。
             """
-            return Iterator(self, self.face_number,
-                            lambda m, ind: m.get_face(ind))
+            return Iterator(self, self.face_number, lambda m, ind: m.get_face(ind))
 
     class Face(Object):
         """
         定义单元格之间的连接通道。
         """
 
-        def __init__(self, model, index):
+        def __init__(self, model: 'SeepageMesh', index: int):
             """
             初始化Face对象。
 
             Args:
-                model (SeepageMesh): SeepageMesh对象，代表所属的渗流网格模型。
-                index (int): 面的索引，必须小于模型中的面的数量。
-
-            Raises:
-                AssertionError: 如果model不是SeepageMesh类型，
-                    或者index不是整数，或者index超出模型面的数量范围。
+                model (SeepageMesh): SeepageMesh对象，代表所属的渗流网格模型
+                index (int): 面的索引，必须小于模型中的面的数量
             """
             assert isinstance(model, SeepageMesh)
             assert isinstance(index, int)
             assert index < model.face_number
-            self.model = model
-            self.index = index
+            self.model: SeepageMesh = model
+            self.index: int = index
 
         def __str__(self):
             """
@@ -11589,13 +11542,8 @@ class SeepageMesh(HasHandle, HasCells):
                 f'index = {self.index}, '
                 f'area = {self.area}, length = {self.length}) ')
 
-        core.use(None, 'seepage_mesh_set_face_area',
-                 c_void_p,
-                 c_size_t,
-                 c_double)
-        core.use(c_double, 'seepage_mesh_get_face_area',
-                 c_void_p,
-                 c_size_t)
+        core.use(None, 'seepage_mesh_set_face_area', c_void_p, c_size_t, c_double)
+        core.use(c_double, 'seepage_mesh_get_face_area', c_void_p, c_size_t)
 
         @property
         def area(self):
@@ -11608,8 +11556,7 @@ class SeepageMesh(HasHandle, HasCells):
             Note:
                 修改面积会影响关联的流动计算参数。
             """
-            return core.seepage_mesh_get_face_area(
-                self.model.handle, self.index)
+            return core.seepage_mesh_get_face_area(self.model.handle, self.index)
 
         @area.setter
         def area(self, value):
@@ -11619,17 +11566,11 @@ class SeepageMesh(HasHandle, HasCells):
             Args:
                 value (float): 新的流动横截面积（单位：平方米）。
             """
-            core.seepage_mesh_set_face_area(self.model.handle,
-                                            self.index,
-                                            value)
+            core.seepage_mesh_set_face_area(self.model.handle, self.index, value)
 
         core.use(None, 'seepage_mesh_set_face_length',
-                 c_void_p,
-                 c_size_t,
-                 c_double)
-        core.use(c_double, 'seepage_mesh_get_face_length',
-                 c_void_p,
-                 c_size_t)
+                 c_void_p, c_size_t, c_double)
+        core.use(c_double, 'seepage_mesh_get_face_length', c_void_p, c_size_t)
 
         @property
         def length(self):
@@ -11642,8 +11583,7 @@ class SeepageMesh(HasHandle, HasCells):
             Note:
                 为了更加清晰的表示“流动距离”的概念，可以调用dist属性。
             """
-            return core.seepage_mesh_get_face_length(
-                self.model.handle, self.index)
+            return core.seepage_mesh_get_face_length(self.model.handle, self.index)
 
         @length.setter
         def length(self, value):
@@ -11656,8 +11596,7 @@ class SeepageMesh(HasHandle, HasCells):
             Note:
                 为了更加清晰的表示“流动距离”的概念，可以调用dist属性。
             """
-            core.seepage_mesh_set_face_length(
-                self.model.handle, self.index, value)
+            core.seepage_mesh_set_face_length(self.model.handle, self.index, value)
 
         @property
         def dist(self):
@@ -11697,8 +11636,7 @@ class SeepageMesh(HasHandle, HasCells):
             p1 = c1.pos
             return tuple([(p0[i] + p1[i]) / 2 for i in range(len(p0))])
 
-        core.use(c_size_t, 'seepage_mesh_get_face_end0',
-                 c_void_p, c_size_t)
+        core.use(c_size_t, 'seepage_mesh_get_face_end0', c_void_p, c_size_t)
 
         @property
         def cell_i0(self):
@@ -11708,11 +11646,9 @@ class SeepageMesh(HasHandle, HasCells):
             Returns:
                 int: 第0个cell的id。
             """
-            return core.seepage_mesh_get_face_end0(self.model.handle,
-                                                   self.index)
+            return core.seepage_mesh_get_face_end0(self.model.handle, self.index)
 
-        core.use(c_size_t, 'seepage_mesh_get_face_end1',
-                 c_void_p, c_size_t)
+        core.use(c_size_t, 'seepage_mesh_get_face_end1', c_void_p, c_size_t)
 
         @property
         def cell_i1(self):
@@ -11722,8 +11658,7 @@ class SeepageMesh(HasHandle, HasCells):
             Returns:
                 int: 第1个cell的id。
             """
-            return core.seepage_mesh_get_face_end1(self.model.handle,
-                                                   self.index)
+            return core.seepage_mesh_get_face_end1(self.model.handle, self.index)
 
         @property
         def cell_ids(self):
@@ -11777,18 +11712,20 @@ class SeepageMesh(HasHandle, HasCells):
             else:
                 return None
 
-        def cells(self) -> Tuple[Optional["SeepageMesh.Cell"], Optional["SeepageMesh.Cell"]]:
+        def cells(self) -> Tuple["SeepageMesh.Cell", "SeepageMesh.Cell"]:
             """
             遍历两端的Cell。
 
             Returns:
-                tuple[Optional[Cell], Optional[Cell]]]: 包含两端Cell对象的元组。
+                tuple[Cell]: 包含两端Cell对象的元组。
             """
-            return self.get_cell(0), self.get_cell(1)
+            c0 = self.get_cell(0)
+            c1 = self.get_cell(1)
+            assert isinstance(c0, SeepageMesh.Cell)
+            assert isinstance(c1, SeepageMesh.Cell)
+            return c0, c1
 
-        core.use(c_double, 'seepage_mesh_get_face_attr',
-                 c_void_p, c_size_t,
-                 c_size_t)
+        core.use(c_double, 'seepage_mesh_get_face_attr', c_void_p, c_size_t, c_size_t)
 
         def get_attr(self, index, default_val=None, **valid_range):
             """
@@ -11804,16 +11741,13 @@ class SeepageMesh(HasHandle, HasCells):
             """
             if index is None:
                 return default_val
-            value = core.seepage_mesh_get_face_attr(self.model.handle,
-                                                    self.index, index)
+            value = core.seepage_mesh_get_face_attr(self.model.handle, self.index, index)
             if _attr_in_range(value, **valid_range):
                 return value
             else:
                 return default_val
 
-        core.use(None, 'seepage_mesh_set_face_attr',
-                 c_void_p, c_size_t,
-                 c_size_t, c_double)
+        core.use(None, 'seepage_mesh_set_face_attr', c_void_p, c_size_t, c_size_t, c_double)
 
         def set_attr(self, index, value):
             """
@@ -11830,16 +11764,13 @@ class SeepageMesh(HasHandle, HasCells):
                 return self
             if value is None:
                 value = 1.0e200
-            core.seepage_mesh_set_face_attr(self.model.handle,
-                                            self.index,
-                                            index, value)
+            core.seepage_mesh_set_face_attr(self.model.handle, self.index, index, value)
             return self
 
     core.use(c_void_p, 'new_seepage_mesh')
-    core.use(None, 'del_seepage_mesh',
-             c_void_p)
+    core.use(None, 'del_seepage_mesh', c_void_p)
 
-    def __init__(self, path=None, handle=None):
+    def __init__(self, path: Optional[str] = None, handle: Optional[c_void_p] = None):
         """
         初始化SeepageMesh对象
 
@@ -11850,9 +11781,7 @@ class SeepageMesh(HasHandle, HasCells):
         Notes:
             如果handle为None，则尝试从path加载网格。
         """
-        super().__init__(handle,
-                         core.new_seepage_mesh,
-                         core.del_seepage_mesh)
+        super().__init__(handle, core.new_seepage_mesh, core.del_seepage_mesh)
         if handle is None:
             if isinstance(path, str):
                 self.load(path)
@@ -11862,13 +11791,13 @@ class SeepageMesh(HasHandle, HasCells):
         except:
             pass
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
-            f'{type(self).__name__}(handle={self.handle}, '
+            f'{type(self).__name__}(handle={int(self.handle)}, '
             f'cell_n={self.cell_number}, '
             f'face_n={self.face_number})')
 
-    def __str__(self):
+    def __str__(self) -> str:
         """
         返回对象的字符串表示
 
@@ -11876,15 +11805,14 @@ class SeepageMesh(HasHandle, HasCells):
             str: 包含句柄、cell数量、face数量和总体积的字符串表示。
         """
         return (
-            f'{type(self).__name__}(handle={self.handle}, '
+            f'{type(self).__name__}(handle={int(self.handle)}, '
             f'cell_n={self.cell_number}, '
             f'face_n={self.face_number}, '
             f'volume={self.volume})')
 
-    core.use(None, 'seepage_mesh_save',
-             c_void_p, c_char_p)
+    core.use(None, 'seepage_mesh_save', c_void_p, c_char_p)
 
-    def save(self, path):
+    def save(self, path: str):
         """
         保存网格到指定路径
 
@@ -11901,10 +11829,9 @@ class SeepageMesh(HasHandle, HasCells):
             make_parent(path)
             core.seepage_mesh_save(self.handle, make_c_char_p(path))
 
-    core.use(None, 'seepage_mesh_load',
-             c_void_p, c_char_p)
+    core.use(None, 'seepage_mesh_load', c_void_p, c_char_p)
 
-    def load(self, path):
+    def load(self, path: str):
         """
         从指定路径加载网格
 
@@ -11918,8 +11845,7 @@ class SeepageMesh(HasHandle, HasCells):
             _check_ipath(path, self)
             core.seepage_mesh_load(self.handle, make_c_char_p(path))
 
-    core.use(None, 'seepage_mesh_clear',
-             c_void_p)
+    core.use(None, 'seepage_mesh_clear', c_void_p)
 
     def clear(self):
         """
@@ -11927,11 +11853,10 @@ class SeepageMesh(HasHandle, HasCells):
         """
         core.seepage_mesh_clear(self.handle)
 
-    core.use(c_size_t, 'seepage_mesh_get_cell_n',
-             c_void_p)
+    core.use(c_size_t, 'seepage_mesh_get_cell_n', c_void_p)
 
     @property
-    def cell_number(self):
+    def cell_number(self) -> int:
         """
         返回cell的数量
 
@@ -11957,8 +11882,7 @@ class SeepageMesh(HasHandle, HasCells):
             return None
 
     core.use(c_size_t, 'seepage_mesh_get_nearest_cell_id',
-             c_void_p,
-             c_double, c_double, c_double)
+             c_void_p, c_double, c_double, c_double)
 
     def get_nearest_cell(self, pos: Union[Tuple[float, float, float], List[float]]) -> Optional["SeepageMesh.Cell"]:
         """
@@ -11972,17 +11896,14 @@ class SeepageMesh(HasHandle, HasCells):
                 如果网格中有cell；否则返回None。
         """
         if self.cell_number > 0:
-            return self.get_cell(
-                core.seepage_mesh_get_nearest_cell_id(
-                    self.handle, pos[0], pos[1], pos[2]))
+            return self.get_cell(core.seepage_mesh_get_nearest_cell_id(self.handle, pos[0], pos[1], pos[2]))
         else:
             return None
 
-    core.use(c_size_t, 'seepage_mesh_get_face_n',
-             c_void_p)
+    core.use(c_size_t, 'seepage_mesh_get_face_n', c_void_p)
 
     @property
-    def face_number(self):
+    def face_number(self) -> int:
         """
         返回face的数量
 
@@ -11991,8 +11912,7 @@ class SeepageMesh(HasHandle, HasCells):
         """
         return core.seepage_mesh_get_face_n(self.handle)
 
-    core.use(c_size_t, 'seepage_mesh_get_face',
-             c_void_p, c_size_t, c_size_t)
+    core.use(c_size_t, 'seepage_mesh_get_face', c_void_p, c_size_t, c_size_t)
 
     def get_face(self, ind=None, cell_0=None, cell_1=None) -> Optional["SeepageMesh.Face"]:
         """
@@ -12048,10 +11968,7 @@ class SeepageMesh(HasHandle, HasCells):
             cell.vol = vol
         return cell
 
-    core.use(c_size_t, 'seepage_mesh_add_face',
-             c_void_p,
-             c_size_t,
-             c_size_t)
+    core.use(c_size_t, 'seepage_mesh_add_face', c_void_p, c_size_t, c_size_t)
 
     def add_face(self, cell_0, cell_1, *, dist=None, area=None) -> "SeepageMesh.Face":
         """
@@ -12105,8 +12022,7 @@ class SeepageMesh(HasHandle, HasCells):
         Returns:
             Iterator: 用于迭代所有cell的迭代器。
         """
-        return Iterator(self, self.cell_number,
-                        lambda m, ind: m.get_cell(ind))
+        return Iterator(self, self.cell_number, lambda m, ind: m.get_cell(ind))
 
     @property
     def faces(self) -> Iterable['SeepageMesh.Face']:
@@ -12116,8 +12032,7 @@ class SeepageMesh(HasHandle, HasCells):
         Returns:
             Iterator: 用于迭代所有face的迭代器。
         """
-        return Iterator(self, self.face_number,
-                        lambda m, ind: m.get_face(ind))
+        return Iterator(self, self.face_number, lambda m, ind: m.get_face(ind))
 
     @property
     def volume(self):
@@ -12212,8 +12127,7 @@ class SeepageMesh(HasHandle, HasCells):
         return create(*args, **kwargs)
 
     core.use(None, 'seepage_mesh_find_inner_face_ids',
-             c_void_p, c_void_p,
-             c_void_p)
+             c_void_p, c_void_p, c_void_p)
 
     def find_inner_face_ids(self, cell_ids: UintVector, buffer=None):
         """
@@ -12237,8 +12151,7 @@ class SeepageMesh(HasHandle, HasCells):
                                               cell_ids.handle)
         return buffer
 
-    core.use(None, 'seepage_mesh_from_mesh3',
-             c_void_p, c_void_p)
+    core.use(None, 'seepage_mesh_from_mesh3', c_void_p, c_void_p)
 
     @staticmethod
     def from_mesh3(mesh3: Mesh3, buffer=None):
@@ -12347,7 +12260,7 @@ class ElementMap(HasHandle):
                 self.load(path)
 
     def __repr__(self):
-        return f'{type(self).__name__}(handle={self.handle}, size={self.size})'
+        return f'{type(self).__name__}(handle={int(self.handle)}, size={self.size})'
 
     core.use(None, 'element_map_save',
              c_void_p, c_char_p)
@@ -13477,7 +13390,7 @@ class Seepage(HasHandle, HasCells):
             """
             返回一个字符串表示当前对象。
             """
-            return f"""{type(self).__name__}(handle={self.handle}, name='{self.name}')"""
+            return f"""{type(self).__name__}(handle={int(self.handle)}, name='{self.name}')"""
 
         def __str__(self) -> str:
             """
@@ -16346,6 +16259,9 @@ class Seepage(HasHandle, HasCells):
             self.solver = None
 
         def get_sol(self) -> 'ConjugateGradientSolver':
+            """
+            返回内部存储的一个默认的线性方程组求解器。
+            """
             if self.solver is None:
                 self.solver = ConjugateGradientSolver(tolerance=1.0e-25)
             return self.solver
@@ -16358,10 +16274,14 @@ class Seepage(HasHandle, HasCells):
                  )
 
         def iterate(
-                self, model: 'Seepage', dt: float, *, fa_s: Optional[int] = None, fa_q: Optional[int] = None,
+                self, model: 'Seepage', dt: float, *,
+                fa_s: Optional[int] = None, fa_q: Optional[int] = None,
                 fa_k: Optional[int] = None, ca_p: Optional[int] = None,
-                solver=None, pool=None, report=None,
-                dv_rela=None):
+                dv_rela: Optional[float] = None,
+                solver: Optional['ConjugateGradientSolver'] = None,
+                pool: Optional[ThreadPool] = None,
+                report: Optional[Map] = None,
+        ):
             """
             将给定的模型在时间上向前迭代(更新流动).
 
@@ -16444,7 +16364,7 @@ class Seepage(HasHandle, HasCells):
                 )
                 return None
 
-            else:  # 此时，直接运行
+            else:  # 此时，直接运行，并且返回计算的报告
                 if not isinstance(report, Map):
                     report = Map()
                 core.seepage_fs_iterate(
@@ -16455,8 +16375,7 @@ class Seepage(HasHandle, HasCells):
                 )
                 return report.to_dict()
 
-        core.use(c_double, 'seepage_fs_get_dv',
-                 c_void_p)
+        core.use(c_double, 'seepage_fs_get_dv', c_void_p)
 
         def get_recommended_dt(
                 self, previous_dt: float,
@@ -16635,7 +16554,7 @@ class Seepage(HasHandle, HasCells):
             pass
 
     def __repr__(self) -> str:
-        return (f'{type(self).__name__}(handle={self.handle}, '
+        return (f'{type(self).__name__}(handle={int(self.handle)}, '
                 f'cell_n={self.cell_number}, '
                 f'face_n={self.face_number}, '
                 f'note={self.get_note()})')
@@ -17062,10 +16981,11 @@ class Seepage(HasHandle, HasCells):
             inj.cell_id = cell
 
         if fluid_id is not None:
-            if isinstance(fluid_id, str): # 给定组分名字，则从model中查找   since 2023-10-24
+            if isinstance(fluid_id, str):  # 给定组分名字，则从model中查找   since 2023-10-24
                 fluid_id = self.find_fludef(name=fluid_id)
                 assert fluid_id is not None
-            assert isinstance(fluid_id, (int, tuple, list)), f'fluid_id must be int, tuple, or list, but got {type(fluid_id)}'
+            assert isinstance(fluid_id,
+                              (int, tuple, list)), f'fluid_id must be int, tuple, or list, but got {type(fluid_id)}'
             inj.set_fid(fluid_id)
 
         if isinstance(flu, Seepage.FluData):  # 只有在等于FluData的时候才使用.
@@ -18805,6 +18725,9 @@ class Seepage(HasHandle, HasCells):
         )
 
     def get_flow_sol(self):
+        """
+        返回模型内部的一个临时变量（用于流体求解）
+        """
         flow_sol = self.temps.get('flow_sol')
         if not isinstance(flow_sol, Seepage.FlowSol):
             res = Seepage.FlowSol()
@@ -18813,7 +18736,30 @@ class Seepage(HasHandle, HasCells):
         else:
             return flow_sol
 
+    def iterate(self, dt, *,
+                fa_s: Optional[int] = None, fa_q: Optional[int] = None,
+                fa_k: Optional[int] = None, ca_p: Optional[int] = None,
+                dv_rela: Optional[float] = None,
+                pool: Optional[ThreadPool] = None,
+                report: Optional[Map] = None,
+                solver: Optional['ConjugateGradientSolver'] = None,
+                ):
+        """
+        迭代模型内的流动过程。
+        Args:
+            dt (float): 时间步长。
+        Returns:
+            迭代结果
+        """
+        return self.get_flow_sol().iterate(
+            model=self, dt=dt, fa_s=fa_s, fa_q=fa_q, fa_k=fa_k, ca_p=ca_p, dv_rela=dv_rela,
+            solver=solver, pool=pool, report=report,
+        )
+
     def get_thermal_sol(self):
+        """
+        返回模型内部的一个临时变量（用于温度场求解）
+        """
         thermal_sol = self.temps.get('thermal_sol')
         if not isinstance(thermal_sol, Seepage.ThermalSol):
             res = Seepage.ThermalSol()
@@ -18821,16 +18767,6 @@ class Seepage(HasHandle, HasCells):
             return res
         else:
             return thermal_sol
-
-    def iterate(self, dt, **opts):
-        """
-        迭代模型内的流动过程
-        Args:
-            dt (float): 时间步长。
-        Returns:
-            迭代结果
-        """
-        return self.get_flow_sol().iterate(self, dt=dt, **opts)
 
     def iterate_thermal(self, dt, **opts):
         """
@@ -19905,7 +19841,7 @@ class Thermal(HasHandle):
             pass
 
     def __repr__(self):
-        return (f'{type(self).__name__}(handle={self.handle}, '
+        return (f'{type(self).__name__}(handle={int(self.handle)}, '
                 f'cell_n={self.cell_number}, '
                 f'face_n={self.face_number})')
 
@@ -20152,7 +20088,7 @@ class ConjugateGradientSolver(HasHandle):
             assert tolerance is None
 
     def __repr__(self):
-        return (f'{type(self).__name__}(handle={self.handle}, '
+        return (f'{type(self).__name__}(handle={int(self.handle)}, '
                 f'tolerance={self.get_tolerance()})')
 
     core.use(None, 'cg_sol_set_tolerance',
@@ -20235,7 +20171,7 @@ class InvasionPercolation(HasHandle):
                 str: 包含节点句柄、位置和半径的字符串。
             """
             return (f'zml.InvasionPercolation.NodeData('
-                    f'handle = {self.handle}, pos = {self.pos}, '
+                    f'handle = {int(self.handle)}, pos = {self.pos}, '
                     f'radi = {self.radi})')
 
         core.use(c_size_t, 'ip_node_get_phase',
@@ -20588,7 +20524,7 @@ class InvasionPercolation(HasHandle):
                 str: 包含通道句柄和半径的字符串。
             """
             return (f'zml.InvasionPercolation.Bond('
-                    f'handle = {self.handle}, '
+                    f'handle = {int(self.handle)}, '
                     f'radi = {self.radi})')
 
         core.use(c_double, 'ip_bond_get_radi',
@@ -20954,7 +20890,7 @@ class InvasionPercolation(HasHandle):
             Returns:
                 str: 包含注入点句柄的字符串。
             """
-            return f'zml.InvasionPercolation.Injector(handle = {self.handle})'
+            return f'zml.InvasionPercolation.Injector(handle = {int(self.handle)})'
 
         core.use(c_size_t, 'ip_inj_get_node_id', c_void_p)
         core.use(None, 'ip_inj_set_node_id',
@@ -21265,7 +21201,7 @@ class InvasionPercolation(HasHandle):
         return not (self == rhs)
 
     def __repr__(self):
-        return (f'{type(self).__name__}(handle={self.handle}, '
+        return (f'{type(self).__name__}(handle={int(self.handle)}, '
                 f'node_n={self.node_n}, bond_n={self.bond_n})')
 
     core.use(None, 'ip_save',
@@ -22098,7 +22034,7 @@ class InvasionPercolation(HasHandle):
     core.use(None, 'ip_write_pos',
              c_void_p, c_size_t, POINTER(c_double))
 
-    def write_pos(self, dim, pointer):
+    def write_pos(self, dim: int, pointer):
         """
         批量获得位置信息。
 
@@ -22106,10 +22042,10 @@ class InvasionPercolation(HasHandle):
             dim (int): 维度。
             pointer (POINTER(c_double)): 指向存储位置信息的指针。
         """
+        assert dim in [0, 1, 2], f'dim must be 0, 1, or 2, but got {dim}'
         core.ip_write_pos(self.handle, dim, f64_ptr(pointer))
 
-    core.use(None, 'ip_read_pos',
-             c_void_p, c_size_t, POINTER(c_double))
+    core.use(None, 'ip_read_pos', c_void_p, c_size_t, POINTER(c_double))
 
     def read_pos(self, dim, pointer):
         """
@@ -22119,10 +22055,10 @@ class InvasionPercolation(HasHandle):
             dim (int): 维度。
             pointer (POINTER(c_double)): 指向存储位置信息的指针。
         """
+        assert dim in [0, 1, 2], f'dim must be 0, 1, or 2, but got {dim}'
         core.ip_read_pos(self.handle, dim, const_f64_ptr(pointer))
 
-    core.use(None, 'ip_write_phase',
-             c_void_p, POINTER(c_double))
+    core.use(None, 'ip_write_phase', c_void_p, POINTER(c_double))
 
     def write_phase(self, pointer):
         """
@@ -22722,7 +22658,7 @@ class Lattice3(HasHandle):
     core.use(c_void_p, 'new_lat3')
     core.use(None, 'del_lat3', c_void_p)
 
-    def __init__(self, box=None, shape=None, handle: Optional[c_void_p]=None):
+    def __init__(self, box=None, shape=None, handle: Optional[c_void_p] = None):
         """
         初始化Lattice3对象
 
@@ -22928,7 +22864,7 @@ class DDMSolution2(HasHandle):
         super().__init__(handle, core.new_ddm_sol2, core.del_ddm_sol2)
 
     def __repr__(self):
-        return (f'{type(self).__name__}(handle={self.handle}, '
+        return (f'{type(self).__name__}(handle={int(self.handle)}, '
                 f'alpha={self.alpha}, beta={self.beta}, '
                 f'shear_modulus={self.shear_modulus / 1.0e9}GPa, '
                 f'poisson_ratio={self.poisson_ratio}, '
@@ -23147,43 +23083,34 @@ class FractureNetwork(HasHandle):
         @property
         def x(self) -> float:
             """
-            获取顶点的x坐标
-
-            Returns:
-                float: 顶点的x坐标
+            顶点的x坐标
             """
             return core.frac_nd_get_pos(self.handle, 0)
 
         @property
         def y(self) -> float:
             """
-            获取顶点的y坐标
-
-            Returns:
-                float: 顶点的y坐标
+            顶点的y坐标
             """
             return core.frac_nd_get_pos(self.handle, 1)
 
         @property
         def pos(self) -> Tuple[float, float]:
             """
-            获取顶点的位置
-
-            Returns:
-                Tuple[float, float]: 包含顶点x和y坐标的元组
+            顶点的位置
             """
             return self.x, self.y
 
         core.use(c_double, 'frac_nd_get_attr', c_void_p, c_size_t)
         core.use(None, 'frac_nd_set_attr', c_void_p, c_size_t, c_double)
 
-        def get_attr(self, index: int, default_val: Optional[float] = None, *,
+        def get_attr(self, index: Optional[int], default_val: Optional[float] = None, *,
                      left: float = -1.0e100, right: float = 1.0e100) -> Optional[float]:
             """
             获取第index个自定义属性
 
             Args:
-                index (int): 自定义属性的索引
+                index (Optional[int]): 自定义属性的索引
                 default_val (float, optional): 属性不存在时的默认值，默认为None
                 left (float): 属性的左边界，默认为-1.0e100
                 right (float): 属性的右边界，默认为1.0e100
@@ -23201,12 +23128,12 @@ class FractureNetwork(HasHandle):
             else:
                 return default_val
 
-        def set_attr(self, index: int, value: float):
+        def set_attr(self, index: Optional[int], value: Optional[float]):
             """
             设置第index个自定义属性
 
             Args:
-                index (int): 自定义属性的索引
+                index (Optional[int]): 自定义属性的索引
                 value (float): 要设置的属性值
 
             Returns:
@@ -23239,19 +23166,19 @@ class FractureNetwork(HasHandle):
         core.use(c_double, 'frac_bd_get_attr', c_void_p, c_size_t)
         core.use(None, 'frac_bd_set_attr', c_void_p, c_size_t, c_double)
 
-        def get_attr(self, index: int, default_val: Optional[float] = None, *,
+        def get_attr(self, index: Optional[int], default_val: Optional[float] = None, *,
                      left: float = -1.0e100, right: float = 1.0e100) -> Optional[float]:
             """
             获取第index个自定义属性
 
             Args:
-                index (int): 自定义属性的索引
+                index (Optional[int]): 自定义属性的索引
                 default_val (float, optional): 属性不存在时的默认值，默认为None
                 left (float): 属性的左边界，默认为-1.0e100
                 right (float): 属性的右边界，默认为1.0e100
 
             Returns:
-                float: 如果属性存在且在有效范围内，返回属性值；否则返回默认值
+                Optional[float]: 如果属性存在且在有效范围内，返回属性值；否则返回默认值
             """
             if index is None:
                 return default_val
@@ -23263,13 +23190,13 @@ class FractureNetwork(HasHandle):
             else:
                 return default_val
 
-        def set_attr(self, index: int, value: float):
+        def set_attr(self, index: Optional[int], value: Optional[float]):
             """
             设置第index个自定义属性
 
             Args:
-                index (int): 自定义属性的索引
-                value (float): 要设置的属性值
+                index (Optional[int]): 自定义属性的索引
+                value (Optional[float]): 要设置的属性值
 
             Returns:
                 FractureData: 返回当前裂缝数据对象
@@ -23287,17 +23214,14 @@ class FractureNetwork(HasHandle):
         @property
         def ds(self) -> float:
             """
-            ds属性
+            ds属性. 裂缝的剪切间断位移 [单位: m]
             """
             return core.frac_bd_get_ds(self.handle)
 
         @ds.setter
         def ds(self, value: float):
             """
-            设置裂缝的ds属性
-
-            Args:
-                value (float): 要设置的ds属性值
+            ds属性. 裂缝的剪切间断位移 [单位: m]
             """
             core.frac_bd_set_ds(self.handle, value)
 
@@ -23307,20 +23231,14 @@ class FractureNetwork(HasHandle):
         @property
         def dn(self) -> float:
             """
-            获取裂缝的dn属性
-
-            Returns:
-                float: 裂缝的dn属性值
+            dn属性. 裂缝的法向间断位移 [单位: m]
             """
             return core.frac_bd_get_dn(self.handle)
 
         @dn.setter
         def dn(self, value: float):
             """
-            设置裂缝的dn属性
-
-            Args:
-                value (float): 要设置的dn属性值
+            dn属性. 裂缝的法向间断位移 [单位: m]
             """
             core.frac_bd_set_dn(self.handle, value)
 
@@ -23330,20 +23248,14 @@ class FractureNetwork(HasHandle):
         @property
         def h(self) -> float:
             """
-            获取裂缝的高度
-
-            Returns:
-                float: 裂缝的高度，单位为米
+            裂缝的高度 [单位: m]
             """
             return core.frac_bd_get_h(self.handle)
 
         @h.setter
         def h(self, value: float):
             """
-            设置裂缝的高度
-
-            Args:
-                value (float): 要设置的裂缝高度，单位为米
+            裂缝的高度 [单位: m]
             """
             core.frac_bd_set_h(self.handle, value)
 
@@ -23353,20 +23265,14 @@ class FractureNetwork(HasHandle):
         @property
         def f(self) -> float:
             """
-            获取裂缝的摩擦系数
-
-            Returns:
-                float: 裂缝的摩擦系数
+            裂缝的摩擦系数
             """
             return core.frac_bd_get_fric(self.handle)
 
         @f.setter
         def f(self, value: float):
             """
-            设置裂缝的摩擦系数
-
-            Args:
-                value (float): 要设置的摩擦系数
+            裂缝的摩擦系数
             """
             core.frac_bd_set_fric(self.handle, value)
 
@@ -23376,20 +23282,14 @@ class FractureNetwork(HasHandle):
         @property
         def p0(self) -> float:
             """
-            获取裂缝内流体压力公式中的p0参数: fp = p0 + k * dn
-
-            Returns:
-                float: 裂缝内流体压力公式中的p0参数
+            裂缝内流体压力公式中的p0参数: fp = p0 + k * dn
             """
             return core.frac_bd_get_p0(self.handle)
 
         @p0.setter
         def p0(self, value: float):
             """
-            设置裂缝内流体压力公式中的p0参数: fp = p0 + k * dn
-
-            Args:
-                value (float): 要设置的p0参数
+            裂缝内流体压力公式中的p0参数: fp = p0 + k * dn
             """
             core.frac_bd_set_p0(self.handle, value)
 
@@ -23399,20 +23299,14 @@ class FractureNetwork(HasHandle):
         @property
         def k(self) -> float:
             """
-            获取裂缝内流体压力公式中的k参数: fp = p0 + k * dn
-
-            Returns:
-                float: 裂缝内流体压力公式中的k参数
+            裂缝内流体压力公式中的k参数: fp = p0 + k * dn
             """
             return core.frac_bd_get_k(self.handle)
 
         @k.setter
         def k(self, value: float):
             """
-            设置裂缝内流体压力公式中的k参数: fp = p0 + k * dn
-
-            Args:
-                value (float): 要设置的k参数
+            裂缝内流体压力公式中的k参数: fp = p0 + k * dn
             """
             core.frac_bd_set_k(self.handle, value)
 
@@ -23422,9 +23316,6 @@ class FractureNetwork(HasHandle):
         def fp(self) -> float:
             """
             根据当前的dn、p0和k计算得到的裂缝内流体压力: fp = p0 + k * dn
-
-            Returns:
-                float: 裂缝内流体压力
             """
             return core.frac_bd_get_fp(self.handle)
 
@@ -23433,10 +23324,7 @@ class FractureNetwork(HasHandle):
         @property
         def flu_expr(self) -> Optional[LinearExpr]:
             """
-            返回流体的映射数据. 用于在裂缝扩展的时候，跟踪流体的数据
-
-            Returns:
-                LinearExpr: 流体的映射数据对象，如果不存在则返回None
+            流体的映射数据. 用于在裂缝扩展的时候，跟踪流体的数据
             """
             handle = core.frac_bd_get_flu(self.handle)
             if handle:
@@ -23447,10 +23335,7 @@ class FractureNetwork(HasHandle):
         @flu_expr.setter
         def flu_expr(self, value: LinearExpr):
             """
-            设置流体的映射数据. 用于在裂缝扩展的时候，跟踪流体的数据
-
-            Args:
-                value: 要设置的流体映射数据对象
+            流体的映射数据. 用于在裂缝扩展的时候，跟踪流体的数据
             """
             if isinstance(value, LinearExpr):
                 left = self.flu_expr
@@ -23460,13 +23345,10 @@ class FractureNetwork(HasHandle):
         @property
         def flu(self):
             """
-            获取流体的映射数据（已弃用，请使用flu_expr）
-
-            Returns:
-                LinearExpr: 流体的映射数据对象，如果不存在则返回None
+            流体的映射数据（已弃用，请使用flu_expr）
             """
             warnings.warn(
-                f'{type(self)}: flu is deprecated,'
+                f'{type(self).__name__}: flu is deprecated,'
                 f' please use flu_expr instead.',
                 DeprecationWarning, stacklevel=2)
             return self.flu_expr
@@ -23474,27 +23356,18 @@ class FractureNetwork(HasHandle):
         @flu.setter
         def flu(self, value):
             """
-            设置流体的映射数据（已弃用，请使用flu_expr）
-
-            Args:
-                value: 要设置的流体映射数据对象
+            流体的映射数据（已弃用，请使用flu_expr）
             """
             warnings.warn(
-                f'{type(self)}: flu is deprecated,'
+                f'{type(self).__name__}: flu is deprecated,'
                 f' please use flu_expr instead.',
                 DeprecationWarning, stacklevel=2)
             self.flu_expr = value
 
         @staticmethod
-        def create(**kwargs):
+        def create(**kwargs) -> 'FractureNetwork.FractureData':
             """
             创建裂缝数据
-
-            Args:
-                **kwargs: 裂缝数据的属性和值
-
-            Returns:
-                FractureData: 创建的裂缝数据对象
             """
             data = FractureNetwork.FractureData()
             for key, value in kwargs.items():
@@ -23545,21 +23418,64 @@ class FractureNetwork(HasHandle):
 
         core.use(c_size_t, 'frac_nt_nd_get_bd_i', c_void_p, c_size_t, c_size_t)
 
-        def get_fracture(self, index: int) -> Optional["FractureNetwork.Fracture"]:
+        def get_fracture(self, index: Optional[int]) -> Optional["FractureNetwork.Fracture"]:
             """
             获取此顶点周边的裂缝单元
 
             Args:
-                index (int): 裂缝单元的索引
+                index (Optional[int]): 裂缝单元的索引
 
             Returns:
                 Fracture: 此顶点周边的裂缝单元对象，如果索引无效则返回None
             """
-            index_ = get_index(index, self.fracture_number)
-            if index_ is not None:
-                return self.network.get_fracture(core.frac_nt_nd_get_bd_i(self.network.handle, self.index, index_))
+            index = get_index(index, self.fracture_number)
+            if index is not None:
+                return self.network.get_fracture(core.frac_nt_nd_get_bd_i(self.network.handle, self.index, index))
             else:
                 return None
+
+        @property
+        def fractures(self) -> Iterable['FractureNetwork.Fracture']:
+            """
+            获取所有的裂缝，用于迭代
+
+            Returns:
+                Iterator: 包含所有裂缝的迭代器对象
+            """
+            return Iterator(model=self, count=self.fracture_number, get=lambda m, ind: m.get_fracture(ind))
+
+        @property
+        def vertex_number(self) -> int:
+            """
+            获取此顶点周围的顶点的数量
+            """
+            return self.fracture_number
+
+        def get_vertex(self, index: Optional[int]) -> Optional["FractureNetwork.Vertex"]:
+            """
+            获取此顶点周围的顶点
+
+            Args:
+                index (Optional[int]): 周围的顶点的索引，从0开始
+
+            Returns:
+                Vertex: 裂缝的顶点对象，如果索引无效则返回None
+            """
+            f = self.get_fracture(index)
+            if f is None:
+                return None
+            else:
+                return f.get_another(self)
+
+        @property
+        def vertexes(self) -> Iterable['FractureNetwork.Vertex']:
+            """
+            获取此顶点周围所有的顶点，用于迭代
+
+            Returns:
+                Iterator: 包含所有顶点的迭代器对象
+            """
+            return Iterator(model=self, count=self.vertex_number, get=lambda m, ind: m.get_vertex(ind))
 
     class Fracture(FractureData):
         """
@@ -23603,19 +23519,44 @@ class FractureNetwork(HasHandle):
 
         core.use(c_size_t, 'frac_nt_bd_get_nd_i', c_void_p, c_size_t, c_size_t)
 
-        def get_vertex(self, index: int) -> Optional["FractureNetwork.Vertex"]:
+        def get_vertex(self, index: Optional[int]) -> Optional["FractureNetwork.Vertex"]:
             """
             获取裂缝的顶点
 
             Args:
-                index (int): 顶点的索引
+                index (Optional[int]): 顶点的索引
 
             Returns:
                 Vertex: 裂缝的顶点对象，如果索引无效则返回None
             """
-            index_ = get_index(index, self.vertex_number)
-            if index_ is not None:
-                return self.network.get_vertex(core.frac_nt_bd_get_nd_i(self.network.handle, self.index, index_))
+            index = get_index(index, self.vertex_number)
+            if index is not None:
+                return self.network.get_vertex(core.frac_nt_bd_get_nd_i(self.network.handle, self.index, index))
+            else:
+                return None
+
+        @property
+        def vertexes(self) -> Tuple['FractureNetwork.Vertex', 'FractureNetwork.Vertex']:
+            """
+            获取所有的顶点，用于迭代
+            """
+            v0 = self.get_vertex(0)
+            v1 = self.get_vertex(1)
+            assert isinstance(v0, FractureNetwork.Vertex)
+            assert isinstance(v1, FractureNetwork.Vertex)
+            return v0, v1
+
+        def get_another(self, vertex: "FractureNetwork.Vertex") -> Optional["FractureNetwork.Vertex"]:
+            """
+            一个Fracture有两个顶点，给定一个顶点，返回另外一个顶点
+            """
+            if vertex.network.handle != self.network.handle:
+                return None
+            v0, v1 = self.vertexes
+            if vertex.handle == v0.handle:
+                return v1
+            elif vertex.handle == v1.handle:
+                return v0
             else:
                 return None
 
@@ -23623,7 +23564,6 @@ class FractureNetwork(HasHandle):
         def pos(self) -> Tuple[float, float, float, float]:
             """
             获取裂缝的位置
-
             Returns:
                 tuple: 包含裂缝两个端点的x和y坐标的元组，格式为 (x0, y0, x1, y1)
             """
@@ -23639,7 +23579,6 @@ class FractureNetwork(HasHandle):
         def length(self) -> float:
             """
             获取裂缝的长度
-
             Returns:
                 float: 裂缝的长度，根据裂缝两个端点的位置计算
             """
@@ -23701,7 +23640,7 @@ class FractureNetwork(HasHandle):
             pass
 
     def __repr__(self) -> str:
-        return f'{type(self).__name__}(handle={self.handle}, vertex_n={self.vertex_number}, fracture_n={self.fracture_number})'
+        return f'{type(self).__name__}(handle={int(self.handle)}, vertex_n={self.vertex_number}, fracture_n={self.fracture_number})'
 
     core.use(None, 'frac_nt_save', c_void_p, c_char_p)
 
@@ -23806,19 +23745,19 @@ class FractureNetwork(HasHandle):
         """
         return core.frac_nt_get_nd_n(self.handle)
 
-    def get_vertex(self, index: int) -> Optional['FractureNetwork.Vertex']:
+    def get_vertex(self, index: Optional[int]) -> Optional['FractureNetwork.Vertex']:
         """
         获取指定索引的顶点
 
         Args:
-            index (int): 顶点的索引
+            index (Optional[int]): 顶点的索引
 
         Returns:
             Vertex: 顶点对象，如果索引无效则返回None
         """
-        index_ = get_index(index, self.vertex_number)
-        if index_ is not None:
-            return FractureNetwork.Vertex(self, index_)
+        index = get_index(index, self.vertex_number)
+        if index is not None:
+            return FractureNetwork.Vertex(self, index)
         else:
             return None
 
@@ -23834,19 +23773,19 @@ class FractureNetwork(HasHandle):
         """
         return core.frac_nt_get_bd_n(self.handle)
 
-    def get_fracture(self, index: int) -> Optional['FractureNetwork.Fracture']:
+    def get_fracture(self, index: Optional[int]) -> Optional['FractureNetwork.Fracture']:
         """
         获取指定索引的裂缝单元
 
         Args:
-            index (int): 裂缝单元的索引
+            index (Optional[int]): 裂缝单元的索引
 
         Returns:
             Fracture: 裂缝单元对象，如果索引无效则返回None
         """
-        index_ = get_index(index, self.fracture_number)
-        if index_ is not None:
-            return FractureNetwork.Fracture(self, index_)
+        index = get_index(index, self.fracture_number)
+        if index is not None:
+            return FractureNetwork.Fracture(self, index)
         else:
             return None
 
@@ -23940,8 +23879,7 @@ class FractureNetwork(HasHandle):
     core.use(None, 'frac_nt_get_induced_at', c_void_p, c_void_p, c_double, c_double, c_void_p)
     core.use(None, 'frac_nt_get_induced_along',
              c_void_p, c_void_p, c_double, c_double, c_double, c_double, c_void_p)
-    core.use(None, 'frac_nt_get_induced',
-             c_void_p, c_size_t, c_size_t, c_void_p)
+    core.use(None, 'frac_nt_get_induced', c_void_p, c_size_t, c_size_t, c_void_p)
 
     def get_induced(self, pos=None, sol2=None, buf=None, *,
                     fa_xy=None, fa_yy=None, matrix=None):
@@ -23979,11 +23917,8 @@ class FractureNetwork(HasHandle):
             return buf
 
     core.use(c_size_t, 'frac_nt_update_disp',
-             c_void_p, c_void_p,
-             c_size_t, c_size_t,
-             c_double, c_double,
-             c_size_t, c_size_t, c_double, c_double,
-             c_double, c_double)
+             c_void_p, c_void_p, c_size_t, c_size_t, c_double, c_double,
+             c_size_t, c_size_t, c_double, c_double, c_double, c_double)
 
     def update_disp(self, matrix: 'InfMatrix', fa_yy=99999999, fa_xy=99999999,
                     gradw_max=0, err_max=0.1, iter_min=10,
@@ -24015,9 +23950,8 @@ class FractureNetwork(HasHandle):
         """
         assert isinstance(matrix, InfMatrix)
         return core.frac_nt_update_disp(
-            self.handle, matrix.handle, fa_yy, fa_xy,
-            gradw_max, err_max, iter_min, iter_max,
-            ratio_max, dist_max, dn_max, ds_max)
+            self.handle, matrix.handle, fa_yy, fa_xy, gradw_max, err_max, iter_min, iter_max, ratio_max, dist_max,
+            dn_max, ds_max)
 
     core.use(None, 'frac_nt_extend_tip',
              c_void_p, c_void_p, c_void_p, c_double, c_double, c_size_t, c_double)
@@ -24030,7 +23964,7 @@ class FractureNetwork(HasHandle):
 
         其中 l_extend是扩展的长度。
         注意，默认的情况下(即lave小于等于0的时候)，将简单地在裂缝的尖端添加新的单元。
-        当lave大于0的时候，将首先尝试增加简短裂缝单元的长度。
+        当lave大于0的时候，将首先尝试增加尖端裂缝单元的长度（并在长度大于特定阈值的时候进行分割）。
 
         在2025-1-8添加了lave参数。
 
@@ -24113,7 +24047,7 @@ class InfMatrix(HasHandle):
             self.update(network=network, sol2=sol2)
 
     def __repr__(self):
-        return f'{type(self).__name__}(handle={self.handle}, size={self.size})'
+        return f'{type(self).__name__}(handle={int(self.handle)}, size={self.size})'
 
     core.use(c_size_t, 'frac_mat_size', c_void_p)
 

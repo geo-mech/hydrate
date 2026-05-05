@@ -3,19 +3,21 @@
 """
 
 from ctypes import c_double, POINTER
+from typing import Union
 
-from zml import InvasionPercolation, get_pointer64, np
+from zml import InvasionPercolation, np, f64_ptr, const_f64_ptr
 
 
-def ip_nodes_write(model: InvasionPercolation, index, pointer=None, buf=None):
+def ip_nodes_write(model: InvasionPercolation, index: Union[int, str], pointer=None, buf=None):
     """
-    导出属性:
+    导出InvasionPercolation模型的节点的属性:
         index=-1, x坐标
         index=-2, y坐标
         index=-3, z坐标
         index=-4, phase
     """
     if pointer is None:
+        assert np is not None
         if buf is None:
             buf = np.zeros(shape=model.node_n, dtype=np.float64)
             buf = np.ascontiguousarray(buf)
@@ -24,6 +26,16 @@ def ip_nodes_write(model: InvasionPercolation, index, pointer=None, buf=None):
             buf = np.ascontiguousarray(buf)
         assert buf.flags.c_contiguous, f'The buffer must be contiguous for save'
         pointer = buf.ctypes.data_as(POINTER(c_double))
+
+    if isinstance(index, str):
+        if index == 'x':
+            index = -1
+        elif index == 'y':
+            index = -2
+        elif index == 'z':
+            index = -3
+        elif index == 'phase':
+            index = -4
 
     if index == -1 or index == -2 or index == -3:
         model.write_pos(-index - 1, pointer)
@@ -35,7 +47,8 @@ def ip_nodes_write(model: InvasionPercolation, index, pointer=None, buf=None):
         return None
 
 
-def _get_buf(count, buf=None):
+def _get_buf(count: int, buf=None):
+    assert np is not None
     if buf is None:
         buf = np.zeros(shape=count, dtype=np.float64)
         buf = np.ascontiguousarray(buf)
@@ -45,7 +58,7 @@ def _get_buf(count, buf=None):
     return buf
 
 
-def get_pos(model: InvasionPercolation, dim, buf=None):
+def get_pos(model: InvasionPercolation, dim: int, buf=None):
     """
     获得节点的坐标.
     Args:
@@ -56,8 +69,9 @@ def get_pos(model: InvasionPercolation, dim, buf=None):
     Returns:
         ndarray: 使用numpy的数组表示的坐标
     """
+    assert dim in [0, 1, 2], f'dim must be 0, 1, or 2, but got {dim}'
     buf = _get_buf(model.node_n, buf)
-    model.write_pos(dim, get_pointer64(buf))
+    model.write_pos(dim, f64_ptr(buf))
     return buf
 
 
@@ -75,14 +89,16 @@ def get_z(model: InvasionPercolation, buf=None):
 
 def get_phase(model: InvasionPercolation, buf=None):
     buf = _get_buf(model.node_n, buf)
-    model.write_phase(get_pointer64(buf))
+    model.write_phase(f64_ptr(buf))
     return buf
 
 
 def set_pos(model: InvasionPercolation, dim, pos):
+    assert np is not None
+    assert dim in [0, 1, 2], f'dim must be 0, 1, or 2, but got {dim}'
     if np.isscalar(pos):
         pos = np.full(shape=model.node_n, fill_value=pos)
-    model.read_pos(dim, get_pointer64(pos, readonly=True))
+    model.read_pos(dim, const_f64_ptr(pos))
 
 
 def set_x(model: InvasionPercolation, pos):
@@ -98,19 +114,20 @@ def set_z(model: InvasionPercolation, pos):
 
 
 def set_phase(model: InvasionPercolation, phase):
+    assert np is not None
     if np.isscalar(phase):
         phase = np.full(shape=model.node_n, fill_value=phase)
-    model.read_phase(get_pointer64(phase, readonly=True))
+    model.read_phase(const_f64_ptr(phase))
 
 
 def set_node_radi(model: InvasionPercolation, radi):
+    assert np is not None
     if np.isscalar(radi):
         radi = np.full(shape=model.node_n, fill_value=radi)
-    model.read_node_radi(get_pointer64(radi, readonly=True))
+    model.read_node_radi(const_f64_ptr(radi))
 
 
-def set_nodes(model: InvasionPercolation, count,
-              x=None, y=None, z=None, phase=None, radi=None):
+def set_nodes(model: InvasionPercolation, count, x=None, y=None, z=None, phase=None, radi=None):
     assert model.node_n == 0
     model.add_node(count)
     if x is not None:
@@ -128,16 +145,18 @@ def set_nodes(model: InvasionPercolation, count,
 def set_bonds(model: InvasionPercolation, count, node0, node1, radi=None):
     assert model.bond_n == 0
     model.add_bond(
-        node0=get_pointer64(node0, readonly=True),
-        node1=get_pointer64(node1, readonly=True),
+        node0=const_f64_ptr(node0),
+        node1=const_f64_ptr(node1),
         count=count)
     if radi is not None:
-        model.read_bond_radi(get_pointer64(radi, readonly=True))
+        model.read_bond_radi(const_f64_ptr(radi))
 
 
-def show_xy(model: InvasionPercolation, caption='侵入过程',
-            jx=None, jy=None, cmap=None, clabel='Phase', grid=True,
-            xlabel='x (m)', ylabel='y (m)', title='Fluid Invasion'):
+def show_xy(
+        model: InvasionPercolation, caption='Invasion Process',
+        jx=None, jy=None, cmap=None, clabel='Phase', grid=True,
+        xlabel='x (m)', ylabel='y (m)', title='Fluid Invasion'
+):
     from zmlx.plt.on_axes.data import contourf, tricontourf
     from zmlx.plt.on_axes import plot2d
     x = get_x(model)
@@ -146,9 +165,10 @@ def show_xy(model: InvasionPercolation, caption='侵入过程',
     if cmap is None:
         cmap = 'coolwarm'
     if jx is not None and jy is not None:
-        o = contourf(np.reshape(x, shape=(jx, jy)),
-                     np.reshape(y, shape=(jx, jy)),
-                     np.reshape(v, shape=(jx, jy)), cmap=cmap, cbar=dict(label=clabel))
+        assert np is not None
+        o = contourf(np.reshape(x, (jx, jy)),
+                     np.reshape(y, (jx, jy)),
+                     np.reshape(v, (jx, jy)), cmap=cmap, cbar=dict(label=clabel))
     else:
         o = tricontourf(x, y, v, cmap=cmap, cbar=dict(label=clabel))
 

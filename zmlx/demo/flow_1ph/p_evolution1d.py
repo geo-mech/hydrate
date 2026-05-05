@@ -3,17 +3,15 @@
 from zmlx import *
 
 
-def add_cell(model: Seepage, x, v, p):
+def add_cell(model: Seepage, v, p):
     """
     在一个渗流模型中(Seepage)，添加一个流体的控制单元(Seepage.Cell)
     Args:
         model: 需要添加单元的模型，Seepage类的对象
-        x: 单元的位置，x坐标
         v: 单元的体积，m3
         p: 单元的压力，Pa
     """
     c = model.add_cell()
-    c.pos = [x, 0, 0]
     c.set_pore(p=1e6, v=v, dp=1e6, dv=v * 0.1)
     c.fluid_number = 1
     c.get_fluid(0).vol = c.p2v(p)
@@ -43,17 +41,21 @@ def main():
 
     # 添加一列Cell。其中第一个和最后一个Cell的体积设置为无穷大 (1e6)，从而确保它的压力
     # 在流体流动的过程中，不会发生显著的变化.
-    add_cell(model, x=0, v=1e6, p=2e6)
-    for x in linspace(1, 19, 19):
-        add_cell(model, x=x, v=1, p=1e6)
-    add_cell(model, x=20, v=1e6, p=1e6)
+    vx = linspace(0, 20, 21)
+    for i in range(len(vx)):
+        if i == 0:
+            add_cell(model, v=1e6, p=2e6)
+        elif i+1 ==len(vx):
+            add_cell(model, v=1e6, p=1e6)
+        else:
+            add_cell(model, v=1, p=1e6)
 
     for idx in range(1, model.cell_number):
         add_face(model, idx - 1, idx, area=1, dist=1, perm=1.0e-15)
 
     items = []
     for step in range(10):
-        items.append(item('xy', seepage.get_x(model), seepage.get_p(model) / 1e6, label=f'step={step}'))
+        items.append(item('xy', vx, seepage.get_p(model) / 1e6, label=f'step={step}'))
         model.iterate(dt=1e6)
 
     plot(add_axes2, add_items, *items, item('legend'),

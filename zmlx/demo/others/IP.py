@@ -5,6 +5,7 @@ from zmlx import *
 
 
 def create(jx=100, jy=300):
+    assert np is not None
     import random
     mesh = create_cube(
         x=np.linspace(0, 100, jx + 1),
