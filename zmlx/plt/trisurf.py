@@ -1,4 +1,4 @@
-from zmlx.plt.on_axes.trisurf import add_trisurf
+from zmlx.plt.on_axes import add_trisurf
 from zmlx.plt.on_figure import add_axes3
 
 

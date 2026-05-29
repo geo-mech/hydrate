@@ -172,7 +172,8 @@ def open_url(url: str, caption=None, on_top=None, zoom_factor=None,
 
     if not use_web_engine:
         if os.path.isfile(url):
-            os.startfile(url)
+            from zmlx.alg import startfile
+            startfile(url)
         else:
             from webbrowser import open_new_tab
             open_new_tab(url)

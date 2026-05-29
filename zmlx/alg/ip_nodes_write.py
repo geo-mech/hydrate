@@ -1,4 +1,6 @@
-from zmlx.base.ip import ip_nodes_write
+from zmlx.exts import ip
+
+ip_nodes_write = ip.ip_nodes_write
 
 __all__ = [
     'ip_nodes_write'

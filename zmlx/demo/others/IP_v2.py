@@ -53,22 +53,8 @@ def create(jx=100, jy=300):
     return model
 
 
-def solve(model, jx, jy):
-    for step in range(4000):
-        gui.break_point()
-        model.iterate()
-        if step % 50 == 0:
-            print(f'step = {step}, time = {model.time}, ', end='')
-            print('Invade operations: ', end='')
-            for idx in range(model.oper_n):
-                oper = model.get_oper(idx)
-                print(f'({oper.get_node(0).index} -> {oper.get_node(1).index})',
-                      end=', ')
-            print('')
-            ip.show_xy(model, jx=jx, jy=jy)
-
-
 def execute(gui_mode=True, close_after_done=False):
+    from zmlx.demo.others.IP import solve
     jx, jy = 100, 300
     model = create(jx, jy)
     ip.set_x(model, ip.get_x(model) + ip.get_y(model) * 0.3)

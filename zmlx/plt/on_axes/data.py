@@ -179,27 +179,27 @@ def dfn2_comb(data, **opts):
     return comb(*curves)
 
 
-def get_kernels():
+def _get_kernels():
     """
     返回添加项目的内核函数
     """
     try:
-        from zmlx.plt.on_axes.cbar import add_cbar
+        from zmlx.plt.on_axes._cbar import add_cbar
     except ImportError:
         add_cbar = None
 
     try:
-        from zmlx.plt.on_axes.tricontourf import add_tricontourf
+        from zmlx.plt.on_axes._tricontourf import add_tricontourf
     except ImportError:
         add_tricontourf = None
 
     try:
-        from zmlx.plt.on_axes.surf import add_surf
+        from zmlx.plt.on_axes._surf import add_surf
     except ImportError:
         add_surf = None
 
     try:
-        from zmlx.plt.on_axes.contourf import add_contourf
+        from zmlx.plt.on_axes._contourf import add_contourf
     except ImportError:
         add_contourf = None
 
@@ -207,42 +207,42 @@ def get_kernels():
         return ax.plot(*args, **opts)
 
     try:
-        from zmlx.plt.on_axes.dfn2 import add_dfn2
+        from zmlx.plt.on_axes._dfn2 import add_dfn2
     except ImportError:
         add_dfn2 = None
 
     try:
-        from zmlx.plt.on_axes.field2 import add_field2
+        from zmlx.plt.on_axes._field2 import add_field2
     except ImportError:
         add_field2 = None
 
     try:
-        from zmlx.plt.on_axes.rc3 import add_rc3
+        from zmlx.plt.on_axes._rc3 import add_rc3
     except ImportError:
         add_rc3 = None
 
     try:
-        from zmlx.plt.on_axes.trisurf import add_trisurf
+        from zmlx.plt.on_axes._trisurf import add_trisurf
     except ImportError:
         add_trisurf = None
 
     try:
-        from zmlx.plt.on_axes.trimesh import add_trimesh
+        from zmlx.plt.on_axes._trimesh import add_trimesh
     except ImportError:
         add_trimesh = None
 
     try:
-        from zmlx.plt.on_axes.scatter import add_scatter
+        from zmlx.plt.on_axes._scatter import add_scatter
     except ImportError:
         add_scatter = None
 
     try:
-        from zmlx.plt.on_axes.fn2 import add_fn2
+        from zmlx.plt.on_axes._fn2 import add_fn2
     except ImportError:
         add_fn2 = None
 
     try:
-        from zmlx.plt.on_axes.seepage_mesh import add_seepage_mesh
+        from zmlx.plt.on_axes._seepage_mesh import add_seepage_mesh
     except ImportError:
         add_seepage_mesh = None
 
@@ -263,7 +263,7 @@ def get_kernels():
     )
 
 
-def add_item(ax, ax_item, *, kernels=None, **default_opts):
+def _add_item(ax, ax_item, *, kernels=None, **default_opts):
     if len(ax_item) == 0:  # 没有给定选项
         import warnings
         warnings.warn('没有给定项目的名称', stacklevel=2)
@@ -276,7 +276,7 @@ def add_item(ax, ax_item, *, kernels=None, **default_opts):
         return None
 
     if kernels is None:
-        kernels = get_kernels()
+        kernels = _get_kernels()
 
     # 识别别名
     for step in range(10):
@@ -335,8 +335,8 @@ def add_items(ax, *ax_items, kernels=None, **common_opts):
         一个列表，包含添加到Axes上的对象。如果项目的名称为空，则添加None到列表中。
     """
     if kernels is None:
-        kernels = get_kernels()
-    return [add_item(ax, a, kernels=kernels, **common_opts) for a in ax_items]
+        kernels = _get_kernels()
+    return [_add_item(ax, a, kernels=kernels, **common_opts) for a in ax_items]
 
 
 add_to_axes = add_items

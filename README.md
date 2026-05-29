@@ -43,7 +43,7 @@
    `zml_ui.pyw`](https://gitee.com/geomech/hydrate/blob/master/zml_ui.pyw)打开界面.
 
 注：<sup>①</sup>
-如有在Linux上运行的需求，请[联系作者](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/201703/t20170306_4755492.html);
+如有在Linux上运行的需求，请[联系作者](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/201703/t20170306_4755492.html) (在Ubuntu系统上可以正常运行，其他系统未测试);
 另外，软件计算内核采用Visual Studio编译，建议用户在运行[IGG-Hydrate](https://gitee.com/geomech/hydrate)之前，提前安装
 Visual
 Studio运行库 [VC_redist.x64.exe](https://gitee.com/geomech/hydrate/attach_files) (

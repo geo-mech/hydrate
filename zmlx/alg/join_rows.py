@@ -7,6 +7,7 @@ warnings.warn(f'{__name__} will be removed after 2026-4-15', DeprecationWarning,
 
 
 def test():
+    assert np is not None
     a = np.array([[1, 2], [3, 4]])
     b = np.array([[5, 6]])
 

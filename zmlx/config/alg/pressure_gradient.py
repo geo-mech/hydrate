@@ -5,8 +5,11 @@
 from zmlx.exts import Seepage, const_f64_ptr
 from zmlx.tfc._sand import get_face_pressure_gradient
 
-
 _keep = [get_face_pressure_gradient]
+
+import zmlx.alg.sys as warnings
+
+warnings.warn(f'{__name__} will be removed after 2027-5-25', DeprecationWarning, stacklevel=2)
 
 
 def test_1():

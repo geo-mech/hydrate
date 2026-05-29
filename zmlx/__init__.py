@@ -7,7 +7,7 @@
 import zmlx.exts as zml
 
 ########################################
-# 导入zml中的内容
+# 导入zmlx.exts中的内容
 from zmlx.exts import *
 
 
@@ -45,7 +45,7 @@ except Exception as err:
 # alg
 from zmlx.alg import (
     create_async, apply_async, sbatch, first_only, print_tag, join_paths, make_fname, clamp, linspace,
-    time2str, mass2str, fsize2str, fsys, fsys as path, ip
+    time2str, mass2str, fsize2str, fsys, fsys as path
 )
 
 ########################################
@@ -93,6 +93,7 @@ from zmlx.plt import (
     tricontourf, trimesh, contourf, plot2,
     plot_trisurf, scatter, show_rc3
 )
+import zmlx.fig as fig
 
 ########################################
 # react

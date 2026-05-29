@@ -5,6 +5,7 @@ from zmlx.exts import app_data
 from zmlx.ui.alg import create_action
 from zmlx.ui.gui_buffer import gui
 from zmlx.ui.pyqt import QtGui, QtWidgets
+from zmlx.ui.widget._parallel import CoreParallelEdit
 from zmlx.ui.widget.attr_view import AttrView
 from zmlx.ui.widget.text_browser import TextBrowser
 
@@ -18,6 +19,9 @@ class OutputWidget(QtWidgets.QWidget):
 
         self.text_browser = TextBrowser(self)
         layout.addWidget(self.text_browser)
+
+        self.parallel_edit = CoreParallelEdit(self)
+        layout.addWidget(self.parallel_edit)
 
         self.attr_view = AttrView(self)
         self.attr_view.setVisible(False)

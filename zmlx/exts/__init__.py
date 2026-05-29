@@ -39,13 +39,14 @@ from zmlx.exts._coord import *
 from zmlx.exts._interp import *
 from zmlx.exts._mat import *
 from zmlx.exts._mesh import *
-from zmlx.exts._lexpr import LinearExpr
+from zmlx.exts._lexpr import LinearExpr, create_lexpr
 from zmlx.exts._dyn import *
 from zmlx.exts._sol import ConjugateGradientSolver
 import zmlx.exts._utils as has_cells
 from zmlx.exts._seepage import Seepage, Thermal, Reaction
 from zmlx.exts._ip import InvasionPercolation
 from zmlx.exts._frac import Dfn2, Lattice3, FracAlg, FractureNetwork, InfMatrix, DDMSolution2
+import zmlx.exts._ip as ip
 
 create_dict = dict
 

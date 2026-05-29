@@ -1,3 +1,7 @@
+import zmlx.alg.sys as warnings
+
+warnings.warn(f'{__name__} will be removed after 2027-5-25', DeprecationWarning, stacklevel=2)
+
 from zmlx.alg.sys import has_module
 
 # 是否存在numpy

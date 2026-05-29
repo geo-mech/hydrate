@@ -618,7 +618,7 @@ class MainWindow(QtWidgets.QMainWindow):
         )
 
         def print_funcs():
-            self.show_string_table(list(gui.list_all()), '命令列表')
+            gui.show_string_table(list(gui.list_all()), '命令列表')
 
         def print_actions():
             names = gui.list_actions()
@@ -660,7 +660,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
         def open_cwd():
             print(f'当前工作路径：\n{os.getcwd()}\n')
-            os.startfile(os.getcwd())
+            from zmlx.alg import startfile
+            startfile(os.getcwd())
 
         self.add_action(
             menu=['帮助', '打开'], name='open_cwd',
@@ -670,8 +671,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
         def open_opath():
             from zmlx.io import opath
+            from zmlx.alg import startfile
             print(f'数据目录：\n{opath()}\n')
-            os.startfile(opath())
+            startfile(opath())
 
         self.add_action(
             menu=['帮助', '打开'], name='open_opath',
@@ -679,10 +681,12 @@ class MainWindow(QtWidgets.QMainWindow):
             slot=open_opath
         )
 
+        from zmlx.alg import startfile
+
         self.add_action(
             menu=['帮助', '打开'], name='open_app_data',
             text='AppData',
-            slot=lambda: os.startfile(app_data.root()),
+            slot=lambda: startfile(app_data.root()),
             is_enabled=lambda: lic.is_admin
         )
 
@@ -1692,7 +1696,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
         if QWebEngineView is None:
             if os.path.isfile(url):
-                os.startfile(url)
+                from zmlx.alg import startfile
+                startfile(url)
             else:
                 from webbrowser import open_new_tab
                 open_new_tab(url)

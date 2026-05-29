@@ -4,4 +4,5 @@
 
 import warnings
 
-warnings.warn("The module zmlx.base is deprecated. Please use zmlx.alg instead.", DeprecationWarning, stacklevel=2)
+warnings.warn("The module zmlx.base is deprecated (will be removed after 2027-5-17)",
+              DeprecationWarning, stacklevel=2)

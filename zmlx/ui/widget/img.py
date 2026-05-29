@@ -195,3 +195,17 @@ class ImageView(QtWidgets.QGraphicsView):
         # 还原 anchor
         self.setTransformationAnchor(
             QtWidgets.QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+
+
+def test():
+    from zmlx.data import get_path
+    import sys
+    app = QtWidgets.QApplication(sys.argv)
+    w = ImageView()
+    w.set_image(get_path('igg.png'))
+    w.show()
+    sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    test()

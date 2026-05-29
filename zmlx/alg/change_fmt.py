@@ -1,6 +1,7 @@
-import zmlx.alg.sys as warnings
+import sys
 
-from zmlx.filesys.change_fmt import *
+import zmlx.alg.sys as warnings
+from zmlx.tfc import seepage2txt, txt2seepage
 
 warnings.warn(f'The module {__name__} will be removed after 2026-4-15',
               DeprecationWarning, stacklevel=2)

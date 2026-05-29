@@ -3,7 +3,7 @@
 from zmlx import tfc, Tensor3, Seepage
 from zmlx.demo.hydrate.co2 import create, solve
 from zmlx.io import opath
-from zmlx.seepage_mesh.edit import add_cell_face
+from zmlx.seepage_mesh import add_cell_face
 from zmlx.seepage_mesh.xz_half import create_xz_half
 from zmlx.tfc import timer
 from zmlx.utility import GuiIterator

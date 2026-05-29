@@ -1,20 +1,20 @@
 """
 在这里，处理对axes的各种操作。这是定义绘图的底层的操作。
 """
+from zmlx.plt.on_axes._cbar import add_cbar
+from zmlx.plt.on_axes._contourf import add_contourf as contourf, add_contourf
+from zmlx.plt.on_axes._dfn2 import add_dfn2
+from zmlx.plt.on_axes._field2 import add_field2
+from zmlx.plt.on_axes._fn2 import add_fn2
 from zmlx.plt.on_axes._legend import add_legend
-from zmlx.plt.on_axes.cbar import add_cbar
-from zmlx.plt.on_axes.contourf import add_contourf as contourf, add_contourf
+from zmlx.plt.on_axes._rc3 import add_rc3
+from zmlx.plt.on_axes._scatter import add_scatter as scatter3, add_scatter
+from zmlx.plt.on_axes._seepage_mesh import add_seepage_mesh
+from zmlx.plt.on_axes._surf import add_surf
+from zmlx.plt.on_axes._tricontourf import add_tricontourf as tricontourf, add_tricontourf
+from zmlx.plt.on_axes._trimesh import add_trimesh
+from zmlx.plt.on_axes._trisurf import add_trisurf as trisurf3, add_trisurf
 from zmlx.plt.on_axes.data import item, add_items, plot2d, plot3d
-from zmlx.plt.on_axes.dfn2 import add_dfn2
-from zmlx.plt.on_axes.field2 import add_field2
-from zmlx.plt.on_axes.fn2 import add_fn2
-from zmlx.plt.on_axes.rc3 import add_rc3
-from zmlx.plt.on_axes.scatter import add_scatter as scatter3, add_scatter
-from zmlx.plt.on_axes.seepage_mesh import add_seepage_mesh
-from zmlx.plt.on_axes.surf import add_surf
-from zmlx.plt.on_axes.tricontourf import add_tricontourf as tricontourf, add_tricontourf
-from zmlx.plt.on_axes.trimesh import add_trimesh
-from zmlx.plt.on_axes.trisurf import add_trisurf as trisurf3, add_trisurf
 
 _keep = [contourf, trisurf3, tricontourf, scatter3, item, add_items]
 

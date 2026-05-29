@@ -1,7 +1,7 @@
 # ** desc = '基于井筒换热的地热开发模拟(存在尚未发现的bug)'
 
 from zmlx import *
-from zmlx.seepage_mesh.wellbore import create_wellbore
+from zmlx.seepage_mesh import create_wellbore
 
 
 def create_well(rate_inj=None, temp_inj=None, heat_cond=2.0, dist=0.1):

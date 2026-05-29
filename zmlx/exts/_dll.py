@@ -473,7 +473,7 @@ class DllCore:
 
 
 # 动态库对象
-dll = load_cdll('zml.dll' if in_windows() else 'zml_impl.so', first=os.path.dirname(os.path.realpath(__file__)))
+dll = load_cdll('zml.dll' if in_windows() else 'zml.so', first=os.path.dirname(os.path.realpath(__file__)))
 
 # 对动态库对象的进一步的封装
 core = DllCore(dll_obj=dll)

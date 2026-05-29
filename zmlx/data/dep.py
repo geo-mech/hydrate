@@ -1,10 +1,16 @@
 # zmlx 计算模块运行所需要的第三方的包
+
+import sys
+
 package_names = [
     'numpy', 'scipy', 'matplotlib', 'pyqtgraph',
     'PyQt6', 'PyQt6-WebEngine', 'pyqt6-qscintilla',
-    'PyOpenGL', 'pypiwin32', 'pywin32', 'dulwich',
+    'PyOpenGL', 'dulwich',
     'pillow', 'pyvista', 'pyvistaqt', 'vtk', 'pandas', 'openpyxl'
 ]
+
+if sys.platform.startswith('win'):
+    package_names.extend(['pypiwin32', 'pywin32'])
 
 # zmlx 计算模块运行所需要的第三方的包的导入名(根据包名)
 import_names = {

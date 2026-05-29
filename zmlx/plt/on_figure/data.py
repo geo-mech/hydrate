@@ -59,7 +59,7 @@ def auto_layout(*axes_items, aspect_ratio=1.0, **opts):
 
 
 def add_items(figure, *items, **common_opts):
-    from zmlx.plt.on_figure.subplot import add_subplot
+    from zmlx.plt.on_figure._subplot import add_subplot
     from zmlx.plt.on_axes.data import add_items as add_to_axes
 
     for a in items:

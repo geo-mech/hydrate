@@ -52,9 +52,10 @@ def create(jx=100, jy=300):
 
 
 def solve(model, jx, jy):
+    it = GuiIterator(iterate=model.iterate, plot=lambda: ip.show_xy(model, jx=jx, jy=jy), ratio=0.2)
     for step in range(4000):
         gui.break_point()
-        model.iterate()
+        it(forced_plot=step % 50 == 0)
         if step % 50 == 0:
             print(f'step = {step}, time = {model.time}, ', end='')
             print('Invade operations: ', end='')
@@ -63,7 +64,6 @@ def solve(model, jx, jy):
                 print(f'({oper.get_node(0).index} -> {oper.get_node(1).index})',
                       end=', ')
             print('')
-            ip.show_xy(model, jx=jx, jy=jy)
 
 
 def execute(gui_mode=True, close_after_done=False):

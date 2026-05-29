@@ -15,6 +15,7 @@ from zmlx.seepage_mesh.edit import (
     swap_yz as seepage_mesh_swap_yz,
     swap_xy as seepage_mesh_swap_xy,
     swap_xz as seepage_mesh_swap_xz)
+from zmlx.seepage_mesh.wellbore import create_wellbore
 
 get_path = SelfPath(__file__)
 

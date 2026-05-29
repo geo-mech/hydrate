@@ -95,37 +95,9 @@ def create(years_heating=5.0, years_max=8.0, power=5e3):
     return model
 
 
-def show(model: Seepage, caption=None):
-    def on_figure(fig):
-        from zmlx.plt import calculate_subplot_layout
-        n_rows, n_cols = calculate_subplot_layout(8, subplot_aspect_ratio=0.5, fig=fig)
-        opts = dict(ncols=n_cols, nrows=n_rows, xlabel='x', ylabel='z', aspect='equal')
-        mask = get_cell_mask(model=model, yr=[-3, 3], zr=[-15, 15])
-        x = tfc.get_x(model, mask=mask)
-        z = tfc.get_z(model, mask=mask)
-        args = ['tricontourf', x, z, ]
-        t = tfc.get_t(model, mask=mask)
-        add_axes2(fig, add_items, item(*args, t, cbar=dict(label='温度', shrink=0.6), cmap='coolwarm'),
-                  title='温度', index=1, **opts)
-        p = tfc.get_p(model, mask=mask)
-        add_axes2(fig, add_items, item(*args, p, cbar=dict(label='压力', shrink=0.6), cmap='jet'),
-                  title='压力', index=2, **opts)
-        v = tfc.get_v(model, mask=mask)
-        index = 3
-        for fid in ['kg', 'ho', 'lo', 'ch4', 'h2o', 'steam', ]:
-            s = tfc.get_v(model, mask=mask, fid=fid) / v
-            add_axes2(fig, add_items, item(*args, s, cbar=dict(label=f'{fid}饱和度', shrink=0.6)),
-                      title=f'{fid}饱和度', index=index, **opts)
-            index += 1
-
-    plot(on_figure, caption=caption, clear=True, tight_layout=True,
-         suptitle=f'time = {tfc.get_time(model, as_str=True)}'
-         )
-
-
 def main():
     model = create()
-    icp.solve(model=model, extra_plot=lambda: show(model, caption='当前状态'))
+    icp.solve(model=model, extra_plot=lambda: icp.show_xz(model, caption='当前状态', yr=[-3, 3], zr=[-15, 15]))
 
 
 if __name__ == '__main__':

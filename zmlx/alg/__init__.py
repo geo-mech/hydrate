@@ -8,14 +8,16 @@ import warnings
 
 from zmlx.alg._code_config import code_config
 from zmlx.alg._slowdown import get_velocity_after_slowdown_by_viscosity
+from zmlx.alg._startfile import startfile  # 替代os.startfile, 实现跨平台的文件打开
 from zmlx.alg.base import (
     year_to_seconds, rand_dir3, make_index, clamp, linspace, mean, divide_list, less, is_sorted,
-    join_cols, join_rows, mass2str, time2str, fsize2str
+    join_cols, join_rows, mass2str, time2str, fsize2str,
 )
-from zmlx.alg.fsys import first_only, print_tag, join_paths, make_fname, count_lines
+from zmlx.alg.fsys import first_only, print_tag, join_paths, make_fname, count_lines, list_files, get_last_file
 from zmlx.alg.interp import create_interp1d
+from zmlx.alg.interp import interp1
 from zmlx.alg.multi_proc import create_async, apply_async
-from zmlx.alg.sys import sbatch
+from zmlx.alg.sys import sbatch, timing_show, pip_install, install_dep
 from zmlx.exts import SelfPath
 
 

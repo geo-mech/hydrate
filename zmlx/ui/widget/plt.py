@@ -3,6 +3,7 @@ import os
 import sys
 import warnings
 
+from zmlx.alg import startfile
 from zmlx.exts import in_windows, in_linux, in_macos, make_parent
 from zmlx.io import opath
 from zmlx.io.env import plt_export_dpi
@@ -11,42 +12,42 @@ from zmlx.ui.pyqt import QtWidgets, QtGui
 
 
 def set_chinese_font():
-    try:  # 设置Matplotlib支持中文显示
+    try:
         import matplotlib
-        if in_windows():
-            matplotlib.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei',
-                                                      'SimSun']  # 指定字体
-            matplotlib.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
-        elif in_linux():
-            # 使用文泉驿字体作为首选
-            matplotlib.rcParams['font.sans-serif'] = [
-                'WenQuanYi Micro Hei',
-                'Noto Sans CJK SC',
-                'Droid Sans Fallback',
-                'AR PL UMing CN',
-                'sans-serif'
-            ]
-            matplotlib.rcParams['axes.unicode_minus'] = False
-            cache_dir = matplotlib.get_cachedir()
-            cache_files = ['fontlist-v330.json', 'fontlist-v310.json']
+        import matplotlib.font_manager as fm
 
-            for cf in cache_files:
-                cache_path = os.path.join(cache_dir, cf)
-                if os.path.exists(cache_path):
-                    try:
-                        os.unlink(cache_path)
-                    except:
-                        print(f'无法删除字体缓存 {cache_path}')
-                        pass
-        elif in_macos():
-            # macOS 通常使用 .ttc 字体文件
-            matplotlib.rcParams['font.sans-serif'] = [
-                'PingFang SC',  # 苹方
-                'Hiragino Sans GB',  # 冬青黑体
-                'STHeiti',  # 华文黑体
-                'Apple SD Gothic Neo'
+        font_list = fm.findSystemFonts(fontext='ttf') + fm.findSystemFonts(fontext='otf')
+        available_fonts = set()
+        for font_path in font_list:
+            try:
+                available_fonts.add(fm.FontProperties(fname=font_path).get_name())
+            except Exception:
+                pass
+
+        if in_windows():
+            preferred_fonts = ['SimHei', 'Microsoft YaHei', 'SimSun', 'KaiTi', 'DejaVu Sans']
+        elif in_linux():
+            preferred_fonts = [
+                'Noto Sans CJK SC', 'Noto Sans CJK SC Regular', 'Noto Serif CJK SC',
+                'Noto Sans CJK TC', 'WenQuanYi Micro Hei', 'WenQuanYi Zen Hei',
+                'AR PL UKai CN', 'AR PL UMing CN', 'DejaVu Sans', 'DejaVu Serif',
+                'Liberation Sans', 'Liberation Serif', 'Droid Sans Fallback',
             ]
-            matplotlib.rcParams['axes.unicode_minus'] = False
+        elif in_macos():
+            preferred_fonts = ['PingFang SC', 'Hiragino Sans GB', 'STHeiti', 'Apple SD Gothic Neo', 'Songti SC',
+                               'DejaVu Sans']
+        else:
+            preferred_fonts = ['DejaVu Sans']
+
+        selected_fonts = [font for font in preferred_fonts if font in available_fonts] or ['DejaVu Sans']
+
+        matplotlib.rcParams.update({
+            'font.sans-serif': selected_fonts,
+            'font.family': 'sans-serif',
+            'axes.unicode_minus': False,
+            'axes.labelsize': 'large',
+            'legend.fontsize': 'large',
+        })
     except Exception as font_err:
         print(f'Error when set font: {font_err}')
 
@@ -163,7 +164,7 @@ class MatplotWidget(QtWidgets.QWidget):
         if self.__folder_save is not None:  # 打开自动保存目录
             if isinstance(self.__folder_save, str):
                 def open_dir():
-                    os.startfile(self.__folder_save)
+                    startfile(self.__folder_save)
 
                 menu.addAction(
                     create_action(
@@ -205,10 +206,10 @@ class MatplotWidget(QtWidgets.QWidget):
         try:
             self.draw()
         except Exception as e:
-            warnings.warn(f'meet exception <{e}> when run <{self.draw}>')
+            warnings.warn(f'meet exception <{e}> when run <{self.draw.__name__}>')
 
 
-def test():
+def test_1():
     app = QtWidgets.QApplication(sys.argv)
     w = MatplotWidget()
 
@@ -225,4 +226,4 @@ def test():
 
 
 if __name__ == "__main__":
-    test()
+    test_1()

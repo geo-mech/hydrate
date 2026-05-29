@@ -1,6 +1,6 @@
 from io import StringIO
 
-import numpy as np
+from zmlx.exts import np
 
 
 def text_to_numpy(text, delimiter=' '):
@@ -16,6 +16,7 @@ def text_to_numpy(text, delimiter=' '):
     返回:
     numpy.ndarray : 从文本重建的NumPy数组
     """
+    assert np is not None
     # 将字符串转换为类似文件对象
     buffer = StringIO(text)
 
@@ -46,6 +47,7 @@ def numpy_to_text(arr, fmt='%.18e', delimiter=' ', newline='\n'):
     返回:
     str : 数组的文本表示形式
     """
+    assert np is not None
     # 创建内存中的文本流
     buffer = StringIO()
 
@@ -66,6 +68,7 @@ def numpy_to_text(arr, fmt='%.18e', delimiter=' ', newline='\n'):
 
 
 def test_1():
+    assert np is not None
     # 创建示例数组
     data = np.array([[1, 2.5], [3.33, 4]])
 
@@ -95,6 +98,7 @@ def test_1():
 
 
 def test_2():
+    assert np is not None
     # 从之前保存的文本创建数组
     data_str = "1.0 2.5\n3.33 4.0"
     recovered = text_to_numpy(data_str)

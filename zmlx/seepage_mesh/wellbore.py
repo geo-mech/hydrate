@@ -1,4 +1,7 @@
-from scipy.interpolate import interp1d
+try:
+    from scipy.interpolate import interp1d
+except ImportError:
+    interp1d = None
 
 from zmlx.exts import SeepageMesh, np
 from zmlx.geometry.base import point_distance

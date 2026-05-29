@@ -1,5 +1,7 @@
 # ** desc = '天然气藏的降压开发过程模拟'
 
+import math
+
 from scipy.interpolate import NearestNDInterpolator
 
 from zmlx import *

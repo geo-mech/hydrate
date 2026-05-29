@@ -725,6 +725,7 @@ def solve(
         if hide_console_when_done:  # 求解完成后，隐藏控制台
             gui.hide_console()
         plot()
+        gui_iter.plot_timing()
         save(check_dt=False)  # 保存最终状态
 
     if close_after_done is not None and gui_mode is None:

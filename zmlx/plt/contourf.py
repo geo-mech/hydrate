@@ -40,7 +40,7 @@ contourf = plot_contourf
 
 def test():
     from zmlx.plt.on_figure import add_axes2
-    from zmlx.plt.on_axes.tricontourf import add_tricontourf
+    from zmlx.plt.on_axes._tricontourf import add_tricontourf
     import numpy as np
     from zmlx.ui import plot, gui
     def f():

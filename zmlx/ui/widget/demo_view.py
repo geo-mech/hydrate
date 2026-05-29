@@ -16,8 +16,8 @@ class DemoView(QtWidgets.QTableWidget):
         self.refresh()
 
     def refresh(self):
-        from zmlx.demo.list_demo_files import list_demo_files
-        from zmlx.demo.path import get_path
+        from zmlx.demo import list_demo_files
+        from zmlx.demo import get_path
         folder = get_path()
         self.__data = [['demo根目录', folder, folder], ]
         for path, desc in list_demo_files():
@@ -62,6 +62,7 @@ class DemoView(QtWidgets.QTableWidget):
                         else:
                             gui.exec_file(path)
             if os.path.isdir(path):
-                os.startfile(path)
+                from zmlx.alg import startfile
+                startfile(path)
         except Exception as err:
             print(err)
