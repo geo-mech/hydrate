@@ -15,17 +15,12 @@ def _vapor():
 
 
 def _he():
-    """
-    水蒸气
-    """
-    return Seepage.FluDef(name='he', den=10.0, vis=1.0e-5)
-
+    # 修正：20MPa, 80℃ 下氦气真实密度约为 27 kg/m^3，粘度约为 2.2e-5 Pa·s
+    return Seepage.FluDef(name='he', den=27.0, vis=2.2e-5)
 
 def _n2():
-    """
-    氮气
-    """
-    return Seepage.FluDef(name='n2', den=30.0, vis=1.0e-5)
+    # 修正：20MPa, 80℃ 下氮气真实密度约为 195 kg/m^3，粘度约为 2.1e-5 Pa·s
+    return Seepage.FluDef(name='n2', den=195.0, vis=2.1e-5)
 
 
 def _h2o():
