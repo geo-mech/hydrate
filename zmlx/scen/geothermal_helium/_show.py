@@ -25,7 +25,7 @@ def show_xz(model: Seepage):
     def f_t(fig):
         ax = plt.add_axes2(fig, aspect='equal', xlabel='x(m)', ylabel='z(m)', title='Temperature Field')
         plt.add_tricontourf(ax, x, z, t, cbar=dict(label='Temperature (K)'))
-
+    #氦气质量
     def f_he_mass(fig):
         ax = plt.add_axes2(fig, aspect='equal', xlabel='x(m)', ylabel='z(m)', title='he_mass Field ')
         plt.add_tricontourf(ax, x, z, he_mass, cbar=dict(label='he_mass (kg)'))
