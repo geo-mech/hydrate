@@ -79,13 +79,12 @@ def create_model():
         perm=get_perm,
         heat_cond=2.56,
         dist=0.8,
-        has_solid=False,
         dt_max=3600.0 * 24.0 * 30.0,
         gravity=[0, 0, -10]
 
     )
-    return model
 
+    return model
 
 def main():
     from zmlx.scen.geothermal_helium._show import show_xz
