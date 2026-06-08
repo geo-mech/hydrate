@@ -21,9 +21,9 @@ def create():
         return {'oil': s1, 'water': 1 - s1}
 
     # 设置3种流体，均为不可压缩的流体
-    fludefs = [Seepage.FluDef(den=1000, vis=1.0, name='oil'),
-               Seepage.FluDef(den=1000, vis=1.0e-3, name='water'),
-               Seepage.FluDef(den=1000, vis=1.0e-2, name='foam')]
+    fludefs = [FluDef(den=1000, vis=1.0, name='oil'),
+               FluDef(den=1000, vis=1.0e-3, name='water'),
+               FluDef(den=1000, vis=1.0e-2, name='foam')]
 
     # 创建模型.
     model = tfc.create(mesh, porosity=0.1, pore_modulus=100e6,

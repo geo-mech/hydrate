@@ -7,7 +7,7 @@ https://www.engineeringtoolbox.com/carbon-monoxide-d_1416.html
 """
 import zmlx.alg.sys as warnings
 
-from zmlx.exts import Interp2, Seepage
+from zmlx.exts import Interp2, FluDef
 from zmlx.fluid.conf.gas_density.CO_density import *
 from zmlx.fluid.conf.gas_viscosity.CO_viscosity import *
 
@@ -41,8 +41,8 @@ def create(tmin=280, tmax=700, pmin=1.0e6, pmax=20.0e6, name=None):
         return vis
 
     specific_heat = 1046  # J/kg K
-    return Seepage.FluDef(den=create_density(), vis=create_viscosity(),
-                          specific_heat=specific_heat, name=name)
+    return FluDef(den=create_density(), vis=create_viscosity(),
+                  specific_heat=specific_heat, name=name)
 
 
 def create_flu(*args, **kwargs):

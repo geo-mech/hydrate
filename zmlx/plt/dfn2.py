@@ -1,16 +1,8 @@
-from zmlx.plt.on_axes import add_dfn2, plot_on_axes
+import zmlx.alg.sys as warnings
+from zmlx.plt.on_ui import show_dfn2
 
-
-def show_dfn2(dfn2, **opts):
-    """
-    利用画线的方式显示一个二维的离散裂缝网络. 主要用于测试.
-    """
-    default_opts = dict(
-        aspect='equal',
-        xlabel='x / m', ylabel='y / m',
-        title='Discrete Fracture Network', tight_layout=True)
-    opts = {**default_opts, **opts}
-    plot_on_axes(add_dfn2, dfn2, **opts)
+warnings.warn(f'The module {__name__} will be removed after 2027-5-23',
+              DeprecationWarning, stacklevel=2)
 
 
 def test():

@@ -1,6 +1,6 @@
 import zmlx.alg.sys as warnings
 
-from zmlx.plt.trisurf import plot_trisurf
+from zmlx.plt.on_ui import show_trisurf as plot_trisurf
 
 _keep = [plot_trisurf]
 

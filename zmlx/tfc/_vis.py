@@ -8,8 +8,7 @@
 from typing import Optional
 
 from zmlx.exts import Seepage
-from zmlx.tfc import _cfg as settings
-from zmlx.tfc._base import as_numpy
+from zmlx.tfc._base import as_numpy, get_configs, add_config
 
 text_key = 'adjust_vis'
 
@@ -27,7 +26,8 @@ def get_settings(model: Seepage):
         'name'是流体的名字 (或者流体的ID),
         'key'是cell的属性 (一个字符串，用来存储调整粘性系数的倍率).
     """
-    return settings.get(model, text_key=text_key)
+    assert isinstance(model, Seepage), f'get_settings expect Seepage, but got {type(model).__name__}'
+    return get_configs(model, text_key=text_key)
 
 
 def add_setting(
@@ -45,8 +45,9 @@ def add_setting(
     Returns:
         None
     """
+    assert isinstance(model, Seepage), f'add_setting expect Seepage, but got {type(model).__name__}'
     assert isinstance(name, str) and isinstance(key, str)
-    settings.add(model, text_key=text_key, name=name, key=key)
+    add_config(model, text_key=text_key, name=name, key=key)
 
 
 def adjust(model: Seepage):
@@ -59,6 +60,7 @@ def adjust(model: Seepage):
     Returns:
         None
     """
+    assert isinstance(model, Seepage), f'adjust expect Seepage, but got {type(model).__name__}'
     if model.temps.get('vis_backups') is not None:
         print('已经备份过流体的粘性系数. 请先恢复备份，然后才能调整粘性系数')
         return
@@ -107,6 +109,7 @@ def restore(model: Seepage):
     Returns:
         None
     """
+    assert isinstance(model, Seepage), f'restore expect Seepage, but got {type(model).__name__}'
     vis_backups = model.temps.get('vis_backups')
     if vis_backups is None:
         print('未备份过流体的粘性系数. 请先备份粘性系数，然后才能恢复粘性系数')

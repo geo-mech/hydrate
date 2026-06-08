@@ -214,8 +214,7 @@ class XyEdit(DataEdit):
         self.opts.update(opts)
 
     def on_figure(self, fig, data):
-        from zmlx.plt.on_figure import add_axes2
-        from zmlx.plt.curve2 import add_curve2
+        from zmlx.plt import add_axes2, add_curve2
         fig.clear()
         add_axes2(fig, add_curve2, data[:, 0], data[:, 1], **self.opts)
 
@@ -258,8 +257,7 @@ class XyzEdit(DataEdit):
         self.opts.update(opts)
 
     def on_figure(self, fig, data):
-        from zmlx.plt.on_figure import add_axes3
-        from zmlx.plt.trisurf import add_trisurf
+        from zmlx.plt import add_axes3, add_trisurf
         fig.clear()
         add_axes3(fig, add_trisurf, data[:, 0], data[:, 1], data[:, 2], **self.opts)
 

@@ -151,7 +151,7 @@ def main():
         dt1 = model.get_recommended_dt(previous_dt=dt, cfl=0.2)
 
         diffusion.iterate(model, dt=dt, recommend_dt=True)
-        dt2 = diffusion.get_dt_next(model)
+        dt2 = tfc.get_dt_next(model)
 
         dt = min(dt1, dt2, 1.0e9)
         if step % 10 == 0:

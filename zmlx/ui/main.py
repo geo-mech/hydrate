@@ -4,8 +4,8 @@ import sys
 from typing import Optional, Tuple, List, Union
 
 import zmlx.alg.sys as warnings
-from zmlx.exts import lic, core, app_data, read_text, get_dir, contain_chinese
 from zmlx.alg.fsys import has_permission, samefile, time_string, print_tag
+from zmlx.exts import lic, core, app_data, read_text, get_dir, contain_chinese
 from zmlx.ui import settings
 from zmlx.ui.alg import open_url, get_last_exec_history, install_package, set_plt_export_dpi, play_images, set_position, \
     set_shape

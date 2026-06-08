@@ -4,7 +4,7 @@
 
 import zmlx.alg.sys as warnings
 
-from zmlx.exts import data_version, Seepage
+from zmlx.exts import data_version, FluDef
 
 """
 甲烷水合物的比热随着温度和压力略有变化，但是变化的幅度很小，所以可以视为常数:
@@ -23,7 +23,7 @@ def create(name=None):
     else:
         # 之前随手写的，错了
         specific_heat = 1000.0
-    return Seepage.FluDef(
+    return FluDef(
         den=919.7,
         vis=1.0e30,
         specific_heat=specific_heat, name=name)

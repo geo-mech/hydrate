@@ -3,9 +3,9 @@ import os
 import sys
 import warnings
 
+from zmlx import app_data
 from zmlx.alg import startfile
 from zmlx.exts import in_windows, in_linux, in_macos, make_parent
-from zmlx.io import opath
 from zmlx.io.env import plt_export_dpi
 from zmlx.ui.alg import create_action
 from zmlx.ui.pyqt import QtWidgets, QtGui
@@ -81,7 +81,7 @@ class MatplotWidget(QtWidgets.QWidget):
 
         now = datetime.datetime.now()
         name = now.strftime("%Y-%m-%d-%H-%M-%S-") + f"{now.microsecond:06d}"
-        self.__folder_save = opath('matplotlib', name)
+        self.__folder_save = app_data.temp('matplotlib', name)
         self.__time_save = None
 
         # 设置主题

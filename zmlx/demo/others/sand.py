@@ -9,13 +9,13 @@ def create():
                        z=[0, 1])
 
     # 所有的流体的定义
-    fludefs = [Seepage.FluDef.create(defs=[
-        Seepage.FluDef(den=1000, vis=0.001, specific_heat=1000, name='h2o'),
-        Seepage.FluDef(den=1000, vis=0.001, specific_heat=1000,
-                       name='flu_sand')],
+    fludefs = [FluDef.create(defs=[
+        FluDef(den=1000, vis=0.001, specific_heat=1000, name='h2o'),
+        FluDef(den=1000, vis=0.001, specific_heat=1000,
+               name='flu_sand')],
         name='flu'),
-        Seepage.FluDef(den=1000, vis=1e30, specific_heat=1000,
-                       name='sol_sand')
+        FluDef(den=1000, vis=1e30, specific_heat=1000,
+               name='sol_sand')
     ]
 
     x_min, x_max = mesh.get_pos_range(0)

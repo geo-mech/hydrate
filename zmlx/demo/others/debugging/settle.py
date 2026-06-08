@@ -1,7 +1,6 @@
 # ** desc = '测试：纵向二维。重力驱动下的沉降过程'
 
 from zmlx import *
-from zmlx.tfc import _settle
 
 
 def create():
@@ -14,8 +13,8 @@ def create():
         mesh, porosity=0.1, pore_modulus=100e6, denc=1.0e6, dist=0.1,
         temperature=280, p=1e6, s={'sand': 0.5, 'h2o': 0.5},
         perm=1.0e-13, heat_cond=2.0,
-        fludefs=[Seepage.FluDef(name='sand', den=3000.0),
-                 Seepage.FluDef(name='h2o', den=1000.0)],
+        fludefs=[FluDef(name='sand', den=3000.0),
+                 FluDef(name='h2o', den=1000.0)],
         dt_max=3600 * 24, gravity=(0, 0, -10))
 
     return model

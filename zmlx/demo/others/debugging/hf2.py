@@ -1,10 +1,10 @@
 # ** desc = '页岩水力压裂 （拟三维）'
 
+from zmlx import tfc
 from zmlx.exts.frac import *
-from zmlx.plt.fig2 import show_fn2
+from zmlx.plt import show_fn2
 from zmlx.tfc import *
 from zmlx.ui import gui
-from zmlx import tfc
 
 stress = Tensor2(xx=-10e6, yy=-11e6)
 kic = Tensor2(xx=1e6, yy=1e6)

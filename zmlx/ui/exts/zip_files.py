@@ -1,8 +1,8 @@
 import os
 import zipfile
 
-from zmlx.exts import app_data
 from zmlx.alg.fsys import is_time_string
+from zmlx.exts import app_data
 from zmlx.ui.gui_buffer import gui
 
 dataname = 'zml_files.zip'

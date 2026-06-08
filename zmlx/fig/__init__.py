@@ -1,12 +1,15 @@
 """
 定义数据驱动的绘图模式
 """
-from zmlx.plt.on_axes.data import *
-from zmlx.plt.on_figure.data import *
-from zmlx.plt.on_figure.data import show as plt_show
 
-_keep = [add_to_axes, add_to_figure, show, plt_show, subplot, surface
-         ]
+# 作用在Axes上的项目
+from zmlx.fig._on_ax import *
+
+# 作用在Figure上的项目
+from zmlx.fig._on_fig import *
+
+# 基于matplotlib的绘图函数
+from zmlx.fig._plt import show, show as plt_show, plot2d, plot3d, add_to_figure, add_to_axes
 
 
 def save(fname, data):

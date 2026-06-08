@@ -1,4 +1,4 @@
-from zmlx.exts import Seepage
+from zmlx.exts import Seepage, FluDef
 from zmlx.tfc import seepage
 from zmlx.ui.alg import h_spacer
 from zmlx.ui.widget.editors import *
@@ -9,7 +9,7 @@ class FludefEdit(QtWidgets.QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.data = Seepage.FluDef()
+        self.data = FluDef()
 
         layout = QtWidgets.QVBoxLayout(self)
         self.setLayout(layout)
@@ -48,7 +48,7 @@ class FludefEdit(QtWidgets.QWidget):
         self.c_edit.editingFinished.connect(self._specific_heat_changed)
 
     def set_data(self, data):
-        if isinstance(data, Seepage.FluDef):
+        if isinstance(data, FluDef):
             self.data = data
             self.name_edit.setText(self.data.name)
             self.den_view.set_data(self.data.den)
@@ -83,7 +83,7 @@ class FludefEdit(QtWidgets.QWidget):
         gui.reg_file_type(
             '流体定义 FluDef', ['.fludef', '.xml', '.txt'],
             name='fludef',
-            init=Seepage.FluDef,
+            init=FluDef,
             widget_type=FludefEdit
         )
 

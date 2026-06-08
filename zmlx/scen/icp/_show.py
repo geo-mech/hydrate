@@ -1,5 +1,6 @@
 from zmlx.exts import Seepage
-from zmlx.plt import add_axes2, add_items, item
+from zmlx.fig import add_to_axes as add_items, item
+from zmlx.plt import add_axes2
 from zmlx.tfc import get_cell_mask, get_x, get_z, get_t, get_p, get_v, get_time
 from zmlx.ui import plot
 

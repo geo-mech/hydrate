@@ -1,16 +1,8 @@
-from zmlx.exts import Seepage
-from zmlx.alg.base import time2str
-from zmlx.alg.fsys import join_paths
-from zmlx.alg.fsys import make_fname
-from zmlx.tfc import as_numpy
-from zmlx.tfc import seepage
+from zmlx.alg import time2str, join_paths, make_fname
+from zmlx.exts import Seepage, np
+from zmlx.fig import *
+from zmlx.tfc import as_numpy, seepage
 from zmlx.ui import gui
-from zmlx import fig
-
-try:
-    import numpy as np
-except ImportError:
-    np = None
 
 
 def get_label(idim):
@@ -71,14 +63,14 @@ def show_2d_v2(
     ax_opts = dict(xlabel=get_label(dim0), ylabel=get_label(dim1), aspect='equal')
     t = seepage.get_t(model, mask=mask, shape=shape)
     p = seepage.get_p(model, mask=mask, shape=shape)
-    face = fig.tricontourf if shape is None else fig.contourf
-    ax_items = [
-        fig.axes2(
+    face = tricontourf if shape is None else contourf
+    items_on_ax = [
+        axes2(
             face(x, y, t, cbar=dict(shrink=0.6), cmap='coolwarm'),
             *other_items,
             title='温度', **ax_opts
         ),
-        fig.axes2(
+        axes2(
             face(x, y, p, cbar=dict(shrink=0.6), cmap='coolwarm'),
             *other_items,
             title='压力', **ax_opts
@@ -87,8 +79,8 @@ def show_2d_v2(
     v = seepage.get_v(model, mask=mask, shape=shape)
     for fid in fids:
         s = seepage.get_v(model, fid=fid, mask=mask, shape=shape) / v
-        ax_items.append(
-            fig.axes2(
+        items_on_ax.append(
+            axes2(
                 face(x, y, s, cbar=dict(shrink=0.6), cmap='coolwarm'),
                 *other_items,
                 title=f'{fid}饱和度', **ax_opts
@@ -96,17 +88,17 @@ def show_2d_v2(
         )
 
     if tight_layout is not None:
-        ax_items.append(fig.tight_layout())
+        items_on_ax.append(tight_layout())
 
     if caption is None:
-        caption = f"Seepage({model.handle})"
+        caption = f"Seepage({model.handle_str})"
 
-    fig.show(
-        fig.auto_layout(
-            *ax_items,
+    show(
+        auto_layout(
+            *items_on_ax,
             aspect_ratio=subplot_aspect_ratio
         ),
-        fig.suptitle(f'time = {seepage.get_time_str(model)}'),
+        suptitle(f'time = {seepage.get_time_str(model)}'),
         caption=caption, clear=True
     )
 
@@ -131,9 +123,9 @@ def show_2d(model: Seepage, folder=None, xdim=0, ydim=1):
     cell_keys = seepage.cell_keys(model)
 
     def show_key(key):
-        fig.show(
-            fig.axes2(
-                fig.tricontourf(x, y, as_numpy(model).cells.get(cell_keys[key])),
+        show(
+            axes2(
+                tricontourf(x, y, as_numpy(model).cells.get(cell_keys[key])),
                 title=f'plot when time={time2str(time)}',
             ),
             caption=key, fname=fname(key),
@@ -146,9 +138,9 @@ def show_2d(model: Seepage, folder=None, xdim=0, ydim=1):
 
     def show_s(flu_name):
         s = as_numpy(model).fluids(*model.find_fludef(flu_name)).vol / fv_all
-        fig.show(
-            fig.axes2(
-                fig.tricontourf(x, y, s),
+        show(
+            axes2(
+                tricontourf(x, y, s),
                 title=f'plot when time={time2str(time)}',
             ),
             caption=flu_name, fname=fname(flu_name),

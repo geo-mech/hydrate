@@ -30,8 +30,8 @@ def create(jx: int, jy: int, s=None, fid_inj=None) -> Seepage:
 
     # 定义流体
     fluid_defs = [
-        Seepage.FluDef(den=50, vis=1.0e-2, name='oil'),
-        Seepage.FluDef(den=1000, vis=1.0e-3, name='water')
+        FluDef(den=50, vis=1.0e-2, name='oil'),
+        FluDef(den=1000, vis=1.0e-3, name='water')
     ]
 
     if s is None:
@@ -75,30 +75,28 @@ def show(model: Seepage, jx: int, jy: int):
         jx: 模型的x方向的单元格数量
         jy: 模型的y方向的单元格数量
     """
-    from zmlx.plt import fig_items, ax_items
-
     x = tfc.get_x(model, shape=(jx, jy))
     y = tfc.get_y(model, shape=(jx, jy))
     p = tfc.get_p(model, shape=(jx, jy))
     s = tfc.get_v(model, 1, shape=(jx, jy)) / tfc.get_v(model, None, shape=(jx, jy))
 
     opts = dict(aspect='equal', xlabel='x/m', ylabel='y/m')
-    obj = fig_items.auto_layout(
-        fig_items.axes2(
-            ax_items.contourf(x, y, p, cbar=dict(label='Pressure', shrink=0.7)),
+    obj = fig.auto_layout(
+        fig.axes2(
+            fig.contourf(x, y, p, cbar=dict(label='Pressure', shrink=0.7)),
             index=1,
             title='Pressure', **opts
         ),
-        fig_items.axes2(
-            ax_items.contourf(x, y, s, cbar=dict(label='Saturation', shrink=0.7), cmap='coolwarm'),
+        fig.axes2(
+            fig.contourf(x, y, s, cbar=dict(label='Saturation', shrink=0.7), cmap='coolwarm'),
             index=2,
             title='water saturation', **opts
         ),
-        fig_items.suptitle(f'时间: {tfc.get_time(model, as_str=True)}'),
-        fig_items.tight_layout(),
+        fig.suptitle(f'时间: {tfc.get_time(model, as_str=True)}'),
+        fig.tight_layout(),
         aspect_ratio=1,
     )
-    fig_items.show(obj, caption='模型状态')
+    fig.show(obj, caption='模型状态')
 
 
 def wat_disp_oil():

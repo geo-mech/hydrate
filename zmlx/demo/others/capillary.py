@@ -103,8 +103,8 @@ def get_s(x, y, z):
 
 
 def create():
-    fludefs = [Seepage.FluDef(den=50, vis=1.0e-4, name='gas'),
-               Seepage.FluDef(den=1000, vis=1.0e-3, name='water')
+    fludefs = [FluDef(den=50, vis=1.0e-4, name='gas'),
+               FluDef(den=1000, vis=1.0e-3, name='water')
                ]
     mesh = create_cube(np.linspace(0, 100, 101),
                        np.linspace(0, 100, 101),

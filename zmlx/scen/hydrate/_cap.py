@@ -9,7 +9,7 @@ def create_caps(
         ch4_cap=None,
         others=None):
     """
-    创建扩散过程
+    利用虚拟的毛管压力，模拟组分的扩散过程，目前已经废弃.
     """
     result = []
 

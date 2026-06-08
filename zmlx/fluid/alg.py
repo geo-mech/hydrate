@@ -1,6 +1,6 @@
 import os
 
-from zmlx.exts import Interp2, Seepage, np
+from zmlx.exts import Interp2, FluDef, np
 from zmlx.io import json_ex
 from zmlx.utility.interp import Interp2 as Interpolator
 
@@ -33,7 +33,7 @@ def _load_fludef(opt, folder):
         if len(data) > 0:
             path = os.path.join(folder, data)
             assert os.path.isfile(path)
-            result = Seepage.FluDef()
+            result = FluDef()
             result.load(path)
             if isinstance(name, str):
                 assert len(name) > 0
@@ -45,7 +45,7 @@ def _load_fludef(opt, folder):
     # 此时，必须给定name
     assert isinstance(name, str)
     assert len(name) > 0
-    result = Seepage.FluDef(name=name)
+    result = FluDef(name=name)
     components = opt.get('components')
     if isinstance(components, (list, tuple)):
         for comp in components:
@@ -170,11 +170,11 @@ def from_data(data, get_t, get_p, get_den, get_vis,
     if specific_heat is None:
         specific_heat = 2000.0
 
-    return Seepage.FluDef(den=den, vis=vis, specific_heat=specific_heat,
-                          name=name)
+    return FluDef(den=den, vis=vis, specific_heat=specific_heat,
+                  name=name)
 
 
-def get_density(pre, temp, flu_def: Seepage.FluDef):
+def get_density(pre, temp, flu_def: FluDef):
     """
     返回给定压力和温度下的密度
     """
@@ -185,9 +185,9 @@ def get_density(pre, temp, flu_def: Seepage.FluDef):
     return None
 
 
-def get_viscosity(pre, temp, flu_def: Seepage.FluDef):
+def get_viscosity(pre, temp, flu_def: FluDef):
     """
-    返回给定压力和温度下的密度
+    返回给定压力和温度下的粘性系数
     """
     data = flu_def.vis
 

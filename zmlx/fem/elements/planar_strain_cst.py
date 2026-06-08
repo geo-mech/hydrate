@@ -1,7 +1,7 @@
 from zmlx.exts import np  # 当numpy没有安装的时候，np为None
 
 
-def stiffness(nodes, E, mu, thickness=1.0):
+def stiffness(nodes, E: float, mu: float, thickness: float = 1.0):
     """计算平面应变状态下常应变三角形单元的刚度矩阵(适用于无限厚的二维问题)
 
     Args:
@@ -13,6 +13,7 @@ def stiffness(nodes, E, mu, thickness=1.0):
     Returns:
         np.ndarray: 6x6的单元刚度矩阵
     """
+    assert np is not None, "numpy没有安装"
 
     # 解包节点坐标
     x0, y0 = nodes[0]
@@ -61,6 +62,7 @@ def calc_strain(nodes, displacement):
     Returns:
         np.ndarray: 应变向量 [ε_xx, ε_yy, γ_xy] (形状为(3,))
     """
+    assert np is not None, "numpy没有安装"
     # 解包节点坐标
     x0, y0 = nodes[0]
     x1, y1 = nodes[1]
@@ -101,7 +103,7 @@ def calc_stress(nodes, displacement, E, mu):
     Returns:
         np.ndarray: 应力向量 [σ_xx, σ_yy, τ_xy] (形状为(3,))
     """
-
+    assert np is not None, "numpy没有安装"
     # 1. 计算应变
     strain = calc_strain(nodes, displacement)  # 复用之前的应变函数
 

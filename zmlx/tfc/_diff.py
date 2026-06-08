@@ -6,11 +6,10 @@
 from typing import Optional
 
 from zmlx.exts import clock
-from zmlx.tfc import _cfg as settings
 from zmlx.tfc._base import (
     as_numpy, Seepage, reg_cell_tmp, reg_face_tmp,
     get_dt, get_func_opts, get_dv_relative, Map, ThreadPool,
-    set_attr, get_attr
+    add_dt_next, get_configs, put_configs, add_config
 )
 
 # 存储的text
@@ -21,14 +20,14 @@ def get_settings(model: Seepage) -> list:
     """
     读取扩散过程的设置。 对于一个模型，可以定义多个扩散的过程.
     """
-    return settings.get(model, text_key=text_key)
+    return get_configs(model, text_key=text_key)
 
 
 def set_settings(model: Seepage, data: Optional[list] = None):
     """
     写入设置
     """
-    return settings.put(model, data=data, text_key=text_key)
+    return put_configs(model, data=data, text_key=text_key)
 
 
 def add_setting(
@@ -45,18 +44,17 @@ def add_setting(
 
     if d is not None:  # 给定了扩散系数，则设置给各个Face
         if fa_d is None:
-            for index in range(20):  # 尝试注册fa_d
-                key = f'diffusion_{index}'
-                fa = model.get_face_key(key=key)
-                if fa is None:
-                    fa_d = model.reg_face_key(key=key)  # 新注册
-                    break
+            if flu1 is not None:
+                key = f"diff_{flu0}_{flu1}"
+            else:
+                assert ca_m1 is not None, "ca_m1 (溶液质量) 必须指定"
+                key = f"diff_{flu0}_{ca_m1}"
+            assert model.get_face_key(key) is None, f"Diffusion key ({key}) already exists"
+            fa_d = model.reg_face_key(key=key)  # 新注册
 
-        # 此时，上面尝试注册属性失败
         assert fa_d is not None, "fa_d (扩散系数属性) 必须指定"
 
         for face in model.faces:
-            assert isinstance(face, Seepage.Face)
             if callable(d):
                 value = d(*face.pos)
             else:
@@ -66,7 +64,7 @@ def add_setting(
     assert fa_g is not None or fa_d is not None, \
         "fa_g (face的扩散常数) 或者 fa_d(扩散系数)，必须给定一个"
 
-    settings.add(
+    add_config(
         model, text_key=text_key,
         flu0=flu0, flu1=flu1, ca_m1=ca_m1,
         fa_g=fa_g, fa_d=fa_d, ca_c=ca_c,
@@ -278,14 +276,4 @@ def iterate(*models, pool=None, **global_opts):
                 else:
                     dt_next = min(value, dt_next)
         if dt_next is not None:
-            set_dt_next(model, dt_next)
-        else:
-            set_dt_next(model, -1)
-
-
-def get_dt_next(model: Seepage):
-    return get_attr(model, 'diffusion_dt_next', default_val=-1)
-
-
-def set_dt_next(model: Seepage, dt_next):
-    set_attr(model, 'diffusion_dt_next', dt_next)
+            add_dt_next(model, dt_next, "diffusion")

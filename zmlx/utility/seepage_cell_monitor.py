@@ -173,7 +173,7 @@ class SeepageCellMonitor:
         显示累积生产曲线
         """
         try:
-            from zmlx.plt.fig2 import plot_xy
+            from zmlx.plt import show_xy
             x, y = self.get_prod(index)
             x = [xi / (3600 * 24) for xi in x]
             kw = {}
@@ -181,7 +181,7 @@ class SeepageCellMonitor:
                 caption = f'mass<{index}>'
             kw.update(caption=caption, xlabel='time/d', ylabel='kg')
             kw.update(kwargs)
-            plot_xy(x, y, **kw)
+            show_xy(x, y, **kw)
         except Exception as err:
             warnings.warn(
                 f'meet exception <{err}> when call function <{self.plot_prod}>')
@@ -191,7 +191,7 @@ class SeepageCellMonitor:
         显示生产速率曲线
         """
         try:
-            from zmlx.plt.fig2 import plot_xy
+            from zmlx.plt import show_xy
             x, y = self.get_rate(index)
             x = [xi / (3600 * 24) for xi in x]
             y = [yi * (3600 * 24) for yi in y]
@@ -200,7 +200,7 @@ class SeepageCellMonitor:
                 caption = f'rate<{index}>'
             kw.update(caption=caption, xlabel='time/d', ylabel='kg/day')
             kw.update(kwargs)
-            plot_xy(x, y, **kw)
+            show_xy(x, y, **kw)
         except Exception as err:
             warnings.warn(
                 f'meet exception <{err}> when call function <{self.plot_rate}>')

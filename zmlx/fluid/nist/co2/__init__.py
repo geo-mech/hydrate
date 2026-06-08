@@ -26,10 +26,8 @@ def test():
     flu = create(t_min=t_min, t_max=t_max, p_min=p_min, p_max=p_max)
     print(flu)
     try:
-        from zmlx.plt.fig2 import show_field2
-        show_field2(flu.den, [p_min, p_max], [t_min, t_max], caption='density')
-        show_field2(flu.vis, [p_min, p_max], [t_min, t_max],
-                    caption='viscosity')
+        from zmlx.plt import show_flu_def
+        show_flu_def(flu, [p_min, p_max], [t_min, t_max])
     except:
         pass
 

@@ -32,6 +32,6 @@ LIBS=(
 OUTPUT=zml.so
 
 $CXX "${CXXFLAGS[@]}" "${INCLUDES[@]}" \
-     -shared ./zml_linux.cpp \
+     -shared ./zml.cpp \
      "${LIBS[@]}" \
      -o $OUTPUT

@@ -51,7 +51,7 @@ def add_subplot(
 
     assert ax is not None, 'add_subplot failed.'
 
-    try: # 尝试调用 on_axes 函数绘图
+    try:  # 尝试调用 on_axes 函数绘图
         if callable(on_axes):
             on_axes(ax, *args, **kwargs)
         else:
@@ -107,3 +107,11 @@ def add_axes3(*args, **kwargs):
 def plot_on_figure(*args, **kwargs):
     from zmlx.ui import plot
     return plot(*args, **kwargs)
+
+
+def plot_on_axes(on_axes, *args, dim=2, **opts):
+    """
+    给定on_axes的函数，然后在界面上绘图。
+    """
+    add_axes = add_axes2 if dim == 2 else add_axes3
+    return plot_on_figure(add_axes, on_axes, *args, **opts)

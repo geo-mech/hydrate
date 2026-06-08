@@ -1,35 +1,8 @@
-from zmlx.plt.on_axes import add_rc3, plot_on_axes
+import zmlx.alg.sys as warnings
+from zmlx.plt.on_ui import show_rc3
 
-
-def show_rc3(
-        rc3, *, clabel=None, cbar=None, **opts):
-    """
-    绘制三维的矩形集合
-    Args:
-        rc3: 矩形集合，每个矩形用一个rect_3d对象表示
-        clabel: 颜色条的标签
-        cbar: 颜色条的参数，例如{'label': 'label', 'title': 'title'}
-        **opts: 其它传递给plot的参数
-    Returns:
-        None
-    """
-    if clabel is not None:
-        if cbar is None:
-            cbar = dict(label=clabel)
-        else:
-            cbar['label'] = clabel
-
-    default_opts = dict(
-        aspect='equal',
-        tight_layout=True,
-        xlabel='x',
-        ylabel='y',
-        zlabel='z',
-    )
-    opts = {
-        **default_opts, **opts
-    }
-    plot_on_axes(add_rc3, rc3, dim=3, cbar=cbar, **opts)
+warnings.warn(f'The module {__name__} will be removed after 2027-5-23',
+              DeprecationWarning, stacklevel=2)
 
 
 def test():

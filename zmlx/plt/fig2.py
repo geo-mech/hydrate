@@ -3,14 +3,14 @@
 """
 
 from zmlx.io.xyz import load_xyz
-from zmlx.plt.contourf import contourf
-from zmlx.plt.curve2 import plotxy, plot_xy
-from zmlx.plt.dfn2 import show_dfn2
-from zmlx.plt.field2 import show_field2
-from zmlx.plt.fn2 import show_fn2
+from zmlx.plt.on_axes import add_tricontourf
 from zmlx.plt.on_figure import add_axes2
-from zmlx.plt.tricontourf import tricontourf, add_tricontourf
-from zmlx.plt.trimesh import trimesh
+from zmlx.plt.on_ui import (
+    show_contourf as contourf, show_xy as plot_xy, show_xy as plotxy, show_dfn2, show_field2,
+    show_fn2
+)
+from zmlx.plt.on_ui import show_tricontourf as tricontourf
+from zmlx.plt.on_ui import show_trimesh as trimesh
 
 _keep = [contourf, plotxy, plot_xy, show_dfn2, show_field2,
          tricontourf, show_fn2, trimesh

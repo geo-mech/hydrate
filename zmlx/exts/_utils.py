@@ -795,15 +795,22 @@ class HasHandle(Object):
 
     @property
     def handle(self) -> c_void_p:
-        """获取对象的句柄。
-
+        """
+        获取对象的句柄。
         Returns:
             对象的句柄。
         """
         return self.__handle
 
+    @property
+    def handle_str(self):
+        """
+        获取对象的句柄的十六进制字符串表示。
+        """
+        return f'{int(self.handle): 08x}'
+
     def __repr__(self) -> str:
-        return f'{type(self).__name__}(handle={int(self.handle)})'
+        return f'{type(self).__name__}(handle={self.handle_str})'
 
     def __str__(self) -> str:
         return repr(self)
@@ -1005,8 +1012,7 @@ def plot_tricontourf(model: Any, get, caption=None, gui_only=False, title=None,
     异常:
     - 无异常抛出
     """
-    from zmlx.plt.on_axes.data import tricontourf
-    from zmlx.plt.on_figure import add_axes2, plot_on_figure
+    from zmlx.fig import tricontourf, plot2d
     from zmlx.ui import gui
 
     if gui_only and not gui.exists():
@@ -1020,8 +1026,8 @@ def plot_tricontourf(model: Any, get, caption=None, gui_only=False, title=None,
     else:
         o = tricontourf(z=z, triangulation=triangulation, levels=20, cmap='coolwarm')
 
-    plot_on_figure(add_axes2, o, xlabel='x/m', ylabel='y/m', aspect='equal', title=title,
-                   caption=caption, gui_only=gui_only, fname=fname, dpi=dpi)
+    plot2d(o, xlabel='x/m', ylabel='y/m', aspect='equal', title=title,
+           caption=caption, gui_only=gui_only, fname=fname, dpi=dpi)
 
 
 class HasCells(Object):
@@ -1193,9 +1199,10 @@ def const_f64_ptr(arr):
     if np is not None:
         arr = np.ascontiguousarray(arr, dtype=np.float64)
         return arr.ctypes.data_as(POINTER(c_double))
-    else:
-        raise ValueError(
-            f"Can not convert to POINTER(c_double). type is {type(arr)}")
+    else:  # 没有安装numpy，只能使用ctypes
+        temp = (ctypes.c_double * len(arr))(*arr)
+        p = ctypes.cast(temp, ctypes.POINTER(ctypes.c_double))
+        return p
 
 
 def f64_ptr(arr):

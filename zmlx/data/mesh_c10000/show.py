@@ -1,11 +1,9 @@
 import os
 
-from zmlx.plt.trimesh import trimesh
-
 
 def test():
     import numpy as np
-
+    from zmlx.plt import show_trimesh as trimesh
     folder = os.path.dirname(__file__)
     triangles = np.loadtxt(os.path.join(folder, "tri"), dtype=int)
     triangles -= 1

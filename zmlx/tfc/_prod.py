@@ -2,10 +2,9 @@
 控制用来生产的Cell的压力.
 """
 
-from zmlx.exts import clock
 from zmlx.alg.interp import interp1
-from zmlx.tfc import _cfg as settings
-from zmlx.tfc._base import get_time, Seepage
+from zmlx.exts import clock
+from zmlx.tfc._base import get_time, Seepage, get_configs, put_configs
 
 text_key = 'prod_settings'
 
@@ -24,14 +23,16 @@ def get_settings(model: Seepage):
     """
     读取设置
     """
-    return settings.get(model, text_key=text_key)
+    assert isinstance(model, Seepage), f'get_settings expect Seepage, but got {type(model).__name__}'
+    return get_configs(model, text_key=text_key)
 
 
 def set_settings(model: Seepage, data):
     """
     写入设置
     """
-    settings.put(model, text_key=text_key, data=data)
+    assert isinstance(model, Seepage), f'set_settings expect Seepage, but got {type(model).__name__}'
+    put_configs(model, text_key=text_key, data=data)
 
 
 def add_setting(model: Seepage,
@@ -40,6 +41,7 @@ def add_setting(model: Seepage,
     添加设置. 其中index为cell的序号
         (当index为None的时候，使用pos最为接近的Cell)
     """
+    assert isinstance(model, Seepage), f'add_setting expect Seepage, but got {type(model).__name__}'
     if index is None and pos is not None:
         # 当index没有给定的时候，使用pos来找到最为接近的index
         cell = model.get_nearest_cell(pos=pos)

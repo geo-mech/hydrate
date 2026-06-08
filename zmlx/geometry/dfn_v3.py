@@ -192,7 +192,7 @@ def create_demo(heights=None):
 
 
 def test_1():
-    from zmlx.plt.rc3 import show_rc3
+    from zmlx.plt import show_rc3
     import random
     rc3 = to_rc3(create_demo(heights=linspace(5, 10, 30)))
     color = []

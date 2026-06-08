@@ -43,24 +43,19 @@ Face的属性：
              变量速度。当Face同时定义了rate和inertia之后，才可以去考虑惯性效应。
 """
 from collections.abc import Iterable
-from typing import Optional, Dict, List, Union, Tuple
+from typing import List, Union, Tuple
 
-from zmlx.alg.base import clamp, join_cols
-from zmlx.alg.fsys import join_paths, print_tag
+from zmlx.alg import join_cols, join_paths, print_tag
 from zmlx.exts import (
-    get_average_perm, Tensor3, make_parent, SeepageMesh)
-from zmlx.geometry.base import point_distance
-from zmlx.react.alg import add_reaction
+    get_average_perm, Tensor3, make_parent, SeepageMesh, get_distance as point_distance)
+from zmlx.react import add_reaction
 from zmlx.tfc import _cap, _cond, _diff, _fluid, _heating, _inj, _prod, _sand, _solid, _step, _time
 from zmlx.tfc._base import *
 from zmlx.tfc._keys import cell_keys, face_keys, flu_keys
 from zmlx.tfc._opts import merge_opts
 from zmlx.tfc._plt import show_cells
 from zmlx.ui import gui, show_attrs, progress
-from zmlx.utility.fields import Field
-from zmlx.utility.gui_iterator import GuiIterator
-from zmlx.utility.save_manager import SaveManager
-from zmlx.utility.seepage_cell_monitor import SeepageCellMonitor
+from zmlx.utility import GuiIterator, SaveManager, SeepageCellMonitor, Field
 
 
 @clock
@@ -167,77 +162,10 @@ def _apply_reactions(*models, pool=None):
             pool.sync()  # 等待放入pool中的任务执行完毕
 
 
-@clock
-def _update_time_state(*models: Seepage):
-    """
-    更新模型的时间状态
-
-    Args:
-        *models: Seepage 模型对象列表
-
-    Returns:
-        None
-
-    该函数通过遍历模型列表，检查每个模型是否为 Seepage 类型。如果满足条件，则调用模型的 set_time 方法
-    更新模型的时间为当前时间加上时间步长（dt），并调用 set_step 方法将模型的步数增加 1。
-    """
-    for model in models:
-        assert isinstance(model, Seepage), f'The model is not Seepage. model type = {type(model)}'
-        t0 = get_time(model)
-        dt = get_dt(model)
-        assert isinstance(t0, float) and isinstance(dt, float)
-        set_time(model, t0 + dt)
-        set_step(model, get_step(model) + 1)
-
-
-@clock
-def _update_dt(*models):
-    """
-    更新模型的时间步长（dt）
-
-    Args:
-        *models: Seepage 模型对象列表
-
-    Returns:
-        None
-
-    该函数通过遍历模型列表，检查每个模型是否启用了更新时间步长功能（通过检查标签 'disable_update_dt'）。
-    如果满足条件，则跳过该模型。否则，根据模型中定义的流、热和扩散等物理量，计算下一步建议的时间步长（dt）。
-    建议的时间步长取所有计算结果中的最小值，并确保在最小和最大时间步长之间。最后，调用模型的 set_dt 方法
-    更新模型的时间步长为建议值。
-    """
-    for model in models:
-        assert isinstance(model, Seepage)
-        if model.has_tag('disable_update_dt'):
-            continue
-
-        recommended_dts = []
-        dt = get_flow_dt_next(model)
-        if dt > 0:
-            recommended_dts.append(dt)
-
-        dt = get_thermal_dt_next(model)
-        if dt > 0:
-            recommended_dts.append(dt)
-
-        dt = _diff.get_dt_next(model)
-        if dt > 0:
-            recommended_dts.append(dt)
-
-        if len(recommended_dts) > 0:
-            if len(recommended_dts) > 1:
-                recommended_dt = min(*recommended_dts)
-            else:
-                recommended_dt = recommended_dts[0]
-
-            dt = max(get_dt_min(model), min(get_dt_max(model), recommended_dt))
-            assert isinstance(dt, float), f'dt must be float. dt = {dt}'
-            set_dt(model, dt)  # 修改dt为下一步建议使用的值
-
-
 def iterate(*local_opts: Union[Seepage, dict], pool: Optional[ThreadPool] = None, **global_opts) -> int:
     """
-    在时间上向前并行地迭代一次
+    在时间上向前并行地迭代一次。按照次序迭代所有必要的流程。tfc设计的最终目标，就是模型的求解，只是调用这一个函数
+    就足够了。
 
     Args:
         *local_opts: 每个模型的迭代选项字典，或者 Seepage 模型对象
@@ -246,6 +174,13 @@ def iterate(*local_opts: Union[Seepage, dict], pool: Optional[ThreadPool] = None
 
     Returns:
         int: 执行了迭代的模型的数量 (如果所有的模型都不需要迭代，则返回0)
+
+    基本的使用方法：
+        iterate(model: Seepage): 迭代一个模型;
+        iterate(model1, model2, ..., modelN, *, pool=the_thread_pool): 并行地迭代多个模型.
+        ...
+        其他调用方法参考 iterate 函数的具体的代码.
+
     """
     if gui.exists():  # 添加断点，从而使得在这里可以暂停和终止
         gui.break_point()
@@ -309,6 +244,10 @@ def iterate(*local_opts: Union[Seepage, dict], pool: Optional[ThreadPool] = None
         warnings.warn(
             'The pool is None, but there are more than 1 models to iterate.', UserWarning, stacklevel=2)
 
+    # 首先，要清空dt_next.
+    for model in models:
+        clear_dt_next(model)
+
     # 执行定时器函数 (此过程会读取model.temps['slots'])
     _time.iterate(*models)
 
@@ -335,7 +274,8 @@ def iterate(*local_opts: Union[Seepage, dict], pool: Optional[ThreadPool] = None
     # 更新cond(基于gr以及cond_updaters)
     _cond.iterate(*models, pool=pool)
 
-    # 迭代流体
+    # 迭代流体. 注意在迭代之后，可能会添加dt_next的配置.
+    #   注意，此处添加recommend_dt选项(即便model中没有这个tag)，用于自动步长管理.
     iterate_flow(*models, pool=pool, recommend_dt=True)
 
     # 执行所有的扩散操作，这一步需要在没有固体存在的条件下进行
@@ -353,7 +293,8 @@ def iterate(*local_opts: Union[Seepage, dict], pool: Optional[ThreadPool] = None
     # 更新砂子的体积（检查在slots中是否有自定义的update_sand）
     _sand.iterate(*models, check_slots=True)
 
-    # 更新传热
+    # 更新传热。
+    #   注意，此处添加recommend_dt选项(即便model中没有这个tag)，用于自动步长管理.
     iterate_thermal(*models, pool=pool, recommend_dt=True)
 
     # 热交换
@@ -362,11 +303,21 @@ def iterate(*local_opts: Union[Seepage, dict], pool: Optional[ThreadPool] = None
     # 化学反应
     _apply_reactions(*models, pool=pool)
 
-    # 更新模型的状态
-    _update_time_state(*models)
+    # 更新模型的time和step状态
+    for model in models:
+        assert isinstance(model, Seepage), f'The model is not Seepage. model type = {type(model)}'
+        t0 = get_time(model)
+        dt = get_dt(model)
+        assert isinstance(t0, float) and isinstance(dt, float)
+        set_time(model, t0 + dt)
+        set_step(model, get_step(model) + 1)
 
     # 更新时间步长（设置动态时间步长）
-    _update_dt(*models)
+    for model in models:
+        if not model.has_tag('disable_update_dt'):
+            dt = get_dt_next(model, clear=False)  # 不清空dt_next（在下一轮迭代的之前清空）.
+            assert isinstance(dt, float), f'dt must be float. dt = {dt}'
+            set_dt(model, dt)  # 修改dt为下一步建议使用的值
 
     return len(models)  # 执行迭代的model的数量
 
@@ -787,7 +738,7 @@ def get_inited(
     model.clear_fludefs()  # 首先，要清空已经存在的流体定义.
     if fludefs is not None:
         for flu in fludefs:
-            model.add_fludef(Seepage.FluDef.create(flu))
+            model.add_fludef(FluDef.create(flu))
 
     model.clear_reactions()  # 清空已经存在的定义.
     if reactions is not None:
@@ -946,7 +897,7 @@ def create(
     model.clear_fludefs()  # 首先，要清空已经存在的流体定义.
     if fludefs is not None:
         for flu in fludefs:
-            model.add_fludef(Seepage.FluDef.create(flu))
+            model.add_fludef(FluDef.create(flu))
 
     model.clear_reactions()  # 清空已经存在的定义.
     if reactions is not None:
@@ -1049,6 +1000,8 @@ def add_mesh(model: Seepage, mesh: SeepageMesh):
 
     该函数通过遍历网格中的单元格和面，将它们添加到模型中，并设置相应的属性。
     """
+    assert isinstance(model, Seepage), f'add_mesh expect Seepage, but got {type(model).__name__}'
+
     if mesh is not None:
         ca_vol = cell_keys(model).vol
         fa_s = face_keys(model).area
@@ -1109,11 +1062,15 @@ class _AttrId:
 def set_model(
         model: Seepage, *, porosity=0.1,
         pore_modulus=1000e6, denc=1.0e6, dist=0.1,
-        temperature=280.0, p=None,
-        s=None, perm=1e-14, heat_cond=1.0,
+        temperature=280.0,
+        p=None,
+        s=None,
+        use_mass: bool = False,
+        perm=1e-14, heat_cond=1.0,
         sample_dist=None, pore_modulus_range=None,
         igr=None, bk_fv=True,
-        bk_g=True, mesh=None, **ignores):
+        bk_g=True, mesh=None,
+        **ignores):
     """
     设置模型的网格，并顺便设置其初始的状态.
 
@@ -1129,6 +1086,7 @@ def set_model(
         temperature: 温度K
         p: 压力Pa
         s: 各个相的饱和度，tuple/list/dict；
+        use_mass: 是否使用质量填充，默认值为False
         perm: 渗透率 m^2
         heat_cond: 热传导系数
         sample_dist: 样本距离，单位m；
@@ -1148,6 +1106,7 @@ def set_model(
         对于Face，需要设置面积s和长度length这两个自定义属性。否则，此函数的执行会出现错误.
 
     """
+    assert isinstance(model, Seepage), f'set_model expect Seepage, but got {type(model).__name__}'
     if len(ignores) > 0:
         print(f'Warning: The following arguments ignored in '
               f'zmlx.config.seepage.set_model: {list(ignores.keys())}')
@@ -1257,6 +1216,7 @@ def set_model(
             temperature=temperature_val,
             p=p_val,
             s=s_val,
+            use_mass=use_mass,
             dist=dist_val,
             bk_fv=bk_fv_val,
             heat_cond=heat_cond_val,
@@ -1304,11 +1264,115 @@ def set_model(
         )
 
 
+def set_cell_ini(cell: Seepage.Cell, ca_mc, ca_t, fa_t, fa_c, pos=None, vol=1.0,
+                 porosity=0.1, pore_modulus=1000e6, denc=1.0e6,
+                 temperature=280.0,
+                 p=1.0,
+                 s=None,
+                 use_mass: bool = False,
+                 pore_modulus_range=None):
+    """
+    配置初始状态。必须保证给定温度和压力。
+    Args:
+        cell: Cell对象。
+        ca_mc (int): 自定义属性的索引，用于存储质量和比热的乘积，即单位温度变化的时候，内能的变化量。
+        ca_t (int): 自定义属性的索引，用于存储温度。
+        fa_t (int): 流体温度的索引。
+        fa_c (int): 流体组分的索引。
+        pos (list or None, optional): Cell的位置，默认为None。
+        vol (float, optional): Cell的体积，默认为1.0。
+        porosity (float, optional): 孔隙度，默认为0.1。
+        pore_modulus (float, optional): 孔隙模量，默认为1000e6。
+        denc (float, optional): 密度和比热的乘积，默认为1.0e6。
+        temperature (float, optional): 温度，默认为280.0。
+        p (float, optional): 压力，默认为1.0。
+        s (list or None, optional): 饱和度数组，默认为None。
+        use_mass (bool, optional): 是否使用质量填充，默认为False。
+        pore_modulus_range (tuple or None, optional): 孔隙模量的有效范围，
+            默认为None。
+    Raises:
+        AssertionError: 如果孔隙模量不在有效范围内，或者孔隙度小于1.0e-6。
+    """
+    model = cell.model
+    assert isinstance(model, Seepage)
+
+    if pos is not None:
+        cell.pos = pos
+
+    if temperature is not None:
+        cell.set_attr(ca_t, temperature)
+
+    if vol is not None and denc is not None:
+        cell.set_attr(ca_mc, vol * denc)
+
+    if pore_modulus is not None:
+        if pore_modulus_range is None:
+            assert 1e6 < pore_modulus < 10000e6
+        else:
+            assert pore_modulus_range[0] < pore_modulus < pore_modulus_range[1]
+
+    if porosity is not None:
+        assert 1.0e-6 < porosity
+
+    # 确保在给定的这个p下，孔隙度等于设置的值.
+    if p is not None and vol is not None and porosity is not None and pore_modulus is not None:
+        cell.set_pore(p, vol * porosity, pore_modulus, vol * porosity)
+
+    # 设置流体的结构
+    cell.set_fluid_components(model)
+
+    # 设置组分的温度.
+    if temperature is not None:
+        for i in range(cell.fluid_number):
+            flu = cell.get_fluid(i)
+            assert flu is not None
+            flu.set_attr(fa_t, temperature)
+
+    # 更新流体的比热、密度和粘性系数
+    if p is not None:
+        cell.set_fluid_property(p=p, fa_t=fa_t, fa_c=fa_c, model=model)
+
+    if s is not None and cell.fluid_number > 0:
+        def get_s(indexes):
+            assert len(indexes) > 0
+            temp = s
+            for ind in indexes:
+                if is_array(temp):
+                    temp = temp[ind] if ind < len(temp) else 0.0
+                else:
+                    temp = temp if ind == 0 else 0.0
+            return temp
+
+        s2 = []
+        vi = []
+
+        def set_flu(flu):
+            assert isinstance(flu, Seepage.FluData)
+            if flu.component_number == 0:
+                s2.append(get_s(vi))
+            else:
+                for ind in range(flu.component_number):
+                    vi.append(ind)
+                    set_flu(flu.get_component(ind))
+                    vi.pop(-1)
+
+        for fid in range(cell.fluid_number):
+            vi.append(fid)
+            set_flu(cell.get_fluid(fid))
+            vi.pop(-1)
+
+        # 调用上一级的fill函数来填充流体
+        if p is not None:
+            cell.fill(p, s2, use_mass=use_mass)
+
+
 def set_cell(
         cell: Seepage.Cell, pos=None, vol=None,
         porosity=0.1, pore_modulus=1000e6,
         denc=1.0e6, dist=0.1,
-        temperature=280.0, p=1.0, s=None,
+        temperature=280.0, p=1.0,
+        s=None,
+        use_mass: bool = False,
         pore_modulus_range=None, bk_fv=True, heat_cond=1.0):
     """
     设置Cell的初始状态.
@@ -1324,6 +1388,7 @@ def set_cell(
         temperature: 温度，默认值为280.0
         p: 压力，默认值为1.0
         s: 饱和度，可选参数
+        use_mass: 是否使用质量填充，默认值为False
         pore_modulus_range: 孔隙模量范围，可选参数
         bk_fv: 是否备份流体体积，默认值为True
         heat_cond: 热传导系数，默认值为1.0
@@ -1352,13 +1417,17 @@ def set_cell(
     if isinstance(s, dict):  # 查表：应该尽量避免此语句执行，效率较低
         s = get_sat(list_comp(cell.model), s)
 
-    cell.set_ini(
+    set_cell_ini(
+        cell,
         ca_mc=ca.mc, ca_t=ca.temperature,
         fa_t=fa.temperature, fa_c=fa.specific_heat,
         pos=pos, vol=vol, porosity=porosity,
         pore_modulus=pore_modulus,
         denc=denc,
-        temperature=temperature, p=p, s=s,
+        temperature=temperature,
+        p=p,
+        s=s,
+        use_mass=use_mass,
         pore_modulus_range=pore_modulus_range
     )
 
@@ -1458,6 +1527,7 @@ def add_cell(model: Seepage, *args, **kwargs):
     该函数通过调用模型的 add_cell 方法创建一个新的单元格，
     然后使用 set_cell 函数设置该单元格的初始状态，并返回这个单元格对象。
     """
+    assert isinstance(model, Seepage), f'add_cell expect Seepage, but got {type(model).__name__}'
     cell = model.add_cell()
     set_cell(cell, *args, **kwargs)
     return cell
@@ -1480,6 +1550,7 @@ def add_face(model: Seepage, cell0, cell1, *args, **kwargs):
     该函数通过调用模型的 add_face 方法创建一个新的面，
     然后使用 set_face 函数设置该面的初始状态，并返回这个面对象。
     """
+    assert isinstance(model, Seepage), f'add_face expect Seepage, but got {type(model).__name__}'
     face = model.add_face(cell0, cell1)
     if face is not None:  # 应该是必然不为None的
         set_face(face, *args, **kwargs)
@@ -1491,6 +1562,7 @@ def append_cells_and_faces(model: Seepage, other: Seepage):
     将另一个模型（other）中的所有的cell和face都追加到这个模型（model）后面;
         since 2024-5-18
     """
+    assert isinstance(model, Seepage), f'append_cells_and_faces expect Seepage, but got {type(model).__name__}'
     # Add all the cells
     cell_n0 = model.cell_number
     for c in other.cells:
@@ -1510,6 +1582,7 @@ def set_solve(model: Seepage, **kw):
     """
     设置用于求解的控制参数
     """
+    assert isinstance(model, Seepage), f'set_solve expect Seepage, but got {type(model).__name__}'
     text = model.get_text(key='solve')
     if len(text) > 0:
         options = eval(text)

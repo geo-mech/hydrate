@@ -100,7 +100,7 @@ def show(model, jx, jz):
                        **opts)
         add_rect(ax)
 
-    plot(on_figure, caption=f'Seepage({model.handle})', suptitle=f'时间: {tfc.get_time(model, as_str=True)}',
+    plot(on_figure, caption=f'Seepage({model.handle_str})', suptitle=f'时间: {tfc.get_time(model, as_str=True)}',
          tight_layout=True)
 
 

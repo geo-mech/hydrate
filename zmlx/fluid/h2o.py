@@ -5,7 +5,7 @@
 import math
 
 import zmlx.alg.sys as warnings
-from zmlx.exts import Interp2, Seepage
+from zmlx.exts import Interp2, FluDef
 
 
 def create(t_min=272.0, t_max=300.0, p_min=1e6, p_max=40e6,
@@ -55,7 +55,7 @@ def create(t_min=272.0, t_max=300.0, p_min=1e6, p_max=40e6,
     if viscosity is not None:
         assert 1.0e-5 <= viscosity <= 1.0e-2
 
-    return Seepage.FluDef(
+    return FluDef(
         den=create_density() if density is None else density,
         vis=create_viscosity() if viscosity is None else viscosity,
         specific_heat=specific_heat, name=name)
@@ -68,10 +68,8 @@ def create_flu(*args, **kwargs):
 
 
 def show_all():
-    from zmlx.plt.fig2 import show_field2
-    flu = create()
-    show_field2(flu.den, [4e6, 15e6], [274, 290], caption='den')
-    show_field2(flu.vis, [4e6, 15e6], [274, 290], caption='vis')
+    from zmlx.plt import show_flu_def
+    show_flu_def(create(name='h2o'), [4e6, 15e6], [274, 290])
 
 
 if __name__ == '__main__':

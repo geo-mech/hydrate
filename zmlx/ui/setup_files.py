@@ -1,7 +1,7 @@
 import os
 
-from zmlx.exts import app_data, get_hash
 from zmlx.alg.base import clamp
+from zmlx.exts import app_data, get_hash
 
 
 def get_rank(path):

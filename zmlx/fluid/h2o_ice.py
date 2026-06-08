@@ -1,6 +1,6 @@
 import zmlx.alg.sys as warnings
 
-from zmlx.exts import Seepage
+from zmlx.exts import FluDef
 
 
 def create(name=None):
@@ -20,7 +20,7 @@ def create(name=None):
     """
     den = 917.0
     specific_heat = 2100.0
-    return Seepage.FluDef(
+    return FluDef(
         den=den,
         vis=1.0e30,
         specific_heat=specific_heat, name=name)

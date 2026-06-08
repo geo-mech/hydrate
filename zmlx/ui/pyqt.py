@@ -6,7 +6,6 @@ qt_name = None
 
 if qt_name is None:
     if 'PyQt6' in sys.modules:  # 之前已经导入了PyQt6 (直接使用)
-        from PyQt6 import QtGui, QtCore, QtWidgets
 
         qt_name = 'PyQt6'
         print('PyQt6 is already imported.')
@@ -60,33 +59,40 @@ if qt_name is None:
 
 is_pyqt5 = qt_name == 'PyQt5'
 is_pyqt6 = qt_name == 'PyQt6'
-assert is_pyqt5 or is_pyqt6, 'please make sure you have installed PyQt6 (Recommended) or PyQt5.'
 
 # QWebEngineView需要在程序正式运行之前来导入
 try:
     if is_pyqt6:
         from PyQt6.QtWebEngineWidgets import QWebEngineView
         from PyQt6.QtWebEngineCore import QWebEngineSettings
-    else:
+    elif is_pyqt5:
         from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings
+    else:
+        QWebEngineView = None
+        QWebEngineSettings = None
 except Exception as e:
     print(f'Error: {e}')
     QWebEngineView = None
     QWebEngineSettings = None
 
-if is_pyqt6:
-    from PyQt6.QtGui import QAction
-else:
-    from PyQt5.QtWidgets import QAction
+try:
+    if is_pyqt6:
+        from PyQt6.QtGui import QAction
+    elif is_pyqt5:
+        from PyQt5.QtWidgets import QAction
+    else:
+        QAction = None
+except Exception as e:
+    print(f'Error: {e}')
+    QAction = None
 
 try:
     if is_pyqt6:
         from PyQt6 import QtMultimedia
-    else:
+    elif is_pyqt5:
         from PyQt5 import QtMultimedia
-except:
+    else:
+        QtMultimedia = None
+except Exception as e:
+    print(f'Error: {e}')
     QtMultimedia = None
-
-# 所有导出的变量
-__all__ = ['QtGui', 'QtCore', 'QtWidgets', 'is_pyqt5', 'is_pyqt6', 'qt_name',
-           'QWebEngineView', 'QWebEngineSettings', 'QAction', 'QtMultimedia']

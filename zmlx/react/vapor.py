@@ -73,7 +73,7 @@ def test_1():
     参考文献：Wagner, W.; Pruss, A., The IAPWS Formulation 1995 for the Thermodynamic Properties of Ordinary Water Substance for General
         and Scientific Use, J. Phys. Chem. Ref. Data, 2002, 31, 2, 387-535, https://doi.org/10.1063/1.1461829 .
     """
-    from zmlx.plt.fig2 import plot2
+    from zmlx.fig import plot2d, xy
 
     vt = [float(i) for i in range(290, 1200)]
     vp = [exp(9.3876 - 3826.36 / (t - 45.47)) * 1.0e6 for t in vt]
@@ -88,9 +88,7 @@ def test_1():
            6.1172e6, 6.5976e6, 7.1062e6, 7.6444e6, 8.2132e6, 8.8140e6, 9.4480e6,
            10.117e6, 10.821e6, 11.563e6, 12.345e6]
 
-    d3 = {'name': 'plot', 'args': [vt1, vp1], 'kwargs': {'c': 'b'}}
-    d4 = {'name': 'plot', 'args': [vt, vp], 'kwargs': {'c': 'r'}}
-    plot2(xlabel='x', ylabel='y', data=(d3, d4))
+    plot2d(xy(vt1, vp1, c='b'), xy(vt, vp, c='r'), xlabel='x', ylabel='y')
 
 
 def test_2():
@@ -98,4 +96,4 @@ def test_2():
 
 
 if __name__ == '__main__':
-    test_2()
+    test_1()

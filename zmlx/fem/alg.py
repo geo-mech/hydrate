@@ -338,8 +338,8 @@ def _test2():
             z.append(node.pos[2])
             v.append(node.get_attr(2))
     print(x)
-    from zmlx.plt.fig2 import tricontourf
-    tricontourf(x, z, v)
+    from zmlx.plt import show_tricontourf
+    show_tricontourf(x, z, v)
 
 
 if __name__ == '__main__':

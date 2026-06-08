@@ -1,10 +1,83 @@
 """
 实现对虚拟模型的分组，确保在一个分组内，模型并行执行的时候，不会出现数据的冲突.
 """
+import warnings
 from typing import List, Set, Any, Dict, Optional, Tuple
 
-from zmlx.exts import Seepage, get_index
+from zmlx.exts import Seepage, get_index, ThreadPool
 from zmlx.tfc import seepage
+
+
+def create_group(models: List[Seepage], copy_task: Optional[seepage.CellCopyTask] = None) -> Dict[str, Any]:
+    """
+    创建一个分组. 具有models和copy_task两个键.
+    """
+    assert isinstance(models, list), f'models must be a list'
+    assert len(models) > 0, "models must be a non-empty list of Seepage objects"
+    for model in models:
+        assert isinstance(model, Seepage), "models must be a list of Seepage objects"
+
+    if copy_task is not None:
+        assert isinstance(copy_task, seepage.CellCopyTask), "copy_task must be a seepage.CellCopyTask object"
+
+    return dict(models=models, copy_task=copy_task)
+
+
+def is_group(obj: Any) -> bool:
+    """
+    判断给定的对象能否被视为一个分组
+    """
+    if not isinstance(obj, dict):
+        return False
+
+    models = obj.get('models')
+    if not isinstance(models, list):
+        return False
+
+    for model in models:
+        if not isinstance(model, Seepage):
+            return False
+
+    copy_task = obj.get('copy_task')
+    if copy_task is not None:
+        if not isinstance(copy_task, seepage.CellCopyTask):
+            return False
+    return True
+
+
+def create(
+        groups: List[Dict[str, Any]], *,
+        pool: Optional[ThreadPool] = None,
+        time: float = 0.0,
+        dt: Optional[float] = None,
+        **opts
+) -> Dict[str, Any]:
+    """
+    创建一个子域模型. 包含groups, time, dt, pool等键. 使用此函数创建，确保生成的模型符合iterate的要求
+    Args:
+        groups: 模型的分组
+        pool: 线程池
+        time: 初始时间
+        dt: 时间步长
+        **opts: 其他参数
+    Returns:
+        子域模型
+    """
+    groups_checked = []
+    for group in groups:
+        if is_group(group):
+            groups_checked.append(group)
+        else:
+            warnings.warn(f"group {group} is not a valid group", Warning, stacklevel=2)
+
+    assert dt is not None, "dt cannot be None"
+    assert dt > 0.0, "dt must be greater than 0.0"
+    res = {}
+    res.update(opts)
+    res.update(dict(
+        time=time, dt=dt, groups=groups, pool=pool
+    ))
+    return res
 
 
 def split(virtual_models: List[List[Any]]) -> List[List[int]]:

@@ -1,12 +1,7 @@
 """
 用于水合物计算的配置.
 """
-import zmlx.alg.sys as warnings
-from zmlx.exts import Seepage, log
-from zmlx.tfc.config import TherFlowConfig
-from zmlx.scen.hydrate._cap import create_caps
-from zmlx.scen.hydrate._fluid import create_fludefs
-from zmlx.scen.hydrate._react import create_reactions
+from zmlx.exts import log, FluDef
 from zmlx.fluid.ch4 import create as create_ch4
 from zmlx.fluid.ch4_hydrate import create as create_ch4_hydrate
 from zmlx.fluid.co2 import create as create_co2
@@ -21,6 +16,10 @@ from zmlx.react import dissolution
 from zmlx.react import h2o_ice as icing_react
 from zmlx.react import vapor as vapor_react
 from zmlx.react.alpha.salinity import data as salinity_c2t
+from zmlx.scen.hydrate._cap import create_caps
+from zmlx.scen.hydrate._fluid import create_fludefs
+from zmlx.scen.hydrate._react import create_reactions
+from zmlx.tfc.config import TherFlowConfig
 from zmlx.utility.capillary_effect import CapillaryEffect
 
 
@@ -183,8 +182,8 @@ class Config(TherFlowConfig):
             # 添加盐度
             inh_id = len(liq)
             # 这里，采用NaCl的密度和比热容
-            liq.append(Seepage.FluDef(den=2165.0, vis=0.001,
-                                      specific_heat=4030.0))
+            liq.append(FluDef(den=2165.0, vis=0.001,
+                              specific_heat=4030.0))
         else:
             inh_id = None
         if has_ch4_in_liq:
@@ -201,8 +200,8 @@ class Config(TherFlowConfig):
             #
             #    -- zzb, 2023-5-25
             #
-            liq.append(Seepage.FluDef(den=500.0, vis=0.001,
-                                      specific_heat=1000.0))
+            liq.append(FluDef(den=500.0, vis=0.001,
+                              specific_heat=1000.0))
         else:
             ich4_in_liq = None
         liq_id = self.add_fluid(liq)
@@ -332,4 +331,3 @@ class Config(TherFlowConfig):
             self.krf = create_krf(as_interp=True)
         else:
             self.krf = krf
-

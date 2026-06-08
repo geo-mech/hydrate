@@ -3,8 +3,8 @@
 """
 
 from zmlx.exts import Seepage, clock
-from zmlx.tfc import _cfg as settings
-from zmlx.tfc._base import get_step
+
+from zmlx.tfc._base import get_step, get_configs, add_config
 from zmlx.tfc._slots import get_slots
 
 text_key = 'step_iteration'
@@ -14,7 +14,8 @@ def get_settings(model: Seepage):
     """
     读取设置
     """
-    return settings.get(model, text_key=text_key)
+    assert isinstance(model, Seepage), f'get_settings expect Seepage, but got {type(model).__name__}'
+    return get_configs(model, text_key=text_key)
 
 
 def add_setting(
@@ -23,9 +24,10 @@ def add_setting(
     """
     添加设置
     """
+    assert isinstance(model, Seepage), f'add_setting expect Seepage, but got {type(model).__name__}'
     if name is None or start >= stop or step <= 0:
         return
-    settings.add(
+    add_config(
         model, text_key=text_key,
         start=start, step=step, stop=stop,
         name=name, args=args, kwds=kwds

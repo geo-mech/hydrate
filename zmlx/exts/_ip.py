@@ -2481,8 +2481,7 @@ def show_xy(
         jx=None, jy=None, cmap=None, clabel='Phase', grid=True,
         xlabel='x (m)', ylabel='y (m)', title='Fluid Invasion'
 ):
-    from zmlx.plt.on_axes.data import contourf, tricontourf
-    from zmlx.plt.on_axes import plot2d
+    from zmlx.fig import contourf, tricontourf, plot2d
     x = get_x(model)
     y = get_y(model)
     v = get_phase(model)

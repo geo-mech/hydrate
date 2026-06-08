@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from zmlx.exts import Interp2, Seepage
+from zmlx.exts import Interp2, FluDef
 
 'gas mixture'
 "gas mixture density, viscosity the same C2h6(ethane)"
@@ -39,8 +39,8 @@ def create(tmin=280, tmax=2000, pmin=1.0e6, pmax=40.0e6, name=None):
 
     specific_heat = 1800
 
-    return Seepage.FluDef(den=create_density(), vis=create_viscosity(),
-                          specific_heat=specific_heat, name=name)
+    return FluDef(den=create_density(), vis=create_viscosity(),
+                  specific_heat=specific_heat, name=name)
 
 
 def create_flu(*args, **kwargs):

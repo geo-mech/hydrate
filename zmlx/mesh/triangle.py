@@ -2,6 +2,7 @@
 处理三角形网格相关的算法
 """
 import math
+
 try:
     from scipy.spatial import Delaunay
 except ImportError:

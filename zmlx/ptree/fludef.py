@@ -1,6 +1,6 @@
 import os
 
-from zmlx.exts import Seepage
+from zmlx.exts import FluDef, Seepage
 from zmlx.ptree.interp2 import interp2
 from zmlx.ptree.ptree import PTree, as_ptree
 
@@ -65,7 +65,7 @@ def _from_text(text, find=None, name=None):
         if isinstance(fname, str):
             if os.path.isfile(fname):
                 try:
-                    return Seepage.FluDef(path=fname, name=name)
+                    return FluDef(path=fname, name=name)
                 except:
                     return None
             return None
@@ -76,7 +76,7 @@ def _from_text(text, find=None, name=None):
 def _from_list(data, path, name=None):
     if data is None:
         return None
-    f_def = Seepage.FluDef(name=name)
+    f_def = FluDef(name=name)
     for item in data:
         f_def.add_component(fludef(as_ptree(item, path)))
     return f_def
@@ -112,8 +112,8 @@ def fludef(pt):
             return f_def
 
         # 尝试创建并自定义
-        f_def = Seepage.FluDef(den=interp2(pt['den']), vis=interp2(pt['vis']),
-                               name=name)
+        f_def = FluDef(den=interp2(pt['den']), vis=interp2(pt['vis']),
+                       name=name)
 
         specific_heat = pt('specific_heat',
                            doc='the specific heat of the fluid')

@@ -79,7 +79,7 @@ def show(model, jx, jz):
         ax = add_axes2(*args, v1 / v, cbar=dict(label='s1', shrink=0.6), title='h2o saturation', index=3, **opts)
         ax.plot(150 + 50 * np.cos(angles), -500 + 50 * np.sin(angles), 'r--')
 
-    plot(on_figure, caption=f'Seepage({model.handle})', suptitle=f'时间: {tfc.get_time(model, as_str=True)}',
+    plot(on_figure, caption=f'Seepage({model.handle_str})', suptitle=f'时间: {tfc.get_time(model, as_str=True)}',
          tight_layout=True)
 
 

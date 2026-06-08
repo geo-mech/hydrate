@@ -4,8 +4,8 @@
 import math
 from random import uniform
 
-from zmlx.exts import Vector, is_array, np
 from zmlx.alg._code_config import code_config
+from zmlx.exts import Vector, is_array, np
 
 _keep = [code_config]
 

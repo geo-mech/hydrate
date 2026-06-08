@@ -1,7 +1,6 @@
-from zmlx.exts import Seepage, np, clock
 from zmlx.alg.vec import to_numpy
-from zmlx.tfc import _cfg as settings
-from zmlx.tfc._base import get_dt, as_numpy
+from zmlx.exts import Seepage, np, clock
+from zmlx.tfc._base import get_dt, as_numpy, get_configs, add_config
 
 text_key = 'fluid_heating'
 
@@ -10,7 +9,7 @@ def get_settings(model: Seepage):
     """
     读取设置
     """
-    return settings.get(model, text_key=text_key)
+    return get_configs(model, text_key=text_key)
 
 
 def add_setting(
@@ -28,7 +27,7 @@ def add_setting(
         None
     """
     if fluid is not None:
-        settings.add(
+        add_config(
             model, text_key=text_key, fluid=fluid,
             power=power, temp_max=temp_max)
 

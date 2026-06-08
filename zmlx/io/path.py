@@ -1,8 +1,8 @@
 import os
 
 import zmlx.alg.sys as warnings
-from zmlx.exts import app_data, get_dir, contain_chinese, make_parent, make_dirs
 from zmlx.alg.fsys import in_directory, join_paths
+from zmlx.exts import app_data, get_dir, contain_chinese, make_parent, make_dirs
 
 
 def get_path(*args, tag=None, key=None):

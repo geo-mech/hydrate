@@ -1,4 +1,0 @@
-include zml.py
-include README.md
-include zml_ui.pyw
-recursive-include zmlx *

@@ -1,7 +1,6 @@
 # ** desc = '测试：流动以及sand的沉降'
 
 from zmlx import *
-from zmlx.tfc import _settle
 
 
 def create():
@@ -16,8 +15,8 @@ def create():
 
     model = tfc.create(
         mesh=mesh, dv_relative=0.2,
-        fludefs=[Seepage.FluDef(name='h2o', den=1000.0, vis=1.0e-3),
-                 Seepage.FluDef(name='sand', den=2000.0, vis=1.0e-2)],
+        fludefs=[FluDef(name='h2o', den=1000.0, vis=1.0e-3),
+                 FluDef(name='sand', den=2000.0, vis=1.0e-2)],
         porosity=get_fai,
         pore_modulus=200e6, p=1e6, s=[1, 0], perm=1e-13, gravity=[0, -10, 0])
 

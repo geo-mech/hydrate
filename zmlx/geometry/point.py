@@ -1,9 +1,8 @@
 import math
 
-try:
-    import numpy as np
-except ImportError:
-    np = None
+from zmlx.exts import get_distance, get_distance as point_distance
+
+_keep = [point_distance]
 
 
 def get_angle(x, y):
@@ -29,24 +28,11 @@ def get_norm(p):
         向量的模长
 
     """
-    return np.linalg.norm(p)
+    return get_distance(p, [0] * len(p))
 
 
-def get_distance(p1, p2):
-    """
-    Returns the distance between two points in n-dimensional space.
-    Args:
-        p1: 第一个点的坐标
-        p2: 第二个点的坐标
-
-    Returns:
-        两个点之间的距离
-    """
-    return np.linalg.norm(
-        np.asarray(p1, dtype=np.float64) - np.asarray(p2, dtype=np.float64))
-
-
-point_distance = get_distance
+# if __name__ == '__main__':
+#     print(get_norm([3, 4]))
 
 
 def get_center(*points):
@@ -61,19 +47,16 @@ def get_center(*points):
     Raises:
         ValueError: 如果没有提供点
     """
-    if not points:
-        raise ValueError("至少需要提供一个点")
-
-    # 检查维度一致性
-    dims = [len(p) for p in points]
-    if len(set(dims)) > 1:
-        import warnings
-        warnings.warn("点的维度不一致，将使用最小维度进行计算")
-
-    n_dim = min(dims)
-    truncated_points = [p[:n_dim] for p in points]
-    center = np.mean(truncated_points, axis=0)
-    return center
+    if len(points) == 0:
+        return []
+    n_dim = min(len(p) for p in points)
+    if n_dim == 0:
+        return []
+    res = [0] * n_dim
+    for p in points:
+        for i in range(n_dim):
+            res[i] += p[i]
+    return [x / len(points) for x in res]
 
 
 def test_1():
@@ -94,9 +77,9 @@ def test_2():
     """
     测试get_center函数
     """
-    a = get_center([0, 0, -1], [1, 1, 1])
+    a = get_center([0, 0], [1, 1, 1])
     print(a)
 
-
-if __name__ == '__main__':
-    test_2()
+# if __name__ == '__main__':
+#     test_1()
+#     test_2()

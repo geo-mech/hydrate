@@ -1,8 +1,8 @@
 import os
 import timeit
 
-from zmlx.exts import app_data
 from zmlx.alg.base import time2str
+from zmlx.exts import app_data
 from zmlx.ui.alg import add_code_history, add_exec_history, get_last_exec_history
 from zmlx.ui.pyqt import QtCore
 from zmlx.ui.settings import play_error, load_priority, priority_value

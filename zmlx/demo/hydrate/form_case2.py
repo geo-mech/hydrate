@@ -64,7 +64,7 @@ def main():
     jx, jz = 50, 100
     model = create(jx, jz)
     hydrate.solve(model=model, extra_plot=lambda: show(model, jx, jz),
-              time_max=100 * 365 * 24 * 3600)
+                  time_max=100 * 365 * 24 * 3600)
 
 
 if __name__ == '__main__':

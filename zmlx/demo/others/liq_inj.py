@@ -33,10 +33,10 @@ def create():
         disable_ther=True,
         disable_heat_exchange=True,
         fludefs=[
-            Seepage.FluDef(den=50, vis=1.0e-4 * random.uniform(0.5, 1.5),
-                           name='flu0'),
-            Seepage.FluDef(den=1000, vis=1.0e-3 * random.uniform(0.5, 1.5),
-                           name='flu1')]  # 粘性有一定随机性
+            FluDef(den=50, vis=1.0e-4 * random.uniform(0.5, 1.5),
+                   name='flu0'),
+            FluDef(den=1000, vis=1.0e-3 * random.uniform(0.5, 1.5),
+                   name='flu1')]  # 粘性有一定随机性
     )
 
     cell = model.get_nearest_cell(
@@ -61,8 +61,8 @@ def show_model(model: Seepage):
     s = tfc.get_cell_fv(model, fid=1) / tfc.get_cell_fv(model)
 
     def on_figure(figure):
-        from zmlx.plt.on_figure import calc_best_layout
-        nrows, ncols = calc_best_layout(figure, 2)
+        from zmlx.plt import calculate_subplot_layout
+        nrows, ncols = calculate_subplot_layout(2, fig=figure)
         figure.suptitle(
             f'Model when time = {tfc.get_time(model, as_str=True)}')
         opts = dict(
@@ -77,7 +77,7 @@ def show_model(model: Seepage):
                   index=2, **opts
                   )
 
-    plot(on_figure, caption=f'Seepage({model.handle})', clear=True)
+    plot(on_figure, caption=f'Seepage({model.handle_str})', clear=True)
 
 
 def main():

@@ -5,7 +5,7 @@
 import math
 
 import zmlx.alg.sys as warnings
-from zmlx.exts import Seepage, Interp2
+from zmlx.exts import FluDef, Interp2
 
 
 def create(MH, NH=6, t_min=270, t_max=290, p_min=1e6, p_max=40e6, name=None):
@@ -40,18 +40,18 @@ def create(MH, NH=6, t_min=270, t_max=290, p_min=1e6, p_max=40e6, name=None):
         den.create(p_min, 0.1e6, p_max, t_min, 1, t_max, get_density)
         return den
 
-    return Seepage.FluDef(
+    return FluDef(
         den=create_density(),
         vis=1.0e30,
         specific_heat=2100.0, name=name)
 
 
 if __name__ == '__main__':
-    flu = create(100)
+    flu = create(100, name='ch4_hydrate')
     print(flu)
     try:
-        from zmlx.plt.fig2 import show_field2
+        from zmlx.plt import show_flu_def
 
-        show_field2(flu.den, [1e6, 20e6], [270, 290])
+        show_flu_def(flu, [1e6, 20e6], [270, 290])
     except:
         pass

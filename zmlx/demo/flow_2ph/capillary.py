@@ -129,8 +129,8 @@ def create(jx, jy):
     Returns:
         渗流模型
     """
-    fludefs = [Seepage.FluDef(den=50, vis=1.0e-4, name='gas'),
-               Seepage.FluDef(den=1000, vis=1.0e-3, name='water')
+    fludefs = [FluDef(den=50, vis=1.0e-4, name='gas'),
+               FluDef(den=1000, vis=1.0e-3, name='water')
                ]
 
     mesh = create_cube(

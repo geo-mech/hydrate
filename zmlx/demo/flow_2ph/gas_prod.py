@@ -8,6 +8,7 @@ from zmlx import *
 
 
 def create(jx, jz):
+    assert np is not None, "numpy is not installed"
     mesh = create_cube(
         x=np.linspace(-50, 50, jx + 1),
         y=[-0.5, 0.5],
@@ -47,7 +48,7 @@ def create(jx, jz):
         return 3e6 if is_prod(*pos) else 10e6
 
     gas = create_ch4(name='gas')
-    wat = Seepage.FluDef(den=1000.0, vis=1.0e-3, specific_heat=4200, name='wat')
+    wat = FluDef(den=1000.0, vis=1.0e-3, specific_heat=4200, name='wat')
 
     fludefs = [gas, wat]
 
@@ -74,21 +75,21 @@ def create(jx, jz):
 
 
 def show(model: Seepage, jx, jz, folder=None):
-    def on_figure(fig):
-        fig.suptitle(f'Model when time = {tfc.get_time(model, as_str=True)}')
-        opts = dict(ncols=2, nrows=1, xlabel='x/m', ylabel='z/m', aspect='equal')
+    def on_figure(figure):
+        figure.suptitle(f'Model when time = {tfc.get_time(model, as_str=True)}')
+        layout = AutoFigLayout(figure, 2, 1.3, xlabel='x/m', ylabel='z/m', aspect='equal')
         shape = [jx, jz]
         x = tfc.get_x(model, shape=shape)
         y = tfc.get_z(model, shape=shape)
         p = tfc.get_p(model, shape=shape) / 1e6
         v = tfc.get_v(model, shape=shape)
         s = tfc.get_v(model, shape=shape, fid=1) / v
-        args = [fig, add_contourf, x, y]
-        add_axes2(*args, p, title='压力 (MPa)', cbar=dict(label='Pressure', shrink=0.5), index=1, **opts)
-        add_axes2(*args, s, title='水饱和度', cbar=dict(label='Saturation', shrink=0.5), index=2, **opts)
+        args = [add_contourf, x, y]
+        layout.add_axes2(*args, p, title='压力 (MPa)', cbar=dict(label='Pressure', shrink=0.5))
+        layout.add_axes2(*args, s, title='水饱和度', cbar=dict(label='Saturation', shrink=0.5))
 
     fname = make_fname(time=tfc.get_time(model) / (3600 * 24), folder=folder, ext='jpg', unit='d')
-    plot(on_figure, caption=f'Seepage({model.handle})', clear=True, fname=fname, tight_layout=True)
+    plot(on_figure, caption=f'Seepage({model.handle_str})', clear=True, fname=fname, tight_layout=True)
 
 
 def main(folder=None):

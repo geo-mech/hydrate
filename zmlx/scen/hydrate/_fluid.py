@@ -1,5 +1,5 @@
 import zmlx.alg.sys as warnings
-from zmlx.exts import Seepage
+from zmlx.exts import FluDef
 from zmlx.fluid.ch4 import create as create_ch4
 from zmlx.fluid.ch4_hydrate import create as create_ch4_hydrate
 from zmlx.fluid.co2 import create as create_co2
@@ -85,7 +85,7 @@ def create_fludefs(
         has_inh = True
 
     # 1  气体：
-    gas = Seepage.FluDef(name='gas')
+    gas = FluDef(name='gas')
     gas.add_component(ch4_def, name='ch4')
     if has_co2:
         gas.add_component(co2_def, name='co2')
@@ -103,7 +103,7 @@ def create_fludefs(
                 当只有浓度和密度变化时，默认粘性变化为1.0。
 
         Returns:
-            Seepage.FluDef: “溶质”的流体定义
+            FluDef: “溶质”的流体定义
         """
         if data is None:
             return h2o_def
@@ -120,7 +120,7 @@ def create_fludefs(
             )
 
     # 2  液体:
-    liq = Seepage.FluDef(name='liq')
+    liq = FluDef(name='liq')
     liq.add_component(h2o_def, name='h2o')
 
     if has_inh:
@@ -129,7 +129,7 @@ def create_fludefs(
         else:
             warnings.warn('The dissolved salinity data is not defined')
             if inh_def is None:
-                inh_def = Seepage.FluDef(
+                inh_def = FluDef(
                     den=2165.0,
                     vis=0.001,
                     specific_heat=4030.0)
@@ -155,7 +155,7 @@ def create_fludefs(
             liq.add_component(item)
 
     # 3   固体:
-    sol = Seepage.FluDef(name='sol')
+    sol = FluDef(name='sol')
     sol.add_component(create_ch4_hydrate(), name='ch4_hydrate')
     sol.add_component(create_h2o_ice(), name='h2o_ice')
     if has_co2:

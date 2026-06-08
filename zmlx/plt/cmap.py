@@ -84,7 +84,6 @@ def get_cm(name=None):
         return plt.get_cmap(name if name is not None else "coolwarm")
 
 
-
 def resample(cmap, lutsize):
     assert isinstance(cmap, matplotlib.colors.Colormap)
     return cmap.resampled(lutsize)

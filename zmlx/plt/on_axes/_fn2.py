@@ -76,4 +76,3 @@ def add_fn2(
         ratio = max(xr - xl, 1.0e-10) / max(yr - yl, 1.0e-10)
         if 0.0333 <= ratio <= 33.33:
             ax.set_aspect(fn2_aspect)
-

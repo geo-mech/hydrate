@@ -1,6 +1,6 @@
 import zmlx.alg.sys as warnings
 
-from zmlx.plt.curve2 import plotxy
+from zmlx.plt.on_ui import show_xy as plotxy
 
 warnings.warn(
     f'The modulus {__name__} is deprecated and '

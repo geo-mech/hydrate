@@ -7,14 +7,14 @@ from zmlx.exts import SelfPath
 from zmlx.utility.attr_keys import AttrKeys, add_keys
 from zmlx.utility.capillary_effect import CapillaryEffect
 from zmlx.utility.fields import Field, LinearField
+from zmlx.utility.frame_rate_ctrl import FrameRateCtrl
 from zmlx.utility.gui_iterator import GuiIterator
+from zmlx.utility.heat_injector import HeatInjector
 from zmlx.utility.interp import load_field3, Interp2, Interp3
 from zmlx.utility.pressure_controller import PressureController
 from zmlx.utility.runtime_fn import RuntimeFunc
 from zmlx.utility.save_manager import SaveManager
 from zmlx.utility.seepage_cell_monitor import SeepageCellMonitor
-from zmlx.utility.frame_rate_ctrl import FrameRateCtrl
-from zmlx.utility.heat_injector import HeatInjector
 
 get_path = SelfPath(__file__)
 

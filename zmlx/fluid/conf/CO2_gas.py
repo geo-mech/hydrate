@@ -5,7 +5,7 @@
 
 import zmlx.alg.sys as warnings
 
-from zmlx.exts import Interp2, Seepage
+from zmlx.exts import Interp2, FluDef
 from zmlx.fluid.conf.gas_density.co2 import den_co2
 from zmlx.fluid.conf.gas_viscosity.co2 import gas_vis_co2
 
@@ -40,8 +40,8 @@ def create(tmin=200, tmax=500, pmin=1.0e6, pmax=20.0e6, name=None):
 
     specific_heat = 2303.56
 
-    return Seepage.FluDef(den=create_density(), vis=create_viscosity(),
-                          specific_heat=specific_heat, name=name)
+    return FluDef(den=create_density(), vis=create_viscosity(),
+                  specific_heat=specific_heat, name=name)
 
 
 def create_flu(*args, **kwargs):

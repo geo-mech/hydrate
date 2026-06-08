@@ -1,29 +1,36 @@
 """
-用以构建DynSys对象
+用以构建有限元问题等价的DynSys对象
 """
-from typing import Optional
+from typing import Optional, List
 
 from zmlx.exts import DynSys, LinearExpr
 
 
-def create_dyn(masses: list[float], elements: list[list[int]],
-               matrices,
-               velocities: Optional[list[float]] = None,
-               displacements: Optional[list[float]] = None):
+def create_dyn(
+        masses: List[float],
+        elements: List[List[int]],
+        matrices,
+        velocities: Optional[List[float]] = None,
+        displacements: Optional[List[float]] = None
+):
     """
-    创建DynSys对象. 其中DynSys的每一个自由度代表的是对应自由度的“位移”（或者“转角”），
-    即相对于初始平衡位置的偏移的量。
+    创建有限元问题等价的DynSys对象.
+    其中DynSys的每一个自由度代表的是对应自由度的“位移”（或者“转角”），即相对于初始平衡位置的偏移的量。
 
     Args:
-        masses: 自由度的质量（或者转动惯量）列表。质量（或者转动惯量）是必须给定的。
+        masses: 自由度的质量（或者转动惯量）列表。根据此List的长度来决定自由度的大小.
         elements: 单元列表。其中的每一个元素都是一个列表，包含了该单元关联的自由度的索引。
+            注意，如果一个体系包含了多种单元，那么，就在这里全部给定.
         matrices: 单元刚度矩阵列表，每个元素都是一个二维数组，
-                代表该单元的刚度矩阵（矩阵的大小，等于该单元关联的自由度的数量）。
-        displacements: 自由度的位移（或者转角）列表。如果为None，则默认所有自由度位移为0。
-        velocities: 自由度的速度（或者角速度）列表。如果为None，则默认所有自由度速度为0。
+            代表该单元的刚度矩阵（矩阵的大小，等于该单元关联的自由度的数量）.
+            如果一个体系有多种单元，也全部在这里给定.
+        displacements: 自由度的位移（或者转角）列表。
+            如果为None，则默认所有自由度位移为0。
+        velocities: 自由度的速度（或者角速度）列表。
+            如果为None，则默认所有自由度速度为0。
 
     Returns:
-        DynSys对象
+        有限元问题等价的DynSys对象
     """
     n_dof = len(masses)  # 自由度的数量
 
@@ -42,11 +49,11 @@ def create_dyn(masses: list[float], elements: list[list[int]],
         assert masses[i_dof] > 0, f"自由度{i_dof}的质量必须大于0"
         dyn.set_mass(i_dof, masses[i_dof])  # 必须设置质量
         if velocities is None:
-            dyn.set_vel(i_dof, 0)
+            dyn.set_vel(i_dof, 0.0)
         else:
             dyn.set_vel(i_dof, velocities[i_dof])
         if displacements is None:
-            dyn.set_pos(i_dof, 0)
+            dyn.set_pos(i_dof, 0.0)
         else:
             dyn.set_pos(i_dof, displacements[i_dof])
 

@@ -3,8 +3,7 @@
 """
 
 from zmlx.exts import Seepage, clock
-from zmlx.tfc import _cfg as settings
-from zmlx.tfc._base import get_time, get_dt
+from zmlx.tfc._base import get_time, get_dt, get_configs
 from zmlx.tfc._slots import get_slot, get_slots
 
 text_key = 'timers'
@@ -14,7 +13,7 @@ def get_settings(model: Seepage):
     """
     读取设置
     """
-    return settings.get(model, text_key=text_key)
+    return get_configs(model, text_key=text_key)
 
 
 def add_setting(

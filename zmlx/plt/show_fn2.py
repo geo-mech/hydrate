@@ -1,6 +1,6 @@
 import zmlx.alg.sys as warnings
 
-from zmlx.plt.fn2 import show_fn2
+from zmlx.plt.on_ui import show_fn2
 
 _keep = [show_fn2]
 warnings.warn(f'The modulus {__name__} is deprecated and '

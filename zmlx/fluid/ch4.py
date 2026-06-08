@@ -7,7 +7,7 @@ by 张召彬
 import math
 
 import zmlx.alg.sys as warnings
-from zmlx.exts import Interp2, Seepage, data_version
+from zmlx.exts import Interp2, FluDef, data_version
 
 
 def create(t_min=270, t_max=290, p_min=1e6, p_max=40e6, name=None):
@@ -48,7 +48,7 @@ def create(t_min=270, t_max=290, p_min=1e6, p_max=40e6, name=None):
     else:
         # 之前随手写的，错了
         specific_heat = 1000.0
-    return Seepage.FluDef(
+    return FluDef(
         den=create_density(), vis=create_viscosity(),
         specific_heat=specific_heat, name=name)
 
@@ -60,10 +60,8 @@ def create_flu(*args, **kwargs):
 
 
 def show_all():
-    from zmlx.plt.fig2 import show_field2
-    flu = create()
-    show_field2(flu.den, [4e6, 15e6], [274, 290], caption='den')
-    show_field2(flu.vis, [4e6, 15e6], [274, 290], caption='vis')
+    from zmlx.plt import show_flu_def
+    show_flu_def(create(name='ch4'), [4e6, 15e6], [274, 290])
 
 
 if __name__ == '__main__':

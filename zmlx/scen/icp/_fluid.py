@@ -1,4 +1,4 @@
-from zmlx.exts import Seepage
+from zmlx.exts import FluDef
 from zmlx.fluid import c11h24
 from zmlx.fluid import char
 from zmlx.fluid import kerogen
@@ -17,14 +17,14 @@ def create_fludefs():
         3. ho = heavy oil
         4. solid: kg = kerogen, char
     """
-    gas = Seepage.FluDef.create(
+    gas = FluDef.create(
         name='gas',
         defs=[create_ch4(name='ch4'),
               create_steam(name='steam')])
     h2o = create_h2o(name='h2o')
     lo = c11h24.create(name='lo')
     ho = oil.create(name='ho')
-    sol = Seepage.FluDef.create(
+    sol = FluDef.create(
         name='sol',
         defs=[kerogen.create(name='kg'),
               char.create(den=1800.0, name='char')])

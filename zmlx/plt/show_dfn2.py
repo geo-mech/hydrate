@@ -1,6 +1,6 @@
 import zmlx.alg.sys as warnings
 
-from zmlx.plt.dfn2 import show_dfn2
+from zmlx.plt.on_ui import show_dfn2
 
 _keep = [show_dfn2]
 

@@ -2,8 +2,8 @@
 热流耦合配置模块。弃用。
 """
 import zmlx.alg.sys as warnings
-
-from zmlx.exts import Object, Seepage, get_average_perm, Reaction, log
+from zmlx.exts import Object, Seepage, get_average_perm, Reaction, log, FluDef
+from zmlx.tfc._main import set_cell_ini
 from zmlx.utility.attr_keys import AttrKeys
 from zmlx.utility.fields import Field
 
@@ -13,7 +13,7 @@ class TherFlowConfig(Object):
     传热-渗流耦合模型的配置。假设流体的密度和粘性系数都是压力和温度的函数，并利用二维的插值体来表示。
     此类仅仅用于辅助Seepage类用于热流耦合模拟。
     """
-    FluProperty = Seepage.FluDef
+    FluProperty = FluDef
 
     def __init__(self, *args):
         """
@@ -247,15 +247,17 @@ class TherFlowConfig(Object):
             vol = cell.get_attr(self.cell_keys['vol'])
             assert vol is not None
 
-        cell.set_ini(ca_mc=self.cell_keys['mc'],
-                     ca_t=self.cell_keys['temperature'],
-                     fa_t=self.flu_keys['temperature'],
-                     fa_c=self.flu_keys['specific_heat'],
-                     pos=pos, vol=vol, porosity=porosity,
-                     pore_modulus=pore_modulus,
-                     denc=denc,
-                     temperature=temperature, p=p, s=s,
-                     pore_modulus_range=pore_modulus_range)
+        set_cell_ini(
+            cell, ca_mc=self.cell_keys['mc'],
+            ca_t=self.cell_keys['temperature'],
+            fa_t=self.flu_keys['temperature'],
+            fa_c=self.flu_keys['specific_heat'],
+            pos=pos, vol=vol, porosity=porosity,
+            pore_modulus=pore_modulus,
+            denc=denc,
+            temperature=temperature, p=p, s=s,
+            pore_modulus_range=pore_modulus_range
+        )
 
         cell.set_attr(self.cell_keys['fv0'], cell.fluid_vol)
         cell.set_attr(self.cell_keys['g_heat'], vol / (dist ** 2))
@@ -419,7 +421,7 @@ class TherFlowConfig(Object):
         # 添加流体的定义和反应的定义 (since 2023-4-5)
         model.clear_fludefs()  # 首先，要清空已经存在的流体定义.
         for flu in self.fluids:
-            model.add_fludef(Seepage.FluDef.create(flu))
+            model.add_fludef(FluDef.create(flu))
 
         model.clear_reactions()  # 清空已经存在的定义.
         for r in self.reactions:

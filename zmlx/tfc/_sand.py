@@ -5,8 +5,7 @@
 """
 
 from zmlx.exts import Seepage, np, clock, const_f64_ptr
-from zmlx.tfc import _cfg as settings
-from zmlx.tfc._base import as_numpy
+from zmlx.tfc._base import as_numpy, get_configs, add_config, put_configs
 
 # 存储的text
 text_key = 'sand_settings'
@@ -17,6 +16,7 @@ def get_face_pressure_gradient(model: Seepage, fluid=None):
     计算各个face的位置流体压力的梯度，并作为一个numpy的数组返回。
     如果给定了流体，则会排除掉流体的静水压力，从而获得能够驱动流体流动的压力梯度
     """
+    assert isinstance(model, Seepage), f'get_face_pressure_gradient expect Seepage, but got {type(model).__name__}'
     result = model.get_face_gradient(ca=const_f64_ptr(as_numpy(model).cells.pre))
     if fluid is not None:
         density = model.get_face_average(
@@ -30,14 +30,16 @@ def get_settings(model: Seepage):
     """
     读取设置
     """
-    return settings.get(model, text_key=text_key)
+    assert isinstance(model, Seepage), f'get_settings expect Seepage, but got {type(model).__name__}'
+    return get_configs(model, text_key=text_key)
 
 
 def set_settings(model: Seepage, data):
     """
     写入设置
     """
-    return settings.put(model, data=data, text_key=text_key)
+    assert isinstance(model, Seepage), f'set_settings expect Seepage, but got {type(model).__name__}'
+    return put_configs(model, data=data, text_key=text_key)
 
 
 def add_setting(
@@ -46,7 +48,8 @@ def add_setting(
     """
     添加设置
     """
-    return settings.add(
+    assert isinstance(model, Seepage), f'add_setting expect Seepage, but got {type(model).__name__}'
+    return add_config(
         model, text_key=text_key,
         sol_sand=sol_sand,
         flu_sand=flu_sand,
@@ -57,7 +60,9 @@ def get_gradient(model: Seepage, fluid=None, use_average=False):
     """
     计算Face位置的剪切应力
     """
+    assert isinstance(model, Seepage), f'get_gradient expect Seepage, but got {type(model).__name__}'
     assert np is not None
+
     face_f = get_face_pressure_gradient(model=model, fluid=fluid)
     face_f = np.abs(face_f)
     if use_average:
@@ -71,6 +76,7 @@ def iterate_1(model: Seepage):
     """
     更新砂
     """
+    assert isinstance(model, Seepage), f'iterate_1 expect Seepage, but got {type(model).__name__}'
     for item in get_settings(model):
         assert isinstance(item, dict)
 

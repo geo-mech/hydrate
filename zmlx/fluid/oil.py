@@ -21,7 +21,7 @@ p = 10000000.0Pa, T = 500K, vis = 0.0063358958456372905Pa.s, den = 898.062894kg/
 from math import log, exp
 
 import zmlx.alg.sys as warnings
-from zmlx.exts import Interp2, Seepage
+from zmlx.exts import Interp2, FluDef
 
 
 def create(t_min=270, t_max=1000, p_min=1e6, p_max=40e6, name=None,
@@ -64,8 +64,8 @@ def create(t_min=270, t_max=1000, p_min=1e6, p_max=40e6, name=None,
     if specific_heat is None:
         specific_heat = 1800
 
-    return Seepage.FluDef(den=create_density(), vis=create_viscosity(),
-                          specific_heat=specific_heat, name=name)
+    return FluDef(den=create_density(), vis=create_viscosity(),
+                  specific_heat=specific_heat, name=name)
 
 
 def create_flu(*args, **kwargs):
@@ -83,7 +83,7 @@ if __name__ == '__main__':
         den = flu.den(p, T)
         print(f'p = {p}Pa, T = {T}K, vis = {vis}Pa.s, den = {den}kg/m^3')
     try:
-        from zmlx.plt.fig2 import show_field2
+        from zmlx.plt import show_field2
 
         show_field2(flu.vis, [1e6, 40e6], [300, 1000])
         show_field2(flu.den, [1e6, 40e6], [300, 1000])

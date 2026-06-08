@@ -1,8 +1,8 @@
 from scipy.interpolate import NearestNDInterpolator, LinearNDInterpolator
 
-from zmlx.exts import Interp3, np
 from zmlx.alg.base import join_cols
 from zmlx.alg.fsys import *
+from zmlx.exts import Interp3, np
 from zmlx.ptree.array import array
 from zmlx.ptree.box import box3
 from zmlx.ptree.ptree import PTree

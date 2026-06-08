@@ -7,7 +7,7 @@ Heavy Oil
 
 import zmlx.alg.sys as warnings
 
-from zmlx.exts import Interp2, Seepage
+from zmlx.exts import Interp2, FluDef
 from zmlx.fluid.conf.gas_density.c22h46 import den_c22h46
 from zmlx.fluid.conf.gas_viscosity.c22h46 import gas_vis_c22h46
 
@@ -41,8 +41,8 @@ def create(tmin=280, tmax=1000, pmin=1.0e6, pmax=30.0e6, name=None):
         return vis
 
     specific_heat = 3097.30  # J/kg K
-    return Seepage.FluDef(den=create_density(), vis=create_viscosity(),
-                          specific_heat=specific_heat, name=name)
+    return FluDef(den=create_density(), vis=create_viscosity(),
+                  specific_heat=specific_heat, name=name)
 
 
 def create_flu(*args, **kwargs):

@@ -9,7 +9,7 @@ https://www.engineeringtoolbox.com/oxygen-d_978.html
 import matplotlib.pyplot as plt
 
 import zmlx.alg.sys as warnings
-from zmlx.exts import Interp2, Seepage, np
+from zmlx.exts import Interp2, FluDef, np
 from zmlx.fluid.conf.gas_density.O2_density import *
 from zmlx.fluid.conf.gas_viscosity.O2_viscosity import *
 
@@ -43,8 +43,8 @@ def create(tmin=280, tmax=700, pmin=1.0e6, pmax=20.0e6, name=None):
         return vis
 
     specific_heat = 1090  # J/kg K
-    return Seepage.FluDef(den=create_density(), vis=create_viscosity(),
-                          specific_heat=specific_heat, name=name)
+    return FluDef(den=create_density(), vis=create_viscosity(),
+                  specific_heat=specific_heat, name=name)
 
 
 def create_flu(*args, **kwargs):

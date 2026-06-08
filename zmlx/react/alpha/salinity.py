@@ -59,10 +59,8 @@ data = (vs, vt)
 
 
 def test_2():
-    from zmlx import plot2
-
-    plot2(data=[{'name': 'plot', 'args': [vs, vt]},
-                {'name': 'plot', 'args': [__s2, __dT2]}])
+    from zmlx.fig import plot2d, xy
+    plot2d(xy(vs, vt), xy(__s2, __dT2))
 
 
 if __name__ == '__main__':

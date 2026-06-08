@@ -210,7 +210,7 @@ class DynSys(HasHandle):
 
     core.use(c_double, 'dynsys_get_pos', c_void_p, c_size_t)
 
-    def get_pos(self, index: int) -> Optional[float]:
+    def get_pos(self, index) -> Optional[float]:
         """
         获取指定自由度的当前位置。
 
@@ -220,9 +220,9 @@ class DynSys(HasHandle):
         Returns:
             float: 当前位置值
         """
-        idx_ = get_index(index, self.size)
-        if idx_ is not None:
-            return core.dynsys_get_pos(self.handle, idx_)
+        index = get_index(index, self.size)
+        if index is not None:
+            return core.dynsys_get_pos(self.handle, index)
         else:
             return None
 
@@ -268,15 +268,15 @@ class DynSys(HasHandle):
         Returns:
             float: 当前速度值
         """
-        idx_ = get_index(index, self.size)
-        if idx_ is not None:
-            return core.dynsys_get_vel(self.handle, idx_)
+        index = get_index(index, self.size)
+        if index is not None:
+            return core.dynsys_get_vel(self.handle, index)
         else:
             return None
 
     core.use(None, 'dynsys_set_vel', c_void_p, c_size_t, c_double)
 
-    def set_vel(self, index, value):
+    def set_vel(self, index, value: float):
         """
         设置指定自由度的速度。
 
@@ -284,9 +284,9 @@ class DynSys(HasHandle):
             index (int): 自由度索引（0 <= idx < size）
             value (float): 新速度值
         """
-        idx_ = get_index(index, self.size)
-        if idx_ is not None:
-            core.dynsys_set_vel(self.handle, idx_, value)
+        index = get_index(index, self.size)
+        if index is not None:
+            core.dynsys_set_vel(self.handle, index, value)
 
     core.use(None, 'dynsys_write_vel', c_void_p, c_void_p)
 
@@ -306,7 +306,7 @@ class DynSys(HasHandle):
 
     core.use(c_double, 'dynsys_get_mass', c_void_p, c_size_t)
 
-    def get_mass(self, index: int) -> Optional[float]:
+    def get_mass(self, index) -> Optional[float]:
         """
         获取指定自由度的质量。
 
@@ -316,15 +316,15 @@ class DynSys(HasHandle):
         Returns:
             float: 质量值
         """
-        idx_ = get_index(index, self.size)
-        if idx_ is not None:
-            return core.dynsys_get_mass(self.handle, idx_)
+        index = get_index(index, self.size)
+        if index is not None:
+            return core.dynsys_get_mass(self.handle, index)
         else:
             return None
 
     core.use(None, 'dynsys_set_mass', c_void_p, c_size_t, c_double)
 
-    def set_mass(self, index: int, value: float):
+    def set_mass(self, index, value: float):
         """
         设置指定自由度的质量。
 
@@ -332,9 +332,9 @@ class DynSys(HasHandle):
             index (int): 自由度索引（0 <= idx < size）
             value (float): 新质量值
         """
-        idx_ = get_index(index, self.size)
-        if idx_ is not None:
-            core.dynsys_set_mass(self.handle, idx_, value)
+        index = get_index(index, self.size)
+        if index is not None:
+            core.dynsys_set_mass(self.handle, index, value)
 
     get_mas = get_mass
     set_mas = set_mass
@@ -357,7 +357,7 @@ class DynSys(HasHandle):
 
     core.use(c_void_p, 'dynsys_get_p2f', c_void_p, c_size_t)
 
-    def get_p2f(self, index: int) -> Optional[LinearExpr]:
+    def get_p2f(self, index) -> Optional[LinearExpr]:
         """
         获取位置到受力的线性关系表达式。
 
@@ -367,9 +367,9 @@ class DynSys(HasHandle):
         Returns:
             LinearExpr: 描述受力与位置关系的线性表达式
         """
-        idx_ = get_index(index, self.size)
-        if idx_ is not None:
-            handle = core.dynsys_get_p2f(self.handle, idx_)
+        index = get_index(index, self.size)
+        if index is not None:
+            handle = core.dynsys_get_p2f(self.handle, index)
             if handle:
                 return LinearExpr(handle=handle)
             else:

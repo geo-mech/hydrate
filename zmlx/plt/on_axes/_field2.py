@@ -27,12 +27,16 @@ def add_field2(ax, f, xr, yr, *, cmap=None, levels=None, clabel=None, cbar=None,
         for b in vb:
             x.append(a * x_times)
             y.append(b * y_times)
-            z.append(f(a, b) * z_times)
+            if callable(f):
+                z.append(f(a, b) * z_times)
+            else:
+                z.append(f * z_times)
 
     if clabel is not None:
         if cbar is None:
             cbar = dict(label=clabel)
         else:
+            assert isinstance(cbar, dict), "cbar must be a dict"
             cbar['label'] = clabel
 
     return add_tricontourf(

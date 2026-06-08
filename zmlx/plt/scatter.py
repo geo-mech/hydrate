@@ -3,8 +3,7 @@ def scatter(
     """
     绘制三维的散点图
     """
-    from zmlx.plt.on_axes.data import scatter
-    from zmlx.plt.on_axes import plot3d
+    from zmlx.fig import scatter, plot3d
     if x is None or y is None or z is None:
         if get_pos is None:
             def get_pos(item):
@@ -22,8 +21,7 @@ def scatter(
 
 def test():
     import numpy as np
-    from zmlx.plt.on_axes.data import scatter
-    from zmlx.plt.on_axes import plot3d
+    from zmlx.fig import scatter, plot3d
 
     x = np.random.rand(100)
     y = np.random.rand(100)

@@ -1,11 +1,8 @@
-from zmlx.plt.on_axes import add_field2, plot_on_axes
+import zmlx.alg.sys as warnings
+from zmlx.plt.on_ui import show_field2
 
-
-def show_field2(f, xr, yr, **opts):
-    """
-    显示一个二维的场，用于测试
-    """
-    plot_on_axes(add_field2, f, xr, yr, **opts)
+warnings.warn(f'The module {__name__} will be removed after 2027-5-23',
+              DeprecationWarning, stacklevel=2)
 
 
 def test():

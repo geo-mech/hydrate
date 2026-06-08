@@ -22,8 +22,8 @@ def create_well(rate_inj=None, temp_inj=None, heat_cond=2.0, dist=0.1):
     # 将导热系数视为一个三维的场
     heat_cond = Field(heat_cond)
 
-    fludefs = [Seepage.FluDef(name='h2o', den=1000, vis=0.001,
-                              specific_heat=4200.0)]
+    fludefs = [FluDef(name='h2o', den=1000, vis=0.001,
+                      specific_heat=4200.0)]
 
     if temp_inj is None:
         temp_inj = 273.15 + 50  # 默认注入50摄氏度的水

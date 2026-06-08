@@ -3,8 +3,8 @@
 from zmlx import *
 from zmlx.data import mesh_c10000 as data
 from zmlx.fem.compute_face_stiff2 import compute_face_stiff2
+from zmlx.plt import add_tricontourf
 from zmlx.plt.on_figure import add_axes2
-from zmlx.plt.tricontourf import add_tricontourf
 
 
 def main():

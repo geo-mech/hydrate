@@ -229,7 +229,10 @@ def plot_no_gui(kernel, *args, fname=None, dpi=300, caption=None, clear=None, ti
         if isinstance(suptitle, str):
             fig.suptitle(suptitle)
         if tight_layout:
-            fig.tight_layout()
+            if isinstance(tight_layout, dict):
+                fig.tight_layout(**tight_layout)
+            else:
+                fig.tight_layout()
         if fname is not None:
             fig.savefig(fname=fname, dpi=dpi)
             plt.close()
@@ -320,6 +323,19 @@ def gui_exec(*args, **kwargs):
     return gui.execute(*args, **kwargs)
 
 
+def proc_argv(argv=None):
+    from zmlx.alg import fsys
+    if not isinstance(argv, (list, tuple)):
+        return
+    if len(argv) < 2:
+        return
+    key = argv[1]
+    if fsys.isfile(key):
+        gui.open_file(key)
+        return
+    gui.command(*argv[1:])
+
+
 def open_gui(argv=None):
     """
     打开gui
@@ -332,8 +348,7 @@ def open_gui(argv=None):
     # 是否初始检查
     app_data.put('init_check',
                  app_data.getenv('init_check', default='Yes') != 'No')
-
-    gui.execute(keep_cwd=False, close_after_done=False)
+    gui.execute(func=lambda: proc_argv(argv), keep_cwd=False, close_after_done=False)
 
 
 def open_gui_without_setup(argv=None):
@@ -344,7 +359,7 @@ def open_gui_without_setup(argv=None):
     app_data.put('argv', argv)
     app_data.put('restore_tabs', False)
     app_data.put('run_setup', False)
-    gui.execute(keep_cwd=False, close_after_done=False)
+    gui.execute(func=lambda: proc_argv(argv), keep_cwd=False, close_after_done=False)
 
 
 def test():

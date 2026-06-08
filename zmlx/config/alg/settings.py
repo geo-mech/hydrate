@@ -1,4 +1,4 @@
-from zmlx.tfc._cfg import *
+from zmlx.tfc import get_configs as get, put_configs as put, add_config as add
 
 _keep = [get, put, add]
 

@@ -1,5 +1,5 @@
 """
-渗流类Seepage的一些基础的接口。注意，此模块不依赖其它顶层的模块。
+base模块定义渗流类Seepage的一些基础的接口。注意，此模块不依赖其它顶层的模块。
 
 对于多场耦合过程，我们采用工作流模式 (Workflow Pattern)-各流程像流水线一样处理数据。因此，关于数据的定义是非常关键的。
 对于流体计算，我们采用Seepage类来定义所有的数据状态。因此，这里定义的接口，是后续进行流体计算的基础。这里，定义最核心
@@ -8,15 +8,16 @@
 import ctypes
 import os
 from ctypes import c_void_p
+from typing import Dict, Optional
 
-import zmlx.alg.sys as warnings
-from zmlx.exts import Seepage, Vector, is_array, Map, ThreadPool, np, clock, f64_ptr, const_f64_ptr
-from zmlx.alg.base import time2str
+from zmlx.alg import sys as warnings, time2str, clamp
+from zmlx.exts import Seepage, Vector, is_array, Map, ThreadPool, np, clock, f64_ptr, const_f64_ptr, FluDef
+from zmlx.tfc._opts import merge_opts
 
 
 class SeepageNumpy:
     """
-    用以Seepage类和Numpy之间交换数据的适配器
+    用以Seepage类和Numpy之间交换数据的适配器。 要使用此适配器，需要确保正确安装了numpy库。
     """
 
     class Cells:
@@ -391,11 +392,110 @@ class SeepageNumpy:
         return SeepageNumpy.Fluids(model=self.model, fluid_id=fluid_id)
 
 
-def as_numpy(model):
+def as_numpy(model: Seepage):
     """
     返回利用numpy来读写属性的接口
     """
+    assert isinstance(model, Seepage), f'as_numpy expect Seepage, but got {type(model).__name__}'
     return SeepageNumpy(model)
+
+
+def get_configs(model: Seepage, *, text_key: str) -> list:
+    """
+    读取设置.
+    """
+    assert isinstance(text_key, str) and len(text_key) >= 1
+    text = model.get_text(text_key)
+    if len(text) >= 2:
+        data = eval(text)
+        assert isinstance(data, list)
+        return data
+    else:
+        return []
+
+
+def put_configs(model: Seepage, *, data: Optional[list] = None, text_key: str):
+    """
+    写入设置
+    """
+    assert isinstance(text_key, str) and len(text_key) >= 1
+    if isinstance(data, list):
+        model.set_text(text_key, f'{data}')
+    else:
+        assert data is None
+        model.set_text(text_key, '')
+
+
+def add_config(model: Seepage, *, text_key: str, **kwargs):
+    """
+    添加设置
+    """
+    if len(kwargs) > 0:
+        data = get_configs(model, text_key=text_key)
+        assert isinstance(data, list)
+        data.append(kwargs)
+        put_configs(model, text_key=text_key, data=data)
+
+
+def list_dt_next(model: Seepage) -> list:
+    """
+    列出目前记录的所有的配置. 返回一个list，每个元素是一个dict，包含dt和desc两个键.
+    """
+    return get_configs(model, text_key='dt_next')
+
+
+def clear_dt_next(model: Seepage):
+    """
+    清除目前的所有的配置(在每一步迭代之前，需要调用此函数清除)
+    """
+    put_configs(model, text_key='dt_next', data=None)
+
+
+def add_dt_next(model: Seepage, dt: float, desc: Optional[str] = None):
+    """
+    添加一个时间步长配置. 在每一个子过程中添加.
+    """
+    if dt > 0:
+        if not isinstance(desc, str):
+            desc = ""
+        add_config(model, text_key='dt_next', dt=dt, desc=desc)
+
+
+def get_dt_next(model: Seepage, clear: bool = True) -> Optional[float]:
+    """
+    返回在所有的配置中的dt的最小值. 如果没有配置，返回None.
+    """
+    items = list_dt_next(model)
+    if clear:
+        clear_dt_next(model)
+
+    dt_next = None
+    for item in items:
+        assert isinstance(item, dict)
+        dt = item.get('dt')
+        assert isinstance(dt, (str, float, int)), f"dt must be str, float, or int, but got {type(dt).__name__}"
+
+        # dt 是str或者是float
+        try:
+            dt = float(dt)
+        except ValueError:
+            continue  # 忽略无效的dt
+
+        if dt_next is None:
+            dt_next = dt
+            continue
+
+        if dt < dt_next:  # 寻找最小值
+            dt_next = dt
+            continue
+
+    if dt_next is None:  # 确保有一个值，默认使用上一个时间步的数值
+        dt_next = get_dt(model)
+
+    _min = get_dt_min(model)  # 最小dt的硬约束
+    _max = get_dt_max(model)  # 最大dt的硬约束
+
+    return clamp(dt_next, _min, _max)
 
 
 def get_attr(model: Seepage, key, default_val=None, cast=None,
@@ -423,6 +523,7 @@ def get_attr(model: Seepage, key, default_val=None, cast=None,
         然后，它尝试从模型中获取属性值，如果属性不存在，它会返回默认值或发出警告。
         如果提供了类型转换函数 cast，它会将属性值转换为指定的类型。最后，它返回属性值或默认值。
     """
+    assert isinstance(model, Seepage), f'get_attr expect Seepage, but got {type(model).__name__}'
     assert isinstance(key, (int, str))
     key_backup = key
     if isinstance(key, str):
@@ -463,6 +564,7 @@ def set_attr(model: Seepage, key=None, value=None, **key_values):
         并尝试设置属性值。如果值为 None，它会发出警告。如果提供了多个键值对，
         它会遍历这些键值对，并调用自身来设置每个属性。
     """
+    assert isinstance(model, Seepage), f'set_attr expect Seepage, but got {type(model).__name__}'
     if key is not None:
         if isinstance(key, str):
             key = model.reg_model_key(key)
@@ -489,6 +591,7 @@ def set_dt(model: Seepage, dt: float):
     Returns:
         None: 没有返回值
     """
+    assert isinstance(model, Seepage), f'set_dt expect Seepage, but got {type(model).__name__}'
     set_attr(model, 'dt', dt)
 
 
@@ -503,6 +606,7 @@ def get_dt(model: Seepage, as_str=False):
     Returns:
         float|str: 当as_str为True时返回格式化的时间字符串，否则返回浮点数
     """
+    assert isinstance(model, Seepage), f'get_dt expect Seepage, but got {type(model).__name__}'
     result = get_attr(model, key='dt', default_val=1.0e-10)
     return time2str(result) if as_str else result
 
@@ -517,6 +621,7 @@ def get_dt_str(model: Seepage):
     Returns:
         str: 格式化的时间字符串
     """
+    assert isinstance(model, Seepage), f'get_dt_str expect Seepage, but got {type(model).__name__}'
     return get_dt(model, as_str=True)
 
 
@@ -534,6 +639,7 @@ def get_time(model: Seepage, as_str=False):
     Notes:
         底层通过get_attr获取'time'属性，默认值为0.0秒
     """
+    assert isinstance(model, Seepage), f'get_time expect Seepage, but got {type(model).__name__}'
     result = get_attr(model, key='time', default_val=0.0)
     return time2str(result) if as_str else result
 
@@ -548,6 +654,7 @@ def get_time_str(model: Seepage):
     Returns:
         str: 格式化的时间字符串
     """
+    assert isinstance(model, Seepage), f'get_time_str expect Seepage, but got {type(model).__name__}'
     return get_time(model, as_str=True)
 
 
@@ -561,6 +668,7 @@ def set_time(model: Seepage, value):
     Raises:
         ValueError: 当输入值小于0时会触发警告（通过底层set_attr实现）
     """
+    assert isinstance(model, Seepage), f'set_time expect Seepage, but got {type(model).__name__}'
     set_attr(model, 'time', value)
 
 
@@ -578,6 +686,7 @@ def update_time(model: Seepage, dt=None):
     该函数首先检查是否提供了时间步长。如果没有提供，它会获取模型当前的时间步长。
     然后，它将模型的时间更新为当前时间加上时间步长。
     """
+    assert isinstance(model, Seepage), f'update_time expect Seepage, but got {type(model).__name__}'
     if dt is None:
         dt = get_dt(model)
     t0 = get_time(model)
@@ -597,6 +706,7 @@ def get_step(model: Seepage):
     Notes:
         通过round函数对获取值进行四舍五入处理
     """
+    assert isinstance(model, Seepage), f'get_step expect Seepage, but got {type(model).__name__}'
     return get_attr(model, 'step', default_val=0, cast=round)
 
 
@@ -610,6 +720,7 @@ def set_step(model: Seepage, step):
     Raises:
         TypeError: 当输入值无法转换为整数时会触发异常（通过底层set_attr实现）
     """
+    assert isinstance(model, Seepage), f'set_step expect Seepage, but got {type(model).__name__}'
     set_attr(model, 'step', step)
 
 
@@ -625,6 +736,7 @@ def get_dv_relative(model: Seepage):
     Notes:
         正常取值范围建议为[0,1]，超出范围可能导致计算不稳定
     """
+    assert isinstance(model, Seepage), f'get_dv_relative expect Seepage, but got {type(model).__name__}'
     return get_attr(model, 'dv_relative', default_val=0.1)
 
 
@@ -640,6 +752,7 @@ def set_dv_relative(model: Seepage, value):
     Note:
         实际通过 `set_attr(model, 'dv_relative', value)` 存储该值。
     """
+    assert isinstance(model, Seepage), f'set_dv_relative expect Seepage, but got {type(model).__name__}'
     set_attr(model, 'dv_relative', value)
 
 
@@ -658,6 +771,7 @@ def get_dt_min(model: Seepage):
     Note:
         实际通过 `get_attr(model, 'dt_min', default_val=1.0e-15)` 获取该值。
     """
+    assert isinstance(model, Seepage), f'get_dt_min expect Seepage, but got {type(model).__name__}'
     return get_attr(model, key='dt_min', default_val=1.0e-15)
 
 
@@ -674,6 +788,7 @@ def set_dt_min(model: Seepage, value):
     Note:
         实际通过 `set_attr(model, 'dt_min', value)` 存储该值。
     """
+    assert isinstance(model, Seepage), f'set_dt_min expect Seepage, but got {type(model).__name__}'
     set_attr(model, 'dt_min', value)
 
 
@@ -692,7 +807,8 @@ def get_dt_max(model: Seepage):
     Note:
         实际通过 `get_attr(model, 'dt_max', default_val=1.0e10)` 获取该值。
     """
-    return get_attr(model, 'dt_max', default_val=1.0e10)
+    assert isinstance(model, Seepage), f'get_dt_max expect Seepage, but got {type(model).__name__}'
+    return get_attr(model, key='dt_max', default_val=1.0e10)
 
 
 def set_dt_max(model: Seepage, value):
@@ -708,22 +824,27 @@ def set_dt_max(model: Seepage, value):
     Note:
         实际通过 `set_attr(model, 'dt_max', value)` 存储该值。
     """
+    assert isinstance(model, Seepage), f'set_dt_max expect Seepage, but got {type(model).__name__}'
     set_attr(model, 'dt_max', value)
 
 
 def get_vis_min(model: Seepage):
+    assert isinstance(model, Seepage), f'get_vis_min expect Seepage, but got {type(model).__name__}'
     return get_attr(model, 'vis_min', default_val=1.0e-7)
 
 
 def set_vis_min(model: Seepage, value):
+    assert isinstance(model, Seepage), f'set_vis_min expect Seepage, but got {type(model).__name__}'
     set_attr(model, 'vis_min', value)
 
 
 def get_vis_max(model: Seepage):
+    assert isinstance(model, Seepage), f'get_vis_max expect Seepage, but got {type(model).__name__}'
     return get_attr(model, 'vis_max', default_val=1.0e30)
 
 
 def set_vis_max(model: Seepage, value):
+    assert isinstance(model, Seepage), f'set_vis_max expect Seepage, but got {type(model).__name__}'
     set_attr(model, 'vis_max', value)
 
 
@@ -737,6 +858,7 @@ def get_func_opts(model: Seepage, key: str):
     Returns:
         一个字典，包含模型的迭代参数
     """
+    assert isinstance(model, Seepage), f'get_func_opts expect Seepage, but got {type(model).__name__}'
     text = model.get_text(key)
     if len(text) > 1:
         opts = eval(text)
@@ -757,6 +879,7 @@ def set_func_opts(model: Seepage, key: str, **opts):
     Returns:
         None
     """
+    assert isinstance(model, Seepage), f'set_func_opts expect Seepage, but got {type(model).__name__}'
     model.set_text(key, str(opts) if len(opts) > 0 else '')
 
 
@@ -771,6 +894,7 @@ def add_func_opts(model: Seepage, key: str, **opts):
     Returns:
         None
     """
+    assert isinstance(model, Seepage), f'add_func_opts expect Seepage, but got {type(model).__name__}'
     new_opts = {**get_func_opts(model, key), **opts}
     set_func_opts(model, key, **new_opts)
 
@@ -806,7 +930,7 @@ def iterate_flow(*local_opts, pool=None, **global_opts):
         default_opts = dict(
             disable_flow=model.has_tag('disable_flow'),
             check_dt=model.has_tag('check_dt'),
-            recommend_dt=model.has_tag('recommend_dt'),
+            recommend_dt=model.has_tag('recommend_dt'),  # 在流动迭代之后，添加建议的dt，对于自动步长管理很关键
             dt=get_dt(model),
             dv_rela=get_dv_relative(model),
             fa_s=model.get_face_key('area'),
@@ -815,9 +939,7 @@ def iterate_flow(*local_opts, pool=None, **global_opts):
         )
 
         # 所有用来迭代的选项
-        opts = {
-            **default_opts, **inner_opts, **global_opts, **local_opt
-        }
+        opts = merge_opts(default_opts, inner_opts, global_opts, local_opt)
 
         # 准备其它参数
         if opts.get('ca_p') is None:
@@ -827,12 +949,12 @@ def iterate_flow(*local_opts, pool=None, **global_opts):
             model.temps[key_opt] = None
             continue
 
-        # 备份参数，后续使用
-        opts['result'] = Map()
-        model.temps[key_opt] = opts
-
         sol = model.get_flow_sol()
         assert isinstance(sol, Seepage.FlowSol)
+
+        # 备份参数，后续使用
+        opts['result'] = sol.get_report()
+        model.temps[key_opt] = opts
 
         sol.iterate(
             model, dt=opts['dt'],
@@ -854,7 +976,6 @@ def iterate_flow(*local_opts, pool=None, **global_opts):
 
         # 设置缺省值
         set_attr(model, 'flow_real_dt', -1)
-        set_attr(model, 'flow_dt_next', -1)
 
         opts = model.temps.get(key_opt)
         if opts is None:
@@ -868,18 +989,14 @@ def iterate_flow(*local_opts, pool=None, **global_opts):
         if real_dt is None:
             continue
 
-        set_attr(model, 'flow_real_dt', real_dt)
+        set_attr(model, 'flow_real_dt', real_dt)  # 实际向前迭代的dt. 如果check_dt的时候，这个值可能和给定的dt不同.
 
-        if opts['recommend_dt']:
+        if opts['recommend_dt']:  # 建议新的dt.
             dv_rela = opts['dv_rela']
             if 0 < dv_rela < 1.0e3:
                 sol = model.get_flow_sol()
                 dt_next = sol.get_recommended_dt(previous_dt=real_dt, dv_relative=dv_rela)
-                set_attr(model, 'flow_dt_next', dt_next)
-
-
-def get_flow_dt_next(model: Seepage):
-    return get_attr(model, 'flow_dt_next', default_val=-1)
+                add_dt_next(model, dt=dt_next, desc="flow")
 
 
 @clock
@@ -912,7 +1029,7 @@ def iterate_thermal(*local_opts, pool=None, **global_opts):
         # 默认选项
         default_opts = dict(
             disable_ther=model.has_tag('disable_ther'),
-            recommend_dt=model.has_tag('recommend_dt'),
+            recommend_dt=model.has_tag('recommend_dt'),  # 在传热迭代之后，添加建议的dt，对于自动步长管理很关键
             dt=get_dt(model),
             dv_rela=get_dv_relative(model),
             ca_t=model.get_cell_key('temperature'),
@@ -930,13 +1047,14 @@ def iterate_thermal(*local_opts, pool=None, **global_opts):
             model.temps[key_opt] = None
             continue
 
-        # 备份参数，后续使用
-        opts['result'] = Map()
-        model.temps[key_opt] = opts
-
         # 准备求解器
         sol = model.get_thermal_sol()
         assert isinstance(sol, Seepage.ThermalSol)
+
+        # 备份参数，后续使用
+        opts['result'] = sol.get_report()
+        model.temps[key_opt] = opts
+
         sol.iterate(
             model, dt=opts['dt'], pool=pool, report=opts['result'],
             ca_t=opts['ca_t'], ca_mc=opts['ca_mc'], fa_g=opts['fa_g'],
@@ -949,8 +1067,6 @@ def iterate_thermal(*local_opts, pool=None, **global_opts):
     # 将报告转化为dict
     for model in models:
         assert isinstance(model, Seepage)
-        # 设置缺省值
-        set_attr(model, 'thermal_dt_next', -1)
 
         opts = model.temps[key_opt]
         if opts is None:
@@ -961,13 +1077,10 @@ def iterate_thermal(*local_opts, pool=None, **global_opts):
             dt_next = sol.get_recommended_dt(
                 model, previous_dt=opts['dt'],
                 dv_relative=opts['dv_rela'],
-                ca_t=opts['ca_t'], ca_mc=opts['ca_mc']
+                ca_t=opts['ca_t'],
+                ca_mc=opts['ca_mc']
             )
-            set_attr(model, 'thermal_dt_next', dt_next)
-
-
-def get_thermal_dt_next(model: Seepage):
-    return get_attr(model, 'thermal_dt_next', default_val=-1)
+            add_dt_next(model, dt=dt_next, desc="thermal")
 
 
 class FloatBuffer:
@@ -1052,6 +1165,7 @@ def get_face_gradient(model: Seepage, ca, fa=None):
         输入的 `ca` 长度必须等于模型的单元格数量。
         输出的 `fa` 长度必须等于模型的面数量。
     """
+    assert isinstance(model, Seepage), f'get_face_gradient expect Seepage, but got {type(model).__name__}'
     ca = FloatBuffer(value=ca, is_input=True, length=model.cell_number)
     fa = FloatBuffer(value=fa, is_input=False, length=model.face_number)
     model.get_face_gradient(buf=fa.pointer, ca=ca.pointer)
@@ -1077,6 +1191,7 @@ def get_face_diff(model: Seepage, ca, fa=None):
         输入的 `ca` 长度必须等于模型的单元格数量。
         输出的 `fa` 长度必须等于模型的面数量。
     """
+    assert isinstance(model, Seepage), f'get_face_diff expect Seepage, but got {type(model).__name__}'
     ca = FloatBuffer(value=ca, is_input=True, length=model.cell_number)
     fa = FloatBuffer(value=fa, is_input=False, length=model.face_number)
     model.get_face_diff(buf=fa.pointer, ca=ca.pointer)
@@ -1102,6 +1217,7 @@ def get_face_sum(model: Seepage, ca, fa=None):
         输入的 `ca` 长度必须等于模型的单元格数量。
         输出的 `fa` 长度必须等于模型的面数量。
     """
+    assert isinstance(model, Seepage), f'get_face_sum expect Seepage, but got {type(model).__name__}'
     ca = FloatBuffer(value=ca, is_input=True, length=model.cell_number)
     fa = FloatBuffer(value=fa, is_input=False, length=model.face_number)
     model.get_face_sum(buf=fa.pointer, ca=ca.pointer)
@@ -1127,6 +1243,7 @@ def get_face_average(model: Seepage, ca, fa=None):
         输入的 `ca` 长度必须等于模型的单元格数量。
         输出的 `fa` 长度必须等于模型的面数量。
     """
+    assert isinstance(model, Seepage), f'get_face_average expect Seepage, but got {type(model).__name__}'
     ca = FloatBuffer(value=ca, is_input=True, length=model.cell_number)
     fa = FloatBuffer(value=fa, is_input=False, length=model.face_number)
     model.get_face_average(buf=fa.pointer, ca=ca.pointer)
@@ -1152,6 +1269,7 @@ def get_face_left(model: Seepage, ca, fa=None):
         输入的 `ca` 长度必须等于模型的单元格数量。
         输出的 `fa` 长度必须等于模型的面数量。
     """
+    assert isinstance(model, Seepage), f'get_face_left expect Seepage, but got {type(model).__name__}'
     ca = FloatBuffer(value=ca, is_input=True, length=model.cell_number)
     fa = FloatBuffer(value=fa, is_input=False, length=model.face_number)
     model.get_face_left(buf=fa.pointer, ca=ca.pointer)
@@ -1177,6 +1295,7 @@ def get_face_right(model: Seepage, ca, fa=None):
         输入的 `ca` 长度必须等于模型的单元格数量。
         输出的 `fa` 长度必须等于模型的面数量。
     """
+    assert isinstance(model, Seepage), f'get_face_right expect Seepage, but got {type(model).__name__}'
     ca = FloatBuffer(value=ca, is_input=True, length=model.cell_number)
     fa = FloatBuffer(value=fa, is_input=False, length=model.face_number)
     model.get_face_right(buf=fa.pointer, ca=ca.pointer)
@@ -1202,6 +1321,7 @@ def get_cell_average(model: Seepage, fa, ca=None):
         输入的 `fa` 长度必须等于模型的面数量。
         输出的 `ca` 长度必须等于模型的单元格数量。
     """
+    assert isinstance(model, Seepage), f'get_cell_average expect Seepage, but got {type(model).__name__}'
     fa = FloatBuffer(value=fa, is_input=True, length=model.face_number)
     ca = FloatBuffer(value=ca, is_input=False, length=model.cell_number)
     model.get_cell_average(fa=fa.pointer, buf=ca.pointer)
@@ -1227,6 +1347,7 @@ def get_cell_max(model: Seepage, fa, ca=None):
         输入的 `fa` 长度必须等于模型的面数量。
         输出的 `ca` 长度必须等于模型的单元格数量。
     """
+    assert isinstance(model, Seepage), f'get_cell_max expect Seepage, but got {type(model).__name__}'
     fa = FloatBuffer(value=fa, is_input=True, length=model.face_number)
     ca = FloatBuffer(value=ca, is_input=False, length=model.cell_number)
     model.get_cell_max(fa=fa.pointer, buf=ca.pointer)
@@ -1245,16 +1366,17 @@ def set_text(model: Seepage, **kwargs):
         None
 
     """
+    assert isinstance(model, Seepage), f'set_text expect Seepage, but got {type(model).__name__}'
     for key, text in kwargs.items():
         model.set_text(key=key, text=text)
 
 
-def __list(fluid_def: Seepage.FluDef):
+def __list(fluid_def: FluDef):
     """
     递归列出流体定义中的所有组分。
 
     Args:
-        fluid_def (Seepage.FluDef): 流体定义对象。
+        fluid_def (FluDef): 流体定义对象。
 
     Returns:
         dict: 包含所有组分属性的字典
@@ -1262,7 +1384,7 @@ def __list(fluid_def: Seepage.FluDef):
     data = {}
     for i in range(fluid_def.component_number):
         c = fluid_def.get_component(i)
-        assert isinstance(c, Seepage.FluDef)
+        assert isinstance(c, FluDef)
         name = c.name
         data[name if len(name) > 0 else f'<{i}>'] = __list(c)
     return data
@@ -1278,6 +1400,7 @@ def list_fludefs(model):
     Returns:
         dict: 包含所有流体定义的字典，键为流体名，值为该流体的组分属性字典。
     """
+    assert isinstance(model, Seepage), f'list_fludefs expect Seepage, but got {type(model).__name__}'
     data = {}
     for i in range(model.fludef_number):
         name = model.get_fludef(i).name
@@ -1318,7 +1441,7 @@ def txt2seepage(path=None, processes=None):
         processes=processes)
 
 
-def _get_names(fluid_def: Seepage.FluDef):
+def _get_names(fluid_def: FluDef):
     """
     返回给定流体定义的所有的组分的名字 (since 2024-7-25)
     Args:
@@ -1333,7 +1456,7 @@ def _get_names(fluid_def: Seepage.FluDef):
         names = []
         for idx in range(fluid_def.component_number):
             c = fluid_def.get_component(idx)
-            assert isinstance(c, Seepage.FluDef)
+            assert isinstance(c, FluDef)
             names.append(_get_names(c))
         return names
 
@@ -1370,6 +1493,7 @@ def list_comp(model: Seepage, keep_structure=True):
     Returns:
         所有组分的名字作为list返回(注意，会维持流体和组分的组成结构)
     """
+    assert isinstance(model, Seepage), f'list_comp expect Seepage, but got {type(model).__name__}'
     names = []
     for idx in range(model.fludef_number):
         names.append(_get_names(model.get_fludef(idx)))
@@ -1379,7 +1503,7 @@ def list_comp(model: Seepage, keep_structure=True):
         return _flatten_comp(names)
 
 
-def _list_comp_ids(fluid_def: Seepage.FluDef):
+def _list_comp_ids(fluid_def: FluDef):
     """
     用在list_comp_ids中，列出组分中具有子组分的id (since 2024-7-25)
     """
@@ -1388,7 +1512,7 @@ def _list_comp_ids(fluid_def: Seepage.FluDef):
     result = []
     for idx in range(fluid_def.component_number):
         c = fluid_def.get_component(idx)
-        assert isinstance(c, Seepage.FluDef)
+        assert isinstance(c, FluDef)
         ids = _list_comp_ids(c)
         for item in ids:
             result.append([idx] + item)
@@ -1399,6 +1523,7 @@ def list_comp_ids(model: Seepage):
     """
     列出模型中所有的流体的ID(其中每一个元素都是list)  (since 2024-7-25)
     """
+    assert isinstance(model, Seepage), f'list_comp_ids expect Seepage, but got {type(model).__name__}'
     result = []
     for idx in range(model.fludef_number):
         ids = _list_comp_ids(model.get_fludef(idx))
@@ -1421,6 +1546,7 @@ def get_cell_mask(model: Seepage, xr=None, yr=None, zr=None):
         一个列表，包含给定坐标范围内的单元格索引
         如果 xr、yr 或 zr 为 None，则表示该方向上没有限制
     """
+    assert isinstance(model, Seepage), f'get_cell_mask expect Seepage, but got {type(model).__name__}'
 
     def get_(v, r):
         """
@@ -1461,6 +1587,7 @@ def get_cell_pos(model: Seepage, dim, mask=None, shape=None):
         一个 numpy 数组，包含给定维度上单元格的位置向量
         如果 mask 为 None，则返回所有单元格的位置向量；否则，返回掩码指定的单元格的位置向量
     """
+    assert isinstance(model, Seepage), f'get_cell_pos expect Seepage, but got {type(model).__name__}'
     assert 0 <= dim < 3, 'dim must be 0, 1, or 2'
     v = as_numpy(model).cells.get(-(dim + 1))
     res = v if mask is None else v[mask]
@@ -1483,6 +1610,7 @@ def get_x(model: Seepage, mask=None, shape=None):
         一个 numpy 数组，包含模型中所有单元格的x坐标。
         如果提供了掩码，则返回掩码指定的单元格的x坐标。
     """
+    assert isinstance(model, Seepage), f'get_x expect Seepage, but got {type(model).__name__}'
     return get_cell_pos(model, dim=0, mask=mask, shape=shape)
 
 
@@ -1499,6 +1627,7 @@ def get_y(model: Seepage, mask=None, shape=None):
         一个 numpy 数组，包含模型中所有单元格的y坐标。
         如果提供了掩码，则返回掩码指定的单元格的y坐标。
     """
+    assert isinstance(model, Seepage), f'get_y expect Seepage, but got {type(model).__name__}'
     return get_cell_pos(model, dim=1, mask=mask, shape=shape)
 
 
@@ -1515,6 +1644,7 @@ def get_z(model: Seepage, mask=None, shape=None):
         一个 numpy 数组，包含模型中所有单元格的z坐标。
         如果提供了掩码，则返回掩码指定的单元格的z坐标。
     """
+    assert isinstance(model, Seepage), f'get_z expect Seepage, but got {type(model).__name__}'
     return get_cell_pos(model, dim=2, mask=mask, shape=shape)
 
 
@@ -1530,6 +1660,7 @@ def get_cell_pre(model: Seepage, mask=None, shape=None):
         一个 numpy 数组，包含模型中所有单元格的压力值。
         如果提供了掩码，则返回掩码指定的单元格的压力值。
     """
+    assert isinstance(model, Seepage), f'get_cell_pre expect Seepage, but got {type(model).__name__}'
     v = as_numpy(model).cells.pre
     res = v if mask is None else v[mask]
     if shape is not None:
@@ -1553,6 +1684,7 @@ def get_cell_temp(model: Seepage, mask=None, shape=None):
         一个 numpy 数组，包含模型中所有单元格的温度值。
         如果提供了掩码，则返回掩码指定的单元格的温度值。
     """
+    assert isinstance(model, Seepage), f'get_cell_temp expect Seepage, but got {type(model).__name__}'
     v = as_numpy(model).cells.get(model.get_cell_key('temperature'))
     res = v if mask is None else v[mask]
     if shape is not None:
@@ -1578,6 +1710,7 @@ def get_cell_fv(model: Seepage, fid=None, mask=None, shape=None):
         如果提供了流体 ID，则返回该流体在所有单元格中的体积。
         如果提供了掩码，则返回掩码指定的单元格的流体体积。
     """
+    assert isinstance(model, Seepage), f'get_cell_fv expect Seepage, but got {type(model).__name__}'
     if fid is None:
         v = as_numpy(model).cells.fluid_vol
     else:
@@ -1610,6 +1743,7 @@ def get_cell_fm(model: Seepage, fid=None, mask=None, shape=None):
         如果提供了流体 ID，则返回该流体在所有单元格中的质量。
         如果提供了掩码，则返回掩码指定的单元格的流体质量。
     """
+    assert isinstance(model, Seepage), f'get_cell_fm expect Seepage, but got {type(model).__name__}'
     if fid is None:
         v = as_numpy(model).cells.fluid_mass
     else:
@@ -1629,6 +1763,25 @@ def get_cell_fm(model: Seepage, fid=None, mask=None, shape=None):
 get_m = get_cell_fm
 
 
+def get_cell_fc(model: Seepage, sol, liq, mask=None, shape=None):
+    """
+    返回模型中单元格的流体质量浓度。
+    Args:
+        model: Seepage 模型对象
+        sol: 溶质ID
+        liq: 溶液ID
+        mask: 可选的掩码，用于筛选特定的单元格
+        shape: 可选的形状，用于将结果重新整形为指定的维度
+    """
+    assert np is not None, 'numpy is not imported'
+    v0 = get_cell_fm(model, fid=sol, mask=mask, shape=shape)
+    v1 = get_cell_fm(model, fid=liq, mask=mask, shape=shape)
+    return v0 / np.maximum(1.0e-10, v1)
+
+
+get_c = get_cell_fc
+
+
 def get_ca(model: Seepage, ca, mask=None, shape=None):
     """
     返回cell的属性
@@ -1643,6 +1796,7 @@ def get_ca(model: Seepage, ca, mask=None, shape=None):
         一个 numpy 数组，包含给定维度上单元格的属性值
         如果 mask 为 None，则返回所有单元格的属性值；否则，返回掩码指定的单元格的属性值
     """
+    assert isinstance(model, Seepage), f'get_ca expect Seepage, but got {type(model).__name__}'
     v = as_numpy(model).cells.get(ca)
     res = v if mask is None else v[mask]
     if shape is not None:
@@ -1666,6 +1820,7 @@ def get_den(model: Seepage, fid, mask=None, shape=None):
         如果提供了流体 ID，则返回该流体在所有单元格中的密度。
         如果提供了掩码，则返回掩码指定的单元格的流体密度。
     """
+    assert isinstance(model, Seepage), f'get_den expect Seepage, but got {type(model).__name__}'
     if isinstance(fid, str):
         fid = model.find_fludef(name=fid)
         assert fid is not None
@@ -1689,6 +1844,7 @@ def set_fa(model: Seepage, fid, fa, value):
         fa: 流体属性索引（例如 FluidAttrs.density）
         value: 要设置的属性值
     """
+    assert isinstance(model, Seepage), f'set_fa expect Seepage, but got {type(model).__name__}'
     if isinstance(fid, str):
         fid = model.find_fludef(name=fid)
         assert fid is not None
@@ -1713,6 +1869,7 @@ def get_fa(model: Seepage, fid, fa, mask=None, shape=None):
         如果提供了流体 ID，则返回该流体在所有单元格中的属性值。
         如果提供了掩码，则返回掩码指定的单元格的流体属性值。
     """
+    assert isinstance(model, Seepage), f'get_fa expect Seepage, but got {type(model).__name__}'
     if isinstance(fid, str):
         fid = model.find_fludef(name=fid)
     if not is_array(fid):
@@ -1752,7 +1909,7 @@ def _pop_sat(name, table: dict):
         return values
 
 
-def get_sat(names, table: dict):
+def get_sat(names, table: Dict[str, float]):
     """
     返回各个组分的饱和度数值
     Args:
@@ -1794,6 +1951,7 @@ def get_recommended_dt(
         然后，根据是否使用流动模型和热模型，分别计算推荐的时间步长 `dt1` 和 `dt2`。
         最后，返回 `dt1` 和 `dt2` 中的较小值。
     """
+    assert isinstance(model, Seepage), f'get_recommended_dt expect Seepage, but got {type(model).__name__}'
     assert using_flow or using_ther
     if using_flow:
         dt1 = model.get_recommended_dt(
@@ -1913,6 +2071,7 @@ def reg_cell_tmp(model: Seepage, index):
     Returns:
         临时属性的索引
     """
+    assert isinstance(model, Seepage), f'reg_cell_tmp expect Seepage, but got {type(model).__name__}'
     return model.reg_cell_key(f'tmp_{index}')
 
 
@@ -1926,6 +2085,7 @@ def reg_face_tmp(model: Seepage, index):
     Returns:
         临时属性的索引
     """
+    assert isinstance(model, Seepage), f'reg_face_tmp expect Seepage, but got {type(model).__name__}'
     return model.reg_face_key(f'tmp_{index}')
 
 
@@ -1939,4 +2099,5 @@ def reg_flu_tmp(model: Seepage, index):
     Returns:
         临时属性的索引
     """
+    assert isinstance(model, Seepage), f'reg_flu_tmp expect Seepage, but got {type(model).__name__}'
     return model.reg_flu_key(f'tmp_{index}')

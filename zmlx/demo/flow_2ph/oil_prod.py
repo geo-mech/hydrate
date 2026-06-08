@@ -37,7 +37,7 @@ def create(jx=40, jz=20, s=None):
     # 定义流体
     fludefs = [
         create_oil(name='oil'),
-        Seepage.FluDef(den=1000, vis=1.0e-3, name='water')
+        FluDef(den=1000, vis=1.0e-3, name='water')
     ]
 
     def get_p(x, y, z):

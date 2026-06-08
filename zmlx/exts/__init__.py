@@ -43,7 +43,9 @@ from zmlx.exts._lexpr import LinearExpr, create_lexpr
 from zmlx.exts._dyn import *
 from zmlx.exts._sol import ConjugateGradientSolver
 import zmlx.exts._utils as has_cells
-from zmlx.exts._seepage import Seepage, Thermal, Reaction
+from zmlx.exts._seepage import (
+    Seepage, Thermal, Reaction, FluDef, FluData, Fluid, CellData, Cell, FaceData, Face, Injector, FlowSol, ThermalSol
+)
 from zmlx.exts._ip import InvasionPercolation
 from zmlx.exts._frac import Dfn2, Lattice3, FracAlg, FractureNetwork, InfMatrix, DDMSolution2
 import zmlx.exts._ip as ip
@@ -473,26 +475,6 @@ class Alg:
                          make_c_char_p(znetwork_folder))
 
 
-def main(argv: list):
-    """
-    模块运行的主函数.
-    """
-    if len(argv) == 1:
-        print(about(check_lic=False))
-        return
-    if len(argv) == 2:
-        if argv[1] == 'lic':
-            print(lic.desc)
-            return
-        if argv[1] == 'env':
-            try:
-                from zmlx.alg.sys import install_dep
-                install_dep(print)
-            except Exception as e:
-                print(e)
-        return
-
-
 class LazyImport:
     def __init__(self, module, name, deprecated_date=None):
         self.pack = module
@@ -566,6 +548,3 @@ SeepageTher = LazyImport(
     'zmlx.config.TherFlowConfig', 'TherFlowConfig', '2025-1-21')
 Field = LazyImport(
     'zmlx.utility.Field', 'Field', '2025-1-21')
-
-if __name__ == "__main__":
-    main(sys.argv)

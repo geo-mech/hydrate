@@ -3,8 +3,8 @@ import os
 import sys
 from datetime import datetime
 
-from zmlx.exts import app_data, write_text, read_text
 from zmlx.alg.fsys import time_string
+from zmlx.exts import app_data, write_text, read_text
 from zmlx.ui.alg import create_action
 from zmlx.ui.gui_buffer import gui
 from zmlx.ui.pyqt import is_pyqt6, QtCore, QtGui, QtWidgets

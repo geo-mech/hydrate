@@ -48,8 +48,8 @@ def create(jx, jz):
 
 def show(model, jx, jz, caption=None):
     def on_figure(figure):
-        from zmlx.plt.on_figure import calc_best_layout
-        nrows, ncols = calc_best_layout(figure, 3, 0.6)
+        from zmlx.plt import calculate_subplot_layout
+        nrows, ncols = calculate_subplot_layout(3, 0.6, fig=figure)
         opts = dict(nrows=nrows, ncols=ncols, xlabel='x', ylabel='z', aspect='equal')
         x = tfc.get_x(model, shape=[jx, jz])
         z = tfc.get_z(model, shape=[jx, jz])

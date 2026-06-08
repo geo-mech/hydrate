@@ -8,8 +8,8 @@ Zhou X, Fan S, Liang D, et al., 2008. . Energy Conversion and Management, 49(8):
 """
 
 import zmlx.react.hydrate as hydrate
-from zmlx.exts import Interp1
 from zmlx.alg.interp import interp1
+from zmlx.exts import Interp1
 
 # 温度
 vt = [265, 273.25, 274.33, 275.6, 276.12, 276.63, 277.34, 278.09, 279.32,
@@ -108,8 +108,10 @@ if __name__ == '__main__':
     print(f'mg = {get_mg_vs_mh()}, {get_mg()}')
     print(f'dh = {get_dheat()}, {get_dh()}')
 
-    d3 = {'name': 'plot', 'args': [vt1, vp1], 'kwargs': {'c': 'b'}}
-    d4 = {'name': 'plot', 'args': [vt, vp], 'kwargs': {'c': 'r'}}
-    from zmlx.plt.fig2 import plot2
+    from zmlx.fig import plot2d, xy
 
-    plot2(xlabel='x', ylabel='y', data=(d3, d4))
+    plot2d(xy(vt1, vp1, c='b'),
+           xy(vt, vp, c='r'),
+           xlabel='x',
+           ylabel='y'
+           )

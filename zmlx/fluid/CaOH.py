@@ -2,7 +2,7 @@
 
 @author: Maryelin
 """
-from zmlx.exts import Seepage
+from zmlx.exts import FluDef
 
 
 def create(name=None):
@@ -18,7 +18,7 @@ def create(name=None):
     den = 2240
     vis = 1.0e30
     specific_heat = 1565.66
-    return Seepage.FluDef(
+    return FluDef(
         den=den, vis=vis, specific_heat=specific_heat,
         name=name)
 

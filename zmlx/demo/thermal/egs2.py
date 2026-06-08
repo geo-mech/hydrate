@@ -135,7 +135,7 @@ def plot_cells(model, folder=None):
     """
     if not gui.exists():
         return
-    from zmlx.plt.fig2 import tricontourf
+    from zmlx.plt import show_tricontourf
     assert isinstance(model, Seepage)
 
     time = time2str(tfc.get_time(model))
@@ -149,7 +149,7 @@ def plot_cells(model, folder=None):
     def show_ca(idx, name):
         p = as_numpy(model).cells.get(idx)
         p = p[: -1]
-        tricontourf(
+        show_tricontourf(
             x, y, p, caption=name, title=f'time = {time}',
             fname=make_fname(year, path.join(folder, name), '.jpg', 'y'))
 
@@ -160,7 +160,7 @@ def plot_cells(model, folder=None):
     # 显示流体温度
     t = as_numpy(model).fluids(0).get(index=model.reg_flu_key('temperature'))
     t = t[: -1]
-    tricontourf(
+    show_tricontourf(
         x, y, t, caption='flu_temp', title=f'time = {time}',
         fname=make_fname(year, path.join(folder, 'flu_temp'), '.jpg', 'y'))
 

@@ -1,5 +1,5 @@
-from zmlx.exts import Dfn2
 from zmlx.alg.base import linspace
+from zmlx.exts import Dfn2
 from zmlx.geometry.base import point_distance
 
 
@@ -104,7 +104,7 @@ def test():
     ]
     fractures = dfn2(data, xr=[0, 10], yr=[0, 10])
     print(f'average length = {get_avg_length(fractures)}')
-    from zmlx.plt.fig2 import show_dfn2
+    from zmlx.plt import show_dfn2
     show_dfn2(fractures)
 
 

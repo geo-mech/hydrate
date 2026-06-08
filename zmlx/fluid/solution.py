@@ -7,11 +7,11 @@
 @2025-11-20  张召彬
 """
 
-from zmlx.exts import Seepage
+from zmlx.exts import FluDef, FluData
 
 
 def create_solute(
-        solvent: Seepage.FluDef,
+        solvent: FluDef,
         c=0.01, den_times=1.0, vis_times=1.0, name=None
 ):
     """
@@ -25,7 +25,7 @@ def create_solute(
         name: “溶质”的名称。如果为None，则使用“溶剂”的名称。
 
     Returns:
-        Seepage.FluDef: “溶质”的流体定义
+        FluDef: “溶质”的流体定义
     """
     assert 0.0 < c <= 0.2, 'c must be in (0, 0.2]'
 
@@ -33,7 +33,7 @@ def create_solute(
     res = solvent.get_copy(name=name)
 
     # 定义一个包含了两个组分的流体来测试
-    flu = Seepage.FluData()
+    flu = FluData()
     flu.component_number = 2
     flu.get_component(0).mass = 1.0 - c
     flu.get_component(1).mass = c
@@ -79,7 +79,7 @@ def test():
     c = 0.05
 
     # 溶剂
-    solvent = Seepage.FluDef(den=1000.0, vis=1, specific_heat=4200)
+    solvent = FluDef(den=1000.0, vis=1, specific_heat=4200)
 
     # 溶质
     solute = create_solute(
@@ -87,7 +87,7 @@ def test():
         den_times=1.05, vis_times=1.05)
 
     # 流体的定义
-    flu = Seepage.FluData()
+    flu = FluData()
     flu.component_number = 2
     flu.get_component(0).den = solvent.get_den(10e6, 300)
     flu.get_component(0).vis = solvent.get_vis(10e6, 300)

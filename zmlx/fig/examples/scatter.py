@@ -1,5 +1,6 @@
 from zmlx.fig import *
 
+
 def test():
     import numpy as np
     x = np.random.rand(100).tolist()

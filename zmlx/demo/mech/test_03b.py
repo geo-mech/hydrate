@@ -3,8 +3,8 @@
 from zmlx import *
 from zmlx.fem import xy
 from zmlx.mesh.triangle import layered_triangles
+from zmlx.plt import add_tricontourf
 from zmlx.plt.on_figure import add_axes2
-from zmlx.plt.tricontourf import add_tricontourf
 
 
 def main():

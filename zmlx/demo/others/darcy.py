@@ -28,7 +28,7 @@ def create():
 
     model = tfc.create(
         mesh=mesh, dv_relative=0.5,
-        fludefs=[Seepage.FluDef(name='h2o')],
+        fludefs=[FluDef(name='h2o')],
         porosity=porosity,
         p=2e6, s=1.0,
         perm=10e-15,

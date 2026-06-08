@@ -1,7 +1,7 @@
 from PIL import Image
 
-from zmlx.exts import np
 from zmlx.alg.image import get_data
+from zmlx.exts import np
 
 
 def test(img_name, map_name):

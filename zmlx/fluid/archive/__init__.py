@@ -1,6 +1,6 @@
 import os
 
-from zmlx.exts import Seepage
+from zmlx.exts import FluDef
 
 
 def get_path(*args):
@@ -13,7 +13,7 @@ def load(key, name=None):
     """
     fname = get_path(key)
     if os.path.isfile(fname):
-        flu = Seepage.FluDef(path=fname)
+        flu = FluDef(path=fname)
         if name is not None:
             flu.name = name
         return flu
@@ -26,7 +26,7 @@ def load_co2_liq_270_289_1_20(name=None):
 def show(flu, p_min=1e6, p_max=20e6, t_min=270, t_max=290):
     print(flu)
     try:
-        from zmlx.plt.fig2 import show_field2
+        from zmlx.plt import show_field2
         show_field2(flu.den, xr=[p_min, p_max], yr=[t_min, t_max])
         show_field2(flu.vis, xr=[p_min, p_max], yr=[t_min, t_max])
     except:

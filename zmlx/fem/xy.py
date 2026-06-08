@@ -31,7 +31,7 @@ def get_masses(mesh: Mesh3, face_density, face_thickness):
     return [vm[i // 2] for i in range(len(vm) * 2)]
 
 
-def get_element(face: Mesh3.Face):
+def _get_element(face: Mesh3.Face):
     res = []
     for node in face.nodes:
         assert isinstance(node, Mesh3.Node)
@@ -45,10 +45,13 @@ def get_elements(mesh: Mesh3):
     """
     计算各个单位对应的自由度. 每个单位是一个Face.
     """
-    return [get_element(face) for face in mesh.faces]
+    return [_get_element(face) for face in mesh.faces]
 
 
-def get_matrices(mesh: Mesh3, face_ym, face_mu, face_thickness, get_matrix=None):
+def get_matrices(
+        mesh: Mesh3, face_ym, face_mu, face_thickness,
+        get_matrix=None
+):
     """
     计算单元刚度矩阵(各个face的)。其中face_ym为Face的杨氏模量，face_mu为Face的泊松比，face_thickness为Face的厚度。
     get_matrix为一个函数，用于计算一个Face的刚度矩阵。
@@ -82,8 +85,10 @@ def create_dyn(mesh: Mesh3, face_ym, face_mu, face_density, face_thickness, get_
     """
     masses = get_masses(mesh, face_density=face_density, face_thickness=face_thickness)
     elements = get_elements(mesh)
-    matrices = get_matrices(mesh, face_ym=face_ym, face_mu=face_mu, face_thickness=face_thickness,
-                            get_matrix=get_matrix)
+    matrices = get_matrices(
+        mesh, face_ym=face_ym, face_mu=face_mu, face_thickness=face_thickness,
+        get_matrix=get_matrix
+    )
     return dyn.create_dyn(
         masses=masses, elements=elements, matrices=matrices, velocities=velocities,
         displacements=displacements

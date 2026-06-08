@@ -1,11 +1,15 @@
+import zmlx.alg.sys as warnings
 from zmlx.plt.on_axes import add_seepage_mesh, plot_on_axes
+
+warnings.warn(f'The module {__name__} will be removed after 2027-5-23',
+              DeprecationWarning, stacklevel=2)
 
 
 def test():
     """
     测试
     """
-    from zmlx import create_cube, plot, add_axes3
+    from zmlx import create_cube
     import random
     import numpy as np
 
@@ -21,10 +25,10 @@ def test():
         c.pos = [x, y, z]
 
     plot_on_axes(add_seepage_mesh, mesh, dim=3,
-         cbar=dict(label='Volume', shrink=0.5),
-         gui_mode=True,
-         aspect='equal', xlabel='x', ylabel='y', zlabel='z', title=f'A Seepage Mesh'
-         )
+                 cbar=dict(label='Volume', shrink=0.5),
+                 gui_mode=True,
+                 aspect='equal', xlabel='x', ylabel='y', zlabel='z', title=f'A Seepage Mesh'
+                 )
 
 
 if __name__ == '__main__':

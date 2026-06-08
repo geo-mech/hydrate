@@ -323,7 +323,10 @@ class TabWidget(QtWidgets.QTabWidget):
                 if isinstance(suptitle, str):
                     figure.suptitle(suptitle)
                 if tight_layout:
-                    figure.tight_layout()
+                    if isinstance(tight_layout, dict):
+                        figure.tight_layout(**tight_layout)
+                    else:
+                        figure.tight_layout()
 
             widget.plot_on_figure(on_figure=on_figure)
             if fname is not None:

@@ -9,7 +9,7 @@ def create(jx, jz):
     )
     model = tfc.create(
         mesh=mesh, dv_relative=0.5,
-        fludefs=[Seepage.FluDef(name='h2o')],
+        fludefs=[FluDef(name='h2o')],
         porosity=0.2,
         p=2e6, s=1.0,
         perm=10e-15,

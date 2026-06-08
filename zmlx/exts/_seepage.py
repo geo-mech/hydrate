@@ -21,4026 +21,3996 @@ from zmlx.exts._utils import (
 from zmlx.exts._vec import UintVector, Vector
 
 
+class Reaction(HasHandle):
+    """
+    定义一个化学反应。
+
+    这里，所谓“化学反应”，是一种或者几种流体（或者流体的组分）转化为另外一种或者几种
+        流体或者组分，并吸收或者释放能量的过程。
+    这个Reaction类，定义参与反应的各种物质的比例、反应的速度以及反应过程中的能量变化。
+    基于Seepage类模拟水合物的分解或者生成、冰的形成和融化、重油的裂解等，均基于此Reaction类进行定义。
+
+    反应速率q定义：
+        在单位时间内（1秒内），“反应所消耗的物质的质量（左侧物质质量的减少量）”
+            与 “在Cell中所有与此反应相关的组分的质量之和”的比值.
+        注意：
+            此定义与一般反应速率的定义不同，需要进行转换.
+
+    当Reaction作用到一个Cell上的时候，反应速率的计算步骤如下：
+        1. 根据Cell内流体的压力，使用p2t曲线，计算出基准温度T0。如果p2t没有定义，则
+            基准温度为0;
+        2. 遍历各个Inhibitor，如果定义了c2t曲线，则计算此Inhibitor的浓度，并使用
+            c2t曲线，计算出此Inhibitor对基准温度的影响。
+            注意：此浓度的计算是基于sol和liq的比值计算的。
+        3. 尝试读取Cell的idt属性和wdt属性，在此Cell内，T0=T0+idt属性值*wdt属性值.
+            至此，获得了经过矫正的基准温度T0;
+        4. 读取反应相关的各个组分的平均温度T，并减去基准温度T0，即得到dT=T-T0。下面，将
+            使用这个dT来计算反应速率.
+        5. 使用dT，以及t2q曲线，计算出正向反应速率q；同理，基于t2qr曲线，根据dT，计算出
+            逆向的反应速率qr.
+        6. 遍历各个Inhibitor，如果其定义了exp，则令q=q*c^exp；如果其定义了exp_r则令
+            qr=qr*c^exp_r。 这个步骤，即使用相关组分的浓度来对正向和逆向的反应速率进行
+            必要的矫正。
+        7. 令反应速率Q=q-qr。
+        8. 遍历各个Inhibitor，如果其定义了c2q曲线，则使用c2q曲线，对反应速率Q进行矫正。
+            即Q=Q+c2q(c)。
+        9. 查看Cell是否定义了irate属性，如果定义了，则读取irate属性为此Cell内速率的倍率，
+            令Q=Q*irate属性值
+        10. 至此，得到了最终的反应速率Q。
+    """
+
+    class Component:
+        """
+        组分。定义的是反应方程式中的一项。
+        """
+
+        def __init__(self, handle: c_void_p):
+            self.handle = handle
+
+        core.use(c_void_p, 'rea_comp_get_index', c_void_p)
+
+        @property
+        def index(self) -> List[int]:
+            """
+            流体组分的序号. 长度为1到3之间的list
+            """
+            idx = UintVector(handle=core.rea_comp_get_index(self.handle))
+            return idx.to_list()
+
+        @index.setter
+        def index(self, value: List[int]):
+            """
+            流体组分的序号. 长度为1到3之间的list
+            """
+            idx = UintVector(handle=core.rea_comp_get_index(self.handle))
+            idx.set(value)
+
+        core.use(c_size_t, 'rea_comp_get_fa_t', c_void_p)
+
+        @property
+        def fa_t(self) -> int:
+            """
+            组分温度属性的ID. 必须定义
+            """
+            return core.rea_comp_get_fa_t(self.handle)
+
+        core.use(None, 'rea_comp_set_fa_t',
+                 c_void_p, c_size_t)
+
+        @fa_t.setter
+        def fa_t(self, value: int):
+            """
+            组分温度属性的ID. 必须定义
+            """
+            core.rea_comp_set_fa_t(self.handle, value)
+
+        core.use(c_size_t, 'rea_comp_get_fa_c', c_void_p)
+
+        @property
+        def fa_c(self) -> int:
+            """
+            组分比热属性的ID. 必须定义
+            """
+            return core.rea_comp_get_fa_c(self.handle)
+
+        core.use(None, 'rea_comp_set_fa_c',
+                 c_void_p, c_size_t)
+
+        @fa_c.setter
+        def fa_c(self, value: int):
+            """
+            组分比热属性的ID. 必须定义
+            """
+            core.rea_comp_set_fa_c(self.handle, value)
+
+        core.use(c_double, 'rea_comp_get_weight', c_void_p)
+
+        @property
+        def weight(self) -> float:
+            """
+            组分权重。 左侧物质的权重为负值，右侧为正值. 所有左侧物质权重的加和等于-1
+            右侧物质权重的加和等于+1
+            """
+            return core.rea_comp_get_weight(self.handle)
+
+        core.use(None, 'rea_comp_set_weight',
+                 c_void_p, c_double)
+
+        @weight.setter
+        def weight(self, value: float):
+            """
+            组分权重
+            """
+            core.rea_comp_set_weight(self.handle, value)
+
+    class Inhibitor:
+        """
+        定义抑制剂，或者催化剂。这种物质不参与反应，但是可能会影响到反应的速率。
+        所有可以影响到反应速率的物质，在这里统一都定义为抑制剂
+        """
+
+        def __init__(self, handle: c_void_p):
+            self.handle = handle
+
+        core.use(c_void_p, 'rea_inh_get_sol', c_void_p)
+
+        @property
+        def sol(self) -> List[int]:
+            """
+            溶质对应的ID.
+            说明：
+                在实际计算的时候，将根据sol的质量（或者体积）除以liq的质量（或者体积）来
+                获得溶质的浓度，并根据此浓度来矫正反应速率。
+                具体是使用质量浓度还是体积浓度，取决于use_vol的取值。
+                默认使用质量浓度。
+                计算得到的溶质的浓度将会是0到1之间的数值。
+            """
+            return UintVector(
+                handle=core.rea_inh_get_sol(self.handle)).to_list()
+
+        @sol.setter
+        def sol(self, value: List[int]):
+            """
+            溶质对应的ID
+            """
+            UintVector(
+                handle=core.rea_inh_get_sol(self.handle)).set(value)
+
+        core.use(c_void_p, 'rea_inh_get_liq', c_void_p)
+
+        @property
+        def liq(self) -> List[int]:
+            """
+            溶液对应的ID.
+            说明：
+                在实际计算的时候，将根据sol的质量（或者体积）除以liq的质量（或者体积）来
+                获得溶质的浓度，并根据此浓度来矫正反应速率。
+                具体是使用质量浓度还是体积浓度，取决于use_vol的取值。
+                默认使用质量浓度。
+                计算得到的溶质的浓度将会是0到1之间的数值。
+            """
+            return UintVector(
+                handle=core.rea_inh_get_liq(self.handle)).to_list()
+
+        @liq.setter
+        def liq(self, value: List[int]):
+            """
+            溶液对应的ID
+            """
+            UintVector(
+                handle=core.rea_inh_get_liq(self.handle)).set(value)
+
+        core.use(c_void_p, 'rea_inh_get_c2t', c_void_p)
+
+        @property
+        def c2t(self) -> Interp1:
+            """
+            溶质浓度（根据sol和liq的比值计算）对基准温度的矫正。
+            定义一条曲线，其中
+                x为溶质的浓度 （0到1之间）
+                y为此抑制剂对基准温度的改变。y>0则相当于提升基准温度（等价于流体温度降低）。单位为K
+            """
+            handle = core.rea_inh_get_c2t(self.handle)
+            return Interp1(handle=handle)
+
+        core.use(c_bool, 'rea_inh_get_use_vol', c_void_p)
+        core.use(None, 'rea_inh_set_use_vol',
+                 c_void_p, c_bool)
+
+        @property
+        def use_vol(self) -> bool:
+            """
+            是否使用体积分数 (如果为False，则使用质量分数)。
+                如果为True，则定义浓度c为c=sol的体积/liq的体积。
+                否则，定义浓度c为c=sol的质量/liq的质量。
+            """
+            return core.rea_inh_get_use_vol(self.handle)
+
+        @use_vol.setter
+        def use_vol(self, value: bool):
+            """
+            是否使用体积分数 (如果为False，则使用质量分数)
+            """
+            core.rea_inh_set_use_vol(self.handle, value)
+
+        core.use(c_void_p, 'rea_inh_get_c2q', c_void_p)
+
+        @property
+        def c2q(self) -> Interp1:
+            """
+            溶质浓度（根据sol和liq的比值计算）对反应速率矫正。
+            定义一条曲线，其中
+                x为溶质的浓度 （0到1之间）
+                y为此抑制剂对反应速率的影响。基于此计算的反应速率，将直接叠加在反应的速率上。
+            特别注意反应速率的定义：
+                在单位时间内（1秒内），“反应所消耗的物质的质量（左侧物质质量的减少量）”
+                与 “在Cell中所有与此反应相关的组分的质量之和”的比值.
+            """
+            handle = core.rea_inh_get_c2q(self.handle)
+            return Interp1(handle=handle)
+
+        core.use(c_double, 'rea_inh_get_exp', c_void_p)
+
+        @property
+        def exp(self) -> float:
+            """
+            反应速率的指数（正向反应）.
+                在使用反应的t2q计算出正向反应速率之后，将乘以c^exp，其中c为溶质的浓度。
+                特别注意：
+                    这里浓度的定义和常规的不同，在化学反应中，一般采用mol/L这样的单位
+                    但是，这里的浓度为质量分数(或者体积分数，取决于use_vol属性是否为True)，
+                    是无量纲的量。因此，必须进行必要的转换。
+                    如果此抑制剂的浓度不会对反应的速率造成影响，则将此指数设置为0
+            注意：
+                只有在计算正向反应速率的时候，此属性才会起作用
+            """
+            return core.rea_inh_get_exp(self.handle)
+
+        core.use(None, 'rea_inh_set_exp',
+                 c_void_p, c_double)
+
+        @exp.setter
+        def exp(self, value: float):
+            """
+            反应速率的指数（正向反应）.
+            """
+            core.rea_inh_set_exp(self.handle, value)
+
+        core.use(c_double, 'rea_inh_get_exp_r', c_void_p)
+
+        @property
+        def exp_r(self) -> float:
+            """
+            反应速率的指数(逆向)
+                在使用反应的t2qr计算出逆向反应速率之后，将乘以c^exp_r，其中c为溶质的浓度。
+                特别注意：
+                    这里浓度的定义和常规的不同，在化学反应中，一般采用mol/L这样的单位
+                    但是，这里的浓度为质量分数(或者体积分数，取决于use_vol属性是否为True)，
+                    是无量纲的量。因此，必须进行必要的转换。
+                    如果此抑制剂的浓度不会对反应的速率造成影响，则将此指数设置为0
+            注意：
+                只有在计算逆向反应速率的时候，此属性才会起作用
+            """
+            return core.rea_inh_get_exp_r(self.handle)
+
+        core.use(None, 'rea_inh_set_exp_r',
+                 c_void_p, c_double)
+
+        @exp_r.setter
+        def exp_r(self, value: float):
+            """
+            反应速率的指数(逆向)
+            """
+            core.rea_inh_set_exp_r(self.handle, value)
+
+    core.use(c_void_p, 'new_reaction')
+    core.use(None, 'del_reaction', c_void_p)
+
+    def __init__(self, path: Optional[str] = None, handle: Optional[c_void_p] = None):
+        """
+        初始化一个反应。
+
+        Args:
+            path (str, optional): 当给定path的时候，
+                则载入之前创建好并序列化存储的反应。默认为None。
+            handle (c_void_p, optional): 反应的句柄。如果为None，
+                则根据path加载反应；否则忽略path。默认为None。
+        """
+        super().__init__(handle, core.new_reaction, core.del_reaction)
+        if handle is None:
+            if isinstance(path, str):
+                self.load(path)
+        else:
+            assert path is None, "If handle is given, path must be None"
+
+    core.use(None, 'reaction_save', c_void_p, c_char_p)
+
+    def save(self, path: str):
+        """
+        序列化保存。
+
+        Args:
+            path (str): 保存文件的路径。
+
+        Notes:
+            可选扩展格式：
+            1：.txt
+                .TXT 格式（跨平台，基本不可读）
+            2：.xml
+                .XML 格式（特定可读性，文件体积最大，读写速度最慢，跨平台）
+            3：.其他
+                二进制格式
+                    （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
+        """
+        if isinstance(path, str):
+            make_parent(path)
+            core.reaction_save(self.handle, make_c_char_p(path))
+
+    core.use(None, 'reaction_load', c_void_p, c_char_p)
+
+    def load(self, path: str):
+        """
+        读取序列化文件。
+
+        Args:
+            path (str): 读取文件的路径。
+
+        Notes:
+            根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
+        """
+        if isinstance(path, str):
+            check_ipath(path, self)
+            core.reaction_load(self.handle, make_c_char_p(path))
+
+    core.use(None, 'reaction_write_fmap',
+             c_void_p, c_void_p, c_char_p)
+    core.use(None, 'reaction_read_fmap',
+             c_void_p, c_void_p, c_char_p)
+
+    def to_fmap(self, fmt: str = 'binary'):
+        """
+        将数据序列化到一个Filemap中。
+
+        Args:
+            fmt (str, optional): 序列化格式，取值可以为 'text', 'xml'
+                和 'binary'。默认为 'binary'。
+
+        Returns:
+            FileMap: 包含序列化数据的FileMap对象。
+        """
+        fmap = FileMap()
+        core.reaction_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
+        return fmap
+
+    def from_fmap(self, fmap: FileMap, fmt: str = 'binary'):
+        """
+        从Filemap中读取序列化的数据。
+
+        Args:
+            fmap (FileMap): 包含序列化数据的FileMap对象。
+            fmt (str, optional): 序列化格式，取值可以为 'text', 'xml'
+                和 'binary'。默认为 'binary'。
+        """
+        assert isinstance(fmap, FileMap)
+        core.reaction_read_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
+
+    @property
+    def fmap(self) -> FileMap:
+        """
+        返回一个二进制的FileMap对象。
+
+        Returns:
+            FileMap: 包含二进制序列化数据的FileMap对象。
+        """
+        return self.to_fmap(fmt='binary')
+
+    @fmap.setter
+    def fmap(self, value: FileMap):
+        """
+        从二进制的FileMap对象中读取序列化的数据。
+
+        Args:
+            value (FileMap): 包含二进制序列化数据的FileMap对象。
+        """
+        self.from_fmap(value, fmt='binary')
+
+    core.use(None, 'reaction_set_dheat', c_void_p, c_double)
+    core.use(c_double, 'reaction_get_dheat', c_void_p)
+
+    @property
+    def heat(self) -> float:
+        """
+        反应热.
+            发生1kg物质的化学反应(1kg的左侧物质，转化为1kg的右侧物质)释放的热量，单位焦耳。
+            注意:
+                1. 如果反应是吸热反应，则此heat为负值。
+                2. 特别要注意单位。此heat的单位，实际为焦耳/kg，与一般的焦耳/mol不同。
+
+        Returns:
+            float: 单位质量化学反应释放的热量，单位焦耳。
+        """
+        return core.reaction_get_dheat(self.handle)
+
+    @heat.setter
+    def heat(self, value: float):
+        """
+        反应热.
+        Args:
+            value (float): 单位质量化学反应释放的热量，单位焦耳。
+        """
+        core.reaction_set_dheat(self.handle, value)
+
+    # 兼容之前的接口 (将在2024-02-01之后移除)
+    dheat = heat
+
+    core.use(None, 'reaction_set_t0', c_void_p, c_double)
+    core.use(c_double, 'reaction_get_t0', c_void_p)
+
+    @property
+    def temp(self) -> float:
+        """
+        和heat对应的参考温度（单位为K），只有当反应前后的温度都等于此temp的时候，
+        释放的热量才可以使用heat来定义。
+        注意：
+            默认值为280.0K
+
+        Returns:
+            float: 参考温度。单位K
+        """
+        return core.reaction_get_t0(self.handle)
+
+    @temp.setter
+    def temp(self, value: float):
+        """
+        设置参考温度。
+        Args:
+            value (float): 参考温度。
+        """
+        core.reaction_set_t0(self.handle, value)
+
+    def set_p2t(self, p: List[float], t: List[float]):
+        """
+        设置p2t，具体参考对p2t的说明
+        """
+        self.p2t.set_xy(p, t)
+
+    def set_t2q(self, t: List[float], q: List[float]):
+        """
+        设置t2q，具体参考对t2q的说明
+        """
+        self.t2q.set_xy(t, q)
+
+    core.use(c_void_p, 'reaction_get_p2t', c_void_p)
+
+    @property
+    def p2t(self) -> Interp1:
+        """
+        不同的压力下，反应的基准温度. 单位K
+        说明：
+            在此反应定义中，反应的速率是根据温度来计算的。但是，温度总是一个相对的数值，
+            因此，才有一个基准温度的概念。而且，这个基准温度是和压力相关的。
+            比如说，1MPa下的基准温度是0度，2MPa下的基准温度是10度，那么后续计算反应
+            速率的时候，压力1MPa，温度1度的反应速率，将和压力2MPa，温度11度的反应速率相等。
+        此属性定义了一条曲线，其中：
+            自变量x: 压力（一个向量），单位是Pa
+            因变量y: 给定压力下对应的基准温度（一个向量，长度和x相等），单位是K
+        """
+        handle = core.reaction_get_p2t(self.handle)
+        return Interp1(handle=handle)
+
+    core.use(c_void_p, 'reaction_get_t2q', c_void_p)
+
+    @property
+    def t2q(self) -> Interp1:
+        """
+        当温度偏离平衡温度的时候反应的速率（正向反应速率，此属性必须正确设置）。
+        如果定义了t2qr（逆向速率），则实际的反应速率，将是正向的速率减去逆向的速率。
+
+        定一个一条曲线，其中：
+            自变量x: 温度偏移量。单位K
+            因变量y: 反应速率。单位: 1/s。
+                (反应的速率定义为：对于1kg的总的反应物质，在1s内，左侧物质质量的较少量)
+                小于0的q表示反应是逆向的（右侧物质质量减少）
+                注意这个速率后续需要根据exp以及组分的浓度来矫正
+        注意:
+            一般地，对于吸热反应，随着温度的增加，反应的速率应当增加；
+            反之，对于放热反应，随着温度的降低，反应的速率降低；
+        """
+        handle = core.reaction_get_t2q(self.handle)
+        return Interp1(handle=handle)
+
+    core.use(c_void_p, 'reaction_get_t2qr', c_void_p)
+
+    @property
+    def t2qr(self) -> Interp1:
+        """
+        一条曲线，表示不同的温度(实际温度减去基准温度)下的逆向反应速率。参考t2q的说明。
+        """
+        handle = core.reaction_get_t2qr(self.handle)
+        return Interp1(handle=handle)
+
+    def add_component(self, index: List[int], weight: float, fa_t: int, fa_c: int):
+        """
+        添加一种反应物质。
+
+        Args:
+            index: Seepage.Cell中定义的流体组分的序号。
+            weight: 发生1kg的反应的时候此物质变化的质量，
+                其中左侧物质的weight为负值，右侧为正值。
+            fa_t (int): 定义流体温度的属性ID。
+            fa_c (int): 定义流体比热的属性ID。
+
+        Raises:
+            AssertionError: 如果fa_t或fa_c为None，或者weight的绝对值大于1.00001。
+        """
+        idx = self.component_n
+        self.component_n = idx + 1
+        comp = self.get_component(idx)
+
+        comp.index = parse_fid(index)
+
+        assert fa_t is not None, "fa_t must be not None"
+        comp.fa_t = fa_t
+
+        assert fa_c is not None, "fa_c must be not None"
+        comp.fa_c = fa_c
+
+        assert abs(weight) <= 1.00001, "weight must be smaller than 1"
+        comp.weight = weight
+
+    def clear_components(self) -> None:
+        """
+        清除所有的反应组分。
+        """
+        self.component_n = 0
+
+    core.use(c_size_t, 'reaction_get_component_n', c_void_p)
+
+    @property
+    def component_n(self) -> int:
+        """
+        反应组分的数量。
+        """
+        return core.reaction_get_component_n(self.handle)
+
+    core.use(None, 'reaction_set_component_n', c_void_p, c_size_t)
+
+    @component_n.setter
+    def component_n(self, value: int):
+        """
+        反应组分的数量。
+        """
+        core.reaction_set_component_n(self.handle, value)
+
+    core.use(c_void_p, 'reaction_get_component', c_void_p, c_size_t)
+
+    def get_component(self, index: int) -> Optional['Reaction.Component']:
+        """
+        获取指定索引的反应组分。
+        """
+        idx_ = get_index(index, count=self.component_n)
+        if idx_ is None:
+            return None
+        else:
+            return Reaction.Component(
+                handle=core.reaction_get_component(self.handle, idx_))
+
+    @property
+    def components(self) -> Iterable['Reaction.Component']:
+        """
+        迭代所有的组分
+        """
+        return Iterator(self, self.component_n,
+                        lambda m, ind: m.get_component(ind))
+
+    def add_inhibitor(self, *args, **kwargs):
+        warnings.warn(
+            'Reaction.add_inhibitor will be removed after 2026-5-31, '
+            'use zmlx.react.alg.add_inhibitor instead',
+            DeprecationWarning, stacklevel=2)
+        from zmlx.react import alg
+        return alg.add_inhibitor(self, *args, **kwargs)
+
+    def clear_inhibitors(self):
+        """
+        清除所有的抑制剂定义。
+        """
+        self.inhibitor_n = 0
+
+    core.use(c_size_t, 'reaction_get_inh_n', c_void_p)
+
+    @property
+    def inhibitor_n(self) -> int:
+        """
+        抑制剂的数量。
+        """
+        return core.reaction_get_inh_n(self.handle)
+
+    core.use(None, 'reaction_set_inh_n', c_void_p, c_size_t)
+
+    @inhibitor_n.setter
+    def inhibitor_n(self, value: int):
+        """
+        设置抑制剂的数量。
+        """
+        core.reaction_set_inh_n(self.handle, value)
+
+    core.use(c_void_p, 'reaction_get_inh', c_void_p, c_size_t)
+
+    def get_inhibitor(self, index: int) -> Optional['Reaction.Inhibitor']:
+        """
+        获取指定索引的抑制剂。
+        """
+        idx_ = get_index(index, count=self.inhibitor_n)
+        if idx_ is None:
+            return None
+        else:
+            return Reaction.Inhibitor(
+                handle=core.reaction_get_inh(self.handle, idx_))
+
+    @property
+    def inhibitors(self) -> Iterable['Reaction.Inhibitor']:
+        """
+        迭代所有的抑制剂
+        """
+        return Iterator(self, self.inhibitor_n,
+                        lambda m, ind: m.get_inhibitor(ind))
+
+    core.use(None, 'reaction_react', c_void_p, c_void_p, c_double, c_void_p, c_void_p)
+
+    def react(self, model: 'Seepage', dt: float, buf=None, pool: Optional[ThreadPool] = None):
+        """
+        将该反应作用到Seepage的所有的Cell上dt时间。
+
+        Args:
+            model (Seepage): Seepage模型对象。
+            dt (float): 时间步长。
+            buf (Any, optional): 一个缓冲区(double*)，
+                记录各个Cell上发生的反应的质量。务必确保此缓冲区的大小足够，
+                否则会出现致命的错误。默认为None。
+            pool: 线程池
+        """
+        self.adjust_weights()  # 确保权重正确，保证质量守恒
+        handle = pool.handle if isinstance(pool, ThreadPool) else 0
+        core.reaction_react(
+            self.handle, model.handle, dt,
+            0 if buf is None else ctypes.cast(buf, c_void_p),
+            handle
+        )
+
+    core.use(None, 'reaction_adjust_weights', c_void_p)
+
+    def adjust_weights(self):
+        """
+        等比例地调整权重。确保方程左侧系数加和之后等于-1，右侧的系数加和之后等于1.
+        """
+        core.reaction_adjust_weights(self.handle)
+
+    def adjust_widghts(self):
+        """
+        同adjust_weights （曾经单纯的拼写错误）
+
+        Warnings:
+            此方法已弃用，将在2024-1-1之后移除，请使用 <adjust_weights>。
+        """
+        warnings.warn(
+            'Use <adjust_weights>. <adjust_widghts> will be '
+            'removed after 2024-1-1',
+            DeprecationWarning, stacklevel=2)
+        self.adjust_weights()
+
+    core.use(c_double, 'reaction_get_rate', c_void_p, c_void_p)
+
+    def get_rate(self, cell: 'CellData') -> float:
+        """
+        获得给定Cell在当前状态(温度、压力、抑制剂等条件)下的<瞬时的>反应速率。
+        此函数主要用来测试
+
+        Args:
+            cell (CellData): Seepage的CellData对象。
+
+        Returns:
+            float: 反应速率。
+        """
+        assert isinstance(cell, CellData), 'cell must be a CellData object'
+        return core.reaction_get_rate(self.handle, cell.handle)
+
+    core.use(None, 'reaction_set_idt', c_void_p, c_size_t)
+    core.use(c_size_t, 'reaction_get_idt', c_void_p)
+
+    @property
+    def idt(self) -> int:
+        """
+        Cell的属性ID。Cell的此属性用以定义反应作用到该Cell上的时候，基准温度的调整量。
+        这允许在不同的Cell上，有不同的基准温度（而不仅仅是压力的函数）。
+        在使用p2t计算了基准温度之后，将额外附加上idt的属性值.
+        默认情况下，此属性不定义，则反应在各个Cell上的基准温度是一样的。
+
+        Notes:
+            此属性为一个测试功能，当后续有更好的实现方案的时候，可能会被移除。
+
+        Returns:
+            int: Cell的属性ID。
+        """
+        return core.reaction_get_idt(self.handle)
+
+    @idt.setter
+    def idt(self, value: int):
+        """
+        设置Cell的属性ID。
+
+        Args:
+            value (int): Cell的属性ID。
+        """
+        core.reaction_set_idt(self.handle, value)
+
+    core.use(None, 'reaction_set_wdt', c_void_p, c_double)
+    core.use(c_double, 'reaction_get_wdt', c_void_p)
+
+    @property
+    def wdt(self) -> float:
+        """
+        和idt配合使用。在Cell定义温度调整量的时候， 可以利用这个权重再对这个调整量进行（缩放）调整。
+        比如，当Cell给的温度的调整量的单位不是K的时候， 可以利用wdt属性来添加一个倍率。
+        默认为1，即不进行缩放处理。
+
+        Notes:
+            此属性为一个测试功能，当后续有更好的实现方案的时候，可能会被移除。
+
+        Returns:
+            float: 权重。
+        """
+        return core.reaction_get_wdt(self.handle)
+
+    @wdt.setter
+    def wdt(self, value: float):
+        """
+        设置idt的权重（缩放系数）
+
+        Args:
+            value (float): 权重。
+        """
+        core.reaction_set_wdt(self.handle, value)
+
+    core.use(None, 'reaction_set_irate', c_void_p, c_size_t)
+    core.use(c_size_t, 'reaction_get_irate', c_void_p)
+
+    @property
+    def irate(self) -> int:
+        """
+        Cell的属性ID。Cell的此属性用以定义反应作用到该Cell上的时候，
+        反应速率应该乘以的倍数。
+        若定义这个属性，且Cell的这个属性值小于等于0，那么反应在这个Cell上将不会发生。
+
+        Notes:
+            如果希望某个反应只在部分Cell上发生，则可以利用这个属性来实现。
+
+        Returns:
+            int: Cell的属性ID。
+        """
+        return core.reaction_get_irate(self.handle)
+
+    @irate.setter
+    def irate(self, value: int):
+        """
+        设置Cell的属性ID。
+
+        Args:
+            value (int): Cell的属性ID。
+        """
+        core.reaction_set_irate(self.handle, value)
+
+    core.use(None, 'reaction_clone', c_void_p, c_void_p)
+
+    def clone(self, other: Optional['Reaction'] = None) -> 'Reaction':
+        """
+        拷贝所有的数据。
+
+        Args:
+            other (Reaction): 要拷贝的Reaction对象。
+
+        Returns:
+            Reaction: 拷贝后的Reaction对象。
+        """
+        if other is not None:
+            assert isinstance(other, Reaction), 'other must be a Reaction object in clone'
+            core.reaction_clone(self.handle, other.handle)
+        return self
+
+    def get_copy(self) -> 'Reaction':
+        """
+        返回一个拷贝(而非一个引用)。
+
+        Returns:
+            Reaction: 拷贝后的Reaction对象。
+        """
+        result = Reaction()
+        result.clone(self)
+        return result
+
+    core.use(c_char_p, 'reaction_get_name', c_void_p)
+    core.use(None, 'reaction_set_name', c_void_p, c_char_p)
+
+    @property
+    def name(self) -> str:
+        """
+        反应的名字（字符串），主要用于区分不同的反应，不参与任何计算
+        """
+        return core.reaction_get_name(self.handle).decode()
+
+    @name.setter
+    def name(self, value: str):
+        """
+        反应的名字（字符串），主要用于区分不同的反应，不参与任何计算
+        """
+        core.reaction_set_name(self.handle, make_c_char_p(value))
+
+
+class FluDef(HasHandle):
+    """
+    流体定义。在本程序中，我们假设流体的密度和粘性系数都是压力和温度的函数，
+        并且利用二维插值来存储。
+        比热容被视为常数(这可能不严谨，但是大多数情况下够用).
+    流体定义被存储在Seepage中，被所有的Cell所共用。
+    """
+    core.use(c_void_p, 'new_fludef')
+    core.use(None, 'del_fludef', c_void_p)
+
+    def __init__(self, den: Union[float, Interp2] = 1000.0,
+                 vis: Union[float, Interp2] = 1.0e-3,
+                 specific_heat: float = 4200.0,
+                 name: Optional[str] = None, path: Optional[str] = None, handle: Optional[c_void_p] = None
+                 ):
+        """
+        构造函数。
+
+        Args:
+            den (float or Interp2, optional): 流体密度，
+                当为None时清除C++层面的默认数据。默认为1000.0。
+            vis (float or Interp2, optional): 流体粘性，
+                当为None时清除C++层面的默认数据。默认为1.0e-3。
+            specific_heat (float, optional): 流体比热容。
+                默认为4200。
+            name (str, optional): 流体名称。默认为None。
+            path (str, optional): 加载流体定义的文件路径。
+                默认为None。
+            handle (c_void_p, optional): 指向底层C对象的句柄。
+                如果为None，则根据其他参数初始化；否则创建当前数据的引用。
+                默认为None。
+        """
+        super().__init__(handle, core.new_fludef, core.del_fludef)
+        if handle is None:
+            # 现在，这是一个新建数据，将进行必要的初始化
+            if isinstance(path, str):
+                self.load(path)
+            else:
+                self.den = den  # 即便给定的数据为None，也将使用(清除当前数据)
+                self.vis = vis  # 即便给定的数据为None，也将使用(清除当前数据)
+                if specific_heat is not None:
+                    self.specific_heat = specific_heat
+            # 只要给定name，无论是load，还是create，都修改name
+            if name is not None:
+                self.name = name
+        else:
+            assert path is None
+
+    def __repr__(self) -> str:
+        """
+        返回一个字符串表示当前对象。
+        """
+        return f"""{type(self).__name__}(handle={int(self.handle)}, name='{self.name}')"""
+
+    def __str__(self) -> str:
+        """
+        返回一个字符串表示当前对象。
+        """
+        name = self.name
+        if len(name) == 0:
+            name = "unnamed"
+        if self.component_number == 0:
+            return name
+        else:
+            text = ", ".join([str(c) for c in self.components])
+            return f"{name}({text})"
+
+    core.use(None, 'fludef_save', c_void_p, c_char_p)
+
+    def save(self, path: str):
+        """
+        序列化保存。
+
+        Args:
+            path (str): 保存文件的路径。
+
+        Notes:
+            可选扩展格式：
+            1：.txt
+                .TXT 格式（跨平台，基本不可读）
+            2：.xml
+                .XML 格式（特定可读性，文件体积最大，读写速度最慢，跨平台）
+            3：.其他
+                二进制格式（最快且最小，但在 Windows 和 Linux
+                下生成的文件无法互相读取）
+        """
+        if isinstance(path, str):
+            make_parent(path)
+            core.fludef_save(self.handle, make_c_char_p(path))
+
+    core.use(None, 'fludef_load', c_void_p, c_char_p)
+
+    def load(self, path: str):
+        """
+        读取序列化文件。
+
+        Args:
+            path (str): 读取文件的路径。
+
+        Notes:
+            根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
+        """
+        if isinstance(path, str):
+            check_ipath(path, self)
+            core.fludef_load(self.handle, make_c_char_p(path))
+
+    core.use(None, 'fludef_write_fmap', c_void_p, c_void_p, c_char_p)
+    core.use(None, 'fludef_read_fmap', c_void_p, c_void_p, c_char_p)
+
+    def to_fmap(self, fmt: str = 'binary') -> FileMap:
+        """
+        将数据序列化到一个Filemap中。
+
+        Args:
+            fmt (str, optional): 序列化格式，取值可以为 'text', 'xml'
+                和 'binary'。默认为 'binary'。
+
+        Returns:
+            FileMap: 包含序列化数据的FileMap对象。
+        """
+        fmap = FileMap()
+        core.fludef_write_fmap(
+            self.handle, fmap.handle, make_c_char_p(fmt))
+        return fmap
+
+    def from_fmap(self, fmap: FileMap, fmt: str = 'binary'):
+        """
+        从Filemap中读取序列化的数据。
+
+        Args:
+            fmap (FileMap): 包含序列化数据的FileMap对象。
+            fmt (str, optional): 序列化格式，取值可以为 'text', 'xml'
+                和 'binary'。默认为 'binary'。
+        """
+        assert isinstance(fmap, FileMap)
+        core.fludef_read_fmap(
+            self.handle, fmap.handle, make_c_char_p(fmt))
+
+    @property
+    def fmap(self) -> FileMap:
+        """
+        返回一个二进制的FileMap对象。
+
+        Returns:
+            FileMap: 包含二进制序列化数据的FileMap对象。
+        """
+        return self.to_fmap(fmt='binary')
+
+    @fmap.setter
+    def fmap(self, value: FileMap):
+        """
+        从二进制的FileMap对象中读取序列化的数据。
+
+        Args:
+            value (FileMap): 包含二进制序列化数据的FileMap对象。
+        """
+        self.from_fmap(value, fmt='binary')
+
+    core.use(c_void_p, 'fludef_get_den', c_void_p)
+
+    @property
+    def den(self) -> Interp2:
+        """
+        流体密度的插值。
+
+        Returns:
+            Interp2: 流体密度的插值对象。
+
+        Raises:
+            AssertionError: 如果组分的数量不为0。
+        """
+        assert self.component_number == 0
+        return Interp2(handle=core.fludef_get_den(self.handle))
+
+    @den.setter
+    def den(self, value: Optional[Union[float, Interp2]] = None):
+        """
+        设置密度数据。
+
+        Args:
+            value (float or Interp2, optional): 密度数据，
+                当为None时清除现有数据。
+
+        Raises:
+            AssertionError: 如果组分的数量不为0，或者给定的非插值数据不在有效范围内。
+        """
+        assert self.component_number == 0
+        if value is None:
+            self.den.clear()
+        else:
+            if isinstance(value, Interp2):
+                self.den.clone(value)
+            else:  # 转化为二维插值
+                assert 1.0e-3 < value <= 1.0e7
+                itp = Interp2.create_const(value)
+                self.den.clone(itp)
+
+    core.use(c_void_p, 'fludef_get_vis', c_void_p)
+
+    @property
+    def vis(self) -> Interp2:
+        """
+        流体粘性的插值。
+
+        Returns:
+            Interp2: 流体粘性的插值对象。
+
+        Raises:
+            AssertionError: 如果组分的数量不为0。
+        """
+        assert self.component_number == 0
+        return Interp2(handle=core.fludef_get_vis(self.handle))
+
+    @vis.setter
+    def vis(self, value: Optional[Union[float, Interp2]] = None):
+        """
+        设置粘性数据。
+
+        Args:
+            value (float or Interp2, optional): 粘性数据，
+                当为None时清除现有数据。
+
+        Raises:
+            AssertionError: 如果组分的数量不为0，或者给定的非插值数据不在有效范围内。
+        """
+        assert self.component_number == 0
+        if value is None:
+            self.vis.clear()
+        else:
+            if isinstance(value, Interp2):
+                self.vis.clone(value)
+            else:  # 转化为二维插值
+                assert 1.0e-7 < value < 1.0e40
+                itp = Interp2.create_const(value)
+                self.vis.clone(itp)
+
+    def get_den(self, pressure: float, temp: float) -> float:
+        """
+        返回给定压力和温度下的密度。
+
+        Args:
+            pressure (float): 压力值。
+            temp (float): 温度值。
+
+        Returns:
+            float: 给定压力和温度下的密度。
+        """
+        return self.den(pressure, temp)
+
+    def get_vis(self, pressure: float, temp: float) -> float:
+        """
+        返回给定压力和温度下的粘性。
+
+        Args:
+            pressure (float): 压力值。
+            temp (float): 温度值。
+
+        Returns:
+            float: 给定压力和温度下的粘性。
+        """
+        return self.vis(pressure, temp)
+
+    core.use(c_double, 'fludef_get_specific_heat', c_void_p)
+
+    @property
+    def specific_heat(self) -> float:
+        """
+        流体的比热(常数)。
+
+        Returns:
+            float: 流体的比热。
+
+        Raises:
+            AssertionError: 如果组分的数量不为0。
+        """
+        assert self.component_number == 0
+        return core.fludef_get_specific_heat(self.handle)
+
+    core.use(None, 'fludef_set_specific_heat', c_void_p, c_double)
+
+    @specific_heat.setter
+    def specific_heat(self, value: float):
+        """
+        设置流体的比热。
+
+        Args:
+            value (float): 流体的比热。
+
+        Raises:
+            AssertionError: 如果组分的数量不为0，或者给定的值不在有效范围内。
+        """
+        assert self.component_number == 0
+        assert 0.1 <= value <= 1.0e8
+        core.fludef_set_specific_heat(self.handle, value)
+
+    core.use(c_size_t, 'fludef_get_component_number', c_void_p)
+
+    @property
+    def component_number(self) -> int:
+        """
+        流体组分的数量。
+
+        Returns:
+            int: 流体组分的数量。
+        """
+        return core.fludef_get_component_number(self.handle)
+
+    core.use(None, 'fludef_set_component_number', c_void_p, c_size_t)
+
+    @component_number.setter
+    def component_number(self, value: int):
+        """
+        设置流体组分的数量。
+
+        Args:
+            value (int): 流体组分的数量。
+        """
+        core.fludef_set_component_number(self.handle, value)
+
+    core.use(c_void_p, 'fludef_get_component', c_void_p, c_size_t)
+
+    def get_component(self, index: int) -> Optional['FluDef']:
+        """
+        返回流体的组分。
+
+        Args:
+            index (int): 组分的索引。
+
+        Returns:
+            FluDef: 流体的组分对象，如果索引有效；否则返回None。
+        """
+        idx_ = get_index(index, self.component_number)
+        if idx_ is not None:
+            return FluDef(
+                handle=core.fludef_get_component(self.handle, idx_))
+        else:
+            return None
+
+    def clear_components(self):
+        """
+        清除所有的组分。
+        """
+        self.component_number = 0
+
+    def add_component(self, flu: 'FluDef', name: Optional[str] = None):
+        """
+        添加流体组分，并返回组分的ID。
+
+        Args:
+            flu (FluDef): 要添加的流体组分对象。
+            name (str, optional): 流体组分的名称。默认为None。
+
+        Returns:
+            int: 新添加组分的ID。
+        """
+        assert isinstance(flu, FluDef)
+        idx = self.component_number
+        self.component_number = idx + 1
+        temp = self.get_component(idx)
+        assert isinstance(temp, FluDef), f'get_component failed at index {idx}'
+        temp.clone(flu)
+        if name is not None:
+            temp.name = name
+        return idx
+
+    @property
+    def components(self) -> Iterable['FluDef']:
+        return Iterator(self, self.component_number, lambda m, i: m.get_component(i))
+
+    @staticmethod
+    def create(defs: Union['FluDef', List['FluDef']], name: str = None) -> 'FluDef':
+        """
+        将存储在list中的多个流体的定义，组合成为一个具有多个组分的单个流体定义。
+
+        Args:
+            defs (list or FluDef): 流体定义列表或单个流体定义对象。
+            name (str, optional): 返回的流体定义的名称。默认为None。
+
+        Returns:
+            FluDef: 组合后的流体定义对象。
+
+        Notes:
+            当给定name的时候，则返回的数据使用此name。
+            此函数将返回给定数据的拷贝，因此，原始的数据并不会被引用和修改。
+        """
+        if isinstance(defs, FluDef):
+            return defs.get_copy(name=name)
+        else:
+            result = FluDef(name=name)
+            for x in defs:
+                result.add_component(FluDef.create(x))
+            return result
+
+    core.use(c_char_p, 'fludef_get_name', c_void_p)
+
+    @property
+    def name(self) -> str:
+        """
+        流体组分的名称。
+
+        Returns:
+            str: 流体组分的名称。
+        """
+        return core.fludef_get_name(self.handle).decode()
+
+    core.use(None, 'fludef_set_name', c_void_p, c_char_p)
+
+    @name.setter
+    def name(self, value: str):
+        """
+        设置流体组分的名称。
+
+        Args:
+            value (str): 流体组分的名称。
+        """
+        core.fludef_set_name(self.handle, make_c_char_p(value))
+
+    core.use(None, 'fludef_clone', c_void_p, c_void_p)
+
+    def clone(self, other: Optional['FluDef'] = None) -> 'FluDef':
+        """
+        克隆数据。
+
+        Args:
+            other (FluDef, optional): 要克隆的FluDef对象。默认为None。
+
+        Returns:
+            FluDef: 克隆后的FluDef对象。
+        """
+        if other is not None:
+            assert isinstance(other, FluDef)
+            core.fludef_clone(self.handle, other.handle)
+        return self
+
+    def get_copy(self, name: Optional[str] = None) -> 'FluDef':
+        """
+        返回当前数据的一个拷贝。
+
+        Args:
+            name (str, optional): 拷贝后的数据的名称。默认为None。
+
+        Returns:
+            FluDef: 拷贝后的FluDef对象。
+        """
+        result = FluDef()
+        result.clone(self)
+        if name is not None:
+            result.name = name
+        return result
+
+
+class FluData(HasHandle):
+    """
+    流体数据(存储在Cell中)。一个流体数据由以下属性组成：
+    1、流体的质量、密度、粘性系数。
+    2、流体的自定义属性。
+        在FluData内存储一个浮点型的数组，存储一系列自定义的属性，
+        用于辅助存储和计算。自定义属性从0开始编号。
+    3、流体的组分。
+        流体的组分亦采用FluData类进行定义（即FluData为一个嵌套的类），
+        因此，流体的组分也具有和流体同样的数据。流体的组分存储在
+        一个数组内，且从0开始编号。当流体的组分数量不为0的时候，
+        则存储在流体自身的数据自动失效，并利用组分的属性来自动计算
+        这些组分作为一个整体的属性。如：流体的质量等于各个组分的质量之和，
+        体积等于各个组分的体积之和，自定义属性则等于不同组分
+        根据质量的加权平均。
+    """
+    core.use(c_void_p, 'new_fluid')
+    core.use(None, 'del_fluid', c_void_p)
+
+    def __init__(self, mass: Optional[float] = None, den: Optional[float] = None, vis: Optional[float] = None,
+                 vol: Optional[float] = None, handle: Optional[c_void_p] = None):
+        """
+        创建给定handle的引用，或者创建流体数据。
+
+        Args:
+            mass (float, optional): 流体的质量，单位为kg。默认为None。
+            den (float, optional): 流体的密度，单位为kg/m^3。默认为None。
+            vis (float, optional): 流体的粘性系数，单位为Pa.s。默认为None。
+            vol (float, optional): 流体的体积，单位为m^3。默认为None。
+            handle (c_void_p, optional): 流体数据的句柄。默认为None。
+        """
+        super().__init__(handle, core.new_fluid,
+                         core.del_fluid)
+        if handle is None:
+            if mass is not None:
+                self.mass = mass
+            if den is not None:
+                self.den = den
+            if vis is not None:
+                self.vis = vis
+            if vol is not None:
+                assert mass is None
+                self.vol = vol
+        else:
+            assert (mass is None and den is None
+                    and vis is None and vol is None)
+
+    core.use(None, 'fluid_save', c_void_p, c_char_p)
+
+    def save(self, path: str):
+        """
+        序列化保存。可选扩展格式：
+            1：.txt
+            .TXT 格式
+            （跨平台，基本不可读）
+
+            2：.xml
+            .XML 格式
+            （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+            3：.其他
+            二进制格式
+            （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
+
+        Args:
+            path (str): 保存文件的路径。
+        """
+        if isinstance(path, str):
+            make_parent(path)
+            core.fluid_save(self.handle, make_c_char_p(path))
+
+    core.use(None, 'fluid_load', c_void_p, c_char_p)
+
+    def load(self, path: str):
+        """
+        读取序列化文件。
+            根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
+
+        Args:
+            path (str): 读取文件的路径。
+        """
+        if isinstance(path, str):
+            check_ipath(path, self)
+            core.fluid_load(self.handle, make_c_char_p(path))
+
+    core.use(None, 'fluid_write_fmap', c_void_p, c_void_p, c_char_p)
+    core.use(None, 'fluid_read_fmap', c_void_p, c_void_p, c_char_p)
+
+    def to_fmap(self, fmt: str = 'binary') -> FileMap:
+        """
+        将数据序列化到一个Filemap中。其中fmt的取值可以为: text, xml和binary。
+
+        Args:
+            fmt (str, optional): 序列化的格式，可选值为'text', 'xml'
+                和'binary'。默认为'binary'。
+
+        Returns:
+            FileMap: 序列化后的FileMap对象。
+        """
+        fmap = FileMap()
+        core.fluid_write_fmap(
+            self.handle, fmap.handle, make_c_char_p(fmt))
+        return fmap
+
+    def from_fmap(self, fmap: FileMap, fmt: str = 'binary'):
+        """
+        从Filemap中读取序列化的数据。其中fmt的取值可以为: text, xml和binary。
+
+        Args:
+            fmap (FileMap): 包含序列化数据的FileMap对象。
+            fmt (str, optional): 反序列化的格式，可选值为'text', 'xml'
+                和'binary'。默认为'binary'。
+        """
+        assert isinstance(fmap, FileMap)
+        core.fluid_read_fmap(
+            self.handle, fmap.handle, make_c_char_p(fmt))
+
+    @property
+    def fmap(self) -> FileMap:
+        """
+        获取二进制格式的序列化数据。
+
+        Returns:
+            FileMap: 二进制格式的序列化数据。
+        """
+        return self.to_fmap(fmt='binary')
+
+    @fmap.setter
+    def fmap(self, value: FileMap):
+        """
+        设置二进制格式的序列化数据。
+
+        Args:
+            value (FileMap): 二进制格式的序列化数据。
+        """
+        self.from_fmap(value, fmt='binary')
+
+    core.use(c_double, 'fluid_get_mass', c_void_p)
+    core.use(None, 'fluid_set_mass', c_void_p, c_double)
+
+    @property
+    def mass(self) -> float:
+        """
+        流体的质量，单位为kg。
+
+        Returns:
+            float: 流体的质量。
+        """
+        return core.fluid_get_mass(self.handle)
+
+    @mass.setter
+    def mass(self, value: float):
+        """
+        设置流体的质量，单位为kg。
+
+        Args:
+            value (float): 流体的质量，必须大于等于0。
+        """
+        assert value >= 0
+        core.fluid_set_mass(self.handle, value)
+
+    core.use(c_double, 'fluid_get_vol', c_void_p)
+    core.use(None, 'fluid_set_vol', c_void_p, c_double)
+
+    @property
+    def vol(self) -> float:
+        """
+        流体的体积，单位为m^3。
+        注意:
+            内核中并不存储流体体积，而是根据质量和密度计算得到的。
+
+        Returns:
+            float: 流体的体积。
+        """
+        return core.fluid_get_vol(self.handle)
+
+    @vol.setter
+    def vol(self, value: float):
+        """
+        修改流体的体积，单位为m^3。
+        注意:
+            内核中并不存储流体体积，而是根据质量和密度计算得到的。
+            将修改mass，并保持density不变。
+
+        Args:
+            value (float): 流体的体积，必须大于等于0。
+        """
+        assert value >= 0
+        core.fluid_set_vol(self.handle, value)
+
+    core.use(c_double, 'fluid_get_den', c_void_p)
+    core.use(None, 'fluid_set_den', c_void_p, c_double)
+
+    @property
+    def den(self) -> float:
+        """
+        流体密度，单位为kg/m^3。
+            注意: 流体不可压缩，除非外部修改，否则密度永远维持不变。
+        假设：
+            在计算的过程中，流体的密度不会发生剧烈的变化，
+            因此，在一次迭代的过程中，流体的密度可以
+            视为不变的。在一次迭代之后，可以根据最新的温度和压力来更新流体的密度。
+        注意：
+            在利用TherFlowConfig来iterate的时候，
+            如果模型中存储了流体的定义，那么流体密度的
+            更新会被自动调用，从而保证流体的密度总是最新的。
+
+        Returns:
+            float: 流体的密度。
+        """
+        return core.fluid_get_den(self.handle)
+
+    @den.setter
+    def den(self, value: float):
+        """
+        设置流体的密度，单位为kg/m^3。
+
+        Args:
+            value (float): 流体的密度，必须大于0。
+        """
+        assert value > 0
+        core.fluid_set_den(self.handle, value)
+
+    core.use(c_double, 'fluid_get_vis', c_void_p)
+    core.use(None, 'fluid_set_vis', c_void_p, c_double)
+
+    @property
+    def vis(self) -> float:
+        """
+        流体粘性系数，单位为Pa.s。
+            注意: 除非外部修改，否则vis维持不变。
+        流体粘性的更新规则和密度相似。
+
+        Returns:
+            float: 流体的粘性系数。
+        """
+        return core.fluid_get_vis(self.handle)
+
+    @vis.setter
+    def vis(self, value: float):
+        """
+        设置流体的粘性系数，单位为Pa.s。
+
+        Args:
+            value (float): 流体的粘性系数，必须大于0。
+        """
+        assert value > 0
+        core.fluid_set_vis(self.handle, value)
+
+    @property
+    def is_solid(self) -> bool:
+        """
+        该流体单元在计算内核中是否可以被视为固体。
+        注意：
+            该属性将被弃用。
+
+        Returns:
+            bool: 如果流体的粘性系数大于等于0.5e30，则返回True；
+            否则返回False。
+        """
+        warnings.warn('FluData.is_solid will be deleted '
+                      'after 2024-5-5',
+                      DeprecationWarning, stacklevel=2)
+        return self.vis >= 0.5e30
+
+    core.use(c_double, 'fluid_get_attr', c_void_p, c_size_t)
+    core.use(None, 'fluid_set_attr', c_void_p, c_size_t, c_double)
+
+    def get_attr(self, index: Union[int, str], default_val: Optional[float] = None, **valid_range):
+        """
+        获取第index个流体自定义属性。当两个流体数据相加时，
+        自定义属性将根据质量进行加权平均。
+
+        Args:
+            index (int or str): 自定义属性的索引或键。
+            default_val (float, optional): 当属性不存在
+                或不在有效范围内时返回的默认值。默认为None。
+            **valid_range: 自定义属性的有效范围。
+
+        Returns:
+            float: 自定义属性的值，如果不存在或不在有效范围内，则返回默认值。
+        """
+        if isinstance(index, str):
+            assert isinstance(self, Fluid)
+            assert isinstance(self.cell, Cell)
+            index = self.cell.model.get_flu_key(key=index)
+        if index is None:
+            return default_val
+        # 当index个属性不存在时，默认为无穷大的一个值(1.0e100以上的浮点数)
+        value = core.fluid_get_attr(self.handle, index)
+        if attr_in_range(value, **valid_range):
+            return value
+        else:
+            return default_val
+
+    def set_attr(self, index: Union[int, str], value: Optional[float] = None) -> 'FluData':
+        """
+        设置第index个流体自定义属性。参考get_attr函数。
+
+        Args:
+            index (int or str): 自定义属性的索引或键。
+            value (float): 自定义属性的值。
+
+        Returns:
+            FluData: 返回当前对象。
+        """
+        if isinstance(index, str):
+            assert isinstance(self, Fluid)
+            assert isinstance(self.cell, Cell)
+            index = self.cell.model.reg_flu_key(key=index)
+        if index is None:
+            return self
+        if value is None:
+            value = 1.0e200
+        core.fluid_set_attr(self.handle, index, value)
+        return self
+
+    core.use(None, 'fluid_clone',
+             c_void_p, c_void_p)
+
+    def clone(self, other: Optional['FluData'] = None) -> 'FluData':
+        """
+        拷贝所有的数据。
+
+        Args:
+            other (FluData): 要拷贝的FluData对象。
+
+        Returns:
+            FluData: 返回当前对象。
+        """
+        if other is not None:
+            assert isinstance(other, FluData)
+            core.fluid_clone(self.handle, other.handle)
+        return self
+
+    def get_copy(self, mass: Optional[float] = None) -> 'FluData':
+        """
+        获取当前对象的拷贝。
+
+        Returns:
+            FluData: 当前对象的拷贝。
+        """
+        result = FluData()
+        result.clone(self)
+        if mass is not None:
+            result.mass = mass
+        return result
+
+    core.use(None, 'fluid_add', c_void_p, c_void_p)
+
+    def add(self, other: 'FluData'):
+        """
+        将other所定义的流体数据添加到self。注意，并不是添加组分。
+        类似于: self = self + other。
+        比如:
+            若self的质量为1kg，other的质量也为1kg，
+            则当执行了此函数之后，self的质量会成为2kg，而other保持不变。
+
+        Args:
+            other (FluData): 要添加的FluData对象。
+        """
+        assert isinstance(other, FluData)
+        core.fluid_add(self.handle, other.handle)
+
+    core.use(c_size_t, 'fluid_get_component_number', c_void_p)
+
+    @property
+    def component_number(self) -> int:
+        """
+        流体组分的数量。当流体不可再分的时候，组分数量为0；
+        否则，流体被视为混合物，且组分的数量大于0。
+
+        Returns:
+            int: 流体组分的数量。
+        """
+        return core.fluid_get_component_number(self.handle)
+
+    core.use(None, 'fluid_set_component_number', c_void_p, c_size_t)
+
+    @component_number.setter
+    def component_number(self, value: int):
+        """
+        设置流体组分的数量。
+
+        Args:
+            value (int): 流体组分的数量。
+        """
+        core.fluid_set_component_number(self.handle, value)
+
+    core.use(c_void_p, 'fluid_get_component', c_void_p, c_size_t)
+
+    def get_component(self, index: int) -> Optional['FluData']:
+        """
+        返回给定的组分。
+
+        Args:
+            index (int): 组分的索引。
+
+        Returns:
+            FluData: 给定索引的组分对象，如果索引无效则返回None。
+        """
+        idx_ = get_index(index, self.component_number)
+        if idx_ is not None:
+            return FluData(
+                handle=core.fluid_get_component(self.handle, idx_))
+        else:
+            return None
+
+    core.use(None, 'fluid_clear_components',
+             c_void_p)
+
+    def clear_components(self):
+        """
+        清除所有的组分。
+        """
+        core.fluid_clear_components(self.handle)
+
+    core.use(c_size_t, 'fluid_add_component', c_void_p, c_void_p)
+
+    def add_component(self, flu: 'FluData') -> int:
+        """
+        添加流体组分，并返回组分的ID。
+
+        Args:
+            flu (FluData): 要添加的流体组分对象。
+
+        Returns:
+            int: 新添加组分的ID。
+        """
+        assert isinstance(flu, FluData)
+        return core.fluid_add_component(self.handle, flu.handle)
+
+    core.use(None, 'fluid_set_property',
+             c_void_p, c_double, c_size_t,
+             c_size_t, c_void_p)
+
+    def set_property(self, p: float, fa_t: int, fa_c: int, fdef: 'FluDef'):
+        """
+        在给定压力和由 <fa_T> 定义的流体温度下，设置流体的密度、粘度和比热。
+
+        Args:
+            p (float): 压力。
+            fa_t (int): 流体温度的索引。
+            fa_c (int): 流体组分的索引。
+            fdef (FluDef): 流体定义对象。
+        """
+        assert isinstance(fdef, FluDef)
+        core.fluid_set_property(self.handle, p, fa_t, fa_c, fdef.handle)
+
+    core.use(None, 'fluid_set_components', c_void_p, c_void_p)
+
+    def set_components(self, fdef: 'FluDef'):
+        """
+        按照fdef的定义来设置流体的组分的数量，从而使得这个流体数据和给定的
+        流体定义具有相同的结构。
+
+        Args:
+            fdef (FluDef): 流体定义对象。
+        """
+        assert isinstance(fdef, FluDef)
+        core.fluid_set_components(self.handle, fdef.handle)
+
+
+class Fluid(FluData):
+    core.use(c_void_p, 'seepage_cell_get_fluid', c_void_p, c_size_t)
+
+    def __init__(self, cell: "CellData", fid: int):
+        """
+        初始化Fluid对象。
+
+        Args:
+            cell (CellData): 流体所在的Cell对象。
+            fid (int): 流体在Cell中的编号，必须小于Cell内流体的数量。
+        """
+        assert isinstance(cell, CellData)
+        assert isinstance(fid, int)
+        assert fid < cell.fluid_number
+        self.cell = cell
+        self.fid = fid
+        super().__init__(handle=core.seepage_cell_get_fluid(self.cell.handle, self.fid))
+
+    @property
+    def vol_fraction(self) -> float:
+        """
+        流体的体积占Cell内所有流体总体积的比例。
+
+        Returns:
+            float: 流体的体积占比。
+        """
+        res = self.cell.get_fluid_vol_fraction(self.fid)
+        assert res is not None
+        return res
+
+
+class CellData(HasHandle):
+    """
+    CellData类用于管理和操作控制体（Cell）的数据。
+
+    该类提供了一系列方法用于序列化保存和加载数据，
+    设置和获取Cell的位置、孔隙参数、流体属性等。
+    """
+    core.use(c_void_p, 'new_seepage_cell')
+    core.use(None, 'del_seepage_cell', c_void_p)
+
+    def __init__(self, path: Optional[str] = None, handle: Optional[c_void_p] = None):
+        """
+        初始化CellData对象。
+
+        Args:
+            path (str, optional): 用于加载数据的文件路径。默认为None。
+            handle (c_void_p, optional): 指向底层数据的句柄。默认为None。
+        """
+        super().__init__(
+            handle,
+            core.new_seepage_cell,
+            core.del_seepage_cell)
+        if handle is None:
+            if isinstance(path, str):
+                self.load(path)
+
+    core.use(None, 'seepage_cell_save', c_void_p, c_char_p)
+
+    def save(self, path: str):
+        """
+        序列化保存。可选扩展格式：
+            1：.txt
+            .TXT 格式
+            （跨平台，基本不可读）
+
+            2：.xml
+            .XML 格式
+            （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+            3：.其他
+            二进制格式
+            （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
+
+        Args:
+            path (str): 保存文件的路径。
+        """
+        if isinstance(path, str):
+            make_parent(path)
+            core.seepage_cell_save(self.handle, make_c_char_p(path))
+
+    core.use(None, 'seepage_cell_load', c_void_p, c_char_p)
+
+    def load(self, path: str):
+        """
+        读取序列化文件。
+            根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
+
+        Args:
+            path (str): 读取文件的路径。
+        """
+        if isinstance(path, str):
+            check_ipath(path, self)
+            core.seepage_cell_load(self.handle, make_c_char_p(path))
+
+    core.use(None, 'seepage_cell_write_fmap',
+             c_void_p, c_void_p, c_char_p)
+    core.use(None, 'seepage_cell_read_fmap',
+             c_void_p, c_void_p, c_char_p)
+
+    def to_fmap(self, fmt: str = 'binary') -> FileMap:
+        """
+        将数据序列化到一个Filemap中. 其中fmt的取值可以为: text, xml和binary
+
+        Args:
+            fmt (str, optional): 序列化格式，
+                可选值为 'text', 'xml', 'binary'。默认为 'binary'。
+
+        Returns:
+            FileMap: 序列化后的FileMap对象。
+        """
+        fmap = FileMap()
+        core.seepage_cell_write_fmap(self.handle, fmap.handle,
+                                     make_c_char_p(fmt))
+        return fmap
+
+    def from_fmap(self, fmap: FileMap, fmt: str = 'binary'):
+        """
+        从Filemap中读取序列化的数据. 其中fmt的取值可以为: text, xml和binary
+
+        Args:
+            fmap (FileMap): 包含序列化数据的FileMap对象。
+            fmt (str, optional): 反序列化格式，
+                可选值为 'text', 'xml', 'binary'。默认为 'binary'。
+        """
+        assert isinstance(fmap, FileMap)
+        core.seepage_cell_read_fmap(self.handle, fmap.handle,
+                                    make_c_char_p(fmt))
+
+    @property
+    def fmap(self) -> FileMap:
+        """
+        获取当前Cell对象的二进制格式FileMap对象。
+
+        Returns:
+            FileMap: 二进制格式的FileMap对象。
+        """
+        return self.to_fmap(fmt='binary')
+
+    @fmap.setter
+    def fmap(self, value: FileMap):
+        """
+        通过FileMap对象设置当前Cell对象的数据。
+
+        Args:
+            value (FileMap): 包含序列化数据的FileMap对象。
+        """
+        self.from_fmap(value, fmt='binary')
+
+    core.use(c_double, 'seepage_cell_get_pos',
+             c_void_p, c_size_t)
+    core.use(None, 'seepage_cell_set_pos',
+             c_void_p, c_size_t, c_double)
+
+    @property
+    def x(self) -> float:
+        """
+        在三维空间中的x坐标
+
+        Returns:
+            float: x坐标的值。
+        """
+        return core.seepage_cell_get_pos(self.handle, 0)
+
+    @x.setter
+    def x(self, value: float):
+        """
+        设置在三维空间中的x坐标。
+
+        Args:
+            value (float): 新的x坐标的值。
+        """
+        core.seepage_cell_set_pos(self.handle, 0, value)
+
+    @property
+    def y(self) -> float:
+        """
+        在三维空间中的y坐标
+
+        Returns:
+            float: y坐标的值。
+        """
+        return core.seepage_cell_get_pos(self.handle, 1)
+
+    @y.setter
+    def y(self, value: float):
+        """
+        设置在三维空间中的y坐标。
+
+        Args:
+            value (float): 新的y坐标的值。
+        """
+        core.seepage_cell_set_pos(self.handle, 1, value)
+
+    @property
+    def z(self) -> float:
+        """
+        在三维空间中的z坐标
+
+        Returns:
+            float: z坐标的值。
+        """
+        return core.seepage_cell_get_pos(self.handle, 2)
+
+    @z.setter
+    def z(self, value: float):
+        """
+        设置在三维空间中的z坐标。
+
+        Args:
+            value (float): 新的z坐标的值。
+        """
+        core.seepage_cell_set_pos(self.handle, 2, value)
+
+    @property
+    def pos(self) -> List[float]:
+        """
+        该Cell在三维空间的坐标
+
+        Returns:
+            list: 包含x、y、z坐标的列表。
+        """
+        return [core.seepage_cell_get_pos(self.handle, i)
+                for i in range(3)]
+
+    @pos.setter
+    def pos(self, value: Union[List[float], Tuple[float]]):
+        """
+        设置该Cell在三维空间的坐标。
+
+        Args:
+            value (list or tuple of float): 包含x、y、z坐标的列表或元组，长度必须为3。
+        """
+        assert len(value) == 3
+        for dim in range(3):
+            core.seepage_cell_set_pos(self.handle, dim, value[dim])
+
+    def distance(self, other):
+        """
+        返回距离另外一个Cell或者另外一个位置的距离
+
+        Args:
+            other (CellData or list): 另一个Cell对象或者包含坐标的列表。
+
+        Returns:
+            float: 两个对象之间的距离。
+        """
+        if hasattr(other, 'pos'):
+            return get_distance(self.pos, other.pos)
+        else:
+            return get_distance(self.pos, other)
+
+    core.use(c_double, 'seepage_cell_get_v0', c_void_p)
+    core.use(None, 'seepage_cell_set_v0', c_void_p, c_double)
+
+    @property
+    def v0(self) -> float:
+        """
+        当流体压力等于0时，该Cell内流体的存储空间 m^3.
+        注意:
+            务必设置合适的刚度和孔隙度，使得v0的数值大于0
+
+        Returns:
+            float: 流体存储空间的值。
+        """
+        return core.seepage_cell_get_v0(self.handle)
+
+    @v0.setter
+    def v0(self, value: float):
+        """
+        设置当流体压力等于0时，该Cell内流体的存储空间 m^3。
+
+        Args:
+            value (float): 新的流体存储空间的值，必须大于等于1.0e-10。
+        """
+        assert value >= 1.0e-10, f'value = {value}'
+        core.seepage_cell_set_v0(self.handle, value)
+
+    core.use(c_double, 'seepage_cell_get_k', c_void_p)
+    core.use(None, 'seepage_cell_set_k', c_void_p, c_double)
+
+    @property
+    def k(self) -> float:
+        """
+        流体压力增加1Pa的时候，孔隙体积的增加量(m^3). k的数值越小，则刚度越大.
+
+        Returns:
+            float: 孔隙体积增加量的值。
+        """
+        return core.seepage_cell_get_k(self.handle)
+
+    @k.setter
+    def k(self, value: float):
+        """
+        设置流体压力增加1Pa的时候，孔隙体积的增加量(m^3)。
+
+        Args:
+            value (float): 新的孔隙体积增加量的值。
+        """
+        core.seepage_cell_set_k(self.handle, value)
+
+    def set_pore(self, p: float, v: float, dp: float, dv: float) -> 'CellData':
+        """
+        创建一个孔隙，使得当内部压力等于p时，体积为v；
+        如果压力变化dp，体积变化为dv
+
+        Args:
+            p (float): 内部压力。
+            v (float): 体积。
+            dp (float): 压力变化量。
+            dv (float): 体积变化量。
+
+        Returns:
+            CellData: 返回当前CellData对象。
+        """
+        k = max(1.0e-30, abs(dv)) / max(1.0e-30, abs(dp))
+        self.k = k
+        v0 = v - p * k
+        if v0 <= 0:
+            warnings.warn(
+                f'v0 (= {v0}) <= 0 at {self.pos}. '
+                f'p={p}, v={v}, dp={dp}, dv={dv}')
+        self.v0 = v0
+        return self
+
+    def v2p(self, v: float) -> float:
+        """
+        给定内部流体的体积，根据孔隙刚度计算孔隙内流体的压力。
+
+        Args:
+            v (float): 内部流体的体积。
+
+        Returns:
+            float: 孔隙内流体的压力。
+        """
+        return (v - self.v0) / self.k
+
+    def p2v(self, p: float) -> float:
+        """
+        给定内部流体的压力，根据孔隙刚度计算内部流体的体积。
+
+        Args:
+            p (float): 内部流体的压力。
+
+        Returns:
+            float: 内部流体的体积。
+        """
+        return self.v0 + p * self.k
+
+    core.use(None, 'seepage_cell_fill', c_void_p, c_double, c_void_p, c_size_t, c_bool)
+
+    def fill(self, p: float, s: Union[Vector, list, tuple], use_mass: bool = False) -> 'CellData':
+        """
+        根据此时流体的密度，孔隙的v0和k，给定的目标压力和流体饱和度，设置各个组分的质量。
+            这里p为目标压力，s为目标饱和度；
+            当各个相的饱和度的和不等于1的时候，将首先对饱和度的值进行等比例调整；
+        注意：
+            s作为一个数组，它的长度应该等于流体的数量或者组分的数量(均可以)；
+            当s的长度等于流体的数量的时候，需要事先设置流体中各个组分的比例；
+        注意
+            当s的总和等于0的时候，虽然给定目标压力，但是仍然不会填充流体。此时填充后
+            所有的组分都等于0。
+
+        Args:
+            p (float): 目标压力。
+            s (Vector | list | tuple): 目标饱和度。
+            use_mass (bool, optional): 是否使用质量填充，默认为False。
+
+        Returns:
+            CellData: 返回当前CellData对象。
+        """
+        pointer = const_f64_ptr(s)
+        count = len(s)
+        core.seepage_cell_fill(self.handle, p, pointer, count, use_mass)
+        return self
+
+    core.use(c_double, 'seepage_cell_get_pre', c_void_p)
+
+    @property
+    def pre(self) -> float:
+        """
+        单元格内流体的压力
+            (根据流体的总体积和孔隙弹性计算得出)
+
+        Returns:
+            float: 单元格内流体的压力。
+        """
+        return core.seepage_cell_get_pre(self.handle)
+
+    core.use(c_size_t, 'seepage_cell_get_fluid_n', c_void_p)
+    core.use(None, 'seepage_cell_set_fluid_n', c_void_p, c_size_t)
+
+    @property
+    def fluid_number(self) -> int:
+        """
+        单元格内流体的数量
+            (至少设置为1，并且需要为模型中的所有单元格设置相同的值)
+
+        Returns:
+            int: 单元格内流体的数量。
+        """
+        return core.seepage_cell_get_fluid_n(self.handle)
+
+    @fluid_number.setter
+    def fluid_number(self, value: int):
+        """
+        设置单元格内流体的数量。
+
+        Args:
+            value (int): 新的流体数量，必须在0到10之间。
+        """
+        assert 0 <= value < 10
+        core.seepage_cell_set_fluid_n(self.handle, value)
+
+    def get_fluid(self, *args) -> Optional[Union['Fluid', 'FluData']]:
+        """
+        返回给定序号的流体。(当参数数量为1的时候，返回Seepage.Fluid对象；
+        当参数数量大于1的时候，返回Seepage.FluData对象)
+
+        Args:
+            *args: 流体或组分的序号。
+
+        Returns:
+            Fluid or FluData: 返回相应的流体或组分对象，
+            如果不存在则返回None。
+        """
+        if len(args) > 0:
+            idx = get_index(args[0], self.fluid_number)
+            if idx is not None:
+                flu = Fluid(self, idx)
+                if len(args) > 1:
+                    for i in range(1, len(args)):
+                        flu = flu.get_component(args[i])
+                        if flu is None:
+                            return None
+                return flu
+            else:
+                return None
+        else:
+            return None
+
+    @property
+    def fluids(self) -> Iterable[Union['Fluid', 'FluData']]:
+        """
+        单元格内的所有流体
+
+        Returns:
+            Iterator: 包含所有流体的迭代器。
+        """
+        return Iterator(self, self.fluid_number,
+                        lambda m, ind: m.get_fluid(ind))
+
+    def get_component(self, indexes: Union[int, list]) -> Optional[Union['FluData']]:
+        """
+        返回给定序号的组分。
+
+        Args:
+            indexes (int or list): 组分的序号或序号列表。
+
+        Returns:
+            FluData: 返回相应的组分对象，如果不存在则返回None。
+        """
+        if is_array(indexes):
+            return self.get_fluid(*indexes)
+        else:
+            return self.get_fluid(indexes)
+
+    core.use(c_double, 'seepage_cell_get_fluid_vol',
+             c_void_p)
+
+    @property
+    def fluid_vol(self) -> float:
+        """
+        所有流体的体积。
+        注意：这个体积包含所有fluids的体积的和，包括那些粘性非常大，
+        在计算内核中被视为固体的流体
+
+        Returns:
+            float: 所有流体的体积。
+        """
+        return core.seepage_cell_get_fluid_vol(self.handle)
+
+    core.use(c_double, 'seepage_cell_get_fluid_mass',
+             c_void_p)
+
+    @property
+    def fluid_mass(self) -> float:
+        """
+        所有流体的质量
+        注意：这个体积包含所有fluids的体积的和，包括那些粘性非常大，
+        在计算内核中被视为固体的流体
+
+        Returns:
+            float: 所有流体的质量。
+        """
+        return core.seepage_cell_get_fluid_mass(self.handle)
+
+    core.use(c_double, 'seepage_cell_get_fluid_vol_fraction',
+             c_void_p,
+             c_size_t)
+
+    def get_fluid_vol_fraction(self, index: int) -> Optional[float]:
+        """
+        返回index给定流体的体积饱和度
+
+        Args:
+            index (int): 流体的序号。
+
+        Returns:
+            float: 该流体的体积饱和度，如果序号无效则返回None。
+        """
+        index_ = get_index(index, self.fluid_number)
+        if index_ is not None:
+            return core.seepage_cell_get_fluid_vol_fraction(
+                self.handle, index_)
+        else:
+            return None
+
+    core.use(c_double, 'seepage_cell_get_attr',
+             c_void_p, c_size_t)
+    core.use(None, 'seepage_cell_set_attr',
+             c_void_p, c_size_t, c_double)
+    core.use(c_size_t, 'seepage_cell_get_attr_n',
+             c_void_p)
+
+    @property
+    def attr_n(self) -> int:
+        """
+        当前存储attr的数组的长度
+
+        Returns:
+            int: 存储attr的数组的长度。
+        """
+        return core.seepage_cell_get_attr_n(self.handle)
+
+    def get_attr(self, index: Union[int, str], default_val: float = None,
+                 **valid_range) -> Optional[float]:
+        """
+        该Cell的第 attr_id个自定义属性值。
+        当不存在时，默认为一个无穷大的值(大于1.0e100)
+
+        Args:
+            index (int or str): 自定义属性的序号或名称。
+            default_val (float, optional): 当属性不存在时返回的默认值。
+                默认为None。
+            **valid_range: 可选的有效范围参数。
+
+        Returns:
+            float: 自定义属性的值，如果不存在则返回默认值。
+        """
+        if isinstance(index, str):
+            assert isinstance(self, Cell)
+            index = self.model.get_cell_key(key=index)
+        if index is None:
+            return default_val
+        if index < 0:
+            if index == -1:
+                return self.x
+            if index == -2:
+                return self.y
+            if index == -3:
+                return self.z
+            if index == -4:
+                return self.v0
+            if index == -5:
+                return self.k
+            return default_val
+        value = core.seepage_cell_get_attr(self.handle, index)
+        if attr_in_range(value, **valid_range):
+            return value
+        else:
+            return default_val
+
+    def set_attr(self, index: Union[int, str], value: float) -> 'CellData':
+        """
+        该Cell的第 attr_id个自定义属性值。当不存在时，
+        默认为一个无穷大的值(大于1.0e100)
+
+        Args:
+            index (int or str): 自定义属性的序号或名称。
+            value (float): 自定义属性的新值。
+
+        Returns:
+            CellData: 返回当前CellData对象。
+        """
+        if isinstance(index, str):
+            assert isinstance(self, Cell)
+            index = self.model.reg_cell_key(key=index)
+        if index is None:
+            return self
+        if value is None:
+            value = 1.0e200
+        if index < 0:
+            if index == -1:
+                self.x = value
+                return self
+            if index == -2:
+                self.y = value
+                return self
+            if index == -3:
+                self.z = value
+                return self
+            if index == -4:
+                self.v0 = value
+                return self
+            if index == -5:
+                self.k = value
+                return self
+            assert False
+        core.seepage_cell_set_attr(self.handle, index, value)
+        return self
+
+    core.use(None, 'seepage_cell_multiply',
+             c_void_p, c_void_p, c_double)
+
+    def multiply(self, scale: float, result: Optional['CellData'] = None) -> 'CellData':
+        """
+        将孔隙大小和流体都乘以相同的倍率，其余所有的属性保持不变。
+
+        Args:
+            scale (float): 缩放倍率。
+            result (CellData, optional): 用于存储结果的CellData对象。
+                默认为None。
+
+        Returns:
+            CellData: 缩放后的CellData对象。
+        """
+        if not isinstance(result, CellData):
+            result = CellData()
+        assert isinstance(result, CellData), 'result must be a CellData'
+        core.seepage_cell_multiply(result.handle, self.handle, scale)
+        return result
+
+    def __mul__(self, scale: float) -> 'CellData':
+        """
+        将孔隙大小和流体都乘以相同的倍率，其余所有的属性保持不变。
+
+        Args:
+            scale (float): 缩放倍率。
+
+        Returns:
+            CellData: 缩放后的CellData对象。
+        """
+        return self.multiply(scale)
+
+    core.use(None, 'seepage_cell_clone',
+             c_void_p, c_void_p)
+
+    def clone(self, other: Optional['CellData'] = None, *, scale: Optional[float] = None):
+        """
+        从other克隆数据（所有的数据）
+
+        Args:
+            other (CellData): 要克隆数据的源CellData对象。
+            scale (float, optional): 可选的缩放倍率。默认为None。
+
+        Returns:
+            CellData: 克隆后的CellData对象。
+        """
+        if other is None:
+            return self
+        assert isinstance(other, CellData)
+        if scale is not None:
+            other.multiply(scale, result=self)
+            return self
+        else:
+            core.seepage_cell_clone(self.handle, other.handle)
+            return self
+
+    core.use(None, 'seepage_cell_clone_all', POINTER(c_void_p), POINTER(c_void_p), c_size_t)
+
+    @staticmethod
+    def clone_all(targets, sources, count):
+        """
+        拷贝所有给定的Cell数据
+        Args:
+            targets: 即将被覆盖的目标Cell
+            sources: 数据来源
+            count: 需要拷贝的数量
+
+        Returns:
+            None
+        """
+        core.seepage_cell_clone_all(targets, sources, count)
+
+    core.use(None, 'seepage_cell_set_fluid_components',
+             c_void_p, c_void_p)
+
+    def set_fluid_components(self, model: "Seepage"):
+        """
+        利用model中定义的流体来设置Cell中的流体的组分的数量。
+        注意:
+            此函数会递归地调用model中的组分定义，
+            从而保证Cell中流体组分结构和model中完全一样。
+
+        Args:
+            model (Seepage): 用于定义流体组分的模型。
+        """
+        assert isinstance(model, Seepage)
+        core.seepage_cell_set_fluid_components(self.handle, model.handle)
+
+    core.use(None, 'seepage_cell_set_fluid_property', c_void_p, c_double, c_size_t, c_size_t, c_void_p)
+
+    def set_fluid_property(self, p: float, fa_t: int, fa_c: int, model: "Seepage"):
+        """
+        利用model中定义的流体的属性来更新流体的比热、密度和粘性系数。
+        注意：
+            函数会使用在各个流体中由fa_t指定的温度，并根据给定的压力p来查找流体属性；
+            因此，在调用这个函数之前，务必要设置各个流体的温度 (fa_t)。
+        注意：
+            在调用之前，务必保证此Cell内的流体的结构和model内fludef的结构一致。
+            即，应该首先调用set_fluid_components函数
+
+        Args:
+            p (float): 压力。
+            fa_t (int): 流体温度的索引。
+            fa_c (int): 流体组分的索引。
+            model (Seepage): 用于定义流体属性的模型。
+        """
+        assert isinstance(model, Seepage)
+        core.seepage_cell_set_fluid_property(self.handle, p, fa_t, fa_c, model.handle)
+
+    core.use(None, 'seepage_cell_set_fluids_by_lexpr', c_void_p, c_void_p, c_void_p)
+
+    def set_fluids_by_lexpr(self, lexpr: LinearExpr, model: "Seepage"):
+        """ 设置此Cell中的流体
+
+        此函数将使用model中各个cell的流体，然后使用线性表达式lexpr来计算
+
+        Args:
+            lexpr (LinearExpr): 计算流体的线性表达式
+            model (Seepage): 用来拷贝流体的另外一个模型
+
+        Returns:
+            None
+        """
+        core.seepage_cell_set_fluids_by_lexpr(
+            self.handle, lexpr.handle, model.handle)
+
+    core.use(None, 'seepage_cell_set_pore_by_lexpr',
+             c_void_p, c_void_p, c_void_p)
+
+    def set_pore_by_lexpr(self, lexpr: LinearExpr, model: "Seepage"):
+        """ 设置此Cell中的孔隙
+
+        此函数将使用model中各个cell的孔隙，然后使用线性表达式lexpr来计算
+
+        Args:
+            lexpr (LinearExpr): 计算pore的线性表达式
+            model (Seepage): 用来拷贝pore的另外一个模型
+
+        Returns:
+            None
+        """
+        core.seepage_cell_set_pore_by_lexpr(self.handle, lexpr.handle,
+                                            model.handle)
+
+    core.use(None, 'seepage_cell_set_mass_attr_by_lexpr',
+             c_void_p, c_size_t, c_void_p, c_void_p)
+
+    def set_mass_attr_by_lexpr(self, index: int, lexpr: LinearExpr, model: "Seepage"):
+        """ 设置此Cell中的自定义属性
+        此函数将使用model中各个cell的自定义属性，然后使用线性表达式lexpr来计算
+        Args:
+            index (int): 自定义属性的序号
+            lexpr (LinearExpr): 计算自定义属性的线性表达式
+            model (Seepage): 用来拷贝自定义属性的另外一个模型
+        Returns:
+            None
+        """
+        core.seepage_cell_set_mass_attr_by_lexpr(
+            self.handle, index, lexpr.handle, model.handle)
+
+    core.use(None, 'seepage_cell_set_density_attr_by_lexpr',
+             c_void_p, c_size_t, c_void_p, c_void_p)
+
+    def set_density_attr_by_lexpr(self, index: int, lexpr: LinearExpr, model: "Seepage"):
+        """ 设置此Cell中的自定义属性
+        此函数将使用model中各个cell的自定义属性，然后使用线性表达式lexpr来计算
+        Args:
+            index (int): 自定义属性的序号
+            lexpr (LinearExpr): 计算自定义属性的线性表达式
+            model (Seepage): 用来拷贝自定义属性的另外一个模型
+        Returns:
+            None
+        """
+        core.seepage_cell_set_density_attr_by_lexpr(
+            self.handle, index, lexpr.handle, model.handle)
+
+
+class Cell(CellData):
+    """
+    Cell为控制体。一个Cell由如下几个部分组成：
+
+    1、该控制体内流体存储空间的大小以及刚度(即设置Cell的pore).
+        计算内核根据Cell内流体的总的体积，结合pore的弹性性质来定义Cell内流体
+        的压力，所以在创建一个Cell之后，必须首先对Cell的pore进行配置。
+        具体地，调用Cell.set_pore函数来设置Cell的pore;
+
+    2、Cell内存储的流体。一个Cell内可以存储多种流体，这些流体存储在一个数组内，
+        且从0开始编号。每一种流体可以由多个组分组成，流体的组分
+        也从0开始编号；
+
+    3、Cell的自定义属性。在Cell内存储一个浮点型的数组，存储一系列自定义的属性，
+        用于辅助存储和计算。自定义属性从0开始编号。
+    """
+
+    core.use(c_void_p, 'seepage_get_cell', c_void_p, c_size_t)
+
+    def __init__(self, model: "Seepage", index: int):
+        """
+        初始化Cell对象。
+
+        Args:
+            model (Seepage): 所属的Seepage模型。
+            index (int): Cell的索引，必须小于模型中的Cell数量。
+
+        Raises:
+            AssertionError: 如果model不是Seepage类型，
+            或者index不是整数，或者index大于等于模型中的Cell数量。
+        """
+        assert isinstance(model, Seepage)
+        assert isinstance(index, int)
+        assert index < model.cell_number
+        self.model = model
+        self.index = index
+        super().__init__(handle=core.seepage_get_cell(model.handle, index))
+
+    def __str__(self) -> str:
+        """
+        返回Cell对象的字符串表示。
+
+        Returns:
+            str: 包含Cell句柄、索引和位置的字符串。
+        """
+        return (f'zml.Cell(handle = {self.model.handle}, '
+                f'index = {self.index}, pos = {self.pos})')
+
+    core.use(c_size_t, 'seepage_get_cell_face_n',
+             c_void_p, c_size_t)
+
+    @property
+    def face_number(self) -> int:
+        """
+        获取与该Cell连接的Face的数量。
+
+        Returns:
+            int: 与该Cell连接的Face的数量。
+        """
+        return core.seepage_get_cell_face_n(self.model.handle, self.index)
+
+    @property
+    def cell_number(self) -> int:
+        """
+        获取与该Cell相邻的Cell的数量。
+
+        Returns:
+            int: 与该Cell相邻的Cell的数量，等于face_number。
+        """
+        return self.face_number
+
+    core.use(c_size_t, 'seepage_get_cell_face_id',
+             c_void_p, c_size_t, c_size_t)
+
+    core.use(c_size_t, 'seepage_get_cell_cell_id',
+             c_void_p, c_size_t, c_size_t)
+
+    def get_cell(self, index: int) -> Optional["Cell"]:
+        """
+        获取与该Cell相邻的第index个Cell。
+
+        Args:
+            index (int): 相邻Cell的索引。
+
+        Returns:
+            Cell or None: 与该Cell相邻的第index个Cell，
+            如果不存在则返回None。
+        """
+        index_ = get_index(index, self.cell_number)
+        if index_ is not None:
+            cell_id = core.seepage_get_cell_cell_id(self.model.handle,
+                                                    self.index, index_)
+            return self.model.get_cell(cell_id)
+        else:
+            return None
+
+    def get_face(self, index: int) -> Optional["Face"]:
+        """
+        获取与该Cell连接的第index个Face。
+
+        Args:
+            index (int): 连接Face的索引。
+
+        Returns:
+            Face or None: 与该Cell连接的第index个Face，
+            如果不存在则返回None。
+        注：该Face的另一侧，即为get_cell返回的Cell。
+        """
+        index_ = get_index(index, self.face_number)
+        if index_ is not None:
+            face_id = core.seepage_get_cell_face_id(self.model.handle, self.index, index_)
+            return self.model.get_face(face_id)
+        else:
+            return None
+
+    @property
+    def cells(self) -> Iterable['Cell']:
+        """
+        获取此Cell周围的所有Cell。
+
+        Returns:
+            Iterator: 包含此Cell周围所有Cell的迭代器。
+        """
+        return Iterator(self, self.cell_number, lambda m, ind: m.get_cell(ind))
+
+    @property
+    def faces(self) -> Iterable['Face']:
+        """
+        获取此Cell周围的所有Face。
+
+        Returns:
+            Iterator: 包含此Cell周围所有Face的迭代器。
+        """
+        return Iterator(self, self.face_number, lambda m, ind: m.get_face(ind))
+
+    def set_ini(self, *args, **kwargs):
+        warnings.warn("set_ini is deprecated (removed after 2027-6-3). Please use zmlx.tfc.set_cell_ini instead.",
+                      stacklevel=2, category=DeprecationWarning)
+        from zmlx.tfc import set_cell_ini
+        set_cell_ini(self, *args, **kwargs)
+
+
+class FaceData(HasHandle):
+    """
+    FaceData类用于表示和操作Cell之间界面（Face）的数据。
+
+    该类提供了一系列方法来处理Face的序列化保存、加载，
+    以及获取和设置Face的各种属性，如自定义属性、导流能力、相对渗透率曲线等。
+    """
+    core.use(c_void_p, 'new_seepage_face')
+    core.use(None, 'del_seepage_face', c_void_p)
+
+    def __init__(self, path: str = None, handle: Optional[c_void_p] = None):
+        """
+        初始化FaceData对象。
+
+        Args:
+            path (str, optional): 用于加载序列化数据的文件路径。默认为None。
+            handle (c_void_p, optional): 已有的FaceData句柄。默认为None。
+
+        若handle为None且path为字符串，则会尝试从指定路径加载数据。
+        """
+        super().__init__(handle, core.new_seepage_face, core.del_seepage_face)
+        if handle is None:
+            if isinstance(path, str):
+                self.load(path)
+
+    core.use(None, 'seepage_face_save', c_void_p, c_char_p)
+
+    def save(self, path: str):
+        """
+        序列化保存。可选扩展格式：
+            1：.txt
+            .TXT 格式
+            （跨平台，基本不可读）
+
+            2：.xml
+            .XML 格式
+            （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+            3：.其他
+            二进制格式
+            （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
+
+        Args:
+            path (str): 保存序列化数据的文件路径。
+        """
+        if isinstance(path, str):
+            make_parent(path)
+            core.seepage_face_save(self.handle, make_c_char_p(path))
+
+    core.use(None, 'seepage_face_load', c_void_p, c_char_p)
+
+    def load(self, path: str):
+        """
+        读取序列化文件。
+            根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
+
+        Args:
+            path (str): 读取序列化数据的文件路径。
+        """
+        if isinstance(path, str):
+            check_ipath(path, self)
+            core.seepage_face_load(self.handle, make_c_char_p(path))
+
+    core.use(None, 'seepage_face_write_fmap',
+             c_void_p, c_void_p, c_char_p)
+    core.use(None, 'seepage_face_read_fmap',
+             c_void_p, c_void_p, c_char_p)
+
+    def to_fmap(self, fmt: str = 'binary') -> FileMap:
+        """
+        将数据序列化到一个Filemap中. 其中fmt的取值可以为: text, xml和binary
+
+        Args:
+            fmt (str, optional): 序列化格式，可选值为 'text', 'xml'
+                和 'binary'。默认为 'binary'。
+
+        Returns:
+            FileMap: 包含序列化数据的FileMap对象。
+        """
+        fmap = FileMap()
+        core.seepage_face_write_fmap(self.handle, fmap.handle,
+                                     make_c_char_p(fmt))
+        return fmap
+
+    def from_fmap(self, fmap: FileMap, fmt: str = 'binary'):
+        """
+        从Filemap中读取序列化的数据. 其中fmt的取值可以为: text, xml和binary
+
+        Args:
+            fmap (FileMap): 包含序列化数据的FileMap对象。
+            fmt (str, optional): 反序列化格式，可选值为 'text', 'xml'
+                和 'binary'。默认为 'binary'。
+        """
+        assert isinstance(fmap, FileMap)
+        core.seepage_face_read_fmap(self.handle, fmap.handle,
+                                    make_c_char_p(fmt))
+
+    @property
+    def fmap(self) -> FileMap:
+        """
+        获取当前FaceData对象的二进制序列化FileMap对象。
+
+        Returns:
+            FileMap: 包含二进制序列化数据的FileMap对象。
+        """
+        return self.to_fmap(fmt='binary')
+
+    @fmap.setter
+    def fmap(self, value: FileMap):
+        """
+        从给定的FileMap对象中加载二进制序列化数据。
+
+        Args:
+            value (FileMap): 包含二进制序列化数据的FileMap对象。
+        """
+        self.from_fmap(value, fmt='binary')
+
+    core.use(c_double, 'seepage_face_get_attr',
+             c_void_p, c_size_t)
+    core.use(None, 'seepage_face_set_attr',
+             c_void_p, c_size_t, c_double)
+
+    def get_attr(self, index: Union[int, str], default_val: float = None,
+                 **valid_range):
+        """
+        该Face的第 attr_id个自定义属性值。
+        当不存在时，默认为一个无穷大的值(大于1.0e100)
+
+        Args:
+            index (int or str): 自定义属性的索引或键名。
+            default_val (float, optional): 当属性不存在或不在有效范围内时
+                返回的默认值。默认为None。
+            **valid_range: 可选的有效范围参数。
+
+        Returns:
+            float: 自定义属性的值，如果不存在或不在有效范围内则返回默认值。
+        """
+        if isinstance(index, str):
+            assert isinstance(self, Face)
+            index = self.model.get_face_key(key=index)
+        if index is None:
+            return default_val
+        value = core.seepage_face_get_attr(self.handle, index)
+        if attr_in_range(value, **valid_range):
+            return value
+        else:
+            return default_val
+
+    def set_attr(self, index: Union[int, str], value: float):
+        """
+        该Face的第 attr_id个自定义属性值。
+        当不存在时，默认为一个无穷大的值(大于1.0e100)
+
+        Args:
+            index (int or str): 自定义属性的索引或键名。
+            value (float): 要设置的自定义属性的值。
+
+        Returns:
+            FaceData: 返回当前FaceData对象。
+        """
+        if isinstance(index, str):
+            assert isinstance(self, Face)
+            index = self.model.reg_face_key(key=index)
+        if index is None:
+            return self
+        if value is None:
+            value = 1.0e200
+        core.seepage_face_set_attr(self.handle, index, value)
+        return self
+
+    core.use(None, 'seepage_face_clone',
+             c_void_p, c_void_p)
+
+    def clone(self, other: 'FaceData') -> 'FaceData':
+        """
+        从另一个FaceData对象克隆数据。
+
+        Args:
+            other (FaceData): 要克隆数据的源FaceData对象。
+
+        Returns:
+            FaceData: 返回当前FaceData对象。
+        """
+        if other is not None:
+            assert isinstance(other, FaceData)
+            core.seepage_face_clone(self.handle, other.handle)
+        return self
+
+    def get_copy(self) -> 'FaceData':
+        """
+        获取当前FaceData对象的副本。
+        Returns:
+            FaceData: 当前FaceData对象的副本。
+        """
+        data = FaceData()
+        data.clone(self)
+        return data
+
+    core.use(c_double, 'seepage_face_get_cond',
+             c_void_p)
+    core.use(None, 'seepage_face_set_cond',
+             c_void_p, c_double)
+
+    @property
+    def cond(self) -> float:
+        """
+        此Face的导流能力. dv=cond*dp*dt/vis，其中dp为两端的压力差，
+        dt为时间步长，vis为内部流体的粘性系数
+            cond = area * perm / dist.
+        如果是多相的情况下，可能需要两步矫正（程序内部自动算，用户不用设置）：
+            1. 如果多相中存在固体，首先，需要计算 流体体积/总体积，
+                得到流体的体积分数 a，用 cond * kr(a)得到流体的cond1.
+            2. 如果流体有多种，对于第0种流体，
+                s0=v0/v_sum，cond1 * kr0(s0)
+                得到 cond2_0.
+
+        Returns:
+            float: 此Face的导流能力。
+        """
+        return core.seepage_face_get_cond(self.handle)
+
+    @cond.setter
+    def cond(self, value: float):
+        """
+        此Face的导流能力. dv=cond*dp*dt/vis，其中dp为两端的压力差，
+        dt为时间步长，vis为内部流体的粘性系数
+
+        Args:
+            value (float): 要设置的导流能力值。
+        """
+        core.seepage_face_set_cond(self.handle, value)
+
+    core.use(c_double, 'seepage_face_get_dr',
+             c_void_p)
+    core.use(None, 'seepage_face_set_dr',
+             c_void_p, c_double)
+
+    @property
+    def dr(self) -> float:
+        """
+        获取此Face的某个dr属性值(流体的额外驱动力)
+
+        Returns:
+            float: 此Face的属性值。
+        """
+        return core.seepage_face_get_dr(self.handle)
+
+    @dr.setter
+    def dr(self, value: float):
+        """
+        设置此Face的dr属性值(流体的额外驱动力)
+
+        Args:
+            value (float): 要设置的属性值。
+        """
+        core.seepage_face_set_dr(self.handle, value)
+
+    core.use(c_double, 'seepage_face_get_dv',
+             c_void_p, c_size_t)
+
+    def get_dv(self, fluid_id: int) -> float:
+        """
+        返回上一步迭代通过这个face的流体的体积
+
+        Args:
+            fluid_id (int): 流体的ID。
+
+        Returns:
+            float: 上一步迭代通过这个face的指定流体的体积。
+        """
+        assert isinstance(fluid_id, int)
+        return core.seepage_face_get_dv(self.handle, fluid_id)
+
+    core.use(c_size_t, 'seepage_face_get_ikr',
+             c_void_p, c_size_t)
+    core.use(None, 'seepage_face_set_ikr',
+             c_void_p, c_size_t, c_size_t)
+
+    def get_ikr(self, index: int) -> int:
+        """
+        第index种流体的相对渗透率曲线的id
+
+        Args:
+            index (int): 流体的索引。
+
+        Returns:
+            int: 第index种流体的相对渗透率曲线的ID。
+        """
+        return core.seepage_face_get_ikr(self.handle, index)
+
+    def set_ikr(self, index: int, value: int):
+        """
+        设置在这个Face中，第index种流体的相对渗透率曲线的id.
+            如果在这个Face中，没有为某个流体选择相渗曲线，
+            则如果该流体的序号为ID，则默认使用序号为ID的相渗曲线。
+
+        Args:
+            index (int): 流体的索引。
+            value (int): 要设置的相对渗透率曲线的ID。
+        """
+        core.seepage_face_set_ikr(self.handle, index, value)
+
+
+class Face(FaceData):
+    """
+    Face为Cell之间的界面。Cell由如下属性组成：
+
+    1、Face的导流系数cond:  dv=dp*cond*dt/vis
+        其中dv为流经face的流体的体积，cond为导流系数，dt为时长，vis为流体的粘性系数
+
+    2、Face中不同流体所采用的相对渗透率曲线的序号。
+        在Seepage中可以定义多个（最多10000个）相对渗透率曲线，且不同的Face可以选用
+        不同的相对渗透率曲线。<相对渗透率曲线的序号>可以不定义，
+        此时会采用默认值(即第i种流体，自动选用第i个相渗曲线)
+        注意：需要为每一种流体配置相对渗透率曲线;
+
+    3、Face的自定义属性。在Face内存储一个浮点型的数组，存储一系列自定义的属性，
+        用于辅助存储和计算。自定义属性从0开始编号。
+    """
+    core.use(c_void_p, 'seepage_get_face', c_void_p, c_size_t)
+
+    def __init__(self, model: 'Seepage', index: int):
+        """
+        初始化Face对象。
+
+        Args:
+            model (Seepage): 所属的Seepage模型对象。
+            index (int): Face的索引。
+
+        Raises:
+            AssertionError: 如果model不是Seepage类型，或者index不是整数，
+            或者index超出模型的Face数量范围。
+        """
+        assert isinstance(model, Seepage)
+        assert isinstance(index, int)
+        assert index < model.face_number
+        self.model = model
+        self.index = index
+        super().__init__(handle=core.seepage_get_face(model.handle, index))
+
+    def __str__(self) -> str:
+        """
+        返回Face对象的字符串表示。
+
+        Returns:
+            str: 包含Face句柄和索引的字符串。
+        """
+        return (f'zml.Face(handle = {self.model.handle}, '
+                f'index = {self.index}) ')
+
+    core.use(c_size_t, 'seepage_get_face_cell_id',
+             c_void_p, c_size_t, c_size_t)
+
+    @property
+    def cell_number(self) -> int:
+        """
+        和Face连接的Cell的数量
+
+        Returns:
+            int: 与Face连接的Cell的数量，固定为2。
+        """
+        return 2
+
+    def get_cell(self, index) -> Optional['Cell']:
+        """
+        和Face连接的第index个Cell
+
+        Args:
+            index (int): 要获取的Cell的索引。
+
+        Returns:
+            Cell or None: 与Face连接的第index个Cell，
+            如果索引无效则返回None。
+        """
+        index = get_index(index, self.cell_number)
+        if index is not None:
+            cell_id = core.seepage_get_face_cell_id(self.model.handle, self.index, index)
+            return self.model.get_cell(cell_id)
+        else:
+            return None
+
+    @property
+    def cells(self) -> Tuple[Optional['Cell'], Optional['Cell']]:
+        """
+        返回Face两端的Cell
+
+        Returns:
+            tuple: 包含Face两端Cell的元组。
+        """
+        return self.get_cell(0), self.get_cell(1)
+
+    @property
+    def pos(self) -> Tuple[float, ...]:
+        """
+        返回Face中心点的位置（根据两侧的Cell的位置来自动计算）
+
+        Returns:
+            tuple: 包含Face中心点位置坐标的元组。
+        """
+        p0 = self.get_cell(0).pos
+        p1 = self.get_cell(1).pos
+        return tuple([(p0[i] + p1[i]) / 2 for i in range(len(p0))])
+
+    def distance(self, other):
+        """
+        返回距离另外一个Cell或者另外一个位置的距离
+
+        Args:
+            other (Cell or tuple): 另一个Cell对象或位置坐标元组。
+
+        Returns:
+            float: 与另一个Cell或位置的距离。
+        """
+        if hasattr(other, 'pos'):
+            return get_distance(self.pos, other.pos)
+        else:
+            return get_distance(self.pos, other)
+
+    def get_another(self, cell) -> Optional['Cell']:
+        """
+        返回另外一侧的Cell
+
+        Args:
+            cell (Cell or int): Cell对象或Cell的索引。
+
+        Returns:
+            Cell or None: 另一侧的Cell，如果输入无效则返回None。
+        """
+        if isinstance(cell, Cell):
+            cell = cell.index
+
+        c0 = self.get_cell(0)
+        assert isinstance(c0, Cell)
+
+        c1 = self.get_cell(1)
+        assert isinstance(c1, Cell)
+
+        if c0.index == cell:
+            return c1
+        elif c1.index == cell:
+            return c0
+        else:
+            return None
+
+
+class Injector(HasHandle):
+    """
+    流体的注入点。可以按照一定的规律向特定的Cell注入特定的流体(或者能量).
+        注意Injector工作的逻辑：
+        1. 如果设置了注入的流体的ID，则实施流体注入操作
+            (此时value代表注入的体积速率: m^3/s);
+        2. 如果没有设置流体ID，并且设置了 ca_mc和ca_t属性，则实施热量注入操作;
+    """
+    core.use(c_void_p, 'new_injector')
+    core.use(None, 'del_injector', c_void_p)
+
+    def __init__(self, path: Optional[str] = None, handle: Optional[c_void_p] = None):
+        """
+        初始化Injector对象。
+
+        Args:
+            path (str, optional): 用于加载序列化数据的文件路径。默认为None。
+            handle (c_void_p, optional): 已有的Injector句柄。默认为None。
+
+        如果handle为None且path为字符串，则会尝试从指定路径加载数据。
+        """
+        super().__init__(handle, core.new_injector, core.del_injector)
+        if handle is None:
+            if isinstance(path, str):
+                self.load(path)
+
+    core.use(None, 'injector_save', c_void_p, c_char_p)
+
+    def save(self, path: str):
+        """
+        序列化保存。可选扩展格式：
+            1：.txt
+            .TXT 格式
+            （跨平台，基本不可读）
+
+            2：.xml
+            .XML 格式
+            （特定可读性，文件体积最大，读写速度最慢，跨平台）
+
+            3：.其他
+            二进制格式
+            （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
+
+        Args:
+            path (str): 保存序列化数据的文件路径。
+        """
+        if isinstance(path, str):
+            make_parent(path)
+            core.injector_save(self.handle, make_c_char_p(path))
+
+    core.use(None, 'injector_load', c_void_p, c_char_p)
+
+    def load(self, path: str):
+        """
+        读取序列化文件。
+            根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
+
+        Args:
+            path (str): 读取序列化数据的文件路径。
+        """
+        if isinstance(path, str):
+            check_ipath(path, self)
+            core.injector_load(self.handle, make_c_char_p(path))
+
+    core.use(None, 'injector_write_fmap',
+             c_void_p, c_void_p, c_char_p)
+    core.use(None, 'injector_read_fmap',
+             c_void_p, c_void_p, c_char_p)
+
+    def to_fmap(self, fmt: str = 'binary') -> FileMap:
+        """
+        将数据序列化到一个Filemap中。其中fmt的取值可以为: text, xml和binary
+
+        Args:
+            fmt (str, optional): 序列化格式，可选值为 'text', 'xml'
+                和 'binary'。默认为 'binary'。
+
+        Returns:
+            FileMap: 包含序列化数据的FileMap对象。
+        """
+        fmap = FileMap()
+        core.injector_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
+        return fmap
+
+    def from_fmap(self, fmap: FileMap, fmt: str = 'binary'):
+        """
+        从Filemap中读取序列化的数据。其中fmt的取值可以为: text, xml和binary
+
+        Args:
+            fmap (FileMap): 包含序列化数据的FileMap对象。
+            fmt (str, optional): 反序列化格式，可选值为 'text', 'xml'
+                和 'binary'。默认为 'binary'。
+        """
+        assert isinstance(fmap, FileMap)
+        core.injector_read_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
+
+    @property
+    def fmap(self) -> FileMap:
+        """
+        获取当前Injector对象的二进制序列化FileMap对象。
+
+        Returns:
+            FileMap: 包含二进制序列化数据的FileMap对象。
+        """
+        return self.to_fmap(fmt='binary')
+
+    @fmap.setter
+    def fmap(self, value: FileMap):
+        """
+        从给定的FileMap对象中加载二进制序列化数据。
+
+        Args:
+            value (FileMap): 包含二进制序列化数据的FileMap对象。
+        """
+        self.from_fmap(value, fmt='binary')
+
+    core.use(c_size_t, 'injector_get_cell_id',
+             c_void_p)
+    core.use(None, 'injector_set_cell_id',
+             c_void_p, c_size_t)
+
+    @property
+    def cell_id(self) -> int:
+        """
+        注入点关联的Cell的ID。如果该ID不存在，则不会注入。
+        注：
+            默认为无穷大
+
+        Returns:
+            int: 注入点关联的Cell的ID。
+        """
+        return core.injector_get_cell_id(self.handle)
+
+    @cell_id.setter
+    def cell_id(self, value: int):
+        """
+        设置注入点关联的Cell的ID。如果该ID不存在，则不会注入。
+        注：
+            默认为无穷大
+
+        Args:
+            value (int): 要设置的Cell的ID。
+        """
+        core.injector_set_cell_id(self.handle, value)
+
+    core.use(c_void_p, 'injector_get_flu', c_void_p)
+
+    @property
+    def flu(self) -> 'FluData':
+        """
+        即将注入到Cell中的流体的数据。这里返回的是一个引用 (从而可以直接修改内部的数据)。
+        注：
+            默认质量为1e-100，即无限接近于0
+
+        Returns:
+            FluData: 即将注入的流体的数据对象。
+        """
+        return FluData(handle=core.injector_get_flu(self.handle))
+
+    core.use(None, 'injector_set_fid',
+             c_void_p, c_size_t, c_size_t, c_size_t)
+
+    def set_fid(self, fluid_id: Union[int, List[int], Tuple[int, ...]]):
+        """
+        设置注入的流体的ID。注意：如果需要注热的是热量，则将fluid_id设置为None。
+        注：在没有做特殊设置的时候，fid默认为[]
+
+        Args:
+            fluid_id (int | list | tuple): 注入的流体的ID列表。
+        """
+        core.injector_set_fid(self.handle, *parse_fid3(fluid_id))
+
+    core.use(c_size_t, 'injector_get_fid_length',
+             c_void_p)
+    core.use(c_size_t, 'injector_get_fid_of',
+             c_void_p, c_size_t)
+
+    def get_fid(self) -> List[int]:
+        """
+        返回注入流体的ID。
+        注：在没有做特殊设置的时候，默认为[]
+
+        Returns:
+            list: 注入流体的ID列表。
+        """
+        count = core.injector_get_fid_length(self.handle)
+        return [core.injector_get_fid_of(self.handle, idx) for idx in
+                range(count)]
+
+    @property
+    def fid(self) -> List[int]:
+        """
+        注入的流体的ID。注意：如果需要注热的是热量，则将fluid_id设置为None。
+        注：在没有做特殊设置的时候，fid默认为[]
+
+        Returns:
+            list: 注入流体的ID列表。
+        """
+        return self.get_fid()
+
+    @fid.setter
+    def fid(self, value: Union[int, List[int], Tuple[int, ...]]):
+        """
+        设置注入的流体的ID。注意：如果需要注热的是热量，则将fluid_id设置为None。
+        注：在没有做特殊设置的时候，fid默认为[]
+
+        Args:
+            value: 要设置的注入流体的ID。
+        """
+        self.set_fid(value)
+
+    core.use(c_double, 'injector_get_value',
+             c_void_p)
+    core.use(None, 'injector_set_value',
+             c_void_p, c_double)
+
+    @property
+    def value(self) -> float:
+        """
+        注入的数值。可以有多重的含义：
+            当注入流体的时候，为注入的体积速率 m^3/s
+            当注热时：
+                若恒温注热，则为温度
+                若恒功率，则为功率
+        注：
+            在没有做任何设置时，默认值为0
+
+        Returns:
+            float: 注入的数值。
+        """
+        return core.injector_get_value(self.handle)
+
+    @value.setter
+    def value(self, val: float):
+        """
+        设置注入的数值。
+        注：
+            在没有做任何设置时，默认值为0
+
+        Args:
+            val (float): 要设置的注入数值。
+        """
+        core.injector_set_value(self.handle, val)
+
+    @property
+    def time(self):
+        """
+        此属性已被移除。
+
+        注：
+            此属性已被移除，调用时会发出警告。
+
+        Returns:
+            int: 固定返回0。
+        """
+        warnings.warn('Property Injector.time '
+                      'has been removed',
+                      DeprecationWarning, stacklevel=2)
+        return 0
+
+    @time.setter
+    def time(self, _):
+        """
+        设置时间属性（此属性已被移除）。
+
+        注：
+            此属性已被移除，调用时会发出警告。
+
+        Args:
+            _: 此参数无实际作用。
+        """
+        warnings.warn('Property Injector.time '
+                      'has been removed',
+                      DeprecationWarning, stacklevel=2)
+
+    core.use(c_double, 'injector_get_pos',
+             c_void_p, c_size_t)
+    core.use(None, 'injector_set_pos',
+             c_void_p, c_size_t, c_double)
+
+    @property
+    def pos(self) -> List[float]:
+        """
+        该Injector在三维空间的坐标。
+        注：
+            在没有设置的时候，默认是一个无限远的位置 [1e+50, 1e+50, 1e+50]
+
+        Returns:
+            list: 包含三维坐标的列表。
+        """
+        return [core.injector_get_pos(self.handle, i) for i in range(3)]
+
+    @pos.setter
+    def pos(self, value: Union[List[float], Tuple[float], Tuple[float, ...]]):
+        """
+        设置该Injector在三维空间的坐标。
+        注：
+            在没有设置的时候，默认是一个无限远的位置 [1e+50, 1e+50, 1e+50]
+
+        Args:
+            value (list): 包含三维坐标的列表，长度必须为3。
+        """
+        assert len(value) == 3
+        for dim in range(3):
+            core.injector_set_pos(self.handle, dim, value[dim])
+
+    core.use(c_double, 'injector_get_radi',
+             c_void_p)
+    core.use(None, 'injector_set_radi',
+             c_void_p, c_double)
+
+    @property
+    def radi(self) -> float:
+        """
+        Injector的控制半径。
+        注：
+            在没有设置的时候，原始默认值为1e+100，即无穷大
+
+        Returns:
+            float: Injector的控制半径。
+        """
+        return core.injector_get_radi(self.handle)
+
+    @radi.setter
+    def radi(self, value: float):
+        """
+        设置Injector的控制半径。
+        注：
+            在没有设置的时候，原始默认值为1e+100，即无穷大
+
+        Args:
+            value (float): 要设置的控制半径。
+        """
+        core.injector_set_radi(self.handle, value)
+
+    core.use(c_double, 'injector_get_g_heat',
+             c_void_p)
+    core.use(None, 'injector_set_g_heat',
+             c_void_p, c_double)
+
+    @property
+    def g_heat(self) -> float:
+        """
+        热边界和cell之间换热的系数 (当大于0的时候，则实施固定温度的加热，
+        否则为固定功率的加热)。
+        注：
+            默认为0
+
+        Returns:
+            float: 热边界和cell之间换热的系数。
+        """
+        return core.injector_get_g_heat(self.handle)
+
+    @g_heat.setter
+    def g_heat(self, value: float):
+        """
+        设置热边界和cell之间换热的系数 (当大于0的时候，则实施固定温度的加热，
+        否则为固定功率的加热)。
+        注：
+            默认为0
+
+        Args:
+            value (float): 要设置的换热系数。
+        """
+        core.injector_set_g_heat(self.handle, value)
+
+    core.use(c_size_t, 'injector_get_ca_mc',
+             c_void_p)
+    core.use(None, 'injector_set_ca_mc',
+             c_void_p, c_size_t)
+
+    @property
+    def ca_mc(self) -> int:
+        """
+        cell的mc属性的ID。
+        注：
+            默认为无穷大18446744073709551615，即不存在的属性ID
+
+        Returns:
+            int: cell的mc属性的ID。
+        """
+        return core.injector_get_ca_mc(self.handle)
+
+    @ca_mc.setter
+    def ca_mc(self, value: int):
+        """
+        设置cell的mc属性的ID。
+        注：
+            默认为无穷大18446744073709551615，即不存在的属性ID
+
+        Args:
+            value (int): 要设置的cell的mc属性的ID。
+        """
+        core.injector_set_ca_mc(self.handle, value)
+
+    core.use(c_size_t, 'injector_get_ca_t',
+             c_void_p)
+    core.use(None, 'injector_set_ca_t',
+             c_void_p, c_size_t)
+
+    @property
+    def ca_t(self) -> int:
+        """
+        cell的温度属性的id。
+        注：
+            默认为无穷大18446744073709551615，即不存在的属性ID
+
+        Returns:
+            int: cell的温度属性的id。
+        """
+        return core.injector_get_ca_t(self.handle)
+
+    @ca_t.setter
+    def ca_t(self, value: int):
+        """
+        设置cell的温度属性的id。
+        注：
+            默认为无穷大18446744073709551615，即不存在的属性ID
+
+        Args:
+            value (int): 要设置的cell的温度属性的id。
+        """
+        core.injector_set_ca_t(self.handle, value)
+
+    core.use(c_size_t, 'injector_get_ca_no_inj',
+             c_void_p)
+    core.use(None, 'injector_set_ca_no_inj',
+             c_void_p, c_size_t)
+
+    @property
+    def ca_no_inj(self) -> int:
+        """
+        在根据位置来寻找注入的cell的时候，凡是设置了ca_no_inj的cell，
+        将会被忽略（从而避免被Injector操作）。
+        注：
+            默认为无穷大18446744073709551615，即不存在的属性ID
+
+        Returns:
+            int: cell的ca_no_inj属性的ID。
+        """
+        return core.injector_get_ca_no_inj(self.handle)
+
+    @ca_no_inj.setter
+    def ca_no_inj(self, value: int):
+        """
+        设置在根据位置来寻找注入的cell的时候，凡是设置了ca_no_inj的cell，
+        将会被忽略（从而避免被Injector操作）。
+        注：
+            默认为无穷大18446744073709551615，即不存在的属性ID
+
+        Args:
+            value (int): 要设置的cell的ca_no_inj属性的ID。
+        """
+        core.injector_set_ca_no_inj(self.handle, value)
+
+    core.use(None, 'injector_add_oper',
+             c_void_p, c_double, c_char_p)
+
+    def add_oper(self, time: float, oper: Union[str, float]):
+        """
+        添加在time时刻的一个操作。注意，oper支持如下关键词
+            value
+            pos    x  y  z
+            radi   r
+            val    v
+            den    v
+            vis    v
+            mass   m
+            attr   id  val
+            fid    a  b  c
+            g_heat v            (since 2024-02-27)
+        其它关键词将会被忽略(不抛出异常)。
+
+        Args:
+            time (float): 操作的时间。
+            oper (str): 操作的关键词和参数。
+
+        Returns:
+            Injector: 返回当前Injector对象。
+        """
+        core.injector_add_oper(self.handle, time, make_c_char_p(
+            oper if isinstance(oper, str) else f'{oper}'))
+        return self
+
+    core.use(None, 'injector_work',
+             c_void_p, c_void_p, c_double, c_double)
+
+    def work(self, model: 'Seepage', *, time: Optional[float] = None, dt: Optional[float] = None):
+        """
+        执行注入操作。
+        注：
+            此函数不需要调用。内置在Seepage中的Injector，
+            会在Seepage.iterate函数中被自动调用。
+
+        Args:
+            model (Seepage): 所属的Seepage模型对象。
+            time (float, optional): 操作的时间，默认为None，
+                若为None则使用默认值0。
+            dt (float, optional): 时间步长，默认为None，若为None则不执行操作。
+        """
+        assert isinstance(model, Seepage)
+        if time is None:
+            warnings.warn(
+                'time is None for Injector, '
+                'use time=0 as default')
+            time = 0
+        if dt is None:
+            return
+        core.injector_work(self.handle, model.handle, time, dt)
+
+    core.use(None, 'injector_clone',
+             c_void_p, c_void_p)
+
+    def clone(self, other: Optional['Injector'] = None) -> 'Injector':
+        """
+        克隆所有的数据；包括作用的cell_id。
+
+        Args:
+            other (Injector): 要克隆数据的源Injector对象。
+
+        Returns:
+            Injector: 返回当前Injector对象。
+        """
+        if other is not None:
+            assert isinstance(other, Injector)
+            core.injector_clone(self.handle, other.handle)
+        return self
+
+
+class FlowSol(HasHandle):
+    """
+    流动求解器
+    """
+    core.use(c_void_p, 'new_seepage_fs')
+    core.use(None, 'del_seepage_fs', c_void_p)
+
+    def __init__(self, handle: Optional[c_void_p] = None):
+        """
+        初始化UFlowSol类的实例。
+        Args:
+            handle: 句柄，默认为None(此时创建新的对象; 否则，为给定对象的引用)。
+        """
+        super().__init__(handle, core.new_seepage_fs, core.del_seepage_fs)
+        self.solver = None
+        self.report = None
+
+    def get_report(self):
+        """
+        临时变量，存储计算的报告
+        """
+        if self.report is None:
+            self.report = Map()
+        return self.report
+
+    def get_sol(self) -> 'ConjugateGradientSolver':
+        """
+        返回内部存储的一个默认的线性方程组求解器。
+        """
+        if self.solver is None:
+            self.solver = ConjugateGradientSolver(tolerance=1.0e-25)
+        return self.solver
+
+    core.use(None, 'seepage_fs_reset', c_void_p)
+
+    def reset(self):
+        """
+        重置求解器. 当model的数据发生改变的时候，重置求解器，确保在后续迭代的时候，求解器内部的拓扑结构
+        是正确的。
+        注意：重置并在后续重建，会有一定的计算消耗。
+        """
+        core.seepage_fs_reset(self.handle)
+
+    core.use(None, 'seepage_fs_iterate',
+             c_void_p, c_void_p, c_void_p,
+             c_double, c_double,
+             c_size_t, c_size_t, c_size_t, c_size_t, c_void_p,
+             c_void_p  # ThreadPool since 2025-7-25
+             )
+
+    def iterate(
+            self, model: 'Seepage', dt: float, *,
+            fa_s: Optional[int] = None, fa_q: Optional[int] = None,
+            fa_k: Optional[int] = None, ca_p: Optional[int] = None,
+            dv_rela: Optional[float] = None,
+            solver: Optional['ConjugateGradientSolver'] = None,
+            pool: Optional[ThreadPool] = None,
+            report: Optional[Map] = None,
+    ):
+        """
+        将给定的模型在时间上向前迭代(更新流动).
+
+        Args:
+            model: 即将被迭代的渗流模型对象(Seepage)
+            dt (float): 迭代的目标时间步长 [单位：秒]
+                注意，当给定dv_rela的时候，将会进行检查，最终采用的，可能并不是这个给定的
+                时间步长。
+            fa_s (int, optional): Face自定义属性的ID，
+                代表Face的横截面积（用于计算Face内流体的受力），默认为None。
+                当考虑惯性的时候，需要给定
+            fa_q (int, optional): Face自定义属性的ID，
+                代表Face内流体在通量(也将在iterate中更新)，默认为None。
+                当考虑惯性的时候，需要给定(且需要给定初始值)
+            fa_k (int, optional): Face内流体的"惯性系数"的属性ID，
+                默认为None。
+                当考虑惯性的时候，需要给定(且需要给定初始值)
+            ca_p (int, optional): Cell的自定义属性，
+                用于写入Cell内流体的压力(迭代时的压力，并非按照流体体积进行计算的)，
+                默认为None（即不写入）
+            solver (ConjugateGradientSolver, optional): 求解器实例，
+                默认为None。
+            pool (ThreadPool, optional): 线程池实例，
+                默认为None。
+            report (Map, optional): 报告对象，
+                默认为None (此时，会新建一个Map并且传入内核).
+            dv_rela (float, optional): 控制时间步长（最大允许的值）。
+                代表dt内流体流过的“最大距离”与网格的比值。
+                当dv_rela为None的时候，将直接使用给定的dt来进行迭代。
+                当dv_rela给定的时候，则会检查给定的dt是否满足条件。如果不满足，则会降低dt。
+
+        Notes:
+            关于惯性：
+                对于Face中的流体，定义其动量为
+                    momentum = m*v = k*q
+                其中q为通过该Face的流体的速率，k是一个自定义的系数. 这个系数越大，则流体的惯性越强.
+                另外，作用在Face上的流体的作用力为：
+                    f = dp*s
+                其中s为横截面积. 根据动量定理，动量的变化量为
+                    m*d(v)=k*d(q)=f*d(t)
+                以上就是在程序中考虑惯性的基本的逻辑。因此，要计算流体的惯性效应，关键是要正确设置Face的
+                面积s和系数k这两个属性。另外，在迭代的过程中，随着face内流体的密度的变化，也应该去更新
+                这两个属性的值.
+
+        Returns:
+            dict: 包含迭代报告的字典，可能会包括：
+                dt_modify_times: 时间步长调整的次数
+                dv_rela: 实际的dv_rela
+                dt_error: 1 (当dt错误的时候；)；若存在此key，则迭代失败
+                dt: 实际采用的时间步长。
+        """
+        # 检查计算模块是否有授权
+        lic.check_once()
+
+        if solver is None:
+            solver = self.get_sol()
+
+        if not isinstance(report, Map):
+            report = self.get_report()
+            assert isinstance(report, Map), "report must be a Map object"
+
+        # 如下几个属性，都不是必须的，这里，给出默认值
+        if fa_s is None:
+            fa_s = 1000000000
+        if fa_q is None:
+            fa_q = 1000000000
+        if fa_k is None:
+            fa_k = 1000000000
+        if ca_p is None:
+            ca_p = 1000000000
+
+        if dv_rela is None:  # 给定一个非常大，一定可以满足的值
+            dv_rela = 1.0e30
+        else:
+            assert 0 < dv_rela
+
+        if isinstance(pool, ThreadPool):  # 将任务放入线程池，然后立即返回
+            core.seepage_fs_iterate(
+                self.handle, model.handle, report.handle,
+                dt, dv_rela,
+                fa_s, fa_q, fa_k, ca_p,
+                solver.handle, pool.handle
+            )
+            return None
+
+        else:  # 此时，直接运行，并且返回计算的报告
+            core.seepage_fs_iterate(
+                self.handle, model.handle, report.handle,
+                dt, dv_rela,
+                fa_s, fa_q, fa_k, ca_p,
+                solver.handle, 0
+            )
+            return report.to_dict()
+
+    core.use(c_double, 'seepage_fs_get_dv', c_void_p)
+
+    def get_recommended_dt(
+            self, previous_dt: float,
+            dv_relative: float = 0.1,
+            cfl: Optional[float] = None) -> float:
+        """
+        在调用了iterate函数之后，调用此函数，来获取更优的时间步长。
+        特别注意，
+        这个函数依赖于模型内部的一些缓存，因此，需要在每次iterate之后，立即调用此
+        函数来获取建议的时间步长，否则如果缓存失效，则此函数可能出错。
+
+        Args:
+            previous_dt: 上一次的时间步长。应该为iterate函数返回报告中的dt(实际的dt)
+            dv_relative: 相对变化阈值，默认为0.1.
+                         此参数即为Courant-Friedrichs-Lewy数，简称CFL数。
+            cfl: Courant-Friedrichs-Lewy数，默认为None。
+        Returns:
+            float: 建议的时间步长。
+        """
+        dv_max = core.seepage_fs_get_dv(self.handle)
+        dv_max = max(1.0e-6, dv_max)
+        dt = previous_dt
+        if cfl is not None:  # 新的变量名，覆盖dv_relative，后续，dv_relative可能会被移除
+            assert 0 < cfl <= 1.0, 'cfl must be in (0, 1]'
+            dv_relative = cfl
+        if dv_max > dv_relative:
+            dt *= (dv_relative / dv_max)
+        else:
+            dt *= min(2.0, math.sqrt(dv_relative / dv_max))
+        return dt
+
+
+class ThermalSol(HasHandle):
+    """
+    热传导求解器
+    """
+    core.use(c_void_p, 'new_seepage_ts')
+    core.use(None, 'del_seepage_ts', c_void_p)
+
+    def __init__(self, handle: Optional[c_void_p] = None):
+        """
+        初始化热传导求解器类的实例。
+        Args:
+            handle: 句柄，默认为None。
+        """
+        super().__init__(handle, core.new_seepage_ts, core.del_seepage_ts)
+        self.solver = None  # 线性求解器，线性方程组Ax=b的计算引擎
+        self.report = None
+
+    def get_report(self):
+        """
+        临时变量，存储计算的报告
+        """
+        if self.report is None:
+            self.report = Map()
+        return self.report
+
+    def get_sol(self) -> 'ConjugateGradientSolver':
+        if self.solver is None:
+            self.solver = ConjugateGradientSolver(tolerance=1.0e-25)
+        return self.solver
+
+    core.use(None, 'seepage_ts_reset', c_void_p)
+
+    def reset(self):
+        """
+        重置求解器. 当model的数据发生改变的时候，重置求解器，确保在后续迭代的时候，求解器内部的拓扑结构
+        是正确的。
+        注意：重置并在后续重建，会有一定的计算消耗。
+        """
+        core.seepage_ts_reset(self.handle)
+
+    core.use(None, 'seepage_ts_iterate',
+             c_void_p, c_void_p,
+             c_void_p,
+             c_size_t, c_size_t, c_size_t,
+             c_double, c_void_p,
+             c_void_p  # ThreadPool since 2025-7-25
+             )
+
+    def iterate(self, model: 'Seepage', dt: float, *, ca_t=None, ca_mc=None, fa_g=None, solver=None,
+                pool=None, report=None):
+        """
+        对于此渗流模型，当定义了热传导相关的参数之后，可以作为一个热传导模型来使用。
+        具体和Thermal模型类似。
+
+        Args:
+            model: 渗流模型对象。
+            dt (float): 时间步长。
+            ca_t (int): Cell的温度属性的ID。
+            ca_mc (int): Cell范围内质量和比热的乘积。
+            fa_g (int): Face导热的通量g；
+                单位时间内通过Face的热量dH = g * dT。
+            solver (ConjugateGradientSolver, optional): 求解器实例，
+                默认为None。
+            pool (ThreadPool, optional): 线程池实例，
+                默认为None。
+            report (Map, optional): 报告对象，默认为None。
+
+        Returns:
+            dict: 包含迭代报告的字典。
+        """
+        lic.check_once()
+
+        if dt <= 0 or ca_t is None or ca_mc is None or fa_g is None:  # 此时无法迭代，直接返回
+            return None
+
+        if solver is None:
+            solver = self.get_sol()
+
+        if not isinstance(report, Map):
+            report = self.get_report()
+            assert isinstance(report, Map), "report must be a Map object"
+
+        if isinstance(pool, ThreadPool):  # 将任务放入线程池，然后立即返回（需要在后续手动进行同步）
+            core.seepage_ts_iterate(
+                self.handle, model.handle, report.handle,
+                ca_t, ca_mc, fa_g,
+                dt, solver.handle, pool.handle
+            )
+            return None
+
+        else:  # 此时，直接运行
+            core.seepage_ts_iterate(
+                self.handle, model.handle,
+                report.handle,
+                ca_t, ca_mc, fa_g,
+                dt, solver.handle, 0
+            )
+            return report.to_dict()
+
+    core.use(c_double, 'seepage_ts_get_de',
+             c_void_p,
+             c_void_p, c_size_t, c_size_t)
+
+    def get_recommended_dt(
+            self, model: 'Seepage', previous_dt: float,
+            dv_relative: float = 0.1,
+            ca_t: Optional[int] = None, ca_mc: Optional[int] = None, cfl: Optional[float] = None) -> float:
+        """
+        在调用了iterate函数之后，调用此函数，来获取更优的时间步长。
+        特别注意，
+        这个函数依赖于模型内部的一些缓存，因此，需要在每次iterate之后，立即调用此
+        函数来获取建议的时间步长，否则如果缓存失效，则此函数可能出错。
+
+        Args:
+            model: 渗流模型对象。
+            previous_dt: 上一次的时间步长。
+            dv_relative: 相对变化阈值，默认为0.1.
+                         此参数即为Courant-Friedrichs-Lewy数，简称CFL数。
+            ca_t: Cell的温度属性的ID，默认为None。
+            ca_mc: Cell范围内质量和比热的乘积，默认为None。
+            cfl: Courant-Friedrichs-Lewy数，默认为None。
+
+        Returns:
+            float: 建议的时间步长。
+        """
+        assert ca_mc is not None, "ca_mc must be specified"
+        assert ca_t is not None, "ca_t must be specified"
+        dv_max = core.seepage_ts_get_de(
+            self.handle,
+            model.handle, ca_t, ca_mc)
+        dv_max = max(1.0e-6, dv_max)
+        dt = previous_dt
+        if cfl is not None:  # 新的变量名，覆盖dv_relative，后续，dv_relative可能会被移除
+            assert 0 < cfl <= 1.0, 'cfl must be in (0, 1]'
+            dv_relative = cfl
+        if dv_max > dv_relative:
+            dt *= (dv_relative / dv_max)
+        else:
+            dt *= min(2.0, math.sqrt(dv_relative / dv_max))
+        return dt
+
+
 class Seepage(HasHandle, HasCells):
     """
     多相多组分渗流模型。Seepage类是进行热流化耦合模拟的基础。
     Seepage类主要涉及单元Cell，界面Face，流体Fluid，反应Reaction，流体定义FluDef几个概念。
     对于任意渗流场，均可以离散为由Cell<控制体：流体的存储空间>和Face<两个Cell之间的界面，流体的流动通道>组成的结构。
     """
-
-    class Reaction(HasHandle):
-        """
-        定义一个化学反应。
-
-        这里，所谓“化学反应”，是一种或者几种流体（或者流体的组分）转化为另外一种或者几种
-            流体或者组分，并吸收或者释放能量的过程。
-        这个Reaction类，定义参与反应的各种物质的比例、反应的速度以及反应过程中的能量变化。
-        基于Seepage类模拟水合物的分解或者生成、冰的形成和融化、重油的裂解等，均基于此Reaction类进行定义。
-
-        反应速率q定义：
-            在单位时间内（1秒内），“反应所消耗的物质的质量（左侧物质质量的减少量）”
-                与 “在Cell中所有与此反应相关的组分的质量之和”的比值.
-            注意：
-                此定义与一般反应速率的定义不同，需要进行转换.
-
-        当Reaction作用到一个Cell上的时候，反应速率的计算步骤如下：
-            1. 根据Cell内流体的压力，使用p2t曲线，计算出基准温度T0。如果p2t没有定义，则
-                基准温度为0;
-            2. 遍历各个Inhibitor，如果定义了c2t曲线，则计算此Inhibitor的浓度，并使用
-                c2t曲线，计算出此Inhibitor对基准温度的影响。
-                注意：此浓度的计算是基于sol和liq的比值计算的。
-            3. 尝试读取Cell的idt属性和wdt属性，在此Cell内，T0=T0+idt属性值*wdt属性值.
-                至此，获得了经过矫正的基准温度T0;
-            4. 读取反应相关的各个组分的平均温度T，并减去基准温度T0，即得到dT=T-T0。下面，将
-                使用这个dT来计算反应速率.
-            5. 使用dT，以及t2q曲线，计算出正向反应速率q；同理，基于t2qr曲线，根据dT，计算出
-                逆向的反应速率qr.
-            6. 遍历各个Inhibitor，如果其定义了exp，则令q=q*c^exp；如果其定义了exp_r则令
-                qr=qr*c^exp_r。 这个步骤，即使用相关组分的浓度来对正向和逆向的反应速率进行
-                必要的矫正。
-            7. 令反应速率Q=q-qr。
-            8. 遍历各个Inhibitor，如果其定义了c2q曲线，则使用c2q曲线，对反应速率Q进行矫正。
-                即Q=Q+c2q(c)。
-            9. 查看Cell是否定义了irate属性，如果定义了，则读取irate属性为此Cell内速率的倍率，
-                令Q=Q*irate属性值
-            10. 至此，得到了最终的反应速率Q。
-        """
-
-        class Component:
-            """
-            组分。定义的是反应方程式中的一项。
-            """
-
-            def __init__(self, handle: c_void_p):
-                self.handle = handle
-
-            core.use(c_void_p, 'rea_comp_get_index', c_void_p)
-
-            @property
-            def index(self) -> List[int]:
-                """
-                流体组分的序号. 长度为1到3之间的list
-                """
-                idx = UintVector(handle=core.rea_comp_get_index(self.handle))
-                return idx.to_list()
-
-            @index.setter
-            def index(self, value: List[int]):
-                """
-                流体组分的序号. 长度为1到3之间的list
-                """
-                idx = UintVector(handle=core.rea_comp_get_index(self.handle))
-                idx.set(value)
-
-            core.use(c_size_t, 'rea_comp_get_fa_t', c_void_p)
-
-            @property
-            def fa_t(self) -> int:
-                """
-                组分温度属性的ID. 必须定义
-                """
-                return core.rea_comp_get_fa_t(self.handle)
-
-            core.use(None, 'rea_comp_set_fa_t',
-                     c_void_p, c_size_t)
-
-            @fa_t.setter
-            def fa_t(self, value: int):
-                """
-                组分温度属性的ID. 必须定义
-                """
-                core.rea_comp_set_fa_t(self.handle, value)
-
-            core.use(c_size_t, 'rea_comp_get_fa_c', c_void_p)
-
-            @property
-            def fa_c(self) -> int:
-                """
-                组分比热属性的ID. 必须定义
-                """
-                return core.rea_comp_get_fa_c(self.handle)
-
-            core.use(None, 'rea_comp_set_fa_c',
-                     c_void_p, c_size_t)
-
-            @fa_c.setter
-            def fa_c(self, value: int):
-                """
-                组分比热属性的ID. 必须定义
-                """
-                core.rea_comp_set_fa_c(self.handle, value)
-
-            core.use(c_double, 'rea_comp_get_weight', c_void_p)
-
-            @property
-            def weight(self) -> float:
-                """
-                组分权重。 左侧物质的权重为负值，右侧为正值. 所有左侧物质权重的加和等于-1
-                右侧物质权重的加和等于+1
-                """
-                return core.rea_comp_get_weight(self.handle)
-
-            core.use(None, 'rea_comp_set_weight',
-                     c_void_p, c_double)
-
-            @weight.setter
-            def weight(self, value: float):
-                """
-                组分权重
-                """
-                core.rea_comp_set_weight(self.handle, value)
-
-        class Inhibitor:
-            """
-            定义抑制剂，或者催化剂。这种物质不参与反应，但是可能会影响到反应的速率。
-            所有可以影响到反应速率的物质，在这里统一都定义为抑制剂
-            """
-
-            def __init__(self, handle: c_void_p):
-                self.handle = handle
-
-            core.use(c_void_p, 'rea_inh_get_sol', c_void_p)
-
-            @property
-            def sol(self) -> List[int]:
-                """
-                溶质对应的ID.
-                说明：
-                    在实际计算的时候，将根据sol的质量（或者体积）除以liq的质量（或者体积）来
-                    获得溶质的浓度，并根据此浓度来矫正反应速率。
-                    具体是使用质量浓度还是体积浓度，取决于use_vol的取值。
-                    默认使用质量浓度。
-                    计算得到的溶质的浓度将会是0到1之间的数值。
-                """
-                return UintVector(
-                    handle=core.rea_inh_get_sol(self.handle)).to_list()
-
-            @sol.setter
-            def sol(self, value: List[int]):
-                """
-                溶质对应的ID
-                """
-                UintVector(
-                    handle=core.rea_inh_get_sol(self.handle)).set(value)
-
-            core.use(c_void_p, 'rea_inh_get_liq', c_void_p)
-
-            @property
-            def liq(self) -> List[int]:
-                """
-                溶液对应的ID.
-                说明：
-                    在实际计算的时候，将根据sol的质量（或者体积）除以liq的质量（或者体积）来
-                    获得溶质的浓度，并根据此浓度来矫正反应速率。
-                    具体是使用质量浓度还是体积浓度，取决于use_vol的取值。
-                    默认使用质量浓度。
-                    计算得到的溶质的浓度将会是0到1之间的数值。
-                """
-                return UintVector(
-                    handle=core.rea_inh_get_liq(self.handle)).to_list()
-
-            @liq.setter
-            def liq(self, value: List[int]):
-                """
-                溶液对应的ID
-                """
-                UintVector(
-                    handle=core.rea_inh_get_liq(self.handle)).set(value)
-
-            core.use(c_void_p, 'rea_inh_get_c2t', c_void_p)
-
-            @property
-            def c2t(self) -> Interp1:
-                """
-                溶质浓度（根据sol和liq的比值计算）对基准温度的矫正。
-                定义一条曲线，其中
-                    x为溶质的浓度 （0到1之间）
-                    y为此抑制剂对基准温度的改变。y>0则相当于提升基准温度（等价于流体温度降低）。单位为K
-                """
-                handle = core.rea_inh_get_c2t(self.handle)
-                return Interp1(handle=handle)
-
-            core.use(c_bool, 'rea_inh_get_use_vol', c_void_p)
-            core.use(None, 'rea_inh_set_use_vol',
-                     c_void_p, c_bool)
-
-            @property
-            def use_vol(self) -> bool:
-                """
-                是否使用体积分数 (如果为False，则使用质量分数)。
-                    如果为True，则定义浓度c为c=sol的体积/liq的体积。
-                    否则，定义浓度c为c=sol的质量/liq的质量。
-                """
-                return core.rea_inh_get_use_vol(self.handle)
-
-            @use_vol.setter
-            def use_vol(self, value: bool):
-                """
-                是否使用体积分数 (如果为False，则使用质量分数)
-                """
-                core.rea_inh_set_use_vol(self.handle, value)
-
-            core.use(c_void_p, 'rea_inh_get_c2q', c_void_p)
-
-            @property
-            def c2q(self) -> Interp1:
-                """
-                溶质浓度（根据sol和liq的比值计算）对反应速率矫正。
-                定义一条曲线，其中
-                    x为溶质的浓度 （0到1之间）
-                    y为此抑制剂对反应速率的影响。基于此计算的反应速率，将直接叠加在反应的速率上。
-                特别注意反应速率的定义：
-                    在单位时间内（1秒内），“反应所消耗的物质的质量（左侧物质质量的减少量）”
-                    与 “在Cell中所有与此反应相关的组分的质量之和”的比值.
-                """
-                handle = core.rea_inh_get_c2q(self.handle)
-                return Interp1(handle=handle)
-
-            core.use(c_double, 'rea_inh_get_exp', c_void_p)
-
-            @property
-            def exp(self) -> float:
-                """
-                反应速率的指数（正向反应）.
-                    在使用反应的t2q计算出正向反应速率之后，将乘以c^exp，其中c为溶质的浓度。
-                    特别注意：
-                        这里浓度的定义和常规的不同，在化学反应中，一般采用mol/L这样的单位
-                        但是，这里的浓度为质量分数(或者体积分数，取决于use_vol属性是否为True)，
-                        是无量纲的量。因此，必须进行必要的转换。
-                        如果此抑制剂的浓度不会对反应的速率造成影响，则将此指数设置为0
-                注意：
-                    只有在计算正向反应速率的时候，此属性才会起作用
-                """
-                return core.rea_inh_get_exp(self.handle)
-
-            core.use(None, 'rea_inh_set_exp',
-                     c_void_p, c_double)
-
-            @exp.setter
-            def exp(self, value: float):
-                """
-                反应速率的指数（正向反应）.
-                """
-                core.rea_inh_set_exp(self.handle, value)
-
-            core.use(c_double, 'rea_inh_get_exp_r', c_void_p)
-
-            @property
-            def exp_r(self) -> float:
-                """
-                反应速率的指数(逆向)
-                    在使用反应的t2qr计算出逆向反应速率之后，将乘以c^exp_r，其中c为溶质的浓度。
-                    特别注意：
-                        这里浓度的定义和常规的不同，在化学反应中，一般采用mol/L这样的单位
-                        但是，这里的浓度为质量分数(或者体积分数，取决于use_vol属性是否为True)，
-                        是无量纲的量。因此，必须进行必要的转换。
-                        如果此抑制剂的浓度不会对反应的速率造成影响，则将此指数设置为0
-                注意：
-                    只有在计算逆向反应速率的时候，此属性才会起作用
-                """
-                return core.rea_inh_get_exp_r(self.handle)
-
-            core.use(None, 'rea_inh_set_exp_r',
-                     c_void_p, c_double)
-
-            @exp_r.setter
-            def exp_r(self, value: float):
-                """
-                反应速率的指数(逆向)
-                """
-                core.rea_inh_set_exp_r(self.handle, value)
-
-        core.use(c_void_p, 'new_reaction')
-        core.use(None, 'del_reaction', c_void_p)
-
-        def __init__(self, path: Optional[str] = None, handle: Optional[c_void_p] = None):
-            """
-            初始化一个反应。
-
-            Args:
-                path (str, optional): 当给定path的时候，
-                    则载入之前创建好并序列化存储的反应。默认为None。
-                handle (c_void_p, optional): 反应的句柄。如果为None，
-                    则根据path加载反应；否则忽略path。默认为None。
-            """
-            super().__init__(handle, core.new_reaction, core.del_reaction)
-            if handle is None:
-                if isinstance(path, str):
-                    self.load(path)
-            else:
-                assert path is None, "If handle is given, path must be None"
-
-        core.use(None, 'reaction_save', c_void_p, c_char_p)
-
-        def save(self, path: str):
-            """
-            序列化保存。
-
-            Args:
-                path (str): 保存文件的路径。
-
-            Notes:
-                可选扩展格式：
-                1：.txt
-                    .TXT 格式（跨平台，基本不可读）
-                2：.xml
-                    .XML 格式（特定可读性，文件体积最大，读写速度最慢，跨平台）
-                3：.其他
-                    二进制格式
-                        （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
-            """
-            if isinstance(path, str):
-                make_parent(path)
-                core.reaction_save(self.handle, make_c_char_p(path))
-
-        core.use(None, 'reaction_load', c_void_p, c_char_p)
-
-        def load(self, path: str):
-            """
-            读取序列化文件。
-
-            Args:
-                path (str): 读取文件的路径。
-
-            Notes:
-                根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
-            """
-            if isinstance(path, str):
-                check_ipath(path, self)
-                core.reaction_load(self.handle, make_c_char_p(path))
-
-        core.use(None, 'reaction_write_fmap',
-                 c_void_p, c_void_p, c_char_p)
-        core.use(None, 'reaction_read_fmap',
-                 c_void_p, c_void_p, c_char_p)
-
-        def to_fmap(self, fmt: str = 'binary'):
-            """
-            将数据序列化到一个Filemap中。
-
-            Args:
-                fmt (str, optional): 序列化格式，取值可以为 'text', 'xml'
-                    和 'binary'。默认为 'binary'。
-
-            Returns:
-                FileMap: 包含序列化数据的FileMap对象。
-            """
-            fmap = FileMap()
-            core.reaction_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
-            return fmap
-
-        def from_fmap(self, fmap: FileMap, fmt: str = 'binary'):
-            """
-            从Filemap中读取序列化的数据。
-
-            Args:
-                fmap (FileMap): 包含序列化数据的FileMap对象。
-                fmt (str, optional): 序列化格式，取值可以为 'text', 'xml'
-                    和 'binary'。默认为 'binary'。
-            """
-            assert isinstance(fmap, FileMap)
-            core.reaction_read_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
-
-        @property
-        def fmap(self) -> FileMap:
-            """
-            返回一个二进制的FileMap对象。
-
-            Returns:
-                FileMap: 包含二进制序列化数据的FileMap对象。
-            """
-            return self.to_fmap(fmt='binary')
-
-        @fmap.setter
-        def fmap(self, value: FileMap):
-            """
-            从二进制的FileMap对象中读取序列化的数据。
-
-            Args:
-                value (FileMap): 包含二进制序列化数据的FileMap对象。
-            """
-            self.from_fmap(value, fmt='binary')
-
-        core.use(None, 'reaction_set_dheat', c_void_p, c_double)
-        core.use(c_double, 'reaction_get_dheat', c_void_p)
-
-        @property
-        def heat(self) -> float:
-            """
-            反应热.
-                发生1kg物质的化学反应(1kg的左侧物质，转化为1kg的右侧物质)释放的热量，单位焦耳。
-                注意:
-                    1. 如果反应是吸热反应，则此heat为负值。
-                    2. 特别要注意单位。此heat的单位，实际为焦耳/kg，与一般的焦耳/mol不同。
-
-            Returns:
-                float: 单位质量化学反应释放的热量，单位焦耳。
-            """
-            return core.reaction_get_dheat(self.handle)
-
-        @heat.setter
-        def heat(self, value: float):
-            """
-            反应热.
-            Args:
-                value (float): 单位质量化学反应释放的热量，单位焦耳。
-            """
-            core.reaction_set_dheat(self.handle, value)
-
-        # 兼容之前的接口 (将在2024-02-01之后移除)
-        dheat = heat
-
-        core.use(None, 'reaction_set_t0', c_void_p, c_double)
-        core.use(c_double, 'reaction_get_t0', c_void_p)
-
-        @property
-        def temp(self) -> float:
-            """
-            和heat对应的参考温度（单位为K），只有当反应前后的温度都等于此temp的时候，
-            释放的热量才可以使用heat来定义。
-            注意：
-                默认值为280.0K
-
-            Returns:
-                float: 参考温度。单位K
-            """
-            return core.reaction_get_t0(self.handle)
-
-        @temp.setter
-        def temp(self, value: float):
-            """
-            设置参考温度。
-            Args:
-                value (float): 参考温度。
-            """
-            core.reaction_set_t0(self.handle, value)
-
-        def set_p2t(self, p: List[float], t: List[float]):
-            """
-            设置p2t，具体参考对p2t的说明
-            """
-            self.p2t.set_xy(p, t)
-
-        def set_t2q(self, t: List[float], q: List[float]):
-            """
-            设置t2q，具体参考对t2q的说明
-            """
-            self.t2q.set_xy(t, q)
-
-        core.use(c_void_p, 'reaction_get_p2t', c_void_p)
-
-        @property
-        def p2t(self) -> Interp1:
-            """
-            不同的压力下，反应的基准温度. 单位K
-            说明：
-                在此反应定义中，反应的速率是根据温度来计算的。但是，温度总是一个相对的数值，
-                因此，才有一个基准温度的概念。而且，这个基准温度是和压力相关的。
-                比如说，1MPa下的基准温度是0度，2MPa下的基准温度是10度，那么后续计算反应
-                速率的时候，压力1MPa，温度1度的反应速率，将和压力2MPa，温度11度的反应速率相等。
-            此属性定义了一条曲线，其中：
-                自变量x: 压力（一个向量），单位是Pa
-                因变量y: 给定压力下对应的基准温度（一个向量，长度和x相等），单位是K
-            """
-            handle = core.reaction_get_p2t(self.handle)
-            return Interp1(handle=handle)
-
-        core.use(c_void_p, 'reaction_get_t2q', c_void_p)
-
-        @property
-        def t2q(self) -> Interp1:
-            """
-            当温度偏离平衡温度的时候反应的速率（正向反应速率，此属性必须正确设置）。
-            如果定义了t2qr（逆向速率），则实际的反应速率，将是正向的速率减去逆向的速率。
-
-            定一个一条曲线，其中：
-                自变量x: 温度偏移量。单位K
-                因变量y: 反应速率。单位: 1/s。
-                    (反应的速率定义为：对于1kg的总的反应物质，在1s内，左侧物质质量的较少量)
-                    小于0的q表示反应是逆向的（右侧物质质量减少）
-                    注意这个速率后续需要根据exp以及组分的浓度来矫正
-            注意:
-                一般地，对于吸热反应，随着温度的增加，反应的速率应当增加；
-                反之，对于放热反应，随着温度的降低，反应的速率降低；
-            """
-            handle = core.reaction_get_t2q(self.handle)
-            return Interp1(handle=handle)
-
-        core.use(c_void_p, 'reaction_get_t2qr', c_void_p)
-
-        @property
-        def t2qr(self) -> Interp1:
-            """
-            一条曲线，表示不同的温度(实际温度减去基准温度)下的逆向反应速率。参考t2q的说明。
-            """
-            handle = core.reaction_get_t2qr(self.handle)
-            return Interp1(handle=handle)
-
-        def add_component(self, index: List[int], weight: float, fa_t: int, fa_c: int):
-            """
-            添加一种反应物质。
-
-            Args:
-                index: Seepage.Cell中定义的流体组分的序号。
-                weight: 发生1kg的反应的时候此物质变化的质量，
-                    其中左侧物质的weight为负值，右侧为正值。
-                fa_t (int): 定义流体温度的属性ID。
-                fa_c (int): 定义流体比热的属性ID。
-
-            Raises:
-                AssertionError: 如果fa_t或fa_c为None，或者weight的绝对值大于1.00001。
-            """
-            idx = self.component_n
-            self.component_n = idx + 1
-            comp = self.get_component(idx)
-
-            comp.index = parse_fid(index)
-
-            assert fa_t is not None, "fa_t must be not None"
-            comp.fa_t = fa_t
-
-            assert fa_c is not None, "fa_c must be not None"
-            comp.fa_c = fa_c
-
-            assert abs(weight) <= 1.00001, "weight must be smaller than 1"
-            comp.weight = weight
-
-        def clear_components(self) -> None:
-            """
-            清除所有的反应组分。
-            """
-            self.component_n = 0
-
-        core.use(c_size_t, 'reaction_get_component_n', c_void_p)
-
-        @property
-        def component_n(self) -> int:
-            """
-            反应组分的数量。
-            """
-            return core.reaction_get_component_n(self.handle)
-
-        core.use(None, 'reaction_set_component_n', c_void_p, c_size_t)
-
-        @component_n.setter
-        def component_n(self, value: int):
-            """
-            反应组分的数量。
-            """
-            core.reaction_set_component_n(self.handle, value)
-
-        core.use(c_void_p, 'reaction_get_component', c_void_p, c_size_t)
-
-        def get_component(self, index: int) -> Optional['Seepage.Reaction.Component']:
-            """
-            获取指定索引的反应组分。
-            """
-            idx_ = get_index(index, count=self.component_n)
-            if idx_ is None:
-                return None
-            else:
-                return Seepage.Reaction.Component(
-                    handle=core.reaction_get_component(self.handle, idx_))
-
-        @property
-        def components(self) -> Iterable['Seepage.Reaction.Component']:
-            """
-            迭代所有的组分
-            """
-            return Iterator(self, self.component_n,
-                            lambda m, ind: m.get_component(ind))
-
-        def add_inhibitor(self, *args, **kwargs):
-            warnings.warn(
-                'Reaction.add_inhibitor will be removed after 2026-5-31, '
-                'use zmlx.react.alg.add_inhibitor instead',
-                DeprecationWarning, stacklevel=2)
-            from zmlx.react import alg
-            return alg.add_inhibitor(self, *args, **kwargs)
-
-        def clear_inhibitors(self):
-            """
-            清除所有的抑制剂定义。
-            """
-            self.inhibitor_n = 0
-
-        core.use(c_size_t, 'reaction_get_inh_n', c_void_p)
-
-        @property
-        def inhibitor_n(self) -> int:
-            """
-            抑制剂的数量。
-            """
-            return core.reaction_get_inh_n(self.handle)
-
-        core.use(None, 'reaction_set_inh_n', c_void_p, c_size_t)
-
-        @inhibitor_n.setter
-        def inhibitor_n(self, value: int):
-            """
-            设置抑制剂的数量。
-            """
-            core.reaction_set_inh_n(self.handle, value)
-
-        core.use(c_void_p, 'reaction_get_inh', c_void_p, c_size_t)
-
-        def get_inhibitor(self, index: int) -> Optional['Seepage.Reaction.Inhibitor']:
-            """
-            获取指定索引的抑制剂。
-            """
-            idx_ = get_index(index, count=self.inhibitor_n)
-            if idx_ is None:
-                return None
-            else:
-                return Seepage.Reaction.Inhibitor(
-                    handle=core.reaction_get_inh(self.handle, idx_))
-
-        @property
-        def inhibitors(self) -> Iterable['Seepage.Reaction.Inhibitor']:
-            """
-            迭代所有的抑制剂
-            """
-            return Iterator(self, self.inhibitor_n,
-                            lambda m, ind: m.get_inhibitor(ind))
-
-        core.use(None, 'reaction_react', c_void_p, c_void_p, c_double, c_void_p, c_void_p)
-
-        def react(self, model: 'Seepage', dt: float, buf=None, pool: Optional[ThreadPool] = None):
-            """
-            将该反应作用到Seepage的所有的Cell上dt时间。
-
-            Args:
-                model (Seepage): Seepage模型对象。
-                dt (float): 时间步长。
-                buf (Any, optional): 一个缓冲区(double*)，
-                    记录各个Cell上发生的反应的质量。务必确保此缓冲区的大小足够，
-                    否则会出现致命的错误。默认为None。
-                pool: 线程池
-            """
-            self.adjust_weights()  # 确保权重正确，保证质量守恒
-            handle = pool.handle if isinstance(pool, ThreadPool) else 0
-            core.reaction_react(
-                self.handle, model.handle, dt,
-                0 if buf is None else ctypes.cast(buf, c_void_p),
-                handle
-            )
-
-        core.use(None, 'reaction_adjust_weights', c_void_p)
-
-        def adjust_weights(self):
-            """
-            等比例地调整权重。确保方程左侧系数加和之后等于-1，右侧的系数加和之后等于1.
-            """
-            core.reaction_adjust_weights(self.handle)
-
-        def adjust_widghts(self):
-            """
-            同adjust_weights （曾经单纯的拼写错误）
-
-            Warnings:
-                此方法已弃用，将在2024-1-1之后移除，请使用 <adjust_weights>。
-            """
-            warnings.warn(
-                'Use <adjust_weights>. <adjust_widghts> will be '
-                'removed after 2024-1-1',
-                DeprecationWarning, stacklevel=2)
-            self.adjust_weights()
-
-        core.use(c_double, 'reaction_get_rate', c_void_p, c_void_p)
-
-        def get_rate(self, cell: 'Seepage.CellData') -> float:
-            """
-            获得给定Cell在当前状态(温度、压力、抑制剂等条件)下的<瞬时的>反应速率。
-            此函数主要用来测试
-
-            Args:
-                cell (Seepage.CellData): Seepage的CellData对象。
-
-            Returns:
-                float: 反应速率。
-            """
-            assert isinstance(cell, Seepage.CellData), 'cell must be a Seepage.CellData object'
-            return core.reaction_get_rate(self.handle, cell.handle)
-
-        core.use(None, 'reaction_set_idt', c_void_p, c_size_t)
-        core.use(c_size_t, 'reaction_get_idt', c_void_p)
-
-        @property
-        def idt(self) -> int:
-            """
-            Cell的属性ID。Cell的此属性用以定义反应作用到该Cell上的时候，基准温度的调整量。
-            这允许在不同的Cell上，有不同的基准温度（而不仅仅是压力的函数）。
-            在使用p2t计算了基准温度之后，将额外附加上idt的属性值.
-            默认情况下，此属性不定义，则反应在各个Cell上的基准温度是一样的。
-
-            Notes:
-                此属性为一个测试功能，当后续有更好的实现方案的时候，可能会被移除。
-
-            Returns:
-                int: Cell的属性ID。
-            """
-            return core.reaction_get_idt(self.handle)
-
-        @idt.setter
-        def idt(self, value: int):
-            """
-            设置Cell的属性ID。
-
-            Args:
-                value (int): Cell的属性ID。
-            """
-            core.reaction_set_idt(self.handle, value)
-
-        core.use(None, 'reaction_set_wdt', c_void_p, c_double)
-        core.use(c_double, 'reaction_get_wdt', c_void_p)
-
-        @property
-        def wdt(self) -> float:
-            """
-            和idt配合使用。在Cell定义温度调整量的时候， 可以利用这个权重再对这个调整量进行（缩放）调整。
-            比如，当Cell给的温度的调整量的单位不是K的时候， 可以利用wdt属性来添加一个倍率。
-            默认为1，即不进行缩放处理。
-
-            Notes:
-                此属性为一个测试功能，当后续有更好的实现方案的时候，可能会被移除。
-
-            Returns:
-                float: 权重。
-            """
-            return core.reaction_get_wdt(self.handle)
-
-        @wdt.setter
-        def wdt(self, value: float):
-            """
-            设置idt的权重（缩放系数）
-
-            Args:
-                value (float): 权重。
-            """
-            core.reaction_set_wdt(self.handle, value)
-
-        core.use(None, 'reaction_set_irate', c_void_p, c_size_t)
-        core.use(c_size_t, 'reaction_get_irate', c_void_p)
-
-        @property
-        def irate(self) -> int:
-            """
-            Cell的属性ID。Cell的此属性用以定义反应作用到该Cell上的时候，
-            反应速率应该乘以的倍数。
-            若定义这个属性，且Cell的这个属性值小于等于0，那么反应在这个Cell上将不会发生。
-
-            Notes:
-                如果希望某个反应只在部分Cell上发生，则可以利用这个属性来实现。
-
-            Returns:
-                int: Cell的属性ID。
-            """
-            return core.reaction_get_irate(self.handle)
-
-        @irate.setter
-        def irate(self, value: int):
-            """
-            设置Cell的属性ID。
-
-            Args:
-                value (int): Cell的属性ID。
-            """
-            core.reaction_set_irate(self.handle, value)
-
-        core.use(None, 'reaction_clone', c_void_p, c_void_p)
-
-        def clone(self, other: Optional['Seepage.Reaction'] = None) -> 'Seepage.Reaction':
-            """
-            拷贝所有的数据。
-
-            Args:
-                other (Seepage.Reaction): 要拷贝的Reaction对象。
-
-            Returns:
-                Seepage.Reaction: 拷贝后的Reaction对象。
-            """
-            if other is not None:
-                assert isinstance(other, Seepage.Reaction), 'other must be a Seepage.Reaction object in clone'
-                core.reaction_clone(self.handle, other.handle)
-            return self
-
-        def get_copy(self) -> 'Seepage.Reaction':
-            """
-            返回一个拷贝(而非一个引用)。
-
-            Returns:
-                Seepage.Reaction: 拷贝后的Reaction对象。
-            """
-            result = Seepage.Reaction()
-            result.clone(self)
-            return result
-
-        core.use(c_char_p, 'reaction_get_name', c_void_p)
-        core.use(None, 'reaction_set_name', c_void_p, c_char_p)
-
-        @property
-        def name(self) -> str:
-            """
-            反应的名字（字符串），主要用于区分不同的反应，不参与任何计算
-            """
-            return core.reaction_get_name(self.handle).decode()
-
-        @name.setter
-        def name(self, value: str):
-            """
-            反应的名字（字符串），主要用于区分不同的反应，不参与任何计算
-            """
-            core.reaction_set_name(self.handle, make_c_char_p(value))
-
-    class FluDef(HasHandle):
-        """
-        流体定义。在本程序中，我们假设流体的密度和粘性系数都是压力和温度的函数，
-            并且利用二维插值来存储。
-            比热容被视为常数(这可能不严谨，但是大多数情况下够用).
-        流体定义被存储在Seepage中，被所有的Cell所共用。
-        """
-        core.use(c_void_p, 'new_fludef')
-        core.use(None, 'del_fludef', c_void_p)
-
-        def __init__(self, den: Union[float, Interp2] = 1000.0,
-                     vis: Union[float, Interp2] = 1.0e-3,
-                     specific_heat: float = 4200.0,
-                     name: Optional[str] = None, path: Optional[str] = None, handle: Optional[c_void_p] = None
-                     ):
-            """
-            构造函数。
-
-            Args:
-                den (float or Interp2, optional): 流体密度，
-                    当为None时清除C++层面的默认数据。默认为1000.0。
-                vis (float or Interp2, optional): 流体粘性，
-                    当为None时清除C++层面的默认数据。默认为1.0e-3。
-                specific_heat (float, optional): 流体比热容。
-                    默认为4200。
-                name (str, optional): 流体名称。默认为None。
-                path (str, optional): 加载流体定义的文件路径。
-                    默认为None。
-                handle (c_void_p, optional): 指向底层C对象的句柄。
-                    如果为None，则根据其他参数初始化；否则创建当前数据的引用。
-                    默认为None。
-            """
-            super().__init__(handle, core.new_fludef, core.del_fludef)
-            if handle is None:
-                # 现在，这是一个新建数据，将进行必要的初始化
-                if isinstance(path, str):
-                    self.load(path)
-                else:
-                    self.den = den  # 即便给定的数据为None，也将使用(清除当前数据)
-                    self.vis = vis  # 即便给定的数据为None，也将使用(清除当前数据)
-                    if specific_heat is not None:
-                        self.specific_heat = specific_heat
-                # 只要给定name，无论是load，还是create，都修改name
-                if name is not None:
-                    self.name = name
-            else:
-                assert path is None
-
-        def __repr__(self) -> str:
-            """
-            返回一个字符串表示当前对象。
-            """
-            return f"""{type(self).__name__}(handle={int(self.handle)}, name='{self.name}')"""
-
-        def __str__(self) -> str:
-            """
-            返回一个字符串表示当前对象。
-            """
-            return f"""{type(self).__name__}({self.name})"""
-
-        core.use(None, 'fludef_save', c_void_p, c_char_p)
-
-        def save(self, path: str):
-            """
-            序列化保存。
-
-            Args:
-                path (str): 保存文件的路径。
-
-            Notes:
-                可选扩展格式：
-                1：.txt
-                    .TXT 格式（跨平台，基本不可读）
-                2：.xml
-                    .XML 格式（特定可读性，文件体积最大，读写速度最慢，跨平台）
-                3：.其他
-                    二进制格式（最快且最小，但在 Windows 和 Linux
-                    下生成的文件无法互相读取）
-            """
-            if isinstance(path, str):
-                make_parent(path)
-                core.fludef_save(self.handle, make_c_char_p(path))
-
-        core.use(None, 'fludef_load', c_void_p, c_char_p)
-
-        def load(self, path: str):
-            """
-            读取序列化文件。
-
-            Args:
-                path (str): 读取文件的路径。
-
-            Notes:
-                根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
-            """
-            if isinstance(path, str):
-                check_ipath(path, self)
-                core.fludef_load(self.handle, make_c_char_p(path))
-
-        core.use(None, 'fludef_write_fmap', c_void_p, c_void_p, c_char_p)
-        core.use(None, 'fludef_read_fmap', c_void_p, c_void_p, c_char_p)
-
-        def to_fmap(self, fmt: str = 'binary') -> FileMap:
-            """
-            将数据序列化到一个Filemap中。
-
-            Args:
-                fmt (str, optional): 序列化格式，取值可以为 'text', 'xml'
-                    和 'binary'。默认为 'binary'。
-
-            Returns:
-                FileMap: 包含序列化数据的FileMap对象。
-            """
-            fmap = FileMap()
-            core.fludef_write_fmap(
-                self.handle, fmap.handle, make_c_char_p(fmt))
-            return fmap
-
-        def from_fmap(self, fmap: FileMap, fmt: str = 'binary'):
-            """
-            从Filemap中读取序列化的数据。
-
-            Args:
-                fmap (FileMap): 包含序列化数据的FileMap对象。
-                fmt (str, optional): 序列化格式，取值可以为 'text', 'xml'
-                    和 'binary'。默认为 'binary'。
-            """
-            assert isinstance(fmap, FileMap)
-            core.fludef_read_fmap(
-                self.handle, fmap.handle, make_c_char_p(fmt))
-
-        @property
-        def fmap(self) -> FileMap:
-            """
-            返回一个二进制的FileMap对象。
-
-            Returns:
-                FileMap: 包含二进制序列化数据的FileMap对象。
-            """
-            return self.to_fmap(fmt='binary')
-
-        @fmap.setter
-        def fmap(self, value: FileMap):
-            """
-            从二进制的FileMap对象中读取序列化的数据。
-
-            Args:
-                value (FileMap): 包含二进制序列化数据的FileMap对象。
-            """
-            self.from_fmap(value, fmt='binary')
-
-        core.use(c_void_p, 'fludef_get_den', c_void_p)
-
-        @property
-        def den(self) -> Interp2:
-            """
-            流体密度的插值。
-
-            Returns:
-                Interp2: 流体密度的插值对象。
-
-            Raises:
-                AssertionError: 如果组分的数量不为0。
-            """
-            assert self.component_number == 0
-            return Interp2(handle=core.fludef_get_den(self.handle))
-
-        @den.setter
-        def den(self, value: Optional[Union[float, Interp2]] = None):
-            """
-            设置密度数据。
-
-            Args:
-                value (float or Interp2, optional): 密度数据，
-                    当为None时清除现有数据。
-
-            Raises:
-                AssertionError: 如果组分的数量不为0，或者给定的非插值数据不在有效范围内。
-            """
-            assert self.component_number == 0
-            if value is None:
-                self.den.clear()
-            else:
-                if isinstance(value, Interp2):
-                    self.den.clone(value)
-                else:  # 转化为二维插值
-                    assert 1.0e-3 < value <= 1.0e7
-                    itp = Interp2.create_const(value)
-                    self.den.clone(itp)
-
-        core.use(c_void_p, 'fludef_get_vis', c_void_p)
-
-        @property
-        def vis(self) -> Interp2:
-            """
-            流体粘性的插值。
-
-            Returns:
-                Interp2: 流体粘性的插值对象。
-
-            Raises:
-                AssertionError: 如果组分的数量不为0。
-            """
-            assert self.component_number == 0
-            return Interp2(handle=core.fludef_get_vis(self.handle))
-
-        @vis.setter
-        def vis(self, value: Optional[Union[float, Interp2]] = None):
-            """
-            设置粘性数据。
-
-            Args:
-                value (float or Interp2, optional): 粘性数据，
-                    当为None时清除现有数据。
-
-            Raises:
-                AssertionError: 如果组分的数量不为0，或者给定的非插值数据不在有效范围内。
-            """
-            assert self.component_number == 0
-            if value is None:
-                self.vis.clear()
-            else:
-                if isinstance(value, Interp2):
-                    self.vis.clone(value)
-                else:  # 转化为二维插值
-                    assert 1.0e-7 < value < 1.0e40
-                    itp = Interp2.create_const(value)
-                    self.vis.clone(itp)
-
-        def get_den(self, pressure: float, temp: float) -> float:
-            """
-            返回给定压力和温度下的密度。
-
-            Args:
-                pressure (float): 压力值。
-                temp (float): 温度值。
-
-            Returns:
-                float: 给定压力和温度下的密度。
-            """
-            return self.den(pressure, temp)
-
-        def get_vis(self, pressure: float, temp: float) -> float:
-            """
-            返回给定压力和温度下的粘性。
-
-            Args:
-                pressure (float): 压力值。
-                temp (float): 温度值。
-
-            Returns:
-                float: 给定压力和温度下的粘性。
-            """
-            return self.vis(pressure, temp)
-
-        core.use(c_double, 'fludef_get_specific_heat', c_void_p)
-
-        @property
-        def specific_heat(self) -> float:
-            """
-            流体的比热(常数)。
-
-            Returns:
-                float: 流体的比热。
-
-            Raises:
-                AssertionError: 如果组分的数量不为0。
-            """
-            assert self.component_number == 0
-            return core.fludef_get_specific_heat(self.handle)
-
-        core.use(None, 'fludef_set_specific_heat', c_void_p, c_double)
-
-        @specific_heat.setter
-        def specific_heat(self, value: float):
-            """
-            设置流体的比热。
-
-            Args:
-                value (float): 流体的比热。
-
-            Raises:
-                AssertionError: 如果组分的数量不为0，或者给定的值不在有效范围内。
-            """
-            assert self.component_number == 0
-            assert 0.1 <= value <= 1.0e8
-            core.fludef_set_specific_heat(self.handle, value)
-
-        core.use(c_size_t, 'fludef_get_component_number', c_void_p)
-
-        @property
-        def component_number(self) -> int:
-            """
-            流体组分的数量。
-
-            Returns:
-                int: 流体组分的数量。
-            """
-            return core.fludef_get_component_number(self.handle)
-
-        core.use(None, 'fludef_set_component_number', c_void_p, c_size_t)
-
-        @component_number.setter
-        def component_number(self, value: int):
-            """
-            设置流体组分的数量。
-
-            Args:
-                value (int): 流体组分的数量。
-            """
-            core.fludef_set_component_number(self.handle, value)
-
-        core.use(c_void_p, 'fludef_get_component', c_void_p, c_size_t)
-
-        def get_component(self, index: int) -> Optional['Seepage.FluDef']:
-            """
-            返回流体的组分。
-
-            Args:
-                index (int): 组分的索引。
-
-            Returns:
-                Seepage.FluDef: 流体的组分对象，如果索引有效；否则返回None。
-            """
-            idx_ = get_index(index, self.component_number)
-            if idx_ is not None:
-                return Seepage.FluDef(
-                    handle=core.fludef_get_component(self.handle, idx_))
-            else:
-                return None
-
-        def clear_components(self):
-            """
-            清除所有的组分。
-            """
-            self.component_number = 0
-
-        def add_component(self, flu: 'Seepage.FluDef', name: str = None):
-            """
-            添加流体组分，并返回组分的ID。
-
-            Args:
-                flu (Seepage.FluDef): 要添加的流体组分对象。
-                name (str, optional): 流体组分的名称。默认为None。
-
-            Returns:
-                int: 新添加组分的ID。
-            """
-            assert isinstance(flu, Seepage.FluDef)
-            idx = self.component_number
-            self.component_number = idx + 1
-            temp = self.get_component(idx)
-            assert isinstance(temp, Seepage.FluDef), f'get_component failed at index {idx}'
-            temp.clone(flu)
-            if name is not None:
-                temp.name = name
-            return idx
-
-        @staticmethod
-        def create(defs: Union['Seepage.FluDef', List['Seepage.FluDef']], name: str = None) -> 'Seepage.FluDef':
-            """
-            将存储在list中的多个流体的定义，组合成为一个具有多个组分的单个流体定义。
-
-            Args:
-                defs (list or Seepage.FluDef): 流体定义列表或单个流体定义对象。
-                name (str, optional): 返回的流体定义的名称。默认为None。
-
-            Returns:
-                Seepage.FluDef: 组合后的流体定义对象。
-
-            Notes:
-                当给定name的时候，则返回的数据使用此name。
-                此函数将返回给定数据的拷贝，因此，原始的数据并不会被引用和修改。
-            """
-            if isinstance(defs, Seepage.FluDef):
-                return defs.get_copy(name=name)
-            else:
-                result = Seepage.FluDef(name=name)
-                for x in defs:
-                    result.add_component(Seepage.FluDef.create(x))
-                return result
-
-        core.use(c_char_p, 'fludef_get_name', c_void_p)
-
-        @property
-        def name(self) -> str:
-            """
-            流体组分的名称。
-
-            Returns:
-                str: 流体组分的名称。
-            """
-            return core.fludef_get_name(self.handle).decode()
-
-        core.use(None, 'fludef_set_name', c_void_p, c_char_p)
-
-        @name.setter
-        def name(self, value: str):
-            """
-            设置流体组分的名称。
-
-            Args:
-                value (str): 流体组分的名称。
-            """
-            core.fludef_set_name(self.handle, make_c_char_p(value))
-
-        core.use(None, 'fludef_clone', c_void_p, c_void_p)
-
-        def clone(self, other: Optional['Seepage.FluDef'] = None) -> 'Seepage.FluDef':
-            """
-            克隆数据。
-
-            Args:
-                other (Seepage.FluDef, optional): 要克隆的FluDef对象。默认为None。
-
-            Returns:
-                Seepage.FluDef: 克隆后的FluDef对象。
-            """
-            if other is not None:
-                assert isinstance(other, Seepage.FluDef)
-                core.fludef_clone(self.handle, other.handle)
-            return self
-
-        def get_copy(self, name: Optional[str] = None) -> 'Seepage.FluDef':
-            """
-            返回当前数据的一个拷贝。
-
-            Args:
-                name (str, optional): 拷贝后的数据的名称。默认为None。
-
-            Returns:
-                Seepage.FluDef: 拷贝后的FluDef对象。
-            """
-            result = Seepage.FluDef()
-            result.clone(self)
-            if name is not None:
-                result.name = name
-            return result
-
-    class FluData(HasHandle):
-        """
-        流体数据(存储在Cell中)。一个流体数据由以下属性组成：
-        1、流体的质量、密度、粘性系数。
-        2、流体的自定义属性。
-            在FluData内存储一个浮点型的数组，存储一系列自定义的属性，
-            用于辅助存储和计算。自定义属性从0开始编号。
-        3、流体的组分。
-            流体的组分亦采用FluData类进行定义（即FluData为一个嵌套的类），
-            因此，流体的组分也具有和流体同样的数据。流体的组分存储在
-            一个数组内，且从0开始编号。当流体的组分数量不为0的时候，
-            则存储在流体自身的数据自动失效，并利用组分的属性来自动计算
-            这些组分作为一个整体的属性。如：流体的质量等于各个组分的质量之和，
-            体积等于各个组分的体积之和，自定义属性则等于不同组分
-            根据质量的加权平均。
-        """
-        core.use(c_void_p, 'new_fluid')
-        core.use(None, 'del_fluid', c_void_p)
-
-        def __init__(self, mass: Optional[float] = None, den: Optional[float] = None, vis: Optional[float] = None,
-                     vol: Optional[float] = None, handle: Optional[c_void_p] = None):
-            """
-            创建给定handle的引用，或者创建流体数据。
-
-            Args:
-                mass (float, optional): 流体的质量，单位为kg。默认为None。
-                den (float, optional): 流体的密度，单位为kg/m^3。默认为None。
-                vis (float, optional): 流体的粘性系数，单位为Pa.s。默认为None。
-                vol (float, optional): 流体的体积，单位为m^3。默认为None。
-                handle (c_void_p, optional): 流体数据的句柄。默认为None。
-            """
-            super().__init__(handle, core.new_fluid,
-                             core.del_fluid)
-            if handle is None:
-                if mass is not None:
-                    self.mass = mass
-                if den is not None:
-                    self.den = den
-                if vis is not None:
-                    self.vis = vis
-                if vol is not None:
-                    assert mass is None
-                    self.vol = vol
-            else:
-                assert (mass is None and den is None
-                        and vis is None and vol is None)
-
-        core.use(None, 'fluid_save', c_void_p, c_char_p)
-
-        def save(self, path: str):
-            """
-            序列化保存。可选扩展格式：
-                1：.txt
-                .TXT 格式
-                （跨平台，基本不可读）
-
-                2：.xml
-                .XML 格式
-                （特定可读性，文件体积最大，读写速度最慢，跨平台）
-
-                3：.其他
-                二进制格式
-                （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
-
-            Args:
-                path (str): 保存文件的路径。
-            """
-            if isinstance(path, str):
-                make_parent(path)
-                core.fluid_save(self.handle, make_c_char_p(path))
-
-        core.use(None, 'fluid_load', c_void_p, c_char_p)
-
-        def load(self, path: str):
-            """
-            读取序列化文件。
-                根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
-
-            Args:
-                path (str): 读取文件的路径。
-            """
-            if isinstance(path, str):
-                check_ipath(path, self)
-                core.fluid_load(self.handle, make_c_char_p(path))
-
-        core.use(None, 'fluid_write_fmap', c_void_p, c_void_p, c_char_p)
-        core.use(None, 'fluid_read_fmap', c_void_p, c_void_p, c_char_p)
-
-        def to_fmap(self, fmt: str = 'binary') -> FileMap:
-            """
-            将数据序列化到一个Filemap中。其中fmt的取值可以为: text, xml和binary。
-
-            Args:
-                fmt (str, optional): 序列化的格式，可选值为'text', 'xml'
-                    和'binary'。默认为'binary'。
-
-            Returns:
-                FileMap: 序列化后的FileMap对象。
-            """
-            fmap = FileMap()
-            core.fluid_write_fmap(
-                self.handle, fmap.handle, make_c_char_p(fmt))
-            return fmap
-
-        def from_fmap(self, fmap: FileMap, fmt: str = 'binary'):
-            """
-            从Filemap中读取序列化的数据。其中fmt的取值可以为: text, xml和binary。
-
-            Args:
-                fmap (FileMap): 包含序列化数据的FileMap对象。
-                fmt (str, optional): 反序列化的格式，可选值为'text', 'xml'
-                    和'binary'。默认为'binary'。
-            """
-            assert isinstance(fmap, FileMap)
-            core.fluid_read_fmap(
-                self.handle, fmap.handle, make_c_char_p(fmt))
-
-        @property
-        def fmap(self) -> FileMap:
-            """
-            获取二进制格式的序列化数据。
-
-            Returns:
-                FileMap: 二进制格式的序列化数据。
-            """
-            return self.to_fmap(fmt='binary')
-
-        @fmap.setter
-        def fmap(self, value: FileMap):
-            """
-            设置二进制格式的序列化数据。
-
-            Args:
-                value (FileMap): 二进制格式的序列化数据。
-            """
-            self.from_fmap(value, fmt='binary')
-
-        core.use(c_double, 'fluid_get_mass', c_void_p)
-        core.use(None, 'fluid_set_mass', c_void_p, c_double)
-
-        @property
-        def mass(self) -> float:
-            """
-            流体的质量，单位为kg。
-
-            Returns:
-                float: 流体的质量。
-            """
-            return core.fluid_get_mass(self.handle)
-
-        @mass.setter
-        def mass(self, value: float):
-            """
-            设置流体的质量，单位为kg。
-
-            Args:
-                value (float): 流体的质量，必须大于等于0。
-            """
-            assert value >= 0
-            core.fluid_set_mass(self.handle, value)
-
-        core.use(c_double, 'fluid_get_vol', c_void_p)
-        core.use(None, 'fluid_set_vol', c_void_p, c_double)
-
-        @property
-        def vol(self) -> float:
-            """
-            流体的体积，单位为m^3。
-            注意:
-                内核中并不存储流体体积，而是根据质量和密度计算得到的。
-
-            Returns:
-                float: 流体的体积。
-            """
-            return core.fluid_get_vol(self.handle)
-
-        @vol.setter
-        def vol(self, value: float):
-            """
-            修改流体的体积，单位为m^3。
-            注意:
-                内核中并不存储流体体积，而是根据质量和密度计算得到的。
-                将修改mass，并保持density不变。
-
-            Args:
-                value (float): 流体的体积，必须大于等于0。
-            """
-            assert value >= 0
-            core.fluid_set_vol(self.handle, value)
-
-        core.use(c_double, 'fluid_get_den', c_void_p)
-        core.use(None, 'fluid_set_den', c_void_p, c_double)
-
-        @property
-        def den(self) -> float:
-            """
-            流体密度，单位为kg/m^3。
-                注意: 流体不可压缩，除非外部修改，否则密度永远维持不变。
-            假设：
-                在计算的过程中，流体的密度不会发生剧烈的变化，
-                因此，在一次迭代的过程中，流体的密度可以
-                视为不变的。在一次迭代之后，可以根据最新的温度和压力来更新流体的密度。
-            注意：
-                在利用TherFlowConfig来iterate的时候，
-                如果模型中存储了流体的定义，那么流体密度的
-                更新会被自动调用，从而保证流体的密度总是最新的。
-
-            Returns:
-                float: 流体的密度。
-            """
-            return core.fluid_get_den(self.handle)
-
-        @den.setter
-        def den(self, value: float):
-            """
-            设置流体的密度，单位为kg/m^3。
-
-            Args:
-                value (float): 流体的密度，必须大于0。
-            """
-            assert value > 0
-            core.fluid_set_den(self.handle, value)
-
-        core.use(c_double, 'fluid_get_vis', c_void_p)
-        core.use(None, 'fluid_set_vis', c_void_p, c_double)
-
-        @property
-        def vis(self) -> float:
-            """
-            流体粘性系数，单位为Pa.s。
-                注意: 除非外部修改，否则vis维持不变。
-            流体粘性的更新规则和密度相似。
-
-            Returns:
-                float: 流体的粘性系数。
-            """
-            return core.fluid_get_vis(self.handle)
-
-        @vis.setter
-        def vis(self, value: float):
-            """
-            设置流体的粘性系数，单位为Pa.s。
-
-            Args:
-                value (float): 流体的粘性系数，必须大于0。
-            """
-            assert value > 0
-            core.fluid_set_vis(self.handle, value)
-
-        @property
-        def is_solid(self) -> bool:
-            """
-            该流体单元在计算内核中是否可以被视为固体。
-            注意：
-                该属性将被弃用。
-
-            Returns:
-                bool: 如果流体的粘性系数大于等于0.5e30，则返回True；
-                否则返回False。
-            """
-            warnings.warn('FluData.is_solid will be deleted '
-                          'after 2024-5-5',
-                          DeprecationWarning, stacklevel=2)
-            return self.vis >= 0.5e30
-
-        core.use(c_double, 'fluid_get_attr', c_void_p, c_size_t)
-        core.use(None, 'fluid_set_attr', c_void_p, c_size_t, c_double)
-
-        def get_attr(self, index: Union[int, str], default_val: Optional[float] = None, **valid_range):
-            """
-            获取第index个流体自定义属性。当两个流体数据相加时，
-            自定义属性将根据质量进行加权平均。
-
-            Args:
-                index (int or str): 自定义属性的索引或键。
-                default_val (float, optional): 当属性不存在
-                    或不在有效范围内时返回的默认值。默认为None。
-                **valid_range: 自定义属性的有效范围。
-
-            Returns:
-                float: 自定义属性的值，如果不存在或不在有效范围内，则返回默认值。
-            """
-            if isinstance(index, str):
-                assert isinstance(self, Seepage.Fluid)
-                assert isinstance(self.cell, Seepage.Cell)
-                index = self.cell.model.get_flu_key(key=index)
-            if index is None:
-                return default_val
-            # 当index个属性不存在时，默认为无穷大的一个值(1.0e100以上的浮点数)
-            value = core.fluid_get_attr(self.handle, index)
-            if attr_in_range(value, **valid_range):
-                return value
-            else:
-                return default_val
-
-        def set_attr(self, index: Union[int, str], value: Optional[float] = None) -> 'Seepage.FluData':
-            """
-            设置第index个流体自定义属性。参考get_attr函数。
-
-            Args:
-                index (int or str): 自定义属性的索引或键。
-                value (float): 自定义属性的值。
-
-            Returns:
-                FluData: 返回当前对象。
-            """
-            if isinstance(index, str):
-                assert isinstance(self, Seepage.Fluid)
-                assert isinstance(self.cell, Seepage.Cell)
-                index = self.cell.model.reg_flu_key(key=index)
-            if index is None:
-                return self
-            if value is None:
-                value = 1.0e200
-            core.fluid_set_attr(self.handle, index, value)
-            return self
-
-        core.use(None, 'fluid_clone',
-                 c_void_p, c_void_p)
-
-        def clone(self, other: Optional['Seepage.FluData'] = None) -> 'Seepage.FluData':
-            """
-            拷贝所有的数据。
-
-            Args:
-                other (FluData): 要拷贝的FluData对象。
-
-            Returns:
-                FluData: 返回当前对象。
-            """
-            if other is not None:
-                assert isinstance(other, Seepage.FluData)
-                core.fluid_clone(self.handle, other.handle)
-            return self
-
-        def get_copy(self, mass: Optional[float] = None) -> 'Seepage.FluData':
-            """
-            获取当前对象的拷贝。
-
-            Returns:
-                FluData: 当前对象的拷贝。
-            """
-            result = Seepage.FluData()
-            result.clone(self)
-            if mass is not None:
-                result.mass = mass
-            return result
-
-        core.use(None, 'fluid_add', c_void_p, c_void_p)
-
-        def add(self, other: 'Seepage.FluData'):
-            """
-            将other所定义的流体数据添加到self。注意，并不是添加组分。
-            类似于: self = self + other。
-            比如:
-                若self的质量为1kg，other的质量也为1kg，
-                则当执行了此函数之后，self的质量会成为2kg，而other保持不变。
-
-            Args:
-                other (FluData): 要添加的FluData对象。
-            """
-            assert isinstance(other, Seepage.FluData)
-            core.fluid_add(self.handle, other.handle)
-
-        core.use(c_size_t, 'fluid_get_component_number', c_void_p)
-
-        @property
-        def component_number(self) -> int:
-            """
-            流体组分的数量。当流体不可再分的时候，组分数量为0；
-            否则，流体被视为混合物，且组分的数量大于0。
-
-            Returns:
-                int: 流体组分的数量。
-            """
-            return core.fluid_get_component_number(self.handle)
-
-        core.use(None, 'fluid_set_component_number', c_void_p, c_size_t)
-
-        @component_number.setter
-        def component_number(self, value: int):
-            """
-            设置流体组分的数量。
-
-            Args:
-                value (int): 流体组分的数量。
-            """
-            core.fluid_set_component_number(self.handle, value)
-
-        core.use(c_void_p, 'fluid_get_component', c_void_p, c_size_t)
-
-        def get_component(self, index: int) -> Optional['Seepage.FluData']:
-            """
-            返回给定的组分。
-
-            Args:
-                index (int): 组分的索引。
-
-            Returns:
-                FluData: 给定索引的组分对象，如果索引无效则返回None。
-            """
-            idx_ = get_index(index, self.component_number)
-            if idx_ is not None:
-                return Seepage.FluData(
-                    handle=core.fluid_get_component(self.handle, idx_))
-            else:
-                return None
-
-        core.use(None, 'fluid_clear_components',
-                 c_void_p)
-
-        def clear_components(self):
-            """
-            清除所有的组分。
-            """
-            core.fluid_clear_components(self.handle)
-
-        core.use(c_size_t, 'fluid_add_component', c_void_p, c_void_p)
-
-        def add_component(self, flu: 'Seepage.FluData') -> int:
-            """
-            添加流体组分，并返回组分的ID。
-
-            Args:
-                flu (FluData): 要添加的流体组分对象。
-
-            Returns:
-                int: 新添加组分的ID。
-            """
-            assert isinstance(flu, Seepage.FluData)
-            return core.fluid_add_component(self.handle, flu.handle)
-
-        core.use(None, 'fluid_set_property',
-                 c_void_p, c_double, c_size_t,
-                 c_size_t, c_void_p)
-
-        def set_property(self, p: float, fa_t: int, fa_c: int, fdef: 'Seepage.FluDef'):
-            """
-            在给定压力和由 <fa_T> 定义的流体温度下，设置流体的密度、粘度和比热。
-
-            Args:
-                p (float): 压力。
-                fa_t (int): 流体温度的索引。
-                fa_c (int): 流体组分的索引。
-                fdef (Seepage.FluDef): 流体定义对象。
-            """
-            assert isinstance(fdef, Seepage.FluDef)
-            core.fluid_set_property(self.handle, p, fa_t, fa_c, fdef.handle)
-
-        core.use(None, 'fluid_set_components', c_void_p, c_void_p)
-
-        def set_components(self, fdef: 'Seepage.FluDef'):
-            """
-            按照fdef的定义来设置流体的组分的数量，从而使得这个流体数据和给定的
-            流体定义具有相同的结构。
-
-            Args:
-                fdef (FluDef): 流体定义对象。
-            """
-            assert isinstance(fdef, Seepage.FluDef)
-            core.fluid_set_components(self.handle, fdef.handle)
-
-    class Fluid(FluData):
-        core.use(c_void_p, 'seepage_cell_get_fluid', c_void_p, c_size_t)
-
-        def __init__(self, cell: "Seepage.CellData", fid: int):
-            """
-            初始化Fluid对象。
-
-            Args:
-                cell (Seepage.CellData): 流体所在的Cell对象。
-                fid (int): 流体在Cell中的编号，必须小于Cell内流体的数量。
-            """
-            assert isinstance(cell, Seepage.CellData)
-            assert isinstance(fid, int)
-            assert fid < cell.fluid_number
-            self.cell = cell
-            self.fid = fid
-            super().__init__(handle=core.seepage_cell_get_fluid(self.cell.handle, self.fid))
-
-        @property
-        def vol_fraction(self) -> float:
-            """
-            流体的体积占Cell内所有流体总体积的比例。
-
-            Returns:
-                float: 流体的体积占比。
-            """
-            res = self.cell.get_fluid_vol_fraction(self.fid)
-            assert res is not None
-            return res
-
-    class CellData(HasHandle):
-        """
-        CellData类用于管理和操作控制体（Cell）的数据。
-
-        该类提供了一系列方法用于序列化保存和加载数据，
-        设置和获取Cell的位置、孔隙参数、流体属性等。
-        """
-        core.use(c_void_p, 'new_seepage_cell')
-        core.use(None, 'del_seepage_cell', c_void_p)
-
-        def __init__(self, path: Optional[str] = None, handle: Optional[c_void_p] = None):
-            """
-            初始化CellData对象。
-
-            Args:
-                path (str, optional): 用于加载数据的文件路径。默认为None。
-                handle (c_void_p, optional): 指向底层数据的句柄。默认为None。
-            """
-            super().__init__(
-                handle,
-                core.new_seepage_cell,
-                core.del_seepage_cell)
-            if handle is None:
-                if isinstance(path, str):
-                    self.load(path)
-
-        core.use(None, 'seepage_cell_save', c_void_p, c_char_p)
-
-        def save(self, path: str):
-            """
-            序列化保存。可选扩展格式：
-                1：.txt
-                .TXT 格式
-                （跨平台，基本不可读）
-
-                2：.xml
-                .XML 格式
-                （特定可读性，文件体积最大，读写速度最慢，跨平台）
-
-                3：.其他
-                二进制格式
-                （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
-
-            Args:
-                path (str): 保存文件的路径。
-            """
-            if isinstance(path, str):
-                make_parent(path)
-                core.seepage_cell_save(self.handle, make_c_char_p(path))
-
-        core.use(None, 'seepage_cell_load', c_void_p, c_char_p)
-
-        def load(self, path: str):
-            """
-            读取序列化文件。
-                根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
-
-            Args:
-                path (str): 读取文件的路径。
-            """
-            if isinstance(path, str):
-                check_ipath(path, self)
-                core.seepage_cell_load(self.handle, make_c_char_p(path))
-
-        core.use(None, 'seepage_cell_write_fmap',
-                 c_void_p, c_void_p, c_char_p)
-        core.use(None, 'seepage_cell_read_fmap',
-                 c_void_p, c_void_p, c_char_p)
-
-        def to_fmap(self, fmt: str = 'binary') -> FileMap:
-            """
-            将数据序列化到一个Filemap中. 其中fmt的取值可以为: text, xml和binary
-
-            Args:
-                fmt (str, optional): 序列化格式，
-                    可选值为 'text', 'xml', 'binary'。默认为 'binary'。
-
-            Returns:
-                FileMap: 序列化后的FileMap对象。
-            """
-            fmap = FileMap()
-            core.seepage_cell_write_fmap(self.handle, fmap.handle,
-                                         make_c_char_p(fmt))
-            return fmap
-
-        def from_fmap(self, fmap: FileMap, fmt: str = 'binary'):
-            """
-            从Filemap中读取序列化的数据. 其中fmt的取值可以为: text, xml和binary
-
-            Args:
-                fmap (FileMap): 包含序列化数据的FileMap对象。
-                fmt (str, optional): 反序列化格式，
-                    可选值为 'text', 'xml', 'binary'。默认为 'binary'。
-            """
-            assert isinstance(fmap, FileMap)
-            core.seepage_cell_read_fmap(self.handle, fmap.handle,
-                                        make_c_char_p(fmt))
-
-        @property
-        def fmap(self) -> FileMap:
-            """
-            获取当前Cell对象的二进制格式FileMap对象。
-
-            Returns:
-                FileMap: 二进制格式的FileMap对象。
-            """
-            return self.to_fmap(fmt='binary')
-
-        @fmap.setter
-        def fmap(self, value: FileMap):
-            """
-            通过FileMap对象设置当前Cell对象的数据。
-
-            Args:
-                value (FileMap): 包含序列化数据的FileMap对象。
-            """
-            self.from_fmap(value, fmt='binary')
-
-        core.use(c_double, 'seepage_cell_get_pos',
-                 c_void_p, c_size_t)
-        core.use(None, 'seepage_cell_set_pos',
-                 c_void_p, c_size_t, c_double)
-
-        @property
-        def x(self) -> float:
-            """
-            在三维空间中的x坐标
-
-            Returns:
-                float: x坐标的值。
-            """
-            return core.seepage_cell_get_pos(self.handle, 0)
-
-        @x.setter
-        def x(self, value: float):
-            """
-            设置在三维空间中的x坐标。
-
-            Args:
-                value (float): 新的x坐标的值。
-            """
-            core.seepage_cell_set_pos(self.handle, 0, value)
-
-        @property
-        def y(self) -> float:
-            """
-            在三维空间中的y坐标
-
-            Returns:
-                float: y坐标的值。
-            """
-            return core.seepage_cell_get_pos(self.handle, 1)
-
-        @y.setter
-        def y(self, value: float):
-            """
-            设置在三维空间中的y坐标。
-
-            Args:
-                value (float): 新的y坐标的值。
-            """
-            core.seepage_cell_set_pos(self.handle, 1, value)
-
-        @property
-        def z(self) -> float:
-            """
-            在三维空间中的z坐标
-
-            Returns:
-                float: z坐标的值。
-            """
-            return core.seepage_cell_get_pos(self.handle, 2)
-
-        @z.setter
-        def z(self, value: float):
-            """
-            设置在三维空间中的z坐标。
-
-            Args:
-                value (float): 新的z坐标的值。
-            """
-            core.seepage_cell_set_pos(self.handle, 2, value)
-
-        @property
-        def pos(self) -> List[float]:
-            """
-            该Cell在三维空间的坐标
-
-            Returns:
-                list: 包含x、y、z坐标的列表。
-            """
-            return [core.seepage_cell_get_pos(self.handle, i)
-                    for i in range(3)]
-
-        @pos.setter
-        def pos(self, value: Union[List[float], Tuple[float]]):
-            """
-            设置该Cell在三维空间的坐标。
-
-            Args:
-                value (list or tuple of float): 包含x、y、z坐标的列表或元组，长度必须为3。
-            """
-            assert len(value) == 3
-            for dim in range(3):
-                core.seepage_cell_set_pos(self.handle, dim, value[dim])
-
-        def distance(self, other):
-            """
-            返回距离另外一个Cell或者另外一个位置的距离
-
-            Args:
-                other (CellData or list): 另一个Cell对象或者包含坐标的列表。
-
-            Returns:
-                float: 两个对象之间的距离。
-            """
-            if hasattr(other, 'pos'):
-                return get_distance(self.pos, other.pos)
-            else:
-                return get_distance(self.pos, other)
-
-        core.use(c_double, 'seepage_cell_get_v0', c_void_p)
-        core.use(None, 'seepage_cell_set_v0', c_void_p, c_double)
-
-        @property
-        def v0(self) -> float:
-            """
-            当流体压力等于0时，该Cell内流体的存储空间 m^3.
-            注意:
-                务必设置合适的刚度和孔隙度，使得v0的数值大于0
-
-            Returns:
-                float: 流体存储空间的值。
-            """
-            return core.seepage_cell_get_v0(self.handle)
-
-        @v0.setter
-        def v0(self, value: float):
-            """
-            设置当流体压力等于0时，该Cell内流体的存储空间 m^3。
-
-            Args:
-                value (float): 新的流体存储空间的值，必须大于等于1.0e-10。
-            """
-            assert value >= 1.0e-10, f'value = {value}'
-            core.seepage_cell_set_v0(self.handle, value)
-
-        core.use(c_double, 'seepage_cell_get_k', c_void_p)
-        core.use(None, 'seepage_cell_set_k', c_void_p, c_double)
-
-        @property
-        def k(self) -> float:
-            """
-            流体压力增加1Pa的时候，孔隙体积的增加量(m^3). k的数值越小，则刚度越大.
-
-            Returns:
-                float: 孔隙体积增加量的值。
-            """
-            return core.seepage_cell_get_k(self.handle)
-
-        @k.setter
-        def k(self, value: float):
-            """
-            设置流体压力增加1Pa的时候，孔隙体积的增加量(m^3)。
-
-            Args:
-                value (float): 新的孔隙体积增加量的值。
-            """
-            core.seepage_cell_set_k(self.handle, value)
-
-        def set_pore(self, p: float, v: float, dp: float, dv: float) -> 'Seepage.CellData':
-            """
-            创建一个孔隙，使得当内部压力等于p时，体积为v；
-            如果压力变化dp，体积变化为dv
-
-            Args:
-                p (float): 内部压力。
-                v (float): 体积。
-                dp (float): 压力变化量。
-                dv (float): 体积变化量。
-
-            Returns:
-                Seepage.CellData: 返回当前CellData对象。
-            """
-            k = max(1.0e-30, abs(dv)) / max(1.0e-30, abs(dp))
-            self.k = k
-            v0 = v - p * k
-            if v0 <= 0:
-                warnings.warn(
-                    f'v0 (= {v0}) <= 0 at {self.pos}. '
-                    f'p={p}, v={v}, dp={dp}, dv={dv}')
-            self.v0 = v0
-            return self
-
-        def v2p(self, v: float) -> float:
-            """
-            给定内部流体的体积，根据孔隙刚度计算孔隙内流体的压力。
-
-            Args:
-                v (float): 内部流体的体积。
-
-            Returns:
-                float: 孔隙内流体的压力。
-            """
-            return (v - self.v0) / self.k
-
-        def p2v(self, p: float) -> float:
-            """
-            给定内部流体的压力，根据孔隙刚度计算内部流体的体积。
-
-            Args:
-                p (float): 内部流体的压力。
-
-            Returns:
-                float: 内部流体的体积。
-            """
-            return self.v0 + p * self.k
-
-        core.use(None, 'seepage_cell_fill',
-                 c_void_p, c_double, c_void_p)
-
-        def fill(self, p: float, s: Union[Vector, list, tuple]) -> 'Seepage.CellData':
-            """
-            根据此时流体的密度，孔隙的v0和k，给定的目标压力和流体饱和度，设置各个组分的质量。
-                这里p为目标压力，s为目标饱和度；
-                当各个相的饱和度的和不等于1的时候，将首先对饱和度的值进行等比例调整；
-            注意：
-                s作为一个数组，它的长度应该等于流体的数量或者组分的数量(均可以)；
-                当s的长度等于流体的数量的时候，需要事先设置流体中各个组分的比例；
-            注意
-                当s的总和等于0的时候，虽然给定目标压力，但是仍然不会填充流体。此时填充后
-                所有的组分都等于0。
-
-            Args:
-                p (float): 目标压力。
-                s (Vector | list | tuple): 目标饱和度。
-
-            Returns:
-                CellData: 返回当前CellData对象。
-            """
-            if not isinstance(s, Vector):
-                s = Vector(s)
-            assert isinstance(s, Vector)
-            core.seepage_cell_fill(self.handle, p, s.handle)
-            return self
-
-        core.use(c_double, 'seepage_cell_get_pre', c_void_p)
-
-        @property
-        def pre(self) -> float:
-            """
-            单元格内流体的压力
-                (根据流体的总体积和孔隙弹性计算得出)
-
-            Returns:
-                float: 单元格内流体的压力。
-            """
-            return core.seepage_cell_get_pre(self.handle)
-
-        core.use(c_size_t, 'seepage_cell_get_fluid_n',
-                 c_void_p)
-        core.use(None, 'seepage_cell_set_fluid_n',
-                 c_void_p, c_size_t)
-
-        @property
-        def fluid_number(self) -> int:
-            """
-            单元格内流体的数量
-                (至少设置为1，并且需要为模型中的所有单元格设置相同的值)
-
-            Returns:
-                int: 单元格内流体的数量。
-            """
-            return core.seepage_cell_get_fluid_n(self.handle)
-
-        @fluid_number.setter
-        def fluid_number(self, value: int):
-            """
-            设置单元格内流体的数量。
-
-            Args:
-                value (int): 新的流体数量，必须在0到10之间。
-            """
-            assert 0 <= value < 10
-            core.seepage_cell_set_fluid_n(self.handle, value)
-
-        def get_fluid(self, *args) -> Optional[Union['Seepage.Fluid', 'Seepage.FluData']]:
-            """
-            返回给定序号的流体。(当参数数量为1的时候，返回Seepage.Fluid对象；
-            当参数数量大于1的时候，返回Seepage.FluData对象)
-
-            Args:
-                *args: 流体或组分的序号。
-
-            Returns:
-                Seepage.Fluid or Seepage.FluData: 返回相应的流体或组分对象，
-                如果不存在则返回None。
-            """
-            if len(args) > 0:
-                idx = get_index(args[0], self.fluid_number)
-                if idx is not None:
-                    flu = Seepage.Fluid(self, idx)
-                    if len(args) > 1:
-                        for i in range(1, len(args)):
-                            flu = flu.get_component(args[i])
-                            if flu is None:
-                                return None
-                    return flu
-                else:
-                    return None
-            else:
-                return None
-
-        @property
-        def fluids(self) -> Iterable[Union['Seepage.Fluid', 'Seepage.FluData']]:
-            """
-            单元格内的所有流体
-
-            Returns:
-                Iterator: 包含所有流体的迭代器。
-            """
-            return Iterator(self, self.fluid_number,
-                            lambda m, ind: m.get_fluid(ind))
-
-        def get_component(self, indexes: Union[int, list]) -> Optional[Union['Seepage.FluData']]:
-            """
-            返回给定序号的组分。
-
-            Args:
-                indexes (int or list): 组分的序号或序号列表。
-
-            Returns:
-                Seepage.FluData: 返回相应的组分对象，如果不存在则返回None。
-            """
-            if is_array(indexes):
-                return self.get_fluid(*indexes)
-            else:
-                return self.get_fluid(indexes)
-
-        core.use(c_double, 'seepage_cell_get_fluid_vol',
-                 c_void_p)
-
-        @property
-        def fluid_vol(self) -> float:
-            """
-            所有流体的体积。
-            注意：这个体积包含所有fluids的体积的和，包括那些粘性非常大，
-            在计算内核中被视为固体的流体
-
-            Returns:
-                float: 所有流体的体积。
-            """
-            return core.seepage_cell_get_fluid_vol(self.handle)
-
-        core.use(c_double, 'seepage_cell_get_fluid_mass',
-                 c_void_p)
-
-        @property
-        def fluid_mass(self) -> float:
-            """
-            所有流体的质量
-            注意：这个体积包含所有fluids的体积的和，包括那些粘性非常大，
-            在计算内核中被视为固体的流体
-
-            Returns:
-                float: 所有流体的质量。
-            """
-            return core.seepage_cell_get_fluid_mass(self.handle)
-
-        core.use(c_double, 'seepage_cell_get_fluid_vol_fraction',
-                 c_void_p,
-                 c_size_t)
-
-        def get_fluid_vol_fraction(self, index: int) -> Optional[float]:
-            """
-            返回index给定流体的体积饱和度
-
-            Args:
-                index (int): 流体的序号。
-
-            Returns:
-                float: 该流体的体积饱和度，如果序号无效则返回None。
-            """
-            index_ = get_index(index, self.fluid_number)
-            if index_ is not None:
-                return core.seepage_cell_get_fluid_vol_fraction(
-                    self.handle, index_)
-            else:
-                return None
-
-        core.use(c_double, 'seepage_cell_get_attr',
-                 c_void_p, c_size_t)
-        core.use(None, 'seepage_cell_set_attr',
-                 c_void_p, c_size_t, c_double)
-        core.use(c_size_t, 'seepage_cell_get_attr_n',
-                 c_void_p)
-
-        @property
-        def attr_n(self) -> int:
-            """
-            当前存储attr的数组的长度
-
-            Returns:
-                int: 存储attr的数组的长度。
-            """
-            return core.seepage_cell_get_attr_n(self.handle)
-
-        def get_attr(self, index: Union[int, str], default_val: float = None,
-                     **valid_range) -> Optional[float]:
-            """
-            该Cell的第 attr_id个自定义属性值。
-            当不存在时，默认为一个无穷大的值(大于1.0e100)
-
-            Args:
-                index (int or str): 自定义属性的序号或名称。
-                default_val (float, optional): 当属性不存在时返回的默认值。
-                    默认为None。
-                **valid_range: 可选的有效范围参数。
-
-            Returns:
-                float: 自定义属性的值，如果不存在则返回默认值。
-            """
-            if isinstance(index, str):
-                assert isinstance(self, Seepage.Cell)
-                index = self.model.get_cell_key(key=index)
-            if index is None:
-                return default_val
-            if index < 0:
-                if index == -1:
-                    return self.x
-                if index == -2:
-                    return self.y
-                if index == -3:
-                    return self.z
-                if index == -4:
-                    return self.v0
-                if index == -5:
-                    return self.k
-                return default_val
-            value = core.seepage_cell_get_attr(self.handle, index)
-            if attr_in_range(value, **valid_range):
-                return value
-            else:
-                return default_val
-
-        def set_attr(self, index: Union[int, str], value: float) -> 'Seepage.CellData':
-            """
-            该Cell的第 attr_id个自定义属性值。当不存在时，
-            默认为一个无穷大的值(大于1.0e100)
-
-            Args:
-                index (int or str): 自定义属性的序号或名称。
-                value (float): 自定义属性的新值。
-
-            Returns:
-                CellData: 返回当前CellData对象。
-            """
-            if isinstance(index, str):
-                assert isinstance(self, Seepage.Cell)
-                index = self.model.reg_cell_key(key=index)
-            if index is None:
-                return self
-            if value is None:
-                value = 1.0e200
-            if index < 0:
-                if index == -1:
-                    self.x = value
-                    return self
-                if index == -2:
-                    self.y = value
-                    return self
-                if index == -3:
-                    self.z = value
-                    return self
-                if index == -4:
-                    self.v0 = value
-                    return self
-                if index == -5:
-                    self.k = value
-                    return self
-                assert False
-            core.seepage_cell_set_attr(self.handle, index, value)
-            return self
-
-        core.use(None, 'seepage_cell_multiply',
-                 c_void_p, c_void_p, c_double)
-
-        def multiply(self, scale: float, result: Optional['Seepage.CellData'] = None) -> 'Seepage.CellData':
-            """
-            将孔隙大小和流体都乘以相同的倍率，其余所有的属性保持不变。
-
-            Args:
-                scale (float): 缩放倍率。
-                result (Seepage.CellData, optional): 用于存储结果的CellData对象。
-                    默认为None。
-
-            Returns:
-                Seepage.CellData: 缩放后的CellData对象。
-            """
-            if not isinstance(result, Seepage.CellData):
-                result = Seepage.CellData()
-            assert isinstance(result, Seepage.CellData), 'result must be a Seepage.CellData'
-            core.seepage_cell_multiply(result.handle, self.handle, scale)
-            return result
-
-        def __mul__(self, scale: float) -> 'Seepage.CellData':
-            """
-            将孔隙大小和流体都乘以相同的倍率，其余所有的属性保持不变。
-
-            Args:
-                scale (float): 缩放倍率。
-
-            Returns:
-                Seepage.CellData: 缩放后的CellData对象。
-            """
-            return self.multiply(scale)
-
-        core.use(None, 'seepage_cell_clone',
-                 c_void_p, c_void_p)
-
-        def clone(self, other: Optional['Seepage.CellData'] = None, *, scale: Optional[float] = None):
-            """
-            从other克隆数据（所有的数据）
-
-            Args:
-                other (Seepage.CellData): 要克隆数据的源CellData对象。
-                scale (float, optional): 可选的缩放倍率。默认为None。
-
-            Returns:
-                CellData: 克隆后的CellData对象。
-            """
-            if other is None:
-                return self
-            assert isinstance(other, Seepage.CellData)
-            if scale is not None:
-                other.multiply(scale, result=self)
-                return self
-            else:
-                core.seepage_cell_clone(self.handle, other.handle)
-                return self
-
-        core.use(None, 'seepage_cell_clone_all', POINTER(c_void_p), POINTER(c_void_p), c_size_t)
-
-        @staticmethod
-        def clone_all(targets, sources, count):
-            """
-            拷贝所有给定的Cell数据
-            Args:
-                targets: 即将被覆盖的目标Cell
-                sources: 数据来源
-                count: 需要拷贝的数量
-
-            Returns:
-                None
-            """
-            core.seepage_cell_clone_all(targets, sources, count)
-
-        core.use(None, 'seepage_cell_set_fluid_components',
-                 c_void_p, c_void_p)
-
-        def set_fluid_components(self, model: "Seepage"):
-            """
-            利用model中定义的流体来设置Cell中的流体的组分的数量。
-            注意:
-                此函数会递归地调用model中的组分定义，
-                从而保证Cell中流体组分结构和model中完全一样。
-
-            Args:
-                model (Seepage): 用于定义流体组分的模型。
-            """
-            assert isinstance(model, Seepage)
-            core.seepage_cell_set_fluid_components(self.handle, model.handle)
-
-        core.use(None, 'seepage_cell_set_fluid_property',
-                 c_void_p,
-                 c_double, c_size_t, c_size_t,
-                 c_void_p)
-
-        def set_fluid_property(self, p: float, fa_t: int, fa_c: int, model: "Seepage"):
-            """
-            利用model中定义的流体的属性来更新流体的比热、密度和粘性系数。
-            注意：
-                函数会使用在各个流体中由fa_t指定的温度，并根据给定的压力p来查找流体属性；
-                因此，在调用这个函数之前，务必要设置各个流体的温度 (fa_t)。
-            注意：
-                在调用之前，务必保证此Cell内的流体的结构和model内fludef的结构一致。
-                即，应该首先调用set_fluid_components函数
-
-            Args:
-                p (float): 压力。
-                fa_t (int): 流体温度的索引。
-                fa_c (int): 流体组分的索引。
-                model (Seepage): 用于定义流体属性的模型。
-            """
-            assert isinstance(model, Seepage)
-            core.seepage_cell_set_fluid_property(
-                self.handle, p, fa_t, fa_c, model.handle)
-
-        core.use(None, 'seepage_cell_set_fluids_by_lexpr',
-                 c_void_p, c_void_p,
-                 c_void_p)
-
-        def set_fluids_by_lexpr(self, lexpr: LinearExpr, model: "Seepage"):
-            """ 设置此Cell中的流体
-
-            此函数将使用model中各个cell的流体，然后使用线性表达式lexpr来计算
-
-            Args:
-                lexpr (LinearExpr): 计算流体的线性表达式
-                model (Seepage): 用来拷贝流体的另外一个模型
-
-            Returns:
-                None
-            """
-            core.seepage_cell_set_fluids_by_lexpr(
-                self.handle, lexpr.handle, model.handle)
-
-        core.use(None, 'seepage_cell_set_pore_by_lexpr',
-                 c_void_p, c_void_p, c_void_p)
-
-        def set_pore_by_lexpr(self, lexpr: LinearExpr, model: "Seepage"):
-            """ 设置此Cell中的孔隙
-
-            此函数将使用model中各个cell的孔隙，然后使用线性表达式lexpr来计算
-
-            Args:
-                lexpr (LinearExpr): 计算pore的线性表达式
-                model (Seepage): 用来拷贝pore的另外一个模型
-
-            Returns:
-                None
-            """
-            core.seepage_cell_set_pore_by_lexpr(self.handle, lexpr.handle,
-                                                model.handle)
-
-        core.use(None, 'seepage_cell_set_mass_attr_by_lexpr',
-                 c_void_p, c_size_t, c_void_p, c_void_p)
-
-        def set_mass_attr_by_lexpr(self, index: int, lexpr: LinearExpr, model: "Seepage"):
-            """ 设置此Cell中的自定义属性
-            此函数将使用model中各个cell的自定义属性，然后使用线性表达式lexpr来计算
-            Args:
-                index (int): 自定义属性的序号
-                lexpr (LinearExpr): 计算自定义属性的线性表达式
-                model (Seepage): 用来拷贝自定义属性的另外一个模型
-            Returns:
-                None
-            """
-            core.seepage_cell_set_mass_attr_by_lexpr(
-                self.handle, index, lexpr.handle, model.handle)
-
-        core.use(None, 'seepage_cell_set_density_attr_by_lexpr',
-                 c_void_p, c_size_t, c_void_p, c_void_p)
-
-        def set_density_attr_by_lexpr(self, index: int, lexpr: LinearExpr, model: "Seepage"):
-            """ 设置此Cell中的自定义属性
-            此函数将使用model中各个cell的自定义属性，然后使用线性表达式lexpr来计算
-            Args:
-                index (int): 自定义属性的序号
-                lexpr (LinearExpr): 计算自定义属性的线性表达式
-                model (Seepage): 用来拷贝自定义属性的另外一个模型
-            Returns:
-                None
-            """
-            core.seepage_cell_set_density_attr_by_lexpr(
-                self.handle, index, lexpr.handle, model.handle)
-
-    class Cell(CellData):
-        """
-        Cell为控制体。一个Cell由如下几个部分组成：
-
-        1、该控制体内流体存储空间的大小以及刚度(即设置Cell的pore).
-            计算内核根据Cell内流体的总的体积，结合pore的弹性性质来定义Cell内流体
-            的压力，所以在创建一个Cell之后，必须首先对Cell的pore进行配置。
-            具体地，调用Cell.set_pore函数来设置Cell的pore;
-
-        2、Cell内存储的流体。一个Cell内可以存储多种流体，这些流体存储在一个数组内，
-            且从0开始编号。每一种流体可以由多个组分组成，流体的组分
-            也从0开始编号；
-
-        3、Cell的自定义属性。在Cell内存储一个浮点型的数组，存储一系列自定义的属性，
-            用于辅助存储和计算。自定义属性从0开始编号。
-        """
-
-        core.use(c_void_p, 'seepage_get_cell', c_void_p, c_size_t)
-
-        def __init__(self, model: "Seepage", index: int):
-            """
-            初始化Cell对象。
-
-            Args:
-                model (Seepage): 所属的Seepage模型。
-                index (int): Cell的索引，必须小于模型中的Cell数量。
-
-            Raises:
-                AssertionError: 如果model不是Seepage类型，
-                或者index不是整数，或者index大于等于模型中的Cell数量。
-            """
-            assert isinstance(model, Seepage)
-            assert isinstance(index, int)
-            assert index < model.cell_number
-            self.model = model
-            self.index = index
-            super().__init__(handle=core.seepage_get_cell(model.handle, index))
-
-        def __str__(self) -> str:
-            """
-            返回Cell对象的字符串表示。
-
-            Returns:
-                str: 包含Cell句柄、索引和位置的字符串。
-            """
-            return (f'zml.Seepage.Cell(handle = {self.model.handle}, '
-                    f'index = {self.index}, pos = {self.pos})')
-
-        core.use(c_size_t, 'seepage_get_cell_face_n',
-                 c_void_p, c_size_t)
-
-        @property
-        def face_number(self) -> int:
-            """
-            获取与该Cell连接的Face的数量。
-
-            Returns:
-                int: 与该Cell连接的Face的数量。
-            """
-            return core.seepage_get_cell_face_n(self.model.handle, self.index)
-
-        @property
-        def cell_number(self) -> int:
-            """
-            获取与该Cell相邻的Cell的数量。
-
-            Returns:
-                int: 与该Cell相邻的Cell的数量，等于face_number。
-            """
-            return self.face_number
-
-        core.use(c_size_t, 'seepage_get_cell_face_id',
-                 c_void_p, c_size_t, c_size_t)
-
-        core.use(c_size_t, 'seepage_get_cell_cell_id',
-                 c_void_p, c_size_t, c_size_t)
-
-        def get_cell(self, index: int) -> Optional["Seepage.Cell"]:
-            """
-            获取与该Cell相邻的第index个Cell。
-
-            Args:
-                index (int): 相邻Cell的索引。
-
-            Returns:
-                Seepage.Cell or None: 与该Cell相邻的第index个Cell，
-                如果不存在则返回None。
-            """
-            index_ = get_index(index, self.cell_number)
-            if index_ is not None:
-                cell_id = core.seepage_get_cell_cell_id(self.model.handle,
-                                                        self.index, index_)
-                return self.model.get_cell(cell_id)
-            else:
-                return None
-
-        def get_face(self, index: int) -> Optional["Seepage.Face"]:
-            """
-            获取与该Cell连接的第index个Face。
-
-            Args:
-                index (int): 连接Face的索引。
-
-            Returns:
-                Seepage.Face or None: 与该Cell连接的第index个Face，
-                如果不存在则返回None。
-            注：该Face的另一侧，即为get_cell返回的Cell。
-            """
-            index_ = get_index(index, self.face_number)
-            if index_ is not None:
-                face_id = core.seepage_get_cell_face_id(self.model.handle, self.index, index_)
-                return self.model.get_face(face_id)
-            else:
-                return None
-
-        @property
-        def cells(self) -> Iterable['Seepage.Cell']:
-            """
-            获取此Cell周围的所有Cell。
-
-            Returns:
-                Iterator: 包含此Cell周围所有Cell的迭代器。
-            """
-            return Iterator(self, self.cell_number, lambda m, ind: m.get_cell(ind))
-
-        @property
-        def faces(self) -> Iterable['Seepage.Face']:
-            """
-            获取此Cell周围的所有Face。
-
-            Returns:
-                Iterator: 包含此Cell周围所有Face的迭代器。
-            """
-            return Iterator(self, self.face_number, lambda m, ind: m.get_face(ind))
-
-        def set_ini(self, ca_mc, ca_t, fa_t, fa_c, pos=None, vol=1.0,
-                    porosity=0.1, pore_modulus=1000e6, denc=1.0e6,
-                    temperature=280.0, p=1.0, s=None,
-                    pore_modulus_range=None):
-            """
-            配置初始状态。必须保证给定温度和压力。
-
-            Args:
-                ca_mc (int): 自定义属性的索引，用于存储质量。
-                ca_t (int): 自定义属性的索引，用于存储温度。
-                fa_t (int): 流体温度的索引。
-                fa_c (int): 流体组分的索引。
-                pos (list or None, optional): Cell的位置，默认为None。
-                vol (float, optional): Cell的体积，默认为1.0。
-                porosity (float, optional): 孔隙度，默认为0.1。
-                pore_modulus (float, optional): 孔隙模量，默认为1000e6。
-                denc (float, optional): 密度，默认为1.0e6。
-                temperature (float, optional): 温度，默认为280.0。
-                p (float, optional): 压力，默认为1.0。
-                s (list or None, optional): 饱和度数组，默认为None。
-                pore_modulus_range (tuple or None, optional): 孔隙模量的有效范围，
-                    默认为None。
-
-            Raises:
-                AssertionError: 如果孔隙模量不在有效范围内，或者孔隙度小于1.0e-6。
-            """
-            model = self.model
-            assert isinstance(model, Seepage)
-
-            if pos is not None:
-                self.pos = pos
-
-            if temperature is not None:
-                self.set_attr(ca_t, temperature)
-
-            if vol is not None and denc is not None:
-                self.set_attr(ca_mc, vol * denc)
-
-            if pore_modulus is not None:
-                if pore_modulus_range is None:
-                    assert 1e6 < pore_modulus < 10000e6
-                else:
-                    assert pore_modulus_range[0] < pore_modulus < \
-                           pore_modulus_range[1]
-
-            if porosity is not None:
-                assert 1.0e-6 < porosity
-
-            # 确保在给定的这个p下，孔隙度等于设置的值.
-            if (p is not None and vol is not None and porosity is not None
-                    and pore_modulus is not None):
-                self.set_pore(p, vol * porosity,
-                              pore_modulus, vol * porosity)
-
-            # 设置流体的结构
-            self.set_fluid_components(model)
-
-            # 设置组分的温度.
-            if temperature is not None:
-                for i in range(self.fluid_number):
-                    self.get_fluid(i).set_attr(fa_t, temperature)
-
-            # 更新流体的比热、密度和粘性系数
-            if p is not None:
-                self.set_fluid_property(p=p, fa_t=fa_t,
-                                        fa_c=fa_c, model=model)
-
-            if s is not None and self.fluid_number > 0:
-                def get_s(indexes):
-                    assert len(indexes) > 0
-                    temp = s
-                    for ind in indexes:
-                        if is_array(temp):
-                            temp = temp[ind] if ind < len(temp) else 0.0
-                        else:
-                            temp = temp if ind == 0 else 0.0
-                    return temp
-
-                s2 = []
-                vi = []
-
-                def set_flu(flu):
-                    assert isinstance(flu, Seepage.FluData)
-                    if flu.component_number == 0:
-                        s2.append(get_s(vi))
-                    else:
-                        for ind in range(flu.component_number):
-                            vi.append(ind)
-                            set_flu(flu.get_component(ind))
-                            vi.pop(-1)
-
-                for fid in range(self.fluid_number):
-                    vi.append(fid)
-                    set_flu(self.get_fluid(fid))
-                    vi.pop(-1)
-
-                # 调用上一级的fill函数来填充流体
-                if p is not None:
-                    self.fill(p, s2)
-
-    class FaceData(HasHandle):
-        """
-        FaceData类用于表示和操作Cell之间界面（Face）的数据。
-
-        该类提供了一系列方法来处理Face的序列化保存、加载，
-        以及获取和设置Face的各种属性，如自定义属性、导流能力、相对渗透率曲线等。
-        """
-        core.use(c_void_p, 'new_seepage_face')
-        core.use(None, 'del_seepage_face', c_void_p)
-
-        def __init__(self, path: str = None, handle: Optional[c_void_p] = None):
-            """
-            初始化FaceData对象。
-
-            Args:
-                path (str, optional): 用于加载序列化数据的文件路径。默认为None。
-                handle (c_void_p, optional): 已有的FaceData句柄。默认为None。
-
-            若handle为None且path为字符串，则会尝试从指定路径加载数据。
-            """
-            super().__init__(handle, core.new_seepage_face, core.del_seepage_face)
-            if handle is None:
-                if isinstance(path, str):
-                    self.load(path)
-
-        core.use(None, 'seepage_face_save', c_void_p, c_char_p)
-
-        def save(self, path: str):
-            """
-            序列化保存。可选扩展格式：
-                1：.txt
-                .TXT 格式
-                （跨平台，基本不可读）
-
-                2：.xml
-                .XML 格式
-                （特定可读性，文件体积最大，读写速度最慢，跨平台）
-
-                3：.其他
-                二进制格式
-                （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
-
-            Args:
-                path (str): 保存序列化数据的文件路径。
-            """
-            if isinstance(path, str):
-                make_parent(path)
-                core.seepage_face_save(self.handle, make_c_char_p(path))
-
-        core.use(None, 'seepage_face_load', c_void_p, c_char_p)
-
-        def load(self, path: str):
-            """
-            读取序列化文件。
-                根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
-
-            Args:
-                path (str): 读取序列化数据的文件路径。
-            """
-            if isinstance(path, str):
-                check_ipath(path, self)
-                core.seepage_face_load(self.handle, make_c_char_p(path))
-
-        core.use(None, 'seepage_face_write_fmap',
-                 c_void_p, c_void_p, c_char_p)
-        core.use(None, 'seepage_face_read_fmap',
-                 c_void_p, c_void_p, c_char_p)
-
-        def to_fmap(self, fmt: str = 'binary') -> FileMap:
-            """
-            将数据序列化到一个Filemap中. 其中fmt的取值可以为: text, xml和binary
-
-            Args:
-                fmt (str, optional): 序列化格式，可选值为 'text', 'xml'
-                    和 'binary'。默认为 'binary'。
-
-            Returns:
-                FileMap: 包含序列化数据的FileMap对象。
-            """
-            fmap = FileMap()
-            core.seepage_face_write_fmap(self.handle, fmap.handle,
-                                         make_c_char_p(fmt))
-            return fmap
-
-        def from_fmap(self, fmap: FileMap, fmt: str = 'binary'):
-            """
-            从Filemap中读取序列化的数据. 其中fmt的取值可以为: text, xml和binary
-
-            Args:
-                fmap (FileMap): 包含序列化数据的FileMap对象。
-                fmt (str, optional): 反序列化格式，可选值为 'text', 'xml'
-                    和 'binary'。默认为 'binary'。
-            """
-            assert isinstance(fmap, FileMap)
-            core.seepage_face_read_fmap(self.handle, fmap.handle,
-                                        make_c_char_p(fmt))
-
-        @property
-        def fmap(self) -> FileMap:
-            """
-            获取当前FaceData对象的二进制序列化FileMap对象。
-
-            Returns:
-                FileMap: 包含二进制序列化数据的FileMap对象。
-            """
-            return self.to_fmap(fmt='binary')
-
-        @fmap.setter
-        def fmap(self, value: FileMap):
-            """
-            从给定的FileMap对象中加载二进制序列化数据。
-
-            Args:
-                value (FileMap): 包含二进制序列化数据的FileMap对象。
-            """
-            self.from_fmap(value, fmt='binary')
-
-        core.use(c_double, 'seepage_face_get_attr',
-                 c_void_p, c_size_t)
-        core.use(None, 'seepage_face_set_attr',
-                 c_void_p, c_size_t, c_double)
-
-        def get_attr(self, index: Union[int, str], default_val: float = None,
-                     **valid_range):
-            """
-            该Face的第 attr_id个自定义属性值。
-            当不存在时，默认为一个无穷大的值(大于1.0e100)
-
-            Args:
-                index (int or str): 自定义属性的索引或键名。
-                default_val (float, optional): 当属性不存在或不在有效范围内时
-                    返回的默认值。默认为None。
-                **valid_range: 可选的有效范围参数。
-
-            Returns:
-                float: 自定义属性的值，如果不存在或不在有效范围内则返回默认值。
-            """
-            if isinstance(index, str):
-                assert isinstance(self, Seepage.Face)
-                index = self.model.get_face_key(key=index)
-            if index is None:
-                return default_val
-            value = core.seepage_face_get_attr(self.handle, index)
-            if attr_in_range(value, **valid_range):
-                return value
-            else:
-                return default_val
-
-        def set_attr(self, index: Union[int, str], value: float):
-            """
-            该Face的第 attr_id个自定义属性值。
-            当不存在时，默认为一个无穷大的值(大于1.0e100)
-
-            Args:
-                index (int or str): 自定义属性的索引或键名。
-                value (float): 要设置的自定义属性的值。
-
-            Returns:
-                FaceData: 返回当前FaceData对象。
-            """
-            if isinstance(index, str):
-                assert isinstance(self, Seepage.Face)
-                index = self.model.reg_face_key(key=index)
-            if index is None:
-                return self
-            if value is None:
-                value = 1.0e200
-            core.seepage_face_set_attr(self.handle, index, value)
-            return self
-
-        core.use(None, 'seepage_face_clone',
-                 c_void_p, c_void_p)
-
-        def clone(self, other: 'Seepage.FaceData') -> 'Seepage.FaceData':
-            """
-            从另一个FaceData对象克隆数据。
-
-            Args:
-                other (Seepage.FaceData): 要克隆数据的源FaceData对象。
-
-            Returns:
-                FaceData: 返回当前FaceData对象。
-            """
-            if other is not None:
-                assert isinstance(other, Seepage.FaceData)
-                core.seepage_face_clone(self.handle, other.handle)
-            return self
-
-        def get_copy(self) -> 'Seepage.FaceData':
-            """
-            获取当前FaceData对象的副本。
-            Returns:
-                FaceData: 当前FaceData对象的副本。
-            """
-            data = Seepage.FaceData()
-            data.clone(self)
-            return data
-
-        core.use(c_double, 'seepage_face_get_cond',
-                 c_void_p)
-        core.use(None, 'seepage_face_set_cond',
-                 c_void_p, c_double)
-
-        @property
-        def cond(self) -> float:
-            """
-            此Face的导流能力. dv=cond*dp*dt/vis，其中dp为两端的压力差，
-            dt为时间步长，vis为内部流体的粘性系数
-                cond = area * perm / dist.
-            如果是多相的情况下，可能需要两步矫正（程序内部自动算，用户不用设置）：
-                1. 如果多相中存在固体，首先，需要计算 流体体积/总体积，
-                    得到流体的体积分数 a，用 cond * kr(a)得到流体的cond1.
-                2. 如果流体有多种，对于第0种流体，
-                    s0=v0/v_sum，cond1 * kr0(s0)
-                    得到 cond2_0.
-
-            Returns:
-                float: 此Face的导流能力。
-            """
-            return core.seepage_face_get_cond(self.handle)
-
-        @cond.setter
-        def cond(self, value: float):
-            """
-            此Face的导流能力. dv=cond*dp*dt/vis，其中dp为两端的压力差，
-            dt为时间步长，vis为内部流体的粘性系数
-
-            Args:
-                value (float): 要设置的导流能力值。
-            """
-            core.seepage_face_set_cond(self.handle, value)
-
-        core.use(c_double, 'seepage_face_get_dr',
-                 c_void_p)
-        core.use(None, 'seepage_face_set_dr',
-                 c_void_p, c_double)
-
-        @property
-        def dr(self) -> float:
-            """
-            获取此Face的某个dr属性值(流体的额外驱动力)
-
-            Returns:
-                float: 此Face的属性值。
-            """
-            return core.seepage_face_get_dr(self.handle)
-
-        @dr.setter
-        def dr(self, value: float):
-            """
-            设置此Face的dr属性值(流体的额外驱动力)
-
-            Args:
-                value (float): 要设置的属性值。
-            """
-            core.seepage_face_set_dr(self.handle, value)
-
-        core.use(c_double, 'seepage_face_get_dv',
-                 c_void_p, c_size_t)
-
-        def get_dv(self, fluid_id: int) -> float:
-            """
-            返回上一步迭代通过这个face的流体的体积
-
-            Args:
-                fluid_id (int): 流体的ID。
-
-            Returns:
-                float: 上一步迭代通过这个face的指定流体的体积。
-            """
-            assert isinstance(fluid_id, int)
-            return core.seepage_face_get_dv(self.handle, fluid_id)
-
-        core.use(c_size_t, 'seepage_face_get_ikr',
-                 c_void_p, c_size_t)
-        core.use(None, 'seepage_face_set_ikr',
-                 c_void_p, c_size_t, c_size_t)
-
-        def get_ikr(self, index: int) -> int:
-            """
-            第index种流体的相对渗透率曲线的id
-
-            Args:
-                index (int): 流体的索引。
-
-            Returns:
-                int: 第index种流体的相对渗透率曲线的ID。
-            """
-            return core.seepage_face_get_ikr(self.handle, index)
-
-        def set_ikr(self, index: int, value: int):
-            """
-            设置在这个Face中，第index种流体的相对渗透率曲线的id.
-                如果在这个Face中，没有为某个流体选择相渗曲线，
-                则如果该流体的序号为ID，则默认使用序号为ID的相渗曲线。
-
-            Args:
-                index (int): 流体的索引。
-                value (int): 要设置的相对渗透率曲线的ID。
-            """
-            core.seepage_face_set_ikr(self.handle, index, value)
-
-    class Face(FaceData):
-        """
-        Face为Cell之间的界面。Cell由如下属性组成：
-
-        1、Face的导流系数cond:  dv=dp*cond*dt/vis
-            其中dv为流经face的流体的体积，cond为导流系数，dt为时长，vis为流体的粘性系数
-
-        2、Face中不同流体所采用的相对渗透率曲线的序号。
-            在Seepage中可以定义多个（最多10000个）相对渗透率曲线，且不同的Face可以选用
-            不同的相对渗透率曲线。<相对渗透率曲线的序号>可以不定义，
-            此时会采用默认值(即第i种流体，自动选用第i个相渗曲线)
-            注意：需要为每一种流体配置相对渗透率曲线;
-
-        3、Face的自定义属性。在Face内存储一个浮点型的数组，存储一系列自定义的属性，
-            用于辅助存储和计算。自定义属性从0开始编号。
-        """
-        core.use(c_void_p, 'seepage_get_face', c_void_p, c_size_t)
-
-        def __init__(self, model: 'Seepage', index: int):
-            """
-            初始化Face对象。
-
-            Args:
-                model (Seepage): 所属的Seepage模型对象。
-                index (int): Face的索引。
-
-            Raises:
-                AssertionError: 如果model不是Seepage类型，或者index不是整数，
-                或者index超出模型的Face数量范围。
-            """
-            assert isinstance(model, Seepage)
-            assert isinstance(index, int)
-            assert index < model.face_number
-            self.model = model
-            self.index = index
-            super().__init__(handle=core.seepage_get_face(model.handle, index))
-
-        def __str__(self) -> str:
-            """
-            返回Face对象的字符串表示。
-
-            Returns:
-                str: 包含Face句柄和索引的字符串。
-            """
-            return (f'zml.Seepage.Face(handle = {self.model.handle}, '
-                    f'index = {self.index}) ')
-
-        core.use(c_size_t, 'seepage_get_face_cell_id',
-                 c_void_p, c_size_t, c_size_t)
-
-        @property
-        def cell_number(self) -> int:
-            """
-            和Face连接的Cell的数量
-
-            Returns:
-                int: 与Face连接的Cell的数量，固定为2。
-            """
-            return 2
-
-        def get_cell(self, index) -> Optional['Seepage.Cell']:
-            """
-            和Face连接的第index个Cell
-
-            Args:
-                index (int): 要获取的Cell的索引。
-
-            Returns:
-                Seepage.Cell or None: 与Face连接的第index个Cell，
-                如果索引无效则返回None。
-            """
-            index = get_index(index, self.cell_number)
-            if index is not None:
-                cell_id = core.seepage_get_face_cell_id(self.model.handle, self.index, index)
-                return self.model.get_cell(cell_id)
-            else:
-                return None
-
-        @property
-        def cells(self) -> Tuple[Optional['Seepage.Cell'], Optional['Seepage.Cell']]:
-            """
-            返回Face两端的Cell
-
-            Returns:
-                tuple: 包含Face两端Cell的元组。
-            """
-            return self.get_cell(0), self.get_cell(1)
-
-        @property
-        def pos(self) -> Tuple[float, ...]:
-            """
-            返回Face中心点的位置（根据两侧的Cell的位置来自动计算）
-
-            Returns:
-                tuple: 包含Face中心点位置坐标的元组。
-            """
-            p0 = self.get_cell(0).pos
-            p1 = self.get_cell(1).pos
-            return tuple([(p0[i] + p1[i]) / 2 for i in range(len(p0))])
-
-        def distance(self, other):
-            """
-            返回距离另外一个Cell或者另外一个位置的距离
-
-            Args:
-                other (Seepage.Cell or tuple): 另一个Cell对象或位置坐标元组。
-
-            Returns:
-                float: 与另一个Cell或位置的距离。
-            """
-            if hasattr(other, 'pos'):
-                return get_distance(self.pos, other.pos)
-            else:
-                return get_distance(self.pos, other)
-
-        def get_another(self, cell) -> Optional['Seepage.Cell']:
-            """
-            返回另外一侧的Cell
-
-            Args:
-                cell (Seepage.Cell or int): Cell对象或Cell的索引。
-
-            Returns:
-                Seepage.Cell or None: 另一侧的Cell，如果输入无效则返回None。
-            """
-            if isinstance(cell, Seepage.Cell):
-                cell = cell.index
-
-            c0 = self.get_cell(0)
-            assert isinstance(c0, Seepage.Cell)
-
-            c1 = self.get_cell(1)
-            assert isinstance(c1, Seepage.Cell)
-
-            if c0.index == cell:
-                return c1
-            elif c1.index == cell:
-                return c0
-            else:
-                return None
-
-    class Injector(HasHandle):
-        """
-        流体的注入点。可以按照一定的规律向特定的Cell注入特定的流体(或者能量).
-            注意Injector工作的逻辑：
-            1. 如果设置了注入的流体的ID，则实施流体注入操作
-                (此时value代表注入的体积速率: m^3/s);
-            2. 如果没有设置流体ID，并且设置了 ca_mc和ca_t属性，则实施热量注入操作;
-        """
-        core.use(c_void_p, 'new_injector')
-        core.use(None, 'del_injector', c_void_p)
-
-        def __init__(self, path: Optional[str] = None, handle: Optional[c_void_p] = None):
-            """
-            初始化Injector对象。
-
-            Args:
-                path (str, optional): 用于加载序列化数据的文件路径。默认为None。
-                handle (c_void_p, optional): 已有的Injector句柄。默认为None。
-
-            如果handle为None且path为字符串，则会尝试从指定路径加载数据。
-            """
-            super().__init__(handle, core.new_injector, core.del_injector)
-            if handle is None:
-                if isinstance(path, str):
-                    self.load(path)
-
-        core.use(None, 'injector_save', c_void_p, c_char_p)
-
-        def save(self, path: str):
-            """
-            序列化保存。可选扩展格式：
-                1：.txt
-                .TXT 格式
-                （跨平台，基本不可读）
-
-                2：.xml
-                .XML 格式
-                （特定可读性，文件体积最大，读写速度最慢，跨平台）
-
-                3：.其他
-                二进制格式
-                （最快且最小，但在 Windows 和 Linux 下生成的文件无法互相读取）
-
-            Args:
-                path (str): 保存序列化数据的文件路径。
-            """
-            if isinstance(path, str):
-                make_parent(path)
-                core.injector_save(self.handle, make_c_char_p(path))
-
-        core.use(None, 'injector_load', c_void_p, c_char_p)
-
-        def load(self, path: str):
-            """
-            读取序列化文件。
-                根据扩展名确定文件格式（txt、xml 和二进制），请参考save函数。
-
-            Args:
-                path (str): 读取序列化数据的文件路径。
-            """
-            if isinstance(path, str):
-                check_ipath(path, self)
-                core.injector_load(self.handle, make_c_char_p(path))
-
-        core.use(None, 'injector_write_fmap',
-                 c_void_p, c_void_p, c_char_p)
-        core.use(None, 'injector_read_fmap',
-                 c_void_p, c_void_p, c_char_p)
-
-        def to_fmap(self, fmt: str = 'binary') -> FileMap:
-            """
-            将数据序列化到一个Filemap中。其中fmt的取值可以为: text, xml和binary
-
-            Args:
-                fmt (str, optional): 序列化格式，可选值为 'text', 'xml'
-                    和 'binary'。默认为 'binary'。
-
-            Returns:
-                FileMap: 包含序列化数据的FileMap对象。
-            """
-            fmap = FileMap()
-            core.injector_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
-            return fmap
-
-        def from_fmap(self, fmap: FileMap, fmt: str = 'binary'):
-            """
-            从Filemap中读取序列化的数据。其中fmt的取值可以为: text, xml和binary
-
-            Args:
-                fmap (FileMap): 包含序列化数据的FileMap对象。
-                fmt (str, optional): 反序列化格式，可选值为 'text', 'xml'
-                    和 'binary'。默认为 'binary'。
-            """
-            assert isinstance(fmap, FileMap)
-            core.injector_read_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
-
-        @property
-        def fmap(self) -> FileMap:
-            """
-            获取当前Injector对象的二进制序列化FileMap对象。
-
-            Returns:
-                FileMap: 包含二进制序列化数据的FileMap对象。
-            """
-            return self.to_fmap(fmt='binary')
-
-        @fmap.setter
-        def fmap(self, value: FileMap):
-            """
-            从给定的FileMap对象中加载二进制序列化数据。
-
-            Args:
-                value (FileMap): 包含二进制序列化数据的FileMap对象。
-            """
-            self.from_fmap(value, fmt='binary')
-
-        core.use(c_size_t, 'injector_get_cell_id',
-                 c_void_p)
-        core.use(None, 'injector_set_cell_id',
-                 c_void_p, c_size_t)
-
-        @property
-        def cell_id(self) -> int:
-            """
-            注入点关联的Cell的ID。如果该ID不存在，则不会注入。
-            注：
-                默认为无穷大
-
-            Returns:
-                int: 注入点关联的Cell的ID。
-            """
-            return core.injector_get_cell_id(self.handle)
-
-        @cell_id.setter
-        def cell_id(self, value: int):
-            """
-            设置注入点关联的Cell的ID。如果该ID不存在，则不会注入。
-            注：
-                默认为无穷大
-
-            Args:
-                value (int): 要设置的Cell的ID。
-            """
-            core.injector_set_cell_id(self.handle, value)
-
-        core.use(c_void_p, 'injector_get_flu', c_void_p)
-
-        @property
-        def flu(self) -> 'Seepage.FluData':
-            """
-            即将注入到Cell中的流体的数据。这里返回的是一个引用 (从而可以直接修改内部的数据)。
-            注：
-                默认质量为1e-100，即无限接近于0
-
-            Returns:
-                Seepage.FluData: 即将注入的流体的数据对象。
-            """
-            return Seepage.FluData(handle=core.injector_get_flu(self.handle))
-
-        core.use(None, 'injector_set_fid',
-                 c_void_p, c_size_t, c_size_t, c_size_t)
-
-        def set_fid(self, fluid_id: Union[int, List[int], Tuple[int, ...]]):
-            """
-            设置注入的流体的ID。注意：如果需要注热的是热量，则将fluid_id设置为None。
-            注：在没有做特殊设置的时候，fid默认为[]
-
-            Args:
-                fluid_id (int | list | tuple): 注入的流体的ID列表。
-            """
-            core.injector_set_fid(self.handle, *parse_fid3(fluid_id))
-
-        core.use(c_size_t, 'injector_get_fid_length',
-                 c_void_p)
-        core.use(c_size_t, 'injector_get_fid_of',
-                 c_void_p, c_size_t)
-
-        def get_fid(self) -> List[int]:
-            """
-            返回注入流体的ID。
-            注：在没有做特殊设置的时候，默认为[]
-
-            Returns:
-                list: 注入流体的ID列表。
-            """
-            count = core.injector_get_fid_length(self.handle)
-            return [core.injector_get_fid_of(self.handle, idx) for idx in
-                    range(count)]
-
-        @property
-        def fid(self) -> List[int]:
-            """
-            注入的流体的ID。注意：如果需要注热的是热量，则将fluid_id设置为None。
-            注：在没有做特殊设置的时候，fid默认为[]
-
-            Returns:
-                list: 注入流体的ID列表。
-            """
-            return self.get_fid()
-
-        @fid.setter
-        def fid(self, value: Union[int, List[int], Tuple[int, ...]]):
-            """
-            设置注入的流体的ID。注意：如果需要注热的是热量，则将fluid_id设置为None。
-            注：在没有做特殊设置的时候，fid默认为[]
-
-            Args:
-                value: 要设置的注入流体的ID。
-            """
-            self.set_fid(value)
-
-        core.use(c_double, 'injector_get_value',
-                 c_void_p)
-        core.use(None, 'injector_set_value',
-                 c_void_p, c_double)
-
-        @property
-        def value(self) -> float:
-            """
-            注入的数值。可以有多重的含义：
-                当注入流体的时候，为注入的体积速率 m^3/s
-                当注热时：
-                    若恒温注热，则为温度
-                    若恒功率，则为功率
-            注：
-                在没有做任何设置时，默认值为0
-
-            Returns:
-                float: 注入的数值。
-            """
-            return core.injector_get_value(self.handle)
-
-        @value.setter
-        def value(self, val: float):
-            """
-            设置注入的数值。
-            注：
-                在没有做任何设置时，默认值为0
-
-            Args:
-                val (float): 要设置的注入数值。
-            """
-            core.injector_set_value(self.handle, val)
-
-        @property
-        def time(self):
-            """
-            此属性已被移除。
-
-            注：
-                此属性已被移除，调用时会发出警告。
-
-            Returns:
-                int: 固定返回0。
-            """
-            warnings.warn('Property Seepage.Injector.time '
-                          'has been removed',
-                          DeprecationWarning, stacklevel=2)
-            return 0
-
-        @time.setter
-        def time(self, _):
-            """
-            设置时间属性（此属性已被移除）。
-
-            注：
-                此属性已被移除，调用时会发出警告。
-
-            Args:
-                _: 此参数无实际作用。
-            """
-            warnings.warn('Property Seepage.Injector.time '
-                          'has been removed',
-                          DeprecationWarning, stacklevel=2)
-
-        core.use(c_double, 'injector_get_pos',
-                 c_void_p, c_size_t)
-        core.use(None, 'injector_set_pos',
-                 c_void_p, c_size_t, c_double)
-
-        @property
-        def pos(self) -> List[float]:
-            """
-            该Injector在三维空间的坐标。
-            注：
-                在没有设置的时候，默认是一个无限远的位置 [1e+50, 1e+50, 1e+50]
-
-            Returns:
-                list: 包含三维坐标的列表。
-            """
-            return [core.injector_get_pos(self.handle, i) for i in range(3)]
-
-        @pos.setter
-        def pos(self, value: Union[List[float], Tuple[float], Tuple[float, ...]]):
-            """
-            设置该Injector在三维空间的坐标。
-            注：
-                在没有设置的时候，默认是一个无限远的位置 [1e+50, 1e+50, 1e+50]
-
-            Args:
-                value (list): 包含三维坐标的列表，长度必须为3。
-            """
-            assert len(value) == 3
-            for dim in range(3):
-                core.injector_set_pos(self.handle, dim, value[dim])
-
-        core.use(c_double, 'injector_get_radi',
-                 c_void_p)
-        core.use(None, 'injector_set_radi',
-                 c_void_p, c_double)
-
-        @property
-        def radi(self) -> float:
-            """
-            Injector的控制半径。
-            注：
-                在没有设置的时候，原始默认值为1e+100，即无穷大
-
-            Returns:
-                float: Injector的控制半径。
-            """
-            return core.injector_get_radi(self.handle)
-
-        @radi.setter
-        def radi(self, value: float):
-            """
-            设置Injector的控制半径。
-            注：
-                在没有设置的时候，原始默认值为1e+100，即无穷大
-
-            Args:
-                value (float): 要设置的控制半径。
-            """
-            core.injector_set_radi(self.handle, value)
-
-        core.use(c_double, 'injector_get_g_heat',
-                 c_void_p)
-        core.use(None, 'injector_set_g_heat',
-                 c_void_p, c_double)
-
-        @property
-        def g_heat(self) -> float:
-            """
-            热边界和cell之间换热的系数 (当大于0的时候，则实施固定温度的加热，
-            否则为固定功率的加热)。
-            注：
-                默认为0
-
-            Returns:
-                float: 热边界和cell之间换热的系数。
-            """
-            return core.injector_get_g_heat(self.handle)
-
-        @g_heat.setter
-        def g_heat(self, value: float):
-            """
-            设置热边界和cell之间换热的系数 (当大于0的时候，则实施固定温度的加热，
-            否则为固定功率的加热)。
-            注：
-                默认为0
-
-            Args:
-                value (float): 要设置的换热系数。
-            """
-            core.injector_set_g_heat(self.handle, value)
-
-        core.use(c_size_t, 'injector_get_ca_mc',
-                 c_void_p)
-        core.use(None, 'injector_set_ca_mc',
-                 c_void_p, c_size_t)
-
-        @property
-        def ca_mc(self) -> int:
-            """
-            cell的mc属性的ID。
-            注：
-                默认为无穷大18446744073709551615，即不存在的属性ID
-
-            Returns:
-                int: cell的mc属性的ID。
-            """
-            return core.injector_get_ca_mc(self.handle)
-
-        @ca_mc.setter
-        def ca_mc(self, value: int):
-            """
-            设置cell的mc属性的ID。
-            注：
-                默认为无穷大18446744073709551615，即不存在的属性ID
-
-            Args:
-                value (int): 要设置的cell的mc属性的ID。
-            """
-            core.injector_set_ca_mc(self.handle, value)
-
-        core.use(c_size_t, 'injector_get_ca_t',
-                 c_void_p)
-        core.use(None, 'injector_set_ca_t',
-                 c_void_p, c_size_t)
-
-        @property
-        def ca_t(self) -> int:
-            """
-            cell的温度属性的id。
-            注：
-                默认为无穷大18446744073709551615，即不存在的属性ID
-
-            Returns:
-                int: cell的温度属性的id。
-            """
-            return core.injector_get_ca_t(self.handle)
-
-        @ca_t.setter
-        def ca_t(self, value: int):
-            """
-            设置cell的温度属性的id。
-            注：
-                默认为无穷大18446744073709551615，即不存在的属性ID
-
-            Args:
-                value (int): 要设置的cell的温度属性的id。
-            """
-            core.injector_set_ca_t(self.handle, value)
-
-        core.use(c_size_t, 'injector_get_ca_no_inj',
-                 c_void_p)
-        core.use(None, 'injector_set_ca_no_inj',
-                 c_void_p, c_size_t)
-
-        @property
-        def ca_no_inj(self) -> int:
-            """
-            在根据位置来寻找注入的cell的时候，凡是设置了ca_no_inj的cell，
-            将会被忽略（从而避免被Injector操作）。
-            注：
-                默认为无穷大18446744073709551615，即不存在的属性ID
-
-            Returns:
-                int: cell的ca_no_inj属性的ID。
-            """
-            return core.injector_get_ca_no_inj(self.handle)
-
-        @ca_no_inj.setter
-        def ca_no_inj(self, value: int):
-            """
-            设置在根据位置来寻找注入的cell的时候，凡是设置了ca_no_inj的cell，
-            将会被忽略（从而避免被Injector操作）。
-            注：
-                默认为无穷大18446744073709551615，即不存在的属性ID
-
-            Args:
-                value (int): 要设置的cell的ca_no_inj属性的ID。
-            """
-            core.injector_set_ca_no_inj(self.handle, value)
-
-        core.use(None, 'injector_add_oper',
-                 c_void_p, c_double, c_char_p)
-
-        def add_oper(self, time: float, oper: Union[str, float]):
-            """
-            添加在time时刻的一个操作。注意，oper支持如下关键词
-                value
-                pos    x  y  z
-                radi   r
-                val    v
-                den    v
-                vis    v
-                mass   m
-                attr   id  val
-                fid    a  b  c
-                g_heat v            (since 2024-02-27)
-            其它关键词将会被忽略(不抛出异常)。
-
-            Args:
-                time (float): 操作的时间。
-                oper (str): 操作的关键词和参数。
-
-            Returns:
-                Injector: 返回当前Injector对象。
-            """
-            core.injector_add_oper(self.handle, time, make_c_char_p(
-                oper if isinstance(oper, str) else f'{oper}'))
-            return self
-
-        core.use(None, 'injector_work',
-                 c_void_p, c_void_p, c_double, c_double)
-
-        def work(self, model: 'Seepage', *, time: Optional[float] = None, dt: Optional[float] = None):
-            """
-            执行注入操作。
-            注：
-                此函数不需要调用。内置在Seepage中的Injector，
-                会在Seepage.iterate函数中被自动调用。
-
-            Args:
-                model (Seepage): 所属的Seepage模型对象。
-                time (float, optional): 操作的时间，默认为None，
-                    若为None则使用默认值0。
-                dt (float, optional): 时间步长，默认为None，若为None则不执行操作。
-            """
-            assert isinstance(model, Seepage)
-            if time is None:
-                warnings.warn(
-                    'time is None for Seepage.Injector, '
-                    'use time=0 as default')
-                time = 0
-            if dt is None:
-                return
-            core.injector_work(self.handle, model.handle, time, dt)
-
-        core.use(None, 'injector_clone',
-                 c_void_p, c_void_p)
-
-        def clone(self, other: Optional['Seepage.Injector'] = None) -> 'Seepage.Injector':
-            """
-            克隆所有的数据；包括作用的cell_id。
-
-            Args:
-                other (Seepage.Injector): 要克隆数据的源Injector对象。
-
-            Returns:
-                Injector: 返回当前Injector对象。
-            """
-            if other is not None:
-                assert isinstance(other, Seepage.Injector)
-                core.injector_clone(self.handle, other.handle)
-            return self
-
-    class FlowSol(HasHandle):
-        """
-        流动求解器
-        """
-        core.use(c_void_p, 'new_seepage_fs')
-        core.use(None, 'del_seepage_fs', c_void_p)
-
-        def __init__(self, handle: Optional[c_void_p] = None):
-            """
-            初始化UFlowSol类的实例。
-            Args:
-                handle: 句柄，默认为None(此时创建新的对象; 否则，为给定对象的引用)。
-            """
-            super().__init__(handle, core.new_seepage_fs, core.del_seepage_fs)
-            self.solver = None
-
-        def get_sol(self) -> 'ConjugateGradientSolver':
-            """
-            返回内部存储的一个默认的线性方程组求解器。
-            """
-            if self.solver is None:
-                self.solver = ConjugateGradientSolver(tolerance=1.0e-25)
-            return self.solver
-
-        core.use(None, 'seepage_fs_iterate',
-                 c_void_p, c_void_p, c_void_p,
-                 c_double, c_double,
-                 c_size_t, c_size_t, c_size_t, c_size_t, c_void_p,
-                 c_void_p  # ThreadPool since 2025-7-25
-                 )
-
-        def iterate(
-                self, model: 'Seepage', dt: float, *,
-                fa_s: Optional[int] = None, fa_q: Optional[int] = None,
-                fa_k: Optional[int] = None, ca_p: Optional[int] = None,
-                dv_rela: Optional[float] = None,
-                solver: Optional['ConjugateGradientSolver'] = None,
-                pool: Optional[ThreadPool] = None,
-                report: Optional[Map] = None,
-        ):
-            """
-            将给定的模型在时间上向前迭代(更新流动).
-
-            Args:
-                model: 即将被迭代的渗流模型对象(Seepage)
-                dt (float): 迭代的目标时间步长 [单位：秒]
-                    注意，当给定dv_rela的时候，将会进行检查，最终采用的，可能并不是这个给定的
-                    时间步长。
-                fa_s (int, optional): Face自定义属性的ID，
-                    代表Face的横截面积（用于计算Face内流体的受力），默认为None。
-                    当考虑惯性的时候，需要给定
-                fa_q (int, optional): Face自定义属性的ID，
-                    代表Face内流体在通量(也将在iterate中更新)，默认为None。
-                    当考虑惯性的时候，需要给定(且需要给定初始值)
-                fa_k (int, optional): Face内流体的"惯性系数"的属性ID，
-                    默认为None。
-                    当考虑惯性的时候，需要给定(且需要给定初始值)
-                ca_p (int, optional): Cell的自定义属性，
-                    用于写入Cell内流体的压力(迭代时的压力，并非按照流体体积进行计算的)，
-                    默认为None（即不写入）
-                solver (ConjugateGradientSolver, optional): 求解器实例，
-                    默认为None。
-                pool (ThreadPool, optional): 线程池实例，
-                    默认为None。
-                report (Map, optional): 报告对象，
-                    默认为None (此时，会新建一个Map并且传入内核).
-                dv_rela (float, optional): 控制时间步长（最大允许的值）。
-                    代表dt内流体流过的“最大距离”与网格的比值。
-                    当dv_rela为None的时候，将直接使用给定的dt来进行迭代。
-                    当dv_rela给定的时候，则会检查给定的dt是否满足条件。如果不满足，则会降低dt。
-
-            Notes:
-                关于惯性：
-                    对于Face中的流体，定义其动量为
-                        momentum = m*v = k*q
-                    其中q为通过该Face的流体的速率，k是一个自定义的系数. 这个系数越大，则流体的惯性越强.
-                    另外，作用在Face上的流体的作用力为：
-                        f = dp*s
-                    其中s为横截面积. 根据动量定理，动量的变化量为
-                        m*d(v)=k*d(q)=f*d(t)
-                    以上就是在程序中考虑惯性的基本的逻辑。因此，要计算流体的惯性效应，关键是要正确设置Face的
-                    面积s和系数k这两个属性。另外，在迭代的过程中，随着face内流体的密度的变化，也应该去更新
-                    这两个属性的值.
-
-            Returns:
-                dict: 包含迭代报告的字典，可能会包括：
-                    dt_modify_times: 时间步长调整的次数
-                    dv_rela: 实际的dv_rela
-                    dt_error: 1 (当dt错误的时候；)；若存在此key，则迭代失败
-                    dt: 实际采用的时间步长。
-            """
-            # 检查计算模块是否有授权
-            lic.check_once()
-
-            if solver is None:
-                solver = self.get_sol()
-
-            # 如下几个属性，都不是必须的，这里，给出默认值
-            if fa_s is None:
-                fa_s = 1000000000
-            if fa_q is None:
-                fa_q = 1000000000
-            if fa_k is None:
-                fa_k = 1000000000
-            if ca_p is None:
-                ca_p = 1000000000
-
-            if dv_rela is None:  # 给定一个非常大，一定可以满足的值
-                dv_rela = 1.0e30
-            else:
-                assert 0 < dv_rela
-
-            if isinstance(pool, ThreadPool):  # 将任务放入线程池，然后立即返回
-                assert isinstance(report, Map), "report must be a Map object when using thread pool."
-                core.seepage_fs_iterate(
-                    self.handle, model.handle, report.handle,
-                    dt, dv_rela,
-                    fa_s, fa_q, fa_k, ca_p,
-                    solver.handle, pool.handle
-                )
-                return None
-
-            else:  # 此时，直接运行，并且返回计算的报告
-                if not isinstance(report, Map):
-                    report = Map()
-                core.seepage_fs_iterate(
-                    self.handle, model.handle, report.handle,
-                    dt, dv_rela,
-                    fa_s, fa_q, fa_k, ca_p,
-                    solver.handle, 0
-                )
-                return report.to_dict()
-
-        core.use(c_double, 'seepage_fs_get_dv', c_void_p)
-
-        def get_recommended_dt(
-                self, previous_dt: float,
-                dv_relative: float = 0.1,
-                cfl: Optional[float] = None) -> float:
-            """
-            在调用了iterate函数之后，调用此函数，来获取更优的时间步长。
-            特别注意，
-            这个函数依赖于模型内部的一些缓存，因此，需要在每次iterate之后，立即调用此
-            函数来获取建议的时间步长，否则如果缓存失效，则此函数可能出错。
-
-            Args:
-                previous_dt: 上一次的时间步长。应该为iterate函数返回报告中的dt(实际的dt)
-                dv_relative: 相对变化阈值，默认为0.1.
-                             此参数即为Courant-Friedrichs-Lewy数，简称CFL数。
-                cfl: Courant-Friedrichs-Lewy数，默认为None。
-            Returns:
-                float: 建议的时间步长。
-            """
-            dv_max = core.seepage_fs_get_dv(self.handle)
-            dv_max = max(1.0e-6, dv_max)
-            dt = previous_dt
-            if cfl is not None:  # 新的变量名，覆盖dv_relative，后续，dv_relative可能会被移除
-                assert 0 < cfl <= 1.0, 'cfl must be in (0, 1]'
-                dv_relative = cfl
-            if dv_max > dv_relative:
-                dt *= (dv_relative / dv_max)
-            else:
-                dt *= min(2.0, math.sqrt(dv_relative / dv_max))
-            return dt
-
-    class ThermalSol(HasHandle):
-        """
-        热传导求解器
-        """
-        core.use(c_void_p, 'new_seepage_ts')
-        core.use(None, 'del_seepage_ts', c_void_p)
-
-        def __init__(self, handle: Optional[c_void_p] = None):
-            """
-            初始化热传导求解器类的实例。
-            Args:
-                handle: 句柄，默认为None。
-            """
-            super().__init__(handle, core.new_seepage_ts, core.del_seepage_ts)
-            self.solver = None  # 线性求解器，线性方程组Ax=b的计算引擎
-
-        def get_sol(self) -> 'ConjugateGradientSolver':
-            if self.solver is None:
-                self.solver = ConjugateGradientSolver(tolerance=1.0e-25)
-            return self.solver
-
-        core.use(None, 'seepage_ts_iterate',
-                 c_void_p, c_void_p,
-                 c_void_p,
-                 c_size_t, c_size_t, c_size_t,
-                 c_double, c_void_p,
-                 c_void_p  # ThreadPool since 2025-7-25
-                 )
-
-        def iterate(self, model: 'Seepage', dt: float, *, ca_t=None, ca_mc=None, fa_g=None, solver=None,
-                    pool=None, report=None):
-            """
-            对于此渗流模型，当定义了热传导相关的参数之后，可以作为一个热传导模型来使用。
-            具体和Thermal模型类似。
-
-            Args:
-                model: 渗流模型对象。
-                dt (float): 时间步长。
-                ca_t (int): Cell的温度属性的ID。
-                ca_mc (int): Cell范围内质量和比热的乘积。
-                fa_g (int): Face导热的通量g；
-                    单位时间内通过Face的热量dH = g * dT。
-                solver (ConjugateGradientSolver, optional): 求解器实例，
-                    默认为None。
-                pool (ThreadPool, optional): 线程池实例，
-                    默认为None。
-                report (Map, optional): 报告对象，默认为None。
-
-            Returns:
-                dict: 包含迭代报告的字典。
-            """
-            lic.check_once()
-
-            if dt <= 0 or ca_t is None or ca_mc is None or fa_g is None:  # 此时无法迭代，直接返回
-                return None
-
-            if solver is None:
-                solver = self.get_sol()
-
-            if isinstance(pool, ThreadPool):  # 将任务放入线程池，然后立即返回（需要在后续手动进行同步）
-                assert isinstance(report, Map), "report must be a Map object"
-                core.seepage_ts_iterate(
-                    self.handle, model.handle, report.handle,
-                    ca_t, ca_mc, fa_g,
-                    dt, solver.handle, pool.handle
-                )
-                return None
-
-            else:  # 此时，直接运行
-                if not isinstance(report, Map):
-                    report = Map()
-                core.seepage_ts_iterate(
-                    self.handle, model.handle,
-                    report.handle,
-                    ca_t, ca_mc, fa_g,
-                    dt, solver.handle, 0
-                )
-                return report.to_dict()
-
-        core.use(c_double, 'seepage_ts_get_de',
-                 c_void_p,
-                 c_void_p, c_size_t, c_size_t)
-
-        def get_recommended_dt(
-                self, model: 'Seepage', previous_dt: float,
-                dv_relative: float = 0.1,
-                ca_t: Optional[int] = None, ca_mc: Optional[int] = None, cfl: Optional[float] = None) -> float:
-            """
-            在调用了iterate函数之后，调用此函数，来获取更优的时间步长。
-            特别注意，
-            这个函数依赖于模型内部的一些缓存，因此，需要在每次iterate之后，立即调用此
-            函数来获取建议的时间步长，否则如果缓存失效，则此函数可能出错。
-
-            Args:
-                model: 渗流模型对象。
-                previous_dt: 上一次的时间步长。
-                dv_relative: 相对变化阈值，默认为0.1.
-                             此参数即为Courant-Friedrichs-Lewy数，简称CFL数。
-                ca_t: Cell的温度属性的ID，默认为None。
-                ca_mc: Cell范围内质量和比热的乘积，默认为None。
-                cfl: Courant-Friedrichs-Lewy数，默认为None。
-
-            Returns:
-                float: 建议的时间步长。
-            """
-            assert ca_mc is not None, "ca_mc must be specified"
-            assert ca_t is not None, "ca_t must be specified"
-            dv_max = core.seepage_ts_get_de(
-                self.handle,
-                model.handle, ca_t, ca_mc)
-            dv_max = max(1.0e-6, dv_max)
-            dt = previous_dt
-            if cfl is not None:  # 新的变量名，覆盖dv_relative，后续，dv_relative可能会被移除
-                assert 0 < cfl <= 1.0, 'cfl must be in (0, 1]'
-                dv_relative = cfl
-            if dv_max > dv_relative:
-                dt *= (dv_relative / dv_max)
-            else:
-                dt *= min(2.0, math.sqrt(dv_relative / dv_max))
-            return dt
+    Reaction = Reaction
+    FluDef = FluDef
+    FluData = FluData
+    Fluid = Fluid
+    CellData = CellData
+    Cell = Cell
+    FaceData = FaceData
+    Face = Face
+    Injector = Injector
+    FlowSol = FlowSol
+    ThermalSol = ThermalSol
 
     core.use(c_void_p, 'new_seepage')
     core.use(None, 'del_seepage', c_void_p)
@@ -4073,8 +4043,7 @@ class Seepage(HasHandle, HasCells):
                 f'face_n={self.face_number}, '
                 f'note={self.get_note()})')
 
-    core.use(None, 'seepage_save',
-             c_void_p, c_char_p)
+    core.use(None, 'seepage_save', c_void_p, c_char_p)
 
     def save(self, path: str):
         """
@@ -4098,8 +4067,7 @@ class Seepage(HasHandle, HasCells):
             make_parent(path)
             core.seepage_save(self.handle, make_c_char_p(path))
 
-    core.use(None, 'seepage_load',
-             c_void_p, c_char_p)
+    core.use(None, 'seepage_load', c_void_p, c_char_p)
 
     def load(self, path: str):
         """
@@ -4113,10 +4081,8 @@ class Seepage(HasHandle, HasCells):
             check_ipath(path, self)
             core.seepage_load(self.handle, make_c_char_p(path))
 
-    core.use(None, 'seepage_write_fmap',
-             c_void_p, c_void_p, c_char_p)
-    core.use(None, 'seepage_read_fmap',
-             c_void_p, c_void_p, c_char_p)
+    core.use(None, 'seepage_write_fmap', c_void_p, c_void_p, c_char_p)
+    core.use(None, 'seepage_read_fmap', c_void_p, c_void_p, c_char_p)
 
     def to_fmap(self, fmt: str = 'binary') -> FileMap:
         """
@@ -4130,8 +4096,7 @@ class Seepage(HasHandle, HasCells):
             FileMap: 包含序列化数据的 FileMap 对象。
         """
         fmap = FileMap()
-        core.seepage_write_fmap(self.handle, fmap.handle,
-                                make_c_char_p(fmt))
+        core.seepage_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
         return fmap
 
     def from_fmap(self, fmap: FileMap, fmt: str = 'binary'):
@@ -4144,8 +4109,7 @@ class Seepage(HasHandle, HasCells):
                 默认为 'binary'。
         """
         assert isinstance(fmap, FileMap)
-        core.seepage_read_fmap(
-            self.handle, fmap.handle, make_c_char_p(fmt))
+        core.seepage_read_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
 
     @property
     def fmap(self) -> FileMap:
@@ -4167,10 +4131,8 @@ class Seepage(HasHandle, HasCells):
         """
         self.from_fmap(value, fmt='binary')
 
-    core.use(c_char_p, 'seepage_get_text',
-             c_void_p, c_char_p)
-    core.use(None, 'seepage_set_text',
-             c_void_p, c_char_p, c_char_p)
+    core.use(c_char_p, 'seepage_get_text', c_void_p, c_char_p)
+    core.use(None, 'seepage_set_text', c_void_p, c_char_p, c_char_p)
 
     def get_text(self, key: str) -> str:
         """
@@ -4182,8 +4144,7 @@ class Seepage(HasHandle, HasCells):
         Returns:
             str: 存储的文本数据。
         """
-        return core.seepage_get_text(self.handle,
-                                     make_c_char_p(key)).decode()
+        return core.seepage_get_text(self.handle, make_c_char_p(key)).decode()
 
     def set_text(self, key: str, text: Union[str, Any]):
         """
@@ -4195,8 +4156,7 @@ class Seepage(HasHandle, HasCells):
         """
         if not isinstance(text, str):
             text = f'{text}'
-        core.seepage_set_text(self.handle, make_c_char_p(key),
-                              make_c_char_p(text))
+        core.seepage_set_text(self.handle, make_c_char_p(key), make_c_char_p(text))
 
     def add_note(self, text: str):
         """
@@ -4329,7 +4289,7 @@ class Seepage(HasHandle, HasCells):
         """
         core.seepage_set_inj_n(self.handle, count)
 
-    def get_cell(self, index: int) -> Optional['Seepage.Cell']:
+    def get_cell(self, index: int) -> Optional['Cell']:
         """
         返回第index个Cell对象
 
@@ -4337,15 +4297,15 @@ class Seepage(HasHandle, HasCells):
             index (int): 单元的索引。
 
         Returns:
-            Seepage.Cell: 第 index 个单元对象，如果索引无效则返回 None。
+            Cell: 第 index 个单元对象，如果索引无效则返回 None。
         """
         index_ = get_index(index, self.cell_number)
         if index_ is not None:
-            return Seepage.Cell(self, index_)
+            return Cell(self, index_)
         else:
             return None
 
-    def get_face(self, index: int) -> Optional['Seepage.Face']:
+    def get_face(self, index: int) -> Optional['Face']:
         """
         返回第index个Face对象
 
@@ -4353,18 +4313,17 @@ class Seepage(HasHandle, HasCells):
             index (int): 面的索引。
 
         Returns:
-            Seepage.Face: 第 index 个面对象，如果索引无效则返回 None。
+            Face: 第 index 个面对象，如果索引无效则返回 None。
         """
         index_ = get_index(index, self.face_number)
         if index_ is not None:
-            return Seepage.Face(self, index_)
+            return Face(self, index_)
         else:
             return None
 
-    core.use(c_void_p, 'seepage_get_inj',
-             c_void_p, c_size_t)
+    core.use(c_void_p, 'seepage_get_inj', c_void_p, c_size_t)
 
-    def get_injector(self, index: int) -> Optional['Seepage.Injector']:
+    def get_injector(self, index: int) -> Optional['Injector']:
         """
         返回第index个Injector对象
 
@@ -4372,18 +4331,17 @@ class Seepage(HasHandle, HasCells):
             index (int): 注入器的索引。
 
         Returns:
-            Seepage.Injector: 第 index 个注入器对象，如果索引无效则返回 None。
+            Injector: 第 index 个注入器对象，如果索引无效则返回 None。
         """
         index_ = get_index(index, self.injector_number)
         if index_ is not None:
-            return Seepage.Injector(handle=core.seepage_get_inj(self.handle, index_))
+            return Injector(handle=core.seepage_get_inj(self.handle, index_))
         else:
             return None
 
-    core.use(c_size_t, 'seepage_add_cell',
-             c_void_p)
+    core.use(c_size_t, 'seepage_add_cell', c_void_p)
 
-    def add_cell(self, data: Optional['Seepage.CellData'] = None) -> 'Seepage.Cell':
+    def add_cell(self, data: Optional['CellData'] = None) -> 'Cell':
         """
         添加一个新的Cell，并返回Cell对象
 
@@ -4391,7 +4349,7 @@ class Seepage(HasHandle, HasCells):
             data (optional): 要克隆到新单元的数据。默认为 None。
 
         Returns:
-            Seepage.Cell: 新添加的单元对象。
+            Cell: 新添加的单元对象。
         """
         cell_id = core.seepage_add_cell(self.handle)
         cell = self.get_cell(cell_id)
@@ -4403,7 +4361,7 @@ class Seepage(HasHandle, HasCells):
     core.use(c_size_t, 'seepage_add_face', c_void_p, c_size_t, c_size_t)
 
     def add_face(self, cell0, cell1,
-                 data: Optional['Seepage.FaceData'] = None) -> Optional['Seepage.Face']:
+                 data: Optional['FaceData'] = None) -> Optional['Face']:
         """
         在两个给定的Cell之间创建Face（注意：两个Cell之间只能有一个Face）
 
@@ -4413,13 +4371,13 @@ class Seepage(HasHandle, HasCells):
             data (optional): 要克隆到新面的数据。默认为 None。
 
         Returns:
-            Seepage.Face: 新添加的面对象，如果创建失败则返回 None。
+            Face: 新添加的面对象，如果创建失败则返回 None。
         """
-        if isinstance(cell0, Seepage.Cell):
+        if isinstance(cell0, Cell):
             assert cell0.model.handle == self.handle
             cell0 = cell0.index
 
-        if isinstance(cell1, Seepage.Cell):
+        if isinstance(cell1, Cell):
             assert cell1.model.handle == self.handle
             cell1 = cell1.index
 
@@ -4438,17 +4396,17 @@ class Seepage(HasHandle, HasCells):
 
     core.use(c_size_t, 'seepage_add_inj', c_void_p)
 
-    def add_injector(self, cell: Optional[Union['Seepage.Cell', int]] = None,
+    def add_injector(self, cell: Optional[Union['Cell', int]] = None,
                      fluid_id: Optional[Union[int, str, List[int], Tuple[int, ...]]] = None,
-                     flu: Optional['Seepage.FluData'] = None,
-                     data: Optional['Seepage.Injector'] = None,
+                     flu: Optional['FluData'] = None,
+                     data: Optional['Injector'] = None,
                      pos: Optional[Union[List[float], Tuple[float]]] = None,
                      radi: Optional[float] = None,
                      opers: Optional[List[Any]] = None,
                      ca_mc: Optional[int] = None,
                      ca_t: Optional[int] = None,
                      g_heat: Optional[float] = None, value: Optional[float] = None
-                     ) -> 'Seepage.Injector':
+                     ) -> 'Injector':
         """
         添加一个注入点. 首先尝试拷贝data；
         然后尝试利用给定cell、fluid_id和flu进行设置。返回新添加的Injector对象
@@ -4485,11 +4443,11 @@ class Seepage(HasHandle, HasCells):
         assert inj is not None
 
         if data is not None:
-            assert isinstance(data, Seepage.Injector)
+            assert isinstance(data, Injector)
             inj.clone(data)
 
         if cell is not None:  # 可以是cell对象，也可以是cell的id
-            if isinstance(cell, Seepage.Cell):
+            if isinstance(cell, Cell):
                 assert cell.model.handle == self.handle  # 必须是同一个模型
                 cell = cell.index
             inj.cell_id = cell
@@ -4502,7 +4460,7 @@ class Seepage(HasHandle, HasCells):
                               (int, tuple, list)), f'fluid_id must be int, tuple, or list, but got {type(fluid_id)}'
             inj.set_fid(fluid_id)
 
-        if isinstance(flu, Seepage.FluData):  # 只有在等于FluData的时候才使用.
+        if isinstance(flu, FluData):  # 只有在等于FluData的时候才使用.
             inj.flu.clone(flu)
 
         if pos is not None:  # 给定注入的位置，后续，则自动去查找附近的cell
@@ -4530,7 +4488,7 @@ class Seepage(HasHandle, HasCells):
         return inj
 
     @property
-    def cells(self) -> Iterable['Seepage.Cell']:
+    def cells(self) -> Iterable['Cell']:
         """
         模型中所有的Cell
 
@@ -4540,7 +4498,7 @@ class Seepage(HasHandle, HasCells):
         return Iterator(self, self.cell_number, lambda m, ind: m.get_cell(ind))
 
     @property
-    def faces(self) -> Iterable['Seepage.Face']:
+    def faces(self) -> Iterable['Face']:
         """
         模型中所有的Face
 
@@ -4550,7 +4508,7 @@ class Seepage(HasHandle, HasCells):
         return Iterator(self, self.face_number, lambda m, ind: m.get_face(ind))
 
     @property
-    def injectors(self) -> Iterable['Seepage.Injector']:
+    def injectors(self) -> Iterable['Injector']:
         """
         模型中所有的Injector
 
@@ -4559,9 +4517,7 @@ class Seepage(HasHandle, HasCells):
         """
         return Iterator(self, self.injector_number, lambda m, ind: m.get_injector(ind))
 
-    core.use(None, 'seepage_apply_injs',
-             c_void_p, c_double,
-             c_double, c_void_p)
+    core.use(None, 'seepage_apply_injs', c_void_p, c_double, c_double, c_void_p)
 
     def apply_injectors(self, *, time: Optional[float] = None, dt: Optional[float] = None,
                         pool: Optional[ThreadPool] = None):
@@ -4575,7 +4531,7 @@ class Seepage(HasHandle, HasCells):
         """
         if time is None:
             warnings.warn(
-                'time is None for Seepage.Injector, use time=0 as default')
+                'time is None for Injector, use time=0 as default')
             time = 0
         if dt is None:
             return
@@ -4921,8 +4877,7 @@ class Seepage(HasHandle, HasCells):
         else:
             return None
 
-    core.use(None, 'seepage_set_curve',
-             c_void_p, c_size_t, c_void_p)
+    core.use(None, 'seepage_set_curve', c_void_p, c_size_t, c_void_p)
 
     def set_curve(self, index, curve):
         """
@@ -4935,8 +4890,7 @@ class Seepage(HasHandle, HasCells):
         if isinstance(curve, Interp1):
             core.seepage_set_curve(self.handle, index, curve.handle)
 
-    core.use(c_size_t, 'seepage_get_fludef_n',
-             c_void_p)
+    core.use(c_size_t, 'seepage_get_fludef_n', c_void_p)
 
     @property
     def fludef_number(self):
@@ -4959,8 +4913,7 @@ class Seepage(HasHandle, HasCells):
         """
         core.seepage_set_fludef_n(self.handle, val)
 
-    core.use(c_bool, 'seepage_find_fludef',
-             c_void_p, c_char_p, c_void_p)
+    core.use(c_bool, 'seepage_find_fludef', c_void_p, c_char_p, c_void_p)
 
     def find_fludef(self, name, buffer=None):
         """
@@ -4982,9 +4935,7 @@ class Seepage(HasHandle, HasCells):
             return buffer.to_list()
         return None
 
-    core.use(c_void_p, 'seepage_get_fludef',
-             c_void_p, c_size_t, c_size_t,
-             c_size_t)
+    core.use(c_void_p, 'seepage_get_fludef', c_void_p, c_size_t, c_size_t, c_size_t)
 
     def get_fludef(self, key):
         """
@@ -4994,7 +4945,7 @@ class Seepage(HasHandle, HasCells):
             key (str or int or list): 流体定义的名称、序号或序号列表。
 
         Returns:
-            Seepage.FluDef: 找到的流体定义对象，如果未找到则返回 None。
+            FluDef: 找到的流体定义对象，如果未找到则返回 None。
         """
         if isinstance(key, str):
             key = self.find_fludef(key)
@@ -5002,7 +4953,7 @@ class Seepage(HasHandle, HasCells):
             return None
         handle = core.seepage_get_fludef(self.handle, *parse_fid3(key))
         if handle:
-            return Seepage.FluDef(handle=handle)
+            return FluDef(handle=handle)
         else:
             return None
 
@@ -5011,17 +4962,17 @@ class Seepage(HasHandle, HasCells):
         添加一个流体定义
 
         Args:
-            fdef (Seepage.FluDef or list): 要添加的流体定义对象或数据。
+            fdef (FluDef or list): 要添加的流体定义对象或数据。
             need_id (bool, optional): 是否返回添加的流体定义的 ID。默认为 False。
             name (str, optional): 流体定义的名称。默认为 None。
 
         Returns:
-            Seepage.FluDef or int: 如果 need_id 为 False，
+            FluDef or int: 如果 need_id 为 False，
             则返回添加的流体定义对象；否则返回添加的流体定义的 ID。
         """
-        if not isinstance(fdef, Seepage.FluDef):
+        if not isinstance(fdef, FluDef):
             # 此时，可能是一个list
-            fdef = Seepage.FluDef.create(fdef)
+            fdef = FluDef.create(fdef)
         idx = self.fludef_number
         self.fludef_number = idx + 1
         result = self.get_fludef(idx)
@@ -5044,7 +4995,7 @@ class Seepage(HasHandle, HasCells):
         清除并设置所有的流体定义
 
         Args:
-            *args (Seepage.FluDef or list): 要设置的流体定义对象或数据。
+            *args (FluDef or list): 要设置的流体定义对象或数据。
         """
         self.clear_fludefs()
         for item in args:
@@ -5153,11 +5104,11 @@ class Seepage(HasHandle, HasCells):
             index (int): 反应的索引。
 
         Returns:
-            Seepage.Reaction: 第 idx 个反应对象，如果索引无效则返回 None。
+            Reaction: 第 idx 个反应对象，如果索引无效则返回 None。
         """
         index = get_index(index, self.reaction_number)
         if index is not None:
-            return Seepage.Reaction(
+            return Reaction(
                 handle=core.seepage_get_reaction(self.handle, index))
         else:
             return None
@@ -5167,18 +5118,18 @@ class Seepage(HasHandle, HasCells):
         添加一个反应
 
         Args:
-            data (Seepage.Reaction): 要添加的反应对象。
+            data (Reaction): 要添加的反应对象。
             need_id (bool, optional): 是否返回添加的反应的 ID。默认为 False。
 
         Returns:
-            Seepage.Reaction or int: 如果 need_id 为 False，
+            Reaction or int: 如果 need_id 为 False，
             则返回添加的反应对象；否则返回添加的反应的 ID。
         """
-        if not isinstance(data, Seepage.Reaction):
+        if not isinstance(data, Reaction):
             assert isinstance(data, dict)
             from zmlx.react import alg
             warnings.warn(
-                'The none Seepage.Reaction type will '
+                'The none Reaction type will '
                 'not be supported after 2026-2-7',
                 DeprecationWarning, stacklevel=2)
             return alg.add_reaction(self, data, need_id=need_id)
@@ -5231,18 +5182,18 @@ class Seepage(HasHandle, HasCells):
             反应对象
 
         Warnings:
-            zml.Seepage.Reaction.create_reaction 将在2026-2-7之后移除，
+            zml.Reaction.create_reaction 将在2026-2-7之后移除，
             请使用 zmlx.react.create_reaction 代替。
         """
         warnings.warn(
-            'zml.Seepage.Reaction.create_reaction will be '
+            'zml.Reaction.create_reaction will be '
             'remove after 2026-2-7',
             DeprecationWarning, stacklevel=2)
         from zmlx.react.alg import create_reaction as create
         return create(self, **kwargs)
 
     @property
-    def reactions(self) -> Iterable['Seepage.Reaction']:
+    def reactions(self) -> Iterable['Reaction']:
         """
         迭代所有的反应
 
@@ -5308,8 +5259,7 @@ class Seepage(HasHandle, HasCells):
         """
         return not self.has_tag(tag)
 
-    core.use(None, 'seepage_add_tag',
-             c_void_p, c_char_p)
+    core.use(None, 'seepage_add_tag', c_void_p, c_char_p)
 
     def add_tag(self, tag, *tags):
         """
@@ -5329,8 +5279,7 @@ class Seepage(HasHandle, HasCells):
                 self.add_tag(tag=tag)
         return self
 
-    core.use(None, 'seepage_del_tag',
-             c_void_p, c_char_p)
+    core.use(None, 'seepage_del_tag', c_void_p, c_char_p)
 
     def del_tag(self, tag, *tags):
         """
@@ -5644,7 +5593,7 @@ class Seepage(HasHandle, HasCells):
 
     core.use(c_size_t, 'seepage_get_nearest_cell_id', c_void_p, c_double, c_double, c_double, c_size_t, c_size_t)
 
-    def get_nearest_cell(self, pos, i_beg=None, i_end=None) -> Optional['Seepage.Cell']:
+    def get_nearest_cell(self, pos, i_beg=None, i_end=None) -> Optional['Cell']:
         """
         返回与给定位置距离最近的cell (在[i_beg, i_end)的范围内搜索)
 
@@ -6125,8 +6074,7 @@ class Seepage(HasHandle, HasCells):
             ds_max,
             0 if face_groups is None else face_groups.handle)
 
-    core.use(None, 'seepage_heating',
-             c_void_p, c_size_t, c_size_t, c_size_t, c_double)
+    core.use(None, 'seepage_heating', c_void_p, c_size_t, c_size_t, c_size_t, c_double)
 
     def heating(self, ca_mc, ca_t, ca_p, dt) -> 'Seepage':
         """
@@ -6146,9 +6094,7 @@ class Seepage(HasHandle, HasCells):
         core.seepage_heating(self.handle, ca_mc, ca_t, ca_p, dt)
         return self
 
-    core.use(None, 'seepage_update_sand',
-             c_void_p,
-             c_size_t, c_size_t,
+    core.use(None, 'seepage_update_sand', c_void_p, c_size_t, c_size_t,
              c_size_t, c_size_t, c_size_t,
              c_size_t, c_size_t, c_size_t, c_void_p, c_void_p)
 
@@ -6211,13 +6157,13 @@ class Seepage(HasHandle, HasCells):
             since: 2023-04
 
         Args:
-            buffer (Seepage.CellData): 用于暂存流体的缓冲区
+            buffer (CellData): 用于暂存流体的缓冲区
             pool: 线程池
 
         Returns:
             None
         """
-        assert isinstance(buffer, Seepage.CellData)
+        assert isinstance(buffer, CellData)
         core.seepage_pop_fluids(
             self.handle, buffer.handle,
             pool.handle if isinstance(pool, ThreadPool) else 0
@@ -6228,29 +6174,42 @@ class Seepage(HasHandle, HasCells):
         将buffer中暂存的流体追加到各个Cell中。和pop_fluids函数搭配使用。
 
         Args:
-            buffer (Seepage.CellData): 暂存流体的缓冲区
+            buffer (CellData): 暂存流体的缓冲区
             pool: 线程池
 
         Returns:
             None
         """
-        assert isinstance(buffer, Seepage.CellData)
+        assert isinstance(buffer, CellData)
         core.seepage_push_fluids(
             self.handle, buffer.handle,
             pool.handle if isinstance(pool, ThreadPool) else 0
         )
 
-    def get_flow_sol(self):
+    def get_temporary(self, key, the_type):
+        """
+        返回一个临时变量(这个临时变量在save和load的时候会丢失)。确保返回的类型为the_type
+        Args:
+            key: 临时变量的名称
+            the_type: 临时变量的类型
+        Returns:
+            临时变量的实例
+        """
+        res = self.temps.get(key)
+        if not isinstance(res, the_type):
+            res = the_type()
+            self.temps[key] = res
+            return res
+        else:
+            return res
+
+    def get_flow_sol(self) -> 'FlowSol':
         """
         返回模型内部的一个临时变量（用于流体求解）
         """
-        flow_sol = self.temps.get('flow_sol')
-        if not isinstance(flow_sol, Seepage.FlowSol):
-            res = Seepage.FlowSol()
-            self.temps['flow_sol'] = res
-            return res
-        else:
-            return flow_sol
+        res = self.get_temporary('flow_sol', FlowSol)
+        assert isinstance(res, FlowSol)
+        return res
 
     def iterate(self, dt, *,
                 fa_s: Optional[int] = None, fa_q: Optional[int] = None,
@@ -6262,27 +6221,19 @@ class Seepage(HasHandle, HasCells):
                 ):
         """
         迭代模型内的流动过程。
-        Args:
-            dt (float): 时间步长。
-        Returns:
-            迭代结果
         """
         return self.get_flow_sol().iterate(
             model=self, dt=dt, fa_s=fa_s, fa_q=fa_q, fa_k=fa_k, ca_p=ca_p, dv_rela=dv_rela,
             solver=solver, pool=pool, report=report,
         )
 
-    def get_thermal_sol(self):
+    def get_thermal_sol(self) -> 'ThermalSol':
         """
         返回模型内部的一个临时变量（用于温度场求解）
         """
-        thermal_sol = self.temps.get('thermal_sol')
-        if not isinstance(thermal_sol, Seepage.ThermalSol):
-            res = Seepage.ThermalSol()
-            self.temps['thermal_sol'] = res
-            return res
-        else:
-            return thermal_sol
+        res = self.get_temporary('thermal_sol', ThermalSol)
+        assert isinstance(res, ThermalSol)
+        return res
 
     def iterate_thermal(self, dt, **opts):
         """
@@ -6309,17 +6260,16 @@ class Seepage(HasHandle, HasCells):
         Returns:
             float: 推荐的时间步长
         """
+        warnings.warn("Seepage.get_recommended_dt is deprecated (will be removed after 2027-6-8).", DeprecationWarning,
+                      stacklevel=2)
         if ca_t is not None and ca_mc is not None:
-            thermal_sol = self.temps.get('thermal_sol')
-            assert isinstance(thermal_sol, Seepage.ThermalSol)
+            thermal_sol = self.get_thermal_sol()
             return thermal_sol.get_recommended_dt(self, *args, ca_t=ca_t, ca_mc=ca_mc, **kwargs)
         else:
-            flow_sol = self.temps.get('flow_sol')
-            assert isinstance(flow_sol, Seepage.FlowSol)
+            flow_sol = self.get_flow_sol()
             return flow_sol.get_recommended_dt(*args, **kwargs)
 
-    core.use(c_double, 'seepage_get_fluid_mass',
-             c_void_p, c_size_t, c_size_t, c_size_t)
+    core.use(c_double, 'seepage_get_fluid_mass', c_void_p, c_size_t, c_size_t, c_size_t)
 
     def get_fluid_mass(self, fluid_id=None):
         """
@@ -6520,8 +6470,7 @@ class Seepage(HasHandle, HasCells):
             assert value is not None
             core.seepage_cells_read(self.handle, 0, value, index)
 
-    core.use(None, 'seepage_faces_write',
-             c_void_p, c_void_p, c_int64)
+    core.use(None, 'seepage_faces_write', c_void_p, c_void_p, c_int64)
 
     def faces_write(self, *, index, pointer):
         """
@@ -7057,9 +7006,6 @@ class Seepage(HasHandle, HasCells):
         assert buf is not None
         core.seepage_get_face_right(self.handle, ctypes.cast(buf, c_void_p), ctypes.cast(ca, c_void_p))
         return data
-
-
-Reaction = Seepage.Reaction
 
 
 class Thermal(HasHandle):

@@ -2,7 +2,7 @@
 计算各个face的位置流体压力的梯度，并作为一个numpy的数组返回
 """
 
-from zmlx.exts import Seepage, const_f64_ptr
+from zmlx.exts import FluDef, const_f64_ptr
 from zmlx.tfc._sand import get_face_pressure_gradient
 
 _keep = [get_face_pressure_gradient]
@@ -30,7 +30,7 @@ def test_1():
     model = tfc.create(
         mesh, p=get_p,
         s={'h2o': 1},
-        fludefs=[Seepage.FluDef(den=1000, name='h2o')],
+        fludefs=[FluDef(den=1000, name='h2o')],
         gravity=(0, 0, -10))
 
     print(get_face_pressure_gradient(model))

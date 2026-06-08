@@ -88,6 +88,7 @@ Studio运行库 [VC_redist.x64.exe](https://gitee.com/geomech/hydrate/attach_fil
 
 注：<sup>①</sup> 在[Gitee帮助中心](https://gitee.com/help#article-header0)
 有不少git的入门资料；新手建议安装[TortoiseGit](https://tortoisegit.org/)，它会在文件管理器添加右键菜单，可以满足大部分操作;
+另外，如果是Pycharm用户，可以参考 https://gitee.com/geomech/hydrate/issues/IJT65R; 
 <sup>②</sup>[Fork + Pull 模式](https://help.gitee.com/base/pullrequest/Fork+Pull)是Gitee建议的一种参与开发的方式.
 
 ### 镜像

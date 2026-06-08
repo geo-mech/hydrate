@@ -1,6 +1,6 @@
-def show_image(fig, file_path):
+def add_axes_img(fig, file_path):
     """
-    在给定的 matplotlib figure 上显示图片，保持比例不变，页边距尽可能为 0
+    在给定的 matplotlib figure 上绘制图片，保持比例不变，页边距尽可能为 0
 
     参数:
         fig: matplotlib 的 Figure 对象
