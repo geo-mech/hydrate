@@ -1,5 +1,5 @@
 import zmlx.tfc as tfc
-from zmlx.alg import get_pos_range
+from zmlx.exts import get_pos_range
 from zmlx.scen.geothermal_helium._create import create
 from zmlx.seepage_mesh import create_xz, add_cell_face
 from zmlx.ui import gui
