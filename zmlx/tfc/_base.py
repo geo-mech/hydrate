@@ -11,7 +11,9 @@ from ctypes import c_void_p
 from typing import Dict, Optional
 
 from zmlx.alg import sys as warnings, time2str, clamp
-from zmlx.exts import Seepage, Vector, is_array, Map, ThreadPool, np, clock, f64_ptr, const_f64_ptr, FluDef
+from zmlx.exts import (
+    Seepage, Vector, is_array, Map, ThreadPool, np, clock, f64_ptr, const_f64_ptr, FluDef, calc_recommended_dt
+)
 from zmlx.tfc._opts import merge_opts
 
 
@@ -985,18 +987,19 @@ def iterate_flow(*local_opts, pool=None, **global_opts):
         result = opts.get('result')
         assert isinstance(result, Map)
         result = result.to_dict()
-        real_dt = result.get('dt')
+        real_dt: Optional[float] = result.get('dt')
         if real_dt is None:
             continue
 
         set_attr(model, 'flow_real_dt', real_dt)  # 实际向前迭代的dt. 如果check_dt的时候，这个值可能和给定的dt不同.
 
         if opts['recommend_dt']:  # 建议新的dt.
-            dv_rela = opts['dv_rela']
+            dv_rela = opts['dv_rela']  # 设置的目标值
             if 0 < dv_rela < 1.0e3:
-                sol = model.get_flow_sol()
-                dt_next = sol.get_recommended_dt(previous_dt=real_dt, dv_relative=dv_rela)
-                add_dt_next(model, dt=dt_next, desc="flow")
+                prev_cfl = result.get('dv_rela', -1.0)
+                if prev_cfl > 0:
+                    dt_next = calc_recommended_dt(prev_dt=real_dt, prev_cfl=prev_cfl, target_cfl=dv_rela)
+                    add_dt_next(model, dt=dt_next, desc="flow")
 
 
 @clock
@@ -1029,6 +1032,7 @@ def iterate_thermal(*local_opts, pool=None, **global_opts):
         # 默认选项
         default_opts = dict(
             disable_ther=model.has_tag('disable_ther'),
+            check_dt=model.has_tag('check_dt'),
             recommend_dt=model.has_tag('recommend_dt'),  # 在传热迭代之后，添加建议的dt，对于自动步长管理很关键
             dt=get_dt(model),
             dv_rela=get_dv_relative(model),
@@ -1056,9 +1060,14 @@ def iterate_thermal(*local_opts, pool=None, **global_opts):
         model.temps[key_opt] = opts
 
         sol.iterate(
-            model, dt=opts['dt'], pool=pool, report=opts['result'],
-            ca_t=opts['ca_t'], ca_mc=opts['ca_mc'], fa_g=opts['fa_g'],
+            model, dt=opts['dt'],
+            pool=pool,
+            report=opts['result'],
+            ca_t=opts['ca_t'],
+            ca_mc=opts['ca_mc'],
+            fa_g=opts['fa_g'],
             solver=opts.get('solver'),
+            cfl=opts['dv_rela'] if opts['check_dt'] else None,
         )
 
     if isinstance(pool, ThreadPool):
@@ -1072,15 +1081,21 @@ def iterate_thermal(*local_opts, pool=None, **global_opts):
         if opts is None:
             continue
 
-        if opts['recommend_dt']:
-            sol = model.get_thermal_sol()
-            dt_next = sol.get_recommended_dt(
-                model, previous_dt=opts['dt'],
-                dv_relative=opts['dv_rela'],
-                ca_t=opts['ca_t'],
-                ca_mc=opts['ca_mc']
-            )
-            add_dt_next(model, dt=dt_next, desc="thermal")
+        assert isinstance(opts, dict)
+        result = opts.get('result')
+        assert isinstance(result, Map)
+        result = result.to_dict()
+        real_dt: Optional[float] = result.get('dt')
+        if real_dt is None:
+            continue
+
+        if opts['recommend_dt']:  # 建议新的dt.
+            dv_rela = opts['dv_rela']  # 设置的目标值
+            if 0 < dv_rela < 1.0e3:
+                prev_cfl = result.get('dv_rela', -1.0)
+                if prev_cfl > 0:
+                    dt_next = calc_recommended_dt(prev_dt=real_dt, prev_cfl=prev_cfl, target_cfl=dv_rela)
+                    add_dt_next(model, dt=dt_next, desc="thermal")
 
 
 class FloatBuffer:

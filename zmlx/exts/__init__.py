@@ -44,7 +44,8 @@ from zmlx.exts._dyn import *
 from zmlx.exts._sol import ConjugateGradientSolver
 import zmlx.exts._utils as has_cells
 from zmlx.exts._seepage import (
-    Seepage, Thermal, Reaction, FluDef, FluData, Fluid, CellData, Cell, FaceData, Face, Injector, FlowSol, ThermalSol
+    Seepage, Thermal, Reaction, FluDef, FluData, Fluid, CellData, Cell, FaceData, Face, Injector, FlowSol, ThermalSol,
+    calc_recommended_dt
 )
 from zmlx.exts._ip import InvasionPercolation
 from zmlx.exts._frac import Dfn2, Lattice3, FracAlg, FractureNetwork, InfMatrix, DDMSolution2
