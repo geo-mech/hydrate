@@ -1,4 +1,6 @@
 from dataclasses import dataclass, field
+from collections import OrderedDict
+from functools import lru_cache
 import json
 import math
 from typing import Dict, List
@@ -12,6 +14,7 @@ from zmlx.scen.mineralization_reactor._config import (
     MINERALS,
     STATE_SPECIES,
     ReactorConfig,
+    get_database,
     species_molar_mass,
     scene_config,
     scene_state,
@@ -67,6 +70,8 @@ class Co2StorageMineral(Mineralization):
     _default_state: dict = field(default=None, init=False, repr=False, compare=False)
     _system: object = field(default=None, init=False, repr=False, compare=False)
     _solver: object = field(default=None, init=False, repr=False, compare=False)
+    _molar_masses: dict = field(default=None, init=False, repr=False, compare=False)
+    _state_cache: object = field(default_factory=OrderedDict, init=False, repr=False, compare=False)
 
     def __post_init__(self):
         self._config = scene_config(self.scene, self.database, self.surface_area)
@@ -74,6 +79,9 @@ class Co2StorageMineral(Mineralization):
         self.database = self._config.database
         self.surface_area = self._config.surface_area
         self._default_state = scene_state(self.scene)
+        self._molar_masses = self._create_molar_mass_cache()
+        self._system = self._create_system()
+        self._solver = rkt.KineticsSolver(self._system)
 
     def list_fluid_names(self) -> List[str]:
         return list(FLUID_NAMES)
@@ -91,21 +99,13 @@ class Co2StorageMineral(Mineralization):
         return self._solver
 
     def _create_system(self):
-        db = rkt.SupcrtDatabase(self.database)
-        params = rkt.Params.embedded('PalandriKharaka.yaml')
-        aqueous = rkt.AqueousPhase(rkt.speciate('H O C Ca Mg Na K Al Si Cl S'))
-        aqueous.set(rkt.ActivityModelPitzer())
-        gas = rkt.GaseousPhase('CO2(g)')
-        gas.set(rkt.ActivityModelPengRobinsonPhreeqcOriginal())
+        return _cached_system(self.database, max(float(self.surface_area), 0.0))
 
-        args = [db, aqueous, gas, rkt.MineralPhases(' '.join(m.phase for m in MINERALS))]
+    def _create_molar_mass_cache(self):
+        masses = {'CO2(g)': species_molar_mass('CO2(g)', self.database)}
         for mineral in MINERALS:
-            args.append(
-                rkt.MineralReaction(mineral.phase).setRateModel(
-                    rkt.ReactionRateModelPalandriKharaka(params)))
-            args.append(rkt.MineralSurface(
-                mineral.phase, max(float(self.surface_area), 0.0), 'cm2/cm3'))
-        return rkt.ChemicalSystem(*args)
+            masses[mineral.phase] = species_molar_mass(mineral.phase, self.database)
+        return masses
 
     def _new_state(self, state: Dict[str, float], temperature, pressure):
         water = _positive(state.get('H2O', self._default_state['H2O']), self._default_state['H2O'])
@@ -133,6 +133,12 @@ class Co2StorageMineral(Mineralization):
         state0 = self._with_defaults(current_state)
         state1 = dict(state0)
         dt = max(float(time_step), 1.0e-12)
+        cache_key = self._cache_key(state0, dt, temperature, pressure)
+        cached = self._state_cache.get(cache_key)
+        if cached is not None:
+            self._state_cache.move_to_end(cache_key)
+            return dict(cached)
+
         initial = {m.phase: _positive(state0.get(m.phase, 0.0)) for m in MINERALS}
         chemical, water = self._new_state(state0, temperature, pressure)
         try:
@@ -155,13 +161,13 @@ class Co2StorageMineral(Mineralization):
                 continue
             state1[name] = _value(lambda n=name: props.speciesMass(n), state0[name])
 
-        co2_mass = species_molar_mass('CO2(g)', self.database)
+        co2_mass = self._molar_masses['CO2(g)']
         fixed_kg = 0.0
         released_kg = 0.0
         for mineral in MINERALS:
             amount = _value(lambda p=mineral.phase: props.speciesMass(p), initial[mineral.phase])
             delta = amount - initial[mineral.phase]
-            carbon = delta / species_molar_mass(mineral.phase, self.database) * mineral.carbon
+            carbon = delta / self._molar_masses[mineral.phase] * mineral.carbon
             carbon_kg = carbon * co2_mass
             fixed_kg += max(carbon_kg, 0.0)
             released_kg += max(-carbon_kg, 0.0)
@@ -173,6 +179,7 @@ class Co2StorageMineral(Mineralization):
         state1['CO2_fixed_kg'] = fixed_kg
         state1['CO2_released_kg'] = released_kg
         state1['mineralization_rate_kg_s'] = fixed_kg / dt
+        self._remember_state(cache_key, state1)
         return state1
 
     def to_text(self) -> str:
@@ -187,6 +194,45 @@ class Co2StorageMineral(Mineralization):
                 if value is not None:
                     result[key] = value
         return result
+
+    def _cache_key(self, state, dt, temperature, pressure):
+        items = tuple(
+            sorted((str(key), _cache_value(value)) for key, value in state.items()))
+        return (
+            float(dt),
+            float(temperature),
+            max(float(pressure), 1.0e5),
+            items)
+
+    def _remember_state(self, key, state):
+        self._state_cache[key] = dict(state)
+        self._state_cache.move_to_end(key)
+        while len(self._state_cache) > 64:
+            self._state_cache.popitem(last=False)
+
+
+@lru_cache(maxsize=16)
+def _cached_system(database, surface_area):
+    db = get_database(database)
+    params = _reaction_params()
+    aqueous = rkt.AqueousPhase(rkt.speciate('H O C Ca Mg Na K Al Si Cl S'))
+    aqueous.set(rkt.ActivityModelPitzer())
+    gas = rkt.GaseousPhase('CO2(g)')
+    gas.set(rkt.ActivityModelPengRobinsonPhreeqcOriginal())
+
+    args = [db, aqueous, gas, rkt.MineralPhases(' '.join(m.phase for m in MINERALS))]
+    for mineral in MINERALS:
+        args.append(
+            rkt.MineralReaction(mineral.phase).setRateModel(
+                rkt.ReactionRateModelPalandriKharaka(params)))
+        args.append(rkt.MineralSurface(
+            mineral.phase, surface_area, 'cm2/cm3'))
+    return rkt.ChemicalSystem(*args)
+
+
+@lru_cache(maxsize=1)
+def _reaction_params():
+    return rkt.Params.embedded('PalandriKharaka.yaml')
 
 
 def parse_text(text: str):
@@ -228,3 +274,13 @@ def _value(fn, default=0.0):
     except Exception:
         return float(default)
     return value if math.isfinite(value) else float(default)
+
+
+def _cache_value(value):
+    try:
+        number = float(value)
+    except Exception:
+        return 'text', repr(value)
+    if math.isfinite(number):
+        return 'number', number
+    return 'text', repr(value)
