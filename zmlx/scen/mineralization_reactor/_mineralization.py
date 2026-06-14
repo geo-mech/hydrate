@@ -20,7 +20,6 @@ from zmlx.scen.mineralization_reactor._config import (
     scene_state,
 )
 
-
 class Mineralization:
     """
     Local mineralization reactor.
