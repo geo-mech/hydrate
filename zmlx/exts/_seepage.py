@@ -3666,6 +3666,27 @@ class Injector(HasHandle):
         return self
 
 
+def calc_recommended_dt(
+        prev_dt: float, prev_cfl: float, target_cfl: float = 0.1
+) -> float:
+    """
+    计算建议的时间步长.
+    Args:
+        prev_dt: 上一次的时间步长。
+        prev_cfl: 上一次的CFL数。
+        target_cfl: 目标CFL数，默认为0.1。
+    Returns:
+        float: 建议的时间步长。
+    """
+    prev_cfl = max(1.0e-6, prev_cfl)
+    dt = prev_dt
+    if prev_cfl > target_cfl:
+        dt *= (target_cfl * 0.99 / prev_cfl)  # 使得略微小一些
+    else:
+        dt *= min(2.0, math.sqrt(target_cfl / prev_cfl))
+    return dt
+
+
 class FlowSol(HasHandle):
     """
     流动求解器
@@ -3839,17 +3860,12 @@ class FlowSol(HasHandle):
         Returns:
             float: 建议的时间步长。
         """
-        dv_max = core.seepage_fs_get_dv(self.handle)
-        dv_max = max(1.0e-6, dv_max)
-        dt = previous_dt
-        if cfl is not None:  # 新的变量名，覆盖dv_relative，后续，dv_relative可能会被移除
-            assert 0 < cfl <= 1.0, 'cfl must be in (0, 1]'
+        prev_cfl = core.seepage_fs_get_dv(self.handle)
+        prev_cfl = max(1.0e-6, prev_cfl)
+        if cfl is not None:
+            assert 0 < cfl <= 1.0e6, 'cfl must be in (0, 1e6]'
             dv_relative = cfl
-        if dv_max > dv_relative:
-            dt *= (dv_relative / dv_max)
-        else:
-            dt *= min(2.0, math.sqrt(dv_relative / dv_max))
-        return dt
+        return calc_recommended_dt(prev_dt=previous_dt, prev_cfl=prev_cfl, target_cfl=dv_relative)
 
 
 class ThermalSol(HasHandle):
@@ -3896,12 +3912,13 @@ class ThermalSol(HasHandle):
              c_void_p, c_void_p,
              c_void_p,
              c_size_t, c_size_t, c_size_t,
-             c_double, c_void_p,
+             c_double, c_double,
+             c_void_p,
              c_void_p  # ThreadPool since 2025-7-25
              )
 
     def iterate(self, model: 'Seepage', dt: float, *, ca_t=None, ca_mc=None, fa_g=None, solver=None,
-                pool=None, report=None):
+                pool=None, report=None, cfl=None):
         """
         对于此渗流模型，当定义了热传导相关的参数之后，可以作为一个热传导模型来使用。
         具体和Thermal模型类似。
@@ -3918,6 +3935,7 @@ class ThermalSol(HasHandle):
             pool (ThreadPool, optional): 线程池实例，
                 默认为None。
             report (Map, optional): 报告对象，默认为None。
+            cfl (float, optional): Courant-Friedrichs-Lewy数，默认为None。
 
         Returns:
             dict: 包含迭代报告的字典。
@@ -3934,11 +3952,15 @@ class ThermalSol(HasHandle):
             report = self.get_report()
             assert isinstance(report, Map), "report must be a Map object"
 
+        if cfl is None:
+            cfl = 1.0e100
+
         if isinstance(pool, ThreadPool):  # 将任务放入线程池，然后立即返回（需要在后续手动进行同步）
             core.seepage_ts_iterate(
                 self.handle, model.handle, report.handle,
                 ca_t, ca_mc, fa_g,
-                dt, solver.handle, pool.handle
+                dt, cfl,
+                solver.handle, pool.handle
             )
             return None
 
@@ -3947,7 +3969,8 @@ class ThermalSol(HasHandle):
                 self.handle, model.handle,
                 report.handle,
                 ca_t, ca_mc, fa_g,
-                dt, solver.handle, 0
+                dt, cfl,
+                solver.handle, 0
             )
             return report.to_dict()
 
@@ -3979,19 +4002,14 @@ class ThermalSol(HasHandle):
         """
         assert ca_mc is not None, "ca_mc must be specified"
         assert ca_t is not None, "ca_t must be specified"
-        dv_max = core.seepage_ts_get_de(
+        prev_cfl = core.seepage_ts_get_de(
             self.handle,
             model.handle, ca_t, ca_mc)
-        dv_max = max(1.0e-6, dv_max)
-        dt = previous_dt
+        prev_cfl = max(1.0e-6, prev_cfl)
         if cfl is not None:  # 新的变量名，覆盖dv_relative，后续，dv_relative可能会被移除
-            assert 0 < cfl <= 1.0, 'cfl must be in (0, 1]'
+            assert 0 < cfl <= 1.0e6, 'cfl must be in (0, 1e6]'
             dv_relative = cfl
-        if dv_max > dv_relative:
-            dt *= (dv_relative / dv_max)
-        else:
-            dt *= min(2.0, math.sqrt(dv_relative / dv_max))
-        return dt
+        return calc_recommended_dt(prev_dt=previous_dt, prev_cfl=prev_cfl, target_cfl=dv_relative)
 
 
 class Seepage(HasHandle, HasCells):

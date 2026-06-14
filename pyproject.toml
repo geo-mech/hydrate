@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "IggHydrate"
-version = "1.6.12"
+version = "1.6.14"
 description = "IggHydrate - Comprehensive hydrate simulation tool (import as 'zmlx', conflicts with other zmlx packages - uninstall them first)"
 authors = [
     { name = "Zhaobin Zhang", email = "zhangzhaobin@mail.iggcas.ac.cn" }
