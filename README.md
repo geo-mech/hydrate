@@ -19,7 +19,7 @@
 
 <sup>x</sup>
 联系人: [张召彬](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/201703/t20170306_4755492.html),
-邮箱: [zhangzhaobin@mail.iggcas.ac.cn](zhangzhaobin@mail.iggcas.ac.cn);
+邮箱: [zhangzhaobin@mail.iggcas.ac.cn](mailto:zhangzhaobin@mail.iggcas.ac.cn);
 或添加[微信](https://gitee.com/geomech/hydrate/issues/ID5HZX).
 
 ### 功能/特点
@@ -71,7 +71,7 @@ Studio运行库 [VC_redist.x64.exe](https://gitee.com/geomech/hydrate/attach_fil
 <sup>②</sup> 推荐使用[WinPython](https://gitee.com/geomech/hydrate/attach_files) (
 绿色免安装，同时也是软件作者使用的发行版，更能保证和[IGG-Hydrate](https://gitee.com/geomech/hydrate)的兼容);
 注意：关于Python版本的需求主要来自界面/绘图等功能;
-<sup>③</sup> 运行脚本`zmlx/script/install_dep.py`来可自动安装所有依赖包(基于[pip](https://pypi.org/project/pip/)
+<sup>③</sup> 运行脚本`zmlx/script/install_dep.py`可自动安装所有依赖包(基于[pip](https://pypi.org/project/pip/)
 ，不保证安装成功)；另外，`PyQt5`不再支持;
 <sup>④</sup> 建议在[demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)
 的基础上，向前追溯函数的实现; [demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)中案例仅供测试，作者不保证其参数的合理性.
