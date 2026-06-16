@@ -79,8 +79,8 @@ def test():
     # 迭代并且绘图显示
     step_max = 50
     for step in range(step_max):
-        print(f'step = {step}/{step_max}')
-        model.iterate(dt=1.0e6)
+        r = model.iterate(dt=1.0e6)
+        print(f'step = {step}/{step_max}, r = {r}')
 
         x = tfc.get_x(model, shape=[jx, jy])
         y = tfc.get_y(model, shape=[jx, jy])

@@ -46,8 +46,8 @@
 技术问题(bug反馈/建模咨询等)请[新建Issue](https://gitee.com/geomech/hydrate/issues/new)<sup>①</sup>
 ，其他问题请[联系作者](https://gitee.com/geomech/hydrate/issues/ID5HZX).
 
-注：<sup>①</sup> 在[新建Issue](https://gitee.com/geomech/hydrate/issues/new)
-之前，建议浏览[已有的Issues](https://gitee.com/geomech/hydrate/issues).
+> 注：<sup>①</sup> 在[新建Issue](https://gitee.com/geomech/hydrate/issues/new)
+> 之前，建议浏览[已有的Issues](https://gitee.com/geomech/hydrate/issues).
 
 ### 安装
 
@@ -63,18 +63,18 @@
 4. 参考[`zmlx/demo`](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)建模<sup>④</sup>; 运行[
    `zml_ui.pyw`](https://gitee.com/geomech/hydrate/blob/master/zml_ui.pyw)打开界面.
 
-注：<sup>①</sup>
-软件计算内核采用Visual Studio编译，建议用户在运行[IGG-Hydrate](https://gitee.com/geomech/hydrate)之前，提前安装
-Visual
-Studio运行库 [VC_redist.x64.exe](https://gitee.com/geomech/hydrate/attach_files) (
-尽管，貌似很多时候系统都内置了，但是安装这个运行库，并不会有任何的副作用);
+> 注：<sup>①</sup>
+> 软件计算内核采用Visual Studio编译，建议用户在运行[IGG-Hydrate](https://gitee.com/geomech/hydrate)之前，提前安装
+> Visual
+> Studio运行库 [VC_redist.x64.exe](https://gitee.com/geomech/hydrate/attach_files) (
+> 尽管，貌似很多时候系统都内置了，但是安装这个运行库，并不会有任何的副作用);
 <sup>②</sup> 推荐使用[WinPython](https://gitee.com/geomech/hydrate/attach_files) (
-绿色免安装，同时也是软件作者使用的发行版，更能保证和[IGG-Hydrate](https://gitee.com/geomech/hydrate)的兼容);
-注意：关于Python版本的需求主要来自界面/绘图等功能;
+> 绿色免安装，同时也是软件作者使用的发行版，更能保证和[IGG-Hydrate](https://gitee.com/geomech/hydrate)的兼容);
+> 注意：关于Python版本的需求主要来自界面/绘图等功能;
 <sup>③</sup> 运行脚本`zmlx/script/install_dep.py`可自动安装所有依赖包(基于[pip](https://pypi.org/project/pip/)
-，不保证安装成功)；另外，`PyQt5`不再支持;
+> ，不保证安装成功)；另外，`PyQt5`不再支持;
 <sup>④</sup> 建议在[demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)
-的基础上，向前追溯函数的实现; [demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)中案例仅供测试，作者不保证其参数的合理性.
+> 的基础上，向前追溯函数的实现; [demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)中案例仅供测试，作者不保证其参数的合理性.
 
 #### Linux 版本
 
@@ -110,7 +110,7 @@ Studio运行库 [VC_redist.x64.exe](https://gitee.com/geomech/hydrate/attach_fil
    ```bash
    pip install git+https://gitee.com/geomech/hydrate.git
    ```
-   > 注意：首次安装可能需要较长时间，需耐心等待。
+   > 注：首次安装可能需要较长时间，需耐心等待。
 
 5. 启动 IGG-Hydrate 界面：
    ```bash
@@ -126,7 +126,7 @@ Studio运行库 [VC_redist.x64.exe](https://gitee.com/geomech/hydrate/attach_fil
 **故障排查**：
 
 - 在Linux上运行，核心是要满足动态库`zmlx/exts/zml.so`的依赖，请自行使用相关的工具来检查;
-- 可以使用ctypes尝试导入`zmlx/exts/zml.so`来测试环境配置是否成功. 
+- 可以使用ctypes尝试导入`zmlx/exts/zml.so`来测试环境配置是否成功.
 
 ### 协作/开发
 
@@ -137,11 +137,12 @@ Studio运行库 [VC_redist.x64.exe](https://gitee.com/geomech/hydrate/attach_fil
 3. 请务必熟悉[git](https://git-scm.com/)<sup>①</sup>;
 4. 如果直接向[IGG-Hydrate](https://gitee.com/geomech/hydrate)
    推送代码，可能会报错（因为没有权限）。此时，可以在页面右上角，点击[申请加入仓库](https://gitee.com/geomech/hydrate)
-   ，成为开发者；或者，你也可以使用[Fork + Pull 模式](https://help.gitee.com/base/pullrequest/Fork+Pull)<sup>②</sup>参与开发。
+   ，成为开发者；或者，你也可以使用[Fork + Pull 模式](https://help.gitee.com/base/pullrequest/Fork+Pull)<sup>②</sup>参与开发;
+5. 在push代码前，先确保本地代码与主仓库同步。
 
-注：<sup>①</sup> 在[Gitee帮助中心](https://gitee.com/help#article-header0)
-有不少git的入门资料；新手建议安装[TortoiseGit](https://tortoisegit.org/)，它会在文件管理器添加右键菜单，可以满足大部分操作;
-另外，如果是Pycharm用户，可以参考 https://gitee.com/geomech/hydrate/issues/IJT65R;
+> 注：<sup>①</sup> 在[Gitee帮助中心](https://gitee.com/help#article-header0)
+> 有不少git的入门资料；新手建议安装[TortoiseGit](https://tortoisegit.org/)，它会在文件管理器添加右键菜单，可以满足大部分操作;
+> 另外，如果是Pycharm用户，可以参考 https://gitee.com/geomech/hydrate/issues/IJT65R;
 <sup>②</sup>[Fork + Pull 模式](https://help.gitee.com/base/pullrequest/Fork+Pull)是Gitee建议的一种参与开发的方式.
 
 ### 镜像
@@ -149,16 +150,17 @@ Studio运行库 [VC_redist.x64.exe](https://gitee.com/geomech/hydrate/attach_fil
 仓库主网址为: [gitee.com/geomech/hydrate](https://gitee.com/geomech/hydrate), 镜像仓库<sup>
 ①</sup>: [github.com/geo-mech/hydrate](https://github.com/geo-mech/hydrate).
 
-注：<sup>①</sup> 反馈或推送给代码，务必在[主仓库](https://gitee.com/geomech/hydrate)
-进行，作者不会关注[镜像仓库](https://github.com/geo-mech/hydrate)的变化.
+> 注：<sup>①</sup> 反馈或推送给代码，务必在[主仓库](https://gitee.com/geomech/hydrate)
+> 进行，作者不会关注[镜像仓库](https://github.com/geo-mech/hydrate)的变化.
 
 ### 授权
 
 大部分功能可自由免费使用.
 但是，不同的模块可能有不同的授权要求，建议使用前先联系并[告知作者](https://gitee.com/geomech/hydrate/issues/ID5HZX)，谢谢。
 
-特别注意：软件启动的时候，会检查网络时间，进而确保运行的是比较新的版本。对于过期的版本，仍然可以运行，但是计算的速度会受到限制。因此，
-请确保使用最新版，并在运行此软件模块的时候，确保电脑联网，否则计算会很慢。之所以有此限制，主要是作者不希望维护多个版本。
+> 注：软件启动的时候，会检查网络时间，进而确保运行的是比较新的版本。对于过期的版本，仍然可以运行，但是计算的速度会受到限制
+> （仅Windows版本，Linux版本不做限制，但仍然建议使用最新版）。因此，
+> 请确保使用最新版，并在运行此软件模块的时候，确保电脑联网，否则计算会很慢。之所以有此限制，主要是作者不希望维护多个版本。
 
 ### 关于软件名
 

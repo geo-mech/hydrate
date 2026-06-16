@@ -994,12 +994,12 @@ def iterate_flow(*local_opts, pool=None, **global_opts):
         set_attr(model, 'flow_real_dt', real_dt)  # 实际向前迭代的dt. 如果check_dt的时候，这个值可能和给定的dt不同.
 
         if opts['recommend_dt']:  # 建议新的dt.
-            dv_rela = opts['dv_rela']  # 设置的目标值
-            if 0 < dv_rela < 1.0e3:
-                prev_cfl = result.get('dv_rela', -1.0)
-                if prev_cfl > 0:
-                    dt_next = calc_recommended_dt(prev_dt=real_dt, prev_cfl=prev_cfl, target_cfl=dv_rela)
-                    add_dt_next(model, dt=dt_next, desc="flow")
+            target_cfl = opts['dv_rela']
+            if 0 < target_cfl < 1.0e3:
+                real_cfl: Optional[float] = result.get('cfl')
+                assert real_cfl is not None
+                dt_next = calc_recommended_dt(prev_dt=real_dt, prev_cfl=real_cfl, target_cfl=target_cfl)
+                add_dt_next(model, dt=dt_next, desc="flow")
 
 
 @clock
@@ -1092,10 +1092,10 @@ def iterate_thermal(*local_opts, pool=None, **global_opts):
         if opts['recommend_dt']:  # 建议新的dt.
             dv_rela = opts['dv_rela']  # 设置的目标值
             if 0 < dv_rela < 1.0e3:
-                prev_cfl = result.get('dv_rela', -1.0)
-                if prev_cfl > 0:
-                    dt_next = calc_recommended_dt(prev_dt=real_dt, prev_cfl=prev_cfl, target_cfl=dv_rela)
-                    add_dt_next(model, dt=dt_next, desc="thermal")
+                real_cfl: Optional[float] = result.get('cfl')
+                assert real_cfl is not None
+                dt_next = calc_recommended_dt(prev_dt=real_dt, prev_cfl=real_cfl, target_cfl=dv_rela)
+                add_dt_next(model, dt=dt_next, desc="thermal")
 
 
 class FloatBuffer:

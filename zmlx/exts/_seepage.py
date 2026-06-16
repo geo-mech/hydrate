@@ -2227,8 +2227,7 @@ class CellData(HasHandle):
         else:
             return self.get_fluid(indexes)
 
-    core.use(c_double, 'seepage_cell_get_fluid_vol',
-             c_void_p)
+    core.use(c_double, 'seepage_cell_get_fluid_vol', c_void_p)
 
     @property
     def fluid_vol(self) -> float:
@@ -2242,8 +2241,7 @@ class CellData(HasHandle):
         """
         return core.seepage_cell_get_fluid_vol(self.handle)
 
-    core.use(c_double, 'seepage_cell_get_fluid_mass',
-             c_void_p)
+    core.use(c_double, 'seepage_cell_get_fluid_mass', c_void_p)
 
     @property
     def fluid_mass(self) -> float:
@@ -2257,9 +2255,7 @@ class CellData(HasHandle):
         """
         return core.seepage_cell_get_fluid_mass(self.handle)
 
-    core.use(c_double, 'seepage_cell_get_fluid_vol_fraction',
-             c_void_p,
-             c_size_t)
+    core.use(c_double, 'seepage_cell_get_fluid_vol_fraction', c_void_p, c_size_t)
 
     def get_fluid_vol_fraction(self, index: int) -> Optional[float]:
         """
@@ -3667,7 +3663,7 @@ class Injector(HasHandle):
 
 
 def calc_recommended_dt(
-        prev_dt: float, prev_cfl: float, target_cfl: float = 0.1
+        prev_dt: float, prev_cfl: float, target_cfl: Optional[float] = 0.1
 ) -> float:
     """
     计算建议的时间步长.
@@ -3678,6 +3674,8 @@ def calc_recommended_dt(
     Returns:
         float: 建议的时间步长。
     """
+    if target_cfl is None:
+        target_cfl = 0.1
     prev_cfl = max(1.0e-6, prev_cfl)
     dt = prev_dt
     if prev_cfl > target_cfl:
@@ -3741,7 +3739,8 @@ class FlowSol(HasHandle):
             self, model: 'Seepage', dt: float, *,
             fa_s: Optional[int] = None, fa_q: Optional[int] = None,
             fa_k: Optional[int] = None, ca_p: Optional[int] = None,
-            dv_rela: Optional[float] = None,
+            cfl: Optional[float] = None,
+            dv_rela: Optional[float] = None,  # 弃用
             solver: Optional['ConjugateGradientSolver'] = None,
             pool: Optional[ThreadPool] = None,
             report: Optional[Map] = None,
@@ -3772,10 +3771,11 @@ class FlowSol(HasHandle):
                 默认为None。
             report (Map, optional): 报告对象，
                 默认为None (此时，会新建一个Map并且传入内核).
-            dv_rela (float, optional): 控制时间步长（最大允许的值）。
+            dv_rela (float, optional): CFL数 (弃用)
+            cfl (float, optional): CFL数，默认为None.
                 代表dt内流体流过的“最大距离”与网格的比值。
-                当dv_rela为None的时候，将直接使用给定的dt来进行迭代。
-                当dv_rela给定的时候，则会检查给定的dt是否满足条件。如果不满足，则会降低dt。
+                当cfl为None的时候，将直接使用给定的dt来进行迭代。
+                当cfl给定的时候，则会检查给定的dt是否满足条件。如果不满足，则会降低dt。
 
         Notes:
             关于惯性：
@@ -3793,7 +3793,7 @@ class FlowSol(HasHandle):
         Returns:
             dict: 包含迭代报告的字典，可能会包括：
                 dt_modify_times: 时间步长调整的次数
-                dv_rela: 实际的dv_rela
+                cfl: 实际的CFL数
                 dt_error: 1 (当dt错误的时候；)；若存在此key，则迭代失败
                 dt: 实际采用的时间步长。
         """
@@ -3817,15 +3817,22 @@ class FlowSol(HasHandle):
         if ca_p is None:
             ca_p = 1000000000
 
-        if dv_rela is None:  # 给定一个非常大，一定可以满足的值
-            dv_rela = 1.0e30
+        if dv_rela is not None:
+            warnings.warn("Option dv_rela is deprecated and will be removed after 2027-6-15",
+                          DeprecationWarning, stacklevel=2)
+
+        if cfl is None and dv_rela is not None:
+            cfl = dv_rela
+
+        if cfl is None:  # 给定一个非常大，一定可以满足的值
+            cfl = 1.0e30
         else:
-            assert 0 < dv_rela
+            assert 0 < cfl, f'cfl must be greater than 0, but got {cfl}'
 
         if isinstance(pool, ThreadPool):  # 将任务放入线程池，然后立即返回
             core.seepage_fs_iterate(
                 self.handle, model.handle, report.handle,
-                dt, dv_rela,
+                dt, cfl,
                 fa_s, fa_q, fa_k, ca_p,
                 solver.handle, pool.handle
             )
@@ -3834,7 +3841,7 @@ class FlowSol(HasHandle):
         else:  # 此时，直接运行，并且返回计算的报告
             core.seepage_fs_iterate(
                 self.handle, model.handle, report.handle,
-                dt, dv_rela,
+                dt, cfl,
                 fa_s, fa_q, fa_k, ca_p,
                 solver.handle, 0
             )
@@ -3844,8 +3851,9 @@ class FlowSol(HasHandle):
 
     def get_recommended_dt(
             self, previous_dt: float,
-            dv_relative: float = 0.1,
-            cfl: Optional[float] = None) -> float:
+            dv_relative: Optional[float] = None,
+            cfl: Optional[float] = None
+    ) -> float:
         """
         在调用了iterate函数之后，调用此函数，来获取更优的时间步长。
         特别注意，
@@ -3854,18 +3862,26 @@ class FlowSol(HasHandle):
 
         Args:
             previous_dt: 上一次的时间步长。应该为iterate函数返回报告中的dt(实际的dt)
-            dv_relative: 相对变化阈值，默认为0.1.
-                         此参数即为Courant-Friedrichs-Lewy数，简称CFL数。
-            cfl: Courant-Friedrichs-Lewy数，默认为None。
+            cfl: Courant-Friedrichs-Lewy数
+            dv_relative: CFL数。
         Returns:
             float: 建议的时间步长。
         """
-        prev_cfl = core.seepage_fs_get_dv(self.handle)
-        prev_cfl = max(1.0e-6, prev_cfl)
-        if cfl is not None:
-            assert 0 < cfl <= 1.0e6, 'cfl must be in (0, 1e6]'
-            dv_relative = cfl
-        return calc_recommended_dt(prev_dt=previous_dt, prev_cfl=prev_cfl, target_cfl=dv_relative)
+        warnings.warn("FlowSol.get_recommended_dt is deprecated (will be removed after 2027-6-8).", DeprecationWarning,
+                      stacklevel=2)
+
+        real_cfl = core.seepage_fs_get_dv(self.handle)
+        real_cfl = max(1.0e-6, real_cfl)
+
+        if dv_relative is not None:
+            warnings.warn("dv_relative is deprecated and will be removed after 2027-6-15",
+                          DeprecationWarning, stacklevel=2
+                          )
+
+        if cfl is None and dv_relative is not None:
+            cfl = dv_relative
+
+        return calc_recommended_dt(prev_dt=previous_dt, prev_cfl=real_cfl, target_cfl=cfl)
 
 
 class ThermalSol(HasHandle):
@@ -3954,6 +3970,8 @@ class ThermalSol(HasHandle):
 
         if cfl is None:
             cfl = 1.0e100
+        else:
+            assert 0 < cfl, f"CFL must be greater than 0, but {cfl} is given"
 
         if isinstance(pool, ThreadPool):  # 将任务放入线程池，然后立即返回（需要在后续手动进行同步）
             core.seepage_ts_iterate(
@@ -3980,8 +3998,10 @@ class ThermalSol(HasHandle):
 
     def get_recommended_dt(
             self, model: 'Seepage', previous_dt: float,
-            dv_relative: float = 0.1,
-            ca_t: Optional[int] = None, ca_mc: Optional[int] = None, cfl: Optional[float] = None) -> float:
+            cfl: Optional[float] = None, *,
+            dv_relative: Optional[float] = None,
+            ca_t: Optional[int] = None,
+            ca_mc: Optional[int] = None) -> float:
         """
         在调用了iterate函数之后，调用此函数，来获取更优的时间步长。
         特别注意，
@@ -3991,25 +4011,35 @@ class ThermalSol(HasHandle):
         Args:
             model: 渗流模型对象。
             previous_dt: 上一次的时间步长。
-            dv_relative: 相对变化阈值，默认为0.1.
+            cfl: Courant-Friedrichs-Lewy数，默认为None。
+            dv_relative: 相对变化阈值.
                          此参数即为Courant-Friedrichs-Lewy数，简称CFL数。
             ca_t: Cell的温度属性的ID，默认为None。
             ca_mc: Cell范围内质量和比热的乘积，默认为None。
-            cfl: Courant-Friedrichs-Lewy数，默认为None。
 
         Returns:
             float: 建议的时间步长。
         """
+        warnings.warn("ThermalSol.get_recommended_dt is deprecated (will be removed after 2027-6-8).",
+                      DeprecationWarning,
+                      stacklevel=2)
         assert ca_mc is not None, "ca_mc must be specified"
         assert ca_t is not None, "ca_t must be specified"
+
         prev_cfl = core.seepage_ts_get_de(
             self.handle,
             model.handle, ca_t, ca_mc)
         prev_cfl = max(1.0e-6, prev_cfl)
-        if cfl is not None:  # 新的变量名，覆盖dv_relative，后续，dv_relative可能会被移除
-            assert 0 < cfl <= 1.0e6, 'cfl must be in (0, 1e6]'
-            dv_relative = cfl
-        return calc_recommended_dt(prev_dt=previous_dt, prev_cfl=prev_cfl, target_cfl=dv_relative)
+
+        if dv_relative is not None:
+            warnings.warn("dv_relative is deprecated and will be removed after 2027-6-15",
+                          DeprecationWarning, stacklevel=2
+                          )
+
+        if cfl is None and dv_relative is not None:
+            cfl = dv_relative
+
+        return calc_recommended_dt(prev_dt=previous_dt, prev_cfl=prev_cfl, target_cfl=cfl)
 
 
 class Seepage(HasHandle, HasCells):
@@ -4480,6 +4510,8 @@ class Seepage(HasHandle, HasCells):
 
         if isinstance(flu, FluData):  # 只有在等于FluData的时候才使用.
             inj.flu.clone(flu)
+        else:
+            assert flu is None, f"flu should be FluData or None, but got {type(flu).__name__}"
 
         if pos is not None:  # 给定注入的位置，后续，则自动去查找附近的cell
             inj.pos = pos
@@ -6232,17 +6264,17 @@ class Seepage(HasHandle, HasCells):
     def iterate(self, dt, *,
                 fa_s: Optional[int] = None, fa_q: Optional[int] = None,
                 fa_k: Optional[int] = None, ca_p: Optional[int] = None,
-                dv_rela: Optional[float] = None,
+                cfl: Optional[float] = None,
                 pool: Optional[ThreadPool] = None,
                 report: Optional[Map] = None,
-                solver: Optional['ConjugateGradientSolver'] = None,
+                solver: Optional['ConjugateGradientSolver'] = None, **kwargs
                 ):
         """
         迭代模型内的流动过程。
         """
         return self.get_flow_sol().iterate(
-            model=self, dt=dt, fa_s=fa_s, fa_q=fa_q, fa_k=fa_k, ca_p=ca_p, dv_rela=dv_rela,
-            solver=solver, pool=pool, report=report,
+            model=self, dt=dt, fa_s=fa_s, fa_q=fa_q, fa_k=fa_k, ca_p=ca_p, cfl=cfl,
+            solver=solver, pool=pool, report=report, **kwargs
         )
 
     def get_thermal_sol(self) -> 'ThermalSol':

@@ -94,7 +94,7 @@ from zmlx.plt import (
     add_dfn2, add_trisurf, add_seepage_mesh,
 
     plot_on_figure, plot_on_axes, add_subplot, add_axes2, add_axes3, add_axes_img, AutoLayout as AutoFigLayout,
-    calculate_subplot_layout, calc_best_layout,
+    AutoLayout, calculate_subplot_layout, calc_best_layout,
 
     show_xy, show_dfn2, show_field2, show_fn2, show_rc3, show_scatter, show_trisurf, show_trimesh, show_contourf,
     show_tricontourf,

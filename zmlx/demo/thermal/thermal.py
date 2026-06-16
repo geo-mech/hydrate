@@ -44,13 +44,13 @@ def show(model):
 def solve(model):
     for step in range(500):
         gui.break_point()
-        model.iterate_thermal(
+        r = model.iterate_thermal(
             dt=1.0e6, ca_t=CellAttrs.temperature,
             ca_mc=CellAttrs.mc,
             fa_g=FaceAttrs.g_heat)
         if step % 50 == 0:
             show(model)
-            print(f'step = {step}')
+            print(f'step = {step}, r = {r}')
 
 
 if __name__ == '__main__':

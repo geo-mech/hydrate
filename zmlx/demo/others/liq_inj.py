@@ -51,7 +51,6 @@ def create():
 
 
 def show_model(model: Seepage):
-    from zmlx.plt.on_axes import add_axes2, tricontourf
     if not gui:
         return
 
@@ -61,27 +60,19 @@ def show_model(model: Seepage):
     s = tfc.get_cell_fv(model, fid=1) / tfc.get_cell_fv(model)
 
     def on_figure(figure):
-        from zmlx.plt import calculate_subplot_layout
-        nrows, ncols = calculate_subplot_layout(2, fig=figure)
-        figure.suptitle(
-            f'Model when time = {tfc.get_time(model, as_str=True)}')
-        opts = dict(
-            ncols=ncols, nrows=nrows, xlabel='x', ylabel='y', aspect='equal'
-        )
-        add_axes2(figure, tricontourf, x, y, p, title='Pressure',
-                  cbar=dict(label='Pressure'),
-                  index=1, **opts
-                  )
-        add_axes2(figure, tricontourf, x, y, s, title='Saturation',
-                  cbar=dict(label='Saturation'),
-                  index=2, **opts
-                  )
+        layout = AutoLayout(figure, 2, subplot_aspect_ratio=1.0, xlabel='x', ylabel='y', aspect='equal')
+        layout.add_axes2(add_tricontourf, x, y, p, title='Pressure',
+                         cbar=dict(label='Pressure')
+                         )
+        layout.add_axes2(add_tricontourf, x, y, s, title='Saturation',
+                         cbar=dict(label='Saturation')
+                         )
+        figure.suptitle(f'Model when time = {tfc.get_time(model, as_str=True)}')
 
     plot(on_figure, caption=f'Seepage({model.handle_str})', clear=True)
 
 
 def main():
-    from zmlx.demo.opath import opath
     model = create()
     tfc.solve(
         model, folder=opath('liq_inj'),
