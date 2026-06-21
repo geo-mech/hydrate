@@ -16,21 +16,11 @@ def create_model():
     # 右侧采出井：保持定压，保留巨大的虚拟体积
     add_cell_face(mesh, pos=[700, 0.0, (z_min + z_max) / 2], offset=[0, 10, 0],
                   vol=1.0e10, area=2.104, length=1)
-    """
-    接触面积先按照1
-    假设单元1*1，2*2，中间0.1m粗井眼，0.1井眼向四周蔓延，达西定律，等效面积应该多大？
-    井眼的射孔。
-    不同井间距下氦气的采出量？温度或者压力的变化？
-    不同注水温度下氦气的采出量？温度或者压力的变化？
-    射孔段长度？这个应该也可以设置。
-    注采平衡？回灌率要求90以上
-    输出采出量？
-    如果热突破时间是50年，注采平衡的状态下，井间距是281.3m，但是现在注采应该是不平衡的。
-    """
+
     # 左侧注入井：定流量注水
     add_cell_face(mesh, pos=[300, 0.0, (z_min + z_max) / 2], offset=[0, -10, 0],
-                  vol=1, area=2.104, length=1)
-    """井筒半径为0.1m，体积应该为3.14*0.05*0.05*10=0.0785"""
+                  vol=100, area=2.104, length=1)
+
 
     def is_upper(x, y, z):
         return abs(z - z_max) < 100
@@ -78,20 +68,20 @@ def create_model():
             return 293.15 - 0.035 * z
 
     # ================= 3. 定义官方注入器 =================
+
     my_injectors = [
         {
             "pos": [300, -10, (z_min + z_max) / 2],
             "fluid_id": "h2o" ,
-            "value":0.0017,
+            "value":5e-5,    ###单位为m³/s
         }
     ]
-    """注入流量与射孔段长度有关,射孔段不存在，假设射孔段为300m？均摊到每个网格为0.0025kg/s。但是吧这个射孔段长度一般来说设置为多少？
-    300米？"""
+
     # ================= 4. 创建模型 =================
     model = create(
         mesh=mesh,
         porosity=get_porosity,
-        pore_modulus=5e9,
+        pore_modulus=100e6,
         p=get_p,
         temperature=get_t,
         denc=get_denc,
@@ -115,3 +105,4 @@ def main():
 
 if __name__ == '__main__':
      gui.execute(main)
+"代码目前生产井和注入井之间仍然存在问题"
