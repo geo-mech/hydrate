@@ -3,7 +3,105 @@
 from zmlx import *
 
 
+_EQUILIBRIA = {}
+_EQUILIBRIUM_ERRORS = set()
+
+
+def _get_components(mass):
+    comps = []
+    for name in mass:
+        if name == 'H2O':
+            continue
+        comp = name[:-4] if name.endswith('(aq)') else name
+        if comp not in comps:
+            comps.append(comp)
+    return tuple(comps)
+
+
+def _get_gas_water_equilibrium(components):
+    key = tuple(components)
+    if key in _EQUILIBRIA:
+        return _EQUILIBRIA[key]
+    if key in _EQUILIBRIUM_ERRORS:
+        return None
+    try:
+        from gas_water_uv_equilibrium import GasWaterUVEquilibrium
+        eq = GasWaterUVEquilibrium(
+            database_name='supcrtbl',
+            gas_components=key,
+            include_water_vapor=False,
+            auto_use_organics=True,
+        )
+    except Exception as err:
+        _EQUILIBRIUM_ERRORS.add(key)
+        print(f'GasWaterUVEquilibrium 初始化失败，跳过本次化学平衡: {err}')
+        return None
+    _EQUILIBRIA[key] = eq
+    return eq
+
+
+def _get_mass_at(mass, name, index):
+    if name not in mass:
+        return 0.0
+    return max(0.0, float(mass[name][index]))
+
+
+def _update_mass_by_equilibrium(p, t, mass, equilibrium=None):
+    components = _get_components(mass)
+    if equilibrium is None:
+        equilibrium = _get_gas_water_equilibrium(components)
+    if equilibrium is None:
+        return {'updated': 0, 'failed': 0, 'skipped': len(p)}
+
+    updated = 0
+    failed = 0
+    skipped = 0
+    for index in range(len(p)):
+        water_kg = _get_mass_at(mass, 'H2O', index)
+        gas_kg = {comp: _get_mass_at(mass, comp, index) for comp in components}
+        aq_gas_kg = {comp: _get_mass_at(mass, f'{comp}(aq)', index) for comp in components}
+        total_kg = water_kg + sum(gas_kg.values()) + sum(aq_gas_kg.values())
+        if total_kg <= 1.0e-30:
+            skipped += 1
+            continue
+
+        try:
+            result = equilibrium.solve(
+                temperature_K=float(t[index]),
+                pressure_Pa=float(p[index]),
+                water_kg=water_kg,
+                aq_gas_kg=aq_gas_kg,
+                gas_kg=gas_kg,
+                fixed_volume_m3=None,
+                temperature_bounds_K=(250.0, 800.0),
+                pressure_bounds_Pa=(1.0e5, 1.0e9),
+            )
+        except Exception:
+            failed += 1
+            continue
+        if not result.get('success', False):
+            failed += 1
+            continue
+
+        if 'H2O' in mass:
+            mass['H2O'][index] = result.get('water_kg', mass['H2O'][index])
+        result_gas = result.get('gas_kg') or {}
+        result_aq = result.get('aq_gas_kg') or {}
+        for comp in components:
+            if comp in mass and comp in result_gas:
+                mass[comp][index] = result_gas[comp]
+            aq_name = f'{comp}(aq)'
+            if aq_name in mass and comp in result_aq:
+                mass[aq_name][index] = result_aq[comp]
+        updated += 1
+
+    if failed > 0:
+        print(f'GasWaterUVEquilibrium 有 {failed} 个cell未收敛，已保持原质量。')
+    return {'updated': updated, 'failed': failed, 'skipped': skipped}
+
+
 def create(jx, jz):
+    dt = 3600 * 24 * 30.0
     mesh = create_cube(
         x=linspace(0, 300, jx + 1),
         y=(-0.5, 0.5),
@@ -58,13 +156,13 @@ def create(jx, jz):
         temperature=get_t, p=get_p, s=get_s,
         perm=get_k, heat_cond=2.0,
         fludefs=fludefs,
-        dt_max=3600 * 24 * 30.0, gravity=(0, 0, -10)
+        dt_ini=dt, dt_max=dt, dv_relative=0.0, gravity=(0, 0, -10)
     )
 
     # 用于求解的选项
     model.set_text(
         key='solve',
-        text={'time_max': 3600 * 24 * 365 * 6, }
+        text={'time_max': 3600 * 24 * 365 * 6, 'step_max': 1, }
     )
     step_iteration.add_setting(model, name='balance', step=1, args=['@model'])
     return model
@@ -87,6 +185,7 @@ def balance(model: Seepage):
     #       请宇轩实现
     #       注意：1、不要使用cell的volume属性，因为model中流体的密度可能和Reaktoro不同
     #            2、这里给的质量都是numpy数组，看Reaktoro能否向量化计算以提升效率
+    _update_mass_by_equilibrium(p=p, t=t, mass=mass)
 
     # step 3.
     # 将更新之后的mass重新应用到模型中
@@ -127,8 +226,13 @@ def show(model, jx, jz):
             layout.add_axes2(add_contourf, x, z, m / m_aq, cbar=dict(label='x', shrink=0.6),
                              title=f'{name}(aq) mass fraction')
 
-    plot(on_figure, caption=f'Seepage({model.handle_str})', suptitle=f'时间: {tfc.get_time(model, as_str=True)}',
-         tight_layout=True)
+    return plot(
+        on_figure,
+        caption=f'Seepage({model.handle_str})',
+        suptitle=f'时间: {tfc.get_time(model, as_str=True)}',
+        tight_layout=True,
+        clear=True,
+        gui_mode=True)
 
 
 def main():
