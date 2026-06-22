@@ -1,6 +1,8 @@
 # ** desc = '浮力作用下气体运移成藏过程模拟(考虑氦气等多组分气体)'
 
 from zmlx import *
+from math import ceil
+from zmlx.fluid.solution import create_solute
 
 
 _EQUILIBRIA = {}
@@ -31,6 +33,7 @@ def _get_gas_water_equilibrium(components):
             gas_components=key,
             include_water_vapor=False,
             auto_use_organics=True,
+            mode='TP',
         )
     except Exception as err:
         _EQUILIBRIUM_ERRORS.add(key)
@@ -44,6 +47,10 @@ def _get_mass_at(mass, name, index):
     if name not in mass:
         return 0.0
     return max(0.0, float(mass[name][index]))
+
+
+def _has_gas_and_water(water_kg, gas_kg, eps=1.0e-20):
+    return water_kg > eps and sum(gas_kg.values()) > eps
 
 
 def _update_mass_by_equilibrium(p, t, mass, equilibrium=None):
@@ -62,6 +69,9 @@ def _update_mass_by_equilibrium(p, t, mass, equilibrium=None):
         aq_gas_kg = {comp: _get_mass_at(mass, f'{comp}(aq)', index) for comp in components}
         total_kg = water_kg + sum(gas_kg.values()) + sum(aq_gas_kg.values())
         if total_kg <= 1.0e-30:
+            skipped += 1
+            continue
+        if not _has_gas_and_water(water_kg, gas_kg):
             skipped += 1
             continue
 
@@ -100,8 +110,19 @@ def _update_mass_by_equilibrium(p, t, mass, equilibrium=None):
     return {'updated': updated, 'failed': failed, 'skipped': skipped}
 
 
+def _gas_component(name):
+    if name == 'N2':
+        return FluDef(name='N2', den=195.0, vis=2.1e-5, specific_heat=1040.0)
+    if name == 'He':
+        return FluDef(name='He', den=27.0, vis=2.2e-5, specific_heat=5193.0)
+    if name == 'CH4':
+        return ch4.create(name='CH4')
+    raise KeyError(name)
+
+
 def create(jx, jz):
     dt = 3600 * 24 * 30.0
+    time_max = 3600 * 24 * 365 * 6
     mesh = create_cube(
         x=linspace(0, 300, jx + 1),
         y=(-0.5, 0.5),
@@ -109,12 +130,12 @@ def create(jx, jz):
     )
 
     # todo: 修改流体定义
-    gas = ch4.create()
-    wat = h2o.create()
+    wat = h2o.create(name='H2O')
     fludefs = [
-        FluDef.create(defs=[gas.get_copy("N2"), gas.get_copy("He"), gas.get_copy("CH4")], name="gas"),
+        FluDef.create(defs=[_gas_component("N2"), _gas_component("He"), _gas_component("CH4")], name="gas"),
         FluDef.create(
-            defs=[wat.get_copy("H2O"), wat.get_copy("N2(aq)"), wat.get_copy("He(aq)"), wat.get_copy("CH4(aq)")],
+            defs=[wat, create_solute(wat, name="N2(aq)"), create_solute(wat, name="He(aq)"),
+                  create_solute(wat, name="CH4(aq)")],
             name="aqueous"),
     ]
 
@@ -162,7 +183,7 @@ def create(jx, jz):
     # 用于求解的选项
     model.set_text(
         key='solve',
-        text={'time_max': 3600 * 24 * 365 * 6, 'step_max': 1, }
+        text={'time_max': time_max, 'step_max': ceil(time_max / dt), }
     )
     step_iteration.add_setting(model, name='balance', step=1, args=['@model'])
     return model

@@ -48,6 +48,7 @@ class GasWaterUVEquilibrium:
         epsilon=1.0e-30,
         auto_use_organics=True,
         component_species=None,
+        mode="UV",
     ):
         """
         初始化计算器。
@@ -87,6 +88,9 @@ class GasWaterUVEquilibrium:
         self.epsilon = epsilon
         self.auto_use_organics = bool(auto_use_organics)
         self.component_species = component_species or {}
+        self.mode = str(mode).upper()
+        if self.mode not in ("UV", "TP"):
+            raise ValueError("mode must be 'UV' or 'TP'.")
 
         # 尝试数据库顺序。
         # 当用户请求 supcrtbl 但其中缺少 CH4(aq) 等有机水相物种时，自动尝试 supcrtbl-organics。
@@ -150,10 +154,14 @@ class GasWaterUVEquilibrium:
         # 4. 创建化学系统。若某个物种不存在，此处通常会抛出异常。
         system = ChemicalSystem(db, *phases)
 
-        # 5. 创建固定体积、固定内能平衡约束。
+        # 5. 创建平衡约束。
         specs = EquilibriumSpecs(system)
-        specs.volume()
-        specs.internalEnergy()
+        if self.mode == "UV":
+            specs.volume()
+            specs.internalEnergy()
+        else:
+            specs.temperature()
+            specs.pressure()
 
         solver = EquilibriumSolver(specs)
         if self.epsilon is not None:
@@ -259,19 +267,23 @@ class GasWaterUVEquilibrium:
         V0 = float(props0.volume()) if fixed_volume_m3 is None else float(fixed_volume_m3)
         U0 = float(props0.internalEnergy())
 
-        # 3. 设置 UV 条件。
+        # 3. 设置平衡条件。
         conditions = EquilibriumConditions(self.specs)
-        conditions.volume(V0)
-        conditions.internalEnergy(U0)
-        conditions.setLowerBoundTemperature(float(temperature_bounds_K[0]), "K")
-        conditions.setUpperBoundTemperature(float(temperature_bounds_K[1]), "K")
-        conditions.setLowerBoundPressure(float(pressure_bounds_Pa[0]), "Pa")
-        conditions.setUpperBoundPressure(float(pressure_bounds_Pa[1]), "Pa")
+        if self.mode == "UV":
+            conditions.volume(V0)
+            conditions.internalEnergy(U0)
+            conditions.setLowerBoundTemperature(float(temperature_bounds_K[0]), "K")
+            conditions.setUpperBoundTemperature(float(temperature_bounds_K[1]), "K")
+            conditions.setLowerBoundPressure(float(pressure_bounds_Pa[0]), "Pa")
+            conditions.setUpperBoundPressure(float(pressure_bounds_Pa[1]), "Pa")
+        else:
+            conditions.temperature(float(temperature_K), "K")
+            conditions.pressure(float(pressure_Pa), "Pa")
 
         # 4. 求解平衡。
         state = ChemicalState(state0)
         try:
-            self.solver.solve(state, conditions)
+            solve_result = self.solver.solve(state, conditions)
         except Exception as exc:
             return {
                 "success": False,
@@ -281,7 +293,18 @@ class GasWaterUVEquilibrium:
                 "pressure_Pa": None,
                 "aq_gas_kg": None,
                 "gas_kg": None,
-                "diagnostics": {"V0_m3": V0, "U0_J": U0},
+                "diagnostics": {"mode": self.mode, "V0_m3": V0, "U0_J": U0},
+            }
+        if hasattr(solve_result, "succeeded") and not solve_result.succeeded():
+            return {
+                "success": False,
+                "error": "Reaktoro equilibrium solver did not converge.",
+                "database_used": self.database_used,
+                "temperature_K": None,
+                "pressure_Pa": None,
+                "aq_gas_kg": None,
+                "gas_kg": None,
+                "diagnostics": {"mode": self.mode, "V0_m3": V0, "U0_J": U0},
             }
 
         # 5. 输出结果。
@@ -314,6 +337,7 @@ class GasWaterUVEquilibrium:
             },
             "all_species_kg": all_species_kg,
             "diagnostics": {
+                "mode": self.mode,
                 "V0_m3": V0,
                 "U0_J": U0,
                 "V_final_m3": float(props.volume()),
@@ -348,6 +372,7 @@ class GasWaterUVEquilibrium:
         return {
             "database_requested": self.requested_database_name,
             "database_used": self.database_used,
+            "mode": self.mode,
             "gas_components": self.gas_components,
             "aqueous_species_map": dict(self.aq_gas_species),
             "gas_species_map": dict(self.gas_species),
