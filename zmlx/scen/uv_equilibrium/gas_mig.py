@@ -1,128 +1,11 @@
 # ** desc = '浮力作用下气体运移成藏过程模拟(考虑氦气等多组分气体)'
 
 from zmlx import *
-from math import ceil
-from zmlx.fluid.solution import create_solute
-
-
-_EQUILIBRIA = {}
-_EQUILIBRIUM_ERRORS = set()
-
-
-def _get_components(mass):
-    comps = []
-    for name in mass:
-        if name == 'H2O':
-            continue
-        comp = name[:-4] if name.endswith('(aq)') else name
-        if comp not in comps:
-            comps.append(comp)
-    return tuple(comps)
-
-
-def _get_gas_water_equilibrium(components):
-    key = tuple(components)
-    if key in _EQUILIBRIA:
-        return _EQUILIBRIA[key]
-    if key in _EQUILIBRIUM_ERRORS:
-        return None
-    try:
-        from gas_water_uv_equilibrium import GasWaterUVEquilibrium
-        eq = GasWaterUVEquilibrium(
-            database_name='supcrtbl',
-            gas_components=key,
-            include_water_vapor=False,
-            auto_use_organics=True,
-            mode='TP',
-        )
-    except Exception as err:
-        _EQUILIBRIUM_ERRORS.add(key)
-        print(f'GasWaterUVEquilibrium 初始化失败，跳过本次化学平衡: {err}')
-        return None
-    _EQUILIBRIA[key] = eq
-    return eq
-
-
-def _get_mass_at(mass, name, index):
-    if name not in mass:
-        return 0.0
-    return max(0.0, float(mass[name][index]))
-
-
-def _has_gas_and_water(water_kg, gas_kg, eps=1.0e-20):
-    return water_kg > eps and sum(gas_kg.values()) > eps
-
-
-def _update_mass_by_equilibrium(p, t, mass, equilibrium=None):
-    components = _get_components(mass)
-    if equilibrium is None:
-        equilibrium = _get_gas_water_equilibrium(components)
-    if equilibrium is None:
-        return {'updated': 0, 'failed': 0, 'skipped': len(p)}
-
-    updated = 0
-    failed = 0
-    skipped = 0
-    for index in range(len(p)):
-        water_kg = _get_mass_at(mass, 'H2O', index)
-        gas_kg = {comp: _get_mass_at(mass, comp, index) for comp in components}
-        aq_gas_kg = {comp: _get_mass_at(mass, f'{comp}(aq)', index) for comp in components}
-        total_kg = water_kg + sum(gas_kg.values()) + sum(aq_gas_kg.values())
-        if total_kg <= 1.0e-30:
-            skipped += 1
-            continue
-        if not _has_gas_and_water(water_kg, gas_kg):
-            skipped += 1
-            continue
-
-        try:
-            result = equilibrium.solve(
-                temperature_K=float(t[index]),
-                pressure_Pa=float(p[index]),
-                water_kg=water_kg,
-                aq_gas_kg=aq_gas_kg,
-                gas_kg=gas_kg,
-                fixed_volume_m3=None,
-                temperature_bounds_K=(250.0, 800.0),
-                pressure_bounds_Pa=(1.0e5, 1.0e9),
-            )
-        except Exception:
-            failed += 1
-            continue
-        if not result.get('success', False):
-            failed += 1
-            continue
-
-        if 'H2O' in mass:
-            mass['H2O'][index] = result.get('water_kg', mass['H2O'][index])
-        result_gas = result.get('gas_kg') or {}
-        result_aq = result.get('aq_gas_kg') or {}
-        for comp in components:
-            if comp in mass and comp in result_gas:
-                mass[comp][index] = result_gas[comp]
-            aq_name = f'{comp}(aq)'
-            if aq_name in mass and comp in result_aq:
-                mass[aq_name][index] = result_aq[comp]
-        updated += 1
-
-    if failed > 0:
-        print(f'GasWaterUVEquilibrium 有 {failed} 个cell未收敛，已保持原质量。')
-    return {'updated': updated, 'failed': failed, 'skipped': skipped}
-
-
-def _gas_component(name):
-    if name == 'N2':
-        return FluDef(name='N2', den=195.0, vis=2.1e-5, specific_heat=1040.0)
-    if name == 'He':
-        return FluDef(name='He', den=27.0, vis=2.2e-5, specific_heat=5193.0)
-    if name == 'CH4':
-        return ch4.create(name='CH4')
-    raise KeyError(name)
+from gas_water_uv_equilibrium import react_gas_water
 
 
 def create(jx, jz):
     dt = 3600 * 24 * 30.0
-    time_max = 3600 * 24 * 365 * 6
     mesh = create_cube(
         x=linspace(0, 300, jx + 1),
         y=(-0.5, 0.5),
@@ -130,12 +13,12 @@ def create(jx, jz):
     )
 
     # todo: 修改流体定义
-    wat = h2o.create(name='H2O')
+    gas = ch4.create()
+    wat = h2o.create()
     fludefs = [
-        FluDef.create(defs=[_gas_component("N2"), _gas_component("He"), _gas_component("CH4")], name="gas"),
+        FluDef.create(defs=[gas.get_copy("N2"), gas.get_copy("He"), gas.get_copy("CH4")], name="gas"),
         FluDef.create(
-            defs=[wat, create_solute(wat, name="N2(aq)"), create_solute(wat, name="He(aq)"),
-                  create_solute(wat, name="CH4(aq)")],
+            defs=[wat.get_copy("H2O"), wat.get_copy("N2(aq)"), wat.get_copy("He(aq)"), wat.get_copy("CH4(aq)")],
             name="aqueous"),
     ]
 
@@ -183,7 +66,7 @@ def create(jx, jz):
     # 用于求解的选项
     model.set_text(
         key='solve',
-        text={'time_max': time_max, 'step_max': ceil(time_max / dt), }
+        text={'time_max': 3600 * 24 * 365 * 6, }
     )
     step_iteration.add_setting(model, name='balance', step=1, args=['@model'])
     return model
@@ -206,7 +89,8 @@ def balance(model: Seepage):
     #       请宇轩实现
     #       注意：1、不要使用cell的volume属性，因为model中流体的密度可能和Reaktoro不同
     #            2、这里给的质量都是numpy数组，看Reaktoro能否向量化计算以提升效率
-    _update_mass_by_equilibrium(p=p, t=t, mass=mass)
+    dt = tfc.get_dt(model)
+    react_gas_water(p, t, mass, dt=dt)
 
     # step 3.
     # 将更新之后的mass重新应用到模型中
