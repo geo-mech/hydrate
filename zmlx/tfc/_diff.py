@@ -5,12 +5,14 @@
 """
 from typing import Optional
 
-from zmlx.exts import clock
+from zmlx.alg.sys import warn
+from zmlx.exts import clock, calc_recommended_dt
 from zmlx.tfc._base import (
     as_numpy, Seepage, reg_cell_tmp, reg_face_tmp,
-    get_dt, get_func_opts, get_dv_relative, Map, ThreadPool,
+    get_dt, get_func_opts, get_cfl, Map, ThreadPool,
     add_dt_next, get_configs, put_configs, add_config
 )
+from zmlx.tfc._opts import merge_opts
 
 # 存储的text
 text_key = 'diffusion_settings'
@@ -112,13 +114,22 @@ def iterate_1(*local_opts, pool=None, key_opt=None, **global_opts):
         default_opts = dict(
             recommend_dt=model.has_tag('recommend_dt'),
             dt=get_dt(model),
-            dv_rela=get_dv_relative(model),
         )
 
         # 所有用来迭代的选项
-        opts = {
-            **default_opts, **inner_opts, **global_opts, **local_opt
-        }
+        opts = merge_opts(default_opts, inner_opts, global_opts, local_opt)
+
+        # 确定cfl
+        cfl = opts.get('cfl')
+        if cfl is None:
+            cfl = opts.get('dv_rela')
+            if cfl is not None:
+                warn(f"dv_rela is deprecated (remove after 2027-6-17), use cfl instead.",
+                     DeprecationWarning, stacklevel=3)
+        if cfl is None:
+            cfl = get_cfl(model)
+        assert cfl is not None
+        opts['cfl'] = cfl  # 将cfl写入opts，后续使用
 
         if model.face_number == 0:
             model.temps[key_opt] = None
@@ -201,11 +212,12 @@ def iterate_1(*local_opts, pool=None, key_opt=None, **global_opts):
         assert dt is not None, 'dt must be given'
 
         # 迭代，或者启动线程
-        opts['result'] = Map()
+        opts['result'] = sol.get_report()
         model.temps[key_opt] = opts
         sol.iterate(
             model, dt=dt, ca_t=ca_c, ca_mc=ca_m1, fa_g=fa_g, solver=None,
-            pool=pool, report=opts['result']
+            pool=pool, report=opts['result'],
+            cfl=opts['cfl'], # Add cfl since 2026-6-17
         )
 
     if isinstance(pool, ThreadPool):
@@ -216,23 +228,28 @@ def iterate_1(*local_opts, pool=None, key_opt=None, **global_opts):
         opts = model.temps[key_opt]
         if opts is None:
             continue
+
+        assert isinstance(opts, dict)
+        result = opts.get('result')
+        assert isinstance(result, Map)
+        result = result.to_dict()
+
         # 根据浓度（ca_c属性，会在sol.iterate中被修改）计算质量m
         ca_c = opts['ca_c']
         c = as_numpy(model).cells.get(ca_c)
         flu0 = opts['flu0']
         m1 = opts['m1']
         as_numpy(model).fluids(*flu0).mass = c * m1  # 更新“溶质”的质量
+
         # 处理dt
         if opts['recommend_dt']:
-            dv_rela = opts['dv_rela']
-            if 0 < dv_rela < 1.0e3:
-                sol = model.temps.get('diffusion_sol')
-                assert isinstance(sol, Seepage.ThermalSol)
-                dt_next = sol.get_recommended_dt(
-                    model, previous_dt=opts['dt'],
-                    dv_relative=dv_rela,
-                    ca_t=opts['ca_c'], ca_mc=opts['ca_m1']
-                )
+            target_cfl = opts['cfl']
+            if 0 < target_cfl < 1.0e3:
+                real_cfl: Optional[float] = result.get('cfl')
+                assert real_cfl is not None
+                real_dt: Optional[float] = result.get('dt')
+                assert real_dt is not None
+                dt_next = calc_recommended_dt(prev_dt=real_dt, prev_cfl=real_cfl, target_cfl=target_cfl)
                 opts['dt_next'] = dt_next  # 存储在option里面
 
 

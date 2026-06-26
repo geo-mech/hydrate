@@ -42,12 +42,13 @@ Face的属性：
     inertia: 惯性系数. 使用速率rate乘以此系数，则得到流体的动量（=m*v）. 根据Face的area*Face两侧的压力差，计算作用力，从而计算动量的
              变量速度。当Face同时定义了rate和inertia之后，才可以去考虑惯性效应。
 """
+import warnings
 from collections.abc import Iterable
 from typing import List, Union, Tuple
 
 from zmlx.alg import join_cols, join_paths, print_tag
 from zmlx.exts import (
-    get_average_perm, Tensor3, make_parent, SeepageMesh, get_distance as point_distance)
+    get_average_perm, Tensor3, make_parent, SeepageMesh, get_distance as point_distance, app_data)
 from zmlx.react import add_reaction
 from zmlx.tfc import _cap, _cond, _diff, _fluid, _heating, _inj, _prod, _sand, _solid, _step, _time
 from zmlx.tfc._base import *
@@ -459,6 +460,7 @@ def solve(
         slots=None,
         opt_iter=None,  # 用于在iterate的时候的额外的关键词参数.
         hide_console_when_done=False,
+        seepage_ext: str = '.seepage',
         **opt_sol
 ):
     """
@@ -505,9 +507,11 @@ def solve(
             return clamp(time * 0.05, save_dt_min, save_dt_max)
 
     # 执行数据的保存
+    assert len(seepage_ext) >= 2
+    assert seepage_ext.startswith('.')
     save_model = SaveManager(
         join_paths(folder, 'models'), save=model.save,
-        ext='.seepage',
+        ext=seepage_ext,
         time_unit=time_unit,
         unit_length='auto',
         dtime=save_dt,
@@ -535,7 +539,7 @@ def solve(
     data = opt_sol.get('show_cells')
     if isinstance(data, dict):
         def do_show():
-            show_cells(model, folder=join_paths(folder, 'figures'), **data)
+            show_cells(model, **data)
     else:
         do_show = None
 
@@ -650,9 +654,12 @@ def solve(
         opt_iter['slots'] = slots
 
     def main_loop():  # 主循环
-        if folder is not None:  # 显示求解的目录
-            if gui.exists():
-                gui.title(f'Solve seepage: {folder}')
+        if gui.exists():
+            if folder is not None:  # 显示求解的目录
+                gui.title(f'Solve Seepage: {folder}')
+                app_data.put('matplotlib_autosave', join_paths(folder, 'figures'))
+            else:
+                gui.title(f'Solve Seepage: Data Folder Not Set')
 
         while get_time(model) < time_max and get_step(model) < step_max:
             gui_iter(model, **opt_iter)
@@ -817,7 +824,8 @@ def create(
         has_solid: bool = False,
         reactions=None,
         gravity=None,
-        dt_max=None, dt_min=None, dt_ini=None, dv_relative=None,
+        dt_max=None, dt_min=None, dt_ini=None,
+        dv_relative=None, cfl=None, flow_cfl=None, thermal_cfl=None,
         gr=None, bk_fv=None, bk_g=None, caps=None,
         keys: Optional[Dict[str, int]] = None,
         tags: Optional[List[str]] = None,
@@ -843,6 +851,9 @@ def create(
         dt_min: 最小时间步长，默认值为 None
         dt_ini: 初始时间步长，默认值为 None
         dv_relative: 在一个dt内，流过的最大体积和网格体积的比值，用以控制dt的大小，默认值为 None
+        cfl: CFL系数，默认值为 None
+        flow_cfl: 流动CFL系数，默认值为 None
+        thermal_cfl: 热导CFL系数，默认值为 None
         gr: 绝对渗透率随着孔隙度的变化曲线，默认值为 None
         bk_fv: 是否备份初始的流体体积，默认值为 None
         bk_g: 是否备份初始的导流能力，默认值为 None
@@ -925,7 +936,15 @@ def create(
         set_dt(model, dt_ini)
 
     if dv_relative is not None:
-        set_dv_relative(model, dv_relative)
+        set_cfl(model, dv_relative)
+        warnings.warn("dv_relative is deprecated (remove after 2027-6-17), please use cfl instead",
+                      DeprecationWarning, stacklevel=2)
+    if cfl is not None:
+        set_cfl(model, cfl)
+    if flow_cfl is not None:
+        set_flow_cfl(model, flow_cfl)
+    if thermal_cfl is not None:
+        set_thermal_cfl(model, thermal_cfl)
 
     if gr is not None:
         igr = model.add_gr(gr, need_id=True)

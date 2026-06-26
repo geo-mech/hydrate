@@ -75,29 +75,30 @@ def create(jx, jz):
 
 
 def show(model, jx, jz):
-    def on_figure(fig):
+    def on_figure(figure):
         x = tfc.get_x(model, shape=(jx, jz))
         z = tfc.get_z(model, shape=(jx, jz))
         p = tfc.get_p(model, shape=(jx, jz))
         v0 = tfc.get_v(model, fid=0, shape=(jx, jz))
         v1 = tfc.get_v(model, fid=1, shape=(jx, jz))
         v = v0 + v1
-        args = [fig, add_contourf, x, z]
-        opts = dict(aspect='equal', xlabel='x/m', ylabel='z/m', nrows=1, ncols=3)
 
         def add_rect(ax):
             ax.plot([0, 200, 200, 0], [-250, -250, -200, -200], color='r', linewidth=1)
             angles = np.linspace(0, np.pi, 100)
             ax.plot(150 + 50 * np.cos(angles), -500 + 50 * np.sin(angles), 'r--')
 
-        ax = add_axes2(*args, p, cbar=dict(label='pressure', shrink=0.6), title='pressure', cmap='coolwarm', index=1,
-                       **opts)
+        layout = AutoLayout(figure, 3, subplot_aspect_ratio=0.6, aspect='equal', xlabel='x/m', ylabel='z/m')
+        ax = layout.add_axes2(add_contourf, x, z,
+                              p, cbar=dict(label='p', shrink=0.6), title='pressure', cmap='coolwarm')
         add_rect(ax)
-        ax = add_axes2(*args, v0 / v, cbar=dict(label='ch4 saturation', shrink=0.6), title='ch4 saturation', index=2,
-                       **opts)
+
+        ax = layout.add_axes2(add_contourf, x, z,
+                              v0 / v, cbar=dict(label='s0', shrink=0.6), title='ch4 saturation')
         add_rect(ax)
-        ax = add_axes2(*args, v1 / v, cbar=dict(label='h2o saturation', shrink=0.6), title='h2o saturation', index=3,
-                       **opts)
+
+        ax = layout.add_axes2(add_contourf, x, z,
+                              v1 / v, cbar=dict(label='s1', shrink=0.6), title='h2o saturation')
         add_rect(ax)
 
     plot(on_figure, caption=f'Seepage({model.handle_str})', suptitle=f'时间: {tfc.get_time(model, as_str=True)}',

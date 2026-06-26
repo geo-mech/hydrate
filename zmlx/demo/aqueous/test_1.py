@@ -19,7 +19,7 @@ def create(jx, jz):
 
     model = tfc.create(
         mesh=mesh,
-        dv_relative=0.5,
+        cfl=0.5,
         fludefs=fludefs,
         s=get_s,
         use_mass=True,

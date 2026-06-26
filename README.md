@@ -1,6 +1,6 @@
 ### 简介
 
-[**IGG-Hydrate**](https://gitee.com/geomech/hydrate): 储层多场耦合计算模块(Python接口和C++内核)。
+[**IGG-Hydrate**](https://gitee.com/geomech/hydrate): 储层多场耦合计算模块。
 用于：
 1、天然气水合物[成藏](https://doi.org/10.3390/w16192822)/[开发](https://doi.org/10.1016/j.apenergy.2024.122963)/[碳封存](https://doi.org/10.1016/j.fuel.2025.137599);
 2、页岩油[原位转化](https://doi.org/10.1016/j.petsci.2024.05.025)；
@@ -51,9 +51,7 @@
 
 ### 安装
 
-#### Windows 版本
-
-1. 确保操作系统为Windows 10/11, x64<sup>①</sup>;
+1. 确保操作系统为Windows 10/11, x64<sup>①</sup>; Linux 版本的安装参考 [https://gitee.com/geomech/hydrate/issues/IJWXWF](https://gitee.com/geomech/hydrate/issues/IJWXWF); 
 2. 安装[Python](https://www.python.org/) (64位, 3.8+, 推荐3.12+)<sup>②</sup> 并安装
    `PyQt6, pyqt6-qscintilla, PyQt6-WebEngine, numpy, scipy, matplotlib`等Python包<sup>③</sup>;
 3. 下载[IGG-Hydrate](https://gitee.com/geomech/hydrate)
@@ -64,69 +62,16 @@
    `zml_ui.pyw`](https://gitee.com/geomech/hydrate/blob/master/zml_ui.pyw)打开界面.
 
 > 注：<sup>①</sup>
-> 软件计算内核采用Visual Studio编译，建议用户在运行[IGG-Hydrate](https://gitee.com/geomech/hydrate)之前，提前安装
+> 软件计算内核采用Visual Studio 2019编译，建议安装
 > Visual
 > Studio运行库 [VC_redist.x64.exe](https://gitee.com/geomech/hydrate/attach_files) (
-> 尽管，貌似很多时候系统都内置了，但是安装这个运行库，并不会有任何的副作用);
-<sup>②</sup> 推荐使用[WinPython](https://gitee.com/geomech/hydrate/attach_files) (
-> 绿色免安装，同时也是软件作者使用的发行版，更能保证和[IGG-Hydrate](https://gitee.com/geomech/hydrate)的兼容);
-> 注意：关于Python版本的需求主要来自界面/绘图等功能;
+> 尽管，貌似很多时候系统都内置了，但是安装这个运行库，并不会有副作用);
+<sup>②</sup> 推荐使用[WinPython](https://gitee.com/geomech/hydrate/attach_files);
 <sup>③</sup> 运行脚本`zmlx/script/install_dep.py`可自动安装所有依赖包(基于[pip](https://pypi.org/project/pip/)
-> ，不保证安装成功)；另外，`PyQt5`不再支持;
+>)；
 <sup>④</sup> 建议在[demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)
 > 的基础上，向前追溯函数的实现; [demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)中案例仅供测试，作者不保证其参数的合理性.
 
-#### Linux 版本
-
-**系统要求**：推荐 Ubuntu 24.04 LTS (其他 Debian/Ubuntu 衍生版本可参考，未测试其他发行版)
-
-**安装步骤**：
-
-1. 打开终端，更新系统软件源：
-   ```bash
-   sudo apt update && sudo apt upgrade -y
-   ```
-
-2. 安装必要依赖：
-   ```bash
-   sudo apt install -y git libboost-all-dev python3-venv python3-pip
-   ```
-    - `git`: 用于克隆代码仓库
-    - `libboost-all-dev`: Boost 库（编译依赖）
-    - `python3-venv`: Python 虚拟环境工具
-    - `python3-pip`: Python 包管理工具
-
-3. 创建并激活 Python 虚拟环境（推荐，避免依赖冲突）：
-   ```bash
-   # 创建虚拟环境（可自定义环境名称）
-   python3 -m venv igg_hydrate_env
-   
-   # 激活虚拟环境
-   source igg_hydrate_env/bin/activate
-   ```
-   激活后终端提示符会显示 `(igg_hydrate_env)` 前缀，表示已进入虚拟环境。
-
-4. 安装 IGG-Hydrate（自动安装所有 Python 依赖）：
-   ```bash
-   pip install git+https://gitee.com/geomech/hydrate.git
-   ```
-   > 注：首次安装可能需要较长时间，需耐心等待。
-
-5. 启动 IGG-Hydrate 界面：
-   ```bash
-   python -m zmlx ui
-   ```
-
-**使用说明**：
-
-- 每次使用前需激活虚拟环境：`source igg_hydrate_env/bin/activate`
-- 退出虚拟环境：`deactivate`
-- Linux 下生成的二进制模型文件与 Windows 不兼容，如需跨平台使用，请保存为 `txt` 或 `xml` 格式。
-
-**故障排查**：
-
-- 在Linux上运行，核心是要满足动态库`zmlx/exts/zml.so`的依赖，请自行使用相关的工具来检查;
-- 可以使用ctypes尝试导入`zmlx/exts/zml.so`来测试环境配置是否成功.
 
 ### 协作/开发
 
@@ -147,20 +92,17 @@
 
 ### 镜像
 
-仓库主网址为: [gitee.com/geomech/hydrate](https://gitee.com/geomech/hydrate), 镜像仓库<sup>
-①</sup>: [github.com/geo-mech/hydrate](https://github.com/geo-mech/hydrate).
+仓库主网址为: [gitee.com/geomech/hydrate](https://gitee.com/geomech/hydrate), 镜像仓库: [github.com/geo-mech/hydrate](https://github.com/geo-mech/hydrate).
 
-> 注：<sup>①</sup> 反馈或推送给代码，务必在[主仓库](https://gitee.com/geomech/hydrate)
+> 注：反馈或推送给代码，务必在[主仓库](https://gitee.com/geomech/hydrate)
 > 进行，作者不会关注[镜像仓库](https://github.com/geo-mech/hydrate)的变化.
 
 ### 授权
 
-大部分功能可自由免费使用.
-但是，不同的模块可能有不同的授权要求，建议使用前先联系并[告知作者](https://gitee.com/geomech/hydrate/issues/ID5HZX)，谢谢。
+[告知作者](https://gitee.com/geomech/hydrate/issues/ID5HZX)后可免费使用。
 
-> 注：软件启动的时候，会检查网络时间，进而确保运行的是比较新的版本。对于过期的版本，仍然可以运行，但是计算的速度会受到限制
-> （仅Windows版本，Linux版本不做限制，但仍然建议使用最新版）。因此，
-> 请确保使用最新版，并在运行此软件模块的时候，确保电脑联网，否则计算会很慢。之所以有此限制，主要是作者不希望维护多个版本。
+> 注：软件会基于网络检查版本。对于过期的版本，仍然可以运行，但是计算的速度会受到限制
+> （仅Windows版本，Linux版本不做限制）。因此，请确保使用最新版，并确保电脑联网。
 
 ### 关于软件名
 

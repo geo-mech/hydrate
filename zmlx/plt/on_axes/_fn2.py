@@ -2,14 +2,13 @@
 定义数据格式 fn2，主要包括4列数据，用于定义裂缝位置，1列数据，用于定义裂缝的宽度，
 1列数据，用于定义裂缝的颜色（如压力）
 """
-
 from zmlx.exts import is_array
 from zmlx.plt.cmap import get_cm, get_color
 
 
 def add_fn2(
         ax, *, pos=None, w=None, c=None, w_min=1, w_max=4, cmap=None, clim=None, wlim=None, cbar=None,
-        fn2_aspect=None):
+        fn2_aspect=None, levels=None):
     """
     在ax上添加fn2数据
     """
@@ -54,7 +53,7 @@ def add_fn2(
         assert len(clim) == 2, f"clim = {clim}"
         cl, cr = clim
 
-    cmap = get_cm(cmap)
+    cmap = get_cm(cmap, levels=levels)
 
     if w_max < w_min:  # 确保w_max > w_min
         w_max, w_min = w_min, w_max

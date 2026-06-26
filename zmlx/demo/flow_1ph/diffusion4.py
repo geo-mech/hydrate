@@ -143,19 +143,16 @@ def main():
     step_max = 300
     dt = 1.0
     time = 0.0
+    tfc.set_dt_max(model, 1.0e9)
 
     for step in range(step_max):
         gui.progress(label='计算进度', val_range=[0, step_max], value=step)
         print(f'step = {step}/{step_max}, dt = {time2str(dt)}')
         time += dt
 
-        model.iterate(dt=dt)
-        dt1 = model.get_recommended_dt(previous_dt=dt, cfl=0.2)
-
+        tfc.iterate_flow(model, dt=dt, recommend_dt=True, cfl=0.2)
         diffusion.iterate(model, dt=dt, recommend_dt=True)
-        dt2 = tfc.get_dt_next(model)
-
-        dt = min(dt1, dt2, 1.0e9)
+        dt = tfc.get_dt_next(model)
         if step % 10 == 0:
             show(model, jx, jy, time=time)
     show(model, jx, jy, time=time)

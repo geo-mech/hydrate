@@ -140,7 +140,8 @@ class DllCore:
             dll_obj: 动态链接库对象
         """
         self.__err_handle = None
-        self.dll = dll_obj
+        self.dll: Optional[ctypes.CDLL] = dll_obj
+        self.safe_mode = True
         # 检查动态链接库是否成功加载
         if self.dll is None:
             warnings.warn("DllCore: dll_obj is None", category=RuntimeWarning, stacklevel=2)
@@ -469,7 +470,10 @@ class DllCore:
             - 未找到时返回 None
             - 自动处理函数不存在情况
         """
-        return self._dll_funcs.get(name)
+        if self.safe_mode:
+            return self._dll_funcs.get(name)
+        else:
+            return getattr(self.dll, name, None)
 
 
 # 动态库对象

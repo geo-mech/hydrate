@@ -33,6 +33,7 @@ def get_color(cmap, lr, rr, val):
         2. 数值超出范围时返回端点颜色
         3. 使用线性插值计算颜色位置，分母添加极小值防止除零错误
     """
+    assert matplotlib is not None
     assert isinstance(cmap, matplotlib.colors.Colormap), \
         f'cmap must be a matplotlib.colors.Colormap object, but got {type(cmap)}'
     # 确保颜色映射至少包含2种颜色（否则无法进行线性插值）
@@ -62,7 +63,7 @@ def get_color(cmap, lr, rr, val):
     return cmap(clamp(numerator / safe_denominator, 0.0, 1.0))
 
 
-def get_cm(name=None):
+def get_cm(name=None, *, levels=None):
     """
     根据 Matplotlib 版本自动选择最佳方法获取 Colormap
     该实现兼容 Matplotlib ≥1.4 的所有版本，并自动选择各版本推荐的最佳实践方法。
@@ -76,17 +77,27 @@ def get_cm(name=None):
     异常:
         ValueError: 如果名称对应的 Colormap 不存在
     """
-    import matplotlib
+    assert matplotlib is not None
     if isinstance(name, matplotlib.colors.Colormap):
-        return name
+        res = name
     else:
         import matplotlib.pyplot as plt
-        return plt.get_cmap(name if name is not None else "coolwarm")
+        res = plt.get_cmap(name if name is not None else "coolwarm")
+    if levels is not None:
+        levels = clamp(levels, 3, 200)
+        return resample(res, levels)
+    else:
+        return res
 
 
 def resample(cmap, lutsize):
-    assert isinstance(cmap, matplotlib.colors.Colormap)
-    return cmap.resampled(lutsize)
+    assert matplotlib is not None
+    assert isinstance(cmap, (str, matplotlib.colors.Colormap))
+    if not isinstance(cmap, matplotlib.colors.Colormap):
+        cmap = get_cm(cmap)
+        return cmap.resampled(lutsize)
+    else:
+        return cmap.resampled(lutsize)
 
 
 def test():

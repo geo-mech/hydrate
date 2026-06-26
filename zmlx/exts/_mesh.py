@@ -42,6 +42,14 @@ class Mesh3(HasHandle):
 
         core.use(c_double, 'mesh3_get_node_pos', c_void_p, c_size_t, c_size_t)
 
+        def get_pos(self, i_dim):
+            """
+            返回第i_dim个维度的节点坐标。
+            Args:
+                i_dim: 维度索引，0、1、2表示x、y、z坐标。
+            """
+            return core.mesh3_get_node_pos(self.model.handle, self.index, i_dim)
+
         @property
         def pos(self):
             """

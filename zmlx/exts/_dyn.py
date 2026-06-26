@@ -191,22 +191,33 @@ class DynSys(HasHandle):
 
     core.use(c_size_t, 'dynsys_size', c_void_p)
 
-    @property
-    def size(self) -> int:
+    def get_size(self) -> int:
         """
-        系统的自由度数量（读写属性）。
-
-        例如：
-            3节点三角形网格每个节点2个自由度 → size=6
-            2个共享边的三角形网格 → size=8
+        系统的自由度数量
         """
         return core.dynsys_size(self.handle)
 
     core.use(None, 'dynsys_resize', c_void_p, c_size_t)
 
+    def set_size(self, value: int):
+        """
+        系统的自由度数量
+        """
+        core.dynsys_resize(self.handle, value)
+
+    @property
+    def size(self) -> int:
+        """
+        系统的自由度数量（读写属性）。
+        """
+        return self.get_size()
+
     @size.setter
     def size(self, value: int):
-        core.dynsys_resize(self.handle, value)
+        """
+        系统的自由度数量
+        """
+        self.set_size(value)
 
     core.use(c_double, 'dynsys_get_pos', c_void_p, c_size_t)
 
@@ -336,7 +347,9 @@ class DynSys(HasHandle):
         if index is not None:
             core.dynsys_set_mass(self.handle, index, value)
 
+    # 别名，弃用
     get_mas = get_mass
+    # 别名，弃用
     set_mas = set_mass
 
     core.use(None, 'dynsys_write_mass', c_void_p, c_void_p)

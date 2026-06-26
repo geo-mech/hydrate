@@ -343,8 +343,8 @@ class SeepageSummary(SeepageFormEdit):
             )),
             ('CFL数', SeepageFloatEdit(
                 self,
-                get_value=lambda model: seepage.get_dv_relative(model),
-                set_value=lambda model, value: seepage.set_dv_relative(model, value)
+                get_value=lambda model: seepage.get_cfl(model),
+                set_value=lambda model, value: seepage.set_cfl(model, value)
             )),
         ]
         self.set_items(items)

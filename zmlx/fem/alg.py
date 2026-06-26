@@ -1,5 +1,7 @@
 import zmlx.alg.sys as warnings
 
+warnings.warn(f"{__file__} is deprecated (will be removed after 2027-6-26)", DeprecationWarning, stacklevel=2)
+
 from zmlx.exts import DynSys, Mesh3, ConjugateGradientSolver, np
 from zmlx.fem.boundary import find_boundary
 from zmlx.fem.create3 import create3

@@ -5787,6 +5787,29 @@ class Seepage(HasHandle, HasCells):
             pool.handle if isinstance(pool, ThreadPool) else 0
         )
 
+    core.use(None, 'seepage_update_mixture_den', c_void_p,
+             c_size_t,
+             c_void_p,
+             c_size_t, c_double, c_double, c_double, c_void_p
+             )
+
+    def update_mixture_den(self, index, ptm2den, fa_t, relax_factor=1.0, lr=-1, rr=-1, pool=None):
+        """
+        更新混合物的密度.
+        Args:
+            index (int): 混合物的索引
+            ptm2den: 回调函数，用于给定压力、温度，以及给定各个组分的质量来计算密度
+            fa_t (int): 温度属性的ID
+            relax_factor: 松弛因子
+            lr: 密度允许的最小值
+            rr: 密度允许的最大值
+            pool: 线程池对象(如果为None，则直接执行)
+        """
+        core.seepage_update_mixture_den(
+            self.handle, index, ptm2den, fa_t, relax_factor, lr, rr, pool.handle if isinstance(pool, ThreadPool) else 0
+        )
+
+
     core.use(None, 'seepage_update_vis',
              c_void_p, c_size_t, c_size_t, c_size_t,
              c_void_p, c_size_t, c_size_t, c_double,

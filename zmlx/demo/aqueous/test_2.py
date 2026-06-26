@@ -58,7 +58,7 @@ def main(jx=50, jy=50):
 
     model = tfc.create(
         mesh=mesh,
-        dv_relative=0.5,
+        cfl=0.5,
         fludefs=fludefs,
         s=get_s,
         use_mass=True,
@@ -71,7 +71,6 @@ def main(jx=50, jy=50):
 
     tfc.set_dt(model, 10)
     tfc.set_dt_max(model, 1e10)
-    tfc.set_dv_relative(model, 0.2)
 
     tfc.solve(model, extra_plot=lambda: show(model, jx, jy, time=tfc.get_time(model)), gui_mode=True, step_max=100)
 

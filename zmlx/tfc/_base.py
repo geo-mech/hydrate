@@ -501,6 +501,8 @@ def get_dt_next(model: Seepage, clear: bool = True) -> Optional[float]:
 
 
 def get_attr(model: Seepage, key, default_val=None, cast=None,
+             *,
+             show_warning: bool=True,
              **valid_range):
     """
     返回模型的属性。其中 key 可以是字符串，也可以是一个 int。
@@ -512,7 +514,8 @@ def get_attr(model: Seepage, key, default_val=None, cast=None,
         key (int|str): 属性键值，字符串会被转换为模型内部键
         default_val (Any): 属性不存在时返回的默认值（默认为None）
         cast (Callable): 用于转换属性值的类型转换函数（可选）
-        **valid_range: 数值验证范围参数 (left/right 或 min/max)
+        show_warning (bool): 是否在属性不存在时发出警告（默认为True）
+        **valid_range: 数值验证范围参数 (left/right)
 
     Returns:
         Any: 属性值。当属性不存在且未提供默认值时返回None
@@ -536,7 +539,7 @@ def get_attr(model: Seepage, key, default_val=None, cast=None,
             default_val=default_val,
             **valid_range)
     else:
-        if default_val is None:
+        if default_val is None and show_warning:
             warnings.warn(
                 f'The key ({key_backup}) is None '
                 f'and default_val is None when get_attr')
@@ -726,36 +729,113 @@ def set_step(model: Seepage, step):
     set_attr(model, 'step', step)
 
 
-def get_dv_relative(model: Seepage):
-    """获取流体运移网格数比（时间步长控制参数）
-
+def get_cfl(model: Seepage) -> float:
+    """
+    获取模型当前的 CFL 数值。
     Args:
-        model (Seepage): 渗流模型对象
+        model: 渗流模型对象
 
     Returns:
-        float: 流体流经网格数与时间步长的比值，默认值0.1
-
-    Notes:
-        正常取值范围建议为[0,1]，超出范围可能导致计算不稳定
+        float: 当前的 CFL 数值，默认值为0.1
     """
-    assert isinstance(model, Seepage), f'get_dv_relative expect Seepage, but got {type(model).__name__}'
-    return get_attr(model, 'dv_relative', default_val=0.1)
+    assert isinstance(model, Seepage), f'get_cfl expect Seepage, but got {type(model).__name__}'
+    value = get_attr(model, key='cfl', default_val=None, left=1.0e-10, right=1.0e20, show_warning=False)
+    if value is not None:
+        return value
+    value = get_attr(model, key='dv_relative', default_val=None, left=1.0e-10, right=1.0e20, show_warning=False)
+    if value is not None:
+        warnings.warn("cfl not defined, using previous dv_relative value", DeprecationWarning, stacklevel=2)
+        return value
+    else:
+        return 0.1
+
+
+def set_cfl(model: Seepage, value):
+    """
+    设置模型的 CFL 数值。
+
+    Args:
+        model: 渗流模型对象
+        value: 新的 CFL 数值（必须为正数）。
+
+    Returns:
+        None
+    """
+    assert isinstance(model, Seepage), f'set_cfl expect Seepage, but got {type(model).__name__}'
+    value = max(2.0e-10, min(0.5e20, value))  # 确保数值对于get_cfl有效
+    set_attr(model, 'cfl', value)
+
+
+def get_dv_relative(model: Seepage):
+    warnings.warn("dv_relative is deprecated (remove after 2027-6-17), please use cfl instead",
+                  DeprecationWarning, stacklevel=2)
+    return get_cfl(model)
 
 
 def set_dv_relative(model: Seepage, value):
-    """设置流体流过的网格数与时间步长的比值 (dv_relative)。
+    warnings.warn("dv_relative is deprecated (remove after 2027-6-17), please use cfl instead",
+                  DeprecationWarning, stacklevel=2)
+    set_cfl(model, value)
 
-    该比值用于控制渗流模型中的自适应时间步长计算。
 
-    Args:
-        model (Seepage): 要修改的渗流模型实例。
-        value (float): 新的 dv_relative 值（必须为正数）。
-
-    Note:
-        实际通过 `set_attr(model, 'dv_relative', value)` 存储该值。
+def get_flow_cfl(model: Seepage) -> float:
     """
-    assert isinstance(model, Seepage), f'set_dv_relative expect Seepage, but got {type(model).__name__}'
-    set_attr(model, 'dv_relative', value)
+    返回流动计算的CFL
+    Args:
+        model: 渗流模型对象
+    Returns:
+        float: 流动计算的CFL
+    """
+    assert isinstance(model, Seepage), f'get_flow_cfl expect Seepage, but got {type(model).__name__}'
+    value = get_attr(model, key='flow_cfl', default_val=None, left=1.0e-10, right=1.0e20, show_warning=False)
+    if value is not None:
+        return value
+    else:
+        return get_cfl(model)
+
+
+def set_flow_cfl(model: Seepage, value):
+    """
+    设置流动计算的CFL
+    Args:
+        model: 渗流模型对象
+        value: 流动计算的CFL
+    Returns:
+        None
+    """
+    assert isinstance(model, Seepage), f'set_flow_cfl expect Seepage, but got {type(model).__name__}'
+    value = max(2.0e-10, min(0.5e20, value))  # 确保数值对于get_flow_cfl有效
+    set_attr(model, 'flow_cfl', value)
+
+
+def get_thermal_cfl(model: Seepage) -> float:
+    """
+    返回热计算的CFL
+    Args:
+        model: 渗流模型对象
+    Returns:
+        float: 热计算的CFL
+    """
+    assert isinstance(model, Seepage), f'get_thermal_cfl expect Seepage, but got {type(model).__name__}'
+    value = get_attr(model, key='thermal_cfl', default_val=None, left=1.0e-10, right=1.0e20, show_warning=False)
+    if value is not None:
+        return value
+    else:
+        return get_cfl(model)
+
+
+def set_thermal_cfl(model: Seepage, value):
+    """
+    设置热计算的CFL
+    Args:
+        model: 渗流模型对象
+        value: 热计算的CFL
+    Returns:
+        None
+    """
+    assert isinstance(model, Seepage), f'set_thermal_cfl expect Seepage, but got {type(model).__name__}'
+    value = max(2.0e-10, min(0.5e20, value))  # 确保数值对于get_thermal_cfl有效
+    set_attr(model, 'thermal_cfl', value)
 
 
 def get_dt_min(model: Seepage):
@@ -934,7 +1014,6 @@ def iterate_flow(*local_opts, pool=None, **global_opts):
             check_dt=model.has_tag('check_dt'),
             recommend_dt=model.has_tag('recommend_dt'),  # 在流动迭代之后，添加建议的dt，对于自动步长管理很关键
             dt=get_dt(model),
-            dv_rela=get_dv_relative(model),
             fa_s=model.get_face_key('area'),
             fa_q=model.get_face_key('rate'),
             fa_k=model.get_face_key('inertia'),
@@ -942,6 +1021,15 @@ def iterate_flow(*local_opts, pool=None, **global_opts):
 
         # 所有用来迭代的选项
         opts = merge_opts(default_opts, inner_opts, global_opts, local_opt)
+
+        # 确定cfl
+        cfl = opts.get('cfl')
+        if cfl is None:
+            cfl = opts.get('dv_rela')
+        if cfl is None:
+            cfl = get_flow_cfl(model)
+        assert cfl is not None
+        opts['cfl'] = cfl  # 将cfl写入opts，后续使用
 
         # 准备其它参数
         if opts.get('ca_p') is None:
@@ -965,7 +1053,7 @@ def iterate_flow(*local_opts, pool=None, **global_opts):
             fa_k=opts['fa_k'],
             ca_p=opts['ca_p'],
             solver=opts.get('solver'),
-            dv_rela=opts['dv_rela'] if opts['check_dt'] else None,
+            cfl=opts['cfl'] if opts['check_dt'] else None,
             pool=pool, report=opts['result']
         )
 
@@ -994,7 +1082,7 @@ def iterate_flow(*local_opts, pool=None, **global_opts):
         set_attr(model, 'flow_real_dt', real_dt)  # 实际向前迭代的dt. 如果check_dt的时候，这个值可能和给定的dt不同.
 
         if opts['recommend_dt']:  # 建议新的dt.
-            target_cfl = opts['dv_rela']
+            target_cfl = opts['cfl']
             if 0 < target_cfl < 1.0e3:
                 real_cfl: Optional[float] = result.get('cfl')
                 assert real_cfl is not None
@@ -1035,16 +1123,22 @@ def iterate_thermal(*local_opts, pool=None, **global_opts):
             check_dt=model.has_tag('check_dt'),
             recommend_dt=model.has_tag('recommend_dt'),  # 在传热迭代之后，添加建议的dt，对于自动步长管理很关键
             dt=get_dt(model),
-            dv_rela=get_dv_relative(model),
             ca_t=model.get_cell_key('temperature'),
             ca_mc=model.get_cell_key('mc'),
             fa_g=model.get_face_key('g_heat'),
         )
 
         # 所有用来迭代的选项
-        opts = {
-            **default_opts, **inner_opts, **global_opts, **local_opt
-        }
+        opts = merge_opts(default_opts, inner_opts, global_opts, local_opt)
+
+        # 确定cfl
+        cfl = opts.get('cfl')
+        if cfl is None:
+            cfl = opts.get('dv_rela')
+        if cfl is None:
+            cfl = get_thermal_cfl(model)
+        assert cfl is not None
+        opts['cfl'] = cfl  # 将cfl写入opts，后续使用
 
         # 检查是否主动声明禁止迭代流场
         if opts['disable_ther']:
@@ -1067,7 +1161,7 @@ def iterate_thermal(*local_opts, pool=None, **global_opts):
             ca_mc=opts['ca_mc'],
             fa_g=opts['fa_g'],
             solver=opts.get('solver'),
-            cfl=opts['dv_rela'] if opts['check_dt'] else None,
+            cfl=opts['cfl'] if opts['check_dt'] else None,
         )
 
     if isinstance(pool, ThreadPool):
@@ -1090,11 +1184,11 @@ def iterate_thermal(*local_opts, pool=None, **global_opts):
             continue
 
         if opts['recommend_dt']:  # 建议新的dt.
-            dv_rela = opts['dv_rela']  # 设置的目标值
-            if 0 < dv_rela < 1.0e3:
+            target_cfl = opts['cfl']  # 设置的目标值
+            if 0 < target_cfl < 1.0e3:
                 real_cfl: Optional[float] = result.get('cfl')
                 assert real_cfl is not None
-                dt_next = calc_recommended_dt(prev_dt=real_dt, prev_cfl=real_cfl, target_cfl=dv_rela)
+                dt_next = calc_recommended_dt(prev_dt=real_dt, prev_cfl=real_cfl, target_cfl=target_cfl)
                 add_dt_next(model, dt=dt_next, desc="thermal")
 
 

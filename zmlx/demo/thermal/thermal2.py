@@ -22,7 +22,7 @@ def show(model: Seepage):
     def on_figure(fig):
         add_axes2(fig, add_tricontourf, tfc.get_x(model), tfc.get_y(model),
                   tfc.get_ca(model, model.get_cell_key('temperature')),
-                  caption='temperature',
+                  title='temperature',
                   xlabel='x (m)', ylabel='y (m)', aspect='equal',
                   cbar={'label': 'temperature (K)'}, cmap='coolwarm',
                   )
