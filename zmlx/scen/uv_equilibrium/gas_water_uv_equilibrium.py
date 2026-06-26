@@ -1,14 +1,21 @@
 # -*- coding: utf-8 -*-
 
+import csv
 from functools import lru_cache
-from math import exp
+import os
+from pathlib import Path
 
 import numpy as np
 from reaktoro import *
 
 
 COMPONENTS = ("He", "N2", "CH4")
-MASS_TRANSFER_RATE = 1.0 / (30.0 * 24.0 * 3600.0)
+FAILURE_LOG = Path(__file__).with_name("reaktoro_failed_cells.csv")
+
+try:
+    Warnings.enable(906)
+except Exception:
+    pass
 
 
 class GasWaterUVEquilibrium:
@@ -48,11 +55,17 @@ class GasWaterUVEquilibrium:
         specs.volume()
         specs.internalEnergy()
         self.solver = EquilibriumSolver(specs)
+        specs_tp = EquilibriumSpecs(self.system)
+        specs_tp.temperature()
+        specs_tp.pressure()
+        self.solver_tp = EquilibriumSolver(specs_tp)
         if epsilon is not None:
             opts = EquilibriumOptions()
             opts.epsilon = epsilon
             self.solver.setOptions(opts)
+            self.solver_tp.setOptions(opts)
         self.specs = specs
+        self.specs_tp = specs_tp
         self.species_names = [sp.name() for sp in self.system.species()]
         self.species_index = {name: i for i, name in enumerate(self.species_names)}
         self.molar_mass = {sp.name(): float(sp.molarMass()) for sp in self.system.species()}
@@ -85,18 +98,24 @@ class GasWaterUVEquilibrium:
         conditions.setUpperBoundPressure(float(pressure_bounds_Pa[1]), "Pa")
 
         state = ChemicalState(state0)
+        uv_success = True
+        uv_error = ""
         try:
             result = self.solver.solve(state, conditions)
             if hasattr(result, "succeeded") and not result.succeeded():
                 raise RuntimeError("Reaktoro equilibrium solver did not converge")
         except Exception as err:
-            return {"success": False, "error": str(err)}
+            uv_success = False
+            uv_error = str(err)
+            return {"success": False, "error": uv_error, "uv_success": False, "uv_error": uv_error}
 
         props = ChemicalProps(state)
         all_kg = self.species_masses(state)
         return {
             "success": True,
-            "error": "",
+            "error": "" if uv_success else f"UV failed; fallback success: {uv_error}",
+            "uv_success": uv_success,
+            "uv_error": uv_error,
             "database_requested": self.requested_database_name,
             "database_used": self.database_used,
             "temperature_K": float(state.temperature()),
@@ -115,11 +134,10 @@ class GasWaterUVEquilibrium:
             },
         }
 
-    def react(self, p, t, mass, dt, rate=MASS_TRANSFER_RATE, components=None):
+    def react(self, p, t, mass, components=None, failure_log=FAILURE_LOG):
         components = tuple(components or self.gas_components)
-        alpha = 1.0 - exp(-float(rate) * float(dt))
         gas_mass = sum(mass[name] for name in components)
-        for i in np.flatnonzero((mass["H2O"] > 1.0e-20) & (gas_mass > 1.0e-20)):
+        for i in np.flatnonzero((mass["H2O"] > 1.0e-20) & (gas_mass > 1.0e-6 * mass["H2O"])):
             gas_kg = {name: float(mass[name][i]) for name in components}
             aq_gas_kg = {name: float(mass[f"{name}(aq)"][i]) for name in components}
             result = self.solve(
@@ -129,12 +147,49 @@ class GasWaterUVEquilibrium:
                 aq_gas_kg=aq_gas_kg,
                 gas_kg=gas_kg,
             )
+            if not result["success"] or not result.get("uv_success", True):
+                self._record_failure(failure_log, i, p, t, mass, gas_kg, aq_gas_kg, result, components)
             if not result["success"]:
                 continue
-            mass["H2O"][i] += alpha * (result["water_kg"] - mass["H2O"][i])
             for name in components:
-                mass[name][i] += alpha * (result["gas_kg"][name] - mass[name][i])
-                mass[f"{name}(aq)"][i] += alpha * (result["aq_gas_kg"][name] - mass[f"{name}(aq)"][i])
+                total0 = gas_kg[name] + aq_gas_kg[name]
+                total_eq = result["gas_kg"][name] + result["aq_gas_kg"][name]
+                if total_eq > 0.0:
+                    mass[name][i] = total0 * result["gas_kg"][name] / total_eq
+                    mass[f"{name}(aq)"][i] = total0 * result["aq_gas_kg"][name] / total_eq
+
+    def _record_failure(self, failure_log, i, p, t, mass, gas_kg, aq_gas_kg, result, components):
+        if failure_log is None:
+            return
+        count = getattr(self, "failure_count", 0) + 1
+        self.failure_count = count
+        path = Path(failure_log)
+        if not getattr(self, "_failure_log_started", False):
+            self._failure_log_started = True
+            print(f"Reaktoro未收敛输入将记录到: {path}")
+        row = {
+            "failure_no": count,
+            "cell_index": int(i),
+            "temperature_K": float(t[i]),
+            "pressure_Pa": float(p[i]),
+            "water_kg": float(mass["H2O"][i]),
+            "gas_total_kg": float(sum(gas_kg.values())),
+            "gas_water_ratio": float(sum(gas_kg.values()) / mass["H2O"][i]),
+            "error": result.get("error", ""),
+        }
+        for name in components:
+            row[f"gas_{name}_kg"] = gas_kg[name]
+            row[f"aq_{name}_kg"] = aq_gas_kg[name]
+        path = _append_csv_row(path, row)
+        print(
+            f"Reaktoro cell {int(i)} recorded: "
+            f"T={float(t[i]):.6g} K, P={float(p[i]):.6g} Pa, "
+            f"water={float(mass['H2O'][i]):.6g} kg, "
+            f"gas_total={float(sum(gas_kg.values())):.6g} kg, "
+            f"gas/water={float(sum(gas_kg.values()) / mass['H2O'][i]):.6g}, "
+            f"csv={path}, "
+            f"error={result.get('error', '')}"
+        )
 
     def species_masses(self, state):
         return {name: self._get_mol(state, name) * self.molar_mass[name] for name in self.species_names}
@@ -173,5 +228,24 @@ def _equilibrium(components):
     )
 
 
-def react_gas_water(p, t, mass, dt, components=COMPONENTS, rate=MASS_TRANSFER_RATE):
-    _equilibrium(tuple(components)).react(p, t, mass, dt, rate=rate, components=components)
+def _append_csv_row(path, row):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        _write_csv_row(path, row)
+        return path
+    except PermissionError:
+        path = path.with_name(f"{path.stem}_{os.getpid()}{path.suffix}")
+        _write_csv_row(path, row)
+        return path
+
+
+def _write_csv_row(path, row):
+    exists = path.exists()
+    with path.open("a", newline="", encoding="utf-8") as file:
+        writer = csv.DictWriter(file, fieldnames=list(row))
+        if not exists:
+            writer.writeheader()
+        writer.writerow(row)
+
+def react_gas_water(p, t, mass, components=COMPONENTS, failure_log=FAILURE_LOG):
+    _equilibrium(tuple(components)).react(p, t, mass, components=components, failure_log=failure_log)
