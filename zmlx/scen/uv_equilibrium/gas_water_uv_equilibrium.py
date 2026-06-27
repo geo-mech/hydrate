@@ -10,6 +10,8 @@ from reaktoro import *
 
 
 COMPONENTS = ("He", "N2", "CH4")
+# CH4(aq) is required by this model; use the SUPCRT database that contains organic aqueous species.
+DEFAULT_DATABASE = "supcrtbl-organics"
 FAILURE_LOG = Path(__file__).with_name("reaktoro_failed_cells.csv")
 
 try:
@@ -20,8 +22,8 @@ except Exception:
 
 class GasWaterUVEquilibrium:
     def __init__(
-            self, database_name="supcrtbl", gas_components=COMPONENTS,
-            include_water_vapor=True, epsilon=1.0e-30, auto_use_organics=True):
+            self, database_name=DEFAULT_DATABASE, gas_components=COMPONENTS,
+            include_water_vapor=True, epsilon=1.0e-30, auto_use_organics=False):
         self.requested_database_name = database_name
         self.gas_components = tuple(gas_components)
         errors = {}
@@ -221,10 +223,10 @@ class GasWaterUVEquilibrium:
 @lru_cache(maxsize=4)
 def _equilibrium(components):
     return GasWaterUVEquilibrium(
-        database_name="supcrtbl",
+        database_name=DEFAULT_DATABASE,
         gas_components=tuple(components),
         include_water_vapor=False,
-        auto_use_organics=True,
+        auto_use_organics=False,
     )
 
 
