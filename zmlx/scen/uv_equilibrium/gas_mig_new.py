@@ -1,7 +1,7 @@
 # ** desc = '浮力作用下气体运移成藏过程模拟(考虑氦气等多组分气体)'
 
 from zmlx import *
-from zmlx.scen.uv_equilibrium.N2_CH4_He import GasWaterUVEquilibrium
+from zmlx.scen.uv_equilibrium.N2_CH4_He_new import GasWaterUVEquilibrium
 
 eq = GasWaterUVEquilibrium()
 
@@ -34,7 +34,7 @@ def create(jx, jz):
 
     def get_s(x, y, z):
         if is_gas_region(x, y, z):
-            return {'CH4': 0.9, 'H2O': 0.1}
+            return {'CH4': 1}
         else:
             return {'H2O': 1, 'He(aq)': 0.001}
 

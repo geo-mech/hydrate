@@ -27,8 +27,7 @@ class GasWaterUVEquilibrium:
         self.conditions.setUpperBoundPressure(100.0, "MPa")
 
     def get_next_state(self, temperature, pressure, masses):
-        backup = {"temperature": temperature, "pressure": pressure}
-        backup.update({name: float(masses.get(name, 0.0)) for name in self.names})
+        backup = {"temperature": temperature, "pressure": pressure, **masses.copy()}
         try:
             state = rtk.ChemicalState(self.system)
             state.temperature(temperature, "K")
