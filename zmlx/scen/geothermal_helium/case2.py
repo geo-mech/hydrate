@@ -4,7 +4,13 @@ from zmlx.scen.geothermal_helium._create import create
 from zmlx.seepage_mesh import create_xz, add_cell_face
 from zmlx.ui import gui
 
-
+("主要考虑氦气的产出和井位的优化，怎样布井更有利于产氦和采热"
+ "改变井的布置"
+ "井间距"
+ "注入流量变化"
+ "是不是也可以考虑氦-氮-甲烷等变化（不同注采深度，生产井压力和射孔段位置？累计产氦量、采热量和热突破时间，有利于地热-氦气协同开发的井位配置）"
+ "如果能提出一个比较合适的协同开发的井位布置也可以吧。"
+ "U热能固定，输入TP，输出平衡状态TP，局部可以，单元格固定体积和热能？")
 def create_model():
     mesh = create_xz(x_min=0, dx=10, x_max=1000, y_min=-0.5, y_max=0.5,
                      z_min=-2200.0, dz=10, z_max=-1800)
@@ -20,7 +26,10 @@ def create_model():
     # 左侧注入井：定流量注水
     add_cell_face(mesh, pos=[300, 0.0, (z_min + z_max) / 2], offset=[0, -10, 0],
                   vol=100, area=2.104, length=1)
-
+    """area是连接面积，L是等效流动距离，L是虚拟井网格中心到储层网格中心之间的等效连接距离，area是这条连接面的等效流通面积
+    真实井模型常用Peacman井模型或者井指数来连接井底流压和网格压力，井指数本质上把井几何，储层渗透率、完井长度、等效半径、精通半径和表皮系数等
+    因素综合起来。
+    """
 
     def is_upper(x, y, z):
         return abs(z - z_max) < 100
@@ -73,7 +82,7 @@ def create_model():
         {
             "pos": [300, -10, (z_min + z_max) / 2],
             "fluid_id": "h2o" ,
-            "value":5e-5,    ###单位为m³/s
+            "value":1.3e-4,    ###单位为m³/s
         }
     ]
 
@@ -105,4 +114,4 @@ def main():
 
 if __name__ == '__main__':
      gui.execute(main)
-"代码目前生产井和注入井之间仍然存在问题"
+
