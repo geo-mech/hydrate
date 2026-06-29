@@ -16,22 +16,8 @@ from zmlx.ui import gui
 3. 暂时不考虑 Reaktoro；
 4. 暂时不使用亨利定律；
 5. 只验证 He(aq)、N2(aq)、CH4(aq) 是否能随水相从储层向生产井被动运移；
-6. 通过 show_xy 显示压力、温度和三种溶解气体运移图。
+6. 通过 show_xy 显示压力、温度和三种溶解气体运移图（mass为单个网格的质量）。
 """
-
-
-# ============================================================
-# 0. 测试模式选择
-# ============================================================
-
-# 2A：只加入 He(aq)
-# TEST_MODE = "2A_HE"
-
-# 2B：加入 He(aq) + N2(aq)
-# TEST_MODE = "2B_HE_N2"
-
-# 2C：加入 He(aq) + N2(aq) + CH4(aq)
-TEST_MODE = "2C_HE_N2_CH4"
 
 
 # ============================================================
@@ -145,23 +131,7 @@ def create_model():
         # 真实储层：根据测试模式设置初始溶解气体
         # --------------------------------------------------------
         else:
-            if TEST_MODE == "2A_HE":
-                return dict(
-                    h2o=1.0 - HE_INIT,
-                    he_sol=HE_INIT,
-                    n2_sol=0.0,
-                    ch4_sol=0.0
-                )
 
-            elif TEST_MODE == "2B_HE_N2":
-                return dict(
-                    h2o=1.0 - HE_INIT - N2_INIT,
-                    he_sol=HE_INIT,
-                    n2_sol=N2_INIT,
-                    ch4_sol=0.0
-                )
-
-            elif TEST_MODE == "2C_HE_N2_CH4":
                 return dict(
                     h2o=1.0 - HE_INIT - N2_INIT - CH4_INIT,
                     he_sol=HE_INIT,
