@@ -40,7 +40,7 @@ def create_model():
     # ================= 1. 网格体积分配 =================
     # 右侧采出井：保持定压，保留巨大的虚拟体积
     add_cell_face(mesh, pos=[700, (y_min + y_max) / 2, 0.0],offset=[0,0,10],
-                  vol=1.0e10, area=2.104, length=1)
+                  vol=1.0e8, area=2.104, length=1)
 
     # 左侧注入井：定流量注水
     add_cell_face(mesh, pos=[300, (y_min + y_max) / 2, 0.0], offset=[0,0,-10],
@@ -65,7 +65,7 @@ def create_model():
 
     def get_perm(x, y, z):
         # 第一版使用均质渗透率，不加入随机场和低渗夹层
-        return 1.0e-14
+        return 5*1.0e-13
 
     def get_s(x, y, z):
         # 当前阶段为纯水模型。
@@ -89,7 +89,7 @@ def create_model():
     def get_p(x, y, z):
         if z > 2.0:
             # 生产井虚拟网格：低压定压边界
-            return 18.0e6
+            return 19.8e6
         else:
             # 储层和注入井虚拟网格：统一初始压力
             return 20.0e6
