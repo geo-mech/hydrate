@@ -36,10 +36,36 @@
 #     },
 # )
 
+"""
+
+"""
+from typing import Optional, List
+
 import reaktoro as rtk
 
+
 class GasWaterUVEquilibrium:
-    def __init__(self):
+    """
+    气体溶解计算模块
+    """
+
+    def __init__(self, gas_names: Optional[List[str]] = None):
+        """
+        初始化并导入数据库
+        Args:
+            gas_names (Optional[List[str]], optional): 气体名称列表。 Defaults to None.
+                在内部，利用后缀(g)代表气体、(aq)代表水相。
+
+
+        注意：
+            支持的类型：
+
+        """
+        if gas_names is None:
+            # 需要对输入的参数作检查，比如是否重复，大小写，是否包含在我们允许的库中
+
+            gas_names = ['CH4', 'N2', 'He', 'H2']
+
         db = rtk.SupcrtDatabase("supcrtbl-organics")
         aqueous = rtk.AqueousPhase("H2O(aq) CH4(aq) N2(aq) He(aq)")
         gases = rtk.GaseousPhase("H2O(g) CH4(g) N2(g) He(g)")
@@ -57,14 +83,41 @@ class GasWaterUVEquilibrium:
         self.conditions.setLowerBoundTemperature(275, "K")
         self.conditions.setUpperBoundTemperature(500.0, "K")
         self.conditions.setLowerBoundPressure(0.1, "MPa")
-        self.conditions.setUpperBoundPressure(100.0, "MPa")
+        self.conditions.setUpperBoundPressure(100.0, "MPa")  # 范围
+
+        # 机理运行的状态的统计，调用了多少次、耗时多少、多少次成功或者失败，保证效率
+
+        # 初始化之后，就要知道各个组分的序号
+        self.indexes = {
+            "ch3": 0
+        }
+
+        # 什么状态改变了，导致有点地方没有错误，有的时候有错误？
+
+        # 初始化之后，存储摩尔质量的np数组，后续就可以先量化计算质量
 
     def get_next_state(self, temperature, pressure, masses):
+        """
+        计算气-水体系UV平衡状态.
+
+        后续，能否支持对各cell的数据同时处理
+        Args:
+            temperature (float): 温度（开尔文）
+            pressure (float): 压力（帕）
+            masses (dict): 物种质量（千克）  支持字典和列表输入（列表输入更加高效）
+                列表的种类的顺序是：气态的各个组分+水的各个的组分
+        Returns: 最终平衡状态（千克）
+        """
+
+        # 归一化物种质量
         assert isinstance(masses, dict)
         state = rtk.ChemicalState(self.system)
         state.temperature(temperature, "K")
         state.pressure(pressure, "Pa")
-        for name in self.names:
+
+        # 最终，要使用setSpeciesAmounts来设置质量
+        for name in self.names:   # 最好是直接设置对应index的物质的质量    输入参数的检查，并且明显问题的时候报错
+            index = self.indexes.get(name)  ##??
             state.set(name, max(1.0e-30, masses.get(name, 0.0)), "kg")
         props = rtk.ChemicalProps(state)
         self.conditions.volume(props.volume())
@@ -72,4 +125,10 @@ class GasWaterUVEquilibrium:
         result = self.solver.solve(state, self.conditions)
         if hasattr(result, "succeeded") and not result.succeeded():
             return None
+
+        # 返回最终平衡状态   # 返回温度(需要返回给cell)
+
+        # 返回和输入保持同样的格式。如果输入的是dict，返回也是dict；输入的是list，返回也是list
+
+        # 是否存在向量化的返回语句？  speciesAmounts?
         return {name: float(state.speciesMass(name)) for name in self.names}
