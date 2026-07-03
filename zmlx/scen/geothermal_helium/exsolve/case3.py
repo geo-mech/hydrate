@@ -5,7 +5,7 @@ from zmlx.exts import get_pos_range
 from zmlx.scen.geothermal_helium.exsolve.fluid import create
 from zmlx.seepage_mesh import create_xy, add_cell_face
 from zmlx.ui import gui
-
+from zmlx import PressureController
 
 """
 水平一注一采溶解气体被动运移模型：简洁版
@@ -199,15 +199,81 @@ def create_model():
     return model
 
 
-def main():
-    from zmlx.scen.geothermal_helium.exsolve.show2 import show_xy
+def solve_with_pressure_controller(
+        model,
+        prod_virtual_pos
+):
+    """
+    使用原来的 tfc.solve 显示方式，同时保留 PressureController 定压生产井。
 
-    model = create_model()
+    核心思想：
+    1. 不再自己写 while 循环；
+    2. 改回 tfc.solve(model=model, extra_plot=...)；
+    3. 在 extra_plot 里面更新 PressureController；
+    4. 这样既能保持原来的 show_xy 显示，又能维持生产井定压。
+    """
+
+    from zmlx.scen.geothermal_helium.exsolve.show3 import show_xy
+
+    # ============================================================
+    # 1. 找到生产井虚拟网格
+    # ============================================================
+
+    prod_cell = model.get_nearest_cell(pos=prod_virtual_pos)
+
+    print("\n========== 定压生产井设置 ==========")
+    print(f"生产井虚拟网格位置 = {prod_virtual_pos}")
+    print(f"生产井虚拟网格 index = {prod_cell.index}")
+    print(f"生产井目标压力 P_PROD = {P_PROD / 1.0e6:.6f} MPa")
+    print(f"生产井初始压力 = {prod_cell.pre / 1.0e6:.6f} MPa")
+    print("说明：通过 PressureController 维持生产井定压。")
+    print("====================================\n")
+
+    # ============================================================
+    # 2. 创建压力控制器
+    # ============================================================
+
+    p_ctrl = PressureController(
+        cell=prod_cell,
+        t=[-1.0e20, 1.0e20],
+        p=[P_PROD, P_PROD],
+        modify_pore=True
+    )
+
+    # 初始时刻先控制一次
+    p_ctrl.update(t=tfc.get_time(model), modify_pore=True)
+
+    print(f"初始控制后生产井压力 = {prod_cell.pre / 1.0e6:.6f} MPa\n")
+
+    # ============================================================
+    # 3. 包装原来的 show_xy 显示函数
+    # ============================================================
+
+    def extra_plot():
+        # 显示前先控制一次，保证图上的生产井压力是定压后的状态
+        p_ctrl.update(t=tfc.get_time(model), modify_pore=True)
+
+        # 原来的显示函数
+        show_xy(model)
+
+        # 显示后再控制一次，减少下一步计算前的压力漂移
+        p_ctrl.update(t=tfc.get_time(model), modify_pore=True)
 
     tfc.solve(
         model=model,
-        extra_plot=lambda: show_xy(model),
+        extra_plot=extra_plot,
     )
+
+
+
+def main():
+    model, prod_virtual_pos = create_model()
+
+    solve_with_pressure_controller(
+        model=model,
+        prod_virtual_pos=prod_virtual_pos,
+    )
+
 
 
 if __name__ == '__main__':
