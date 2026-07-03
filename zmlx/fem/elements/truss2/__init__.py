@@ -4,3 +4,4 @@
 """
 
 from zmlx.fem.elements.truss2._stiffness import calc_stiffness
+from zmlx.fem.elements.truss2._strain import calc_strain
