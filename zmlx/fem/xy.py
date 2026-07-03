@@ -15,6 +15,7 @@ from zmlx.alg import sys as warnings
 from zmlx.exts import Mesh3, DynSys
 from zmlx.fem import dyn
 from zmlx.fem.elements import planar_strain_cst, planar_stress_cst, truss2
+from zmlx.fem.elements import planar_strain_quad4, planar_stress_quad4
 
 try:
     import numpy as np
@@ -28,6 +29,8 @@ class FaceType(Enum):
     """
     PlanarStrainCST = 1
     PlanarStressCST = 2
+    PlanarStrainQuad4 = 3
+    PlanarStressQuad4 = 4
 
 
 class LinkType(Enum):
@@ -144,19 +147,34 @@ def create_face_matrices(
     matrices = []
     for face in mesh.faces:
         assert isinstance(face, Mesh3.Face)
+        ft = face_types[face.index]
         nodes = [node.pos[:2] for node in face.nodes]
-        if face_types[face.index] == FaceType.PlanarStrainCST:  # 平面应变单元
+        if ft == FaceType.PlanarStrainCST:  # 平面应变三角形单元
+            assert face.node_number == 3, f"PlanarStrainCST要求3个节点，但Face {face.index}有{face.node_number}个"
             m = planar_strain_cst.calc_stiffness(
                 nodes, E=face_ym[face.index], mu=face_mu[face.index], thickness=face_thickness[face.index]
             )
             matrices.append(m)
-        elif face_types[face.index] == FaceType.PlanarStressCST:  # 平面应力单元
+        elif ft == FaceType.PlanarStressCST:  # 平面应力三角形单元
+            assert face.node_number == 3, f"PlanarStressCST要求3个节点，但Face {face.index}有{face.node_number}个"
             m = planar_stress_cst.calc_stiffness(
                 nodes, E=face_ym[face.index], mu=face_mu[face.index], thickness=face_thickness[face.index]
             )
             matrices.append(m)
+        elif ft == FaceType.PlanarStrainQuad4:  # 平面应变四边形单元
+            assert face.node_number == 4, f"PlanarStrainQuad4要求4个节点，但Face {face.index}有{face.node_number}个"
+            m = planar_strain_quad4.calc_stiffness(
+                nodes, E=face_ym[face.index], mu=face_mu[face.index], thickness=face_thickness[face.index]
+            )
+            matrices.append(m)
+        elif ft == FaceType.PlanarStressQuad4:  # 平面应力四边形单元
+            assert face.node_number == 4, f"PlanarStressQuad4要求4个节点，但Face {face.index}有{face.node_number}个"
+            m = planar_stress_quad4.calc_stiffness(
+                nodes, E=face_ym[face.index], mu=face_mu[face.index], thickness=face_thickness[face.index]
+            )
+            matrices.append(m)
         else:
-            assert False, f"不支持的单元类型：{face_types[face.index]}"
+            raise ValueError(f"不支持的单元类型：{ft}")
     return matrices
 
 
@@ -202,7 +220,7 @@ def create_link_matrices(
             )
             matrices.append(m)
         else:
-            assert False, f"不支持的单元类型：{link_types[link.index]}"
+            raise ValueError(f"不支持的单元类型：{link_types[link.index]}")
     return matrices
 
 
@@ -323,7 +341,11 @@ class FemModel:
         if face_ym is not None and face_mu is not None:
             self._face_elements = create_face_elements(mesh)
             if face_types is None:
-                self._face_types = [FaceType.PlanarStrainCST] * mesh.face_number  # 默认采用常应变三角形单元
+                # 根据Face节点数自动选择默认单元类型
+                self._face_types = [
+                    FaceType.PlanarStrainCST if face.node_number == 3 else FaceType.PlanarStrainQuad4
+                    for face in mesh.faces
+                ]
             else:
                 self._face_types = face_types
             self._face_matrices = create_face_matrices(
