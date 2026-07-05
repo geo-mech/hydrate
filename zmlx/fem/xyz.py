@@ -142,6 +142,9 @@ class FemModel:
     """
 
     def __init__(self):
+        """
+        初始化变量
+        """
         self._mesh: Optional[Mesh3] = None
         self._dyn: Optional[DynSys] = None
         self._body_density = None
@@ -190,6 +193,9 @@ class FemModel:
         )
 
     def get_mass(self, *, node_id=None, dim=None):
+        """
+        返回节点的质量
+        """
         assert self._dyn is not None
         if node_id is None:
             assert np is not None
@@ -211,12 +217,18 @@ class FemModel:
             return self._dyn.get_mass(node_id * 3 + dim)
 
     def set_mass(self, *, node_id=None, dim=None, value=None):
+        """
+        设置节点的质量
+        """
         assert self._dyn is not None
         assert node_id is not None and dim is not None and value is not None
         assert 0 <= dim <= 2, f"dim must be 0, 1, or 2, but got {dim}"
         self._dyn.set_mass(node_id * 3 + dim, value)
 
     def get_pos(self, *, node_id=None, dim=None):
+        """
+        返回节点的位置
+        """
         if node_id is None:
             assert self._node_x is not None
             if dim is None:
@@ -234,6 +246,9 @@ class FemModel:
             return self._mesh.get_node(node_id).get_pos(dim)
 
     def get_disp(self, *, node_id=None, dim=None):
+        """
+        返回节点的位移
+        """
         assert self._dyn is not None
         if node_id is None:
             assert np is not None
@@ -255,11 +270,17 @@ class FemModel:
             return self._dyn.get_pos(node_id * 3 + dim)
 
     def set_disp(self, *, node_id=None, dim=None, value=None):
+        """
+        设置节点的位移
+        """
         assert self._dyn is not None
         assert 0 <= dim <= 2, f"dim must be 0, 1, or 2, but got {dim}"
         self._dyn.set_pos(node_id * 3 + dim, value)
 
     def get_force(self, *, node_id=None, dim=None):
+        """
+        返回节点的力
+        """
         assert self._dyn is not None
         if node_id is None:
             assert np is not None
@@ -281,21 +302,36 @@ class FemModel:
             return self._dyn.get_p2f(node_id * 3 + dim).c
 
     def set_force(self, *, node_id=None, dim=None, value=None):
+        """
+        设置节点的力
+        """
         assert self._dyn is not None
         assert 0 <= dim <= 2, f"dim must be 0, 1, or 2, but got {dim}"
         lexpr = self._dyn.get_p2f(node_id * 3 + dim)
         lexpr.c = value
 
     def get_dyn(self):
+        """
+        返回动力学模型
+        """
         return self._dyn
 
     def get_mesh(self):
+        """
+        返回网格对象
+        """
         return self._mesh
 
     def get_node_number(self):
+        """
+        返回节点的数量
+        """
         assert self._mesh is not None
         return self._mesh.node_number
 
     def iterate(self, dt: float, solver=None):
+        """
+        向前迭代一步
+        """
         assert self._dyn is not None
         return self._dyn.iterate(dt, solver=solver)
