@@ -7,7 +7,7 @@ except ImportError:
 
 
 def calc_stress(nodes, displacement, E, mu):
-    """计算常应变三角形单元的应力 (DeepSeek 生成，尚未测试)
+    """计算常应变三角形单元的应力。
 
     Args:
         nodes (list): 原始节点坐标，格式为 [[x0,y0], [x1,y1], [x2,y2]]
