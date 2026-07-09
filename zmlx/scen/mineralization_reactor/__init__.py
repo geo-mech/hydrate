@@ -43,6 +43,14 @@ from zmlx.scen.mineralization_reactor._seepage import (
     write_state_to_cell,
 )
 from zmlx.scen.mineralization_reactor._show import show_xz
+from zmlx.scen.mineralization_reactor.co2_hydrate import (
+    add_to_co2_model,
+    co2_key_fields,
+    co2_mineralization_reaction,
+    initialize_co2_state,
+    state_from_co2_cell,
+    write_state_to_co2_cell,
+)
 
 
 __all__ = [
@@ -63,14 +71,18 @@ __all__ = [
     'Mineralization',
     'ReactorConfig',
     'add_to_model',
+    'add_to_co2_model',
     'component',
     'component_molar_mass',
+    'co2_key_fields',
+    'co2_mineralization_reaction',
     'create',
     'create_fludefs',
     'create_state_ini',
     'get_database',
     'get_species',
     'key_fields',
+    'initialize_co2_state',
     'mineral_density',
     'mineralization_reaction',
     'parse_text',
@@ -82,8 +94,10 @@ __all__ = [
     'species_formula',
     'species_molar_mass',
     'show_xz',
+    'state_from_co2_cell',
     'state_from_cell',
     'validate_species',
     'write_state_to_attrs',
+    'write_state_to_co2_cell',
     'write_state_to_cell',
 ]

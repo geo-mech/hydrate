@@ -37,9 +37,9 @@ class GasWaterUVEquilibrium:
         self.solver.setOptions(opts)
         self.conditions = rtk.EquilibriumConditions(self.specs)
         self.conditions.setLowerBoundTemperature(273.15, "K")
-        self.conditions.setUpperBoundTemperature(1273.15, "K")
+        self.conditions.setUpperBoundTemperature(1273, "K")
         self.conditions.setLowerBoundPressure(0.1, "MPa")
-        self.conditions.setUpperBoundPressure(500.0, "MPa")  # 官方数据范围
+        self.conditions.setUpperBoundPressure(400.0, "MPa")  # 官方数据范围
 
         # 运行的状态的统计，调用了多少次、耗时多少、多少次成功或者失败，保证效率
         # 这些统计量不参与计算，只用于调试收敛表现和定位 warning cell。

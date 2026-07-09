@@ -116,6 +116,12 @@ FIELD_NAMES = (
     'albite_kg',
     'anorthite_kg',
     'quartz_kg',
+    'calcite_delta_kg',
+    'magnesite_delta_kg',
+    'dolomite_delta_kg',
+    'albite_delta_kg',
+    'anorthite_delta_kg',
+    'quartz_delta_kg',
 )
 
 STATE_TO_FIELD = {
@@ -140,6 +146,12 @@ STATE_TO_FIELD = {
     'Albite': 'albite_kg',
     'Anorthite': 'anorthite_kg',
     'Quartz': 'quartz_kg',
+    'Calcite_delta_kg': 'calcite_delta_kg',
+    'Magnesite_delta_kg': 'magnesite_delta_kg',
+    'Dolomite_delta_kg': 'dolomite_delta_kg',
+    'Albite_delta_kg': 'albite_delta_kg',
+    'Anorthite_delta_kg': 'anorthite_delta_kg',
+    'Quartz_delta_kg': 'quartz_delta_kg',
 }
 
 
