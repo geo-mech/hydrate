@@ -3,7 +3,7 @@ try:
 except ImportError:
     np = None
 
-from zmlx.fem.elements.c3d8._stiffness import _shape_derivs, _B_matrix
+from zmlx.fem.elements.c3d8._stiffness import _shape_derivs, _B_matrix, _shape_funcs
 
 
 def calc_strain(nodes, displacement, xi=0.0, eta=0.0, zeta=0.0):
@@ -85,21 +85,9 @@ def calc_strain_extrapolated(nodes, displacement):
         (-1.0, -1.0, 1.0), (1.0, -1.0, 1.0), (1.0, 1.0, 1.0), (-1.0, 1.0, 1.0)
     ]
 
-    def shape_funcs(xi, eta, zeta):
-        return np.array([
-            (1.0 - xi) * (1.0 - eta) * (1.0 - zeta) / 8.0,
-            (1.0 + xi) * (1.0 - eta) * (1.0 - zeta) / 8.0,
-            (1.0 + xi) * (1.0 + eta) * (1.0 - zeta) / 8.0,
-            (1.0 - xi) * (1.0 + eta) * (1.0 - zeta) / 8.0,
-            (1.0 - xi) * (1.0 - eta) * (1.0 + zeta) / 8.0,
-            (1.0 + xi) * (1.0 - eta) * (1.0 + zeta) / 8.0,
-            (1.0 + xi) * (1.0 + eta) * (1.0 + zeta) / 8.0,
-            (1.0 - xi) * (1.0 + eta) * (1.0 + zeta) / 8.0,
-        ])
-
     node_strains = np.zeros((8, 6))
     for i_node, (xn, yn, zn) in enumerate(node_coords):
-        N = shape_funcs(xn, yn, zn)
+        N = _shape_funcs(xn, yn, zn)
         node_strains[i_node] = sum(N[j] * gp_strains[j] for j in range(8))
 
     return node_strains
