@@ -1,0 +1,222 @@
+{
+  "train": {
+    "surrogate_vs_reaktoro": {
+      "temperature_mae_K": 0.7857029043926423,
+      "temperature_rmse_K": 1.1381281513383459,
+      "pressure_mae_MPa": 0.6090835792296038,
+      "pressure_rmse_MPa": 1.4153233630446562,
+      "species_mass_mae_kg": 0.1821802746133089,
+      "species_mass_rmse_kg": 0.5611021696985812,
+      "species_mass_wape": 0.0007155649021488631,
+      "species_mass_median_rel_error": 0.0004246097984178291,
+      "species_mass_p95_rel_error": 461.4275592207084,
+      "species_mass_ge_1e-8_median_rel_error": 0.0036076815743742944,
+      "species_mass_ge_1e-8_p95_rel_error": 196.22804232297904,
+      "species_mass_ge_1e-6_median_rel_error": 0.003548146392332777,
+      "species_mass_ge_1e-6_p95_rel_error": 206.47449972346607
+    },
+    "gas_fraction_vs_reaktoro": {
+      "H2O": {
+        "mae": 0.0005269546224805442,
+        "rmse": 0.0017240433307734887,
+        "p95_abs": 0.0015506176020942015
+      },
+      "CH4": {
+        "mae": 0.06498650505318769,
+        "rmse": 0.11365293759687688,
+        "p95_abs": 0.1673334240913391
+      },
+      "N2": {
+        "mae": 0.10574751167503545,
+        "rmse": 0.13962832296287314,
+        "p95_abs": 0.21104939850054727
+      },
+      "He": {
+        "mae": 0.003250014020761614,
+        "rmse": 0.007432054832517823,
+        "p95_abs": 0.012070113140473238
+      }
+    },
+    "surrogate_mass_conservation": {
+      "mean_abs_error_kg": 3.385680998938385e-17,
+      "max_abs_error_kg": 4.547473508864641e-13,
+      "mean_rel_error": 3.6334692062757143e-19,
+      "max_rel_error": 2.1936643635726904e-16,
+      "by_component": {
+        "H2O": {
+          "mean_abs_error_kg": 1.3365570350494122e-16,
+          "max_abs_error_kg": 4.547473508864641e-13,
+          "mean_rel_error": 7.105560932240985e-20,
+          "max_rel_error": 2.010852157319519e-16
+        },
+        "CH4": {
+          "mean_abs_error_kg": 7.513617927144923e-19,
+          "max_abs_error_kg": 8.881784197001252e-16,
+          "mean_rel_error": 5.788422535920468e-19,
+          "max_rel_error": 1.7952552046964282e-16
+        },
+        "N2": {
+          "mean_abs_error_kg": 2.1062521762303398e-20,
+          "max_abs_error_kg": 2.220446049250313e-16,
+          "mean_rel_error": 2.2362698751027235e-19,
+          "max_rel_error": 2.1538095799803068e-16
+        },
+        "He": {
+          "mean_abs_error_kg": 9.991121381173798e-19,
+          "max_abs_error_kg": 4.440892098500626e-16,
+          "mean_rel_error": 5.798628320855565e-19,
+          "max_rel_error": 2.1936643635726904e-16
+        }
+      }
+    }
+  },
+  "val": {
+    "surrogate_vs_reaktoro": {
+      "temperature_mae_K": 1.4246382478399295,
+      "temperature_rmse_K": 2.2990868137348226,
+      "pressure_mae_MPa": 1.2933599943028629,
+      "pressure_rmse_MPa": 2.386776625315836,
+      "species_mass_mae_kg": 0.04507534819733263,
+      "species_mass_rmse_kg": 0.17257907620990132,
+      "species_mass_wape": 0.00029787155898649344,
+      "species_mass_median_rel_error": 0.0036866692970978837,
+      "species_mass_p95_rel_error": 8925791.577105897,
+      "species_mass_ge_1e-8_median_rel_error": 0.007746354050044828,
+      "species_mass_ge_1e-8_p95_rel_error": 23.76095305958094,
+      "species_mass_ge_1e-6_median_rel_error": 0.0075127483391575905,
+      "species_mass_ge_1e-6_p95_rel_error": 45.1692392333873
+    },
+    "gas_fraction_vs_reaktoro": {
+      "H2O": {
+        "mae": 0.0009967605124010545,
+        "rmse": 0.00945470185769478,
+        "p95_abs": 0.0033480359214799905
+      },
+      "CH4": {
+        "mae": 0.047901973290579256,
+        "rmse": 0.07629425282252612,
+        "p95_abs": 0.16785472631454468
+      },
+      "N2": {
+        "mae": 0.07413829545993904,
+        "rmse": 0.10854862472489432,
+        "p95_abs": 0.20120694675605755
+      },
+      "He": {
+        "mae": 0.010501190632962166,
+        "rmse": 0.024877619081812435,
+        "p95_abs": 0.04731917657203495
+      }
+    },
+    "surrogate_mass_conservation": {
+      "mean_abs_error_kg": 1.7734888840499015e-17,
+      "max_abs_error_kg": 1.1368683772161603e-13,
+      "mean_rel_error": 4.717308570786389e-19,
+      "max_rel_error": 2.190285206958224e-16,
+      "by_component": {
+        "H2O": {
+          "mean_abs_error_kg": 7.086268641689329e-17,
+          "max_abs_error_kg": 1.1368683772161603e-13,
+          "mean_rel_error": 2.999308225149695e-19,
+          "max_rel_error": 2.190285206958224e-16
+        },
+        "CH4": {
+          "mean_abs_error_kg": 7.196032118266623e-20,
+          "max_abs_error_kg": 1.1102230246251565e-16,
+          "mean_rel_error": 2.996793020012804e-19,
+          "max_rel_error": 1.562943017472212e-16
+        },
+        "N2": {
+          "mean_abs_error_kg": 4.39726468564785e-21,
+          "max_abs_error_kg": 6.938893903907228e-18,
+          "mean_rel_error": 7.568124906999886e-19,
+          "max_rel_error": 2.0487961377328203e-16
+        },
+        "He": {
+          "mean_abs_error_kg": 5.113592344600854e-22,
+          "max_abs_error_kg": 8.673617379884035e-19,
+          "mean_rel_error": 5.305008130983173e-19,
+          "max_rel_error": 1.8295634489060938e-16
+        }
+      }
+    }
+  },
+  "test": {
+    "surrogate_vs_reaktoro": {
+      "temperature_mae_K": 1.0810995714403138,
+      "temperature_rmse_K": 1.6307167461946535,
+      "pressure_mae_MPa": 1.1090710579956586,
+      "pressure_rmse_MPa": 2.2994632364516994,
+      "species_mass_mae_kg": 0.07757302445587522,
+      "species_mass_rmse_kg": 0.2592829231391415,
+      "species_mass_wape": 0.00045538187227032794,
+      "species_mass_median_rel_error": 0.0026900325741857516,
+      "species_mass_p95_rel_error": 1837191.8388199832,
+      "species_mass_ge_1e-8_median_rel_error": 0.006670592352747912,
+      "species_mass_ge_1e-8_p95_rel_error": 86.56385724802581,
+      "species_mass_ge_1e-6_median_rel_error": 0.006593596447923227,
+      "species_mass_ge_1e-6_p95_rel_error": 91.16145952472625
+    },
+    "gas_fraction_vs_reaktoro": {
+      "H2O": {
+        "mae": 0.0006904786816631797,
+        "rmse": 0.00187482174835357,
+        "p95_abs": 0.0030480874287554054
+      },
+      "CH4": {
+        "mae": 0.05267301001244269,
+        "rmse": 0.07919967820516594,
+        "p95_abs": 0.14046043157577515
+      },
+      "N2": {
+        "mae": 0.09220872906169301,
+        "rmse": 0.12598148267582382,
+        "p95_abs": 0.20512786242432202
+      },
+      "He": {
+        "mae": 0.010081959097252203,
+        "rmse": 0.026758371679342908,
+        "p95_abs": 0.04666396991267323
+      }
+    },
+    "surrogate_mass_conservation": {
+      "mean_abs_error_kg": 8.785420508955654e-20,
+      "max_abs_error_kg": 4.440892098500626e-16,
+      "mean_rel_error": 3.640153353643032e-19,
+      "max_rel_error": 2.1138395414644582e-16,
+      "by_component": {
+        "H2O": {
+          "mean_abs_error_kg": 3.2320903191416495e-19,
+          "max_abs_error_kg": 4.440892098500626e-16,
+          "mean_rel_error": 1.3055284184114596e-19,
+          "max_rel_error": 1.382465403471367e-16
+        },
+        "CH4": {
+          "mean_abs_error_kg": 2.7151135616946384e-20,
+          "max_abs_error_kg": 2.7755575615628914e-17,
+          "mean_rel_error": 4.239757947873898e-19,
+          "max_rel_error": 1.4351298935679414e-16
+        },
+        "N2": {
+          "mean_abs_error_kg": 9.477234237595422e-22,
+          "max_abs_error_kg": 1.734723475976807e-18,
+          "mean_rel_error": 3.193781024320813e-19,
+          "max_rel_error": 2.0775522302559972e-16
+        },
+        "He": {
+          "mean_abs_error_kg": 1.0892940335530203e-22,
+          "max_abs_error_kg": 2.168404344971009e-19,
+          "mean_rel_error": 5.821546023965959e-19,
+          "max_rel_error": 2.1138395414644582e-16
+        }
+      }
+    }
+  },
+  "elapsed_s": 1064.5844048000872,
+  "epochs": 1000,
+  "hidden_size": 256,
+  "batch_size": 1024,
+  "learning_rate": 0.0005,
+  "dataset": "zmlx\\scen\\uv_equilibrium\\data\\gas_aq_uv_equilibrium\\gas_aq_uv_equilibrium_10000_plus_diagnostics_round5.npz",
+  "feature_transform": "component_fractions_v2"
+}
