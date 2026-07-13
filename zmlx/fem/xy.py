@@ -16,6 +16,8 @@ from zmlx.exts import Mesh3, DynSys
 from zmlx.fem import dyn
 from zmlx.fem.elements import planar_strain_cst, planar_stress_cst, truss2
 from zmlx.fem.elements import planar_strain_quad4, planar_stress_quad4
+from zmlx.fem.elements import planar_strain_t6, planar_stress_t6
+from zmlx.fem.elements import planar_strain_quad8, planar_stress_quad8
 
 try:
     import numpy as np
@@ -31,6 +33,10 @@ class FaceType(Enum):
     PlanarStressCST = 2
     PlanarStrainQuad4 = 3
     PlanarStressQuad4 = 4
+    PlanarStrainT6 = 5
+    PlanarStressT6 = 6
+    PlanarStrainQuad8 = 7
+    PlanarStressQuad8 = 8
 
 
 class LinkType(Enum):
@@ -115,7 +121,7 @@ def _face_element(face: Mesh3.Face):
     """
     计算Face单元对应的自由度
     """
-    assert face.node_number == 3 or face.node_number == 4, f"Face {face.index}的节点数为{face.node_number}，必须为3或4"
+    assert face.node_number in (3, 4, 6, 8), f"Face {face.index}的节点数为{face.node_number}，必须为3、4、6或8"
     res = []
     for node in face.nodes:
         assert isinstance(node, Mesh3.Node)
@@ -170,6 +176,30 @@ def create_face_matrices(
         elif ft == FaceType.PlanarStressQuad4:  # 平面应力四边形单元
             assert face.node_number == 4, f"PlanarStressQuad4要求4个节点，但Face {face.index}有{face.node_number}个"
             m = planar_stress_quad4.calc_stiffness(
+                nodes, E=face_ym[face.index], mu=face_mu[face.index], thickness=face_thickness[face.index]
+            )
+            matrices.append(m)
+        elif ft == FaceType.PlanarStrainT6:  # 平面应变二次三角形单元
+            assert face.node_number == 6, f"PlanarStrainT6要求6个节点，但Face {face.index}有{face.node_number}个"
+            m = planar_strain_t6.calc_stiffness(
+                nodes, E=face_ym[face.index], mu=face_mu[face.index], thickness=face_thickness[face.index]
+            )
+            matrices.append(m)
+        elif ft == FaceType.PlanarStressT6:  # 平面应力二次三角形单元
+            assert face.node_number == 6, f"PlanarStressT6要求6个节点，但Face {face.index}有{face.node_number}个"
+            m = planar_stress_t6.calc_stiffness(
+                nodes, E=face_ym[face.index], mu=face_mu[face.index], thickness=face_thickness[face.index]
+            )
+            matrices.append(m)
+        elif ft == FaceType.PlanarStrainQuad8:  # 平面应变二次四边形单元
+            assert face.node_number == 8, f"PlanarStrainQuad8要求8个节点，但Face {face.index}有{face.node_number}个"
+            m = planar_strain_quad8.calc_stiffness(
+                nodes, E=face_ym[face.index], mu=face_mu[face.index], thickness=face_thickness[face.index]
+            )
+            matrices.append(m)
+        elif ft == FaceType.PlanarStressQuad8:  # 平面应力二次四边形单元
+            assert face.node_number == 8, f"PlanarStressQuad8要求8个节点，但Face {face.index}有{face.node_number}个"
+            m = planar_stress_quad8.calc_stiffness(
                 nodes, E=face_ym[face.index], mu=face_mu[face.index], thickness=face_thickness[face.index]
             )
             matrices.append(m)
@@ -343,7 +373,10 @@ class FemModel:
             if face_types is None:
                 # 根据Face节点数自动选择默认单元类型
                 self._face_types = [
-                    FaceType.PlanarStrainCST if face.node_number == 3 else FaceType.PlanarStrainQuad4
+                    FaceType.PlanarStrainCST if face.node_number == 3
+                    else FaceType.PlanarStrainQuad4 if face.node_number == 4
+                    else FaceType.PlanarStrainT6 if face.node_number == 6
+                    else FaceType.PlanarStrainQuad8  # face.node_number == 8
                     for face in mesh.faces
                 ]
             else:
