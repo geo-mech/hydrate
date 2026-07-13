@@ -158,10 +158,13 @@ def solve_inputs(samples, solver_factory=None, workers=1, sample_offset=0):
         if not hasattr(state, "solver"):
             state.solver = factory()
         started = perf_counter()
-        result = state.solver.solve(
-            samples.temperature_K[index], samples.pressure_Pa[index],
-            samples.masses_kg[index],
-        )
+        try:
+            result = state.solver.solve(
+                samples.temperature_K[index], samples.pressure_Pa[index],
+                samples.masses_kg[index],
+            )
+        except (RuntimeError, ValueError, FloatingPointError):
+            return None
         if result is None:
             return None
         row = _make_row(
