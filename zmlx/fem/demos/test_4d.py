@@ -110,17 +110,23 @@ def _show(model: FemModel):
         dy_fem = np.array([dy[n.index] for n in top_nodes])
 
         L, H = 4.0, 1.0
-        E_eff = 1.0 / (1 - 0.2 ** 2)  # 平面应变等效模量
-        I = 1.0 / 12
-        F = -0.001
+        E_mod = 1.0 / (1 - 0.2 ** 2)  # 平面应变等效模量
+        I = 1.0 / 12  # 截面惯性矩
+        F = -0.001  # 载荷
+        G = 1.0 / (2 * (1 + 0.2))  # 剪切模量
+        k = 5.0 / 6.0  # 矩形截面剪切系数
+        A = H * 1.0  # 截面面积（厚度=1）
         x_theory = np.linspace(0, L, 100)
-        dy_theory = F * x_theory ** 2 * (3 * L - x_theory) / (6 * E_eff * I)
+        # 铁木辛柯梁理论：挠度 = 弯曲挠度 + 剪切挠度
+        dy_bend = F * x_theory ** 2 * (3 * L - x_theory) / (6 * E_mod * I)  # 弯曲项
+        dy_shear = F * x_theory / (k * A * G)  # 剪切项
+        dy_theory = dy_bend + dy_shear
 
         ax = add_axes2(figure, nrows=1, ncols=1, index=1,
-                        title='Top edge y-displacement vs Euler-Bernoulli',
+                        title='Top edge y-displacement vs Timoshenko',
                         xlabel='x', ylabel='dy')
         ax.plot(x_fem, dy_fem, 'ro-', label='FEM', markersize=4)
-        ax.plot(x_theory, dy_theory, 'b-', label='Euler-Bernoulli')
+        ax.plot(x_theory, dy_theory, 'b-', label='Timoshenko')
         ax.legend()
         figure.tight_layout()
 
