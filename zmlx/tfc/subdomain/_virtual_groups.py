@@ -1,133 +1,9 @@
-"""
-实现对虚拟模型的分组，确保在一个分组内，模型并行执行的时候，不会出现数据的冲突.
-"""
-import warnings
-from typing import List, Set, Any, Dict, Optional, Tuple
+from typing import List, Any, Dict, Optional, Tuple
 
-from zmlx.exts import Seepage, get_index, ThreadPool
+from zmlx.exts import Seepage, get_index
 from zmlx.tfc import seepage
-
-
-def create_group(models: List[Seepage], copy_task: Optional[seepage.CellCopyTask] = None) -> Dict[str, Any]:
-    """
-    创建一个分组. 具有models和copy_task两个键.
-    """
-    assert isinstance(models, list), f'models must be a list'
-    assert len(models) > 0, "models must be a non-empty list of Seepage objects"
-    for model in models:
-        assert isinstance(model, Seepage), "models must be a list of Seepage objects"
-
-    if copy_task is not None:
-        assert isinstance(copy_task, seepage.CellCopyTask), "copy_task must be a seepage.CellCopyTask object"
-
-    return dict(models=models, copy_task=copy_task)
-
-
-def is_group(obj: Any) -> bool:
-    """
-    判断给定的对象能否被视为一个分组
-    """
-    if not isinstance(obj, dict):
-        return False
-
-    models = obj.get('models')
-    if not isinstance(models, list):
-        return False
-
-    for model in models:
-        if not isinstance(model, Seepage):
-            return False
-
-    copy_task = obj.get('copy_task')
-    if copy_task is not None:
-        if not isinstance(copy_task, seepage.CellCopyTask):
-            return False
-    return True
-
-
-def create(
-        groups: List[Dict[str, Any]], *,
-        pool: Optional[ThreadPool] = None,
-        time: float = 0.0,
-        dt: Optional[float] = None,
-        **opts
-) -> Dict[str, Any]:
-    """
-    创建一个子域模型. 包含groups, time, dt, pool等键. 使用此函数创建，确保生成的模型符合iterate的要求
-    Args:
-        groups: 模型的分组
-        pool: 线程池
-        time: 初始时间
-        dt: 时间步长
-        **opts: 其他参数
-    Returns:
-        子域模型
-    """
-    groups_checked = []
-    for group in groups:
-        if is_group(group):
-            groups_checked.append(group)
-        else:
-            warnings.warn(f"group {group} is not a valid group", Warning, stacklevel=2)
-
-    assert dt is not None, "dt cannot be None"
-    assert dt > 0.0, "dt must be greater than 0.0"
-    res = {}
-    res.update(opts)
-    res.update(dict(
-        time=time, dt=dt, groups=groups, pool=pool
-    ))
-    return res
-
-
-def split(virtual_models: List[List[Any]]) -> List[List[int]]:
-    """
-    对虚拟模型进行分组，确保在一个分组内，模型并行执行的时候，不会出现数据的冲突.
-    Args:
-        virtual_models: 虚拟模型的列表。每一个虚拟模型，都是cell的列表.
-    Returns:
-        每一个分组内模型的ID的列表
-    """
-
-    # 分组后的每一个虚拟模型所在分组的ID
-    group_ids = []
-
-    # 每个Group内使用的cell的ID的集合
-    cell_sets: List[Set[Any]] = []
-
-    # 遍历已有的分组，当找到没有交集的分组时，就将该虚拟模型分到该分组
-    for virtual_model in virtual_models:
-        found_group = False
-        for idx in range(len(cell_sets)):
-            is_intersect = False
-            for cell in virtual_model:
-                if cell in cell_sets[idx]:
-                    is_intersect = True
-                    break
-            if is_intersect:
-                continue
-            else:
-                group_ids.append(idx)
-                for cell in virtual_model:
-                    cell_sets[idx].add(cell)
-                found_group = True
-                break
-        if not found_group:
-            group_ids.append(len(cell_sets))
-            cell_sets.append(set(virtual_model))
-
-    # 返回分组结果
-    assert len(group_ids) == len(
-        virtual_models), f"group_ids and virtual_models must have the same length, but got {len(group_ids)} and {len(virtual_models)}"
-
-    res: List[List[int]] = []
-    for idx in range(len(group_ids)):
-        group_id = group_ids[idx]
-        while group_id >= len(res):
-            res.append([])
-        assert group_id < len(res), f"group_id must be less than {len(res)}, but got {group_id}"
-        res[group_id].append(idx)
-    return res
+from zmlx.tfc.subdomain._model import create_group
+from zmlx.tfc.subdomain._split import split
 
 
 def create_virtual_groups(
@@ -136,7 +12,7 @@ def create_virtual_groups(
         model_template: Optional[Seepage] = None
 ) -> List[Dict[str, Any]]:
     """
-    创建虚拟模型。这些模型不存储单元信息，而是依赖于copy_task来处理已有的模型.
+    创建虚拟模型。这些模型不存储单元信息，而是依赖于cell_copy来处理已有的模型.
     Args:
         real_models: 原始模型的列表.
         configs: 虚拟模型的建模数据列表
@@ -146,12 +22,12 @@ def create_virtual_groups(
             injectors：如何构建注入点， 每一个元素是一个字典，包含fluid_name, rate, pos等键
         model_template: 虚拟模型的模板。 如果为None，会自动从models中获取第一个模型的模板。
     Returns:
-        List[Dict[str, Any]]: 虚拟模型的列表，每个列表都是一个字典，包含models和copy_task两个键。
+        List[Dict[str, Any]]: 虚拟模型的列表，每个列表都是一个字典，包含models和cell_copy两个键。
     """
     if len(real_models) == 0:
         return []
 
-    if model_template is None:
+    if model_template is None:  # 默认使用第一个模型作为模板
         model_template = real_models[0].get_copy()
         model_template.clear_cells_and_faces()
 
@@ -209,11 +85,13 @@ def create_virtual_groups(
         if injectors is None:  # 防止准备数据的时候，将injectors设置为None
             injectors = []
 
-        for inj in injectors:
+        for inj in injectors:  # 这里对于injectors的设置比较有限，如果需要更复杂的设置，需要在创建之后，去进一步设置
             pos = inj.get('pos')
             if pos is None:
                 continue
             assert isinstance(pos, (tuple, list)), f'pos {pos} is not a tuple or list'
+            assert len(pos) == 3, f'pos {pos} must have 3 elements'
+
             cell = virtual_model.get_nearest_cell(pos)
             if cell is None:
                 continue
@@ -242,7 +120,8 @@ def create_virtual_groups(
 
         # 添加到列表中
         virtual_model_spaces.append(
-            dict(model=virtual_model, source_ids=source_ids, target_ids=target_ids, cell_ids=cell_ids))
+            dict(model=virtual_model, source_ids=source_ids, target_ids=target_ids, cell_ids=cell_ids)
+        )
 
     if len(virtual_model_spaces) == 0:
         return []
@@ -252,15 +131,15 @@ def create_virtual_groups(
 
     groups = []
     for indexes in model_groups:
-        assert isinstance(indexes, list)
+        assert isinstance(indexes, list)  # 此时，indexes是virtual_model_spaces中的索引
         spaces: List[Dict[str, Any]] = [virtual_model_spaces[i] for i in indexes]
-        # 模型
-        real_models: List[Seepage] = [space['model'] for space in spaces]
-        #
+        # 模型（前面创建的virtual_model）
+        models: List[Seepage] = [space['model'] for space in spaces]
+        # 创建复制任务
         source_ids: List[Tuple[Seepage, int]] = sum([space['source_ids'] for space in spaces], [])
         target_ids: List[Tuple[Seepage, int]] = sum([space['target_ids'] for space in spaces], [])
-        copy_cells = seepage.create_copy_task(
+        cell_copy = seepage.create_copy_task(
             sources=[m.get_cell(i) for m, i in source_ids], targets=[m.get_cell(i) for m, i in target_ids]
         )
-        groups.append({"models": real_models, "copy_cells": copy_cells})
+        groups.append(create_group(models, cell_copy))
     return groups

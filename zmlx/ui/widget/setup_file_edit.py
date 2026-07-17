@@ -1,6 +1,6 @@
 import os
 
-from zmlx.ui import setup_files
+from zmlx.ui import exts as setup_files
 from zmlx.ui.alg import create_action
 from zmlx.ui.gui_buffer import gui
 from zmlx.ui.pyqt import QtCore, QtWidgets

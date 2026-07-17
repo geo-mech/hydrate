@@ -197,7 +197,7 @@ def create():
         gravity=[0, 0, -10],
         dt_min=1,
         dt_max=24 * 3600,
-        dv_relative=0.1,
+        cfl=0.1,
         mesh=mesh,
         porosity=get_fai,
         pore_modulus=100e6,

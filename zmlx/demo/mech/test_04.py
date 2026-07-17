@@ -1,4 +1,15 @@
 # ** desc = '对于3m*1m的矩形的区域，划分三角形网格 (在顶部1<x<2的范围内，添加分布力的载荷)'
+#
+# 【详细说明】
+# 本案例模拟一个3m × 1m的矩形弹性体，采用更密的网格（100×30）。
+#   1. 左侧和右侧边界：固定x方向位移（铰支）
+#   2. 底部边界：固定y方向位移（滑动支座）
+#   3. 顶部边界在1 < x < 2范围内施加向下的分布力
+#   4. 分布力通过alg_xy.add_link_force施加在边界连杆（Link）上，
+#      力的大小与连杆长度成正比，实现均匀压力载荷
+#
+# 与前面案例的区别：使用更细的网格提高精度，采用非均匀边界条件（不同边界不同约束），
+# 以及通过边界连杆施加分布载荷的技术。
 
 from zmlx import *
 from zmlx.fem import alg_xy
@@ -9,54 +20,80 @@ from zmlx.plt.on_figure import add_axes2
 
 
 def main():
-    # 定义矩形区域的边界
+    """
+    主函数：使用精细网格（100×30）模拟矩形弹性体在局部分布载荷下的变形。
+
+    边界条件：
+      - 左右边界：x方向位移固定（铰支）
+      - 底部边界：y方向位移固定（滑动支座）
+      - 顶部中间区域（1<x<2）：施加向下的分布力载荷
+
+    载荷通过alg_xy.add_link_force施加在顶部边界的连杆上，
+    力的大小为1e6 × 连杆长度（N/m），实现沿边界的均匀压力分布。
+    """
+    # 定义矩形区域的边界 [m]
     x_min = 0
     x_max = 3
     y_min = 0
     y_max = 1
 
     # Mesh的face的自定义属性的ID
-    fa_ym = 0
-    fa_mu = 1
-    fa_den = 2
-    fa_h = 3
+    fa_ym = 0    # 杨氏模量 [Pa]
+    fa_mu = 1    # 泊松比 [无量纲]
+    fa_den = 2   # 密度 [kg/m^3]
+    fa_h = 3     # 厚度 [m]
 
+    # 生成较密的三角形网格（100×30），提高计算精度
     mesh = layered_triangles(x_min, x_max, 100, y_min, y_max, 30, as_mesh=True)
 
+    # 为每个三角形单元设置材料属性
     for face in mesh.faces:
-        face.set_attr(fa_ym, 1.0e9)  # 杨氏模量
-        face.set_attr(fa_mu, 0.2)
-        face.set_attr(fa_den, 1000.0)
-        face.set_attr(fa_h, 1.0)
+        face.set_attr(fa_ym, 1.0e9)  # 杨氏模量: 1 GPa
+        face.set_attr(fa_mu, 0.2)    # 泊松比: 0.2
+        face.set_attr(fa_den, 1000.0) # 密度: 1000 kg/m^3
+        face.set_attr(fa_h, 1.0)     # 厚度: 1 m
 
+    # 计算每个三角形单元的刚度矩阵
     face_stiffs = compute_face_stiff2(
         mesh, fa_E=fa_ym, fa_mu=fa_mu,
         fa_h=fa_h)
 
+    # 组装全局动力学系统
     model = FemAlg.create2(
         mesh=mesh, fa_den=fa_den, fa_h=fa_h,
         face_stiffs=face_stiffs)
 
+    # 施加边界条件（通过放大质量固定特定自由度）
     for i in range(mesh.node_number):
         x, y = mesh.get_node(i).pos[0], mesh.get_node(i).pos[1]
-        if x < 0.01 or x > x_max - 0.01:  # 左右的node，固定x方向的位移
+        if x < 0.01 or x > x_max - 0.01:  # 左右的node，固定x方向的位移（铰支）
             model.set_mass(i * 2, model.get_mass(i * 2) * 1.0e20)
             continue
-        if y < 0.01:  # 底部，固定y方向的位移
+        if y < 0.01:  # 底部，固定y方向的位移（滑动支座）
             model.set_mass(i * 2 + 1, model.get_mass(i * 2 + 1) * 1.0e20)
             continue
 
+    # 在顶部边界中间区域（1<x<2）施加向下的分布力
+    # 通过alg_xy.add_link_force将力施加在边界连杆上
     for link in mesh.links:  # 顶部，添加向下的压力
         assert isinstance(link, Mesh3.Link)
-        if link.face_number == 1:
+        if link.face_number == 1:  # 只考虑只有1个相邻面的边界连杆
             x, y = link.pos[0], link.pos[1]
             if 1 < x < 2 and y > y_max - 0.01:
+                # 施加向下的力，大小与连杆长度成正比（均匀压力）
                 alg_xy.add_link_force(model, mesh, link.index, [0, -1e6 * link.length])
 
+    # 使用共轭梯度求解器执行静态求解
     solver = ConjugateGradientSolver(tolerance=1.0e-30)
     model.iterate(dt=1, solver=solver)
 
     def on_figure(fig):
+        """
+        绘制位移场云图的回调函数。
+
+        Args:
+            fig: matplotlib图形对象
+        """
         vx = [model.get_pos(i * 2) for i in range(mesh.node_number)]
         vy = [model.get_pos(i * 2 + 1) for i in range(mesh.node_number)]
         dx = [vx[i] - mesh.get_node(i).pos[0] for i in range(mesh.node_number)]

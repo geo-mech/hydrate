@@ -16,8 +16,10 @@
 作者: 张召彬 <zhangzhaobin@mail.iggcas.ac.cn>，
      中国科学院地质与地球物理研究所.
 """
+import datetime
 import importlib
 import re
+import sys
 import warnings
 from ctypes import c_uint
 
@@ -42,6 +44,7 @@ from zmlx.exts._mesh import *
 from zmlx.exts._lexpr import LinearExpr, create_lexpr
 from zmlx.exts._dyn import *
 from zmlx.exts._sol import ConjugateGradientSolver
+from zmlx.exts._hk import HasKeys
 import zmlx.exts._utils as has_cells
 from zmlx.exts._seepage import (
     Seepage, Thermal, Reaction, FluDef, FluData, Fluid, CellData, Cell, FaceData, Face, Injector, FlowSol, ThermalSol,

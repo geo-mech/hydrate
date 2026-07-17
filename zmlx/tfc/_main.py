@@ -461,10 +461,24 @@ def solve(
         opt_iter=None,  # 用于在iterate的时候的额外的关键词参数.
         hide_console_when_done=False,
         seepage_ext: str = '.seepage',
+        plot_gui_only=None,  # 是否只在gui模式下绘图
         **opt_sol
 ):
     """
-    求解模型，并尝试将结果保存到folder.
+    求解模型，并尝试将结果保存到folder。
+
+    注意：gui_mode 参数已弃用，将在 2027-07-15 之后移除。
+
+    推荐用法（用户自行控制 GUI）:
+        # 非 GUI 模式
+        tfc.solve(model, folder=...)
+
+        # GUI 模式（通过 gui.execute 包裹）
+        gui.execute(lambda: tfc.solve(model, folder=...),
+                    close_after_done=False)
+
+    旧用法（已弃用，不要在新代码中使用）:
+        tfc.solve(model, gui_mode=True, close_after_done=False)
     """
     model, folder = _prepare_model(model=model, folder=folder, fname=fname)
     if not isinstance(model, Seepage):
@@ -594,6 +608,9 @@ def solve(
         gui_iter.iterate = iterate
         gui_iter.plot = plot
 
+    if plot_gui_only is not None:
+        gui_iter.gui_only = plot_gui_only
+
     # 求解到的最大的时间
     time_max = opt_sol.get('time_max')
     if time_max is None:
@@ -682,8 +699,8 @@ def solve(
 
         if hide_console_when_done:  # 求解完成后，隐藏控制台
             gui.hide_console()
-        plot()
-        gui_iter.plot_timing()
+
+        gui_iter.plot_all()
         save(check_dt=False)  # 保存最终状态
 
     if close_after_done is not None and gui_mode is None:
@@ -695,6 +712,16 @@ def solve(
 
     if close_after_done is None:  # 默认计算技术要关闭界面
         close_after_done = True
+
+    if gui_mode:  # 警告：solve 内部启动 GUI 将在 1 年内弃用
+        warnings.warn(
+            'tfc.solve(gui_mode=True) is deprecated and will be removed after 2027-07-15. '
+            'Please use gui.execute() to wrap the solve call instead:\n'
+            '    gui.execute(lambda: tfc.solve(model, ...), close_after_done=False)\n'
+            'See demo examples: zmlx/demo/hydrate/prod_v2_inj_hot_water.py, '
+            'zmlx/demo/hydrate/prod_v2_electric_heating.py, '
+            'zmlx/demo/flow_2ph/wat_disp_oil.py',
+            DeprecationWarning, stacklevel=2)
 
     gui.execute(func=main_loop, close_after_done=close_after_done,
                 disable_gui=not gui_mode)
@@ -791,23 +818,7 @@ def add_injector(model: Seepage, data):
     if data is None:
         return
     elif isinstance(data, dict):
-        inj = model.add_injector(**data)
-        flu = data.get('flu')
-        if flu == 'insitu' and model.cell_number > 0 and len(inj.fid) > 0:
-            cell_id = inj.cell_id
-            if cell_id >= model.cell_number and point_distance(
-                    inj.pos, [0, 0, 0]) < 1e10:
-                cell = model.get_nearest_cell(pos=inj.pos)
-                if point_distance(cell.pos, inj.pos) < inj.radi:
-                    cell_id = cell.index
-            if cell_id < model.cell_number:
-                # 特别注意的是，这里找到的这个cell，和injector内部工作的时候的cell，可能并不完全相同.
-                cell = model.get_cell(cell_id)
-                temp = cell.get_fluid(*inj.fid).get_copy()
-                if temp is not None:
-                    if temp.mass < 1.0e-10:
-                        temp.mass = 1.0  # 将质量设置为宏观的量，确保属性可以被使用(since 2025-12-9)
-                    inj.flu.clone(temp)
+        model.add_injector(**data)
     else:
         for item in data:
             add_injector(model, data=item)

@@ -1,5 +1,5 @@
 """
-基于流动(渗流)、传热、化学相关的功能 (TFC耦合基础)
+基于流动(渗流)、传热、化学相关的功能 (TFC耦合基础)。核心是对Seepage类的扩展。
 """
 
 import zmlx.tfc._cap as capillary
@@ -16,6 +16,7 @@ from zmlx.exts import SelfPath
 from zmlx.tfc._keys import *
 from zmlx.tfc._main import *
 from zmlx.tfc._plt import show_cells
+from zmlx.tfc._traj import get_cells_along, get_cells_along_seg  # 曲线在Seepage模型中留下的轨迹
 
 get_path = SelfPath(__file__)
 

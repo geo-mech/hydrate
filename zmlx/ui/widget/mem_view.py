@@ -1,7 +1,7 @@
 import timeit
 
 from zmlx.alg.base import clamp
-from zmlx.exts import app_data
+from zmlx.system import app_data
 from zmlx.ui.pyqt import QtCore, QtWidgets
 
 

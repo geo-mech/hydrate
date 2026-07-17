@@ -1,9 +1,30 @@
 # ** desc = '测试：纵向二维。浮力作用下气体运移成藏过程模拟'
 
+# 本案例模拟甲烷气体在浮力驱动下从深部向上运移并在浅层聚集成藏的过程。
+# 物理问题：在一个300m宽、500m深的二维纵向剖面中，初始状态下水完全饱和，
+# 在深度400m处有一个初始甲烷气藏（半径50m）。由于甲烷密度远小于水的密度，
+# 气体在浮力作用下向上运移。模型中存在高渗透通道（中心宽度40m，渗透率100倍
+# 于周围地层），气体优先沿高渗通道运移。温度随深度变化（地温梯度约0.0443 K/m），
+# 压力为静水压力分布。顶部和底部边界的高热容设置用于维持边界温度恒定。
+# 建模方法：使用tfc（热-流-化学）耦合框架，建立二维纵向剖面模型，
+# 包含CH4和H2O两种流体，考虑重力、渗透率非均质性和热传导效应。
+# 模拟结果可展示气体运移路径、聚集位置和饱和度分布随时间的变化。
+
 from zmlx import *
 
 
 def create():
+    """
+    创建浮力驱动气体运移模型。
+
+    构建一个300m宽、500m深的二维纵向剖面（x方向150个单元，z方向250个单元），
+    在深度400m处设置初始甲烷气藏。中心区域设置高渗透率通道模拟断层或高渗层，
+    周围为低渗透率基质。温度和压力按地温梯度和静水压力分布初始化。
+
+    返回:
+        Seepage: 创建好的渗流模型对象
+    """
+    # 创建网格：x方向0~300m（150等分），y方向仅1层（二维），z方向-500~0m（250等分）
     mesh = create_cube(
         x=linspace(0, 300, 150),
         y=(-0.5, 0.5),
@@ -11,44 +32,68 @@ def create():
     )
 
     def get_t(x, y, z):
-        return 278 + 22.15 - 0.0443 * z
+        """
+        定义温度随深度的分布（地温梯度）。
+        地表温度~300.15K，随深度增加温度升高，梯度约0.0443 K/m。
+        """
+        return 278 + 22.15 - 0.0443 * z  # z=-500时约300K，z=0时约278K
 
     def get_p(x, y, z):
-        return 10e6 + 5e6 - 1e4 * z
+        """
+        定义初始压力分布（静水压力）。
+        参考压力10MPa + 5MPa偏移，按水深梯度1e4 Pa/m变化。
+        """
+        return 10e6 + 5e6 - 1e4 * z  # z=-500时约20MPa，z=0时约15MPa
 
     def get_s(x, y, z):
+        """
+        定义初始饱和度分布。
+        以(150, 0, -400)为中心、半径50m范围内初始为纯甲烷，
+        其余区域为纯水。
+        """
         if get_distance((x, y, z), (150, 0, -400)) < 50:
-            return {'ch4': 1}
+            return {'ch4': 1}  # 初始气藏区域：纯甲烷
         else:
-            return {'h2o': 1}
+            return {'h2o': 1}  # 其他区域：纯水
 
-    z0, z1 = mesh.get_pos_range(2)
+    z0, z1 = mesh.get_pos_range(2)  # 获取z方向范围
 
     def get_denc(x, y, z):
+        """
+        定义体积热容分布。
+        顶部和底部边界处设置极高热容（1e20 J/(m3·K)）以稳定边界温度，
+        内部为正常值1e6 J/(m3·K)。
+        """
         if abs(z - z0) < 0.1 or abs(z - z1) < 0.1:
-            return 1.0e20
+            return 1.0e20  # 边界极高热容，维持恒温
         else:
-            return 1.0e6
+            return 1.0e6  # 内部正常热容
 
     def get_k(x, y, z):
+        """
+        定义渗透率分布。
+        中心区域（距x=150m小于20m）为高渗透率通道（模拟断层），
+        渗透率1e-13 m2，其余区域为1e-15 m2（低渗透基质）。
+        """
         if abs(x - 150) < 20:
-            return 1.0e-13
+            return 1.0e-13  # 中心高渗通道
         else:
-            return 1.0e-15
+            return 1.0e-15  # 周围低渗基质
 
+    # 创建tfc耦合模型
     model = tfc.create(
         mesh, porosity=0.1, pore_modulus=100e6,
         denc=get_denc, dist=0.1,
         temperature=get_t, p=get_p, s=get_s,
         perm=get_k, heat_cond=2.0,
-        fludefs=[create_ch4(name='ch4'),
-                 create_h2o(name='h2o')],
-        dt_max=3600 * 24, gravity=(0, 0, -10))
+        fludefs=[create_ch4(name='ch4'),  # 定义甲烷流体（含真实物性参数）
+                 create_h2o(name='h2o')],  # 定义水流体（含真实物性参数）
+        dt_max=3600 * 24, gravity=(0, 0, -10))  # 最大时间步长1天，重力加速度-10m/s2
 
-    # 用于求解的选项
+    # 设置求解选项：显示x-z剖面上的单元信息，最大迭代步数10000
     model.set_text(
         key='solve',
-        text={'show_cells': {'dim0': 0, 'dim1': 2},
+        text={'show_cells': {'dim0': 0, 'dim1': 2},  # 显示x(0)和z(2)方向的剖面
               'step_max': 10000,
               }
     )
@@ -57,4 +102,4 @@ def create():
 
 
 if __name__ == '__main__':
-    tfc.solve(create(), close_after_done=False)
+    gui.execute(lambda: tfc.solve(create()), close_after_done=False)

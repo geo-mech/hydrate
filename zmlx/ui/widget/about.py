@@ -30,6 +30,7 @@ class About(QtWidgets.QTableWidget):
         data = [
             ['安装路径', f'{get_dir()}'],
             ['当前版本', f'{core.time_compile}; {core.compiler}'],
+            ['DLL函数数量', f'{len(core.get_dll_funcs())}'],
             ['授权情况', f'{lic_desc}'],
             ['Python解释器', sys.executable],
             ['Python版本', sys.version],

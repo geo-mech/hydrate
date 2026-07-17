@@ -1,4 +1,7 @@
-from zmlx.exts import core
+try:
+    from zmlx.exts import core
+except ImportError:
+    core = None
 from zmlx.ui.gui_buffer import gui
 from zmlx.ui.widget.label import Label
 

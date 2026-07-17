@@ -1407,7 +1407,7 @@ class FractureNetwork(HasHandle):
             first = pos[0: 2]
             second = pos[2: 4]
 
-        if lave is None:
+        if lave is None:  # 此时，first和second都应该是整数
             index = core.frac_nt_add_bd(self.handle, first, second)
             return self.get_fracture(index)
         else:

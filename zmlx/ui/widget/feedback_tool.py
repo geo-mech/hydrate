@@ -1,6 +1,6 @@
 import os
 
-from zmlx.exts import app_data
+from zmlx.system import app_data
 from zmlx.ui.pyqt import QtCore, QtWidgets
 
 

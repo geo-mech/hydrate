@@ -1,4 +1,4 @@
-from zmlx.exts import app_data
+from zmlx.system import app_data
 from zmlx.ui import settings
 from zmlx.ui.alg import create_action
 from zmlx.ui.gui_buffer import gui
@@ -156,7 +156,9 @@ class TabWidget(QtWidgets.QTabWidget):
         Returns:
             符合条件的Widget对象，否则返回None
         """
-        if caption is None:
+        if not isinstance(caption, str):
+            caption = 'untitled'
+        if len(caption) == 0:
             caption = 'untitled'
         widget = self.find_widget(the_type=the_type, text=caption, is_ok=is_ok)
         if widget is None:
@@ -280,7 +282,9 @@ class TabWidget(QtWidgets.QTabWidget):
             caption=None, on_top=None, icon=None,
             clear=None,
             tight_layout=None,
-            suptitle=None, folder_save=None,
+            suptitle=None,
+            folder_save=None,
+            savefig=None,
             **kwargs
     ):
         """
@@ -301,6 +305,7 @@ class TabWidget(QtWidgets.QTabWidget):
             tight_layout: 是否自动调整子图参数，以防止重叠
             suptitle: 图表的标题
             folder_save: 自动保存图的文件夹
+            savefig: 是否自动保存图(bool, 或者文件名)
 
         Returns:
             None
@@ -308,9 +313,11 @@ class TabWidget(QtWidgets.QTabWidget):
         if clear is None:  # 默认清除
             clear = True
         try:
+            from zmlx.ui.widget.plt import MatplotWidget
             widget = self.get_figure_widget(
                 caption=caption, on_top=on_top, icon=icon, folder_save=folder_save
             )
+            assert isinstance(widget, MatplotWidget)
 
             def on_figure(figure):
                 if clear:  # 清除
@@ -328,7 +335,9 @@ class TabWidget(QtWidgets.QTabWidget):
                     else:
                         figure.tight_layout()
 
-            widget.plot_on_figure(on_figure=on_figure)
+            if fname is not None:
+                savefig = False  # 不自动保存图
+            widget.plot_on_figure(on_figure=on_figure, savefig=savefig)
             if fname is not None:
                 if dpi is None:
                     from zmlx.io.env import plt_export_dpi

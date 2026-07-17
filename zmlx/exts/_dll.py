@@ -457,6 +457,12 @@ class DllCore:
                     self._dll_funcs[name] = lambda *args: self.run(
                         lambda: func(*args))
 
+    def get_dll_funcs(self):
+        """
+        返回内核函数字典
+        """
+        return self._dll_funcs
+
     def __getattr__(self, name: str):
         """动态获取已声明的内核函数。
 

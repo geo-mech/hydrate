@@ -1,7 +1,12 @@
 import sys
 
-from zmlx.exts import app_data, core
+from zmlx.system import app_data
 from zmlx.ui.pyqt import QtWidgets
+
+try:
+    from zmlx.exts import core
+except ImportError:
+    core = None
 
 
 def _parallel_enabled(value=None):
@@ -16,7 +21,8 @@ def _parallel_enabled(value=None):
             app_data.setenv(key=key, value='Yes')
     else:
         value = app_data.getenv(key=key, default='') != 'Yes'
-    core.parallel_enabled = value
+    if core is not None:
+        core.parallel_enabled = value
     return value
 
 

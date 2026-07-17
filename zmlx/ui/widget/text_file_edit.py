@@ -1,4 +1,4 @@
-from zmlx.exts import write_text, read_text
+from zmlx.system import write_text, read_text
 from zmlx.ui.gui_buffer import gui
 from zmlx.ui.pyqt import QtWidgets
 

@@ -3,52 +3,9 @@ import os
 import sys
 import warnings
 
-from zmlx.alg import startfile, join_paths
-from zmlx.exts import in_windows, in_linux, in_macos, make_parent, app_data
-from zmlx.io.env import plt_export_dpi
+from zmlx.system import make_parent
 from zmlx.ui.alg import create_action
 from zmlx.ui.pyqt import QtWidgets, QtGui
-
-
-def set_chinese_font():
-    try:
-        import matplotlib
-        import matplotlib.font_manager as fm
-
-        font_list = fm.findSystemFonts(fontext='ttf') + fm.findSystemFonts(fontext='otf')
-        available_fonts = set()
-        for font_path in font_list:
-            try:
-                available_fonts.add(fm.FontProperties(fname=font_path).get_name())
-            except Exception:
-                pass
-
-        if in_windows():
-            preferred_fonts = ['SimHei', 'Microsoft YaHei', 'SimSun', 'KaiTi', 'DejaVu Sans']
-        elif in_linux():
-            preferred_fonts = [
-                'Noto Sans CJK SC', 'Noto Sans CJK SC Regular', 'Noto Serif CJK SC',
-                'Noto Sans CJK TC', 'WenQuanYi Micro Hei', 'WenQuanYi Zen Hei',
-                'AR PL UKai CN', 'AR PL UMing CN', 'DejaVu Sans', 'DejaVu Serif',
-                'Liberation Sans', 'Liberation Serif', 'Droid Sans Fallback',
-            ]
-        elif in_macos():
-            preferred_fonts = ['PingFang SC', 'Hiragino Sans GB', 'STHeiti', 'Apple SD Gothic Neo', 'Songti SC',
-                               'DejaVu Sans']
-        else:
-            preferred_fonts = ['DejaVu Sans']
-
-        selected_fonts = [font for font in preferred_fonts if font in available_fonts] or ['DejaVu Sans']
-
-        matplotlib.rcParams.update({
-            'font.sans-serif': selected_fonts,
-            'font.family': 'sans-serif',
-            'axes.unicode_minus': False,
-            'axes.labelsize': 'large',
-            'legend.fontsize': 'large',
-        })
-    except Exception as font_err:
-        print(f'Error when set font: {font_err}')
 
 
 class MatplotWidget(QtWidgets.QWidget):
@@ -59,7 +16,6 @@ class MatplotWidget(QtWidgets.QWidget):
         初始化
         """
         super(MatplotWidget, self).__init__(parent)
-        set_chinese_font()
         for backend in ['QtAgg', 'Qt5Agg']:
             try:
                 import matplotlib
@@ -80,11 +36,8 @@ class MatplotWidget(QtWidgets.QWidget):
 
         now = datetime.datetime.now()
         name = now.strftime("%Y-%m-%d-%H-%M-%S-") + f"{now.microsecond:06d}"
-        matplotlib_autosave = app_data.get('matplotlib_autosave')
-        if isinstance(matplotlib_autosave, str):
-            self.__folder_save = join_paths(matplotlib_autosave, name)
-        else:
-            self.__folder_save = app_data.temp('matplotlib', name)
+        from zmlx.plt import get_plt_save_path
+        self.__folder_save = get_plt_save_path(name)
         self.__time_save = None
 
         # 设置主题
@@ -95,23 +48,47 @@ class MatplotWidget(QtWidgets.QWidget):
             # 额外设置，确保所有元素适配暗色
             self.figure.patch.set_facecolor('#1e1e1e')  # 设置画布背景色
 
+        # 字体设置在主题之后，避免被主题覆盖
+        try:
+            from zmlx.plt import set_chinese_font
+            set_chinese_font()
+        except:
+            pass
+
     def set_save_folder(self, folder):
         self.__folder_save = folder
 
-    def draw(self):
+    @staticmethod
+    def _export_dpi():
+        try:
+            from zmlx.io.env import plt_export_dpi
+            return plt_export_dpi.get_value()
+        except:
+            return 300
+
+    def draw(self, *, savefig=None):
         """
         绘图
         """
         self.__canvas.draw()
+
+        if isinstance(savefig, str):
+            self.savefig(fname=make_parent(savefig), dpi=self._export_dpi())
+            self.__time_save = datetime.datetime.now()
+            return
+
         if self.__folder_save is not None:  # 尝试将绘图保存为图片(使用当前的时间)
             now = datetime.datetime.now()
-            if self.__time_save is not None:
-                if abs(now - self.__time_save).total_seconds() < 5.0:
-                    return
-            name = now.strftime("%Y-%m-%d-%H-%M-%S-") + f"{now.microsecond:06d}.png"
-            path = make_parent(os.path.join(self.__folder_save, name))
-            self.savefig(fname=path, dpi=plt_export_dpi.get_value())
-            self.__time_save = now  # 记录时间
+            if savefig is None:
+                if self.__time_save is not None:  # 之前保存过，则检查间隔
+                    savefig = abs(now - self.__time_save).total_seconds() >= 5.0
+                else:  # 之前尚未保存过，则直接保存
+                    savefig = True
+            if savefig:
+                name = now.strftime("%Y-%m-%d-%H-%M-%S-") + f"{now.microsecond:06d}.png"
+                path = make_parent(os.path.join(self.__folder_save, name))
+                self.savefig(fname=path, dpi=self._export_dpi())
+                self.__time_save = now  # 记录时间
 
     def savefig(self, *args, **kwargs):
         """
@@ -129,8 +106,7 @@ class MatplotWidget(QtWidgets.QWidget):
             directory=os.getcwd(),
             filter='Jpg图片(*.jpg);;Png图片(*.png);;所有文件(*.*)')
         if fpath is not None and len(fpath) > 0:
-            self.savefig(
-                fname=fpath, dpi=plt_export_dpi.get_value())
+            self.savefig(fname=fpath, dpi=self._export_dpi())
 
     def export_data(self):  # 接菜单命令
         self.savefig_by_dlg()
@@ -167,6 +143,7 @@ class MatplotWidget(QtWidgets.QWidget):
         if self.__folder_save is not None:  # 打开自动保存目录
             if isinstance(self.__folder_save, str):
                 def open_dir():
+                    from zmlx.alg import startfile
                     startfile(self.__folder_save)
 
                 menu.addAction(
@@ -196,9 +173,12 @@ class MatplotWidget(QtWidgets.QWidget):
     def contextMenuEvent(self, event):  # 右键菜单
         self.get_context_menu().exec(event.globalPos())
 
-    def plot_on_figure(self, on_figure):
+    def plot_on_figure(self, on_figure, *, savefig=None):
         """
         在控件上面绘图。其中on_figure是回调函数，接受一个Figure类型的参数。
+        Args:
+            on_figure: 回调函数
+            savefig: 是否将图片保存为文件
         注意：
             如果多次绘图，建议在绘图之前先调用 figure.clear()
         """
@@ -207,7 +187,7 @@ class MatplotWidget(QtWidgets.QWidget):
         except Exception as e:
             warnings.warn(f'meet exception <{e}> when run <{on_figure}>')
         try:
-            self.draw()
+            self.draw(savefig=savefig)
         except Exception as e:
             warnings.warn(f'meet exception <{e}> when run <{self.draw.__name__}>')
 

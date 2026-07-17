@@ -1,6 +1,6 @@
 try:
     from pyqtgraph.console import ConsoleWidget
-    from zmlx.exts import app_data
+    from zmlx.system import app_data
 
 
     class PgConsole(ConsoleWidget):
@@ -9,7 +9,7 @@ try:
                 key='PgConsoleText',
                 encoding='utf-8',
                 default="""
-这是一个交互的Python控制台。请在输入框输入Python命令并开始！
+这是一个交互的Python控制台。请在输入框输入Python命令并开始。特别注意，输入的代码将直接在主线程中执行，因此，请不要输入耗时较长的代码，否则会导致界面响应卡死。
 
 ---\n\n""")
             code = app_data.getenv(

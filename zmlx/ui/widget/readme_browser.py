@@ -1,7 +1,7 @@
 import os
 
-from zmlx.exts import read_text
-from zmlx.ui.alg import create_action
+from zmlx.system import read_text
+from zmlx.ui.alg import create_action, open_url
 from zmlx.ui.gui_buffer import gui
 from zmlx.ui.widget.text_browser import TextBrowser
 
@@ -22,3 +22,11 @@ class ReadMeBrowser(TextBrowser):
             self.setOpenExternalLinks(True)
             self.setMarkdown(read_text(path=path, encoding='utf-8'))
             self.set_status(path)
+        else:
+            self.setText("未找到ReadMe文件, 并已经尝试打开代码库的主页")
+            open_url(
+                url='https://gitee.com/geomech/hydrate',
+                on_top=True,
+                caption='IGG-Hydrate',
+                icon='home'
+            )

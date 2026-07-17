@@ -3,7 +3,7 @@
 
 整个模型用字典表示，包含如下键：
     groups: 子域计算模型的所有的组。每一个组都是一个字典，包含如下的key:
-        copy_task (seepage.CellCopyTask, optional): 用于更新models，在迭代之后，输出models的数据
+        cell_copy (seepage.CellCopyTask, optional): 用于更新models，在迭代之后，输出models的数据
         models (list of Seepage): 该组的所有的 Seepage模型的列表（每一个模型代表一个子域）.
         n_loop (int, optional): 迭代的循环次数, 会在每次迭代之后更新（仅仅用于输出）
     time: 当前的时间
@@ -12,11 +12,85 @@
         只不过是各个模型对齐时间的一个间隔.
     pool: 用于并行的线程池对象。 这个pool，一般不需要做特殊的设置。在迭代的时候，会自动创建一个pool.
 """
-import warnings
-from typing import Dict, Any, List, Optional
+
+from typing import List, Any, Dict, Optional
 
 from zmlx.exts import Seepage, ThreadPool
-from zmlx.tfc import seepage
+from zmlx.system import warn
+from zmlx.tfc._base import CellCopyTask
+from zmlx.tfc._main import iterate_until
+
+
+def create_group(models: List[Seepage], cell_copy: Optional[CellCopyTask] = None) -> Dict[str, Any]:
+    """
+    创建一个分组. 具有models和cell_copy两个键的dict.
+    """
+    assert isinstance(models, list), f'models must be a list'
+    assert len(models) > 0, "models must be a non-empty list of Seepage objects"
+    for model in models:
+        assert isinstance(model, Seepage), "models must be a list of Seepage objects"
+
+    if cell_copy is not None:
+        assert isinstance(cell_copy, CellCopyTask), "cell_copy must be a CellCopyTask object"
+
+    return {'models': models, 'cell_copy': cell_copy}
+
+
+def is_group(obj: Any) -> bool:
+    """
+    判断给定的对象能否被视为一个分组 (包含models和cell_copy两个键的dict即被视为一个分组)
+    """
+    if not isinstance(obj, dict):
+        return False
+
+    models = obj.get('models')  # 必须是Seepage对象的非空的列表
+    if not isinstance(models, (list, tuple)):
+        return False
+
+    for model in models:
+        if not isinstance(model, Seepage):
+            return False
+
+    cell_copy = obj.get('cell_copy')  # 必须为None或者seepage.CellCopyTask对象
+    return isinstance(cell_copy, CellCopyTask) or cell_copy is None
+
+
+def create(
+        groups: List[Dict[str, Any]], *,
+        pool: Optional[ThreadPool] = None,
+        time: float = 0.0,
+        dt: Optional[float] = None,
+        **opts
+) -> Dict[str, Any]:
+    """
+    创建一个子域模型. 包含groups, time, dt, pool等键. 使用此函数创建，确保生成的模型符合iterate的要求
+    Args:
+        groups: 模型的分组
+        pool: 线程池
+        time: 初始时间
+        dt: 时间步长
+        **opts: 其他参数
+    Returns:
+        子域模型
+    """
+    groups_checked = []
+    for group in groups:
+        if is_group(group):
+            groups_checked.append(group)
+        else:
+            warn(f"group {group} is not a valid group", RuntimeWarning, stacklevel=2)
+
+    assert dt is not None, "dt cannot be None"
+    assert dt > 0.0, "dt must be greater than 0.0"
+    res = {}
+    res.update(opts)
+    res.update({
+        'time': time,
+        'dt': dt,
+        'groups': groups_checked,
+        'pool': pool
+    })
+    return res
 
 
 def _get_models(group: Dict[str, Any]) -> List[Seepage]:
@@ -38,7 +112,7 @@ def _get_models(group: Dict[str, Any]) -> List[Seepage]:
     for model in models:
         assert isinstance(model, Seepage), "All models must be Seepage object"
         if not model.has_tag('check_dt'):
-            warnings.warn(f"模型 {model} 没有 check_dt 标签", RuntimeWarning, stacklevel=3)
+            warn(f"模型 {model} 没有 check_dt 标签", RuntimeWarning, stacklevel=3)
 
     # 返回列表
     return models
@@ -61,23 +135,23 @@ def _iterate_group(group: Dict[str, Any], target_time, *, pool: Optional[ThreadP
         return
 
     # 复制cell的任务
-    copy_cells: Optional[seepage.CellCopyTask] = group.get('copy_cells')
+    cell_copy: Optional[CellCopyTask] = group.get('cell_copy')
 
     # 将数据拷贝到虚拟模型中
-    if copy_cells is not None:
-        assert isinstance(copy_cells, seepage.CellCopyTask), "copy_cells must be a seepage.CellCopyTask object"
-        copy_cells(True)
+    if cell_copy is not None:
+        assert isinstance(cell_copy, CellCopyTask), "cell_copy must be a seepage.CellCopyTask object"
+        cell_copy(True)
 
     # 迭代所有的模型到目标时间
-    n_loop, n_iter = seepage.iterate_until(*models, pool=pool, target_time=target_time)
+    n_loop, n_iter = iterate_until(*models, pool=pool, target_time=target_time)
 
     # 尝试迭代dt所需要的循环的次数
     group['n_loop'] = n_loop
 
     # 再将数据拷贝回来 （从虚拟模型到原始模型）
-    if copy_cells is not None:
-        assert isinstance(copy_cells, seepage.CellCopyTask), "copy_cells must be a seepage.CellCopyTask object"
-        copy_cells(False)
+    if cell_copy is not None:
+        assert isinstance(cell_copy, CellCopyTask), "cell_copy must be a seepage.CellCopyTask object"
+        cell_copy(False)
 
 
 def _get_pool(space: Dict[str, Any]) -> Optional[ThreadPool]:
@@ -100,12 +174,12 @@ def _get_pool(space: Dict[str, Any]) -> Optional[ThreadPool]:
 
 def _get_groups(space: Dict[str, Any]) -> List[Dict[str, Any]]:
     """
-    返回子域计算模型的所有的分组， 每一组都是一个字典， 包含models和copy_task两个键。
+    返回子域计算模型的所有的分组， 每一组都是一个字典， 包含models和cell_copy两个键。
     如果subdomain_model中没有groups键，返回空列表。
     Args:
         space: 整个子域计算模型的配置字典.
     Returns:
-        List[Dict[str, Any]]: 子域计算模型的所有的分组， 每一组都是一个字典， 包含models和copy_task两个键。
+        List[Dict[str, Any]]: 子域计算模型的所有的分组， 每一组都是一个字典， 包含models和cell_copy两个键。
     """
     res = space.get('groups')
     if res is None:
@@ -124,22 +198,23 @@ def iterate(space: Dict[str, Any]):
     然后，更新time标签，将时间推进到了time+dt.
     Args:
         space: 子域计算模型的配置字典. 包含groups, time, dt, pool等键.
-               其中，groups是子域计算模型的所有的分组，每个分组都是一个字典，包含models和copy_task等键。
+               其中，groups是子域计算模型的所有的分组，每个分组都是一个字典，包含models和cell_copy等键。
                     dt是各个分组中所有的模型对齐的时间，并非真实采用的步长
     Notes:
         此函数会按照顺序迭代每个分组的模型.
-        (在每个分组内部，先运行copy_task，再<并行地>迭代所有模型(即子域)，然后在运行反向的copy_task).
+        (在每个分组内部，先运行cell_copy，再<并行地>迭代所有模型(即子域)，然后在运行反向的cell_copy).
     Returns:
         None
     """
     # 获取当前的时间time和时间步长dt
     time: float = space.get('time', 0.0)
-    if time <= 0.0:
+    if time < 0.0:
+        warn("time必须大于等于0", RuntimeWarning, stacklevel=2)
         time = 0.0
 
     dt: float = space.get('dt', 0.0)  # 每次迭代对齐的时间步长
     if dt <= 0.0:
-        warnings.warn("dt步长必须大于0", RuntimeWarning, stacklevel=2)
+        warn("dt步长必须大于0", RuntimeWarning, stacklevel=2)
         return
 
     # 迭代的目标时间

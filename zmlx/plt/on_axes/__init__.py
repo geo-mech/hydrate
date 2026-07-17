@@ -14,6 +14,7 @@ from zmlx.plt.on_axes._surf import add_surf
 from zmlx.plt.on_axes._tricontourf import add_tricontourf as tricontourf, add_tricontourf
 from zmlx.plt.on_axes._trimesh import add_trimesh
 from zmlx.plt.on_axes._trisurf import add_trisurf as trisurf3, add_trisurf
+from zmlx.system import deprecated
 
 _keep = [contourf, trisurf3, tricontourf, scatter3]
 
@@ -110,3 +111,21 @@ def add_curve(ax, *args, **kwargs):
 
 curve = add_curve
 add_curve2 = add_curve
+
+
+@deprecated(remove_after='2027-6-1', alternative='zmlx.fig.item')
+def item(*args, **kwargs):
+    from zmlx.fig import item as impl
+    return impl(*args, **kwargs)
+
+
+@deprecated(remove_after='2027-6-1', alternative='zmlx.fig.plot3d')
+def plot3d(*args, **kwargs):
+    from zmlx.fig import plot3d as impl
+    return impl(*args, **kwargs)
+
+
+@deprecated(remove_after='2027-6-1', alternative='zmlx.fig.plot2d')
+def plot2d(*args, **kwargs):
+    from zmlx.fig import plot2d as impl
+    return impl(*args, **kwargs)

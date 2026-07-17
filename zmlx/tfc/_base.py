@@ -2144,6 +2144,8 @@ class CellCopyTask:
         """
         执行任务
         """
+        if self._targets is None or self._sources is None or self._count is None:  # 尚未初始化
+            return self
         if positive:
             Seepage.Cell.clone_all(targets=self._targets, sources=self._sources, count=self._count)
         else:

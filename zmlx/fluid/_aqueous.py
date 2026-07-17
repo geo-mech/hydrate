@@ -10,6 +10,9 @@ def create_aqueous(name: str = 'liq', *, h2o: Optional[FluDef] = None, solutes: 
     """
     创建水溶液定义. 其中h2o是水的定义。在此基础上，添加各种溶质。每一个溶质都是一个List或者Tuple，格式为：
         name(名字), c(基准浓度), den_times(基准浓度下密度相对于纯水的比例), vis_times(基准浓度下粘度相对于纯水的比例)
+
+    关于密度随浓度线性变化的文献依据，参见：
+        zmlx/fluid/aqueous_density_linearity.md
     """
     if h2o is None:
         h2o = create_h2o()

@@ -59,7 +59,7 @@ def create():
         s=get_initial_s,
         perm=1.0e-15,
         heat_cond=2.0,
-        dv_relative=0.5,  # 一个时间步内，流体最多走过0.5个网格
+        cfl=0.5,  # 一个时间步内，流体最多走过0.5个网格
         dt_max=3600 * 24 * 365,
     ))
 

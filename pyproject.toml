@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "IggHydrate"
-version = "1.6.16"
+version = "1.7.0"
 description = "IggHydrate - Comprehensive hydrate simulation tool (import as 'zmlx', conflicts with other zmlx packages - uninstall them first)"
 authors = [
     { name = "Zhaobin Zhang", email = "zhangzhaobin@mail.iggcas.ac.cn" }
@@ -21,10 +21,7 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX :: Linux",
-    "Operating System :: Unix",
-    "Environment :: Console",
     "Environment :: X11 Applications :: Qt",
-    "Programming Language :: C++",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
@@ -33,7 +30,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
-    "Topic :: Scientific/Engineering :: Hydrology",
+    "Topic :: Scientific/Engineering",
     "Topic :: Scientific/Engineering :: Visualization",
 ]
 
@@ -44,14 +41,10 @@ dependencies = [
     "matplotlib",
     "pyqtgraph",
     "PyOpenGL",
-    "dulwich",
-    "pillow",
+    "pillow", # 处理图片
     "pyvista",
     "pyvistaqt",
     "vtk",
-    "pandas",
-    "openpyxl",
-    # PyQt6 for Python >= 3.8 (preferred)
     "PyQt6",
     "PyQt6-WebEngine",
     "pyqt6-qscintilla",
@@ -60,6 +53,8 @@ dependencies = [
 [project.optional-dependencies]
 # Platform-specific dependencies
 windows = ["pywin32"]
+# 加速计算（可选）
+accelerate = ["numba"]
 
 [tool.setuptools.packages.find]
 where = ["."]
@@ -68,6 +63,7 @@ exclude = ["tests*", "*tests*"]
 
 [tool.setuptools]
 include-package-data = true
+py-modules = ["zml", "zml_ui"]
 
 [tool.setuptools.package-data]
 # Include all files in zmlx directory

@@ -14,7 +14,7 @@ def create():
         return 1.0e20 if abs(x - x_max) < 0.1 else 0.2
 
     model = tfc.create(
-        mesh=mesh, dv_relative=0.2,
+        mesh=mesh, cfl=0.2,
         fludefs=[FluDef(name='h2o', den=1000.0, vis=1.0e-3),
                  FluDef(name='sand', den=2000.0, vis=1.0e-2)],
         porosity=get_fai,

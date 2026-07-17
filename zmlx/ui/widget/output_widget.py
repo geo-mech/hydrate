@@ -1,8 +1,8 @@
 import os
 from typing import Optional, Tuple, List, Union
 
-from zmlx.exts import app_data
-from zmlx.ui.alg import create_action
+from zmlx.system import app_data
+from zmlx.ui.alg import create_action, get_last_exec_history, clear_exec_history
 from zmlx.ui.gui_buffer import gui
 from zmlx.ui.pyqt import QtGui, QtWidgets
 from zmlx.ui.widget._parallel import CoreParallelEdit
@@ -90,11 +90,15 @@ class OutputWidget(QtWidgets.QWidget):
                 slot=lambda: gui.stop_console())
             )
         else:
+            if get_last_exec_history() is not None:
+                result.append(create_action(
+                    self, '再次运行', slot=lambda: gui.start_last())
+                )
+                result.append(create_action(
+                    self, '清除历史', slot=clear_exec_history)
+                )
             result.append(create_action(
-                self, '重新执行', slot=lambda: gui.start_last())
-            )
-            result.append(create_action(
-                self, '运行历史',
+                self, '脚本运行历史',
                 slot=lambda: gui.show_code_history(
                     folder=app_data.root('console_history'),
                     caption='运行历史'))

@@ -141,38 +141,42 @@ class Timer:
 timer = Timer(co=core)
 
 
-def clock(func: Callable) -> Callable:
+def clock(func: Callable, *, key=None) -> Callable:
     """函数耗时统计装饰器（支持异常传播）。
 
     通过Timer实例自动记录被装饰函数的执行耗时，需配合全局timer实例使用。
 
     Args:
         func (Callable): 需要计时的函数
+        key (str|None): 自定义计时键名，默认使用函数名
 
     Returns:
         Callable: 装饰后的函数
 
     示例:
-        @clock
-        def my_function():
-            time.sleep(0.1)
+        >>> @clock
+        ... def function_a():
+        ...     pass
 
-        my_function()  # 自动记录到timer实例
+        >>> @clock(key='My function')
+        ... def function_b():
+        ...     pass
     """
 
     @functools.wraps(func)
     def clocked(*args, **kwargs):
-        module_name = func.__module__
-        func_name = func.__name__
-        key = f"{module_name}.{func_name}"
+        if isinstance(key, str) and len(key) > 0:
+            name = key
+        else:
+            name = f"{func.__module__}.{func.__qualname__}"
 
-        timer.beg(key)
+        timer.beg(name)
         try:
             result = func(*args, **kwargs)
-            timer.end(key)
+            timer.end(name)
             return result
         except Exception as e:
-            timer.end(key)
+            timer.end(name)
             raise e
 
     return clocked

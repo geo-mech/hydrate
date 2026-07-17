@@ -1,5 +1,4 @@
-from zmlx.exts import app_data, get_hash
-from zmlx.ui.gui_buffer import gui
+from zmlx.system import app_data, get_hash
 from zmlx.ui.pyqt import QtWidgets
 
 
@@ -38,7 +37,7 @@ def add_code_history(fname):
         import os
         import shutil
 
-        from zmlx.exts import app_data
+        from zmlx.system import app_data
         from zmlx.alg.fsys import time_string
         if os.path.isfile(fname):
             t_str = time_string()
@@ -69,6 +68,10 @@ def get_last_exec_history():
         return history[-1]
     else:
         return None
+
+
+def clear_exec_history():
+    app_data.put('console_exec_history', [])
 
 
 def paint_image(widget, pixmap):
@@ -141,7 +144,18 @@ def h_spacer():
 def open_url(url: str, caption=None, on_top=None, zoom_factor=None,
              use_web_engine=None, icon=None):
     """
-    显示一个htm文件
+    打开一个 URL 或本地 HTML 文件。
+
+    优先使用 QWebEngineView 在 GUI 标签页中显示；若 GUI 不可用或用户禁用，
+    则降级为系统默认浏览器打开。本地文件路径也会自动检测并处理。
+
+    Args:
+        url: 要打开的 URL 或本地文件路径
+        caption: GUI 标签页标题（可选）
+        on_top: 是否置顶显示（可选）
+        zoom_factor: 缩放比例（可选）
+        use_web_engine: 是否强制使用/禁用 WebEngine（None=自动检测）
+        icon: 标签页图标名称（可选）
     """
     import os
     from zmlx.ui.gui_buffer import gui
@@ -152,7 +166,7 @@ def open_url(url: str, caption=None, on_top=None, zoom_factor=None,
 
     if use_web_engine is None:
         try:
-            from zmlx.exts import app_data
+            from zmlx.system import app_data
             use_web_engine = app_data.getenv(
                 key='use_web_engine',
                 default='Yes',
@@ -181,6 +195,40 @@ def open_url(url: str, caption=None, on_top=None, zoom_factor=None,
         gui.open_url(
             url=url, caption=caption, on_top=on_top,
             zoom_factor=zoom_factor, icon=icon)
+
+
+def open_gitee_geomech_hydrate():
+    open_url(
+        url='https://gitee.com/geomech/hydrate',
+        on_top=True,
+        caption='IGG-Hydrate',
+        icon='home'
+    )
+
+
+def open_iggcas():
+    open_url(
+        url='http://www.igg.cas.cn/',
+        on_top=True,
+        caption='中科院地质地球所主页',
+        icon='iggcas'
+    )
+
+
+def open_new_issue():
+    open_url(
+        url='https://gitee.com/geomech/hydrate/issues/new',
+        on_top=True,
+        caption='新建Issue',
+        icon='issues'
+    )
+
+
+def open_my_publications():
+    open_url(
+        url="https://pan.cstcloud.cn/s/5cKaQrdFSHM",
+        use_web_engine=False
+    )
 
 
 def show_widget(widget, caption=None, use_gui=False, **kwargs):
@@ -231,6 +279,8 @@ def reg_file_type(desc, exts, *, name=None, save=None, load=None, init=None, wid
     Returns:
         None
     """
+    from zmlx.ui.gui_buffer import gui
+
     if isinstance(exts, str):
         exts = [exts]
 
@@ -336,7 +386,7 @@ def reg_file_type(desc, exts, *, name=None, save=None, load=None, init=None, wid
 
     if callable(init):
         def new_file(filename):
-            from zmlx.exts import make_parent
+            from zmlx.system import make_parent
             try:
                 save(init(), make_parent(filename))
             except Exception as e:
@@ -362,6 +412,8 @@ def edit_in_tab(widget_type, set_data, get_data=None, caption=None, support_refr
         caption: 标签的标题.
         support_refresh: 是否支持刷新操作 (默认为否，即控件在创建之后，不再接收数据)
     """
+
+    from zmlx.ui.gui_buffer import gui
 
     def do_init(widget):
         layout = QtWidgets.QVBoxLayout(widget)
@@ -424,6 +476,7 @@ def edit_in_tab(widget_type, set_data, get_data=None, caption=None, support_refr
 def install_package():
     from zmlx.data.dep import package_names, import_names
     from zmlx.alg.sys import pip_install
+    from zmlx.ui.gui_buffer import gui
     text, ok = gui.get_item(
         '安装第三包包', '输入或者选择你所需要的Python包名，并执行pip安装\n',
         ['', *package_names],
@@ -437,6 +490,7 @@ def install_package():
 
 def set_plt_export_dpi():
     from zmlx.io.env import plt_export_dpi
+    from zmlx.ui.gui_buffer import gui
     number, ok = gui.get_double(
         '设置导出图的DPI',
         'DPI',
@@ -447,6 +501,7 @@ def set_plt_export_dpi():
 
 def play_images():
     from zmlx.alg.fsys import list_files
+    from zmlx.ui.gui_buffer import gui
 
     def task():
         files = list_files(exts=['.jpg', '.png'])

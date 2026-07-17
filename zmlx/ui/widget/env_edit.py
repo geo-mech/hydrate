@@ -1,4 +1,4 @@
-from zmlx.exts import app_data
+from zmlx.system import app_data
 from zmlx.ui.gui_buffer import gui
 from zmlx.ui.pyqt import QtCore, QtWidgets
 

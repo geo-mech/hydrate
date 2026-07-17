@@ -2,7 +2,7 @@ import os
 import timeit
 
 from zmlx.alg.base import time2str
-from zmlx.exts import app_data
+from zmlx.system import app_data
 from zmlx.ui.alg import add_code_history, add_exec_history, get_last_exec_history
 from zmlx.ui.pyqt import QtCore
 from zmlx.ui.settings import play_error, load_priority, priority_value
@@ -78,25 +78,28 @@ class Console(QtCore.QObject):
 
     def start_func(
             self, code, text_beg=None, text_end=None,
-            post_task=None, file=None, name=None):
+            post_task=None, file=None, name=None, add_history=True):
         """
         启动方程，注意，这个函数的调用不支持多线程（务必再主线程中调用）
         """
         if code is None:  # 清除最后一次调用的信息
-            add_exec_history(None)
+            if add_history:
+                add_exec_history(None)
             return
 
         if self.is_running():
             play_error()
             return
 
-        add_exec_history(dict(
-            code=code, text_beg=text_beg, text_end=text_end,
-            post_task=post_task, file=file, name=name))
+        if add_history:
+            add_exec_history(dict(
+                code=code, text_beg=text_beg, text_end=text_end,
+                post_task=post_task, file=file, name=name, add_history=add_history))
 
         if isinstance(code, CodeFile):  # 此时，执行脚本文件
             if not code.exists():
-                add_exec_history(None)
+                if add_history:
+                    add_exec_history(None)
                 return
             file = code.abs_path()
             code = code.get_text()

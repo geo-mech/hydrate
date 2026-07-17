@@ -40,7 +40,9 @@ from zmlx.plt.cmap import get_cm, get_color
 
 # 添加对象到Axes上, add_xxx形式的函数
 from zmlx.plt.on_axes import (
-    add_curve, add_curve as add_curve2, add_curve as curve,
+    add_curve,
+    add_curve as add_curve2,
+    add_curve as curve,
     add_cbar,
     add_contourf,
     add_tricontourf,
@@ -50,7 +52,7 @@ from zmlx.plt.on_axes import (
     add_legend,
     add_dfn2,
     add_seepage_mesh,
-    add_scatter
+    add_scatter,
 )
 
 # 在figure上添加子图. add_axes 形式的函数
@@ -68,18 +70,49 @@ from zmlx.plt.on_figure import (
 
 # 绘制单个图. show_xxx形式的函数
 from zmlx.plt.on_ui import (
-    show_tricontourf, show_tricontourf as tricontourf,
-    show_contourf, show_contourf as contourf,
-    show_xy, show_xy as plot_xy, show_xy as plotxy,
+    show_tricontourf,
+    show_tricontourf as tricontourf,
+    show_contourf,
+    show_contourf as contourf,
+    show_xy,
+    show_xy as plot_xy,
+    show_xy as plotxy,
     show_dfn2,
     show_fn2,
     show_field2,
     show_rc3,
-    show_trisurf, show_trisurf as plot_trisurf,
-    show_trimesh, show_trimesh as trimesh,
+    show_trisurf,
+    show_trisurf as plot_trisurf,
+    show_trimesh,
+    show_trimesh as trimesh,
     show_scatter,
-    show_flu_def
+    show_flu_def,
 )
+from zmlx.plt._font import set_chinese_font
+from zmlx.plt._save import get_plt_save_path, set_plt_save_path
+from zmlx.system import deprecated
+
+
+@deprecated(remove_after="2027-6-1", alternative="zmlx.fig.item")
+def item(*args, **kwargs):
+    from zmlx.fig import item as impl
+
+    return impl(*args, **kwargs)
+
+
+@deprecated(remove_after="2027-6-1", alternative="zmlx.fig.plot3d")
+def plot3d(*args, **kwargs):
+    from zmlx.fig import plot3d as impl
+
+    return impl(*args, **kwargs)
+
+
+@deprecated(remove_after="2027-6-1", alternative="zmlx.fig.plot2d")
+def plot2d(*args, **kwargs):
+    from zmlx.fig import plot2d as impl
+
+    return impl(*args, **kwargs)
+
 
 get_path = SelfPath(__file__)
 

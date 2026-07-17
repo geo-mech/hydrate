@@ -2,7 +2,7 @@ import os
 from queue import Queue, Empty
 
 from zmlx.alg.sys import unique
-from zmlx.exts import read_text
+from zmlx.system import read_text
 from zmlx.ui.alg import modify_file_exts
 from zmlx.ui.pyqt import QtCore, QtWidgets
 

@@ -1,7 +1,7 @@
 import glob
 import os
 
-from zmlx.exts import app_data
+from zmlx.system import app_data
 from zmlx.ui.pyqt import QtCore, QtWidgets
 from zmlx.ui.widget.text_browser import TextBrowser
 

@@ -4508,11 +4508,6 @@ class Seepage(HasHandle, HasCells):
                               (int, tuple, list)), f'fluid_id must be int, tuple, or list, but got {type(fluid_id)}'
             inj.set_fid(fluid_id)
 
-        if isinstance(flu, FluData):  # 只有在等于FluData的时候才使用.
-            inj.flu.clone(flu)
-        else:
-            assert flu is None, f"flu should be FluData or None, but got {type(flu).__name__}"
-
         if pos is not None:  # 给定注入的位置，后续，则自动去查找附近的cell
             inj.pos = pos
 
@@ -4534,6 +4529,34 @@ class Seepage(HasHandle, HasCells):
 
         if value is not None:  # 当前的值
             inj.value = value
+
+        if isinstance(flu, FluData):  # 只有在等于FluData的时候才使用.
+            inj.flu.clone(flu)
+        elif isinstance(flu, str):  # since 2026-6-28
+            if flu == 'insitu' and self.cell_number > 0 and len(inj.fid) > 0:
+                cell_id = inj.cell_id
+                # 此时，会使用到inj.pos属性，因此，必须先设置inj.pos属性.
+                if cell_id >= self.cell_number and get_distance(inj.pos, [0, 0, 0]) < 1e10:
+                    cell = self.get_nearest_cell(pos=inj.pos)
+                    if cell is not None:
+                        if get_distance(cell.pos, inj.pos) < inj.radi:
+                            cell_id = cell.index
+                if cell_id < self.cell_number:
+                    # 特别注意的是，这里找到的这个cell，和injector内部工作的时候的cell，可能并不完全相同.
+                    cell = self.get_cell(cell_id)
+                    assert cell is not None
+                    temp = cell.get_fluid(*inj.fid)
+                    if temp is not None:
+                        temp = temp.get_copy()
+                        if temp.mass < 1.0e-10:
+                            temp.mass = 1.0  # 将质量设置为宏观的量，确保属性可以被使用(since 2025-12-9)
+                        inj.flu.clone(temp)
+                    else:
+                        warnings.warn(
+                            f"do not have fluid {inj.fid} in cell {cell_id}", RuntimeWarning, stacklevel=2)
+                else:
+                    warnings.warn(
+                        f"do not have cell when try to use insitu FluData", RuntimeWarning, stacklevel=2)
 
         return inj
 
@@ -5808,7 +5831,6 @@ class Seepage(HasHandle, HasCells):
         core.seepage_update_mixture_den(
             self.handle, index, ptm2den, fa_t, relax_factor, lr, rr, pool.handle if isinstance(pool, ThreadPool) else 0
         )
-
 
     core.use(None, 'seepage_update_vis',
              c_void_p, c_size_t, c_size_t, c_size_t,

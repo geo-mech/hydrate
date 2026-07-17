@@ -1,7 +1,19 @@
 # ** desc = '流体在毛管力驱动下的流动'
 
+# 本案例演示毛管力驱动下的两相流（气-水）在多孔介质中的运移过程。
+# 物理问题：在一个100m x 100m的二维区域中，初始状态存在两种不同的饱和度分布，
+# 在毛管压力的作用下，流体逐渐发生运移和再分布。模型中使用了五种不同的毛管压力
+# 曲线（分别对应泥岩和四种砂岩），模拟不同岩性区域中差异化的毛管驱动效应。
+# 建模方法：使用tfc（热-流-化学耦合）框架创建渗流模型，通过capillary模块设置
+# 毛管压力曲线，并采用迭代方法模拟流体在毛管力驱动下的缓慢运移过程。
+
 from zmlx import *
 
+# ---------- 毛管压力曲线数据（5种岩性），格式：饱和度 <Tab> 毛管压力(Pa) ----------
+# 数据来源为实验测量或经验公式计算，每条曲线定义了一种岩性的毛管压力-饱和度关系。
+# 曲线编号0-4分别对应不同的岩性区域。
+
+# 泥岩的毛管压力曲线（曲线ID: 0）
 mud = """0.007698294	1930020.672
 0.0441305	4270730.329
 0.087590542	14003815.37
@@ -10,6 +22,7 @@ mud = """0.007698294	1930020.672
 0.236863215	65745613.48
 0.4	97799554.5"""
 
+# 砂岩J的毛管压力曲线（曲线ID: 1）
 sand_J = """0	757.5757576
 0.011	1167.929293
 0.0339	1849.747475
@@ -33,6 +46,7 @@ sand_J = """0	757.5757576
 0.8086	7346635.101
 0.8561	12562297.98"""
 
+# 砂岩K的毛管压力曲线（曲线ID: 2）
 sand_K = """0	1167.929293
 0.0088	1849.747475
 0.0533	2891.414141
@@ -55,6 +69,7 @@ sand_K = """0	1167.929293
 0.8504	7345050.505
 0.8774	12570795.45"""
 
+# 砂岩P的毛管压力曲线（曲线ID: 3）
 sand_P = """0	130170.4545
 0.3064	315587.1212
 0.4867	508428.0303
@@ -64,6 +79,7 @@ sand_P = """0	130170.4545
 0.6363	1241477.273
 0.6913	1880555.556"""
 
+# 砂岩T的毛管压力曲线（曲线ID: 4）
 sand_T = """0	10580.80808
 0.0001	12689.39394
 0.0003	18945.70707
@@ -82,30 +98,68 @@ sand_T = """0	10580.80808
 
 def get_idx(x, y, z):
     """
-    定义在不同的区域所使用的毛管压力曲线的ID (从0开始编号)
+    获取指定位置处的毛管压力曲线ID（从0开始编号）。
+
+    将二维平面划分为5个区域，每个区域使用不同的毛管压力曲线：
+    - 以(50,50)为中心、半径20以内的圆形区域使用曲线0（泥岩）
+    - 其余四个象限分别使用曲线1-4（四种不同类型的砂岩）
+
+    参数:
+        x: 位置的x坐标 (m)
+        y: 位置的y坐标 (m)
+        z: 位置的z坐标 (m)
+
+    返回:
+        int: 毛管压力曲线索引 (0~4)
     """
     if point_distance((x, y, z), (50, 50, 0)) < 20:
-        return 0
+        return 0  # 中心圆形区域：使用泥岩的毛管压力曲线
     if x < 50:
         if y < 50:
-            return 1
+            return 1  # 左下象限：使用砂岩J曲线
         else:
-            return 2
+            return 2  # 左上象限：使用砂岩K曲线
     else:
         if y < 50:
-            return 3
+            return 3  # 右下象限：使用砂岩P曲线
         else:
-            return 4
+            return 4  # 右上象限：使用砂岩T曲线
 
 
 def get_s(x, y, z):
+    """
+    定义初始饱和度分布。
+
+    以(60,50)为中心、半径20以内为水的聚集区域（初始含水饱和度为1），
+    其余区域为气的聚集区域（初始含气饱和度为1）。
+
+    参数:
+        x: 位置的x坐标 (m)
+        y: 位置的y坐标 (m)
+        z: 位置的z坐标 (m)
+
+    返回:
+        tuple: 两个流体的饱和度向量 (气饱和度, 水饱和度)
+    """
     return (0, 1) if point_distance((x, y, z), (60, 50, 0)) < 20 else (1, 0)
 
 
 def create():
+    """
+    创建毛管力驱动渗流模型。
+
+    构建一个100m x 100m的二维网格模型，包含气、水两种流体，
+    并设定5个不同区域采用不同的毛管压力曲线，以模拟非均质介质中
+    毛管力驱动的两相流运移过程。
+
+    返回:
+        Seepage: 创建好的渗流模型对象
+    """
+    # 定义两种流体：气体（低密度、低粘度）和水（高密度、高粘度）
     fludefs = [FluDef(den=50, vis=1.0e-4, name='gas'),
                FluDef(den=1000, vis=1.0e-3, name='water')
                ]
+    # 创建100x100的均匀网格，z方向仅一层（二维模拟）
     mesh = create_cube(np.linspace(0, 100, 101),
                        np.linspace(0, 100, 101),
                        (-0.5, 0.5))
@@ -114,34 +168,65 @@ def create():
         porosity=0.2, pore_modulus=100e6,
         p=1e6, temperature=280, perm=1e-14, s=get_s, fludefs=fludefs
     )
+    # 设置相对渗透率为线性关系（端点值），简化计算
     model.set_kr(saturation=[0, 1], kr=[0, 1])
+    # 添加毛管压力设置：指定水相和气相，以及5条不同的毛管压力曲线
     capillary.add_setting(model, fid0='water', fid1='gas', get_idx=get_idx,
                           data=[mud, sand_J, sand_K, sand_P, sand_T])
     return model
 
 
 def show(x, y, z, caption=None):
+    """
+    绘制云图显示二维标量场分布。
+
+    参数:
+        x: x坐标数组
+        y: y坐标数组
+        z: 标量值数组（绘制为颜色填充）
+        caption: 图形标题（可选）
+    """
     tricontourf(x, y, z, caption=caption, gui_only=True)
 
 
 def solve(model: Seepage):
+    """
+    求解毛管力驱动的渗流过程。
+
+    基于毛细管力驱动的两相流迭代，在2000个时间步内模拟流体运移。
+    每隔30步输出当前的饱和度分布。
+
+    参数:
+        model: 要求解的渗流模型（Seepage对象）
+    """
+    # 获取网格节点的x和y坐标
     x = tfc.get_x(model)
     y = tfc.get_y(model)
 
+    # 显示初始的岩性分区
     show(x, y, [get_idx(x[i], y[i], 0) for i in range(len(x))],
          caption='岩石ID')
+    # 显示初始的水饱和度分布
     show(x, y, [get_s(x[i], y[i], 0)[1] for i in range(len(x))],
          caption='初始饱和度')
 
+    # 迭代求解：毛管力驱动流体缓慢运移
     for step in range(2000):
-        gui.break_point()
-        capillary.iterate(model, dt=1e5)
+        gui.break_point()  # 检查GUI中断请求
+        capillary.iterate(model, dt=1e5)  # 执行一个毛管力时间步（时间步长1e5秒）
         if step % 30 == 0:
             print(f'step = {step}')
-            show(x, y, tfc.get_v(model, 1), caption='饱和度')
+            show(x, y, tfc.get_v(model, 1), caption='饱和度')  # 显示第1种流体（水）的饱和度
 
 
 def execute(gui_mode=True, close_after_done=False):
+    """
+    程序入口：执行毛管力驱动流模拟。
+
+    参数:
+        gui_mode: 是否启用GUI显示（默认为True）
+        close_after_done: 计算完成后是否自动关闭窗口（默认为False）
+    """
     gui.execute(solve, args=(create(),), close_after_done=close_after_done,
                 disable_gui=not gui_mode)
 

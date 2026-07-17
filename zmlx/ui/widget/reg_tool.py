@@ -1,4 +1,3 @@
-from zmlx.exts import reg
 from zmlx.ui.pyqt import QtWidgets
 
 
@@ -32,6 +31,7 @@ class RegTool(QtWidgets.QWidget):
         text = self.code.toPlainText()
         if len(text) > 0:
             try:
+                from zmlx.exts import reg
                 code = reg(text)
                 print(code)
             except Exception as err:

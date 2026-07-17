@@ -30,7 +30,7 @@ class AppPathEdit(QtWidgets.QWidget):
         self.update_files()
 
     def update_files(self):
-        from zmlx.exts import app_data
+        from zmlx.system import app_data
         filename = self.fname_edit.text()
         if len(filename) == 0:
             text = ''

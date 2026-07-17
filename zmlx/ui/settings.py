@@ -5,7 +5,7 @@
 import os
 
 from zmlx.alg.base import clamp
-from zmlx.exts import app_data, read_text, write_text
+from zmlx.system import app_data, read_text, write_text
 from zmlx.io.json_ex import read as read_json
 from zmlx.ui.alg import get_current_screen_geometry
 from zmlx.ui.gui_buffer import gui

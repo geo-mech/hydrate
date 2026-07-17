@@ -5,10 +5,11 @@
 已经在此__init__中给定了。
 """
 
-from zmlx.exts import SelfPath
+from zmlx.system import SelfPath
 from zmlx.ui.gui_buffer import (
     gui, information, question, plot, break_point, gui_exec, open_gui,
-    open_gui_without_setup, progress, show_attrs)
+    open_gui_without_setup, progress, show_attrs, add_action
+)
 
 get_path = SelfPath(__file__)
 

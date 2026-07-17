@@ -59,4 +59,4 @@ def create():
 
 
 if __name__ == '__main__':
-    tfc.solve(create(), folder=opath('foam_inj'), close_after_done=True)
+    gui.execute(lambda: tfc.solve(create(), folder=opath('foam_inj')), close_after_done=False)

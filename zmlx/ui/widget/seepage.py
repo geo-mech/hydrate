@@ -87,19 +87,6 @@ class FludefEdit(QtWidgets.QWidget):
             widget_type=FludefEdit
         )
 
-        fname = 'Example.fludef'
-
-        def test_data():
-            from zmlx.fluid import ch4
-            f = ch4.create(name='Methane')
-            f.save(fname)
-            gui.open_fludef(fname)
-
-        show_admin_actions = app_data.getenv(key='show_admin_actions', default='No', ignore_empty=True) == 'Yes'
-        if show_admin_actions:
-            gui.add_action(menu=['帮助', '生成测试数据'],
-                           text=f'流体定义: {fname}', slot=test_data)
-
 
 class SeepageTextEdit(QtWidgets.QTextEdit):
     sig_changed = QtCore.pyqtSignal()
@@ -463,6 +450,25 @@ class SeepageEdit(SeepageTabEdit):
         )
 
 
+@execute_once(file=__file__)
+def _install_action():
+    from zmlx.alg.sys import first_execute
+    if not first_execute(__file__):
+        return
+
+    fname = 'Example.fludef'
+
+    def test_data():
+        from zmlx.fluid import ch4
+        f = ch4.create(name='Methane')
+        f.save(fname)
+        gui.open_fludef(fname)
+
+    gui.add_action(menu=['帮助', '生成测试数据'],
+                   text=f'流体定义: {fname}', slot=test_data)
+
+
+@execute_once(file=__file__)
 def setup_ui():
     for obj in [FludefEdit, SeepageEdit]:
         try:
@@ -470,12 +476,8 @@ def setup_ui():
         except Exception as e:
             print(e)
 
-
-def main():
-    from zmlx.alg.sys import first_execute
-    if first_execute(__file__):
-        gui.execute(func=setup_ui, keep_cwd=False, close_after_done=False)
-
-
-if __name__ == '__main__':
-    main()
+    gui.add_action(
+        menu=['帮助', '加载'],
+        text='Seepage功能',
+        slot=_install_action,
+    )

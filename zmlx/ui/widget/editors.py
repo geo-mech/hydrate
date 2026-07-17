@@ -5,13 +5,14 @@ try:
 except ImportError:
     np = None
 
-from zmlx.exts import Interp1, Interp2, app_data
+from zmlx.exts import Interp1, Interp2
 from zmlx.alg.numpy_algs import text_to_numpy, numpy_to_text
 from zmlx.ui.alg import create_action
 from zmlx.ui.gui_buffer import gui
 from zmlx.ui.pyqt import QtCore, QtWidgets
 from zmlx.ui.widget import MatplotWidget
 from zmlx.plt.cmap import get_cm
+from zmlx.system import execute_once
 
 
 class TextEdit(QtWidgets.QTextEdit):
@@ -152,18 +153,6 @@ class ArrayEdit(QtWidgets.QTextBrowser):
             widget_type=ArrayEdit
         )
 
-        show_admin_actions = app_data.getenv(key='show_admin_actions', default='No', ignore_empty=True) == 'Yes'
-
-        if show_admin_actions:
-            def test_data1():
-                data = np.random.uniform(0, 2, size=[10, 3])
-                fname = os.path.abspath('ArrayExample.npy')
-                NumpyAlgs.save(data, fname)
-                gui.open_numpy_array(fname)
-
-            gui.add_action(menu=['帮助', '生成测试数据'],
-                           text='ArrayExample.npy', slot=test_data1)
-
 
 class DataEdit(QtWidgets.QWidget):
     """
@@ -228,19 +217,6 @@ class XyEdit(DataEdit):
             init=lambda: np.array([]),
             widget_type=XyEdit
         )
-        show_admin_actions = app_data.getenv(key='show_admin_actions', default='No', ignore_empty=True) == 'Yes'
-
-        def test_data2():
-            x = np.linspace(0, 10, 100)
-            y = np.sin(x)
-            data = np.column_stack([x, y])
-            fname = os.path.abspath('XY数据.npy')
-            np.save(fname, data)
-            gui.open_xy_data(fname)
-
-        if show_admin_actions:
-            gui.add_action(menu=['帮助', '生成测试数据'],
-                           text='XY数据.npy', slot=test_data2)
 
 
 class XyzEdit(DataEdit):
@@ -271,21 +247,6 @@ class XyzEdit(DataEdit):
             init=lambda: np.array([]),
             widget_type=XyzEdit
         )
-
-        def test_data3():
-            x = np.linspace(-5, 5, 30)
-            y = np.linspace(-5, 5, 30)
-            x, y = np.meshgrid(x, y)
-            z = np.sin(np.sqrt(x ** 2 + y ** 2))
-            data = np.column_stack([x.flatten(), y.flatten(), z.flatten()])
-            fname = os.path.abspath('XYZ数据.npy')
-            np.save(fname, data)
-            gui.open_xyz_data(fname)
-
-        show_admin_actions = app_data.getenv(key='show_admin_actions', default='No', ignore_empty=True) == 'Yes'
-        if show_admin_actions:
-            gui.add_action(menu=['帮助', '生成测试数据'],
-                           text='XYZ数据.npy', slot=test_data3)
 
 
 class Interp1Edit(MatplotWidget):
@@ -374,19 +335,6 @@ class Interp1Edit(MatplotWidget):
             init=Interp1,
             widget_type=Interp1Edit
         )
-
-        def test_data():
-            x = np.linspace(0, 5, 20)
-            y = np.sin(x)
-            data = Interp1(x=x, y=y)
-            fname = os.path.abspath('Example.interp1')
-            data.save(fname)
-            gui.open_interp1(fname)
-
-        show_admin_actions = app_data.getenv(key='show_admin_actions', default='No', ignore_empty=True) == 'Yes'
-        if show_admin_actions:
-            gui.add_action(menu=['帮助', '生成测试数据'],
-                           text='Example.interp1', slot=test_data)
 
 
 class Interp2Edit(MatplotWidget):
@@ -509,22 +457,74 @@ class Interp2Edit(MatplotWidget):
             widget_type=Interp2Edit
         )
 
-        def test_data():
-            from zmlx.fluid import ch4
-            f = ch4.create()
-            f.den.save('Example.interp2')
-            gui.open_interp2('Example.interp2')
 
-        show_admin_actions = app_data.getenv(key='show_admin_actions', default='No', ignore_empty=True) == 'Yes'
-        if show_admin_actions:
-            gui.add_action(
-                menu=['帮助', '生成测试数据'],
-                text='Example.interp2', slot=test_data)
+@execute_once(file=__file__)
+def _install_action():
+    def test_data1():
+        data = np.random.uniform(0, 2, size=[10, 3])
+        fname = os.path.abspath('ArrayExample.npy')
+        NumpyAlgs.save(data, fname)
+        gui.open_numpy_array(fname)
+
+    gui.add_action(menu=['帮助', '生成测试数据'],
+                   text='ArrayExample.npy', slot=test_data1)
+
+    def test_data2():
+        x = np.linspace(0, 10, 100)
+        y = np.sin(x)
+        data = np.column_stack([x, y])
+        fname = os.path.abspath('XY数据.npy')
+        np.save(fname, data)
+        gui.open_xy_data(fname)
+
+    gui.add_action(menu=['帮助', '生成测试数据'],
+                   text='XY数据.npy', slot=test_data2)
+
+    def test_data3():
+        x = np.linspace(-5, 5, 30)
+        y = np.linspace(-5, 5, 30)
+        x, y = np.meshgrid(x, y)
+        z = np.sin(np.sqrt(x ** 2 + y ** 2))
+        data = np.column_stack([x.flatten(), y.flatten(), z.flatten()])
+        fname = os.path.abspath('XYZ数据.npy')
+        np.save(fname, data)
+        gui.open_xyz_data(fname)
+
+    gui.add_action(menu=['帮助', '生成测试数据'],
+                   text='XYZ数据.npy', slot=test_data3)
+
+    def test_data4():
+        x = np.linspace(0, 5, 20)
+        y = np.sin(x)
+        data = Interp1(x=x, y=y)
+        fname = os.path.abspath('Example.interp1')
+        data.save(fname)
+        gui.open_interp1(fname)
+
+    gui.add_action(menu=['帮助', '生成测试数据'],
+                   text='Example.interp1', slot=test_data4)
+
+    def test_data5():
+        from zmlx.fluid import ch4
+        f = ch4.create()
+        f.den.save('Example.interp2')
+        gui.open_interp2('Example.interp2')
+
+    gui.add_action(
+        menu=['帮助', '生成测试数据'],
+        text='Example.interp2', slot=test_data5)
 
 
+@execute_once(file=__file__)
 def setup_ui():
     for obj in [ArrayEdit, XyEdit, XyzEdit, Interp1Edit, Interp2Edit]:
         try:
             obj.setup_ui()
         except Exception as e:
             print(e)
+
+    gui.add_action(
+        menu=['帮助', '加载'],
+        text='Editors',
+        slot=_install_action,
+    )

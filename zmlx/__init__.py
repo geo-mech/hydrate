@@ -46,6 +46,12 @@ except Exception as err:
     warnings.warn(f'meet exception when add path to app_data. error = {err}')
 
 ########################################
+# system
+from zmlx.system import (
+    is_headless
+)
+
+########################################
 # alg
 from zmlx.alg import (
     create_async, apply_async, sbatch, first_only, print_tag, join_paths, make_fname, clamp, linspace,
@@ -198,37 +204,179 @@ def _ver(*args):
     print(about())
 
 
-_cmds = {
-    'env': _env,
-    'ui': _ui,
-    'demo': _demo,
-    'ver': _ver,
-}
-
-
-def _help(*args):
+class _CommandRegistry:
     """
-    显示帮助信息
+    命令注册器：管理命令行子命令的注册、查找和执行。
+
+    使用方式：
+        cmds = _CommandRegistry()
+
+        # 方式1：装饰器注册（推荐）
+        @cmds.register('ui', desc='打开gui界面')
+        def _ui(args):
+            ...
+
+        # 方式2：字典式注册（兼容旧方式）
+        cmds['ui'] = _ui
+
+        # 方式3：批量注册
+        cmds.register_all(env=_env, ui=_ui)
     """
-    print("欢迎使用zmlx应用, 可用命令:")
-    for cmd, f in _cmds.items():
-        print(f"  {cmd:<12}: {f.__doc__}")
+
+    def __init__(self):
+        self._commands = {}
+
+    def register(self, name, *, desc=None, usage=None):
+        """
+        装饰器：注册一个命令。
+
+        参数:
+            name: 命令名称（命令行中使用）
+            desc: 命令的简短描述（用于帮助信息）
+            usage: 用法说明（可选，如 'ui [--safe]'）
+        """
+
+        def decorator(func):
+            self._commands[name] = {
+                'func': func,
+                'desc': desc or (func.__doc__ or '').strip().split('\n')[0],
+                'usage': usage or name,
+            }
+            return func
+
+        return decorator
+
+    def register_all(self, **kwargs):
+        """
+        批量注册命令。每个关键字参数为 命令名=函数。
+
+        示例:
+            cmds.register_all(env=_env, ui=_ui)
+        """
+        for name, func in kwargs.items():
+            self[name] = func
+
+    def __setitem__(self, name, func):
+        """支持 cmds['name'] = func 的字典式注册（兼容旧方式）"""
+        self._commands[name] = {
+            'func': func,
+            'desc': (func.__doc__ or '').strip().split('\n')[0] if func.__doc__ else '',
+            'usage': name,
+        }
+
+    def __getitem__(self, name):
+        return self._commands[name]['func']
+
+    def __contains__(self, name):
+        return name in self._commands
+
+    def get(self, name):
+        """获取命令函数，不存在返回 None"""
+        entry = self._commands.get(name)
+        return entry['func'] if entry else None
+
+    def items(self):
+        """迭代 (名称, 函数) 对（兼容旧代码的 for cmd, f in cmds.items()）"""
+        for name, entry in self._commands.items():
+            yield name, entry['func']
+
+    def keys(self):
+        return self._commands.keys()
+
+    def get_desc(self, name):
+        """获取命令描述"""
+        entry = self._commands.get(name)
+        return entry['desc'] if entry else ''
+
+    def get_usage(self, name):
+        """获取命令用法"""
+        entry = self._commands.get(name)
+        return entry['usage'] if entry else name
+
+    def help(self, name=None):
+        """
+        打印帮助信息。
+        - 不指定 name：列出所有可用命令
+        - 指定 name：显示该命令的详细帮助
+        """
+        if name:
+            entry = self._commands.get(name)
+            if entry:
+                func = entry['func']
+                doc = (func.__doc__ or '').strip()
+                print(f"命令: {name}")
+                print(f"用法: python -m zmlx {entry['usage']}")
+                if doc:
+                    print(f"\n{doc}")
+            else:
+                print(f"未知命令: {name}")
+                print(f"使用 'python -m zmlx help' 查看可用命令。")
+        else:
+            print("IGG-Hydrate (zmlx) 命令行工具")
+            print(f"用法: python -m zmlx <命令> [参数...]\n")
+            print("可用命令:")
+            max_len = max(len(n) for n in self._commands.keys()) if self._commands else 0
+            for cmd_name, entry in sorted(self._commands.items()):
+                print(f"  {cmd_name:<{max_len + 2}}{entry['desc']}")
+            print(f"\n使用 'python -m zmlx help <命令>' 查看命令详情。")
+
+    def execute(self, argv):
+        """
+        解析命令行参数并执行对应命令。
+
+        参数:
+            argv: 命令行参数列表，如 ['zmlx', 'ui', '--safe']
+        """
+        if len(argv) < 2:
+            self.help()
+            return
+
+        key = argv[1]
+
+        # 处理 help 命令或 --help/-h 标志
+        if key in ('help', '--help', '-h'):
+            if len(argv) > 2 and argv[2] not in ('--help', '-h'):
+                self.help(name=argv[2])
+            else:
+                self.help()
+            return
+
+        entry = self._commands.get(key)
+        if entry is None:
+            print(f"未知命令: {key}")
+            print(f"使用 'python -m zmlx help' 查看可用命令。")
+            return
+
+        # 检查子命令是否请求帮助
+        args = argv[2:]  # 不再包含命令名本身
+        if args and args[0] in ('--help', '-h'):
+            self.help(name=key)
+            return
+
+        # 执行命令
+        entry['func'](args)
 
 
-_cmds['help'] = _help
+# 创建全局命令注册器
+_cmds = _CommandRegistry()
+
+# 注册命令（兼容旧的 _cmds 字典接口）
+_cmds['env'] = _env
+_cmds['ui'] = _ui
+_cmds['demo'] = _demo
+_cmds['ver'] = _ver
 
 
 def main(argv):
-    if len(argv) < 2:
-        _help()
-        return
-
-    key = argv[1]
-    args = argv[1:]  # 附带了key
-
-    f = _cmds.get(key)
-    if callable(f):
-        f(*args)
+    """
+    命令行入口。支持的命令:
+        env  - 安装依赖
+        ui   - 打开GUI界面
+        demo - 打开Demo浏览器
+        ver  - 显示版本信息
+        help - 显示帮助
+    """
+    _cmds.execute(argv)
 
 
 if __name__ == "__main__":

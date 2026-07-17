@@ -1,65 +1,126 @@
 # ** desc = '实验室尺度的ch4水合物合成过程模拟 (仅供参考) '
+"""
+=============================================================
+CH4水合物合成的实验室尺度数值模拟 (case_2)
+=============================================================
+
+物理问题:
+    本模型模拟圆柱形岩心样品中甲烷水合物的合成 (形成) 过程。
+    样品长0.5米，半径0.1米。初始状态: 孔隙中含自由水 (h2o=0.6)
+    和甲烷气 (ch4=0.4)。温度276.15K (3°C)，初始压力1MPa。
+    通过注入口以1.0e-6 m^3/s的速率持续注入甲烷气，驱动水合物生成反应。
+    总模拟时长10小时。
+
+建模技术:
+    - 柱坐标系网格 (create_cylinder) + swap_yz坐标变换
+    - TFC热-流-化耦合求解框架，处理水合物生成动力学
+    - 通过 tfc.add_injector 添加注入井，向模型注入甲烷气
+    - 注入流体类型为 'insitu' (就地流体)，表示使用地层温度条件的流体
+    - 自适应时间步长: dt_min=1e-4, dt_max=10
+    - cfl=1 (较大的体积变化容差，适应注入引起的变化)
+    - 虚拟注入单元通过 pos=[0,0,0] 定位
+
+关键参数:
+    - 孔隙度: 0.3, 渗透率: 1.0e-14 m^2
+    - 初始: h2o=0.6, ch4=0.4
+    - 注入速率: 1.0e-6 m^3/s (甲烷气)
+
+物理意义:
+    水合物合成实验是实验室研究水合物生成动力学和传质过程的重要手段。
+    通过持续注气，可观察水合物饱和度随时间的增长规律，验证动力学模型。
+
+注意事项:
+    此case不针对任何特定实验，仅用于说明实验室尺度水合物合成建模方法。
+"""
 
 from zmlx import *
 
 
 def create():
     """
-    创建模型
+    创建并配置实验室尺度CH4水合物合成的数值模型。
+
+    该函数模拟水合物合成实验: 在初始含水和甲烷气的岩心中持续注入
+    甲烷气，驱动水合物生成反应。具体步骤如下:
+        1. 生成柱形网格 (长0.5m, 半径0.1m, 50x10个单元)
+        2. 定义初始饱和度 (h2o=0.6, ch4=0.4) 和温压条件
+        3. 调用 hydrate.create_kwargs 组装水合物模拟参数
+        4. 通过 tfc.add_injector 添加注气井
+        5. 设置求解器选项
+
+    参数:
+        无 (所有参数在函数内部定义)
+
+    返回:
+        model (tfc.Model): 配置完成的TFC耦合模型对象
+
+    注意:
+        - 注入采用 'insitu' 流体类型，表示温度与地层平衡
+        - cfl=1 为较大的体积变化容差，适应注气引起的体积变化
+        - 模拟时长10小时，注入速率 1.0e-6 m^3/s
     """
+    # 创建柱坐标系网格: 轴向50等分 (0~0.5m), 径向10等分 (0~0.1m)
     mesh = create_cylinder(x=np.linspace(0, 0.5, 50),
                            r=np.linspace(0, 0.1, 10))
+    # 交换Y和Z轴坐标，使柱体轴向与Z方向对齐
     swap_yz(mesh)
+
     # 找到上下范围，从而去找到顶底的边界
     z_min, z_max = mesh.get_pos_range(2)
 
+    # 判断是否为顶部边界 (Z方向最大处)
     def is_upper(x, y, z):
         return abs(z - z_max) < 0.0001
 
+    # 定义初始饱和度: 孔隙中含水0.6 + 甲烷气0.4 (水合物生成的前驱状态)
     def get_s(x, y, z):
         return {'h2o': 0.6, 'ch4': 0.4}
 
+    # 定义密度/渗透率乘数: 顶部边界不透，内部正常值5e6
     def denc(*pos):
         return 1e20 if is_upper(*pos) else 5e6
 
-    def heat_cond(x, y, z):  # 确保不会有热量通过用于生产的虚拟的cell传递过来.
+    # 定义热导率函数 (保留与分解模拟一致的接口)
+    def heat_cond(x, y, z):
         return 1.0 if abs(y) < 2 else 0.0
 
-    # 关键词
+    # 组装水合物模拟的关键字参数
     kw = hydrate.create_kwargs(
-        gravity=[0, 0, 0],
-        dt_min=1.0e-4,
-        dt_max=10,
-        dv_relative=1,
-        mesh=mesh,
-        porosity=0.3,
-        pore_modulus=100e6,
-        denc=denc,
-        temperature=273.15 + 3.0,
-        p=1e6,
-        s=get_s,
-        perm=1.0e-14,
-        dist=0.001,
-        heat_cond=heat_cond,
+        gravity=[0, 0, 0],       # 忽略重力影响
+        dt_min=1.0e-4,           # 最小时间步长 (秒)
+        dt_max=10,               # 最大时间步长 (秒)
+        cfl=1,           # 体积变化相对容差 (设为1，适应注入导致的体积膨胀)
+        mesh=mesh,                # 网格对象
+        porosity=0.3,             # 孔隙度
+        pore_modulus=100e6,       # 孔隙模量 (Pa)
+        denc=denc,                # 密度/渗透率乘数函数
+        temperature=273.15 + 3.0, # 初始温度 (K) = 3°C
+        p=1e6,                    # 初始压力 (Pa) = 1 MPa (较低的初始压力)
+        s=get_s,                  # 初始饱和度函数
+        perm=1.0e-14,             # 绝对渗透率 (m^2) ≈ 10 mD
+        dist=0.001,               # 裂隙/网格特征尺度 (m)
+        heat_cond=heat_cond,      # 热导率函数
     )
+    # 创建TFC耦合模型 (忽略重力相关警告)
     model = tfc.create(**kw,
                        warnings_ignored={'gravity'})
 
+    # 添加注气井: 持续注入甲烷气驱动水合物生成
     tfc.add_injector(
         model, data=dict(
-            flu='insitu',
-            fluid_id='ch4',
-            value=1.0e-6,  # m^3/s
-            pos=[0, 0, 0],
+            flu='insitu',          # 流体类型: 采用地层温度的原位流体
+            fluid_id='ch4',        # 注入流体组分: 甲烷
+            value=1.0e-6,          # 注入速率 (m^3/s)
+            pos=[0, 0, 0],         # 注入位置: 坐标原点
         ))
 
-    # 用于solve的选项
+    # 配置求解器选项
     model.set_text(
         key='solve',
-        text={'show_cells': {'dim0': 0,
-                             'dim1': 2
+        text={'show_cells': {'dim0': 0,     # 沿轴向 (第0维) 显示云图剖面
+                             'dim1': 2       # 沿Z方向 (第2维) 显示剖面
                              },
-              'time_max': 10 * 3600,
+              'time_max': 10 * 3600,         # 最大模拟时间: 10小时 (秒)
               }
     )
     # 返回模型
@@ -67,4 +128,5 @@ def create():
 
 
 if __name__ == '__main__':
-    tfc.solve(create(), close_after_done=False)
+    # 创建并求解模型 (GUI窗口保持打开)
+    gui.execute(lambda: tfc.solve(create()), close_after_done=False)

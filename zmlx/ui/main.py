@@ -4,11 +4,15 @@ import sys
 from typing import Optional, Tuple, List, Union
 
 import zmlx.alg.sys as warnings
-from zmlx.alg.fsys import has_permission, samefile, time_string, print_tag
-from zmlx.exts import lic, core, app_data, read_text, get_dir, contain_chinese
+from zmlx.alg.fsys import has_permission, samefile, time_string
+from zmlx.exts import lic, core, get_dir, contain_chinese
+from zmlx.system import app_data, get_hash
 from zmlx.ui import settings
-from zmlx.ui.alg import open_url, get_last_exec_history, install_package, set_plt_export_dpi, play_images, set_position, \
-    set_shape
+from zmlx.ui.alg import (
+    get_last_exec_history, install_package, set_plt_export_dpi, set_position,
+    set_shape, add_exec_history,
+    clear_exec_history
+)
 from zmlx.ui.console import Console
 from zmlx.ui.gui_buffer import gui
 from zmlx.ui.pyqt import (
@@ -29,8 +33,8 @@ class Action(QAction):
         """
         更新视图
         """
-        is_enabled = self.is_enabled() if callable(self.is_enabled) else True
-        is_visible = self.is_visible() if callable(self.is_visible) else is_enabled
+        is_enabled = bool(self.is_enabled()) if callable(self.is_enabled) else True
+        is_visible = bool(self.is_visible()) if callable(self.is_visible) else is_enabled
         self.setEnabled(is_enabled)
         self.setVisible(is_visible)
         get_text = getattr(self, 'get_text', None)
@@ -58,7 +62,7 @@ class MainWindow(QtWidgets.QMainWindow):
             pass
 
         def new_empty_file(fname):
-            from zmlx.exts import make_parent
+            from zmlx.system import make_parent
             with open(make_parent(fname), 'w') as file:
                 pass
 
@@ -444,9 +448,22 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.add_action(
             menu='操作', name='console_start_last',
-            text='重新执行', shortcut='Ctrl+Shift+R',
+            text='再次运行',
+            tooltip='在控制台重新执行上一次的操作',
+            shortcut='Ctrl+Shift+R',
+            on_toolbar=True,
             slot=self.get_console().start_last,
             is_enabled=lambda: not self.is_running() and get_last_exec_history() is not None,
+        )
+
+        self.add_action(
+            menu='操作', name='console_clear_exec_history',
+            icon='clean',
+            tooltip='清除掉控制台执行的历史',
+            text='清除历史',
+            slot=clear_exec_history,
+            on_toolbar=False,
+            is_enabled=lambda: get_last_exec_history() is not None and not self.is_running(),
         )
 
         self.add_action(
@@ -525,169 +542,6 @@ class MainWindow(QtWidgets.QMainWindow):
             icon='info',
             slot=self.show_feedback,
             is_enabled=not_running,
-        )
-
-        show_admin_actions = app_data.getenv(key='show_admin_actions', default='No', ignore_empty=True) == 'Yes'
-        if show_admin_actions or lic.is_admin:
-            self.__add_admin_actions()
-
-    def __add_admin_actions(self):
-        """
-        定义一些并不常用的测试的功能
-        """
-        from zmlx.alg.sys import create_ui_lnk_on_desktop
-
-        def not_running():
-            return not self.is_running()
-
-        self.add_action(
-            menu='操作', name='play_images',
-            text='播放图片',
-            slot=play_images
-        )
-
-        self.add_action(
-            menu='设置', name='edit_window_style',
-            text='窗口风格',
-            slot=lambda: self.open_text(
-                app_data.temp('zml_window_style.qss'), '窗口风格')
-        )
-
-        self.add_action(
-            menu='帮助', name='create_lnk',
-            text='创建快捷方式',
-            slot=create_ui_lnk_on_desktop,
-        )
-
-        self.add_action(
-            menu=['帮助', '打开'], name='papers',
-            text='已发表文章',
-            slot=lambda: open_url(
-                url="https://pan.cstcloud.cn/s/5cKaQrdFSHM",
-                use_web_engine=False)
-        )
-
-        self.add_action(
-            menu=['帮助', '打开'], name='new_issue',
-            text='新建Issue',
-            icon='issues',
-            slot=lambda: open_url(
-                url='https://gitee.com/geomech/hydrate/issues/new',
-                on_top=True,
-                caption='新建Issue',
-                icon='issues'),
-            is_enabled=not_running,
-        )
-
-        self.add_action(
-            menu=['帮助', '打开'], name='iggcas',
-            text='中科院地质地球所',
-            icon='iggcas',
-            slot=lambda: open_url(
-                url='http://www.igg.cas.cn/',
-                on_top=True,
-                caption='中科院地质地球所主页',
-                icon='iggcas'
-            ),
-            is_enabled=not_running,
-        )
-
-        self.add_action(
-            menu=['帮助', '打开'], name='homepage',
-            text='主页',
-            icon='home',
-            slot=lambda: open_url(
-                url='https://gitee.com/geomech/hydrate',
-                on_top=True,
-                caption='IGG-Hydrate',
-                icon='home'
-            ),
-            is_enabled=not_running,
-        )
-
-        self.add_action(
-            menu=['帮助', '显示'],
-            text='日历',
-            slot=self.show_calendar,
-        )
-
-        self.add_action(
-            menu='帮助', name='print_tag',
-            text='时间标签',
-            slot=print_tag
-        )
-
-        def print_funcs():
-            gui.show_string_table(list(gui.list_all()), '命令列表')
-
-        def print_actions():
-            names = gui.list_actions()
-            names.sort()
-            gui.show_string_table(names, 'Action列表')
-
-        self.add_action(
-            menu=['帮助', '显示'],
-            text='命令列表',
-            slot=lambda: self.start_func(print_funcs),
-        )
-
-        self.add_action(
-            menu=['帮助', '显示'],
-            text='Action列表',
-            slot=lambda: self.start_func(print_actions),
-        )
-
-        def print_gui_setup_logs():
-            logs = app_data.get('gui_setup_logs')
-            gui.show_string_table(logs, 'gui_setup_logs', 1)
-
-        self.add_action(
-            menu=['帮助', '显示'],
-            text='Setup日志',
-            slot=print_gui_setup_logs,
-        )
-
-        def print_sys_folders():
-            from zmlx.alg.sys import listdir
-            paths = listdir(app_data.get_paths())
-            gui.show_string_table(paths, '系统路径', 1)
-
-        self.add_action(
-            menu=['帮助', '显示'],
-            text='系统路径',
-            slot=print_sys_folders,
-        )
-
-        def open_cwd():
-            print(f'当前工作路径：\n{os.getcwd()}\n')
-            from zmlx.alg import startfile
-            startfile(os.getcwd())
-
-        self.add_action(
-            menu=['帮助', '打开'], name='open_cwd',
-            text='工作路径',
-            slot=open_cwd
-        )
-
-        def open_opath():
-            from zmlx.io import opath
-            from zmlx.alg import startfile
-            print(f'数据目录：\n{opath()}\n')
-            startfile(opath())
-
-        self.add_action(
-            menu=['帮助', '打开'], name='open_opath',
-            text='数据目录(zmlx.io.opath)',
-            slot=open_opath
-        )
-
-        from zmlx.alg import startfile
-
-        self.add_action(
-            menu=['帮助', '打开'], name='open_app_data',
-            text='AppData',
-            slot=lambda: startfile(app_data.root()),
-            is_enabled=lambda: lic.is_admin
         )
 
     def list_member_functions(self):
@@ -769,18 +623,33 @@ class MainWindow(QtWidgets.QMainWindow):
                 return toolbar
         return self.addToolBar(name)
 
-    def add_action(self, menu=None, text=None, name=None, slot=None,
-                   icon=None, tooltip=None, shortcut=None,
-                   on_toolbar=None,
-                   is_enabled=None,
-                   is_visible=None
-                   ):
+    def add_action(
+            self, menu=None, text=None, name=None, slot=None,
+            icon=None, tooltip=None, shortcut=None,
+            on_toolbar=None,
+            is_enabled=None,
+            is_visible=None,
+            overwritable=True
+    ):
         """
         添加一个Action. 这是一个新的版本，将替代后续的直接基于File的ActionX的创建方法，
         并且将支持动态地创建Action。
         Since 2026-6-9.
         """
+        if not overwritable:
+            if name is None:  # 此时，需要给定一个name (仅仅用于判断是否已存在)
+                if isinstance(text, str):  # 此时，给定一个默认的name
+                    if menu is None:
+                        name = 'auto_' + get_hash('_'.join(['其它'] + [text]))
+                    elif isinstance(menu, str):
+                        name = 'auto_' + get_hash('_'.join([menu, text]))
+                    elif isinstance(menu, list):
+                        name = 'auto_' + get_hash('_'.join(menu + [text]))
+
         if self.get_action(name=name, create_empty=False) is not None:
+            if not overwritable:
+                assert name is not None, f'Error: name should not be None when action not overwritable'
+                return
             warnings.warn(
                 f'The action already exists: {name}',
                 UserWarning, stacklevel=2)
@@ -848,7 +717,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.get_menu(menu).addAction(action)
 
-    def get_action(self, name, create_empty=None):
+    def get_action(self, name, create_empty=True):
         """
         返回给定name的菜单action
         """
@@ -856,12 +725,10 @@ class MainWindow(QtWidgets.QMainWindow):
             for action in self.findChildren(QAction):
                 if action.objectName() == name or action.objectName() == name + '.py':
                     return action
-        if create_empty is None:
-            create_empty = True
         if create_empty:
             warnings.warn(f'cannot find the action with name: <{name}>',
                           UserWarning, stacklevel=2)
-            action = QAction(parent=self)
+            action = Action(self)
             if name is not None:
                 action.setText(name)
             else:
@@ -881,7 +748,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def trigger(self, name):
         """
-        出发给定的Action
+        触发给定的Action
         """
         action = self.get_action(name)
         if hasattr(action, 'trigger'):
@@ -1755,6 +1622,21 @@ class MainWindow(QtWidgets.QMainWindow):
         self.get_widget(
             the_type=TextBrowser, caption=caption, on_top=on_top, oper=oper)
 
+    def get_vtk_view(self, caption=None, on_top=None, init=None, oper=None):
+        """
+        打开一个QtInteractor窗口
+        Args:
+            caption: 窗口的标题
+            on_top: 是否将窗口置顶
+            init: 初始化函数
+            oper: 操作函数
+        """
+        from pyvistaqt import QtInteractor
+        return self.get_widget(
+            the_type=QtInteractor, caption=caption,
+            on_top=on_top, init=init, oper=oper
+        )
+
 
 class MySplashScreen(QtWidgets.QSplashScreen):
     def mousePressEvent(self, event):
@@ -1889,43 +1771,6 @@ def __add_code_history():
         print(f'Error: {err}')
 
 
-def __gui_setup():
-    """
-    设置GUI的额外的选项(会在线程里面执行)
-    """
-    from zmlx.ui import setup_files
-    the_logs = []
-    for path in setup_files.get_files():
-        try:
-            folder = os.path.dirname(os.path.dirname(path))
-            if folder not in sys.path:
-                sys.path.append(folder)  # 确保包含zml_gui_setup.py的包能够被正确import
-
-            the_logs.append(f'Exec File: {path}')
-            # 备份app_data
-            name = app_data.space.get('__name__', None)
-            file = app_data.space.get('__file__', None)
-            # 针对此文件，设置name和file
-            app_data.space['__name__'] = '__main__'
-            app_data.space['__file__'] = path
-            # 运行此文件
-            try:
-                exec(read_text(path, encoding='utf-8'), app_data.space)
-                error = None
-            except Exception as e:
-                error = e
-            # 恢复app_data
-            app_data.space['__name__'] = name
-            app_data.space['__file__'] = file
-            # 处理错误
-            if error is not None:
-                raise error
-        except Exception as err:
-            the_logs.append(f'Failed: {err}')
-            gui.add_message(f'path = {path}, error = {err}')
-    app_data.put('gui_setup_logs', the_logs)
-
-
 def __check():
     messages = []
 
@@ -1986,6 +1831,12 @@ def __console_kernel(code):
         print(f'Error when setup message: {err}')
 
     try:
+        from zmlx.ui.widget.mem_view import setup_ui
+        setup_ui()
+    except Exception as err:
+        print(f'Error when setup mem_view: {err}')
+
+    try:
         from zmlx.ui.widget.editors import setup_ui
         setup_ui()
     except Exception as err:
@@ -1995,16 +1846,32 @@ def __console_kernel(code):
         from zmlx.ui.widget.seepage import setup_ui
         setup_ui()
     except Exception as err:
-        print(f'Error when setup editors: {err}')
+        print(f'Error when setup seepage: {err}')
 
     try:
-        from zmlx.ui.widget.mem_view import setup_ui
+        from zmlx.ui.action.testing import setup_ui
         setup_ui()
     except Exception as err:
-        print(f'Error when setup mem_view: {err}')
+        print(f'Error when setup testing: {err}')
+
+    try:
+        from zmlx.ui.action.vtk_view import setup_ui
+        setup_ui()
+    except Exception as err:
+        print(f'Error when setup vtk_view: {err}')
+
+    try:
+        from zmlx.ui.action.zip_files import setup_ui
+        setup_ui()
+    except Exception as err:
+        print(f'Error when setup zip_files: {err}')
 
     if app_data.get('run_setup', True):  # 执行额外的配置文件(默认执行)
-        __gui_setup()
+        try:
+            from zmlx.ui import exts
+            exts.run_setup()
+        except Exception as err:
+            print(f'Error when run setup: {err}')
 
     if app_data.get('init_check', False):
         __check()
@@ -2093,7 +1960,7 @@ def __on_close(win):
         print(f'Error: {err2}')
 
 
-def execute(code=None, keep_cwd=True, close_after_done=True):
+def execute(code=None, keep_cwd=True, close_after_done=True, add_history=True):
     try:
         app_data.log(f'gui_execute. file={__file__}. argv={sys.argv}')
     except Exception as err:
@@ -2128,9 +1995,16 @@ def execute(code=None, keep_cwd=True, close_after_done=True):
     # 启动核心(但是不阻塞当前线程)
     win.get_console().start_func(
         lambda: __console_kernel(code),  # 这里，会启动包含code在内的其它一些在初始化的代码
-        post_task=lambda: __console_done(win, code, close_after_done)
+        post_task=lambda: __console_done(win, code, close_after_done),
+        add_history=False  # 除了code之外，还包括一些初始化的代码，因此，不要添加到历史中
     )
-    win.get_console().start_func(None)  # 清除最后一次调用的信息
+
+    # 单将code相关的操作添加到历史，这样后续可以重新多次执行
+    if code is not None and add_history:
+        add_exec_history(dict(
+            code=code
+        ))
+
     app.exec()
     __on_exit(win)  # 执行最后的清理/恢复操作
 

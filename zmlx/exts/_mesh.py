@@ -5,6 +5,7 @@ from typing import Optional, Iterable, Tuple, List, Union
 from zmlx.exts._ary import Array3
 from zmlx.exts._coord import Coord3
 from zmlx.exts._dll import core, make_c_char_p
+from zmlx.exts._hk import HasKeys
 from zmlx.exts._str import String
 from zmlx.exts._utils import (
     HasCells, HasHandle, Iterator, Object, attr_in_range, get_distance, get_index, IDX_INF, log, make_parent,
@@ -1591,6 +1592,38 @@ class Mesh3(HasHandle):
         core.mesh3_get_loc_range(self.handle, lr.handle, rr.handle)
         return lr.to_list(), rr.to_list()
 
+    core.use(c_void_p, 'mesh3_keys', c_void_p)
+
+    def _get_keys(self):
+        """
+        返回Mesh3的属性ID管理对象
+        """
+        return HasKeys(handle=core.mesh3_keys(self.handle))
+
+    def reg_node_key(self, key):
+        return self._get_keys().reg_key(key, ty='node_')
+
+    def get_node_key(self, key):
+        return self._get_keys().get_key(key, ty='node_')
+
+    def reg_link_key(self, key):
+        return self._get_keys().reg_key(key, ty='link_')
+
+    def get_link_key(self, key):
+        return self._get_keys().get_key(key, ty='link_')
+
+    def reg_face_key(self, key):
+        return self._get_keys().reg_key(key, ty='face_')
+
+    def get_face_key(self, key):
+        return self._get_keys().get_key(key, ty='face_')
+
+    def reg_body_key(self, key):
+        return self._get_keys().reg_key(key, ty='body_')
+
+    def get_body_key(self, key):
+        return self._get_keys().get_key(key, ty='body_')
+
 
 class SeepageMesh(HasHandle, HasCells):
     """
@@ -2202,17 +2235,18 @@ class SeepageMesh(HasHandle, HasCells):
 
     def get_nearest_cell(self, pos: Union[Tuple[float, float, float], List[float]]) -> Optional["SeepageMesh.Cell"]:
         """
-        返回与给定位置距离最近的cell
+        返回与给定位置距离最近的cell (如果要忽略某一个维度，则将该维度的坐标设为None)
 
         Args:
             pos (tuple | list): 包含三个浮点数的元组，表示三维空间中的位置。
+                如果某一个维度的坐标为None，则表示该维度不参与计算。
 
         Returns:
             SeepageMesh.Cell: 与给定位置距离最近的cell对象，
                 如果网格中有cell；否则返回None。
         """
         if self.cell_number > 0:
-            pos = [1.0e210 if pos[i] is None else pos[i] for i in range(3)]
+            pos = [1.0e210 if pos[i] is None else pos[i] for i in range(3)]  # 在内核中，自动忽略大于1e200的坐标
             return self.get_cell(core.seepage_mesh_get_nearest_cell_id(self.handle, pos[0], pos[1], pos[2]))
         else:
             return None

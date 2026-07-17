@@ -11,7 +11,7 @@
 [张召彬](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/201703/t20170306_4755492.html)<sup>
 1,2,x</sup>, [李守定](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/201412/t20141218_4278784.html)<sup>
 1,2</sup>, [李晓](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/200907/t20090713_2065538.html)<sup>1,2</sup>, 徐涛<sup>
-1,2</sup>, 李宇轩<sup>1,2</sup>, Maryelin<sup>1,2</sup>, 谢卓然<sup>1,2</sup>, 李晓旗<sup>1,2</sup>
+1,2</sup>, 李宇轩<sup>1,2</sup>, Maryelin Josefina Briceño Montilla<sup>1,2</sup>, 谢卓然<sup>1,2</sup>, 李晓旗<sup>1,2</sup>, 张韬<sup>1,2</sup>
 
 <sup>1</sup>[中国科学院地质与地球物理研究所](https://igg.cas.cn/)(北京, 100029);
 
@@ -51,27 +51,47 @@
 
 ### 安装
 
-1. 确保操作系统为Windows 10/11, x64<sup>①</sup>; Linux 版本的安装参考 [https://gitee.com/geomech/hydrate/issues/IJWXWF](https://gitee.com/geomech/hydrate/issues/IJWXWF); 
+1. 确保操作系统为Windows 10/11, x64<sup>①</sup>; Linux
+   系统参考 [issues/IJWXWF](https://gitee.com/geomech/hydrate/issues/IJWXWF);
 2. 安装[Python](https://www.python.org/) (64位, 3.8+, 推荐3.12+)<sup>②</sup> 并安装
    `PyQt6, pyqt6-qscintilla, PyQt6-WebEngine, numpy, scipy, matplotlib`等Python包<sup>③</sup>;
-3. 下载[IGG-Hydrate](https://gitee.com/geomech/hydrate)
-   的[zip包](https://gitee.com/geomech/hydrate/repository/archive/master.zip)并解压(或者使用[git](https://git-scm.com/)
-   来[clone](https://gitee.com/help/articles/4111#article-header0)代码); 之后，将`zml.py`所在的文件夹(建议纯英文路径)
-   添加到Python的搜索路径中;
-4. 参考[`zmlx/demo`](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)建模<sup>④</sup>; 运行[
-   `zml_ui.pyw`](https://gitee.com/geomech/hydrate/blob/master/zml_ui.pyw)打开界面.
+3. 安装[git](https://git-scm.com/)并确保`git`命令可用;
+4. 使用[git](https://git-scm.com/)来拉取代码 (首次安装：`git clone https://gitee.com/geomech/hydrate.git`; 后续更新:
+   `git pull`);
+5. 将`hydrate`文件夹添加到Python搜索路径<sup>④</sup>;
+6. 运行`python -m zmlx ui`打开界面;
+7. 参考[`zmlx/demo`](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)建模<sup>⑤</sup>.
 
 > 注：<sup>①</sup>
-> 软件计算内核采用Visual Studio 2019编译，建议安装
+> 软件内核采用Visual Studio 2019编译，建议安装
 > Visual
-> Studio运行库 [VC_redist.x64.exe](https://gitee.com/geomech/hydrate/attach_files) (
-> 尽管，貌似很多时候系统都内置了，但是安装这个运行库，并不会有副作用);
-<sup>②</sup> 推荐使用[WinPython](https://gitee.com/geomech/hydrate/attach_files);
-<sup>③</sup> 运行脚本`zmlx/script/install_dep.py`可自动安装所有依赖包(基于[pip](https://pypi.org/project/pip/)
->)；
-<sup>④</sup> 建议在[demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)
-> 的基础上，向前追溯函数的实现; [demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)中案例仅供测试，作者不保证其参数的合理性.
+> Studio运行库 [VC_redist.x64.exe](https://gitee.com/geomech/hydrate/attach_files);
+> <sup>②</sup>
+> 推荐[WinPython](https://gitee.com/geomech/hydrate/attach_files),
+> [Miniconda](https://www.anaconda.com/docs/getting-started/miniconda/main)
+> 等Python发行版; <sup>③</sup> 运行脚本`zmlx/script/install_dep.py`可自动安装所有依赖包(
+> 基于[pip](https://pypi.org/project/pip/))；
+> <sup>④</sup> 使得Python中`import zmlx`可用; <sup>⑤</sup>
+> 建议在[demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)
+> 的基础上，向前追溯函数的实现; 另外，[demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)中案例仅供测试，作者不保证其参数的合理性.
 
+### 学习/快速入门
+
+建议从 [`zmlx/demo`](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo) 开始学习。Demo 目录包含 **100+ 个可运行示例**，覆盖了单相流、两相流、水合物开发、热传导、力学等各类问题。
+
+> 参阅 [`zmlx/demo/ReadMe.md`](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo/ReadMe.md) 获取完整的建模指南，包括：
+> - 建模方法与空间分布函数
+> - 边界条件设置（定压、恒温、井）
+> - 时间步进策略
+> - 多相流与流体定义
+> - 可视化策略
+> - 常见陷阱与最佳实践
+
+运行方式：
+```bash
+python zmlx/demo/flow_1ph/darcy_1d.py              # GUI 模式
+python zmlx/demo/flow_1ph/darcy_1d.py --no-gui     # 命令行模式
+```
 
 ### 协作/开发
 
@@ -81,18 +101,20 @@
 2. 请只推送代码，*不要推送比较大的数据* (Gitee仓库有500Mb的总量限制);
 3. 请务必熟悉[git](https://git-scm.com/)<sup>①</sup>;
 4. 如果直接向[IGG-Hydrate](https://gitee.com/geomech/hydrate)
-   推送代码，可能会报错（因为没有权限）。此时，可以在页面右上角，点击[申请加入仓库](https://gitee.com/geomech/hydrate)
-   ，成为开发者；或者，你也可以使用[Fork + Pull 模式](https://help.gitee.com/base/pullrequest/Fork+Pull)<sup>②</sup>参与开发;
+   推送代码，可能会报错（因为没有权限）。建议使用[Fork + Pull 模式](https://help.gitee.com/base/pullrequest/Fork+Pull)<sup>
+   ②</sup>参与开发，或者点击[申请加入仓库](https://gitee.com/geomech/hydrate)
+   ，成为开发者;
 5. 在push代码前，先确保本地代码与主仓库同步。
 
 > 注：<sup>①</sup> 在[Gitee帮助中心](https://gitee.com/help#article-header0)
 > 有不少git的入门资料；新手建议安装[TortoiseGit](https://tortoisegit.org/)，它会在文件管理器添加右键菜单，可以满足大部分操作;
 > 另外，如果是Pycharm用户，可以参考 https://gitee.com/geomech/hydrate/issues/IJT65R;
-<sup>②</sup>[Fork + Pull 模式](https://help.gitee.com/base/pullrequest/Fork+Pull)是Gitee建议的一种参与开发的方式.
+<sup>②</sup>[Fork + Pull 模式](https://help.gitee.com/base/pullrequest/Fork+Pull)是Gitee建议的方式.
 
 ### 镜像
 
-仓库主网址为: [gitee.com/geomech/hydrate](https://gitee.com/geomech/hydrate), 镜像仓库: [github.com/geo-mech/hydrate](https://github.com/geo-mech/hydrate).
+仓库主网址为: [gitee.com/geomech/hydrate](https://gitee.com/geomech/hydrate),
+镜像仓库: [github.com/geo-mech/hydrate](https://github.com/geo-mech/hydrate).
 
 > 注：反馈或推送给代码，务必在[主仓库](https://gitee.com/geomech/hydrate)
 > 进行，作者不会关注[镜像仓库](https://github.com/geo-mech/hydrate)的变化.
@@ -101,8 +123,7 @@
 
 [告知作者](https://gitee.com/geomech/hydrate/issues/ID5HZX)后可免费使用。
 
-> 注：软件会基于网络检查版本。对于过期的版本，仍然可以运行，但是计算的速度会受到限制
-> （仅Windows版本，Linux版本不做限制）。因此，请确保使用最新版，并确保电脑联网。
+> 注：软件会基于网络检查版本。对于过期的版本，仍然可以运行，但是计算的速度会受到限制。因此，请确保使用最新版，并确保电脑联网。
 
 ### 关于软件名
 

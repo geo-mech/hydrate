@@ -11,6 +11,10 @@ import time
 import timeit
 import warnings
 
+from zmlx.system import warn, deprecated, first_execute
+
+_keep = [warn, deprecated, first_execute]
+
 
 def log_deprecated(name):
     """
@@ -23,27 +27,6 @@ def log_deprecated(name):
     """
     from zmlx.exts import log
     log(f'The deprecated used: {name}', tag=f'{name}.deprecated_used')
-
-
-def warn(message, category=None, stacklevel=1, tag=None):
-    """
-    警告，并且当tag给定的时候，则记录日志 (每天只记录一次). 这个函数用于在zmlx内部，去替换warnings的warn函数，
-    实现在弹出警告的同时，还会进行必要的记录。
-    Args:
-        tag: 记录日志的标签（非必需）。在没有tag的时候，则使用message来替代
-        message: 需要弹出的警告
-        category: 类别
-        stacklevel: 栈的深度
-
-    Returns:
-        None
-    """
-    warnings.warn(message=message, category=category, stacklevel=stacklevel + 1)
-    if tag is None:
-        tag = message
-    if isinstance(tag, str):
-        from zmlx.exts import log
-        log(text=message, tag=f'{tag}.warn')
 
 
 def type_assert(o, dtype):
@@ -524,22 +507,3 @@ def unique(iterable):
             seen.add(element)
             result.append(element)
     return result
-
-
-def first_execute(name, key=None):
-    """
-    检查给定的文件是否是第一次运行（只有在首次启动first_execute函数的时候返回True）.
-    其中name为文件的全路径。key为在app_data中存储的名字。
-    """
-    from zmlx.exts import app_data
-    if name is None:
-        name = ''
-    if key is None:
-        key = 'files_executed'
-    executed = app_data.get(key, [])
-    if name in executed:
-        return False
-    else:
-        executed.append(name)
-        app_data.put(key, executed)
-        return True

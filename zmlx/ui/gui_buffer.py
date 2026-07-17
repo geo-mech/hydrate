@@ -1,9 +1,34 @@
+"""
+zmlx GUI 执行框架。
+
+== 核心用法 ==
+
+所有 gui.xxx() 函数（break_point、progress、show_attrs 等）只有在通过
+gui.execute() 启动主程序时才会生效。在非 GUI 模式下，这些调用自动变为
+无害的空操作，不需要手动判断。
+
+**正确的启动方式**（仅在 if __name__ == '__main__' 下调用 gui.execute）：
+
+    if __name__ == '__main__':
+        gui.execute(main, close_after_done=False)
+
+**无头模式**（不显示 GUI 窗口）：
+
+    python demo.py --no-gui
+    python demo.py --headless
+
+在 gui.execute() 内部会自动检测无头模式，不需要手动处理。
+
+**不要在其它位置调用 gui.execute()**。gui.execute 只应出现在主程序
+入口的 if __name__ == '__main__' 块中。如果在函数内部调用 gui.execute，
+会导致嵌套执行，产生不可预期的行为。
+
+参考 demo 文件（如 zmlx/demo/flow_1ph/darcy_1d.py）了解更多示例。
+"""
+
 from typing import Optional, Tuple, List, Union
 
-try:
-    from zmlx.exts import app_data
-except ImportError:
-    app_data = None
+from zmlx.system import app_data, is_headless
 
 
 class GuiBuffer:
@@ -74,10 +99,13 @@ class GuiBuffer:
         """
         if message is not None:
             print(message)
-        if app_data is not None:
-            disable = app_data.get('DISABLE_PAUSE', False)  # 禁止内核的暂停
+        if is_headless():
+            disable = True
         else:
-            disable = False
+            if app_data is not None:
+                disable = app_data.get('DISABLE_PAUSE', False)  # 禁止内核的暂停
+            else:
+                disable = False
         if not disable:
             self.command('click_pause')
         self.break_point()
@@ -132,7 +160,7 @@ class GuiBuffer:
     def execute(
             self, func=None, keep_cwd=True, close_after_done=True,
             args=None,
-            kwargs=None, disable_gui=False):
+            kwargs=None, disable_gui=False, add_history=True):
         """
         尝试在gui模式下运行给定的函数 func
         Args:
@@ -142,6 +170,7 @@ class GuiBuffer:
             args: 要传递给函数的位置参数
             kwargs: 要传递给函数的关键词参数
             disable_gui: 是否禁用gui模式
+            add_history: 是否将运行历史添加到历史记录(从而方便再次运行)
         Returns:
             函数的返回值
         """
@@ -154,13 +183,20 @@ class GuiBuffer:
             else:
                 return None
 
+        if not disable_gui:
+            from zmlx.system import is_headless
+            if is_headless():
+                disable_gui = True
+                print('headless mode, disable gui')
+
         if self.exists() or disable_gui:
             return fx()
 
         try:
             from zmlx.ui.main import execute
             return execute(fx, keep_cwd=keep_cwd,
-                           close_after_done=close_after_done)
+                           close_after_done=close_after_done,
+                           add_history=add_history)
         except Exception as execute_err:
             print(f'call gui failed: {execute_err}')
             return fx()
@@ -168,12 +204,7 @@ class GuiBuffer:
 
 gui = GuiBuffer()
 
-try:
-    from zmlx.exts import app_data
-
-    app_data.put('gui', gui)
-except Exception as err:
-    print(err)
+app_data.put('gui', gui)
 
 
 def break_point():
@@ -197,33 +228,39 @@ def question(info):
         return y == 'y' or y == 'Y'
 
 
-def plot_no_gui(kernel, *args, fname=None, dpi=300, caption=None, clear=None, tight_layout=None, suptitle=None,
-                **kwargs):
-    """
-    在非GUI模式下绘图(或者显示并阻塞程序执行，或者输出文件但不显示).
-    Args:
-        kernel: 绘图的回调函数，函数的原型为：
-            def kernel(figure, *args, **kwargs):
-                ...
-        *args: 传递给kernel函数的参数
-        **kwargs: 传递给kernel函数的关键字参数
-        tight_layout: 是否自动调整子图参数，以防止重叠
-        caption: 图表的标题
-        clear: 是否清除当前figure的内容，默认清除
-        dpi: 输出图片的分辨率
-        fname: 输出的文件名
-        suptitle: 图表的标题
+def _plot_no_gui(kernel, *args, fname=None, dpi=300, caption=None, tight_layout=None, suptitle=None,
+                 on_top=None,  # 兼容gui下的参数
+                 **kwargs):
+    """在非 GUI 模式下绘图（保存到文件）。
+
+    内部函数，用户不应直接调用。请使用 gui.plot() 或 zmlx.ui.plot()，
+    它们会自动根据环境选择 GUI 绘图或非 GUI 保存。
     """
     try:
         import matplotlib.pyplot as plt
     except Exception as e:
-        from zmlx.exts import log
+        from zmlx.system import log
         log(text=f'{e}', tag='matplotlib_import_error')
         plt = None
 
     if kernel is None or plt is None:
         return None
     try:
+        from zmlx.plt import set_chinese_font
+        set_chinese_font()
+
+        if fname is None:
+            from zmlx.system import is_headless
+            if is_headless() and caption is None:
+                caption = "default_figure"
+            if caption is not None:
+                import datetime
+                import os
+                from zmlx.plt._save import get_plt_save_path
+                from zmlx.system import make_parent
+                now = datetime.datetime.now()
+                name = now.strftime("%Y-%m-%d-%H-%M-%S-") + f"{now.microsecond:06d}.png"
+                fname = make_parent(os.path.join(get_plt_save_path(caption), name))
         fig = plt.figure()
         kernel(fig, *args, **kwargs)
         if isinstance(suptitle, str):
@@ -276,13 +313,20 @@ def plot(kernel, *args, gui_only=False, gui_mode=None,
     if gui.exists():
         return plot_with_gui()
 
+    # 此时，没有处在gui中
+    if gui_mode:
+        from zmlx.system import is_headless
+        if is_headless():
+            gui_mode = False
+            print('headless mode, disable gui')
+
     if gui_mode:  # 创建窗口来运行
         return gui.execute(plot_with_gui, close_after_done=False)
 
     if gui_only:
         return None
     else:
-        return plot_no_gui(kernel, *args, fname=fname, dpi=dpi, **kwargs)
+        return _plot_no_gui(kernel, *args, fname=fname, dpi=dpi, **kwargs)
 
 
 def progress(
@@ -323,6 +367,28 @@ def gui_exec(*args, **kwargs):
     return gui.execute(*args, **kwargs)
 
 
+def add_action(
+        menu=None, text=None, name=None, slot=None,
+        icon=None, tooltip=None, shortcut=None,
+        on_toolbar=None,
+        is_enabled=None,
+        is_visible=None,
+        overwritable=True
+):
+    """
+    在gui菜单添加一个操作项
+    """
+    if gui.exists():
+        gui.add_action(
+            menu=menu, text=text, name=name, slot=slot,
+            icon=icon, tooltip=tooltip, shortcut=shortcut,
+            on_toolbar=on_toolbar,
+            is_enabled=is_enabled,
+            is_visible=is_visible,
+            overwritable=overwritable
+        )
+
+
 def proc_argv(argv=None):
     from zmlx.alg import fsys
     if not isinstance(argv, (list, tuple)):
@@ -340,7 +406,7 @@ def open_gui(argv=None):
     """
     打开gui
     """
-    from zmlx.exts import app_data
+    from zmlx.system import app_data
     app_data.put('argv', argv)
     # 是否需要恢复标签
     app_data.put('restore_tabs',
@@ -348,18 +414,19 @@ def open_gui(argv=None):
     # 是否初始检查
     app_data.put('init_check',
                  app_data.getenv('init_check', default='Yes') != 'No')
-    gui.execute(func=lambda: proc_argv(argv), keep_cwd=False, close_after_done=False)
+    gui.execute(func=lambda: proc_argv(argv), keep_cwd=False, close_after_done=False,
+                add_history=False)
 
 
 def open_gui_without_setup(argv=None):
     """
     打开gui
     """
-    from zmlx.exts import app_data
+    from zmlx.system import app_data
     app_data.put('argv', argv)
     app_data.put('restore_tabs', False)
     app_data.put('run_setup', False)
-    gui.execute(func=lambda: proc_argv(argv), keep_cwd=False, close_after_done=False)
+    gui.execute(func=lambda: proc_argv(argv), keep_cwd=False, close_after_done=False, add_history=False)
 
 
 def test():
