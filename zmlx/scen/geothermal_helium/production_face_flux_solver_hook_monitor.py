@@ -32,7 +32,7 @@ from zmlx.ui import gui
 # 1. 参数区
 # ============================================================
 
-Q_IN = 5.0e-5          # m3/s
+Q_IN = 1.3e-4         # m3/s
 Y_WIDTH = 1.0
 
 X_INJ = 300.0
@@ -41,7 +41,7 @@ X_PROD = 700.0
 P_PROD = 18.0e6       # Pa
 
 INJ_VOL = 100.0
-PROD_VOL = 1.0e10
+PROD_VOL = 1.0e6
 
 WELL_AREA = 2.104
 WELL_LENGTH = 1.0

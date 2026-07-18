@@ -13,10 +13,10 @@
 """
 
 from zmlx.exts import Seepage
-from zmlx.fluid.h2o import create as create_h2o
 from zmlx.fluid.solution import create_solute
 from zmlx.tfc import create as create_tfc
-
+from zmlx import Interp2
+from iapws import IAPWS97
 
 def _vapor():
     """
@@ -55,9 +55,104 @@ def _ch4():
 
 def _h2o():
     """
-    水相。
+    适用于当前地热模型的温压相关水物性。
+
+    物性范围：
+        压力：1～40 MPa
+        温度：290～410 K
+
+    密度和动力黏度由 IAPWS-IF97 计算，
+    再转换成 ZMLX 使用的 Interp2 二维插值表。
     """
-    return create_h2o(name='h2o')
+
+    # ------------------------------------------------------------
+    # 1. 插值表范围
+    # ------------------------------------------------------------
+    p_min = 1.0e6       # Pa
+    p_max = 40.0e6      # Pa
+    dp = 0.5e6          # Pa，压力表格间隔
+
+    t_min = 290.0       # K
+    t_max = 420.0       # K
+    dt = 1.0            # K，温度表格间隔
+
+    # 缓存同一 P-T 状态，避免密度表和黏度表重复计算
+    state_cache = {}
+
+    def get_state(P, T):
+        """
+        P：ZMLX传入的压力，Pa
+        T：ZMLX传入的温度，K
+        """
+
+        # 仅用于防止数值迭代过程中暂时超出插值表范围
+        P = max(p_min, min(p_max, float(P)))
+        T = max(t_min, min(t_max, float(T)))
+
+        # IAPWS97压力单位是MPa
+        key = (round(P, 3), round(T, 6))
+
+        if key not in state_cache:
+            state_cache[key] = IAPWS97(
+                P=P / 1.0e6,
+                T=T
+            )
+
+        return state_cache[key]
+
+    def get_density(P, T):
+        """
+        水密度，kg/m3。
+        """
+        state = get_state(P, T)
+        return float(state.rho)
+
+    def get_viscosity(P, T):
+        """
+        水动力黏度，Pa·s。
+        """
+        state = get_state(P, T)
+        return float(state.mu)
+
+    # ------------------------------------------------------------
+    # 2. 创建密度二维插值表
+    # ------------------------------------------------------------
+    density_table = Interp2()
+
+    density_table.create(
+        p_min,
+        dp,
+        p_max,
+        t_min,
+        dt,
+        t_max,
+        get_density
+    )
+
+    # ------------------------------------------------------------
+    # 3. 创建黏度二维插值表
+    # ------------------------------------------------------------
+    viscosity_table = Interp2()
+
+    viscosity_table.create(
+        p_min,
+        dp,
+        p_max,
+        t_min,
+        dt,
+        t_max,
+        get_viscosity
+    )
+
+    # ------------------------------------------------------------
+    # 4. 返回水相定义
+    # ------------------------------------------------------------
+    return Seepage.FluDef(
+        name='h2o',
+        den=density_table,
+        vis=viscosity_table,
+        specific_heat=4200.0
+    )
 
 
 def _he_sol(h2o):
@@ -161,26 +256,28 @@ def create(**opts) -> Seepage:
 
     return model
 
-
-def _test():
+def test_geothermal_water_properties():
     """
-    测试流体定义是否包含 he_sol / n2_sol / ch4_sol。
+    检查20 MPa下不同温度的水密度和黏度。
     """
-    from zmlx.tfc import cell_keys
 
-    model = create()
-    ca = cell_keys(model)
+    print("\n========== IAPWS水物性检查 ==========")
 
-    print(model)
-    print("he_sol  key =", ca.he_sol)
-    print("n2_sol  key =", ca.n2_sol)
+    pressure_mpa = 20.0
 
-    try:
-        print("ch4_sol key =", ca.ch4_sol)
-    except Exception as e:
-        print("无法读取 ch4_sol key，请检查 create_fludefs 中是否成功定义 ch4_sol")
-        print(e)
+    for temperature in [300.0, 325.0, 350.0, 375.0, 400.0]:
+        state = IAPWS97(
+            P=pressure_mpa,
+            T=temperature
+        )
 
+        print(
+            f"P = {pressure_mpa:6.2f} MPa, "
+            f"T = {temperature:7.2f} K, "
+            f"rho = {state.rho:10.4f} kg/m3, "
+            f"mu = {state.mu:.6e} Pa·s"
+        )
 
+    print("=====================================\n")
 if __name__ == '__main__':
-    _test()
+        test_geothermal_water_properties()
