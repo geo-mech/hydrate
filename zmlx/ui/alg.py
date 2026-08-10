@@ -16,7 +16,8 @@ def create_action(parent, text, *, icon=None, slot=None):
             ac.setIcon(load_icon(icon))
 
     if slot is not None:
-        assert callable(slot), f'slot must be callable when create action {text}'
+        if not callable(slot):
+            raise RuntimeError(f'slot must be callable when create action {text}')
 
         def func():
             try:  # 尝试刷新界面
@@ -255,7 +256,8 @@ def modify_file_exts(exts):
     """
     exts = [e.lower() for e in exts]
     for i in range(len(exts)):
-        assert len(exts[i]) > 0, f'The file extension should not be empty'
+        if len(exts[i]) == 0:
+            raise ValueError('The file extension should not be empty')
         if exts[i][0] != '.':
             exts[i] = '.' + exts[i]
     return exts

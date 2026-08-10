@@ -1,4 +1,5 @@
 # ** desc = '竖直方向二维的水合物开发过程（并行地执行多个模型，用于测试）'
+# ** highlight = '#00bfff'
 #
 # 物理问题描述：
 #   与prod_v2.py相同的竖直方向二维水合物降压开采模型。
@@ -169,7 +170,7 @@ def solve(*models):
             show_2d_v2(model, yr=[-1, 1], dim0=0, dim1=2)
 
     # GuiIterator封装了迭代和显示逻辑
-    it = GuiIterator(iterate, show_x)
+    it = get_gui_iter(iterate, show_x)
     for step in range(1000):
         it()  # 执行一步迭代并更新显示
         print(f'step = {step}')

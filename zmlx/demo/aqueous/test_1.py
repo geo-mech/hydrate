@@ -1,4 +1,5 @@
-# ** desc = '重力驱动下的对流'
+# ** desc = '重力驱动CO2对流：垂直二维剖面(宽2m、高4m)底部纯水区与顶部高CO2浓度区，密度差在重力下驱动对流，实时绘制密度/浓度场'
+# ** highlight = '#1a9641'
 #
 # 本案例模拟重力驱动下的CO2对流现象。在垂直二维剖面中，上下两侧分别设置低密度和高密度
 # 区（通过CO2浓度差异实现密度差），在重力作用下形成对流。模型采用热-流-化学（TFC）耦合
@@ -53,13 +54,13 @@ def create(jx, jz):
     # 创建TFC耦合模型
     model = tfc.create(
         mesh=mesh,
-        cfl=0.5,          # CFL数，控制时间步长稳定性
+        cfl=0.5,  # CFL数，控制时间步长稳定性
         fludefs=fludefs,
-        s=get_s,          # 初始流体组分分布函数
-        use_mass=True,    # 使用质量守恒形式
-        porosity=0.2,     # 孔隙度
-        p=2e6,            # 初始压力（Pa）
-        perm=10e-15,      # 渗透率（m^2）
+        s=get_s,  # 初始流体组分分布函数
+        use_mass=True,  # 使用质量守恒形式
+        porosity=0.2,  # 孔隙度
+        p=2e6,  # 初始压力（Pa）
+        perm=10e-15,  # 渗透率（m^2）
         gravity=[0, 0, -10]  # 重力加速度，沿z负方向
     )
     # 记录每个单元的z坐标作为辅助场量（可用于分析流体运移路径）
@@ -78,8 +79,6 @@ def show(model: Seepage, caption=None):
         model: Seepage渗流模型对象
         caption: 窗口标题，默认为模型句柄字符串
     """
-    if not gui.exists():
-        return
 
     assert np is not None, 'numpy is not imported'
 
@@ -92,8 +91,8 @@ def show(model: Seepage, caption=None):
         """绘图回调函数，在figure上绘制三个子图"""
         assert np is not None, 'numpy is not imported'
         figure.suptitle(f'Model when time = {tfc.get_time(model, as_str=True)}')
-        x = tfc.get_x(model)   # 获取所有单元x坐标
-        y = tfc.get_z(model)   # 获取所有单元z坐标（二维剖面）
+        x = tfc.get_x(model)  # 获取所有单元x坐标
+        y = tfc.get_z(model)  # 获取所有单元z坐标（二维剖面）
         x0, x1, y0, y1 = float(np.min(x)), float(np.max(x)), float(np.min(y)), float(np.max(y))
         # 创建自动布局，3个子图，保持纵横比与实际区域一致
         layout = AutoFigLayout(figure, 3, (x1 - x0) / (y1 - y0), xlabel='x / m', ylabel='z / m',
@@ -122,10 +121,10 @@ def main():
     主函数：创建模型，显示初始状态，然后求解（模拟约2000天），
     并在求解过程中实时更新图形显示。
     """
-    jx, jz = 50, 100   # 网格分辨率：50x100
+    jx, jz = 50, 100  # 网格分辨率：50x100
     model = create(jx, jz)
-    show(model, caption='初始状态')                     # 显示初始状态
-    tfc.solve(model, time_max=3600 * 24 * 2000,         # 最大模拟时间：2000天
+    show(model, caption='初始状态')  # 显示初始状态
+    tfc.solve(model, time_max=3600 * 24 * 2000,  # 最大模拟时间：2000天
               extra_plot=lambda: show(model, caption='最新状态'))  # 每步后更新显示
 
 

@@ -1,4 +1,5 @@
 # ** desc = '单相流。和上一个case相比：1. 不再设置压力差；2、增加了重力效应'
+# ** highlight = '#4575b4'
 #
 # 【物理问题描述】
 # 本模型与diffusion4（压力差+扩散）相比，不再设置外部压力差，而是增加了重力效应。
@@ -100,8 +101,6 @@ def show(model: Seepage, jx, jy, time=None):
         jy: 单元的数量，y方向
         time: 模拟的时间，单位：s
     """
-    if not gui:
-        return
     cells = as_numpy(model).cells
     x = np.reshape(cells.x, (jx, jy))
     y = np.reshape(cells.y, (jx, jy))

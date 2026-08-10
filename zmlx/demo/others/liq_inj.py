@@ -1,4 +1,5 @@
-# ** desc = '两相流，流体注入驱替'
+# ** desc = '二维随机网格上的两相驱替：50×50网格约100m×100m区域，注入井恒定速率注入高密度流体驱替原有低密度流体，模拟1年压力场与饱和度场演化'
+# ** highlight = '#999999'
 #
 # 本示例模拟二维平面区域内两相流驱替过程，在具有一定随机性的网格上模拟
 # 流体注入驱替。模型区域为约100m×100m的矩形，采用50×50的网格剖分，
@@ -76,8 +77,6 @@ def show_model(model: Seepage):
     Args:
         model: 待可视化的Seepage渗流模型对象。
     """
-    if not gui:
-        return
 
     x = tfc.get_cell_pos(model, dim=0)  # 提取所有单元的x坐标
     y = tfc.get_cell_pos(model, dim=1)  # 提取所有单元的y坐标

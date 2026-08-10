@@ -1,4 +1,5 @@
-# ** desc = '基于Seepage类的温度场计算'
+# ** desc = '瞬态导热（高层API版）：与thermal.py相同中心高温区(380K)扩散问题，改用tfc.create命名参数构建模型，代码更简洁'
+# ** highlight = '#fc4e2a'
 #
 # 本案例与 thermal.py 为同一物理问题（二维热传导），但使用高层辅助函数
 # tfc.create() 搭建模型，代码更加简洁。

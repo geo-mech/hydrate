@@ -1,4 +1,5 @@
-# ** desc = '单相的流动。在单相的基础上，添加了盐度组分的扩散效应'
+# ** desc = '单相渗流+盐度分子扩散：40×40区域中心半径3高盐区(盐度0.1)，浓度梯度驱动Fick扩散，渗流与扩散交替迭代求解'
+# ** highlight = '#4575b4'
 #
 # 【物理问题描述】
 # 本模型在单相流体渗流的基础上，添加了盐度（溶质）组分的扩散过程。在40x40的二维
@@ -100,8 +101,6 @@ def show(model: Seepage, jx, jy, time=None):
         jy: 单元的数量，y方向
         time: 模拟的时间，单位：s（用于标题显示）
     """
-    if not gui:
-        return
     cells = as_numpy(model).cells
     x = np.reshape(cells.x, (jx, jy))
     y = np.reshape(cells.y, (jx, jy))

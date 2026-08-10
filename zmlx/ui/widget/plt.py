@@ -108,6 +108,47 @@ class MatplotWidget(QtWidgets.QWidget):
         if fpath is not None and len(fpath) > 0:
             self.savefig(fname=fpath, dpi=self._export_dpi())
 
+    def save_file(self, open_dir=False, open_fig=False):
+        """
+        自动保存图片到默认路径（以当前时间生成文件名）. 注意，此函数会被系统菜单自动调用
+
+        Args:
+            open_dir: 是否打开保存目录
+            open_fig: 是否用系统默认程序打开图片
+        Returns:
+            成功时返回图片文件路径，失败时返回 None
+        """
+        try:
+            now = datetime.datetime.now()
+            name = now.strftime("%Y-%m-%d-%H-%M-%S-") + f"{now.microsecond:06d}.png"
+            path = make_parent(os.path.join(self.__folder_save, name))
+            self.savefig(fname=path, dpi=self._export_dpi())
+            if open_dir:
+                from zmlx.alg import startfile
+                startfile(self.__folder_save)
+            if open_fig:
+                from zmlx.alg import startfile
+                startfile(path)
+            return path
+        except Exception as e:
+            print(f'Error when save figure auto: {e}')
+            return None
+
+    def copy_to_clipboard(self):
+        """
+        将图片复制到剪切板（保存到临时文件）
+        """
+        try:
+            from zmlx.system import app_data
+            now = datetime.datetime.now()
+            name = now.strftime("%Y-%m-%d-%H-%M-%S-") + f"{now.microsecond:06d}.png"
+            path = app_data.temp(name)
+            self.savefig(fname=path, dpi=self._export_dpi())
+            pixmap = QtGui.QPixmap(path)
+            QtWidgets.QApplication.clipboard().setPixmap(pixmap)
+        except Exception as e:
+            print(f'Error when copy figure to clipboard: {e}')
+
     def export_data(self):  # 接菜单命令
         self.savefig_by_dlg()
 
@@ -139,6 +180,10 @@ class MatplotWidget(QtWidgets.QWidget):
             create_action(
                 self, '导出图', icon='export',
                 slot=self.savefig_by_dlg))
+        menu.addAction(
+            create_action(
+                self, '复制到剪切板', icon='export',
+                slot=lambda: self.copy_to_clipboard()))
 
         if self.__folder_save is not None:  # 打开自动保存目录
             if isinstance(self.__folder_save, str):

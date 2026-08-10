@@ -6,7 +6,7 @@ from zmlx.exts._dll import core, make_c_char_p
 from zmlx.exts._fmap import FileMap
 from zmlx.exts._lexpr import LinearExpr
 from zmlx.exts._mesh import Mesh3
-from zmlx.exts._sol import ConjugateGradientSolver
+from zmlx.exts._sol import ConjugateGradientSolver, FuncSol
 from zmlx.exts._utils import (
     HasHandle, Iterator, Object, attr_in_range, f64_ptr, const_f64_ptr, get_index, log, make_parent, check_ipath
 )
@@ -65,9 +65,11 @@ class DynSys(HasHandle):
         except:
             pass
 
-    def get_sol(self) -> 'ConjugateGradientSolver':
-        if not isinstance(self.solver, ConjugateGradientSolver):
-            self.solver = ConjugateGradientSolver(tolerance=1.0e-20)
+    def get_sol(self):
+        if self.solver is None:
+            from zmlx.exts._leq import make_solver, add_solver_log
+            self.solver = make_solver()
+            add_solver_log(f"create linear solver ({self.solver}) for {self}")
         return self.solver
 
     def __repr__(self) -> str:
@@ -168,9 +170,9 @@ class DynSys(HasHandle):
     def fmap(self, value: FileMap):
         self.from_fmap(value, fmt='binary')
 
-    core.use(c_int, 'dynsys_iterate', c_void_p, c_double, c_void_p)
+    core.use(c_int, 'dynsys_iterate', c_void_p, c_double, FuncSol, c_void_p)
 
-    def iterate(self, dt: float, solver: Optional['ConjugateGradientSolver'] = None) -> int:
+    def iterate(self, dt: float, solver = None) -> int:
         """
         执行单次时间步长迭代。
 
@@ -184,10 +186,9 @@ class DynSys(HasHandle):
         Note:
             需要有效的求解器来处理线性方程组
         """
-        if not isinstance(solver, ConjugateGradientSolver):
+        if solver is None:
             solver = self.get_sol()
-            assert isinstance(solver, ConjugateGradientSolver)
-        return core.dynsys_iterate(self.handle, dt, solver.handle)
+        return core.dynsys_iterate(self.handle, dt, solver.fn, solver.ctx)
 
     core.use(c_size_t, 'dynsys_size', c_void_p)
 

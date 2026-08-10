@@ -1,4 +1,5 @@
-# ** desc = '储层-井筒耦合计算模型示例'
+# ** desc = '储层-井筒耦合开采水合物：圆柱坐标储层（水合物层约-360~-300m）与独立井筒网格在界面连接，模拟垂直井降压开采全过程'
+# ** highlight = '#00bfff'
 #
 # 物理问题描述：
 #   本模型模拟圆柱坐标系下天然气水合物藏与井筒的耦合开采过程。
@@ -363,8 +364,6 @@ def plot_cells(model: Seepage, monitor=None, folder=None):
         monitor: 生产监测器（包含生产数据），用于绘制生产曲线
         folder (str, optional): 图片保存文件夹路径
     """
-    if not gui.exists():
-        return
 
     time = time2str(tfc.get_time(model))        # 当前模拟时间（可读格式）
     year = tfc.get_time(model) / (3600 * 24 * 365)  # 当前模拟时间（年）
@@ -466,7 +465,7 @@ def solve(model, time_forward=3600.0 * 24.0 * 365.0 * 10, folder=None,
             gui.title(f'Data folder = {folder}')
 
     # 执行迭代：通过GuiIterator封装迭代和绘图
-    iterate = GuiIterator(
+    iterate = get_gui_iter(
         tfc.iterate,
         lambda: plot_cells(
             model, folder=path.join(folder, 'figures')))

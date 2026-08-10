@@ -10,28 +10,45 @@
 
 ---
 
+## 推荐绘图方式
+
+所有 matplotlib 绘图应通过 `zmlx.ui.plot` 统一入口。编写一个回调函数操作 `fig` 对象，传入 `plot`：
+
+```python
+from zmlx.ui import plot
+
+def on_figure(fig):
+    ax = fig.add_subplot(111)
+    ax.plot(x, y)
+
+plot(on_figure, caption='标题')
+```
+
+`zmlx.ui.plot` 自动适配三种环境：GUI 标签页 / 无头保存 / 直接 `plt.show()`。
+
+**不要**直接 `plt.figure()` + `plt.show()`，应始终使用 `plot(on_figure, ...)`。
+
 ## 快速开始
 
 ```python
 from zmlx import *
 
-# 方法1：高层 show_xxx（直接显示在 GUI 中）
+# 方法1：高层 show_xxx（内部已调用 plot，直接显示在 GUI 中）
 show_contourf(x, y, z, caption='压力分布')
 show_xy(x_data, y_data, caption='生产曲线')
-show_tricontourf(x, y, z, caption='不规则数据')
 
-# 方法2：中层 plot_on_axes（控制 Axes 绘制）
+# 方法2：自定义 figure 回调（推荐用于复杂布局）
+def on_figure(fig):
+    ax = fig.add_subplot(111)
+    add_curve(ax, x, y, label='压力')
+    add_legend(ax)
+plot(on_figure, caption='我的图表')
+
+# 方法3：使用 plot_on_axes（plt 内部封装，自动创建 Axes）
 def on_axes(ax):
     add_curve(ax, x, y, label='压力')
     add_legend(ax)
 plot_on_axes(on_axes, caption='我的图表')
-
-# 方法3：底层 add_xxx（完全控制）
-import matplotlib.pyplot as plt
-fig, ax = plt.subplots()
-add_contourf(ax, x, y, z, cbar={'label': '压力/Pa'})
-add_curve(ax, x_data, y_data, 'r-')
-plt.show()
 ```
 
 ---
@@ -100,7 +117,7 @@ plt.show()
 | `get_cm(name, levels)` | `cmap.py` | 获取颜色映射表（默认 'coolwarm'） |
 | `get_color(cmap, lr, rr, val)` | `cmap.py` | 将数值映射为 RGBA 颜色 |
 | `set_chinese_font()` | `_font.py` | 配置 matplotlib 中文字体 |
-| `plot_no_gui(kernel, fname, ...)` | `_plot.py` | 无 GUI 模式绘图（保存为文件） |
+| `plot_no_gui(kernel, fname, ...)` | `_plot.py` | 内部函数，用户应使用 `zmlx.ui.plot` |
 | `get_plt_save_path(*subdirs)` | `_save.py` | 获取图形保存路径 |
 
 ---

@@ -1,4 +1,5 @@
-# ** desc = 'matplotlib绘图示例'
+# ** desc = '频谱分析可视化：对含噪4Hz正弦信号用subplot_mosaic绘制时域信号、幅度谱、对数幅度谱、相位谱与角度谱'
+# ** highlight = '#f781bf'
 #
 # 本案例演示频谱分析的可视化。生成一个含有噪声的正弦信号，使用
 # matplotlib的subplot_mosaic创建复合布局，分别绘制时域信号、

@@ -56,7 +56,7 @@ from zmlx.tfc._keys import cell_keys, face_keys, flu_keys
 from zmlx.tfc._opts import merge_opts
 from zmlx.tfc._plt import show_cells
 from zmlx.ui import gui, show_attrs, progress
-from zmlx.utility import GuiIterator, SaveManager, SeepageCellMonitor, Field
+from zmlx.utility import get_gui_iter, GuiIterator, SaveManager, SeepageCellMonitor, Field
 
 
 @clock
@@ -602,7 +602,7 @@ def solve(
 
     # 执行最终的迭代
     if gui_iter is None:
-        gui_iter = GuiIterator(iterate, plot=plot)
+        gui_iter = get_gui_iter(iterate, plot=plot)
     else:  # 使用已有的配置(这样，方便多个求解过程，使用全局的iter)
         assert isinstance(gui_iter, GuiIterator)
         gui_iter.iterate = iterate
@@ -713,6 +713,9 @@ def solve(
     if close_after_done is None:  # 默认计算技术要关闭界面
         close_after_done = True
 
+    if gui.exists():  # 是在gui中被调用的，此时不需要再生成界面
+        gui_mode = False
+
     if gui_mode:  # 警告：solve 内部启动 GUI 将在 1 年内弃用
         warnings.warn(
             'tfc.solve(gui_mode=True) is deprecated and will be removed after 2027-07-15. '
@@ -722,9 +725,9 @@ def solve(
             'zmlx/demo/hydrate/prod_v2_electric_heating.py, '
             'zmlx/demo/flow_2ph/wat_disp_oil.py',
             DeprecationWarning, stacklevel=2)
-
-    gui.execute(func=main_loop, close_after_done=close_after_done,
-                disable_gui=not gui_mode)
+        gui.execute(func=main_loop, close_after_done=close_after_done)
+    else:
+        main_loop()
 
 
 def get_inited(

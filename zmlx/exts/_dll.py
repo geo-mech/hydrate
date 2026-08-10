@@ -3,7 +3,7 @@ import os
 import warnings
 from ctypes import c_bool, c_char_p, c_void_p, c_size_t, c_int, CFUNCTYPE
 from ctypes import cdll
-from typing import Optional, Any, Callable, Union
+from typing import Optional, Any, Callable
 
 from zmlx.exts._utils import app_data, in_windows
 
@@ -161,7 +161,8 @@ class DllCore:
             self.dll, c_char_p, 'pop_log', c_void_p)
         self.use(c_size_t, 'get_log_nmax')
         self.use(None, 'set_log_nmax', c_size_t)
-        self.use(c_char_p, 'get_time_compile', c_void_p)
+        self.use(c_char_p, 'get_time_compile')
+        self.use(c_char_p, 'get_parallel_impl')
         self.dll_print_logs = get_func(
             self.dll, None, 'print_logs', c_char_p)
         self.use(c_int, 'get_version')
@@ -331,7 +332,7 @@ class DllCore:
             def f(s):
                 func(s.decode())
 
-            self.__err_handle = err_handle(f)
+            self.__err_handle = err_handle(f)  # type: ignore[assignment]
             self.dll_set_error_handle(self.__err_handle)
 
     @property
@@ -368,7 +369,17 @@ class DllCore:
             str: 格式为 yyyy-MM-dd HH:mm 的时间字符串
         """
         if self.has_dll():
-            return self.get_time_compile(0).decode()
+            return self.get_time_compile().decode()
+        else:
+            return ''
+
+    @property
+    def parallel_impl(self) -> str:
+        """
+        并行的实现
+        """
+        if self.has_dll():
+            return self.get_parallel_impl().decode()
         else:
             return ''
 

@@ -12,7 +12,11 @@ class RegTool(QtWidgets.QWidget):
         layout.addWidget(label)
 
         output = QtWidgets.QTextBrowser(self)
-        output.setPlainText(reg())
+        try:
+            from zmlx.exts import reg
+            output.setPlainText(reg())
+        except Exception as err:
+            output.setPlainText(f"Error (RegTool.__init__): {err}")
         layout.addWidget(output)
 
         label = QtWidgets.QLabel(self)

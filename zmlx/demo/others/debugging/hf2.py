@@ -1,4 +1,5 @@
 # ** desc = '页岩水力压裂 （拟三维）'
+# ** highlight = '#999999'
 
 from zmlx import tfc
 from zmlx.exts.frac import *

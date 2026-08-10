@@ -1,4 +1,5 @@
-# ** desc = 'matplotlib绘图示例'
+# ** desc = '演示tricontourf四种用法：Delaunay三角剖分等值线、带填充图案等值线、无颜色图案等值线及自定义三角剖分'
+# ** highlight = '#f781bf'
 #
 # 本案例演示matplotlib三角网格填充等值线图（tricontourf）的多种用法。
 # 包括：

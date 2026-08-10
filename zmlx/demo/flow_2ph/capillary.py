@@ -1,4 +1,5 @@
-# ** desc = '流体在毛管力驱动下的流动(渗吸的过程)'
+# ** desc = '毛管压力驱动的气-水渗吸：100m×100m区域中心圆形泥岩含气、外围四种砂岩含水，五种岩性毛管压力曲线不同'
+# ** highlight = '#d73027'
 #
 # 物理问题描述：
 #   本模型模拟二维平面区域中，在毛管压力（毛细管力）驱动下的气-水两相渗吸过程。
@@ -214,8 +215,6 @@ def show(x, y, z, jx, jy, caption=None, cmap=None, label=None, title=None):
         label: 颜色条标签
         title: 子图标题
     """
-    if not gui:
-        return
     angles = np.linspace(0, 2 * np.pi, 100)
     items = [
         item('contourf', np.reshape(x, [jx, jy]),

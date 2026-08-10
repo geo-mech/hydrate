@@ -1,4 +1,5 @@
-# ** desc = '基于井筒换热的地热开发模拟(存在尚未发现的bug)'
+# ** desc = '井筒-储层耦合地热开发：1D井筒模型与2D圆柱储层（初始200°C）交替耦合求解，模拟冷水注入、储层加热、热水产出'
+# ** highlight = '#fc4e2a'
 """
 井筒换热地热开发模拟（井筒-储层耦合换热）。
 
@@ -357,7 +358,7 @@ def main(folder=None):
         well = create_well(heat_cond=heat_cond, rate_inj=20e-5, dist=0.01)
         res = create_res(well=well, heat_cond=heat_cond)
 
-        gui_iter = GuiIterator()
+        gui_iter = get_gui_iter()
 
         # 记录时间、功率和出口温度随时间的变化
         vtime, vpower, vtemp = [], [], []

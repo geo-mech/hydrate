@@ -73,7 +73,7 @@
 | 类型 | 位置 | 描述 |
 |------|------|------|
 | `LinearExpr` | `_lexpr.py` | 线性表达式求值器 |
-| `ConjugateGradientSolver` | `_sol.py` | 共轭梯度法线性求解器（Eigen 后端） |
+| `cg_solver_ty` | `_sol.py` | 共轭梯度法线性求解器（Eigen 后端） |
 | `HasKeys` | `_hk.py` | 动态键-值属性存储（被 Cell/Face 用于用户定义属性） |
 | `ThreadPool` | `_pool.py` | C++ 线程池封装，支持并行任务提交 |
 | `Timer` / `clock` | `_timer.py` | 性能计时和函数计时装饰器 |

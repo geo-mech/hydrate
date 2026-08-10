@@ -1,4 +1,5 @@
 # ** desc = '水合物开发：注热水 + 降压，固定相对渗透率。竖直二维剖面，先注 50°C 热水分解水合物，再降压产气。'
+# ** highlight = '#00bfff'
 
 from zmlx import *
 from zmlx.seepage_mesh.hydrate import create_xz

@@ -1,35 +1,29 @@
-from zmlx.ui.alg import create_action
+from zmlx.ui.alg import open_url
 from zmlx.ui.gui_buffer import gui
 from zmlx.ui.pyqt import QtWidgets, qt_name, QWebEngineView
 
 
 class About(QtWidgets.QTableWidget):
 
-    def __init__(self, parent=None, lic_desc=None):
+    def __init__(self, parent=None):
         super(About, self).__init__(parent)
         self.horizontalHeader().setSectionResizeMode(
             QtWidgets.QHeaderView.ResizeMode.Stretch)
-        self.context_actions = [
-            create_action(self, "ReadMe", slot=gui.show_readme),
-            create_action(self, "注册", slot=gui.show_reg_tool)
-        ]
-        self.setup(lic_desc)
+        self.setup()
 
-    def get_context_menu(self):
-        menu = QtWidgets.QMenu(self)
-        for action in self.context_actions:
-            menu.addAction(action)
-        return menu
-
-    def contextMenuEvent(self, event):
-        self.get_context_menu().exec(event.globalPos())
-
-    def setup(self, lic_desc):
-        from zmlx import core, lic, get_dir
+    def setup(self):
+        from zmlx import core, get_dir
         import sys
+        try:
+            from zmlx.exts import lic
+            lic_desc = lic.desc
+        except:
+            lic_desc = '未授权'
         data = [
             ['安装路径', f'{get_dir()}'],
             ['当前版本', f'{core.time_compile}; {core.compiler}'],
+            ['版本号', f'{core.version}'],
+            ['并行库', f'{core.parallel_impl}'],
             ['DLL函数数量', f'{len(core.get_dll_funcs())}'],
             ['授权情况', f'{lic_desc}'],
             ['Python解释器', sys.executable],
@@ -45,13 +39,70 @@ class About(QtWidgets.QTableWidget):
             ['硬件码', f'{lic.usb_serial}'],
         ]
         self.setRowCount(len(data))
-        self.setColumnCount(2)
-        self.setHorizontalHeaderLabels(['项目', '值'])
-        self.horizontalHeader().setSectionResizeMode(
+        self.setColumnCount(3)
+        self.setHorizontalHeaderLabels(['项目', '值', ''])
+
+        hdr = self.horizontalHeader()
+        hdr.setSectionResizeMode(
             0, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
+        hdr.setSectionResizeMode(
+            1, QtWidgets.QHeaderView.ResizeMode.Stretch)
+        hdr.setSectionResizeMode(
+            2, QtWidgets.QHeaderView.ResizeMode.Fixed)
+        self.setColumnWidth(2, 60)
 
         for i_row in range(len(data)):
-            for i_col in range(2):
-                self.setItem(
-                    i_row, i_col,
-                    QtWidgets.QTableWidgetItem(data[i_row][i_col]))
+            label, value = data[i_row]
+            self.setItem(i_row, 0, QtWidgets.QTableWidgetItem(label))
+            self.setItem(i_row, 1, QtWidgets.QTableWidgetItem(value))
+
+            # 操作按钮
+            btn = None
+            if label == '安装路径':
+                btn = QtWidgets.QPushButton('ReadMe')
+                btn.clicked.connect(lambda: gui.show_readme())
+            elif label == '当前版本':
+                btn = QtWidgets.QPushButton('更新')
+                btn.clicked.connect(self._check_update)
+            elif label == '授权情况':
+                btn = QtWidgets.QPushButton('注册')
+                btn.clicked.connect(lambda: gui.show_reg_tool())
+            elif label == '网址':
+                btn = QtWidgets.QPushButton('打开')
+                btn.clicked.connect(
+                    lambda checked, u=value: open_url(u))
+            elif label == '硬件码':
+                btn = QtWidgets.QPushButton('拷贝')
+                btn.clicked.connect(
+                    lambda checked, u=value: QtWidgets.QApplication.clipboard().setText(u))
+            if btn is not None:
+                self.setCellWidget(i_row, 2, btn)
+
+    @staticmethod
+    def _check_update():
+        """在后台线程中执行 git 更新检查。"""
+        from zmlx import get_path
+
+        def task():
+            from zmlx.alg import update_by_git
+            repo_root = get_path('..')
+            print('正在检查更新...')
+            ok, msg = update_by_git(cwd=repo_root)
+            if ok:
+                print(f'更新: {msg}')
+            else:
+                print(f'更新失败: {msg}')
+        gui.start_func(task, add_history=False)
+
+
+def test_1():
+    import sys
+    app = QtWidgets.QApplication(sys.argv)
+    w = About()
+    w.resize(600, 480)
+    w.show()
+    sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    test_1()

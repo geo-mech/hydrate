@@ -12,7 +12,7 @@ from zmlx.exts._lic import lic
 from zmlx.exts._map import Map
 from zmlx.exts._mesh import Groups
 from zmlx.exts._pool import ThreadPool
-from zmlx.exts._sol import ConjugateGradientSolver
+from zmlx.exts._sol import FuncSol
 from zmlx.exts._str import String
 from zmlx.exts._utils import (
     HasCells, HasHandle, Iterator, Object, attr_in_range, get_distance, f64_ptr, const_f64_ptr, get_index, IDX_INF,
@@ -3710,12 +3710,14 @@ class FlowSol(HasHandle):
             self.report = Map()
         return self.report
 
-    def get_sol(self) -> 'ConjugateGradientSolver':
+    def get_sol(self):
         """
         返回内部存储的一个默认的线性方程组求解器。
         """
         if self.solver is None:
-            self.solver = ConjugateGradientSolver(tolerance=1.0e-25)
+            from zmlx.exts._leq import make_solver, add_solver_log
+            self.solver = make_solver()
+            add_solver_log(f"create linear solver ({self.solver}) for {self}")
         return self.solver
 
     core.use(None, 'seepage_fs_reset', c_void_p)
@@ -3731,7 +3733,8 @@ class FlowSol(HasHandle):
     core.use(None, 'seepage_fs_iterate',
              c_void_p, c_void_p, c_void_p,
              c_double, c_double,
-             c_size_t, c_size_t, c_size_t, c_size_t, c_void_p,
+             c_size_t, c_size_t, c_size_t, c_size_t,
+             FuncSol, c_void_p,  # fn, ctx
              c_void_p  # ThreadPool since 2025-7-25
              )
 
@@ -3741,7 +3744,7 @@ class FlowSol(HasHandle):
             fa_k: Optional[int] = None, ca_p: Optional[int] = None,
             cfl: Optional[float] = None,
             dv_rela: Optional[float] = None,  # 弃用
-            solver: Optional['ConjugateGradientSolver'] = None,
+            solver: Optional[Any] = None,  # 需要实现 fn, ctx 两个属性
             pool: Optional[ThreadPool] = None,
             report: Optional[Map] = None,
     ):
@@ -3834,7 +3837,7 @@ class FlowSol(HasHandle):
                 self.handle, model.handle, report.handle,
                 dt, cfl,
                 fa_s, fa_q, fa_k, ca_p,
-                solver.handle, pool.handle
+                solver.fn, solver.ctx, pool.handle
             )
             return None
 
@@ -3843,7 +3846,7 @@ class FlowSol(HasHandle):
                 self.handle, model.handle, report.handle,
                 dt, cfl,
                 fa_s, fa_q, fa_k, ca_p,
-                solver.handle, 0
+                solver.fn, solver.ctx, 0
             )
             return report.to_dict()
 
@@ -3909,9 +3912,11 @@ class ThermalSol(HasHandle):
             self.report = Map()
         return self.report
 
-    def get_sol(self) -> 'ConjugateGradientSolver':
+    def get_sol(self):
         if self.solver is None:
-            self.solver = ConjugateGradientSolver(tolerance=1.0e-25)
+            from zmlx.exts._leq import make_solver, add_solver_log
+            self.solver = make_solver()
+            add_solver_log(f"create linear solver ({self.solver}) for {self}")
         return self.solver
 
     core.use(None, 'seepage_ts_reset', c_void_p)
@@ -3929,7 +3934,7 @@ class ThermalSol(HasHandle):
              c_void_p,
              c_size_t, c_size_t, c_size_t,
              c_double, c_double,
-             c_void_p,
+             FuncSol, c_void_p,  # fn, ctx
              c_void_p  # ThreadPool since 2025-7-25
              )
 
@@ -3978,7 +3983,7 @@ class ThermalSol(HasHandle):
                 self.handle, model.handle, report.handle,
                 ca_t, ca_mc, fa_g,
                 dt, cfl,
-                solver.handle, pool.handle
+                solver.fn, solver.ctx, pool.handle
             )
             return None
 
@@ -3988,7 +3993,7 @@ class ThermalSol(HasHandle):
                 report.handle,
                 ca_t, ca_mc, fa_g,
                 dt, cfl,
-                solver.handle, 0
+                solver.fn, solver.ctx, 0
             )
             return report.to_dict()
 
@@ -6312,7 +6317,7 @@ class Seepage(HasHandle, HasCells):
                 cfl: Optional[float] = None,
                 pool: Optional[ThreadPool] = None,
                 report: Optional[Map] = None,
-                solver: Optional['ConjugateGradientSolver'] = None, **kwargs
+                solver: Optional[Any] = None, **kwargs  # 需要实现 fn, ctx 两个属性
                 ):
         """
         迭代模型内的流动过程。
@@ -7547,7 +7552,7 @@ class Thermal(HasHandle):
         return self.get_face(face_id)
 
     core.use(None, 'thermal_iterate',
-             c_void_p, c_double, c_void_p)
+             c_void_p, c_double, FuncSol, c_void_p)
 
     def iterate(self, dt, solver):
         """
@@ -7555,11 +7560,11 @@ class Thermal(HasHandle):
 
         Args:
             dt (float): 时间步长
-            solver: 求解器对象，必须提供句柄
+            solver: 求解器对象，必须提供 fn/ctx
         """
         lic.check_once()
         assert solver is not None
-        core.thermal_iterate(self.handle, dt, solver.handle)
+        core.thermal_iterate(self.handle, dt, solver.fn, solver.ctx)
 
     @property
     def cells(self) -> Iterable['Thermal.Cell']:

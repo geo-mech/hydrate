@@ -1,4 +1,5 @@
 # ** desc = '水平井注采。向水合物储层注入co2，并在另外一口水平井降压开发水合物'
+# ** highlight = '#00bfff'
 """
 物理问题描述：本模型模拟一个双水平井系统——一口井注入CO2，另一口井降压开采CH4。
 系统包含三个地质层：上覆层（overburden）、水合物储层（reservoir）、下伏层（underburden），
@@ -22,7 +23,7 @@ from zmlx.io import opath
 from zmlx.seepage_mesh import add_cell_face
 from zmlx.seepage_mesh.xz_half import create_xz_half
 from zmlx.tfc import timer
-from zmlx.utility import GuiIterator
+from zmlx.utility import GuiIterator, get_gui_iter
 
 
 def execute(
@@ -158,7 +159,7 @@ def execute(
     # 执行模型的求解
     solve(
         model, folder=folder, slots={'close_prod': close_prod},
-        gui_iter=GuiIterator(ratio=0.05)  # GUI迭代器，每步显示进度
+        gui_iter=get_gui_iter(ratio=0.05)  # GUI迭代器，每步显示进度
     )
 
 

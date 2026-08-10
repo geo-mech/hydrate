@@ -26,9 +26,11 @@ gui.execute() 启动主程序时才会生效。在非 GUI 模式下，这些调�
 参考 demo 文件（如 zmlx/demo/flow_1ph/darcy_1d.py）了解更多示例。
 """
 
+import datetime
+import os
 from typing import Optional, Tuple, List, Union
 
-from zmlx.system import app_data, is_headless
+from zmlx.system import app_data, is_headless, make_parent
 
 
 class GuiBuffer:
@@ -183,13 +185,9 @@ class GuiBuffer:
             else:
                 return None
 
-        if not disable_gui:
-            from zmlx.system import is_headless
-            if is_headless():
-                disable_gui = True
-                print('headless mode, disable gui')
+        from zmlx.system import is_headless
 
-        if self.exists() or disable_gui:
+        if self.exists() or disable_gui or is_headless():  # 此时，不需要新启动GUI界面
             return fx()
 
         try:
@@ -228,8 +226,10 @@ def question(info):
         return y == 'y' or y == 'Y'
 
 
-def _plot_no_gui(kernel, *args, fname=None, dpi=300, caption=None, tight_layout=None, suptitle=None,
+def _plot_no_gui(kernel, *args, fname=None, dpi=300, caption=None, clear=None, tight_layout=None, suptitle=None,
                  on_top=None,  # 兼容gui下的参数
+                 savefig=None,  # 兼容gui下的参数
+                 folder_save=None,  # 兼容gui下的参数
                  **kwargs):
     """在非 GUI 模式下绘图（保存到文件）。
 
@@ -250,17 +250,18 @@ def _plot_no_gui(kernel, *args, fname=None, dpi=300, caption=None, tight_layout=
         set_chinese_font()
 
         if fname is None:
-            from zmlx.system import is_headless
-            if is_headless() and caption is None:
-                caption = "default_figure"
-            if caption is not None:
-                import datetime
-                import os
-                from zmlx.plt._save import get_plt_save_path
-                from zmlx.system import make_parent
+            if folder_save is not None:
                 now = datetime.datetime.now()
                 name = now.strftime("%Y-%m-%d-%H-%M-%S-") + f"{now.microsecond:06d}.png"
-                fname = make_parent(os.path.join(get_plt_save_path(caption), name))
+                fname = make_parent(os.path.join(folder_save, name))
+            else:
+                if is_headless() and caption is None:
+                    caption = "default_figure"
+                if caption is not None:
+                    from zmlx.plt import get_plt_save_path
+                    now = datetime.datetime.now()
+                    name = now.strftime("%Y-%m-%d-%H-%M-%S-") + f"{now.microsecond:06d}.png"
+                    fname = make_parent(os.path.join(get_plt_save_path(caption), name))
         fig = plt.figure()
         kernel(fig, *args, **kwargs)
         if isinstance(suptitle, str):
@@ -318,9 +319,8 @@ def plot(kernel, *args, gui_only=False, gui_mode=None,
         from zmlx.system import is_headless
         if is_headless():
             gui_mode = False
-            print('headless mode, disable gui')
 
-    if gui_mode:  # 创建窗口来运行
+    if gui_mode:  # 创建窗口来运行(并在绘图后保持窗口打开状态)
         return gui.execute(plot_with_gui, close_after_done=False)
 
     if gui_only:

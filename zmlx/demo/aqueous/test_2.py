@@ -1,4 +1,5 @@
-# ** desc = '密度差驱动下的对流+扩散的综合效应 (1)'
+# ** desc = '对流+扩散综合效应（水平面版）：二维平面两个不同CO2浓度圆区，密度差驱动对流的同时CO2组分扩散(1e-9 m²/s)'
+# ** highlight = '#1a9641'
 #
 # 本案例模拟密度差驱动下的对流与扩散综合效应。在二维水平（xy）平面中设置两个
 # 不同CO2浓度的圆形区域，由于浓度差导致密度差异，在重力作用下驱动流体运移。
@@ -19,8 +20,7 @@ def show(model: Seepage, jx, jy, time=None):
         time: 模拟的时间，单位：s
     """
     assert np is not None, 'numpy is not imported'
-    if not gui:
-        return
+
     # 将模型单元数据转为numpy数组并按网格形状重塑
     cells = as_numpy(model).cells
     x = np.reshape(cells.x, (jx, jy))
@@ -82,12 +82,12 @@ def main(jx=50, jy=50):
         mesh=mesh,
         cfl=0.5,
         fludefs=fludefs,
-        s=get_s,               # 初始组分分布函数
-        use_mass=True,         # 使用质量守恒形式
+        s=get_s,  # 初始组分分布函数
+        use_mass=True,  # 使用质量守恒形式
         porosity=0.2,
-        p=1.5e6,               # 初始压力 1.5 MPa
-        perm=10e-15,           # 渗透率 10 mD
-        gravity=[0, -1, 0]     # 重力沿y负方向
+        p=1.5e6,  # 初始压力 1.5 MPa
+        perm=10e-15,  # 渗透率 10 mD
+        gravity=[0, -1, 0]  # 重力沿y负方向
     )
     # 添加CO2扩散设置：扩散系数1.0e-9 m^2/s，扩散CFL限制0.2
     diffusion.add_setting(model, 'co2', 'liq', d=1.0e-9, cfl=0.2)

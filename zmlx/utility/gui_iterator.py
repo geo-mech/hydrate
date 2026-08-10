@@ -68,7 +68,7 @@ class GuiIterator:
             f"Plot = {time2str(self.time_plot)}"
         )
 
-    def _show_timing(self, figure):
+    def show_timing(self, figure):
         """
         在Matplotlib的Figure上显示history。采用双y的坐标系，其中x为step，左侧的y为迭代的耗时，右侧的y为绘图的耗时.
         注意：如果self.history的长度小于2，则不需要绘图.
@@ -77,6 +77,7 @@ class GuiIterator:
         Returns:
             None
         """
+        figure.clear()
         figure.suptitle(self.time_info())
         if len(self.history) < 2 or self.max_history_shown < 10:
             return
@@ -111,16 +112,20 @@ class GuiIterator:
         """
         绘图显示迭代耗时的历史记录
         """
-        if self.gui_only and not gui.exists():
-            return
-        if self.max_history_shown >= 10:
-            from zmlx.ui import plot
-
-            if isinstance(self.figure_caption, str):
-                caption = self.figure_caption
-            else:
-                caption = "迭代耗时"
-            plot(self._show_timing, caption=caption, on_top=False)
+        if gui.exists():
+            from zmlx.ui.widget.gui_iter_edit import GuiIteratorEdit
+            gui.get_widget(
+                the_type=GuiIteratorEdit, caption='GUI 迭代器',
+                on_top=False, oper=lambda w: w.set_data(self)
+            )
+        else:
+            if self.max_history_shown >= 10 and not self.gui_only:
+                from zmlx.ui import plot
+                if isinstance(self.figure_caption, str):
+                    caption = self.figure_caption
+                else:
+                    caption = "迭代耗时"
+                plot(self.show_timing, caption=caption, on_top=False)
 
     @staticmethod
     def timing(f):
@@ -200,3 +205,57 @@ class GuiIterator:
         self.plot_timing()
         # 更新最后一次绘图的时候的step
         self.step_last_plot = self.step
+
+
+
+_gui_iter = None
+
+
+def get_gui_iter(
+    iterate=None,
+    plot=None,
+    info=None,
+    ratio=None,
+    figure_caption=None,
+    max_plot_interval=None,
+    gui_only=None,
+):
+    """获取全局唯一的 GuiIterator 实例.
+
+    首次调用时创建新实例；后续调用返回同一个对象。
+    传入的参数会更新到现有实例（None 表示不修改）。
+
+    Args:
+        iterate: 程序内核进行计算迭代 (将接受 __call__ 的所有参数)
+        plot: 绘图操作 (函数不接受任何参数)
+        info: 返回当前模型的状态信息 (函数不接受任何参数)
+        ratio: gui 绘图所占据的总的时长的比例，默认 0.2
+        figure_caption: 耗时绘图的标题
+        max_plot_interval: 最大绘图间隔 (step 数)
+        gui_only: 是否只在 gui 模式下绘图
+
+    Returns:
+        GuiIterator: 全局唯一的迭代控制器。
+    """
+    global _gui_iter
+    if _gui_iter is None:
+        _gui_iter = GuiIterator(
+            iterate=iterate,
+            plot=plot,
+            info=info,
+            ratio=ratio,
+            figure_caption=figure_caption,
+            max_plot_interval=max_plot_interval,
+            gui_only=gui_only,
+        )
+    else:
+        # 更新已有的实例（仅更新非 None 的参数）
+        params = {
+            'iterate': iterate, 'plot': plot, 'info': info,
+            'ratio': ratio, 'figure_caption': figure_caption,
+            'max_plot_interval': max_plot_interval, 'gui_only': gui_only,
+        }
+        for key, value in params.items():
+            if value is not None:
+                setattr(_gui_iter, key, value)
+    return _gui_iter

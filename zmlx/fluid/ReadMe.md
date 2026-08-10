@@ -91,6 +91,76 @@ flu = from_file('fluid_data.txt', name='oil')
 
 ---
 
+## 高精度物性引擎（CoolProp / Reaktoro）
+
+v1.7 新增两个基于第三方库的纯流体物性子包，提供远高于经验公式的精度：
+
+### `cp/` — CoolProp（工程精度）
+
+基于 Helmholtz 能量状态方程，对标 NIST REFPROP，误差 < 0.1%。
+
+```python
+from zmlx.fluid.cp import h2o_density, h2o_viscosity, h2o_specific_heat
+
+rho = h2o_density(P=10e6, T=300)        # kg/m³
+mu  = h2o_viscosity(P=10e6, T=300)      # Pa·s
+cp  = h2o_specific_heat(P=10e6, T=300)  # J/(kg·K)
+```
+
+| 流体 | CoolProp 名称 | 函数前缀 |
+|------|-------------|---------|
+| 水 | `Water` | `h2o_` |
+| 氢气 | `Hydrogen` | `h2_` |
+| 氦气 | `Helium` | `he_` |
+| 甲烷 | `Methane` | `ch4_` |
+| 乙烷 | `Ethane` | `c2h6_` |
+| 氮气 | `Nitrogen` | `n2_` |
+| 氧气 | `Oxygen` | `o2_` |
+| CO₂ | `CO2` | `co2_` |
+
+> 每种流体提供 `_density`、`_viscosity`、`_specific_heat` 三个函数，签名均为 `fn(P, T)`，SI 单位。
+> 绘图：`python -m zmlx.fluid.cp._ch4`，或 `from zmlx.fluid.cp._plot import plot_contours`。
+
+### `rkt/` — Reaktoro（地质化学）
+
+基于 Supcrt98 数据库，适用于高温高压地质化学场景。
+
+```python
+from zmlx.fluid.rkt import h2o_density, h2o_specific_heat
+
+rho = h2o_density(P=10e6, T=300)        # kg/m³
+cp  = h2o_specific_heat(P=10e6, T=300)  # J/(kg·K)
+```
+
+> 提供 7 种流体（无 C₂H₆），不含粘度（Reaktoro 不支持输运属性）。
+> 对比脚本：`python -m zmlx.fluid.rkt._compare_rkt_and_cp`
+
+### `rkt/aq/` — 水溶液密度
+
+Reaktoro 独有：气-液平衡分配下的水溶液密度计算。
+
+```python
+from zmlx.fluid.rkt.aq import h2o_ch4_density, h2o_co2_density
+
+rho = h2o_ch4_density(w=0.001, P=10e6, T=300)  # CH₄ 溶液
+rho = h2o_co2_density(w=0.02, P=10e6, T=300)   # CO₂ 溶液
+```
+
+> 6 种气体水溶液：CH₄/CO₂/N₂/O₂/He/H₂，自动捕获溶解度饱和拐点。
+
+### 引擎对比
+
+| 特性 | `cp/` (CoolProp) | `rkt/` (Reaktoro) |
+|------|-----------------|-------------------|
+| 精度 | 工程级 (< 0.1%) | 地质化学级 |
+| 粘度 | ✅ | ❌ |
+| 比热 | ✅ | ✅ |
+| 水溶液 | ❌ | ✅ (`rkt/aq/`) |
+| 数据库 | 内置 Helmholtz EOS | Supcrt98 (HKF) |
+| 速度 | 快 | 较慢（平衡求解） |
+
+---
+
 ## 模块列表
 
 | 模块 | 说明 |

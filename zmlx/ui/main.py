@@ -253,10 +253,10 @@ class MainWindow(QtWidgets.QMainWindow):
         )
 
         self.add_action(
-            menu='文件', name='temp_code', icon='open',
-            text='临时脚本',
+            menu='文件', name='temp_code', icon='python',
+            text='脚本',
             slot=lambda: self.open_code("temp_code.py"),
-            on_toolbar=False,  # 临时脚本，不添加到工具栏
+            on_toolbar=True,
             is_enabled=not_running,
         )
 
@@ -352,18 +352,6 @@ class MainWindow(QtWidgets.QMainWindow):
             menu='显示', name='timer', icon='clock',
             tooltip='显示cpu耗时统计的结果', text='耗时',
             slot=self.show_timer
-        )
-
-        self.add_action(
-            menu='显示', name='console', icon='console',
-            text='Python控制台(测试)',
-            slot=self.show_pg_console
-        )
-
-        self.add_action(
-            menu='显示', name='cls', icon='clean',
-            text='清屏', shortcut='Ctrl+L',
-            slot=self.cls
         )
 
         def exec_enabled():
@@ -493,10 +481,17 @@ class MainWindow(QtWidgets.QMainWindow):
         )
 
         self.add_action(
-            menu='设置', name='set_plt_export_dpi',
-            text='设置plt输出图的DPI',
-            slot=set_plt_export_dpi
+            menu='设置', name='solver',
+            text='求解器',
+            slot=self.show_solver_selector
         )
+
+        self.add_action(
+            menu='设置', name='gui_iter',
+            text='GUI 迭代器',
+            slot=lambda: self.show_gui_iter(on_top=True)
+        )
+
 
         self.add_action(
             menu='帮助', name='readme', icon='info',
@@ -528,12 +523,6 @@ class MainWindow(QtWidgets.QMainWindow):
             menu='帮助', name='reg', icon='reg',
             text='注册',
             slot=self.show_reg_tool
-        )
-
-        self.add_action(
-            menu='帮助',
-            text='安装Python包',
-            slot=install_package,
         )
 
         self.add_action(
@@ -1314,7 +1303,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def get_output_widget(self) -> 'OutputWidget':
         if self.__output_widget is None:
             self.__output_widget = self.right_tabs.get_widget(
-                OutputWidget, caption='控制台输出', closeable=False, icon='console'
+                OutputWidget, caption='控制台', closeable=False, icon='console'
             )
         assert isinstance(self.__output_widget, OutputWidget), 'OutputWidget is not found'
         return self.__output_widget
@@ -1351,7 +1340,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
             self.get_widget(
                 the_type=About, caption='关于', on_top=True,
-                icon='info', type_kw=dict(lic_desc=lic.desc),
+                icon='info',
                 oper=oper
             )
 
@@ -1469,6 +1458,16 @@ class MainWindow(QtWidgets.QMainWindow):
             on_top=True,
             icon='set', oper=oper)
 
+    def show_solver_selector(self):
+        from zmlx.ui.widget.solver_selector import SolverSelector
+
+        def oper(w):
+            w.gui_restore = 'gui.show_solver_selector()'
+
+        self.get_widget(
+            the_type=SolverSelector, caption='求解器', on_top=True,
+            icon='set', oper=oper)
+
     def show_env_edit(self):
         from zmlx.ui.widget import EnvEdit
 
@@ -1532,6 +1531,52 @@ class MainWindow(QtWidgets.QMainWindow):
                 the_type=ReadMeBrowser, caption='ReadMe', on_top=True,
                 icon='info', oper=oper,
                 tooltip='显示ReadMe信息，与IGG-Hydrate网站首页的ReadMe保持一致')
+
+    def show_changelog(self):
+        """显示 CHANGELOG.md。"""
+        self._show_md('CHANGELOG.md', '修改记录')
+
+    def show_roadmap(self):
+        """显示 ROADMAP.md。"""
+        self._show_md('ROADMAP.md', '未来工作')
+
+    def check_update(self):
+        """在控制台线程中执行 git 更新检查。"""
+        from zmlx import get_path
+        repo_root = get_path('..')  # zmlx/ 的父目录 = 仓库根目录
+
+        def task():
+            from zmlx.alg import update_by_git
+            print('正在检查更新...')
+            ok, msg = update_by_git(cwd=repo_root)
+            if ok:
+                print(f'更新: {msg}')
+            else:
+                print(f'更新失败: {msg}')
+        self.console.start_func(task, add_history=False)
+
+    def _show_md(self, filename, caption):
+        """加载并显示项目根目录下的 Markdown 文件。"""
+        from zmlx import get_path
+        from zmlx.system import read_text
+        from zmlx.ui.widget import TextBrowser
+        path = get_path('..', filename)
+        if not os.path.isfile(path):
+            print(f'未找到文件: {path}')
+            return
+        text = read_text(path=path, encoding='utf-8')
+        kwds = dict(filename=filename, caption=caption)
+
+        def oper(w: TextBrowser):
+            w.gui_restore = f'gui._show_md(**{kwds})'
+            w.setOpenLinks(True)
+            w.setOpenExternalLinks(True)
+            w.setMarkdown(text)
+            w.set_status(path)
+
+        self.get_widget(
+            the_type=TextBrowser, caption=caption, on_top=True,
+            icon='info', oper=oper)
 
     def show_reg_tool(self):
         from zmlx.ui.widget import RegTool
@@ -1635,6 +1680,25 @@ class MainWindow(QtWidgets.QMainWindow):
         return self.get_widget(
             the_type=QtInteractor, caption=caption,
             on_top=on_top, init=init, oper=oper
+        )
+
+    def show_gui_iter(self, data=None, caption=None, on_top=None):
+        if data is None:
+            from zmlx.utility import get_gui_iter
+            data = get_gui_iter()
+
+        if caption is None:
+            caption = 'GUI 迭代器'
+
+        from zmlx.ui.widget.gui_iter_edit import GuiIteratorEdit
+
+        def oper(w: GuiIteratorEdit):
+            w.gui_restore = 'gui.show_gui_iter()'
+            w.set_data(data)
+
+        return self.get_widget(
+            the_type=GuiIteratorEdit, caption=caption,
+            on_top=on_top, oper=oper
         )
 
 

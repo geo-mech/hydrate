@@ -1,4 +1,5 @@
-# ** desc = 'matplotlib绘图示例'
+# ** desc = '在长计算任务循环中实时更新sin(x)折线图，演示gui.progress进度条与break_point中断点的交互控制'
+# ** highlight = '#f781bf'
 #
 # 本案例演示在循环计算过程中实时更新折线图。模拟一个长时间计算任务
 # （heavy_work），在每次迭代中更新sin(x)曲线并刷新图形窗口。同时展示

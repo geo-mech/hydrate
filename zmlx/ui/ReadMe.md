@@ -79,21 +79,49 @@ python demo.py --headless     # 等效
 
 ---
 
-## 典型使用场景
+## matplotlib 绘图（重要）
+
+### 标准方式：`zmlx.ui.plot`
+
+所有 matplotlib 绘图应通过 `zmlx.ui.plot` 完成。调用方式为**给定一个回调函数 `on_figure(fig)`**，在该函数中操作 figure 对象进行绘图。
+
+```python
+from zmlx.ui import plot
+
+def on_figure(fig):
+    ax = fig.add_subplot(111)
+    ax.plot(x, y)
+    ax.set_xlabel("X label")
+
+plot(on_figure, caption="图标题")
+```
+
+**不要**在代码中直接创建 `plt.figure()` 然后 `plt.show()`。始终使用 `plot(on_figure, ...)` 统一入口。
+
+### `plot` 的三种模式
+
+`zmlx.ui.plot` 自动检测运行环境并选择行为：
+
+| 运行环境 | 行为 |
+|----------|------|
+| **GUI 模式**（`gui.execute` 启动） | 在 GUI 中新建标签页显示图形 |
+| **无头模式**（`--no-gui`） | 自动保存图片到文件 |
+| **直接运行**（常规 `python` 脚本） | 若未指定 `fname`，调用 `plt.show()` 弹出窗口；若指定则保存文件 |
+
+### 完整示例
 
 ```python
 from zmlx import *
 
 def main():
-    """主程序：定义业务逻辑，通过 gui.execute 启动"""
     for step in range(100):
-        gui.break_point()               # 断点：允许暂停/终止
+        gui.break_point()                      # 断点：允许暂停/终止
         gui.progress('计算中', [0, 100], step)  # 进度条
 
     def on_figure(fig):
         ax = fig.add_subplot(111)
         ax.plot([1, 2, 3], [4, 5, 6])
-    gui.plot(on_figure, caption='结果')
+    plot(on_figure, caption='结果')             # 标准绘图
 
     information('模拟完成', '提示')
 

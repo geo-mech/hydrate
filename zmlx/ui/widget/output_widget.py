@@ -4,7 +4,7 @@ from typing import Optional, Tuple, List, Union
 from zmlx.system import app_data
 from zmlx.ui.alg import create_action, get_last_exec_history, clear_exec_history
 from zmlx.ui.gui_buffer import gui
-from zmlx.ui.pyqt import QtGui, QtWidgets
+from zmlx.ui.pyqt import QtCore, QtGui, QtWidgets
 from zmlx.ui.widget._parallel import CoreParallelEdit
 from zmlx.ui.widget.attr_view import AttrView
 from zmlx.ui.widget.text_browser import TextBrowser
@@ -33,6 +33,17 @@ class OutputWidget(QtWidgets.QWidget):
         layout.addWidget(self.progress_label)
         layout.addWidget(self.progress_bar)
         self.progress(visible=False)
+
+        # ── 命令输入行 ──
+        self._cmd_history = self._load_history()
+        self._cmd_history_idx = len(self._cmd_history)
+        self._first_cmd = True
+
+        self.cmd_input = QtWidgets.QLineEdit(self)
+        self.cmd_input.setPlaceholderText('输入 Python 命令，按 Enter 执行...')
+        self.cmd_input.returnPressed.connect(self._exec_cmd)
+        self.cmd_input.installEventFilter(self)
+        layout.addWidget(self.cmd_input)
 
         # 覆盖text_browser的右键菜单
         get_context_menu = self.text_browser.get_context_menu
@@ -69,6 +80,82 @@ class OutputWidget(QtWidgets.QWidget):
         if visible is not None:
             self.progress_bar.setVisible(visible)
             self.progress_label.setVisible(visible)
+
+    def _exec_cmd(self):
+        """执行输入的命令."""
+        code = self.cmd_input.text().strip()
+        self.cmd_input.clear()
+        if not code:
+            return
+
+        self._cmd_history.append(code)
+        self._cmd_history_idx = len(self._cmd_history)
+        if len(self._cmd_history) > 500:
+            self._cmd_history = self._cmd_history[-500:]
+        self._save_history()
+
+        if self._first_cmd:
+            self._first_cmd = False
+            gui.show_memory()
+        self.add_text(f'>>> {code}\n')
+
+        def task():
+            try:
+                try:
+                    c = compile(code, '<console>', 'eval')
+                    r = eval(c, app_data.space)
+                    if r is not None:
+                        print(repr(r))
+                except SyntaxError:
+                    exec(code, app_data.space)
+            except Exception as ex:
+                print(f'{type(ex).__name__}: {ex}')
+
+        if gui.exists():
+            gui.start_func(task, add_history=False)
+        else:
+            task()
+
+    @property
+    def _history_file(self):
+        from zmlx.system import app_data
+        return app_data.temp('console_cmd_history.txt')
+
+    def _load_history(self):
+        try:
+            if os.path.isfile(self._history_file):
+                with open(self._history_file, 'r', encoding='utf-8') as f:
+                    return [line.rstrip('\n') for line in f if line.strip()]
+        except Exception:
+            pass
+        return []
+
+    def _save_history(self):
+        try:
+            from zmlx.system import make_parent
+            with open(make_parent(self._history_file), 'w', encoding='utf-8') as f:
+                for line in self._cmd_history[-500:]:
+                    f.write(line + '\n')
+        except Exception:
+            pass
+
+    def eventFilter(self, obj, event):
+        """拦截输入框的上下箭头，浏览命令历史."""
+        if obj == self.cmd_input and event.type() == QtCore.QEvent.Type.KeyPress:
+            key = event.key()
+            if key == QtCore.Qt.Key.Key_Up:
+                if self._cmd_history:
+                    self._cmd_history_idx = max(0, self._cmd_history_idx - 1)
+                    self.cmd_input.setText(self._cmd_history[self._cmd_history_idx])
+                return True
+            elif key == QtCore.Qt.Key.Key_Down:
+                if self._cmd_history:
+                    idx = min(len(self._cmd_history) - 1, self._cmd_history_idx + 1)
+                    if idx < len(self._cmd_history):
+                        self._cmd_history_idx = idx
+                        self.cmd_input.setText(self._cmd_history[idx])
+                return True
+        return super().eventFilter(obj, event)
 
     def get_context_actions(self):
         result = [create_action(
@@ -146,3 +233,16 @@ class OutputWidget(QtWidgets.QWidget):
                 file.write(self.text_browser.toPlainText())
         except Exception as err2:
             print(err2)
+
+
+def test_1():
+    import sys
+    app = QtWidgets.QApplication(sys.argv)
+    w = OutputWidget()
+    w.resize(800, 600)
+    w.show()
+    sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    test_1()

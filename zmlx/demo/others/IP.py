@@ -1,4 +1,5 @@
-# ** desc = '侵入逾渗(IP)模型计算油气运移成藏'
+# ** desc = '侵入逾渗模型模拟油气二次运移成藏：100m×300m随机孔隙-喉道网络，底部两个注入点，油气在浮力下沿阻力最小路径向上运移聚集'
+# ** highlight = '#999999'
 
 # 本案例使用侵入逾渗（Invasion Percolation, IP）模型模拟油气在
 # 多孔介质中的二次运移和聚集成藏过程。
@@ -99,7 +100,7 @@ def solve(model, jx, jy):
         jy: y方向网格数量
     """
     # 创建GUI迭代器，每次迭代后更新xy平面显示
-    it = GuiIterator(iterate=model.iterate, plot=lambda: ip.show_xy(model, jx=jx, jy=jy), ratio=0.2)
+    it = get_gui_iter(iterate=model.iterate, plot=lambda: ip.show_xy(model, jx=jx, jy=jy), ratio=0.2)
     for step in range(4000):
         gui.break_point()  # 检查GUI中断请求
         it(forced_plot=step % 50 == 0)  # 执行迭代，每50步强制更新图形

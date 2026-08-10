@@ -1,4 +1,5 @@
-# ** desc = '水平二维EGS换热计算'
+# ** desc = '水平二维干热岩EGS换热：100m×100m区域，左下注入井-右上生产井通过随机离散裂隙网络注采循环，模拟地热开发'
+# ** highlight = '#fc4e2a'
 """
 水平方向二维的干热岩换热计算模型（双竖直井注采计算）。
 
@@ -180,8 +181,6 @@ def plot_cells(model, folder=None):
         model: Seepage对象
         folder: 图片保存目录（可选）
     """
-    if not gui.exists():
-        return
     from zmlx.plt import show_tricontourf
     assert isinstance(model, Seepage)
 
@@ -238,7 +237,7 @@ def solve(model: Seepage, time_max=3600 * 24 * 365 * 30, folder=None,
 
     # 设置共轭梯度求解器（高精度）
     solver = ConjugateGradientSolver(tolerance=1.0e-14)
-    iterate = GuiIterator(
+    iterate = get_gui_iter(
         tfc.iterate,
         lambda: plot_cells(model, folder=path.join(folder, 'figures')))
 

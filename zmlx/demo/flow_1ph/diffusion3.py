@@ -1,4 +1,5 @@
-# ** desc = '单相的流动。在单相的基础上，添加了盐度组分的扩散效应'
+# ** desc = '两种溶质(A/B)扩散+重力联合作用：扩散系数1e-9与2e-9的溶质分置对角位置，同时考虑重力引起的垂向密度分层'
+# ** highlight = '#4575b4'
 #
 # 【物理问题描述】
 # 本模型模拟两种不同溶质在孔隙水中的扩散过程。流体包含三个组分：水（组分0）、
@@ -103,8 +104,6 @@ def show(model: Seepage, jx, jy, time=None):
         jy: 单元的数量，y方向
         time: 模拟的时间，单位：s
     """
-    if not gui:
-        return
     cells = as_numpy(model).cells
     x = np.reshape(cells.x, (jx, jy))
     y = np.reshape(cells.y, (jx, jy))

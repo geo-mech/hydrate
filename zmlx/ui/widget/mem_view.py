@@ -2,7 +2,49 @@ import timeit
 
 from zmlx.alg.base import clamp
 from zmlx.system import app_data
-from zmlx.ui.pyqt import QtCore, QtWidgets
+from zmlx.ui.pyqt import QtCore, QtGui, QtWidgets
+
+# 类型 → 字体颜色。已知类型预制颜色，未知类型用 hash 分配。
+_TYPE_COLORS = {
+    int: '#1565C0',          # 蓝
+    float: '#2E7D32',        # 绿
+    str: '#E65100',          # 橙
+    bool: '#6A1B9A',         # 紫
+    list: '#00838F',         # 青
+    tuple: '#00695C',        # 深青
+    dict: '#F9A825',         # 黄
+    set: '#558B2F',          # 黄绿
+    type(None): '#9E9E9E',   # 灰
+    # 函数/方法
+    'function': '#D84315',   # 深橙
+    'method': '#BF360C',     # 红棕
+    'builtin_function_or_method': '#BF360C',
+    # 类的颜色（用字符串名来匹配，因为类可能不在当前命名空间）
+    'Seepage': '#1B5E20',    # 深绿
+    'SeepageMesh': '#0D47A1',  # 深蓝
+    'FluDef': '#880E4F',     # 深粉
+    'DynSys': '#4A148C',     # 深紫
+}
+
+def _get_type_fg(type_obj):
+    """根据类型对象返回字体颜色 QColor，未知类型返回 None（默认颜色）。"""
+    # 1. 精确类型匹配
+    if type_obj in _TYPE_COLORS:
+        return QtGui.QColor(_TYPE_COLORS[type_obj])
+
+    type_name = type_obj.__name__
+
+    # 2. 类名字符串匹配（预制的 Seepage 等）
+    if type_name in _TYPE_COLORS:
+        return QtGui.QColor(_TYPE_COLORS[type_name])
+
+    # 3. 函数/方法类
+    name_lower = type_name.lower()
+    if 'function' in name_lower or 'method' in name_lower:
+        return QtGui.QColor('#D84315')
+
+    # 4. 未知类型：不设颜色，使用默认
+    return None
 
 
 class MemView(QtWidgets.QTableWidget):
@@ -110,7 +152,7 @@ class MemView(QtWidgets.QTableWidget):
                     continue
             if key in names_ignored:
                 continue
-            data.append([key, f'{value}', f'{type(value)}'])
+            data.append([key, f'{value}', type(value)])
 
         self.setRowCount(len(data))
         self.setColumnCount(3)
@@ -119,10 +161,14 @@ class MemView(QtWidgets.QTableWidget):
             0, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
 
         for i_row in range(len(data)):
+            type_obj = data[i_row][2]
+            fg = _get_type_fg(type_obj)
             for i_col in range(3):
-                self.setItem(
-                    i_row, i_col,
-                    QtWidgets.QTableWidgetItem(data[i_row][i_col]))
+                text = data[i_row][i_col] if i_col < 2 else type_obj.__name__
+                item = QtWidgets.QTableWidgetItem(text)
+                if fg is not None:
+                    item.setForeground(fg)
+                self.setItem(i_row, i_col, item)
 
     def refresh(self):
         """

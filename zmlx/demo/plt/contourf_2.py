@@ -1,4 +1,5 @@
-# ** desc = 'matplotlib绘图示例'
+# ** desc = '演示contourf动态绘图：数据中心点沿x轴移动（-5到5）形成动画，展示plot函数在动态可视化中的应用'
+# ** highlight = '#f781bf'
 #
 # 本案例演示contourf的动态绘图效果。与contourf.py相比，本案例让数据
 # 中心点沿x轴移动（从-5到5），形成动画效果。每次绘制前更新数据并短暂

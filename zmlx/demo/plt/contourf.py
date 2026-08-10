@@ -1,4 +1,5 @@
-# ** desc = 'matplotlib绘图示例'
+# ** desc = '演示matplotlib contourf填充等值线图基本用法：正弦波数据生成、坐标网格创建、颜色条添加与坐标轴设置'
+# ** highlight = '#f781bf'
 #
 # 本案例演示使用matplotlib的contourf函数绘制填充等值线图。
 # 在二维平面中生成一个正弦波数据（sin(sqrt(x^2+y^2))），通过plot函数

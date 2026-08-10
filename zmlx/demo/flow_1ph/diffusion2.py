@@ -1,4 +1,5 @@
-# ** desc = '单相的流动。在单相的基础上，添加了盐度组分的扩散效应'
+# ** desc = '单相流盐度扩散：两个高盐斑块（左下与右上）在浓度梯度下同时向外扩散，展示多源扩散的叠加过程'
+# ** highlight = '#4575b4'
 #
 # 【物理问题描述】
 # 本模型与diffusion1类似，但初始盐度分布不同：在40x40的二维正方形区域中，
@@ -95,8 +96,6 @@ def show(model: Seepage, jx, jy, time=None):
         jy: 单元的数量，y方向
         time: 模拟的时间，单位：s
     """
-    if not gui:
-        return
     cells = as_numpy(model).cells
     x = np.reshape(cells.x, (jx, jy))
     y = np.reshape(cells.y, (jx, jy))

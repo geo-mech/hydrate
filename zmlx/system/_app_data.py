@@ -169,7 +169,7 @@ class _AppData:
             pass
 
     def getenv(self, key: str, encoding: Optional[str] = None, default: Optional[Any] = None,
-               ignore_empty: Optional[bool] = False) -> Optional[str]:
+               ignore_empty: Optional[bool] = True) -> Optional[str]:
         """读取持久化环境变量值。
 
         Args:

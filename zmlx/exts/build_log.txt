@@ -1,0 +1,9 @@
+zml.cpp
+D:\boost_1_83_0\boost/throw_exception.hpp(182): warning C4005: “BOOST_THROW_EXCEPTION”: 宏重定义
+D:\boost_1_83_0\boost/throw_exception.hpp(182): note: 之前在命令行上声明的“BOOST_THROW_EXCEPTION”
+NetworkTime.cpp
+OpenUrl.cpp
+PhysicalMacs.cpp
+SystemInfo.cpp
+正在生成代码...
+  正在创建库 zml.lib 和对象 zml.exp

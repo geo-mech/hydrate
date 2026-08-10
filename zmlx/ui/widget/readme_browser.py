@@ -30,3 +30,21 @@ class ReadMeBrowser(TextBrowser):
                 caption='IGG-Hydrate',
                 icon='home'
             )
+
+
+# ============================================================
+# 测试
+# ============================================================
+
+def test_1():
+    import sys
+    from zmlx.ui.pyqt import QtWidgets
+    app = QtWidgets.QApplication(sys.argv)
+    w = ReadMeBrowser()
+    w.resize(600, 520)
+    w.show()
+    sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    test_1()

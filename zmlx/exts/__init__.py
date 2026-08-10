@@ -43,7 +43,9 @@ from zmlx.exts._mat import *
 from zmlx.exts._mesh import *
 from zmlx.exts._lexpr import LinearExpr, create_lexpr
 from zmlx.exts._dyn import *
-from zmlx.exts._sol import ConjugateGradientSolver
+from zmlx.exts._sol import (ConjugateGradientSolver, SparseLUSolver,
+                            SimplicialLDLTSolver, BiCGSTABSolver,
+                            ICCGSolver, ILUBiCGSTABSolver)
 from zmlx.exts._hk import HasKeys
 import zmlx.exts._utils as has_cells
 from zmlx.exts._seepage import (
@@ -53,6 +55,7 @@ from zmlx.exts._seepage import (
 from zmlx.exts._ip import InvasionPercolation
 from zmlx.exts._frac import Dfn2, Lattice3, FracAlg, FractureNetwork, InfMatrix, DDMSolution2
 import zmlx.exts._ip as ip
+from zmlx.exts._leq import get_default_solver_code, set_default_solver_code, make_solver
 
 create_dict = dict
 

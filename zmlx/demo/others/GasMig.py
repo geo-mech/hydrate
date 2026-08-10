@@ -74,7 +74,7 @@ def solve(config, model, folder=None):
     """
     执行求解，并将结果保存到指定的文件夹
     """
-    iterate = GuiIterator(config.iterate, plot=lambda: show(config, model,
+    iterate = get_gui_iter(iterate=config.iterate, plot=lambda: show(config, model,
                                                             folder=join_paths(
                                                                 folder,
                                                                 'figures')))

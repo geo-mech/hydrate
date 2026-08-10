@@ -1,4 +1,4 @@
-from ctypes import (c_char_p, c_int, c_bool)
+from ctypes import (c_char_p, c_int, c_bool, c_double)
 
 from zmlx.exts._dll import DllCore, core, make_c_char_p
 from zmlx.exts._utils import app_data
@@ -23,9 +23,11 @@ class License:
             self.core.use(c_int, 'lic_webtime')
             self.core.use(c_bool, 'lic_valid')
             self.core.use(c_char_p, 'lic_desc')
-            self.core.use(c_char_p, 'lic_serial', c_bool, c_bool)
+            self.core.use(c_char_p, 'lic_serial', c_bool)
             self.core.use(c_char_p, 'lic_create', c_char_p)
             self.core.use(None, 'lic_load', c_char_p)
+            self.core.use(c_char_p, 'lic_hw_fingerprint')
+            self.core.use(c_double, 'lic_hw_match_fingerprints', c_char_p, c_char_p)
 
     @property
     def is_admin(self) -> bool:
@@ -81,14 +83,20 @@ class License:
         """获取当前计算机的 USB 序列号，用于注册。
 
         Args:
-            base64 (bool): 是否以 Base64 格式返回序列号。
-            export_all (bool): 是否导出所有 USB 设备的序列号。
+            base64: 是否以 Base64 格式返回序列号。
+            export_all: [已弃用] 该参数不再生效，将在 2027-01-01 后移除。
 
         Returns:
             str: USB 序列号。
         """
+        if export_all:
+            import warnings
+            warnings.warn(
+                'export_all is deprecated and has no effect. '
+                'It will be removed after 2027-01-01.',
+                DeprecationWarning, stacklevel=2)
         if self.core.has_dll():
-            return self.core.lic_serial(base64, export_all).decode()
+            return self.core.lic_serial(base64).decode()
         else:
             return ''
 
@@ -152,6 +160,35 @@ code to author (zhangzhaobin@mail.iggcas.ac.cn):
 Thanks for using.
     """
                 print(text)
+
+
+    @property
+    def fingerprint(self) -> str:
+        """获取当前计算机的硬件指纹。
+
+        Returns:
+            str: 硬件指纹字符串。
+        """
+        if self.core.has_dll():
+            return self.core.lic_hw_fingerprint().decode()
+        else:
+            return ''
+
+    def match_fingerprints(self, fp1: str, fp2: str) -> float:
+        """比较两个硬件指纹的匹配度。
+
+        Args:
+            fp1: 第一个指纹字符串
+            fp2: 第二个指纹字符串
+
+        Returns:
+            float: 匹配度 (0.0 ~ 1.0)
+        """
+        if self.core.has_dll():
+            return self.core.lic_hw_match_fingerprints(
+                make_c_char_p(fp1), make_c_char_p(fp2))
+        else:
+            return 0.0
 
 
 lic = License(core_obj=core)

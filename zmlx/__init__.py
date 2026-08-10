@@ -141,7 +141,7 @@ from zmlx.ui import (
 ########################################
 # utility
 from zmlx.utility import (
-    load_field3, Field, LinearField, AttrKeys, add_keys, RuntimeFunc, GuiIterator, PressureController, SaveManager,
+    load_field3, Field, LinearField, AttrKeys, add_keys, RuntimeFunc, GuiIterator, get_gui_iter, PressureController, SaveManager,
     SeepageCellMonitor, CapillaryEffect
 )
 
@@ -360,11 +360,23 @@ class _CommandRegistry:
 # 创建全局命令注册器
 _cmds = _CommandRegistry()
 
+def _test(args):
+    """
+    以无头模式运行所有 demo 测试。
+    """
+    import subprocess, sys, os
+    script = os.path.join(os.path.dirname(__file__), 'demo', 'test_all_demos.py')
+    if not isinstance(args, list):
+        args = []
+    subprocess.run([sys.executable, script, '--no-gui'] + args)
+
+
 # 注册命令（兼容旧的 _cmds 字典接口）
 _cmds['env'] = _env
 _cmds['ui'] = _ui
 _cmds['demo'] = _demo
 _cmds['ver'] = _ver
+_cmds['test'] = _test
 
 
 def main(argv):
@@ -373,6 +385,7 @@ def main(argv):
         env  - 安装依赖
         ui   - 打开GUI界面
         demo - 打开Demo浏览器
+        test - 无头模式运行所有demo测试
         ver  - 显示版本信息
         help - 显示帮助
     """

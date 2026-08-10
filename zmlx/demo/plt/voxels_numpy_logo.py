@@ -1,4 +1,5 @@
-# ** desc = 'matplotlib绘图示例'
+# ** desc = '用matplotlib voxels绘制3D体素图构建NumPy标志：3D布尔数组定义体素位置，explode制造间隙形成像素风立体效果'
+# ** highlight = '#f781bf'
 #
 # 本案例演示使用matplotlib的voxels函数绘制三维体素图，构建NumPy标志。
 # 通过定义3D布尔数组确定体素填充位置，使用explode函数在体素间创建间隙，

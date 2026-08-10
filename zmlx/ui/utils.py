@@ -75,7 +75,7 @@ class GuiApi(QtCore.QObject):
             self.res = None
             self.err = None
             self.mtx = QtCore.QMutex()
-            self.mtx_running = QtCore.QMutex()
+            self.mtx_busy = QtCore.QMutex()
 
     __sig_proc = QtCore.pyqtSignal(int)
 
@@ -126,7 +126,8 @@ class GuiApi(QtCore.QObject):
         if len(item.args) > 0:
             try:
                 f = self.funcs.get(item.args[0])
-                assert f is not None, f'gui function <{item.args[0]}> not found'
+                if not callable(f):
+                    raise RuntimeError(f'gui function <{item.args[0]}> not found')
                 item.res = f(*item.args[1:], **item.kwargs)
             except Exception as err:
                 item.err = err
@@ -146,7 +147,8 @@ class GuiApi(QtCore.QObject):
         if is_direct:  # 直接进行调用
             if len(args) > 0:
                 f = self.funcs.get(args[0])
-                assert f is not None, f'gui function <{args[0]}> not found'
+                if not callable(f):
+                    raise RuntimeError(f'gui function <{args[0]}> not found')
                 return f(*args[1:], **kwargs)
             else:
                 return None
@@ -154,7 +156,7 @@ class GuiApi(QtCore.QObject):
         if len(args) > 0:
             for idx in range(self.channels.length()):
                 item = self.channels.get(idx)
-                if item.mtx_running.tryLock():
+                if item.mtx_busy.tryLock():
                     item.mtx.lock()
                     item.res = None
                     item.err = None
@@ -165,7 +167,7 @@ class GuiApi(QtCore.QObject):
                     item.mtx.unlock()
                     res = item.res
                     err = item.err
-                    item.mtx_running.unlock()
+                    item.mtx_busy.unlock()
                     if err is not None:
                         raise err
                     return res
@@ -332,7 +334,8 @@ class TaskProc(QtCore.QObject):
                 if task is None:
                     break
                 else:
-                    assert callable(task), 'The task is not a function'
+                    if not callable(task):
+                        raise RuntimeError('The task is not a function')
                     task()
             except Exception as err:
                 print(f'meet error {err}')
@@ -387,7 +390,8 @@ class FileHandler(QtCore.QObject):
         添加文件类型
         """
         if not isinstance(exts, (list, tuple)):
-            assert isinstance(exts, str)
+            if not isinstance(exts, str):
+                raise TypeError(f'exts must be str or list, got {type(exts).__name__}')
             exts = [exts]
 
         exts = modify_file_exts(exts)

@@ -1,4 +1,5 @@
 # ** desc = '流体在毛管力驱动下的流动(添加了沉降效果)'
+# ** highlight = '#999999'
 
 from zmlx import *
 

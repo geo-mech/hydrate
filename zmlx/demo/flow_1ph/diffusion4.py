@@ -1,4 +1,5 @@
-# ** desc = '单相的流动。添加了压力差和扩散，两者同时起作用'
+# ** desc = '压力对流与盐度扩散同时作用：中心高盐区在分子扩散与对角压差(0.3MPa)驱动的对流传输共同影响下演化'
+# ** highlight = '#4575b4'
 #
 # 【物理问题描述】
 # 本模型模拟单相渗流与溶质扩散同时存在的情况。在40x40的二维区域中，
@@ -96,8 +97,6 @@ def show(model: Seepage, jx, jy, time=None):
         jy: 单元的数量，y方向
         time: 模拟的时间，单位：s
     """
-    if not gui:
-        return
     cells = as_numpy(model).cells
     x = np.reshape(cells.x, (jx, jy))
     y = np.reshape(cells.y, (jx, jy))

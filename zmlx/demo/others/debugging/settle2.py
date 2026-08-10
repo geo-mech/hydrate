@@ -1,4 +1,5 @@
 # ** desc = '测试：流动以及sand的沉降'
+# ** highlight = '#999999'
 
 from zmlx import *
 
@@ -45,7 +46,7 @@ def show(model):
 
 def solve(model):
     solver = ConjugateGradientSolver(tolerance=1.0e-20)
-    iterate = GuiIterator(tfc.iterate, lambda: show(model))
+    iterate = get_gui_iter(iterate=tfc.iterate, plot=lambda: show(model))
 
     while tfc.get_time(model) < 3600 * 24 * 3000:
         iterate(model, solver=solver)

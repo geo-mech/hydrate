@@ -1,4 +1,5 @@
-# ** desc = 'matplotlib绘图示例'
+# ** desc = '演示figure中两个并排3D子图：左侧曲面图(plot_surface)+右侧线框图(plot_wireframe)，展示三维可视化布局与颜色条'
+# ** highlight = '#f781bf'
 #
 # 本案例演示三维子图绘制。在figure中创建两个并排的三维子图：
 #   左图：3D曲面图（plot_surface），展示sin(sqrt(x^2+y^2))函数的曲面

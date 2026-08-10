@@ -1,4 +1,5 @@
 # ** desc = '竖直方向二维的水合物开发过程（变化相对渗透率，尚未实现）（注入热水之后再降压）'
+# ** highlight = '#00bfff'
 
 from zmlx import *
 from zmlx.seepage_mesh.hydrate import create_xz

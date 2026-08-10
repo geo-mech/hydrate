@@ -1,4 +1,5 @@
 # ** desc = '测试：纵向二维。重力驱动下的沉降过程'
+# ** highlight = '#999999'
 
 from zmlx import *
 

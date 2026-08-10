@@ -1,4 +1,5 @@
 # ** desc = '测试：纵向二维。浮力作用下co2及ch4气体运移、ch4水合物及co2水合物成藏过程模拟'
+# ** highlight = '#999999'
 
 from zmlx import *
 
@@ -111,7 +112,7 @@ def solve(model, folder=None, step_max=None):
     """
     solver = ConjugateGradientSolver(tolerance=1.0e-30)
 
-    iterate = GuiIterator(
+    iterate = get_gui_iter(
         lambda m: tfc.iterate(m, solver=solver),
         plot=lambda: show(
             model,

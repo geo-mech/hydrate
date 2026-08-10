@@ -22,6 +22,10 @@
 邮箱: [zhangzhaobin@mail.iggcas.ac.cn](mailto:zhangzhaobin@mail.iggcas.ac.cn);
 或添加[微信](https://gitee.com/geomech/hydrate/issues/ID5HZX).
 
+### 关键词
+
+天然气水合物 / Gas Hydrate · 多场耦合 / THMC · 储层数值模拟 / Reservoir Simulation · 多相多组分流 / Multiphase Multicomponent Flow · 碳封存 / Carbon Sequestration · 页岩油原位转化 / Shale Oil In-situ Conversion · 热-流-力-化耦合
+
 ### 功能/特点
 
 首先，[IGG-Hydrate](https://gitee.com/geomech/hydrate)是一个支持编程，进而实现复杂耦合功能的开放的计算模块：

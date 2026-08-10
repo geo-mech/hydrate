@@ -1,4 +1,5 @@
-# ** desc = '密度差驱动下的对流+扩散的综合效应 (2)'
+# ** desc = '对流+扩散综合效应（垂直剖面版）：左上/右下浓度异常区，扩散系数增大至1e-7 m²/s，重力沿z轴，更贴近实际地质重力对流情景'
+# ** highlight = '#1a9641'
 #
 # 本案例与test_2.py类似，但采用了不同的几何布局和扩散参数。在垂直二维剖面
 # （x方向宽2m，z方向高4m）中设置左上和右下两个初始浓度异常区。相比于test_2.py，
@@ -61,7 +62,7 @@ def create(jx, jz):
         porosity=0.2,
         p=2e6,
         perm=10e-15,
-        gravity=[0, 0, -10]    # 重力垂直向下（z负方向）
+        gravity=[0, 0, -10]  # 重力垂直向下（z负方向）
     )
     # 添加CO2扩散设置：扩散系数1.0e-7 m^2/s（比test_2大100倍）
     diffusion.add_setting(model, 'co2', 'liq', d=1.0e-7, cfl=0.2)
@@ -82,8 +83,6 @@ def show(model: Seepage, caption=None):
         model: Seepage对象
         caption: 窗口标题
     """
-    if not gui.exists():
-        return
 
     assert np is not None, 'numpy is not imported'
 

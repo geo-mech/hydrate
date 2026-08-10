@@ -9,6 +9,7 @@ import warnings
 from zmlx.alg._code_config import code_config
 from zmlx.alg._slowdown import get_velocity_after_slowdown_by_viscosity
 from zmlx.alg._startfile import startfile  # 替代os.startfile, 实现跨平台的文件打开
+from zmlx.alg._update_by_git import update_by_git  # 基于 git 的安全更新
 from zmlx.alg.base import (
     year_to_seconds, rand_dir3, make_index, clamp, linspace, mean, divide_list, less, is_sorted,
     join_cols, join_rows, mass2str, time2str, fsize2str,

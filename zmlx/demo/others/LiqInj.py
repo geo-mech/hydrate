@@ -46,7 +46,7 @@ def show(config, model):
 
 
 def solve(config, model):
-    iterate = GuiIterator(iterate=config.iterate,
+    iterate = get_gui_iter(iterate=config.iterate,
                           plot=lambda: show(config, model))
 
     while config.get_time(model) < 365 * 24 * 3600:
