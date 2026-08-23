@@ -1,3 +1,7 @@
+""" dfn2 绘图工具。
+
+Modified by Claude, 2026-08-12
+"""
 def add_dfn2(ax, dfn2, **opts):
     """
     将一个二维的离散裂缝网络添加到Axes上.

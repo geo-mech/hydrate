@@ -1,3 +1,7 @@
+"""C11H24（十一烷）流体属性.
+
+Modified by Claude, 2026-08-12
+"""
 import os
 
 from zmlx.exts import Interp2, FluDef

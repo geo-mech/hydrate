@@ -1,12 +1,15 @@
+"""监测一个或一组 Cell 中流体质量的变化，记录累积产量与产率，支持保存与绘图.
+
+Modified by Claude, 2026-08-12
+"""
+
 import zmlx.alg.sys as warnings
 
 from zmlx.exts import is_array, Seepage, np
 
 
 def _get_mass(item):
-    """
-    返回给定流体各个组分的质量<将所有的流体作为一个list>.
-    """
+    """返回给定流体各组分质量的 list（递归遍历 Cell 和 Fluid）。"""
     if isinstance(item, Seepage.CellData):  # 返回单个cell
         result = []
         for flu in item.fluids:
@@ -33,13 +36,20 @@ def _get_mass(item):
 
 
 class SeepageCellMonitor:
-    """
-    用以监视给定的一个Cell或者一组Cell中流体质量的变化
+    """Cell 流体质量监测器。
+
+    监测指定 Cell（或一组 Cell）中各流体组分质量随时间的变化，
+    记录累积产量和产率，支持保存到制表符分隔文件及可视化绘图。
     """
 
     def __init__(self, get_t, cell):
-        """
-        初始化：给定的<get_t>应为一个函数，用以返回时间(时间的单位应该是秒)；cell为Seepage的一个Cell对象(或者多个Cell对象);
+        """初始化监测器。
+
+        构造时备份各 Cell 的初始流体质量作为基准。
+
+        Args:
+            get_t: 返回当前时间的回调函数（返回秒）。
+            cell: 单个 Seepage.CellData 或其数组。
         """
         self.get_t = get_t
         if is_array(cell):
@@ -54,8 +64,10 @@ class SeepageCellMonitor:
         self.vm = [[0.0] for i in range(len(self.vm0))]
 
     def update(self, dt=1.0e-6):
-        """
-        更新记录的流体的质量变化. 其中dt为更新数据的最小的时间间隔 <并非计算时候的时间步长>
+        """更新流体的质量变化记录。
+
+        Args:
+            dt: 记录数据的最小时间间隔 [s]（非计算步长）。
         """
         try:
             assert dt > 0, 'The time interval should be positive'
@@ -74,8 +86,10 @@ class SeepageCellMonitor:
                 f'meet exception when update. err = {err}. function = {self.update}')
 
     def get_current_rate(self):
-        """
-        返回当前时刻，各个组分的产出的速率(质量速率)
+        """返回当前各组分产率。
+
+        Returns:
+            list[float] | None: 当前产率 (kg/s)，数据不足时返回 None。
         """
         if len(self.vm) == 0:
             return None
@@ -96,13 +110,18 @@ class SeepageCellMonitor:
         return [m / dt for m in dm]
 
     def get_prod(self, index=None):
-        """
-        返回一组<时间>; 与时间对应的累积生产的<质量>
+        """返回累积产量数据。
+
+        Args:
+            index: 组分索引（None 时返回所有组分的总和）。
+
+        Returns:
+            (时间数组, 累积质量数组 [kg]) | None: 失败时返回 None。
         """
         try:
             if index is not None and index < len(self.vm):
                 return self.vt, self.vm[index]
-            vm = self.vm[0]
+            vm = self.vm[0].copy()
             for i in range(1, len(self.vm)):
                 vm += self.vm[i]
             if np is None:
@@ -115,8 +134,13 @@ class SeepageCellMonitor:
             return None
 
     def get_rate(self, index=None):
-        """
-        返回一组<时间>; 与时间对应的单位时间的生产<质量>
+        """返回产率数据。
+
+        Args:
+            index: 组分索引（None 时返回所有组分的总和）。
+
+        Returns:
+            (时间数组, 产率数组 [kg/s]) | None: 失败时返回 None。
         """
         try:
             x, y = self.get_prod(index)
@@ -133,10 +157,12 @@ class SeepageCellMonitor:
             return None
 
     def save(self, path):
-        """
-        将记录的结果保存到文件。
-        格式：
-            第1列为时间，随后各列为各个流体产出的质量<给定时刻的质量减去初始时刻的质量>
+        """将监测数据保存到文件（制表符分隔）。
+
+        格式：第 1 列为时间 [s]，随后各列为各组分的累积产出质量 [kg]。
+
+        Args:
+            path: 文件路径（None 时无操作）。
         """
         try:
             if path is None:
@@ -152,8 +178,14 @@ class SeepageCellMonitor:
                 f'meet exception <{err}> when call function <{self.save}>')
 
     def plot(self, index, caption=None, **kwargs):
-        """
-        同时显示累积生产曲线和生产速率曲线：已废弃
+        """同时显示累积产量曲线和产率曲线（已废弃）。
+
+        请分别使用 ``plot_prod`` 和 ``plot_rate``。
+
+        Args:
+            index: 组分索引。
+            caption: 图表标题前缀。
+            **kwargs: 透传给 ``zmlx.plt.show_xy``。
         """
         try:
             self.plot_prod(
@@ -169,8 +201,12 @@ class SeepageCellMonitor:
                 f'meet exception <{err}> when call function <{self.plot}>')
 
     def plot_prod(self, index, caption=None, **kwargs):
-        """
-        显示累积生产曲线
+        """显示累积产量曲线（时间单位为天，质量为 kg）。
+
+        Args:
+            index: 组分索引。
+            caption: 图表标题。
+            **kwargs: 透传给 ``zmlx.plt.show_xy``。
         """
         try:
             from zmlx.plt import show_xy
@@ -187,8 +223,12 @@ class SeepageCellMonitor:
                 f'meet exception <{err}> when call function <{self.plot_prod}>')
 
     def plot_rate(self, index, caption=None, **kwargs):
-        """
-        显示生产速率曲线
+        """显示产率曲线（时间单位为天，产率为 kg/day）。
+
+        Args:
+            index: 组分索引。
+            caption: 图表标题。
+            **kwargs: 透传给 ``zmlx.plt.show_xy``。
         """
         try:
             from zmlx.plt import show_xy

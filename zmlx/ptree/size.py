@@ -1,3 +1,7 @@
+"""尺寸属性。
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.ptree.array import array
 from zmlx.ptree.ptree import PTree
 

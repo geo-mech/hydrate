@@ -2,7 +2,10 @@
 对于某一个流体组分，计算扩散过程。
 
 @2025-10-2
+
+Modified by Claude, 2026-08-12
 """
+
 from typing import Optional
 
 from zmlx.alg.sys import warn

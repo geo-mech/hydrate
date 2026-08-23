@@ -1,3 +1,7 @@
+"""SelfPath 工具（获取调用者文件路径）。
+
+Modified by Claude, 2026-08-12
+"""
 import os
 
 from zmlx.system._fsys import make_parent

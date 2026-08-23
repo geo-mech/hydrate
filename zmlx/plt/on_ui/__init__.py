@@ -1,6 +1,9 @@
 """
 直接在zmlx.ui中绘图，打开一个标签，形成一个单独的图. 这里，主要导出一系列 show_xxx函数
+
+Modified by Claude, 2026-08-12
 """
+
 from zmlx.plt.on_ui._cont import show_contourf
 from zmlx.plt.on_ui._curve import show_xy
 from zmlx.plt.on_ui._dfn2 import show_dfn2

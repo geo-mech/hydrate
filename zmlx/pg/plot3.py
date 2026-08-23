@@ -1,3 +1,7 @@
+"""pyqtgraph 3D 绘图。
+
+Modified by Claude, 2026-08-12
+"""
 try:
     import numpy as np
 except ImportError:

@@ -1,3 +1,7 @@
+"""三维边界框属性。
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.ptree.val_range import val_range
 
 

@@ -1,3 +1,7 @@
+"""向量（Vector）绑定.
+
+Modified by Claude, 2026-08-12
+"""
 import ctypes
 from ctypes import c_int64, c_char_p, c_size_t, c_void_p, c_double, POINTER
 from typing import Optional, List, Any

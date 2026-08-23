@@ -1,3 +1,7 @@
+"""反应算法（加载、添加、创建反应定义）.
+
+Modified by Claude, 2026-08-12
+"""
 import os
 import warnings
 from collections.abc import Iterable

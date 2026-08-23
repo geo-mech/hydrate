@@ -1,3 +1,7 @@
+"""版本信息.
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.exts._dll import version
 
 

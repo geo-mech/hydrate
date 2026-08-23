@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.tfc._heating."""
 from zmlx.tfc._heating import *
 
 _keep = [iterate]

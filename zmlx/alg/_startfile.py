@@ -1,3 +1,8 @@
+"""跨平台文件打开（替代 os.startfile）.
+
+Modified by Claude, 2026-08-12
+"""
+
 import os
 import subprocess
 

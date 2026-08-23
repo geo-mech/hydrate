@@ -1,3 +1,8 @@
+"""代码编辑器（QsciScintilla + QTextEdit 回退，支持语法高亮）.
+
+Modified by Claude, 2026-08-12
+"""
+
 import hashlib
 import os
 import sys

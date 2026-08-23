@@ -1,16 +1,12 @@
 # -*- coding: utf-8 -*-
-""" critical values akes from Yaw's table
-H2 = Hydrogen
-PM = KG/MOL
-R = J/MOL*K
-Tc= K
-PC=Pa
-w = adimentional
+"""O2 density 气体密度关联式（Yaw's table 临界值）.
 
-Ideal Gas Equation, correlations results agree with this website:
-https://www.engineeringtoolbox.com/air-temperature-pressure-density-d_771.html
+Modified by Claude, 2026-08-12
 """
-
+# critical values from Yaw's table:
+# O2 = Oxygen, PM = KG/MOL
+# R = J/MOL*K, Tc = K, PC = Pa, w = adimentional
+# Ref: https://www.engineeringtoolbox.com/air-temperature-pressure-density-d_771.html
 
 def den_O2(P, T):
     M = 0.031999

@@ -1,6 +1,9 @@
 """
 定义甲烷水合物的基本参数
+
+Modified by Claude, 2026-08-12
 """
+
 
 import zmlx.react.hydrate as hydrate
 from zmlx.alg.interp import interp1

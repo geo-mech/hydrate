@@ -1,6 +1,9 @@
 """
 之前测试，在某些运行环境下，pip的默认源比较慢，所以这里提供一个脚本，用于写入pip的配置文件，使用清华大学的镜像源。
+
+Modified by Claude, 2026-08-12
 """
+
 import getpass
 import os
 

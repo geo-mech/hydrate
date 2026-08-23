@@ -1,3 +1,7 @@
+"""TFC 绘图工具.
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.alg import join_paths, make_fname
 from zmlx.exts import Seepage
 from zmlx.plt import tricontourf

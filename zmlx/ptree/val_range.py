@@ -1,3 +1,9 @@
+"""数值范围属性.
+
+Modified by Claude, 2026-08-12
+"""
+
+
 def val_range(pt, doc=None, default=None):
     """
     返回一个数据的范围. 由min和max定义的数据的范围.

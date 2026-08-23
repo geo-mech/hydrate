@@ -1,6 +1,11 @@
+"""多维散点数据插值。
+
+2D：依序尝试 CloughTocher → 线性 → 最近点，均失败时返回常数或 NaN。
+3D：依序尝试线性 → 最近点，均失败时返回常数或 NaN。
+
+Modified by Claude, 2026-08-12
 """
-进行自动的多维插值的库
-"""
+
 try:
     import numpy as np
 except ImportError:
@@ -17,14 +22,23 @@ from zmlx.alg.base import join_cols
 
 
 class Interp2:
-    """
-    二维的插值.
-        将首先尝试CloughTocher2DInterpolator，之后是线性插值，最后寻找最为接近的点.
+    """二维插值。
+
+    依序尝试 CloughTocher2DInterpolator → LinearNDInterpolator →
+    NearestNDInterpolator。当三种方法都失败时，若有常量值则返回常量，
+    否则返回 NaN。
     """
 
     def __init__(self, x, y, v, rescale=True):
-        """
-        根据3列数据来构造一个2维插值。当不同维度的范围差异比较大的时候，务必将rescale设置为True
+        """根据散点数据构造二维插值。
+
+        ``len(v) == 1`` 时直接作为常量，不创建插值器。
+
+        Args:
+            x: x 坐标数组。
+            y: y 坐标数组。
+            v: 数值数组。
+            rescale: 是否按各维度范围缩放（维度范围差异大时建议 True）。
         """
         assert len(v) >= 1
         if len(v) == 1:
@@ -44,7 +58,7 @@ class Interp2:
             self.f0 = CloughTocher2DInterpolator(
                 points, values, rescale=rescale,
                 fill_value=np.nan)
-        except:
+        except Exception:
             self.f0 = None
 
         # 首选的线性插值
@@ -52,22 +66,31 @@ class Interp2:
             self.f1 = LinearNDInterpolator(
                 points, values, rescale=rescale,
                 fill_value=np.nan)
-        except:
+        except Exception:
             self.f1 = None
 
         # 备选，当线性插值失败的时候，使用这个
         try:
             self.f2 = NearestNDInterpolator(
                 points, values, rescale=rescale)
-        except:
+        except Exception:
             self.f2 = None
 
         # 默认值 (此时不具备默认值)
         self.value = None
 
     def __call__(self, x, y):
-        """
-        返回给定点处的数据。
+        """返回给定点处的插值结果。
+
+        依序尝试 f0 → f1 → f2，成功则立即返回；
+        均失败时若有常量值则返回常量数组，否则返回 NaN 数组。
+
+        Args:
+            x: x 坐标（标量或数组）。
+            y: y 坐标（标量或数组）。
+
+        Returns:
+            ndarray: 插值结果。
         """
         if self.f0 is not None:  # 首先，尝试CloughTocher插值
             v = self.f0(x, y)
@@ -96,14 +119,23 @@ class Interp2:
 
 
 class Interp3:
-    """
-    三维的插值.
-    将首先尝试线性插值，当线性插值失败的时候，则转而寻找最为接近的点.
+    """三维插值。
+
+    依序尝试 LinearNDInterpolator → NearestNDInterpolator。
+    当两种方法都失败时，若有常量值则返回常量，否则返回 NaN。
     """
 
     def __init__(self, x, y, z, v, rescale=True):
-        """
-        根据4列数据来构造一个三维插值。当不同维度的范围差异比较大的时候，务必将rescale设置为True
+        """根据散点数据构造三维插值。
+
+        输入为标量或长度为 1 的数组时直接作为常量，不创建插值器。
+
+        Args:
+            x: x 坐标数组。
+            y: y 坐标数组。
+            z: z 坐标数组。
+            v: 数值数组（形状与 x, y, z 相同）。
+            rescale: 是否按各维度范围缩放（维度范围差异大时建议 True）。
         """
         x = np.asarray(x)
         y = np.asarray(y)
@@ -132,7 +164,7 @@ class Interp3:
             self.f1 = LinearNDInterpolator(
                 points, values, rescale=rescale,
                 fill_value=np.nan)
-        except:
+        except Exception:
             self.f1 = None
 
         # 备选，当线性插值失败的时候，使用这个
@@ -143,8 +175,18 @@ class Interp3:
         self.value = None
 
     def __call__(self, x, y, z):
-        """
-        返回给定点处的数据。
+        """返回给定点处的插值结果。
+
+        依序尝试 f1 → f2，成功则立即返回；
+        均失败时若有常量值则返回常量数组，否则返回 NaN 数组。
+
+        Args:
+            x: x 坐标（标量或数组）。
+            y: y 坐标（标量或数组）。
+            z: z 坐标（标量或数组）。
+
+        Returns:
+            ndarray: 插值结果。
         """
         if self.f1 is not None:  # 首先，尝试线性插值
             v = self.f1(x, y, z)

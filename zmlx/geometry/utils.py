@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.geometry.base."""
 from zmlx.geometry.base import *
 
 _ = [get_angle]

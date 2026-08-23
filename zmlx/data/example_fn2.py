@@ -1,3 +1,7 @@
+"""示例裂缝网络数据（.fn2 格式）。
+
+Modified by Claude, 2026-08-12
+"""
 import os
 
 from zmlx.io.base import load_col

@@ -1,3 +1,7 @@
+"""字符串工具绑定.
+
+Modified by Claude, 2026-08-12
+"""
 from ctypes import c_void_p, c_char_p, c_size_t
 from typing import Optional
 

@@ -6,7 +6,10 @@
     gui.execute(main, disable_gui=is_headless(), close_after_done=False)
 
 注意：gui.execute() 内部会自动调用 is_headless()，通常不需要手动传递。
+
+Modified by Claude, 2026-08-12
 """
+
 import sys
 
 from zmlx.system._app_data import app_data

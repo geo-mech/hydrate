@@ -1,3 +1,7 @@
+"""极坐标网格生成.
+
+Modified by Claude, 2026-08-12
+"""
 import math
 
 from zmlx.exts import Mesh3, np

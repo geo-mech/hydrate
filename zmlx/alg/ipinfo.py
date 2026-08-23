@@ -1,3 +1,8 @@
+"""IP 信息查询工具.
+
+Modified by Claude, 2026-08-12
+"""
+
 import zmlx.alg.sys as warnings
 
 from zmlx.alg.sys import get_ipinfo, get_city

@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.tfc._inj."""
 from zmlx.tfc._inj import *
 
 _keep = [iterate]

@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.alg.base."""
 from zmlx.alg.base import year_to_seconds
 
 __all__ = ['year_to_seconds']

@@ -1,3 +1,8 @@
+"""从 Python 源码中提取注释（基于 tokenize 模块）.
+
+Modified by Claude, 2026-08-12
+"""
+
 import tokenize
 from io import StringIO
 from typing import List

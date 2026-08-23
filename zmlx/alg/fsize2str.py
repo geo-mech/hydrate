@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.alg.base."""
 from zmlx.alg.base import fsize2str
 
 __all__ = ['fsize2str']

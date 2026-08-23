@@ -1,3 +1,7 @@
+"""固相缓冲（备份与恢复）.
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.exts import Seepage, clock, ThreadPool
 
 

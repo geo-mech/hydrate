@@ -1,3 +1,7 @@
+"""第三方包依赖信息。
+
+Modified by Claude, 2026-08-12
+"""
 # zmlx 计算模块运行所需要的第三方的包
 
 import sys

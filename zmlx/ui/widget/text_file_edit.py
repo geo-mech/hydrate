@@ -1,3 +1,8 @@
+"""纯文本文件编辑器 widget.
+
+Modified by Claude, 2026-08-12
+"""
+
 from zmlx.system import write_text, read_text
 from zmlx.ui.gui_buffer import gui
 from zmlx.ui.pyqt import QtWidgets

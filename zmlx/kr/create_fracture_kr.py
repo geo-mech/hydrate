@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.kr.base."""
 from zmlx.kr.base import create_fracture_kr
 
 __all__ = ['create_fracture_kr']

@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.seepage_mesh.io."""
 from zmlx.seepage_mesh.io import load_mesh
 
 __all__ = [

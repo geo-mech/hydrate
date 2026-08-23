@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.alg.fsys."""
 from zmlx.alg.fsys import make_fname
 
 __all__ = ['make_fname']

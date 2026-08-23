@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.alg.base."""
 import zmlx.alg.sys as warnings
 
 from zmlx.alg.base import divide_list

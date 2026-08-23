@@ -1,3 +1,7 @@
+"""插值绑定（Interp1/Interp2/Interp3）.
+
+Modified by Claude, 2026-08-12
+"""
 from ctypes import POINTER, c_double, c_void_p, c_char_p, c_size_t, c_bool, CFUNCTYPE
 from typing import Tuple, Iterable, Callable, Optional
 

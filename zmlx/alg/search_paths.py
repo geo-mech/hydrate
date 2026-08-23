@@ -1,7 +1,13 @@
+"""搜索路径管理（增删查改搜索路径列表）.
+
+Modified by Claude, 2026-08-12
+"""
+
 import os
 
 
 def get_paths():
+    """返回当前搜索路径列表。"""
     try:
         from zmlx.exts import app_data
         paths = []
@@ -10,7 +16,7 @@ def get_paths():
             if os.path.isdir(line):
                 paths.append(line)
         return paths
-    except:
+    except Exception:
         return []
 
 
@@ -22,14 +28,16 @@ def add_path(paths, path):
 
 
 def save_paths(paths):
+    """保存搜索路径列表。"""
     try:
         from zmlx.exts import app_data
         app_data.setenv('path', '\n'.join(paths))
-    except:
+    except Exception:
         pass
 
 
 def choose_path():
+    """弹出对话框让用户选择路径。"""
     from zmlx.ui import gui
     if not gui.exists():
         return

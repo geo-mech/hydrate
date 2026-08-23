@@ -1,3 +1,7 @@
+"""三维散点图显示。
+
+Modified by Claude, 2026-08-12
+"""
 import zmlx.alg.sys as warnings
 
 from zmlx.geometry.base import point_distance

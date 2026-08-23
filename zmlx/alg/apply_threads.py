@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.alg.multi_thread."""
 from zmlx.alg.multi_thread import *
 
 __all__ = [

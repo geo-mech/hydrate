@@ -1,3 +1,7 @@
+""" rc3 绘图工具。
+
+Modified by Claude, 2026-08-12
+"""
 import warnings
 
 from zmlx.geometry import rect_3d as rect3

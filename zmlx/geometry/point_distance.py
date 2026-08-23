@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.geometry.point."""
 from zmlx.geometry.point import point_distance
 
 __all__ = ['point_distance']

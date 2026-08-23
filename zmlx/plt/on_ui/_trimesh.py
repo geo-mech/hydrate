@@ -1,3 +1,7 @@
+""" trimesh 绘图工具。
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.plt.on_axes import add_trimesh
 from zmlx.plt.on_figure import plot_on_axes
 

@@ -1,3 +1,7 @@
+"""Matplotlib 导出 DPI 配置.
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.exts import app_data
 
 key = 'plt_export_dpi'

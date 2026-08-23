@@ -1,3 +1,8 @@
+"""README.md 浏览器 widget.
+
+Modified by Claude, 2026-08-12
+"""
+
 import os
 
 from zmlx.system import read_text

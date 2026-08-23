@@ -3,6 +3,8 @@
 去进行整理。另外，后续会逐步避免模块/包的名字与函数/类重名。
 
 确保：from zmlx.alg import * 可以在zmlx中的其他包内正确执行，不会循环应用.
+
+Modified by Claude, 2026-08-12
 """
 import warnings
 
@@ -23,6 +25,7 @@ from zmlx.exts import SelfPath
 
 
 def get_cell_mask(*args, **kwargs):
+    """已弃用，请改用 ``zmlx.exts.get_cell_mask``（2027-5-23 后移除）."""
     from zmlx.exts import get_cell_mask as impl
     warnings.warn(
         "get_cell_mask is deprecated (will be removed after 2027-5-23). Please use zmlx.exts.get_cell_mask instead.",
@@ -31,6 +34,7 @@ def get_cell_mask(*args, **kwargs):
 
 
 def get_pos_range(*args, **kwargs):
+    """已弃用，请改用 ``zmlx.exts.get_pos_range``（2027-5-23 后移除）."""
     from zmlx.exts import get_pos_range as impl
     warnings.warn(
         "get_pos_range is deprecated (will be removed after 2027-5-23). Please use zmlx.exts.get_pos_range instead.",

@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.scen.icp."""
 from zmlx.scen.icp import *
 
 _keep = [create_fludefs]

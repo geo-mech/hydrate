@@ -1,3 +1,7 @@
+"""字符串→浮点数映射（Map）绑定.
+
+Modified by Claude, 2026-08-12
+"""
 from ctypes import c_double, c_void_p, c_char_p
 
 from zmlx.exts._dll import core, make_c_char_p

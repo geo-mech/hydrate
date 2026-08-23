@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.seepage_mesh.triangle."""
 from zmlx.seepage_mesh.triangle import split_triangles, create
 
 __all__ = [

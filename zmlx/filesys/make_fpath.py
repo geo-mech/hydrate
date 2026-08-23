@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.alg.fsys."""
 from zmlx.alg.fsys import make_fpath
 
 __all__ = ['make_fpath']

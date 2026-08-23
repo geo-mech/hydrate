@@ -1,3 +1,8 @@
+"""代码配置管理器（自动从脚本中提取注释配置）.
+
+Modified by Claude, 2026-08-12
+"""
+
 from typing import List, Optional, Dict, Any
 
 from zmlx.alg._extract_comments import extract_comments

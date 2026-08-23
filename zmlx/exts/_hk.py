@@ -1,3 +1,7 @@
+"""动态键值属性存储（HasKeys）绑定 — Cell/Face 用户定义属性.
+
+Modified by Claude, 2026-08-12
+"""
 from ctypes import c_void_p, c_char_p, c_longlong
 from typing import Optional
 

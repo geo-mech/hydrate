@@ -1,6 +1,9 @@
 """
 迭代更新流体的性质
+
+Modified by Claude, 2026-08-12
 """
+
 
 from zmlx.exts import clock, ThreadPool
 from zmlx.tfc._base import Seepage, get_vis_min, get_vis_max

@@ -1,3 +1,7 @@
+"""分解反应.
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.react import endothermic
 
 

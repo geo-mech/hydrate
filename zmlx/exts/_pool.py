@@ -1,3 +1,7 @@
+"""线程池（ThreadPool）绑定.
+
+Modified by Claude, 2026-08-12
+"""
 from ctypes import c_void_p, c_int
 from typing import Optional
 

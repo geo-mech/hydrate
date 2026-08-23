@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.alg.fsys."""
 from zmlx.alg.fsys import show_fileinfo
 
 __all__ = ['show_fileinfo']

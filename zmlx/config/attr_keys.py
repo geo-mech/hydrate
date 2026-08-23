@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.tfc."""
 from zmlx.tfc import *
 
 _keep = [DynKeys]

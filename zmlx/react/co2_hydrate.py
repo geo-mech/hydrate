@@ -5,7 +5,9 @@
 Anderson G K, 2003.. The Journal of Chemical Thermodynamics, 35(7): 1171–1183. DOI:10.1016/S0021-9614(03)00093-4.
 Zhou X, Fan S, Liang D, et al., 2008. . Energy Conversion and Management, 49(8): 2124–2129. DOI:10.1016/j.enconman.2008.02.006.
 
+Modified by Claude, 2026-08-12
 """
+
 
 import zmlx.react.hydrate as hydrate
 from zmlx.alg.interp import interp1

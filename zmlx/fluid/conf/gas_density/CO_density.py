@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
-""" critical values akes from Yaw's table
-CO2 = Carbon Dioxide
-PM = KG/MOL
-R = J/MOL*K
-Tc= K
-PC=Pa
-w = adimentional
+"""CO density 气体密度关联式（Yaw's table 临界值）.
+
+Modified by Claude, 2026-08-12
 """
+# critical values from Yaw's table:
+# CO = Carbon Monoxide, PM = KG/MOL
+# R = J/MOL*K, Tc = K, PC = Pa, w = adimentional
 
 from zmlx.exts import np
 

@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.alg.sys."""
 from zmlx.alg.sys import import_module
 
 __all__ = ['import_module']

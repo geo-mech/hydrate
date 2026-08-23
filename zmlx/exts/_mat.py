@@ -1,3 +1,7 @@
+"""矩阵运算绑定.
+
+Modified by Claude, 2026-08-12
+"""
 from ctypes import c_void_p, c_char_p, c_size_t, c_double, c_bool
 
 from zmlx.exts._dll import core, make_c_char_p

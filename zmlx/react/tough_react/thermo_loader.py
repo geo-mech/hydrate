@@ -1,3 +1,7 @@
+"""ToughReact 热力学数据加载.
+
+Modified by Claude, 2026-08-12
+"""
 import codecs
 
 import numpy as np
@@ -15,7 +19,7 @@ for i, line in enumerate(lines):
         parts = line.split()
         try:
             n = int(parts[0])
-        except:
+        except Exception:
             continue
         # 回溯寻找反应名称行
         name_line = None

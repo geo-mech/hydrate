@@ -1,3 +1,7 @@
+"""渗流模型（Seepage）绑定 — 核心模块.
+
+Modified by Claude, 2026-08-12
+"""
 import ctypes
 import math
 import warnings
@@ -4087,7 +4091,7 @@ class Seepage(HasHandle, HasCells):
         try:
             name = type(self).__name__
             log(f'{name} created', tag=f'{name}_Init')
-        except:
+        except Exception:
             pass
 
     def __repr__(self) -> str:
@@ -7399,7 +7403,7 @@ class Thermal(HasHandle):
         try:
             name = type(self).__name__
             log(f'{name} created', tag=f'{name}_Init')
-        except:
+        except Exception:
             pass
 
     def __repr__(self):

@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.io.load_col."""
 from zmlx.io.load_col import load_col
 
 __all__ = ['load_col']

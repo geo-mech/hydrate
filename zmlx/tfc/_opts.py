@@ -1,3 +1,9 @@
+"""配置合并工具.
+
+Modified by Claude, 2026-08-12
+"""
+
+
 def merge_opts(*opts, **kwargs):
     """
     合并字典，并且后面的字典会覆盖前面的字典。

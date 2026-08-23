@@ -1,6 +1,9 @@
 """
 matplotlib 字体配置工具。
+
+Modified by Claude, 2026-08-12
 """
+
 from zmlx.system import execute_once, in_windows, in_linux, in_macos
 
 

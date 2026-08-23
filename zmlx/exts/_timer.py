@@ -1,3 +1,7 @@
+"""计时器绑定.
+
+Modified by Claude, 2026-08-12
+"""
 import functools
 import timeit
 from ctypes import c_char_p, c_double, c_bool
@@ -82,7 +86,7 @@ class Timer:
             tmp = eval(self.summary())
             tmp.pop('enable', None)
             return tmp
-        except:
+        except Exception:
             return {}
 
     def log(self, name: str, seconds: float):

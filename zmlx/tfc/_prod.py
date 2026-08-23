@@ -1,6 +1,9 @@
 """
 控制用来生产的Cell的压力.
+
+Modified by Claude, 2026-08-12
 """
+
 
 from zmlx.alg.interp import interp1
 from zmlx.exts import clock

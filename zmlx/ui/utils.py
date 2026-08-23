@@ -1,3 +1,8 @@
+"""GUI 工具类（线程桥接、断点控制、文件处理、任务队列等基础设施）.
+
+Modified by Claude, 2026-08-12
+"""
+
 import os
 from queue import Queue, Empty
 
@@ -8,9 +13,7 @@ from zmlx.ui.pyqt import QtCore, QtWidgets
 
 
 class SharedList:
-    """
-    线程安全的列表
-    """
+    """线程安全的列表（基于 QMutex）。"""
 
     def __init__(self, value=None):
         self.value = value if isinstance(value, list) else []
@@ -40,6 +43,8 @@ class SharedList:
 
 
 class SharedDict:
+    """线程安全的字典（基于 QMutex）。"""
+
     def __init__(self, value=None):
         self.value = value if isinstance(value, dict) else {}
         self.mtx = QtCore.QMutex()
@@ -68,7 +73,14 @@ class SharedDict:
 
 
 class GuiApi(QtCore.QObject):
+    """GUI 命令桥接器。
+
+    通过信号/槽机制将非 GUI 线程的调用派发到主线程执行。
+    支持命令通道池（最多 20 个并发通道）和直接调用模式。
+    """
+
     class Channel:
+        """单个命令通道（互斥锁保护）。"""
         def __init__(self):
             self.args = []
             self.kwargs = {}
@@ -80,6 +92,13 @@ class GuiApi(QtCore.QObject):
     __sig_proc = QtCore.pyqtSignal(int)
 
     def __init__(self, parent, break_point=None, flag_exit=None):
+        """初始化 GUI API。
+
+        Args:
+            parent: 父 QObject。
+            break_point: 断点控制器（BreakPoint）。
+            flag_exit: 退出标志（SharedValue）。
+        """
         super(GuiApi, self).__init__(parent)
         self.__sig_proc.connect(self.__proc)
         self.break_point = break_point
@@ -250,6 +269,12 @@ class GuiApi(QtCore.QObject):
 
 
 class BreakPoint(QtCore.QObject):
+    """断点控制器（基于 QMutex 的暂停/继续机制）。
+
+    ``lock()`` 锁定互斥锁使执行线程阻塞；
+    ``unlock()`` 释放互斥锁使执行继续。
+    """
+
     __sig_unlocked = QtCore.pyqtSignal()
     __sig_locked = QtCore.pyqtSignal()
 
@@ -259,19 +284,23 @@ class BreakPoint(QtCore.QObject):
         self.__locked = SharedValue(False)
 
     def pass_only(self):
+        """仅通过断点（不改变锁定状态）。"""
         self.__mtx.lock()
         self.__mtx.unlock()
 
     def locked(self):
+        """返回是否处于锁定状态。"""
         return self.__locked.get()
 
     def lock(self):
+        """锁定断点（暂停执行）。"""
         if not self.__locked.get():
             self.__mtx.lock()
             self.__locked.set(True)
             self.__sig_locked.emit()
 
     def unlock(self):
+        """解锁断点（继续执行）。"""
         if self.__locked.get():
             self.__mtx.unlock()
             self.__locked.set(False)
@@ -279,6 +308,8 @@ class BreakPoint(QtCore.QObject):
 
 
 class SharedValue:
+    """线程安全的值容器（基于 QMutex）。"""
+
     def __init__(self, value=None):
         self.__val = value
         self.__mtx = QtCore.QMutex()
@@ -304,6 +335,12 @@ class SharedValue:
 
 
 class TaskProc(QtCore.QObject):
+    """任务处理器（队列 + 信号驱动）。
+
+    通过 ``add(task)`` 添加回调函数到队列，
+    由信号 ``__sig_do_task`` 触发执行，避免 GUI 阻塞。
+    """
+
     __sig_do_task = QtCore.pyqtSignal()
 
     def __init__(self, parent=None):
@@ -341,6 +378,7 @@ class TaskProc(QtCore.QObject):
                 print(f'meet error {err}')
 
     def add(self, task):
+        """添加任务到队列。"""
         try:
             if callable(task):
                 self.__mtx.lock()
@@ -352,6 +390,8 @@ class TaskProc(QtCore.QObject):
 
 
 class CodeFile:
+    """代码文件包装器（支持文本读取与存在性检查）。"""
+
     def __init__(self, fname):
         self.fname = fname
 

@@ -1,3 +1,7 @@
+"""DFN2 裂缝网络定义.
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.alg.base import linspace
 from zmlx.exts import Dfn2
 from zmlx.geometry.base import point_distance

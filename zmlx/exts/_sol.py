@@ -12,7 +12,10 @@
     solver = ConjugateGradientSolver(tolerance=1e-10)
     err = solver.solve(rows, cols, vals, x, b)
     # 或将 fn/ctx 传递给需要 solver callback 的底层函数
+
+Modified by Claude, 2026-08-12
 """
+
 
 from ctypes import c_double, c_int, c_void_p, cast, CFUNCTYPE, POINTER
 

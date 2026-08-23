@@ -1,3 +1,8 @@
+"""通用文本编辑器（ObjEditByText — 使用文本形式编辑任意对象）.
+
+Modified by Claude, 2026-08-12
+"""
+
 from typing import Any
 
 from zmlx.ui.alg import create_action

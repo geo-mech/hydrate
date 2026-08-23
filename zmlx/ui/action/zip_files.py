@@ -1,3 +1,8 @@
+"""文件打包/解包工具（将散落文件 zip 或 unzip）.
+
+Modified by Claude, 2026-08-12
+"""
+
 import os
 import zipfile
 
@@ -51,7 +56,7 @@ def execute_zip(folder, this_only=False):
             z.close()
             for name, path in all:
                 os.remove(path)
-        except:
+        except Exception:
             print('Failed')
         else:
             print('Succeed')
@@ -64,7 +69,7 @@ def execute_zip(folder, this_only=False):
             execute_zip(folder, this_only=True)
         except KeyboardInterrupt:
             return
-        except:
+        except Exception:
             pass
 
 
@@ -84,7 +89,7 @@ def execute_unzip(folder, this_only=False):
                 z.extractall(folder)
                 z.close()
                 os.remove(file)
-            except:
+            except Exception:
                 print('Failed')
             else:
                 print('Succeed')
@@ -103,7 +108,7 @@ def execute_unzip(folder, this_only=False):
                     continue
                 else:
                     all.append((parts[0], log, path))
-        except:
+        except Exception:
             all = []
 
         for subdir, log, path in all:
@@ -114,7 +119,7 @@ def execute_unzip(folder, this_only=False):
                 z.close()
                 os.remove(path)
                 os.remove(log)
-            except:
+            except Exception:
                 print('Failed')
             else:
                 print('Succeed')
@@ -127,7 +132,7 @@ def execute_unzip(folder, this_only=False):
             execute_unzip(folder, this_only=True)
         except KeyboardInterrupt:
             return
-        except:
+        except Exception:
             pass
 
 

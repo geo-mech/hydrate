@@ -1,6 +1,9 @@
 """
 定义，在模型执行到某一个时刻的时候来执行的操作
+
+Modified by Claude, 2026-08-12
 """
+
 
 from zmlx.exts import Seepage, clock
 from zmlx.tfc._base import get_time, get_dt, get_configs

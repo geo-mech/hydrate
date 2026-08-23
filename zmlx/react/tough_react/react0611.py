@@ -1,3 +1,7 @@
+"""ToughReact 0611 反应模块.
+
+Modified by Claude, 2026-08-12
+"""
 from typing import List, Dict
 
 import numpy as np
@@ -99,7 +103,7 @@ def load_mol_weights(filepath="reaction data/thermo_data.tdat") -> Dict[str, flo
                 parts = lines[i].split("mole wt.=")[-1].split()
                 weight = float(parts[0])
                 weights[name] = weight
-            except:
+            except Exception:
                 pass
         i += 1
     return weights

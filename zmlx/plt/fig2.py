@@ -1,6 +1,9 @@
 """
 这里，定义在gui上绘图的顶层的函数，直接操作gui或者在控制台绘图.
+
+Modified by Claude, 2026-08-12
 """
+
 
 from zmlx.io.xyz import load_xyz
 from zmlx.plt.on_axes import add_tricontourf
@@ -70,13 +73,13 @@ def plot2(data=None, **opts):
                 try:  # 优先去使用标准的版本
                     obj = getattr(ax, name, None)(*args, **kwargs)
                     succeed = True
-                except:
+                except Exception:
                     pass
             if not succeed:
                 try:  # 尝试使用自定义的内核函数
                     obj = kernels.get(name)(ax, *args, **kwargs)
                     succeed = True
-                except:
+                except Exception:
                     pass
             if succeed:  # 绘图成功，尝试添加colorbar
                 clabel = d.get('clabel')

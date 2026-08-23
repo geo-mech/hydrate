@@ -1,3 +1,7 @@
+"""Tensor3Matrix3 属性。
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.exts import Tensor3Matrix3
 from zmlx.ptree.box import box3
 from zmlx.ptree.ptree import PTree

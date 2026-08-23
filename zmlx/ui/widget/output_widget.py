@@ -1,3 +1,8 @@
+"""控制台输出控件（OutputWidget — 标准输出捕获、进度条、命令输入行）.
+
+Modified by Claude, 2026-08-12
+"""
+
 import os
 from typing import Optional, Tuple, List, Union
 

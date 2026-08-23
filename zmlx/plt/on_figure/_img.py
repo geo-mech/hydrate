@@ -1,3 +1,7 @@
+""" img 绘图工具。
+
+Modified by Claude, 2026-08-12
+"""
 def add_axes_img(fig, file_path):
     """
     在给定的 matplotlib figure 上绘制图片，保持比例不变，页边距尽可能为 0

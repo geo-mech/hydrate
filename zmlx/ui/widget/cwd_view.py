@@ -1,3 +1,8 @@
+"""工作目录文件浏览器 widget.
+
+Modified by Claude, 2026-08-12
+"""
+
 import os
 import time
 import timeit

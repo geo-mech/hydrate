@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.alg.multi_proc."""
 from zmlx.alg.multi_proc import apply_async, create_async
 
 __all__ = [

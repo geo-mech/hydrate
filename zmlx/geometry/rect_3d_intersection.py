@@ -1,3 +1,7 @@
+"""三维矩形相交检测与可视化.
+
+Modified by Claude, 2026-08-12
+"""
 import matplotlib.pyplot as plt
 
 try:
@@ -381,10 +385,10 @@ def calculate_3d_rectangle_intersect(center1, r1_mid1, r1_mid2, center2,
         # 存在交点
         elif len(local_intersect_line) == 1:
             # 交点为顶点，且线段端点均在2d矩形外部
-            assert (p1_bool and p2_bool) is not True
-            if p1_bool == True and p2_bool == False:
+            assert not (p1_bool and p2_bool)
+            if p1_bool and not p2_bool:
                 local_intersect_line.append(intersec1)
-            elif p1_bool == False and p2_bool == True:
+            elif not p1_bool and p2_bool:
                 local_intersect_line.append(intersec2)
 
         # 添加z轴，设置为零

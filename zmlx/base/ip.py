@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.exts._ip."""
 from zmlx.exts._ip import *
 
 _keep = [ip_nodes_write]

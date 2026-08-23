@@ -14,7 +14,10 @@
     from zmlx.exts.cuda_sol import CudaSolver
     solver = CudaSolver(method='cg', tol=1e-10)
     err = solver.solve(rows, cols, vals, x, b)
+
+Modified by Claude, 2026-08-12
 """
+
 
 from ctypes import c_double, c_int, c_void_p, CFUNCTYPE, POINTER
 

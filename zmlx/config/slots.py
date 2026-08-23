@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.tfc._slots."""
 from zmlx.tfc._slots import *
 
 _keep = [get_slots]

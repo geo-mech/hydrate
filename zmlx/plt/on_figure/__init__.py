@@ -1,7 +1,10 @@
 """
 在这个文件中，处理和figure相关的方法. 这里，不直接处理在Axes上的操作。这里，主要是首先常见Axes，然后，再
 基于on_axes中定义的方法，来创建具体的图形。
+
+Modified by Claude, 2026-08-12
 """
+
 from typing import Optional
 
 from zmlx.plt.on_figure._img import add_axes_img

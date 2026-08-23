@@ -1,3 +1,8 @@
+"""控制台输出历史浏览器.
+
+Modified by Claude, 2026-08-12
+"""
+
 import glob
 import os
 

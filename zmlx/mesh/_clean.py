@@ -2,7 +2,10 @@
 清理 Mesh3 中的孤立元素（不返回原始对象的副本，原始 mesh 不变）。
 
 作者: Claude Code
+
+Modified by Claude, 2026-08-12
 """
+
 
 from zmlx.exts import Mesh3
 

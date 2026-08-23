@@ -1,3 +1,7 @@
+"""预定义 10000 单元渗流网格。
+
+Modified by Claude, 2026-08-12
+"""
 import os
 
 from zmlx.exts import read_text, Mesh3

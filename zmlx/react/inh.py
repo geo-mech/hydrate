@@ -1,3 +1,7 @@
+"""抑制剂反应.
+
+Modified by Claude, 2026-08-12
+"""
 import warnings
 
 

@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.fluid.alg."""
 from zmlx.fluid.alg import from_data
 
 __all__ = [

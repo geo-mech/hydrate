@@ -1,3 +1,7 @@
+"""Tensor3 插值属性。
+
+Modified by Claude, 2026-08-12
+"""
 from scipy.interpolate import NearestNDInterpolator
 
 from zmlx.exts import Tensor2, Tensor3

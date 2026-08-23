@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.alg.sys."""
 from zmlx.alg.sys import add_pth_file as install
 
 __all__ = ['install']

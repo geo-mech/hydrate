@@ -1,3 +1,7 @@
+"""数据文件路径工具。
+
+Modified by Claude, 2026-08-12
+"""
 import os
 
 from zmlx.alg.fsys import join_paths

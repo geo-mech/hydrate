@@ -2,7 +2,10 @@
 在矩形区域内创建只有 Node、Link 和 Face（无 Body）的 Mesh3 网格。
 
 作者: Claude Code
+
+Modified by Claude, 2026-08-12
 """
+
 
 from typing import Sequence
 from zmlx.exts import Mesh3

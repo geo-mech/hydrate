@@ -1,3 +1,7 @@
+"""日志记录（文件 + 消息队列）。
+
+Modified by Claude, 2026-08-12
+"""
 from typing import Optional
 
 from zmlx.system._app_data import app_data

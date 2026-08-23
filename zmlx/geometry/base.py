@@ -1,3 +1,7 @@
+"""几何基础模块（聚合导出点/线段/矩形/三角形的所有函数）.
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.geometry.point import get_angle, get_norm
 from zmlx.geometry.point import point_distance
 from zmlx.geometry.segment import get_seg_angle, get_center, seg_intersection, seg_point_distance

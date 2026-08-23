@@ -1,3 +1,7 @@
+""" tricontourf 绘图工具。
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.plt.on_axes._cbar import add_cbar
 
 

@@ -1,3 +1,12 @@
+"""PyQt 版本自动适配。
+
+按优先级检测：已导入的 PyQt6/PyQt5 → 用户环境变量 Qt_version →
+尝试 PyQt6 → 尝试 PyQt5。无头模式下跳过 Qt 导入。
+同时导出 QtCore、QtGui、QtWidgets、QAction、QtMultimedia、QWebEngineView 等常用模块。
+
+Modified by Claude, 2026-08-12
+"""
+
 import sys
 
 qt_name = None
@@ -51,7 +60,7 @@ if qt_name is None:
 
         qt_name = "PyQt6"
         print("PyQt6 is imported.")
-    except:
+    except Exception:
         pass
 
 if qt_name is None:
@@ -60,7 +69,7 @@ if qt_name is None:
 
         qt_name = "PyQt5"
         print("PyQt5 is imported.")
-    except:
+    except Exception:
         pass
 
 if qt_name is None:

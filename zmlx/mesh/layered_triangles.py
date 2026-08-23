@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.mesh.triangle."""
 from zmlx.mesh.triangle import layered_triangles
 
 __all__ = [

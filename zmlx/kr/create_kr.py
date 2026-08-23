@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.kr.base."""
 import zmlx.alg.sys as warnings
 from zmlx.kr.base import create_kr
 

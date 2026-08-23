@@ -1,5 +1,7 @@
 """
 辅助 InvasionPercolation 类的函数.
+
+Modified by Claude, 2026-08-12
 """
 
 from zmlx.exts._ip import *

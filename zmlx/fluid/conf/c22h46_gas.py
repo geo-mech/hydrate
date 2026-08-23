@@ -1,10 +1,7 @@
+"""C22H46（二十二烷）气体属性.
+
+Modified by Claude, 2026-08-12
 """
-
-C2H22 = Docosane
-Heavy Oil 
-
-"""
-
 import zmlx.alg.sys as warnings
 
 from zmlx.exts import Interp2, FluDef

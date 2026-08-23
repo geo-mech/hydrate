@@ -1,3 +1,7 @@
+"""线段几何计算（交点、点到线段距离、角度）.
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.geometry.point import get_angle, point_distance
 
 

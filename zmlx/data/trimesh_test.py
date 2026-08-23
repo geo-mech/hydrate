@@ -1,3 +1,7 @@
+"""三角形测试网格生成。
+
+Modified by Claude, 2026-08-12
+"""
 def generate_test_mesh(rows=15, cols=15, noise=0.01):
     """
     生成带有随机扰动的二维三角形测试网格

@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.tfc._opts."""
 from zmlx.tfc._opts import merge_opts
 
 _keep = [merge_opts]

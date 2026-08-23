@@ -1,6 +1,9 @@
 """
 定义不依赖于DLL的通用的函数或者类
+
+Modified by Claude, 2026-08-12
 """
+
 
 import ctypes
 import os

@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.alg.sys."""
 from zmlx.alg.sys import install_dep
 
 __all__ = ['install_dep']

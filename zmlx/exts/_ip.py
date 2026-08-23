@@ -1,3 +1,7 @@
+"""入侵渗流（Invasion Percolation）绑定.
+
+Modified by Claude, 2026-08-12
+"""
 import warnings
 from ctypes import c_double, c_void_p, c_size_t, c_bool, c_char_p, POINTER
 from typing import Union
@@ -1066,7 +1070,7 @@ class InvasionPercolation(HasHandle):
         try:
             name = type(self).__name__
             log(f'{name} created', tag=f'{name}_Init')
-        except:
+        except Exception:
             pass
 
     def __eq__(self, rhs):

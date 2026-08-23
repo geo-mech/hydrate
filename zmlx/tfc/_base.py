@@ -4,7 +4,10 @@ base模块定义渗流类Seepage的一些基础的接口。注意，此模块不
 对于多场耦合过程，我们采用工作流模式 (Workflow Pattern)-各流程像流水线一样处理数据。因此，关于数据的定义是非常关键的。
 对于流体计算，我们采用Seepage类来定义所有的数据状态。因此，这里定义的接口，是后续进行流体计算的基础。这里，定义最核心
 的数据接口。当然，一切的定义，本质上都是基于Seepage类的成员函数。
+
+Modified by Claude, 2026-08-12
 """
+
 import ctypes
 import os
 from ctypes import c_void_p
@@ -463,7 +466,7 @@ def add_dt_next(model: Seepage, dt: float, desc: Optional[str] = None):
         add_config(model, text_key='dt_next', dt=dt, desc=desc)
 
 
-def get_dt_next(model: Seepage, clear: bool = True) -> Optional[float]:
+def get_dt_next(model: Seepage, clear: bool = True) -> float:
     """
     返回在所有的配置中的dt的最小值. 如果没有配置，返回None.
     """

@@ -214,7 +214,7 @@ def create(
                 vol_rate = q / flu.den  # 将质量速率转换为体积速率
                 opers.append([t, f'{vol_rate}'])
         opers.append([years_inj * 3600.0 * 24.0 * 365.0, '0'])  # 注入结束时关闭注入
-    except:  # 失败了之后，再作为一个数字来对待
+    except Exception:  # 失败了之后，再作为一个数字来对待
         vol_rate = mass_rate / flu.den
         opers = [[0.0, f'{vol_rate}'], [years_inj * 3600.0 * 24.0 * 365.0, '0']]
     model.add_injector(

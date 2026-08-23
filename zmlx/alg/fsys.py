@@ -29,13 +29,13 @@ def list_files(path=None, keywords=None, exts=None):
                         ext = os.path.splitext(path)[1]
                         if ext not in exts:
                             is_ok = False
-                    except:
+                    except Exception:
                         is_ok = False
             if is_ok:
                 return [path, ]
             else:
                 return []
-        except:
+        except Exception:
             return []
     elif os.path.isdir(path):
         files = []
@@ -60,7 +60,7 @@ def get_lines(path):
     try:
         with open(path, 'r', encoding='utf-8') as file:
             return len(file.readlines())
-    except:
+    except Exception:
         return 0
 
 
@@ -130,7 +130,7 @@ def get_latest_file(folder):
 
         return os.path.abspath(latest_path) if latest_path else None
 
-    except:
+    except Exception:
         return None
 
 
@@ -168,7 +168,7 @@ def get_size_mb(path):
             # 特殊文件类型（如符号链接）
             return 0.0
 
-    except:  # 统一异常处理（参考网页6的健壮性设计）
+    except Exception:  # 统一异常处理（参考网页6的健壮性设计）
         return 0.0
 
 
@@ -179,7 +179,7 @@ def has_permission(folder):
     try:
         os.listdir(folder)
         return True
-    except:
+    except Exception:
         return False
 
 
@@ -264,7 +264,7 @@ def get_protected(func, res=None):
     def fx(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except:
+        except Exception:
             return res
 
     return fx
@@ -305,7 +305,7 @@ def show_fileinfo(filepath):
             print(f'Access Time: {time.ctime(getatime(filepath))}')
             print(f'Modify Time: {time.ctime(getmtime(filepath))}')
             print('\n\n')
-    except:
+    except Exception:
         pass
 
 
@@ -382,12 +382,12 @@ def _do_convert(i_path, o_path, convert=None, keep_file=True, create_data=None,
             data.load(i_path)
             data.save(o_path)
         succeed = True
-    except:
+    except Exception:
         pass
 
     try:
         name = os.path.basename(o_path)
-    except:
+    except Exception:
         name = o_path
 
     info = 'convert: '
@@ -403,7 +403,7 @@ def _do_convert(i_path, o_path, convert=None, keep_file=True, create_data=None,
             try:
                 if os.path.isfile(o_path):
                     os.remove(i_path)
-            except:
+            except Exception:
                 pass
         print(f'{info}"{i_path}" -> "{name}" Succeed!')
         return True

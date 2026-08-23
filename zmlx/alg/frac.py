@@ -1,3 +1,8 @@
+"""裂缝宽度与传导率计算（基于 Crouch & Starfield 1983）.
+
+Modified by Claude, 2026-08-12
+"""
+
 from math import sqrt, pow
 
 from zmlx.alg.base import clamp

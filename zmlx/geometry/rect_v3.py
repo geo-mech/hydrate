@@ -1,3 +1,7 @@
+"""三维矩形 v3 版本.
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.geometry.point import point_distance as get_distance
 from zmlx.geometry.segment import seg_intersection
 

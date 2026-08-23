@@ -1,3 +1,7 @@
+"""获取颜色值工具。
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.alg.base import clamp
 
 

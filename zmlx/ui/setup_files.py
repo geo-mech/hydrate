@@ -1,3 +1,5 @@
+"""已弃用的模块，请改用 zmlx.ui.exts."""
+
 from zmlx.system import warn, deprecated
 
 warn('setup_files.py is deprecated.', DeprecationWarning, stacklevel=2)

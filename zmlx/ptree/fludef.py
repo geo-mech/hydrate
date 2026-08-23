@@ -1,3 +1,7 @@
+"""FluDef 流体定义属性。
+
+Modified by Claude, 2026-08-12
+"""
 import os
 
 from zmlx.exts import FluDef, Seepage
@@ -66,7 +70,7 @@ def _from_text(text, find=None, name=None):
             if os.path.isfile(fname):
                 try:
                     return FluDef(path=fname, name=name)
-                except:
+                except Exception:
                     return None
             return None
         return None

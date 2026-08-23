@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.alg.os."""
 import zmlx.alg.sys as warnings
 
 from zmlx.alg.os import get_desktop_path

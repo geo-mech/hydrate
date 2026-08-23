@@ -1,7 +1,10 @@
 """
 定义数据格式 fn2，主要包括4列数据，用于定义裂缝位置，1列数据，用于定义裂缝的宽度，
 1列数据，用于定义裂缝的颜色（如压力）
+
+Modified by Claude, 2026-08-12
 """
+
 
 from zmlx.plt.on_axes import add_fn2
 from zmlx.plt.on_figure import plot_on_axes

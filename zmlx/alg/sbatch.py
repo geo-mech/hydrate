@@ -6,6 +6,9 @@
     显示用户sce4885的磁盘占用以及剩余的容量.
         lfs quota -uh sce4885 ~
 
+.
+
+Modified by Claude, 2026-08-12
 """
 import zmlx.alg.sys as warnings
 
@@ -18,6 +21,7 @@ from zmlx.alg.sys import sbatch
 
 
 def main():
+    """命令行入口：将参数传递给 sbatch 提交任务。"""
     is_windows = os.name == 'nt'
     if is_windows:
         print('The current system is Windows (do not support)')

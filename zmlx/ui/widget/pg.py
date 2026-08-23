@@ -1,3 +1,8 @@
+"""pyqtgraph 控制台（可选依赖，导入失败时为空）.
+
+Modified by Claude, 2026-08-12
+"""
+
 try:
     from pyqtgraph.console import ConsoleWidget
     from zmlx.system import app_data

@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.geometry.base."""
 import zmlx.alg.sys as warnings
 
 from zmlx.geometry.base import point_distance as get_point_distance

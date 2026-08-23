@@ -1,5 +1,7 @@
 """
 计算各个face的位置流体压力的梯度，并作为一个numpy的数组返回
+
+Modified by Claude, 2026-08-12
 """
 
 from zmlx.exts import FluDef, const_f64_ptr

@@ -1,3 +1,7 @@
+"""动态系统绑定（SpringSys/DynSys）.
+
+Modified by Claude, 2026-08-12
+"""
 import ctypes
 from ctypes import c_void_p, c_char_p, c_double, c_size_t, c_int
 from typing import Optional, Iterable
@@ -62,7 +66,7 @@ class DynSys(HasHandle):
         try:
             name = type(self).__name__
             log(f'{name} created', tag=f'{name}_Init')
-        except:
+        except Exception:
             pass
 
     def get_sol(self):
@@ -1008,7 +1012,7 @@ class SpringSys(HasHandle):
         try:
             name = type(self).__name__
             log(f'{name} created', tag=f'{name}_Init')
-        except:
+        except Exception:
             pass
 
     def __repr__(self):

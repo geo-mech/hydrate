@@ -1,3 +1,8 @@
+"""GUI 辅助函数（菜单动作、文件类型注册、URL 打开、历史记录等）.
+
+Modified by Claude, 2026-08-12
+"""
+
 from zmlx.system import app_data, get_hash
 from zmlx.ui.pyqt import QtWidgets
 
@@ -34,6 +39,7 @@ def create_action(parent, text, *, icon=None, slot=None):
 
 
 def add_code_history(fname):
+    """将脚本文件复制到 console_history 目录下备份。"""
     try:
         import os
         import shutil
@@ -52,6 +58,7 @@ def add_code_history(fname):
 
 
 def add_exec_history(code):
+    """记录执行历史（传入 None 时标记上次执行已清除）。"""
     key = 'console_exec_history'
     history = app_data.get(key, [])
     if not isinstance(history, list):
@@ -61,6 +68,7 @@ def add_exec_history(code):
 
 
 def get_last_exec_history():
+    """返回最后一次执行的历史记录。"""
     key = 'console_exec_history'
     history = app_data.get(key, [])
     if not isinstance(history, list):
@@ -72,6 +80,7 @@ def get_last_exec_history():
 
 
 def clear_exec_history():
+    """清除所有执行历史记录。"""
     app_data.put('console_exec_history', [])
 
 
@@ -129,6 +138,7 @@ def get_current_screen_geometry(window):
 
 
 def v_spacer():
+    """创建垂直弹性空间（用于布局底部填充）。"""
     from zmlx.ui.pyqt import QtWidgets
     return QtWidgets.QSpacerItem(
         40, 20, QtWidgets.QSizePolicy.Policy.Minimum,
@@ -136,6 +146,7 @@ def v_spacer():
 
 
 def h_spacer():
+    """创建水平弹性空间（用于布局右侧填充）。"""
     from zmlx.ui.pyqt import QtWidgets
     return QtWidgets.QSpacerItem(
         40, 20, QtWidgets.QSizePolicy.Policy.Expanding,
@@ -208,6 +219,7 @@ def open_gitee_geomech_hydrate():
 
 
 def open_iggcas():
+    """打开中科院地质地球所主页。"""
     open_url(
         url='http://www.igg.cas.cn/',
         on_top=True,
@@ -217,6 +229,7 @@ def open_iggcas():
 
 
 def open_new_issue():
+    """打开 Gitee 新建 Issue 页面。"""
     open_url(
         url='https://gitee.com/geomech/hydrate/issues/new',
         on_top=True,
@@ -226,6 +239,7 @@ def open_new_issue():
 
 
 def open_my_publications():
+    """打开作者发表物链接（浏览器打开）。"""
     open_url(
         url="https://pan.cstcloud.cn/s/5cKaQrdFSHM",
         use_web_engine=False
@@ -233,6 +247,7 @@ def open_my_publications():
 
 
 def show_widget(widget, caption=None, use_gui=False, **kwargs):
+    """独立显示一个 widget（GUI 模式或独立 QApplication）。"""
     if use_gui:
         from zmlx.ui import gui
 
@@ -351,7 +366,7 @@ def reg_file_type(desc, exts, *, name=None, save=None, load=None, init=None, wid
                                 from zmlx.alg.fsys import getsize_str
                                 fs = getsize_str(filename)
                                 print(f'成功保存到:\n{filename} ({fs})')
-                            except:
+                            except Exception:
                                 print(f'成功保存到:\n{filename}')
                         except Exception as e:
                             print(e)
@@ -476,6 +491,7 @@ def edit_in_tab(widget_type, set_data, get_data=None, caption=None, support_refr
 
 
 def install_package():
+    """弹出对话框让用户选择/输入包名并执行 pip install。"""
     from zmlx.data.dep import package_names, import_names
     from zmlx.alg.sys import pip_install
     from zmlx.ui.gui_buffer import gui
@@ -491,6 +507,7 @@ def install_package():
 
 
 def set_plt_export_dpi():
+    """弹出对话框设置 matplotlib 导出图片的 DPI。"""
     from zmlx.io.env import plt_export_dpi
     from zmlx.ui.gui_buffer import gui
     number, ok = gui.get_double(
@@ -502,6 +519,7 @@ def set_plt_export_dpi():
 
 
 def play_images():
+    """顺序播放当前目录下的所有 jpg/png 图片。"""
     from zmlx.alg.fsys import list_files
     from zmlx.ui.gui_buffer import gui
 
@@ -521,6 +539,7 @@ def play_images():
 
 
 def set_position(tab_widget):
+    """根据环境变量 TabPosition 设置标签页位置。"""
     try:
         text = app_data.getenv('TabPosition', default='North',
                                ignore_empty=True)
@@ -537,6 +556,7 @@ def set_position(tab_widget):
 
 
 def set_shape(tab_widget):
+    """根据环境变量 TabShape 设置标签页形状（圆角/三角）。"""
     try:
         text = app_data.getenv('TabShape', default='Rounded',
                                ignore_empty=True)

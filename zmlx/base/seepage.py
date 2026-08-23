@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.tfc._base."""
 from zmlx.tfc._base import *
 
 _keep = [as_numpy]

@@ -1,3 +1,7 @@
+"""数组操作（numpy 与 C 数组互转）.
+
+Modified by Claude, 2026-08-12
+"""
 from ctypes import c_double, c_void_p, c_char_p, c_size_t
 from typing import List, Tuple, Optional, Union
 

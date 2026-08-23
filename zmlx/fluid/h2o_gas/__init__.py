@@ -1,3 +1,7 @@
+"""H2O 气相流体属性（基于 NIST 数据表）.
+
+Modified by Claude, 2026-08-12
+"""
 import os
 
 from zmlx.exts import Interp2, FluDef
@@ -22,5 +26,5 @@ if __name__ == '__main__':
 
         show_field2(flu.den, [1e6, 20e6], [270, 290])
         show_field2(flu.vis, [1e6, 20e6], [270, 290])
-    except:
+    except Exception:
         pass

@@ -121,25 +121,25 @@ class GuiIteratorEdit(QtWidgets.QWidget):
 
     def _on_clear_history(self):
         if self._iter is not None:
-            self._iter.history.clear()
-            self._iter.step = 0
-            self._iter.step_last_plot = None
+            self._iter._history.clear()
+            self._iter._step = 0
+            self._iter._step_last_plot = None
             self._plt.figure.clear()
             self._plt.draw()
             self._update_status()
 
     def _on_refresh(self):
-        if self._iter is not None and len(self._iter.history) >= 2:
+        if self._iter is not None and len(self._iter._history) >= 2:
             self._plt.plot_on_figure(self._iter.show_timing)
 
     def _update_status(self):
         if self._iter is None:
             return
         self._status.setText(
-            f'Step: {self._iter.step}  |  '
-            f'Iter: {self._iter.time_iter:.2f}s  |  '
-            f'Plot: {self._iter.time_plot:.2f}s  |  '
-            f'History: {len(self._iter.history)}')
+            f'Step: {self._iter._step}  |  '
+            f'Iter: {self._iter._time_iter:.2f}s  |  '
+            f'Plot: {self._iter._time_plot:.2f}s  |  '
+            f'History: {len(self._iter._history)}')
 
     def refresh(self):
         self._sync_from_iter()

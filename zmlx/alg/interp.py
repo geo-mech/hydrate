@@ -1,5 +1,8 @@
 """
 插值相关的函数
+.
+
+Modified by Claude, 2026-08-12
 """
 try:
     from scipy.interpolate import interp1d

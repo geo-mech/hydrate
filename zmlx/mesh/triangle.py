@@ -1,6 +1,9 @@
 """
 处理三角形网格相关的算法
+
+Modified by Claude, 2026-08-12
 """
+
 import math
 
 try:

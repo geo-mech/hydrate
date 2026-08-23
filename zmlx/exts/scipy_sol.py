@@ -10,7 +10,10 @@
     # 作为 FuncSol callback 使用:
     # solver.fn  → C 函数指针 (ctypes CFUNCTYPE)
     # solver.ctx → 上下文指针 (solver 实例 id)
+
+Modified by Claude, 2026-08-12
 """
+
 
 from ctypes import c_double, c_int, c_void_p, cast, CFUNCTYPE, POINTER
 

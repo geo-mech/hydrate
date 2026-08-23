@@ -1,7 +1,25 @@
+"""粘性阻力减速计算（模拟流体在粘性作用下的速度衰减）.
+
+Modified by Claude, 2026-08-12
+"""
+
 import math
 
 
 def get_velocity_after_slowdown_by_viscosity(v0: float, a0: float, time: float):
+    """模拟粘性阻力下的速度衰减（指数衰减模型）。
+
+    速度按半衰期指数衰减：``v = v0 * 0.5^(t / half_t)``，
+    其中半衰期 ``half_t ≈ 0.693 * v0 / a0``（`a0` 为减速度）。
+
+    Args:
+        v0: 初始速度。
+        a0: 减速度（取绝对值后使用）。
+        time: 衰减时间（必须 >= 0）。
+
+    Returns:
+        float: 衰减后的速度。
+    """
     # 确保时间非负
     assert time >= 0.0, "time must be non-negative"
 

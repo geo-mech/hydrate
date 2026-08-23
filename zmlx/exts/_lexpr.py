@@ -1,3 +1,7 @@
+"""线性表达式（LinearExpr）绑定.
+
+Modified by Claude, 2026-08-12
+"""
 from ctypes import c_void_p, c_char_p, c_double, c_size_t
 from typing import Optional, Tuple, Union, List
 

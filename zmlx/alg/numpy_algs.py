@@ -1,3 +1,8 @@
+"""numpy 数组与文本互转工具.
+
+Modified by Claude, 2026-08-12
+"""
+
 from io import StringIO
 
 from zmlx.exts import np

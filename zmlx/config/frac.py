@@ -1,5 +1,7 @@
 """
 裂缝相关的算法
+
+Modified by Claude, 2026-08-12
 """
 
 from zmlx.scen.frac import get_fn2

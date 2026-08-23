@@ -1,3 +1,7 @@
+"""pyqtgraph 颜色映射工具。
+
+Modified by Claude, 2026-08-12
+"""
 import zmlx.alg.sys as warnings
 
 try:

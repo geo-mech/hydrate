@@ -1,3 +1,11 @@
+"""控制台内核执行器。
+
+在独立线程中执行用户代码，支持暂停/停止/断点，
+通过 Qt 信号与主线程通信。
+
+Modified by Claude, 2026-08-12
+"""
+
 import os
 import timeit
 
@@ -10,10 +18,20 @@ from zmlx.ui.utils import CodeFile, SharedValue, BreakPoint
 
 
 class ConsoleThread(QtCore.QThread):
+    """代码执行线程。
+
+    在独立线程中运行用户代码，完成后通过信号通知主线程。
+    """
+
     sig_done = QtCore.pyqtSignal()
     sig_err = QtCore.pyqtSignal(str)
 
     def __init__(self, code):
+        """初始化执行线程。
+
+        Args:
+            code: 要执行的可调用对象。
+        """
         super(ConsoleThread, self).__init__()
         self.code = code
         self.result = None
@@ -22,6 +40,7 @@ class ConsoleThread(QtCore.QThread):
         self.time_beg = None
 
     def run(self):
+        """在线程中执行代码，捕获 KeyboardInterrupt 和通用异常。"""
         if self.code is not None:
             try:
                 self.result = self.code()
@@ -33,6 +52,12 @@ class ConsoleThread(QtCore.QThread):
 
 
 class Console(QtCore.QObject):
+    """控制台内核。
+
+    管理代码执行的完整生命周期：启动 → 暂停/继续 → 停止，
+    支持执行脚本文件和 Python 代码字符串。
+    """
+
     sig_kernel_started = QtCore.pyqtSignal()
     sig_kernel_done = QtCore.pyqtSignal()
     sig_kernel_err = QtCore.pyqtSignal(str)
@@ -47,9 +72,11 @@ class Console(QtCore.QObject):
         self.flag_exit = SharedValue(False)
 
     def get_pause(self):
+        """返回是否处于暂停状态。"""
         return self.break_point.locked()
 
     def set_pause(self, value):
+        """设置暂停/继续状态，触发界面刷新。"""
         if value != self.get_pause():
             if self.break_point.locked():
                 self.break_point.unlock()
@@ -58,19 +85,27 @@ class Console(QtCore.QObject):
             self.sig_refresh.emit()
 
     def get_stop(self):
+        """返回是否处于停止状态。"""
         return self.flag_exit.get()
 
     def set_stop(self, value):
+        """设置停止状态（停止时自动解除暂停）。"""
         self.flag_exit.set(value)
         if value:
             self.set_pause(False)
         self.sig_refresh.emit()
 
     def stop(self):
+        """切换停止/运行状态（UI 按钮回调）。"""
         app_data.log(f'execute <stop_clicked> of {self}')
         self.set_stop(not self.get_stop())
 
     def exec_file(self, fname=None):
+        """执行 Python 脚本文件。
+
+        Args:
+            fname: 文件路径。
+        """
         if not isinstance(fname, str):
             return
         if os.path.isfile(fname):
@@ -134,11 +169,13 @@ class Console(QtCore.QObject):
         self.sig_refresh.emit()
 
     def start_last(self):
+        """重新执行上一次的代码。"""
         last_history = get_last_exec_history()
         if last_history is not None:
             self.start_func(**last_history)
 
     def __kernel_exited(self):
+        """内核线程完成后的回调：获取结果，打印耗时，执行善后任务。"""
         if self.thread is not None:
             self.result = self.thread.result  # 首先，要获得结果
 
@@ -166,6 +203,7 @@ class Console(QtCore.QObject):
                 print(err)
 
     def __kernel_err(self, err):
+        """内核线程异常回调：记录错误信息。"""
         self.kernel_err = err
         print(f'Error: {err}')
         self.sig_kernel_err.emit(err)
@@ -175,10 +213,13 @@ class Console(QtCore.QObject):
             print(err)
 
     def is_running(self):
+        """返回内核是否正在运行。"""
         return self.thread is not None
 
     def get_break_point(self):
+        """返回断点控制器。"""
         return self.break_point
 
     def get_flag_exit(self):
+        """返回停止标志。"""
         return self.flag_exit

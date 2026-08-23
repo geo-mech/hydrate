@@ -1,11 +1,11 @@
-# -*- coding: utf-8 -*-
-"""
+"""O2 气体属性.
 
 @author: Maryelin
+Ref: https://www.engineeringtoolbox.com/oxygen-d_978.html
 
-Specific Heat of Oxigen Gas  from:
-https://www.engineeringtoolbox.com/oxygen-d_978.html
+Modified by Claude, 2026-08-12
 """
+
 import matplotlib.pyplot as plt
 
 import zmlx.alg.sys as warnings

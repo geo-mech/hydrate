@@ -2,7 +2,10 @@
 用于模拟砂的沉降及脱离（测试中）。
 
 存在已知问题，即梯度的计算不准确。造成无法很好地计算砂子的脱离
+
+Modified by Claude, 2026-08-12
 """
+
 
 from zmlx.exts import Seepage, np, clock, const_f64_ptr
 from zmlx.tfc._base import as_numpy, get_configs, add_config, put_configs

@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.geometry.base."""
 from zmlx.geometry.base import triangle_area
 
 __all__ = ['triangle_area']

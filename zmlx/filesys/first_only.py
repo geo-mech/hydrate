@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.alg.fsys."""
 import zmlx.alg.sys as warnings
 
 from zmlx.alg.fsys import first_only

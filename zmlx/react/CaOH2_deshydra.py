@@ -5,7 +5,9 @@ In the exothermic process, <(CaO)> reacts with <(H2O)> to form <(Ca(OH)2)>,
 releasing stored chemical energy as heat.
 by Maryelin
 
+Modified by Claude, 2026-08-12
 """
+
 import zmlx.react.endothermic as endothermic
 from zmlx.exts import Interp1, np
 

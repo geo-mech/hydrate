@@ -1,3 +1,8 @@
+"""标签页容器（TabWidget — 标签管理、查找、绘图路由）.
+
+Modified by Claude, 2026-08-12
+"""
+
 from zmlx.system import app_data
 from zmlx.ui import settings
 from zmlx.ui.alg import create_action

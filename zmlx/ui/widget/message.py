@@ -1,3 +1,8 @@
+"""通知消息系统（MessageEdit 消息中心 widget）.
+
+Modified by Claude, 2026-08-12
+"""
+
 import os
 import time
 

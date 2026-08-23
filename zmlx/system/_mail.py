@@ -1,3 +1,7 @@
+"""邮件发送。
+
+Modified by Claude, 2026-08-12
+"""
 from typing import Optional
 
 
@@ -28,7 +32,7 @@ def sendmail(address: str, subject: Optional[str] = None, text: Optional[str] = 
             try:
                 import getpass
                 name_from = getpass.getuser()
-            except:
+            except Exception:
                 name_from = 'User'
         if name_to is None:
             name_to = 'UserEmail'
@@ -47,5 +51,5 @@ def sendmail(address: str, subject: Optional[str] = None, text: Optional[str] = 
         smtp_obj.sendmail('hyfrddm@126.com',
                           [address], message.as_string())
         return True
-    except:
+    except Exception:
         return False

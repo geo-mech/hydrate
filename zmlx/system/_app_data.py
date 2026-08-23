@@ -1,3 +1,7 @@
+"""应用数据存储（app_data 全局单例，键值持久化）。
+
+Modified by Claude, 2026-08-12
+"""
 import datetime
 import os
 import shutil
@@ -143,7 +147,7 @@ class _AppData:
             path = self.root('tags', name)
             with open(path, 'w') as f:
                 f.write('\n')
-        except:
+        except Exception:
             pass
 
     def log(self, text: str, encoding: Optional[str] = None):
@@ -165,7 +169,7 @@ class _AppData:
                 encoding = 'utf-8'
             with open(path, 'a', encoding=encoding) as f:
                 f.write(f'{datetime.datetime.now()}: \n{text}\n\n\n')
-        except:
+        except Exception:
             pass
 
     def getenv(self, key: str, encoding: Optional[str] = None, default: Optional[Any] = None,
@@ -357,7 +361,7 @@ class _AppData:
                                 break
                         if not exists:
                             results.append(path)
-                except:
+                except Exception:
                     pass
         return results
 

@@ -1,17 +1,31 @@
+"""压力控制器，按预设的时间-压力曲线维持指定 Cell 的压力，用于定压生产.
+
+Modified by Claude, 2026-08-12
+"""
+
 from zmlx.exts import Seepage, Interp1
 
 
 class PressureController(Seepage.CellData):
-    """
-    压力控制器。给定一个Cell，可以在每一步update的时候，动态调整该Cell内的流体(或者修改pore)，从而使得该Cell内的压力等于目标压力。
-    用以辅助以给定的压力进行生产。
+    """压力控制器。
+
+    继承自 ``Seepage.CellData``，在每一步 ``update`` 时动态调整 Cell 内的流体
+    （或修改 pore），使 Cell 压力等于时间-压力曲线定义的目标值。
+    支持两种控制模式：转移流体（默认）和修改孔隙体积。
     """
 
     def __init__(self, cell, t, p, modify_pore=False):
-        """
-        设置检测的Cell并且拷贝其中的流体.
-            需要给定从时间t到压力p的数据. 后续需要用插值来获得给定时刻的压力，所以这个曲线必须给定足够大的范围
-            当modify_pore为True的时候，将尝试通过修改pore来达到维持压力的效果(不能保证成功).
+        """初始化压力控制器。
+
+        拷贝目标 Cell 的流体状态作为"储罐"，通过向 Cell 中注入/从 Cell 中抽取
+        流体来维持目标压力。时间-压力曲线通过 ``Interp1`` 插值，需覆盖足够大的范围。
+
+        Args:
+            cell: 目标 Cell（Seepage.CellData）。
+            t: 时间序列（长度 >= 2）。
+            p: 目标压力序列 [Pa]，与 ``t`` 长度相同。
+            modify_pore: True 时通过修改 pore 控制压力（不保证成功），
+                          False 时通过转移流体控制。
         """
         super(PressureController, self).__init__()
         self.cell = cell
@@ -23,9 +37,7 @@ class PressureController(Seepage.CellData):
         self.modify_pore = modify_pore
 
     def _get_p(self, t):
-        """
-        返回给定时刻的目标压力
-        """
+        """返回给定时刻的目标压力。超出曲线范围时钳制到端点值。"""
         if t <= self.t[0]:
             return self.p[0]
         elif t >= self.t[-1]:
@@ -34,18 +46,14 @@ class PressureController(Seepage.CellData):
             return self.t2p(t)
 
     def _update_by_modify_pore(self, t):
-        """
-        通过调整pore的方式来控制压力
-        """
+        """通过调整 pore 控制压力。"""
         target_fp = self._get_p(t)
         target_fv = max(0.0, self.cell.p2v(target_fp))
         dv = self.cell.fluid_vol - target_fv
         self.cell.v0 = max(0.0, self.cell.v0 + dv)
 
     def _update_by_modify_flu(self, t):
-        """
-        通过转移流体的方式来控制压力
-        """
+        """通过转移流体控制压力。"""
         # 获得当前的目标压力
         fp = self._get_p(t)
         fv = max(0, self.cell.p2v(fp))
@@ -82,8 +90,11 @@ class PressureController(Seepage.CellData):
             assert error / max(va, 1) <= 1.0e-10, f'error = {error}, va = {va}'
 
     def update(self, t, modify_pore=None):
-        """
-        给定时间，设置目标Cell的压力(通过调整其内部的流体)
+        """按目标压力调整 Cell。
+
+        Args:
+            t: 当前时间 [s]。
+            modify_pore: 是否通过修改 pore 控制（None 时使用构造时的设定）。
         """
         if modify_pore is None:
             modify_pore = self.modify_pore

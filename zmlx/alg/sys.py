@@ -144,6 +144,83 @@ def py2pyc(ipath: str, opath: str):
                     print(f'Ignore: {path}')
 
 
+def is_conda_env():
+    """检测当前是否在 conda 环境中."""
+    return os.path.isdir(os.path.join(sys.prefix, 'conda-meta'))
+
+
+def _find_conda_exe():
+    """查找 conda 可执行文件的完整路径."""
+    # 1. CONDA_EXE 环境变量
+    exe = os.environ.get('CONDA_EXE')
+    if exe and os.path.isfile(exe):
+        return exe
+
+    # 2. 从 sys.prefix 推算（env 环境: <base>/envs/<name> → <base>）
+    if os.name == 'nt':
+        names = ['conda.exe', 'conda.bat']
+    else:
+        names = ['conda']
+    for base in [sys.prefix, os.path.dirname(os.path.dirname(sys.prefix))]:
+        for folder in ['Scripts', 'condabin', 'bin']:
+            for name in names:
+                path = os.path.join(base, folder, name)
+                if os.path.isfile(path):
+                    return path
+
+    # 3. 回退
+    return 'conda'
+
+
+def conda_install(package_name, name=None, show_exists=True, channel='conda-forge'):
+    """使用 conda 安装指定的 Python 包。
+
+    如果提供了 name 参数，会先检查该模块是否已存在，只有在模块不存在时才会安装 package_name。
+
+    Args:
+        show_exists: 在包已经存在的时候，是否显示提示信息。
+        package_name (str): 要安装的包名称。
+        name (str, optional): 要检查的模块名称。如果为 None，则直接安装 package_name。
+        channel (str): conda channel，默认 'conda-forge'.
+
+    Returns:
+        bool: True 表示安装成功或已存在，False 表示安装失败。
+    """
+    try:  # 尝试安装
+        if name is not None:  # 检查是否已经安装
+            from importlib.util import find_spec
+            if find_spec(name):
+                if show_exists:
+                    print(f"安装包 {package_name} 已经存在! (conda)")
+                return True
+
+        proc = subprocess.Popen(
+            [_find_conda_exe(), 'install', '-y', '-c', channel, package_name],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True
+        )
+
+        # 实时读取输出
+        while True:
+            line = proc.stdout.readline()
+            if not line:
+                break
+            print(f"[conda:{package_name}]", line.strip())
+
+        # 等待进程结束并检查返回码
+        proc.wait()
+        if proc.returncode != 0:
+            print(f"安装失败({package_name}): 返回码 {proc.returncode}")
+            return False
+        else:
+            return True
+
+    except Exception as err:
+        print(f"安装失败({package_name}): {err}")
+        return False
+
+
 def pip_install(package_name, name=None, show_exists=True):
     """使用pip安装指定的Python包。
 
@@ -155,15 +232,15 @@ def pip_install(package_name, name=None, show_exists=True):
         name (str, optional): 要检查的模块名称。如果为None，则直接安装package_name。
 
     Returns:
-        None
+        bool: True 表示安装成功或已存在，False 表示安装失败。
     """
     try:  # 尝试安装
         if name is not None:  # 检查是否已经安装
             from importlib.util import find_spec
             if find_spec(name):
                 if show_exists:
-                    print(f"安装包 {package_name} 已经存在!")
-                return
+                    print(f"安装包 {package_name} 已经存在! (pip)")
+                return True
 
         proc = subprocess.Popen(
             [sys.executable, "-m", "pip", "install", package_name],
@@ -177,25 +254,44 @@ def pip_install(package_name, name=None, show_exists=True):
             line = proc.stdout.readline()
             if not line:
                 break
-            print(f"[{package_name}]", line.strip())
+            print(f"[pip:{package_name}]", line.strip())
 
         # 等待进程结束并检查返回码
         proc.wait()
         if proc.returncode != 0:
-            raise subprocess.CalledProcessError(proc.returncode, proc.args)
+            print(f"安装失败({package_name}): 返回码 {proc.returncode}")
+            return False
+        else:
+            return True
 
-    except subprocess.CalledProcessError as err:
+    except Exception as err:
         print(f"安装失败({package_name}): {err}")
+        return False
 
 
 def install_dep(show_exists=True):
     """
-    安装计算模块运行所需要的第三方的包
+    安装计算模块运行所需要的第三方的包.
+    在 conda 环境中优先使用 conda install，失败则回退 pip.
     """
     from zmlx.data.dep import package_names, import_names
+    use_conda = is_conda_env()
     for package_name in package_names:
-        pip_install(package_name, name=import_names.get(package_name, None),
-                    show_exists=show_exists)
+        name = import_names.get(package_name, None)
+        # 检查是否已安装
+        if name is not None:
+            from importlib.util import find_spec
+            if find_spec(name):
+                if show_exists:
+                    src = 'conda' if use_conda else 'pip'
+                    print(f"安装包 {package_name} 已经存在! ({src})")
+                continue
+        # 安装
+        if use_conda:
+            if conda_install(package_name, name=name, show_exists=show_exists):
+                continue
+            print(f"[conda:{package_name}] 失败，回退 pip")
+        pip_install(package_name, name=name, show_exists=show_exists)
 
 
 def add_pth_file(name, folder):
@@ -238,7 +334,7 @@ def import_module(name, package=None, field=None, pip=None, show=None):
     try:  # 首次尝试导入
         m = importlib.import_module(name=name, package=package)
         return m if field is None else getattr(m, field)
-    except:
+    except Exception:
         pass
 
     # Indicates whether the system is currently Windows (both Windows and Linux systems are currently supported)
@@ -255,7 +351,7 @@ def import_module(name, package=None, field=None, pip=None, show=None):
         # 安装之后再次尝试导入
         m = importlib.import_module(name=name, package=package)
         return m if field is None else getattr(m, field)
-    except:
+    except Exception:
         return None
 
 
@@ -392,7 +488,7 @@ def has_module(name):
         import importlib
         importlib.import_module(name)
         return True
-    except:
+    except Exception:
         return False
 
 

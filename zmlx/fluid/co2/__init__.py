@@ -33,5 +33,5 @@ if __name__ == '__main__':
 
         show_field2(flu.den, [1e6, 20e6], [270, 290])
         show_field2(flu.vis, [1e6, 20e6], [270, 290])
-    except:
+    except Exception:
         pass

@@ -1,3 +1,8 @@
+"""空间标量场，包含常数场、线性场和均匀分布场，用于辅助建模.
+
+Modified by Claude, 2026-08-12
+"""
+
 import os
 
 try:
@@ -14,11 +19,23 @@ from zmlx.alg.base import join_cols
 
 
 class LinearField:
-    """
-    线性的温度场或者压力场。用于辅助建模;
+    """线性温度场或压力场。
+
+    场值公式：``v(x,y,z) = v0 + (x-x0)*dx + (y-y0)*dy + (z-z0)*dz``。
     """
 
     def __init__(self, x0=0, y0=0, z0=0, v0=0, dx=0, dy=0, dz=0):
+        """构造线性场。
+
+        Args:
+            x0: 基准点 x 坐标 [m]。
+            y0: 基准点 y 坐标 [m]。
+            z0: 基准点 z 坐标 [m]。
+            v0: 基准点场值。
+            dx: x 方向梯度。
+            dy: y 方向梯度。
+            dz: z 方向梯度。
+        """
         self.x0 = x0
         self.y0 = y0
         self.z0 = z0
@@ -28,38 +45,52 @@ class LinearField:
         self.dz = dz
 
     def __call__(self, x, y, z):
+        """返回给定坐标处的场值。
+
+        Args:
+            x: x 坐标 [m]。
+            y: y 坐标 [m]。
+            z: z 坐标 [m]。
+
+        Returns:
+            float: 场值。
+        """
         return self.v0 + (x - self.x0) * self.dx + (y - self.y0) * self.dy + (
                 z - self.z0) * self.dz
 
 
 class Field:
-    """
-    Define a three-dimensional field.
-    Make value = f(pos) return data at any position.
-    where pos is the coordinate and f is an instance of Field
+    """三维标量场封装。
+
+    将任意位置映射到场值：``value = f(pos)``。
+    当传入值不可调用时（如常数），自动包装为 ``Field.Constant``。
     """
 
     class Constant:
-        """
-        A constant field
-        """
+        """常数场（所有位置返回相同值）。"""
 
         def __init__(self, value):
-            """
-            construct with the constant value
+            """构造常数场。
+
+            Args:
+                value: 常数值。
             """
             self.__value = value
 
         def __call__(self, *args, **kwargs):
-            """
-            return the value when call
+            """返回常数值（忽略位置参数）。
+
+            Returns:
+                任意: 常数场值。
             """
             return self.__value
 
     def __init__(self, value):
-        """
-        create the field. treat it as a constant field
-        when it is not a function(__call__ not defined)
+        """构造场对象。
+
+        Args:
+            value: 可调用对象（接收坐标参数）或常数值；
+                   不可调用时自动包装为 ``Field.Constant``。
         """
         if callable(value):
             self.__field = value
@@ -67,15 +98,36 @@ class Field:
             self.__field = Field.Constant(value)
 
     def __call__(self, *args, **kwargs):
+        """返回给定位置处的场值。
+
+        Args:
+            *args: 坐标参数。
+            **kwargs: 坐标关键词参数。
+
+        Returns:
+            任意: 场值。
+        """
         return self.__field(*args, **kwargs)
 
 
 class UniformProfile:
-    """
-    生成一个均匀的分布，并且利用文件来缓存数据
+    """均匀分布曲线，利用文件缓存生成的随机数据。
+
+    若缓存文件存在则直接加载，否则随机生成并保存。
     """
 
     def __init__(self, fname, *, xlim=None, ylim=None, count=100):
+        """构造均匀分布曲线。
+
+        若 ``fname`` 文件已存在，从文件加载 (x, y) 数据；
+        否则在 ``xlim`` × ``ylim`` 范围内随机生成 ``count`` 个点并保存。
+
+        Args:
+            fname: 缓存文件路径。
+            xlim: x 范围 (x_min, x_max)，默认 (0, 1)。
+            ylim: y 范围 (y_min, y_max)，默认 (0, 1)。
+            count: 生成的点数（仅文件不存在时使用）。
+        """
         if os.path.isfile(fname):
             dat = np.loadtxt(fname)
             x, y = dat[:, 0], dat[:, 1]
@@ -96,6 +148,14 @@ class UniformProfile:
         self.data = interp1d(x, y)
 
     def __call__(self, x):
+        """返回给定 x 处的插值结果。
+
+        Args:
+            x: 横坐标（标量或数组）。
+
+        Returns:
+            ndarray: 插值结果。
+        """
         return self.data(x)
 
 

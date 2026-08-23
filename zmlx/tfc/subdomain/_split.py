@@ -1,3 +1,7 @@
+"""子域分割工具.
+
+Modified by Claude, 2026-08-12
+"""
 from typing import List, Set, Any
 
 

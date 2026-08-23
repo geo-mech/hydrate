@@ -30,7 +30,7 @@ def test():
         show_field2(flu.den, [p_min, p_max], [t_min, t_max], caption='density')
         show_field2(flu.vis, [p_min, p_max], [t_min, t_max],
                     caption='viscosity')
-    except:
+    except Exception:
         pass
 
 

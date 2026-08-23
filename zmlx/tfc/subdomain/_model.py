@@ -11,7 +11,10 @@
         注意，这并非每一个模型迭代的时候真实采用的dt,
         只不过是各个模型对齐时间的一个间隔.
     pool: 用于并行的线程池对象。 这个pool，一般不需要做特殊的设置。在迭代的时候，会自动创建一个pool.
+
+Modified by Claude, 2026-08-12
 """
+
 
 from typing import List, Any, Dict, Optional
 

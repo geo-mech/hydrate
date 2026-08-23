@@ -1,5 +1,7 @@
 """
 弃用的包. 此包中的所有内容，将于 2027-5-17之后彻底删除.
+
+Modified by Claude, 2026-08-12
 """
 from zmlx.system import warn
 

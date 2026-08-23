@@ -33,7 +33,10 @@
     此类辅助函数比较有限。
 
 除了以上几类函数之外，plt包中的其它内容，将逐渐废弃.
+
+Modified by Claude, 2026-08-12
 """
+
 
 from zmlx.exts import SelfPath
 from zmlx.plt.cmap import get_cm, get_color

@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.exts."""
 from zmlx.exts import make_dirs, makedirs
 
 __all__ = ['make_dirs', 'makedirs']

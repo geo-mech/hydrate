@@ -1,3 +1,7 @@
+"""contourf 绘图工具。
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.plt.on_axes import add_contourf
 from zmlx.plt.on_ui import show_contourf as plot_contourf
 

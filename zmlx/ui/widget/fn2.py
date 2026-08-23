@@ -1,3 +1,8 @@
+"""2D 裂缝网络 (.fn2) 可视化查看器（Fn2Widget）.
+
+Modified by Claude, 2026-08-12
+"""
+
 import os
 
 from zmlx.ui.pyqt import (

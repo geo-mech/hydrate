@@ -1,6 +1,9 @@
 """
 尝试导入 zml.so 文件
+
+Modified by Claude, 2026-08-12
 """
+
 import ctypes
 import os
 

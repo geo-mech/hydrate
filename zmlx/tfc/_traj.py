@@ -1,7 +1,10 @@
 """
 处理曲线在Seepage模型中留下的轨迹。
     最后检查：2026-6-27
+
+Modified by Claude, 2026-08-12
 """
+
 from typing import List, Union, Tuple
 
 from zmlx.exts import Seepage, SeepageMesh

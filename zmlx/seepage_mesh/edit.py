@@ -2,7 +2,10 @@
 用以交换mesh的坐标，从而实现不同的方向的模拟。
 
 since 2025-2-6
+
+Modified by Claude, 2026-08-12
 """
+
 from zmlx.exts import SeepageMesh
 
 

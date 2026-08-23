@@ -1,3 +1,7 @@
+"""立方体渗流网格生成。
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.exts import SeepageMesh, np
 
 

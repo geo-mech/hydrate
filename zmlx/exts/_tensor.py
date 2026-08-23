@@ -1,3 +1,7 @@
+"""张量绑定（Tensor2/Tensor3）.
+
+Modified by Claude, 2026-08-12
+"""
 from ctypes import c_double, c_void_p, c_char_p, c_size_t
 from typing import Tuple, Optional
 

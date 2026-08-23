@@ -78,7 +78,7 @@ def get_files(rank_max=2.0e10):
     try:
         from zmlx.scen import get_path
         folders.append(get_path())  # 附加scen文件夹
-    except:
+    except Exception:
         pass
     folders.extend(listdir(path=folders, with_file=False, with_dir=True))
     for folder in folders:

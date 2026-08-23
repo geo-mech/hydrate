@@ -1,3 +1,7 @@
+"""DFN v3 离散裂缝网络生成.
+
+Modified by Claude, 2026-08-12
+"""
 import random
 
 from zmlx.alg.base import clamp, linspace

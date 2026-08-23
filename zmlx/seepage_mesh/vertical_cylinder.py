@@ -1,6 +1,9 @@
 """
 竖直方向的圆柱网格.
+
+Modified by Claude, 2026-08-12
 """
+
 from zmlx.exts import SeepageMesh, np
 from zmlx.seepage_mesh.cylinder import create_cylinder
 

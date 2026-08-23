@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.alg.faces_across."""
 import zmlx.alg.sys as warnings
 
 from zmlx.alg.faces_across import get_faces_across

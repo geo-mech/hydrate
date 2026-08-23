@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.tfc._settle."""
 from zmlx.tfc._settle import *
 
 _keep = [iterate]

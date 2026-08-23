@@ -72,13 +72,12 @@ def _pygit2_repo():
 
 def _pygit2_clean(repo):
     """pygit2 版本：检查工作区是否干净。"""
+    import pygit2
     status = repo.status()
     for filepath, flags in status.items():
         if flags != pygit2.GIT_STATUS_CURRENT:
             return False, f'有未提交的修改: {filepath}'
     return True, '工作区干净'
-
-    import pygit2  # for reference in status check above
 
 
 def _pygit2_fetch(repo, remote='origin'):

@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.utility.runtime_fn."""
 import zmlx.alg.sys as warnings
 
 warnings.warn(f'The modulus {__name__} is deprecated and '

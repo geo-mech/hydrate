@@ -1,3 +1,7 @@
+"""CO2 液体属性测试脚本。
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.fluid.nist.co2 import create
 
 

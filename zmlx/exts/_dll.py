@@ -1,3 +1,7 @@
+"""DLL 加载与 C 函数注册（zml.dll 入口）.
+
+Modified by Claude, 2026-08-12
+"""
 import ctypes
 import os
 import warnings

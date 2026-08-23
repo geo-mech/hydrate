@@ -1,3 +1,8 @@
+"""UI 数据资源目录.
+
+Modified by Claude, 2026-08-12
+"""
+
 import os
 
 

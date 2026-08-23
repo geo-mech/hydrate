@@ -1,3 +1,8 @@
+"""路径搜索浏览器 widget.
+
+Modified by Claude, 2026-08-12
+"""
+
 from zmlx.ui.pyqt import QtWidgets
 
 

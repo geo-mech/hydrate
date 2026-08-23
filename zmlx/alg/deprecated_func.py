@@ -1,3 +1,8 @@
+"""弃用函数包装器（延迟导入 + 警告）.
+
+Modified by Claude, 2026-08-12
+"""
+
 import importlib
 
 import zmlx.alg.sys as warnings
@@ -24,7 +29,7 @@ def deprecated_func(deprecated_name, pack_name, func_name, date=None):
             mod = importlib.import_module(pack_name)
             f = getattr(mod, func_name)
             return f(*args, **kwargs)
-        except:
+        except Exception:
             pass
 
     return the_function

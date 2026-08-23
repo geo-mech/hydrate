@@ -1,3 +1,7 @@
+"""三角形渗流网格。
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.exts import SeepageMesh, Mesh3
 from zmlx.geometry.base import get_center
 from zmlx.geometry.base import point_distance

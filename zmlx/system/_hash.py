@@ -1,3 +1,7 @@
+"""哈希工具。
+
+Modified by Claude, 2026-08-12
+"""
 import hashlib
 from typing import Optional
 

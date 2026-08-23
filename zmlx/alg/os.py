@@ -1,3 +1,8 @@
+"""操作系统级别的工具函数（文件删除监控、桌面路径获取等）.
+
+Modified by Claude, 2026-08-12
+"""
+
 import math
 import os
 import time
@@ -53,7 +58,7 @@ def sample_delete(folder, ratio_keep=None, count_keep=None):
                     if os.path.isfile(path):
                         os.remove(files[idx])
                         count += 1
-                except:
+                except Exception:
                     pass
         print(f'Succeed delete {count} Files in Folder {folder}')
 

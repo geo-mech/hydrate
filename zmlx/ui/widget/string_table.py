@@ -1,3 +1,8 @@
+"""通用字符串表格 widget.
+
+Modified by Claude, 2026-08-12
+"""
+
 import math
 
 from zmlx.ui.pyqt import QtWidgets, QtCore

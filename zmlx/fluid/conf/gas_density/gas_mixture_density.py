@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Sat Apr 15 09:10:40 2023
+"""气体混合物密度关联式.
 
-@author: Maryelin
-the density of a gas mixture obtained from heavy oil upgrading
-by 10.1016/j.petrol.2020.107850
+@author: Maryelin (2023-04-15)
+Ref: 10.1016/j.petrol.2020.107850
+
+Modified by Claude, 2026-08-12
 """
 
 from zmlx.exts import np

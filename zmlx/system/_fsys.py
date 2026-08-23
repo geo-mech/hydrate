@@ -1,3 +1,7 @@
+"""文件系统基础操作（make_parent、samefile 等）。
+
+Modified by Claude, 2026-08-12
+"""
 import os
 from typing import Optional
 
@@ -17,7 +21,7 @@ def make_dirs(folder: Optional[str] = None):
         if folder is not None:
             if not os.path.isdir(folder):
                 os.makedirs(folder, exist_ok=True)
-    except:
+    except Exception:
         pass
 
 
@@ -40,5 +44,5 @@ def make_parent(path: str) -> str:
         if not os.path.isdir(name):
             make_dirs(name)
         return path
-    except:
+    except Exception:
         return path

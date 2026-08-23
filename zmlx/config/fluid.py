@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.tfc._fluid."""
 from zmlx.tfc._fluid import *
 
 _keep = [iterate]

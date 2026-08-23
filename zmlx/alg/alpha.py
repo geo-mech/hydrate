@@ -1,5 +1,7 @@
 """
-定义处于测试阶段的方法
+定义处于测试阶段的方法.
+
+Modified by Claude, 2026-08-12
 """
 from zmlx.alg._slowdown import get_velocity_after_slowdown_by_viscosity
 

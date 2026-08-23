@@ -1,3 +1,8 @@
+"""查找跨裂缝两侧的 Face（裂缝面两侧配对）.
+
+Modified by Claude, 2026-08-12
+"""
+
 from zmlx.geometry.base import point_distance, seg_point_distance
 
 

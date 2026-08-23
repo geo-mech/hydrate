@@ -1,3 +1,7 @@
+"""pyqtgraph 2D 绘图。
+
+Modified by Claude, 2026-08-12
+"""
 import pyqtgraph as pg
 
 from zmlx.ui import gui

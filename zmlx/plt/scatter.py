@@ -1,3 +1,7 @@
+"""scatter 绘图工具。
+
+Modified by Claude, 2026-08-12
+"""
 def scatter(
         items=None, get_val=None, x=None, y=None, z=None, c=None, get_pos=None, cb_label=None, **opts):
     """

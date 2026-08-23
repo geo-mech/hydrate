@@ -4,7 +4,10 @@
 在此模块执行的时候，会读取cell的一个属性，并以此属性为倍率，来调整给定流体的粘性系数。
 
 最后修改：2025-11-25
+
+Modified by Claude, 2026-08-12
 """
+
 from typing import Optional
 
 from zmlx.exts import Seepage

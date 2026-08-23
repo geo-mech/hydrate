@@ -1,5 +1,7 @@
 """
-多线程计算相关的函数
+多线程计算相关的函数。
+
+Modified by Claude, 2026-08-12
 """
 import threading
 
@@ -17,6 +19,7 @@ def create_task(func, args=None, kwds=None):
 
 
 def exec_task(task):
+    """执行单个任务（从 dict 中读取 func/args/kwds 并调用）。"""
     # 读取函数和参数
     func = task.get('func')
     assert func is not None
@@ -26,6 +29,7 @@ def exec_task(task):
 
 
 def exec_task_and_set_res(task, res, idx):
+    """执行任务并将结果存入 res[idx]。"""
     res[idx] = exec_task(task)
 
 

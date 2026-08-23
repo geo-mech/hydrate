@@ -28,7 +28,7 @@ def test():
     try:
         from zmlx.plt import show_flu_def
         show_flu_def(flu, [p_min, p_max], [t_min, t_max])
-    except:
+    except Exception:
         pass
 
 

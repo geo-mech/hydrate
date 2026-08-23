@@ -1,3 +1,12 @@
+"""zmlx GUI 主窗口与应用程序启动。
+
+``MainWindow`` 是整个 GUI 的主窗口类（菜单、工具栏、标签页管理、文件处理）。
+``execute()`` 是应用程序入口：创建 QApplication、启动 Console 内核线程、
+恢复上次会话的标签页布局。
+
+Modified by Claude, 2026-08-12
+"""
+
 import datetime
 import os
 import sys
@@ -24,6 +33,7 @@ from zmlx.ui.widget import (
 
 
 class Action(QAction):
+    """可更新视图的 QAction（支持动态 enabled/visible/text）。"""
     def __init__(self, parent):
         super().__init__(parent)
         self.is_enabled = None  # 检查是否是可执行的
@@ -45,6 +55,12 @@ class Action(QAction):
 
 
 class MainWindow(QtWidgets.QMainWindow):
+    """zmlx 主窗口。
+
+    管理标签页容器（TabWidget）、控制台（Console）、菜单栏、工具栏、
+    状态栏和文件处理器（FileHandler）。是 GUI 应用的核心窗口类。
+    """
+
     sig_cwd_changed = QtCore.pyqtSignal(str)
     sig_do_task = QtCore.pyqtSignal()
     sig_play_sound = QtCore.pyqtSignal(str)
@@ -831,7 +847,7 @@ class MainWindow(QtWidgets.QMainWindow):
             if len(text) > 0:
                 try:
                     gui.add_message(text, color='red')  # 警告
-                except:
+                except Exception:
                     print(text)
 
     def get_console(self):
@@ -909,7 +925,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self, '杀死进程',
                 "强制结束当前进程，可能会产生不可预期的影响，是否继续?")
             if reply == QtWidgets.QMessageBox.StandardButton.Yes:
-                if self.thread is not None:
+                if self.console.thread is not None:
                     thread = self.console.thread
                     thread.sig_done.emit()
                     thread.terminate()
@@ -2025,6 +2041,24 @@ def __on_close(win):
 
 
 def execute(code=None, keep_cwd=True, close_after_done=True, add_history=True):
+    """启动 zmlx GUI 应用程序。
+
+    创建 QApplication、主窗口和控制台内核线程，启动 Qt 事件循环。
+    若 GUI 已存在则直接在当前 GUI 中执行 ``code``。
+
+    Args:
+        code: 启动后执行的回调函数（可选）。
+        keep_cwd: 是否保持当前工作目录（False 时从设置恢复上次工作目录）。
+        close_after_done: ``code`` 执行完成后是否自动关闭窗口。
+        add_history: 是否将 ``code`` 添加到执行历史中。
+
+    Returns:
+        任意 | None: ``app_data['console_result']`` 中保存的控制台执行结果。
+
+    注意:
+        仅在 ``if __name__ == '__main__'`` 块中调用此函数。
+        不要在函数内部调用，否则会导致 GUI 嵌套执行。
+    """
     try:
         app_data.log(f'gui_execute. file={__file__}. argv={sys.argv}')
     except Exception as err:
@@ -2077,6 +2111,7 @@ def execute(code=None, keep_cwd=True, close_after_done=True, add_history=True):
 
 
 def get_window():
+    """返回当前 MainWindow 实例（可能为 None）。"""
     window = app_data.get('main_window')
     if window is not None:
         assert isinstance(window, MainWindow)

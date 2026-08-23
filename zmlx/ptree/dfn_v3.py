@@ -1,3 +1,7 @@
+"""DFN v3 裂缝网络属性。
+
+Modified by Claude, 2026-08-12
+"""
 import copy
 
 from zmlx.geometry.dfn_v3 import from_segs, remove_small

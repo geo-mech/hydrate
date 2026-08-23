@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.alg.base."""
 from zmlx.alg.base import time2str
 
 __all__ = ['time2str']

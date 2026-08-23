@@ -1,3 +1,7 @@
+"""路径管理工具（数据目录、缓存路径、临时文件）.
+
+Modified by Claude, 2026-08-12
+"""
 import os
 
 import zmlx.alg.sys as warnings

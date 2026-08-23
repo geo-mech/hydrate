@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.io.base."""
 from zmlx.io.base import get_text_back
 
 __all__ = ['get_text_back']

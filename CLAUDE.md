@@ -72,7 +72,7 @@ Never call `gui.execute()` inside a function — it will nest and behave unpredi
 |----------|---------|
 | `gui.break_point()` | Pause/stop checkpoint |
 | `gui.progress(label, range, value)` | Progress bar |
-| `gui.information(text)` | Info dialog |
+| `gui.information(title, text)` | Info dialog |
 | `gui.question(text)` | Yes/no dialog |
 | `gui.show_attrs(**attrs)` | Dynamic variable display |
 | `gui.in_dark_mode()` | Check dark mode (GUI only) |

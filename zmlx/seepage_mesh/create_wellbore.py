@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.seepage_mesh.wellbore."""
 from zmlx.seepage_mesh.wellbore import create_wellbore
 
 __all__ = [

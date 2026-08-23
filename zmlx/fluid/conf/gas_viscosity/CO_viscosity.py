@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
-"""
+"""CO 气体粘度关联式（Yaw’s correlations for gas viscosity）.
+
 @author: Maryelin
-Yaw's correlations for gas viscosity (organic)
+Ref: Yaws’ Handbook of Thermodynamic and Physical Properties of Chemical
 
-Yaws, C. Yaws’ Handbook of Thermodynamic and Physical Properties of Chemical
-Compounds, Knovel, 2003
-
+Modified by Claude, 2026-08-12
 """
-
+# Yaws, C. Yaws’ Handbook of Thermodynamic and Physical Properties of Chemical
+# Compounds, Knovel, 2003
 
 def gas_vis_co(P, T):
     A = 23.811

@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.exts."""
 from zmlx.exts import ip
 
 ip_nodes_write = ip.ip_nodes_write

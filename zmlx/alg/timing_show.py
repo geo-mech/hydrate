@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.alg.sys."""
 import time
 
 import zmlx.alg.sys as warnings

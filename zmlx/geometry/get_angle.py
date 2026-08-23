@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.geometry.point."""
 from zmlx.geometry.point import get_angle
 
 _keep = [get_angle]

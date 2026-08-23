@@ -103,8 +103,9 @@ apply_async(tasks, processes=4)      # 多进程并行
 
 | 函数 | 描述 |
 |------|------|
-| `pip_install(package_name)` | 安装 Python 包 |
-| `install_dep()` | 安装 zmlx 依赖 |
+| `pip_install(package_name, name, show_exists)` | pip 安装 Python 包，返回 bool |
+| `conda_install(package_name, name, show_exists, channel)` | conda 安装 Python 包，返回 bool |
+| `install_dep()` | 安装 zmlx 依赖（conda 环境优先 conda） |
 | `import_module(name, package)` | 导入模块（含自动安装回退） |
 | `startfile(path)` | 跨平台文件打开（替代 os.startfile） |
 | `create_shortcut(target, path)` | 创建 Windows 快捷方式 |
@@ -175,6 +176,6 @@ apply_async(tasks, processes=4)      # 多进程并行
 ## 与其他模块的关系
 
 - 本包设计上尽量不依赖其他 zmlx 模块（`base.py`、`fsys.py` 为纯 Python）
-- `sys.py` 中的 `pip_install` 等函数用于管理 zmlx 的第三方依赖
+- `sys.py` 中的 `pip_install`/`conda_install` 等函数用于管理 zmlx 的第三方依赖
 - 文件系统操作（`fsys.py`）是 `zmlx.filesys`（已弃用）的迁移目标
 - `around_seg.py` 和 `faces_across.py` 是渗流网格特有算法

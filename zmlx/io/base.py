@@ -1,3 +1,7 @@
+"""IO 基础模块（文件追加、文本读写、TaskFolder 等核心函数）.
+
+Modified by Claude, 2026-08-12
+"""
 import os
 from io import StringIO
 

@@ -1,3 +1,7 @@
+"""导流系数更新（Face cond 迭代）.
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.exts import clock, ThreadPool
 from zmlx.tfc._base import Seepage
 

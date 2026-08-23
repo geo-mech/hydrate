@@ -1,3 +1,7 @@
+"""pyqtgraph OpenGL 元素。
+
+Modified by Claude, 2026-08-12
+"""
 import pyqtgraph.opengl as gl
 
 import zmlx.alg.sys as warnings

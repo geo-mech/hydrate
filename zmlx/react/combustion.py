@@ -1,3 +1,7 @@
+"""燃烧反应.
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.exts import f64_ptr
 from zmlx.react import endothermic
 from zmlx.react.alg import add_reaction

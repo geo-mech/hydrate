@@ -175,7 +175,7 @@ def create(
                 vol_rate = q / flu.den
                 opers.append([t, f'{vol_rate}'])
         opers.append([years_inj * 3600.0 * 24.0 * 365.0, '0'])
-    except:  # 失败了之后，再作为一个数字来对待
+    except Exception:  # 失败了之后，再作为一个数字来对待
         vol_rate = mass_rate / flu.den
         opers = [[0.0, f'{vol_rate}'], [years_inj * 3600.0 * 24.0 * 365.0, '0']]
     model.add_injector(

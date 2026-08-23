@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.exts."""
 import zmlx.alg.sys as warnings
 
 from zmlx.exts import is_chinese

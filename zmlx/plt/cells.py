@@ -1,3 +1,7 @@
+"""cells 绘图工具。
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.tfc import show_cells
 
 _keep = [show_cells]

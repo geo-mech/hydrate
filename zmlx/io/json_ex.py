@@ -1,3 +1,7 @@
+"""JSON 扩展读写（增强的错误处理）.
+
+Modified by Claude, 2026-08-12
+"""
 from json import *
 
 import zmlx.alg.sys as warnings

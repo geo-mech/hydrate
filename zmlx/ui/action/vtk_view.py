@@ -1,3 +1,8 @@
+"""VTK/pyvista 可视化动作（3D 视图演示）.
+
+Modified by Claude, 2026-08-12
+"""
+
 from zmlx.system import execute_once
 
 

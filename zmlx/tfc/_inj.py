@@ -1,3 +1,7 @@
+"""注入器迭代.
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.exts import clock, ThreadPool
 from zmlx.tfc._base import Seepage, get_dt, get_time
 

@@ -1,3 +1,7 @@
+"""Mesh3 → SeepageMesh 转换。
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.exts import SeepageMesh, Mesh3
 from zmlx.geometry.base import point_distance
 

@@ -11,7 +11,10 @@
     # 作为 FuncSol callback 使用:
     # solver.fn  → C 函数指针
     # solver.ctx → 上下文指针 (solver.handle)
+
+Modified by Claude, 2026-08-12
 """
+
 
 import ctypes
 import os

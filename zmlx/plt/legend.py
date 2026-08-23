@@ -1,3 +1,7 @@
+"""legend 绘图工具。
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.plt.on_axes import add_legend
 
 _keep = [add_legend]

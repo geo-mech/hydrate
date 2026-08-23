@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.mesh.io."""
 from zmlx.mesh.io import load_trimesh
 
 __all__ = [

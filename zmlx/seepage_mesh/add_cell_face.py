@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.seepage_mesh.edit."""
 from zmlx.seepage_mesh.edit import add_cell_face
 
 __all__ = [

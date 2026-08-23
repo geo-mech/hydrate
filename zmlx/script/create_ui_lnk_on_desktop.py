@@ -1,6 +1,9 @@
 """
 在桌面上创建界面启动的快捷方式
+
+Modified by Claude, 2026-08-12
 """
+
 import sys
 from os.path import dirname, abspath
 

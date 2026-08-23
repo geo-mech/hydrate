@@ -1,3 +1,7 @@
+"""渗流网格 IO（ASCII 格式读写）。
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.exts import SeepageMesh
 
 

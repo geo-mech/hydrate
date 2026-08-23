@@ -3,7 +3,10 @@
     将这个脚本放到models旁边（models里面，存储了solve之后的Seepage文件）
     修改脚本里面的监测点，然后，运行，即可生成一个文件，这个文件包含两列
     第一列是时间，第二列是给定位置的压力.
+
+Modified by Claude, 2026-08-12
 """
+
 from zmlx import *  # 需要首先确保zmlx可用
 
 

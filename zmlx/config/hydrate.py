@@ -1,3 +1,7 @@
+"""已弃用的模块，请改用 zmlx.scen.hydrate.
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.scen.hydrate import *
 
 _keep = [create_caps, create_fludefs, create_opts]

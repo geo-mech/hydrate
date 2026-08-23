@@ -22,6 +22,7 @@
 | `geothermal_helium/` | 否 | 地热伴生氦气开采 |
 | `mineralization_reactor/` | 否 | CO₂ 矿化封存（Reaktoro 化学耦合） |
 | `rkt_tests/` | 否 | Reaktoro 化学热力学基准测试/教程 |
+| `quick_look/` | 否 | 2D 单相流压力快速评估 |
 | `uv_equilibrium/` | 否 | 气-水固定体积-内能（UV）平衡计算 |
 
 ---
@@ -59,6 +60,12 @@
 - 位置：`zmlx/scen/rkt_tests/`
 - 功能：Reaktoro 化学热力学功能演示和教程
 - 内容：8 个基础教程脚本 + 平衡计算示例
+
+### quick_look/ — 2D 单相流压力快速评估
+- 位置：`zmlx/scen/quick_look/`
+- 功能：矩形区域内单相 Darcy 渗流压力分布快速计算
+- 导出：`evaluate()`（支持控压点、裂缝线段、加速因子）
+- GUI：`zml_gui_setup.py` 集成，`帮助 > 加载 > Quick Look 快速评估` 打开参数输入与结果显示控件
 
 ### uv_equilibrium/ — 气-水 UV 平衡
 - 位置：`zmlx/scen/uv_equilibrium/`

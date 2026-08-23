@@ -1,3 +1,7 @@
+"""文本文件读写（read_text / write_text）。
+
+Modified by Claude, 2026-08-12
+"""
 import os
 from typing import Optional
 
@@ -25,7 +29,7 @@ def read_text(path: str, encoding: Optional[str] = None, default: Optional[str] 
             with open(path, 'r', encoding=encoding) as f:
                 return f.read()
         return default
-    except:
+    except Exception:
         return default
 
 

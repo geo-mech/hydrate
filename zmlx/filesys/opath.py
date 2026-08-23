@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.alg.sys."""
 from zmlx.alg.sys import create_deprecated as create, get_deprecated as get
 
 _deprecated_funcs = dict(

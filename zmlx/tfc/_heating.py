@@ -24,7 +24,10 @@
 参考资料：
     - Seepage.add_injector 的文档（zmlx/exts/_seepage.py）
     - prod_v2_electric_heating.py（点加热 demo）
+
+Modified by Claude, 2026-08-12
 """
+
 
 from zmlx.alg.vec import to_numpy
 from zmlx.exts import Seepage, np, clock

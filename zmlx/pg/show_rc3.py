@@ -1,7 +1,10 @@
 """
 显示三维矩形（主要用于显示dfn）. 其中一个三维矩形利用9个数字（矩形中心坐标和两个相邻边的中心坐标）来表示. 另外，对于任何一个矩形，都有颜色和
 透明度两个通道.
+
+Modified by Claude, 2026-08-12
 """
+
 
 import zmlx.alg.sys as warnings
 from zmlx.alg.base import clamp

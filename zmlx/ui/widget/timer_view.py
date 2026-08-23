@@ -1,3 +1,8 @@
+"""CPU 计时表（TimerView — 函数耗时统计与显示）.
+
+Modified by Claude, 2026-08-12
+"""
+
 import timeit
 
 from zmlx.alg.base import time2str, clamp

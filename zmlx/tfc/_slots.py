@@ -1,3 +1,7 @@
+"""预定义槽函数（standard_slots）.
+
+Modified by Claude, 2026-08-12
+"""
 # 一些预定义函数
 standard_slots = {'print': print}
 

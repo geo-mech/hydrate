@@ -1,6 +1,9 @@
 """
 基于流动(渗流)、传热、化学相关的功能 (TFC耦合基础)。核心是对Seepage类的扩展。
+
+Modified by Claude, 2026-08-12
 """
+
 
 import zmlx.tfc._cap as capillary
 import zmlx.tfc._cond as cond

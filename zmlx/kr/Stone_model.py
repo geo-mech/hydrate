@@ -1,3 +1,7 @@
+"""Stone 两相/三相相对渗透率模型.
+
+Modified by Claude, 2026-08-12
+"""
 try:
     import numpy as np
 except ImportError:
@@ -42,5 +46,5 @@ if __name__ == '__main__':
         from zmlx.exts import plot
 
         plot(f)
-    except:
+    except Exception:
         pass

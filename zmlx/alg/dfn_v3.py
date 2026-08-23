@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.geometry.dfn_v3."""
 from zmlx.geometry.dfn_v3 import *
 
 __all__ = ['from_segs', 'create_fractures', 'remove_small', 'create_links',

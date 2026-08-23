@@ -3,7 +3,10 @@
     !!! 后续将移除
 
 2024-4-3
+
+Modified by Claude, 2026-08-12
 """
+
 import zmlx.alg.sys as warnings
 from zmlx.exts import Seepage, np, const_f64_ptr, f64_ptr
 from zmlx.tfc._base import as_numpy

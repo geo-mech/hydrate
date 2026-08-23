@@ -7,7 +7,10 @@ make_solver() 通过 eval/exec 执行，创建局部实例，避免多线程冲�
 支持两种格式:
     1. 简单表达式 (eval):  "ICCGSolver(tolerance=1e-12)"
     2. 完整语句 (exec):    "from X import Y\\nsolver = Y(...)"
+
+Modified by Claude, 2026-08-12
 """
+
 
 _default_code = (
     'from zmlx.exts._sol import ConjugateGradientSolver\n'

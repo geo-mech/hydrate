@@ -1,3 +1,8 @@
+"""用户反馈工具（问题描述邮件发送）.
+
+Modified by Claude, 2026-08-12
+"""
+
 import os
 
 from zmlx.system import app_data

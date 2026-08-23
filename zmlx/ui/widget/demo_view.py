@@ -27,6 +27,7 @@ class HtmlDelegate(QtWidgets.QStyledItemDelegate):
         painter.save()
         doc = QtGui.QTextDocument()
         doc.setHtml(opt.text)
+        doc.setTextWidth(opt.rect.width())
         opt.text = ''
         style = opt.widget.style() if opt.widget else QtWidgets.QApplication.style()
         style.drawControl(QtWidgets.QStyle.ControlElement.CE_ItemViewItem, opt, painter)

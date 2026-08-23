@@ -1,3 +1,7 @@
+"""网格可视化展示。
+
+Modified by Claude, 2026-08-12
+"""
 import os
 
 

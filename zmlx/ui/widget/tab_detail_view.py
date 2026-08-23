@@ -1,3 +1,8 @@
+"""标签页列表管理 widget（查看/删除已打开的标签页）.
+
+Modified by Claude, 2026-08-12
+"""
+
 from zmlx.ui.pyqt import QtCore, QtWidgets
 
 

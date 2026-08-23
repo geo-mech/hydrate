@@ -1,3 +1,7 @@
+"""操作系统检测（Windows/Linux/Mac）。
+
+Modified by Claude, 2026-08-12
+"""
 import sys
 
 

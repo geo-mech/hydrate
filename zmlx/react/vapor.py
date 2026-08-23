@@ -19,7 +19,10 @@
     T=700, 3200950J
     T=800, 3385950J
     T=900, 3570950J
+
+Modified by Claude, 2026-08-12
 """
+
 from math import exp
 
 from zmlx.react import melt

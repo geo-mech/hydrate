@@ -1,3 +1,8 @@
+"""查找线段周围的 Cell 和 Face（用于裂缝-网格交互）.
+
+Modified by Claude, 2026-08-12
+"""
+
 from zmlx.geometry.base import seg_point_distance as get_seg_point_distance
 
 

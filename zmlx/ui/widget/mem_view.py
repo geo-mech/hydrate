@@ -1,3 +1,8 @@
+"""变量浏览器（MemView — app_data.space 变量查看与过滤）.
+
+Modified by Claude, 2026-08-12
+"""
+
 import timeit
 
 from zmlx.alg.base import clamp
@@ -6,25 +11,26 @@ from zmlx.ui.pyqt import QtCore, QtGui, QtWidgets
 
 # 类型 → 字体颜色。已知类型预制颜色，未知类型用 hash 分配。
 _TYPE_COLORS = {
-    int: '#1565C0',          # 蓝
-    float: '#2E7D32',        # 绿
-    str: '#E65100',          # 橙
-    bool: '#6A1B9A',         # 紫
-    list: '#00838F',         # 青
-    tuple: '#00695C',        # 深青
-    dict: '#F9A825',         # 黄
-    set: '#558B2F',          # 黄绿
-    type(None): '#9E9E9E',   # 灰
+    int: '#1565C0',  # 蓝
+    float: '#2E7D32',  # 绿
+    str: '#E65100',  # 橙
+    bool: '#6A1B9A',  # 紫
+    list: '#00838F',  # 青
+    tuple: '#00695C',  # 深青
+    dict: '#F9A825',  # 黄
+    set: '#558B2F',  # 黄绿
+    type(None): '#9E9E9E',  # 灰
     # 函数/方法
-    'function': '#D84315',   # 深橙
-    'method': '#BF360C',     # 红棕
+    'function': '#D84315',  # 深橙
+    'method': '#BF360C',  # 红棕
     'builtin_function_or_method': '#BF360C',
     # 类的颜色（用字符串名来匹配，因为类可能不在当前命名空间）
-    'Seepage': '#1B5E20',    # 深绿
+    'Seepage': '#1B5E20',  # 深绿
     'SeepageMesh': '#0D47A1',  # 深蓝
-    'FluDef': '#880E4F',     # 深粉
-    'DynSys': '#4A148C',     # 深紫
+    'FluDef': '#880E4F',  # 深粉
+    'DynSys': '#4A148C',  # 深紫
 }
+
 
 def _get_type_fg(type_obj):
     """根据类型对象返回字体颜色 QColor，未知类型返回 None（默认颜色）。"""
@@ -115,7 +121,7 @@ class MemView(QtWidgets.QTableWidget):
                 app_data_edits = app_data.get('app_data_edits')  # 获取编辑方法字典
                 if isinstance(app_data_edits, dict):
                     value = app_data.get(key)
-                    edit = app_data_edits.get(type(value))
+                    edit = app_data_edits.get(type(value).__name__)
                     if callable(edit):  # 找到了针对性的编辑器
                         try:
                             edit(key)
@@ -218,14 +224,20 @@ def setup_ui():
         if ok:
             app_data.put(key, result)
 
+    def edit_func(key):
+        from zmlx.ui import gui
+        gui.information('提示', f'变量 {key} 是函数，暂不支持编辑')
+
     # 注册编辑方法
     app_data_edits = app_data.get('app_data_edits')
     if not isinstance(app_data_edits, dict):
         app_data_edits = {}
     # 添加编辑方法
-    app_data_edits[int] = edit_int
-    app_data_edits[float] = edit_float
-    app_data_edits[str] = edit_str
+    app_data_edits['int'] = edit_int
+    app_data_edits['float'] = edit_float
+    app_data_edits['str'] = edit_str
+    app_data_edits['function'] = edit_func
+    app_data_edits['builtin_function_or_method'] = edit_func
     # 保存编辑方法字典
     app_data.put('app_data_edits', app_data_edits)
 

@@ -1,3 +1,7 @@
+"""文件映射（内存映射文件）.
+
+Modified by Claude, 2026-08-12
+"""
 import os
 from ctypes import c_void_p, c_bool, c_char_p
 from typing import Optional, Union, Any

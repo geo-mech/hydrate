@@ -1,3 +1,7 @@
+"""溶解反应.
+
+Modified by Claude, 2026-08-12
+"""
 import zmlx.alg.sys as warnings
 
 from zmlx.exts import Seepage

@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.tfc._diff."""
 from zmlx.tfc._diff import *
 
 _keep = [iterate]

@@ -1,3 +1,7 @@
+"""单次执行装饰器（@execute_once）。
+
+Modified by Claude, 2026-08-12
+"""
 import functools
 
 from zmlx.system._app_data import app_data

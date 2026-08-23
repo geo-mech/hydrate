@@ -1,3 +1,7 @@
+"""警告与弃用通知。
+
+Modified by Claude, 2026-08-12
+"""
 import warnings
 
 from zmlx.system._log import log

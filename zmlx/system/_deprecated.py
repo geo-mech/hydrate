@@ -1,3 +1,7 @@
+"""弃用标记装饰器。
+
+Modified by Claude, 2026-08-12
+"""
 import functools
 
 from zmlx.system._warn import warn

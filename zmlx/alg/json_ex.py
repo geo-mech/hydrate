@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.io.json_ex."""
 from zmlx.io.json_ex import *
 
 __all__ = ['read', 'write']

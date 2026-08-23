@@ -1,3 +1,8 @@
+"""Seepage 模型编辑器（Cell/Face/流体定义编辑、批量操作）.
+
+Modified by Claude, 2026-08-12
+"""
+
 from zmlx.exts import Seepage, FluDef
 from zmlx.tfc import seepage
 from zmlx.ui.alg import h_spacer
@@ -421,8 +426,8 @@ class SeepageKrEdit(QtWidgets.QWidget):
         for idx in range(count):
             items.append(
                 (f'相渗{idx}', SeepageInterp1Edit(
-                    self, get_value=lambda model: model.get_kr(idx),
-                    set_value=lambda model, value: model.set_kr(index=idx, kr=value)))
+                    self, get_value=lambda model, idx=idx: model.get_kr(idx),
+                    set_value=lambda model, value, idx=idx: model.set_kr(index=idx, kr=value)))
             )
 
         self.form.set_items(items)

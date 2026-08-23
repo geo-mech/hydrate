@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.react.alg."""
 from zmlx.react.alg import add_reaction
 
 __all__ = [

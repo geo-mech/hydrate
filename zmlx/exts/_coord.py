@@ -1,3 +1,7 @@
+"""坐标系统工具.
+
+Modified by Claude, 2026-08-12
+"""
 from ctypes import c_void_p, c_char_p, c_size_t
 
 from zmlx.exts._ary import Array3, Array2

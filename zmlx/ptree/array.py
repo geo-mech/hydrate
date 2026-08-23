@@ -1,6 +1,9 @@
 """
 导入numpy的array
+
+Modified by Claude, 2026-08-12
 """
+
 from io import StringIO
 
 try:
@@ -25,17 +28,17 @@ def _cast(data, pt):
         # 尝试文件
         try:
             return np.loadtxt(pt.find(data))
-        except:
+        except Exception:
             pass
         # 尝试脚本
         try:
             return eval(data, {'np': np})
-        except:
+        except Exception:
             pass
         # 尝试文本
         try:
             return np.loadtxt(StringIO(data))
-        except:
+        except Exception:
             return None
     return None
 

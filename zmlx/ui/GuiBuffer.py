@@ -1,3 +1,5 @@
+"""已弃用的模块，请改用 zmlx.ui.gui_buffer（或直接从 zmlx 导入）."""
+
 import zmlx.alg.sys as warnings
 
 from zmlx.ui.gui_buffer import *

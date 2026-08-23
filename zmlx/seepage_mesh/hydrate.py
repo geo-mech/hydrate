@@ -1,3 +1,7 @@
+"""水合物渗流网格。
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.exts import np
 from zmlx.seepage_mesh.cube import create_cube
 

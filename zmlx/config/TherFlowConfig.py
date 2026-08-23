@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.tfc.config."""
 from zmlx.tfc.config import *
 
 _keep = [TherFlowConfig, SeepageTher]

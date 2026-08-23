@@ -1,3 +1,7 @@
+"""裂缝模块公共 API（DllCore 封装）.
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.exts import *
 
 core = DllCore(dll_obj=load_cdll(name='frac.dll',

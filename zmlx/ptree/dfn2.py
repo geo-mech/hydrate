@@ -1,3 +1,7 @@
+"""DFN2 裂缝网络属性。
+
+Modified by Claude, 2026-08-12
+"""
 import os
 
 from zmlx.exts import Dfn2, np

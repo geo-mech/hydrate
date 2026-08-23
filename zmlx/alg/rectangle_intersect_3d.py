@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.geometry.rect_3d_intersection."""
 from zmlx.geometry.rect_3d_intersection import *
 
 _keep = [print_enable]

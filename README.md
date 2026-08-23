@@ -93,8 +93,8 @@
 
 运行方式：
 ```bash
-python zmlx/demo/flow_1ph/darcy_1d.py              # GUI 模式
-python zmlx/demo/flow_1ph/darcy_1d.py --no-gui     # 命令行模式
+python zmlx/demo/flow_2ph/wat_disp_oil.py              # GUI 模式
+python zmlx/demo/flow_2ph/wat_disp_oil.py --no-gui     # 命令行模式
 ```
 
 ### 协作/开发
@@ -105,15 +105,14 @@ python zmlx/demo/flow_1ph/darcy_1d.py --no-gui     # 命令行模式
 2. 请只推送代码，*不要推送比较大的数据* (Gitee仓库有500Mb的总量限制);
 3. 请务必熟悉[git](https://git-scm.com/)<sup>①</sup>;
 4. 如果直接向[IGG-Hydrate](https://gitee.com/geomech/hydrate)
-   推送代码，可能会报错（因为没有权限）。建议使用[Fork + Pull 模式](https://help.gitee.com/base/pullrequest/Fork+Pull)<sup>
-   ②</sup>参与开发，或者点击[申请加入仓库](https://gitee.com/geomech/hydrate)
-   ，成为开发者;
+   推送代码，可能会报错（因为没有权限）。**建议**使用[Fork + Pull 模式](https://help.gitee.com/base/pullrequest/Fork+Pull)<sup>
+   ②</sup>参与开发;
 5. 在push代码前，先确保本地代码与主仓库同步。
 
 > 注：<sup>①</sup> 在[Gitee帮助中心](https://gitee.com/help#article-header0)
 > 有不少git的入门资料；新手建议安装[TortoiseGit](https://tortoisegit.org/)，它会在文件管理器添加右键菜单，可以满足大部分操作;
 > 另外，如果是Pycharm用户，可以参考 https://gitee.com/geomech/hydrate/issues/IJT65R;
-<sup>②</sup>[Fork + Pull 模式](https://help.gitee.com/base/pullrequest/Fork+Pull)是Gitee建议的方式.
+<sup>②</sup>[Fork + Pull 模式](https://help.gitee.com/base/pullrequest/Fork+Pull)是Gitee建议的方式. 如果不想使用Fork + Pull 模式，也可以点击[申请加入仓库](https://gitee.com/geomech/hydrate)成为开发者. 
 
 ### 镜像
 
@@ -127,7 +126,8 @@ python zmlx/demo/flow_1ph/darcy_1d.py --no-gui     # 命令行模式
 
 [告知作者](https://gitee.com/geomech/hydrate/issues/ID5HZX)后可免费使用。
 
-> 注：软件会基于网络检查版本。对于过期的版本，仍然可以运行，但是计算的速度会受到限制。因此，请确保使用最新版，并确保电脑联网。
+> 注：① 软件会基于网络检查版本。对于过期的版本，仍然可以运行，但是计算的速度会受到限制。因此，请确保使用最新版，并确保电脑联网。
+> ② 目前，软件在Python层面开源，而C++层面的代码则以动态库形式提供（在后续稳定之后，也会逐步开放）。
 
 ### 关于软件名
 
@@ -135,3 +135,7 @@ python zmlx/demo/flow_1ph/darcy_1d.py --no-gui     # 命令行模式
 ，其中IGG是作者单位([中国科学院地质与地球物理研究所](http://www.igg.cas.cn/))的简称;
 此软件模块，是作者在地球所重点部署项目“水合物开发的基础理论与技术”(IGGCAS-201903)
 水合物试采系统温压场演化与流动保障机制”(U2244223)的支持下完成的初步版本。
+
+### 更新
+
+自2026年下半年起，IGG-Hydrate会按照**两个月一次**的频率进行更新。在此期间，除非有明确bug，否则代码将保持不变。

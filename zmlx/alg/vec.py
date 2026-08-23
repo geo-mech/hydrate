@@ -1,3 +1,8 @@
+"""Vector ↔ numpy 数组互转工具.
+
+Modified by Claude, 2026-08-12
+"""
+
 from zmlx.exts import c_double, POINTER, np, Vector
 
 

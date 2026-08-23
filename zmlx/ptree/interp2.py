@@ -1,3 +1,7 @@
+"""Interp2 二维插值属性。
+
+Modified by Claude, 2026-08-12
+"""
 from scipy.interpolate import NearestNDInterpolator, LinearNDInterpolator
 
 from zmlx.alg.base import join_cols

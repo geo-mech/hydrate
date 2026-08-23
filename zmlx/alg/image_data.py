@@ -1,3 +1,8 @@
+"""图像数据处理（测试用）.
+
+Modified by Claude, 2026-08-12
+"""
+
 from PIL import Image
 
 import zmlx.alg.sys as warnings

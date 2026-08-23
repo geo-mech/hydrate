@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.geometry."""
 from numpy.linalg import norm as get_norm
 
 __all__ = ['get_norm']

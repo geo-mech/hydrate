@@ -1,3 +1,7 @@
+"""Mesh3 文件读写（trimesh 格式）.
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.exts import Mesh3
 
 

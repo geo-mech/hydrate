@@ -1,3 +1,8 @@
+"""数据编辑器集合（numpy 数组、Interp1/Interp2、文本编辑等）.
+
+Modified by Claude, 2026-08-12
+"""
+
 import os
 
 try:

@@ -1,3 +1,8 @@
+"""Matplotlib 画布（MatplotWidget — matplotlib figure 嵌入 Qt）.
+
+Modified by Claude, 2026-08-12
+"""
+
 import datetime
 import os
 import sys
@@ -52,7 +57,7 @@ class MatplotWidget(QtWidgets.QWidget):
         try:
             from zmlx.plt import set_chinese_font
             set_chinese_font()
-        except:
+        except Exception:
             pass
 
     def set_save_folder(self, folder):
@@ -63,7 +68,7 @@ class MatplotWidget(QtWidgets.QWidget):
         try:
             from zmlx.io.env import plt_export_dpi
             return plt_export_dpi.get_value()
-        except:
+        except Exception:
             return 300
 
     def draw(self, *, savefig=None):

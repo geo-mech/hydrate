@@ -1,3 +1,7 @@
+"""三角形几何计算（面积、法向量）.
+
+Modified by Claude, 2026-08-12
+"""
 try:
     import numpy as np
 except ImportError:

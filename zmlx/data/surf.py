@@ -1,3 +1,7 @@
+"""曲面数据生成。
+
+Modified by Claude, 2026-08-12
+"""
 import numpy as np
 
 

@@ -1,3 +1,8 @@
+"""Git 操作（clone、update），优先使用 git CLI，否则使用 pygit2.
+
+Modified by Claude, 2026-08-12
+"""
+
 try:
     import pygit2
 except ImportError:

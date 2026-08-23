@@ -1,3 +1,7 @@
+"""seepage mesh 绘图工具。
+
+Modified by Claude, 2026-08-12
+"""
 import zmlx.alg.sys as warnings
 from zmlx.plt.on_axes import add_seepage_mesh, plot_on_axes
 

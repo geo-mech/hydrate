@@ -1,3 +1,7 @@
+"""Interp3 三维插值属性。
+
+Modified by Claude, 2026-08-12
+"""
 from scipy.interpolate import NearestNDInterpolator, LinearNDInterpolator
 
 from zmlx.alg.base import join_cols
@@ -21,7 +25,7 @@ def create_linear(box, size, x, y, z, v, rescale=True):
     try:
         f1 = LinearNDInterpolator(points, values, rescale=rescale,
                                   fill_value=np.nan)
-    except:
+    except Exception:
         def f1(*args):
             return np.nan
     f2 = NearestNDInterpolator(points, values, rescale=rescale)

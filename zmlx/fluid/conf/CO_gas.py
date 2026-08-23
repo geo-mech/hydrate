@@ -1,10 +1,11 @@
-# -*- coding: utf-8 -*-
-"""
-@author: Maryelin
+"""CO 气体属性.
 
-Specific Heat of Oxigen Gas  from:
-https://www.engineeringtoolbox.com/carbon-monoxide-d_1416.html
+@author: Maryelin
+Ref: https://www.engineeringtoolbox.com/carbon-monoxide-d_1416.html
+
+Modified by Claude, 2026-08-12
 """
+
 import zmlx.alg.sys as warnings
 
 from zmlx.exts import Interp2, FluDef

@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.geometry.segment."""
 from zmlx.geometry.segment import seg_intersection
 
 __all__ = ['seg_intersection', ]

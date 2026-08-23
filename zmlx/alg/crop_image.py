@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.alg.image."""
 import zmlx.alg.sys as warnings
 
 from zmlx.alg.image import crop_image

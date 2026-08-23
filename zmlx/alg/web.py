@@ -1,5 +1,8 @@
 """
 网页相关的操作。直接从webbrowser导入即可
+.
+
+Modified by Claude, 2026-08-12
 """
 from webbrowser import open_new_tab, open, open_new
 

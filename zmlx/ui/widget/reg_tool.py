@@ -1,3 +1,8 @@
+"""许可注册工具 widget.
+
+Modified by Claude, 2026-08-12
+"""
+
 from zmlx.ui.pyqt import QtWidgets
 
 

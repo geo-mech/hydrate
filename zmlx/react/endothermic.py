@@ -1,3 +1,7 @@
+"""吸热反应基础类.
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.alg.base import clamp
 
 

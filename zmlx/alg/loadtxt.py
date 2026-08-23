@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.io.load_txt."""
 from zmlx.io.load_txt import load_txt as loadtxt
 
 __all__ = ['loadtxt']

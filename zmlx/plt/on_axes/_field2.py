@@ -1,3 +1,7 @@
+""" field2 绘图工具。
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.plt.on_axes._tricontourf import add_tricontourf
 
 

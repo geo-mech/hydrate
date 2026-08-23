@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.seepage_mesh.mesh3."""
 from zmlx.seepage_mesh.mesh3 import face_centered
 
 __all__ = [

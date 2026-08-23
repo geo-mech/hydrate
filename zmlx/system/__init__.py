@@ -4,7 +4,10 @@ zmlx来说是基础的，但是，exts目前有些庞大了。如果exts中有�
 放在system里面。
 
 since 2026-6-29
+
+Modified by Claude, 2026-08-12
 """
+
 
 from zmlx.system._app_data import app_data, get_user_data_dir
 from zmlx.system._deprecated import deprecated

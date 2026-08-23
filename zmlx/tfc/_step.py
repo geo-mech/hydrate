@@ -1,6 +1,9 @@
 """
 根据step，按照给定的间隔来执行操作
+
+Modified by Claude, 2026-08-12
 """
+
 
 from zmlx.exts import Seepage, clock
 

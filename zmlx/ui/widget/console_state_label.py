@@ -1,3 +1,8 @@
+"""状态栏标签（显示 zml 内核编译时间）.
+
+Modified by Claude, 2026-08-12
+"""
+
 try:
     from zmlx.exts import core
 except ImportError:
@@ -13,7 +18,7 @@ class ConsoleStateLabel(Label):
         try:
             text = core.time_compile.split(',')[0]
             self.default_text = f'Version: {text}'
-        except:
+        except Exception:
             self.default_text = 'Version: ERROR'
 
         self.setText('')

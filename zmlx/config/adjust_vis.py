@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.tfc._vis."""
 from zmlx.tfc._vis import *
 
 _keep = [adjust]

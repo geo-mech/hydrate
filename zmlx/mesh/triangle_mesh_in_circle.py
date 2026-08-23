@@ -7,7 +7,10 @@
 
 在生成随机点的时候，请检查和当前已有点的距离，如果距离小于某一个阈值，则抛弃这个随机点。
 我看了你生成的三角形网格，在边界附近，我感觉某些点之家的距离有些过小了。
+
+Modified by Claude, 2026-08-12
 """
+
 import time
 from typing import Tuple, Optional
 

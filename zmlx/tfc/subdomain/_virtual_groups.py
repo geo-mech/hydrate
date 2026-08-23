@@ -1,3 +1,7 @@
+"""虚拟分组（并行迭代调度）.
+
+Modified by Claude, 2026-08-12
+"""
 from typing import List, Any, Dict, Optional, Tuple
 
 from zmlx.exts import Seepage, get_index

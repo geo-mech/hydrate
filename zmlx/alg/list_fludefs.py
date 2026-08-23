@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.tfc."""
 import zmlx.alg.sys as warnings
 
 from zmlx.tfc import list_fludefs

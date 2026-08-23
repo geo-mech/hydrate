@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.tfc."""
 from zmlx.tfc import get_configs as get, put_configs as put, add_config as add
 
 _keep = [get, put, add]

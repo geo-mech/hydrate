@@ -1,3 +1,7 @@
+"""XYZ 点云文件加载.
+
+Modified by Claude, 2026-08-12
+"""
 def load_xyz(ipath=None, ix=None, iy=None, iz=None):
     if ipath is not None:
         import numpy as np

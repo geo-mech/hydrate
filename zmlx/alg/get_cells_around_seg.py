@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.alg.around_seg."""
 import zmlx.alg.sys as warnings
 
 from zmlx.alg.around_seg import get_cells_around_seg, get_cell_ids_around_seg

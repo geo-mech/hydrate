@@ -1,3 +1,7 @@
+"""2D 绘图测试。
+
+Modified by Claude, 2026-08-12
+"""
 import time
 
 try:

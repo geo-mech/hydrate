@@ -1,3 +1,7 @@
+"""绘图元素定义（_item）。
+
+Modified by Claude, 2026-08-12
+"""
 def item(name, *args, **kwargs):
     """
     生成一个绘图的item.

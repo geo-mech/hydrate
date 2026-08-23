@@ -1,6 +1,6 @@
-"""
+"""C22H46（二十二烷）液体属性.
 
-@author: Maryelin
+Modified by Claude, 2026-08-12
 """
 import zmlx.alg.sys as warnings
 

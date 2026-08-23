@@ -1,3 +1,8 @@
+"""并行计算开关复选框（CoreParallelEdit）.
+
+Modified by Claude, 2026-08-12
+"""
+
 import sys
 
 from zmlx.system import app_data

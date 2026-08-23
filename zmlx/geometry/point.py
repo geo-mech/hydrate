@@ -1,3 +1,7 @@
+"""二维/三维点几何计算（距离、角度、法向量）.
+
+Modified by Claude, 2026-08-12
+"""
 import math
 
 from zmlx.exts import get_distance, get_distance as point_distance

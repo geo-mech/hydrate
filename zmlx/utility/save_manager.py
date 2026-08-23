@@ -1,3 +1,8 @@
+"""周期性自动保存管理器，在迭代过程中按时间间隔保存数据并自动创建目录.
+
+Modified by Claude, 2026-08-12
+"""
+
 import os
 
 import zmlx.alg.sys as warnings
@@ -5,25 +10,34 @@ from zmlx.alg.fsys import make_fname
 
 
 class SaveManager:
-    """
-    用以管理在迭代的过程中以一定的时间间隔来保存数据
+    """迭代过程中的自动保存管理器。
+
+    在每次调用时检查时间间隔，满足条件则调用 ``save(path)`` 保存模型状态。
+    自动创建目标目录，文件名包含时间。
+
+    备注:
+        部分函数依赖 SaveManager 执行的 save 函数不需要指定 path，
+        这些 save 函数需要在 path 为 None 时也能正常工作。因此参数
+        ``always_save`` 的默认值必须为 True。
+        （2023-6-13）
     """
 
     def __init__(self, folder=None, dtime=None, get_time=None, save=None,
                  ext=None, time_unit=None, always_save=True,
                  unit_length=None):
-        """
-        folder: 存储的目录 (当folder为None的时候，则传入save函数的路径也为None。当folder为空字符串时，将保存到当前路径)
-        dtime: 可以是一个函数<或者一个具体的数值>，来返回不同时刻输出的时间间隔(采用和get_time函数一样的单位)
-        get_time: 返回模型的当前时间
-        ext: 为文件的扩展名<需要包含点>
-        time_unit: 为显示的时间的单位（一个字符串）;
-        always_save: 即便在路径为None的时候，也尝试运行save函数 (传递给save的path参数将为None)
+        """初始化保存管理器。
 
-        备注：
-            部分函数依赖SaveManager执行的save函数不需要指定path，这些save函数需要在path为None的时候调用。因此，参数
-            always_save的默认值必须为True，否则这些语句将无法正确执行。
-            2023-6-13
+        Args:
+            folder: 存储目录（None 时 path 也为 None；空字符串存到当前路径）。
+            dtime: 保存间隔函数（接收当前时间并返回间隔）或固定数值。
+            get_time: 返回模型当前时间的回调函数。
+            save: 保存回调函数（接收 ``path`` 参数，必须可调用）。
+            ext: 文件扩展名（需包含点，如 ``".txt"``）。
+            time_unit: 显示的时间单位字符串（如 ``"y"``、``"d"``、``"h"``）。
+            always_save: 即使 path 为 None 也调用 save 函数。
+            unit_length: 每个时间单位对应的秒数；
+                          None 时默认为 1.0（保持兼容）；
+                          ``'auto'`` 时由 ``time_unit`` 自动推算。
         """
 
         assert isinstance(folder, str) or folder is None
@@ -59,6 +73,14 @@ class SaveManager:
 
     @staticmethod
     def get_unit_length(time_unit):
+        """返回时间单位对应的秒数。
+
+        Args:
+            time_unit: ``'y'``（年）、``'d'``（天）、``'h'``（小时）或其他。
+
+        Returns:
+            float: 该时间单位的秒数，未知单位返回 1.0。
+        """
         if time_unit == 'y':
             return 365.25 * 24.0 * 3600.0
         elif time_unit == 'd':
@@ -69,8 +91,10 @@ class SaveManager:
             return 1.0
 
     def __call__(self, check_dt=True):
-        """
-        尝试执行一次保存操作。当check_dt为False的时候，则不检查时间间隔
+        """尝试执行一次保存操作。
+
+        Args:
+            check_dt: False 时不检查时间间隔，强制执行保存。
         """
         if self.save is None or self.get_time is None:
             return

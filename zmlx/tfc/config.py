@@ -1,6 +1,9 @@
 """
 热流耦合配置模块。弃用。
+
+Modified by Claude, 2026-08-12
 """
+
 import zmlx.alg.sys as warnings
 from zmlx.exts import Object, Seepage, get_average_perm, Reaction, log, FluDef
 from zmlx.tfc._main import set_cell_ini

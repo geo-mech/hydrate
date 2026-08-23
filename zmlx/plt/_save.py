@@ -1,6 +1,9 @@
 """
 matplotlib 图片保存路径工具。
+
+Modified by Claude, 2026-08-12
 """
+
 
 import os
 
@@ -17,7 +20,7 @@ def set_plt_save_path(path):
     try:
         from zmlx.system import make_dirs
         make_dirs(path)
-    except:
+    except Exception:
         pass
 
 
@@ -79,7 +82,7 @@ def get_plt_save_path(*subdirs):
     try:
         from zmlx.system import make_parent
         make_parent(res)
-    except:
+    except Exception:
         pass
     return res
 

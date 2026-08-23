@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.data.path."""
 import os
 
 import zmlx.alg.sys as warnings

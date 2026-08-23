@@ -1,6 +1,9 @@
 """
 检查Seepage模型可能存在的问题，并返回问题列表.
+
+Modified by Claude, 2026-08-12
 """
+
 from typing import List
 
 from zmlx.exts import Seepage

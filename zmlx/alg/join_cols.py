@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.alg.base."""
 from zmlx.alg.base import join_cols
 
 __all__ = ['join_cols']

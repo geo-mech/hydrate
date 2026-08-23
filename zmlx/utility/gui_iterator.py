@@ -1,3 +1,12 @@
+"""GUI 求解过程迭代控制器。
+
+自动调用模型迭代与绘图，通过计时统计自适应控制绘图频率，
+确保绘图耗时不超过迭代总时间的设定比例。
+同时提供 ``get_gui_iter`` 函数用于获取全局单例。
+
+Modified by Claude, 2026-08-12
+"""
+
 import timeit
 
 import zmlx.alg.sys as warnings
@@ -7,8 +16,11 @@ from zmlx.system import is_headless
 
 
 class GuiIterator:
-    """
-    基于GUI界面的求解过程控制。自动调用模型的迭代和绘图，并确保绘图函数不会过于频繁地调用，保证计算效率；
+    """基于 GUI 的求解过程自适应控制器。
+
+    自动调用模型的迭代（``iterate``）和绘图（``plot``），
+    通过时间统计控制绘图频率，确保绘图耗时不超过设定的比例。
+    支持 GUI 和无 GUI 模式自动切换。
     """
 
     def __init__(
@@ -21,37 +33,32 @@ class GuiIterator:
         max_plot_interval=None,
         gui_only=None,
     ):
+        """初始化迭代控制器。
+
+        Args:
+            iterate: 迭代回调函数（接收 ``*args, **kwargs``）。
+            plot: 绘图回调函数（无参数）。
+            info: 状态信息回调函数（无参数，返回字符串），
+                  None 时使用内置的耗时显示。
+            ratio: 绘图耗时占总耗时的最大比例，默认 0.2，
+                   钳制在 ``[1e-3, 0.3]``。
+            figure_caption: 耗时绘图窗口的标题。
+            max_plot_interval: 最大绘图间隔（step 数），
+                               超过此间隔强制绘图。None 时不限制。
+            gui_only: 是否仅在 GUI 模式下绘图。
+                      None 时由 ``is_headless()`` 自动决定。
         """
-        初始化：其中：
-            iterate: 程序内核进行计算迭代 (将接受__call__的所有参数)
-            plot: 绘图操作 (函数不接受任何参数)
-            info: 返回当前模型的状态信息 (函数不接受任何参数) 可以为None
-            ratio: gui绘图所占据的总的时长的比例。默认为0.2
-            max_plot_interval: 最大绘图间隔，单位为step。默认为None，即不限制绘图间隔。
-            gui_only: 是否只在gui模式下绘图(如果gui不存在，则永远不会执行绘图)。默认为False。
-        """
-        if callable(iterate):
-            self.iterate = iterate
-        else:
-            self.iterate = None
+        self._iterate = iterate if callable(iterate) else None
+        self._plot = plot if callable(plot) else None
+        self.info = info if callable(info) else self.time_info
 
-        if callable(plot):
-            self.plot = plot
-        else:
-            self.plot = None
-
-        if callable(info):
-            self.info = info
-        else:
-            self.info = self.time_info
-
-        self.step_last_plot = None  # 最后一次绘图的时候的step
-        self.time_iter = 0
-        self.time_plot = 0
-        self.step = 0
-        self.ratio = 0.2 if ratio is None else clamp(ratio, 1.0e-3, 0.3)
-        self.history = []
-        self.max_history_shown = 1000  # 在绘图显示迭代耗时的时候，最多显示的记录的个数.
+        self._step_last_plot = None  # 最后一次绘图的时候的step
+        self._time_iter = 0
+        self._time_plot = 0
+        self._step = 0
+        self._ratio = 0.2 if ratio is None else clamp(ratio, 1.0e-3, 0.3)
+        self._history = []
+        self._max_history_shown = 1000  # 在绘图显示迭代耗时的时候，最多显示的记录的个数.
         self.figure_caption = figure_caption  # 耗时绘图的Caption
         self.max_plot_interval = max_plot_interval  # 最大绘图间隔，单位为step
         self.gui_only = (
@@ -59,19 +66,58 @@ class GuiIterator:
         )  # 是否只在gui模式下绘图(如果gui不存在，则永远不会执行绘图)
 
     def time_info(self):
-        """
-        返回程序的耗时情况
+        """返回程序的耗时情况。
+
+        Returns:
+            str: 累计总耗时、迭代耗时和绘图耗时的格式化字符串。
         """
         return (
-            f"Time. All = {time2str(self.time_iter + self.time_plot)}. "
-            f"Iter = {time2str(self.time_iter)}, "
-            f"Plot = {time2str(self.time_plot)}"
+            f"Time. All = {time2str(self._time_iter + self._time_plot)}. "
+            f"Iter = {time2str(self._time_iter)}, "
+            f"Plot = {time2str(self._time_plot)}"
         )
+
+    @property
+    def iterate(self):
+        """迭代回调函数（可读/写）。设置为 None 或不可调用对象时引发 TypeError。"""
+        return self._iterate
+
+    @iterate.setter
+    def iterate(self, value):
+        if value is not None and not callable(value):
+            raise TypeError(f'iterate must be callable or None, got {type(value).__name__}')
+        self._iterate = value
+        self._time_iter = 0
+        self._time_plot = 0
+
+    @property
+    def plot(self):
+        """绘图回调函数（可读/写）。设置为 None 或不可调用对象时引发 TypeError。"""
+        return self._plot
+
+    @plot.setter
+    def plot(self, value):
+        if value is not None and not callable(value):
+            raise TypeError(f'plot must be callable or None, got {type(value).__name__}')
+        self._plot = value
+        self._time_iter = 0
+        self._time_plot = 0
+
+    @property
+    def ratio(self):
+        """绘图时间比例（可读/写）。取值钳制在 ``[1e-3, 0.3]``。"""
+        return self._ratio
+
+    @ratio.setter
+    def ratio(self, value):
+        self._ratio = clamp(value, 1.0e-3, 0.3)
+        self._time_iter = 0
+        self._time_plot = 0
 
     def show_timing(self, figure):
         """
         在Matplotlib的Figure上显示history。采用双y的坐标系，其中x为step，左侧的y为迭代的耗时，右侧的y为绘图的耗时.
-        注意：如果self.history的长度小于2，则不需要绘图.
+        注意：如果self._history的长度小于2，则不需要绘图.
         Args:
             figure: Matplotlib的Figure对象
         Returns:
@@ -79,9 +125,9 @@ class GuiIterator:
         """
         figure.clear()
         figure.suptitle(self.time_info())
-        if len(self.history) < 2 or self.max_history_shown < 10:
+        if len(self._history) < 2 or self._max_history_shown < 10:
             return
-        history = self.history[-self.max_history_shown :]
+        history = self._history[-self._max_history_shown :]
         step = [h[0] for h in history]
         t_iter = [h[1] for h in history]
         step_plot = [h[0] for h in history if h[2] > 0]
@@ -108,7 +154,7 @@ class GuiIterator:
         ax2.set_ylim(bottom=0)
         figure.tight_layout()
 
-    def plot_timing(self):
+    def _plot_timing(self):
         """
         绘图显示迭代耗时的历史记录
         """
@@ -119,7 +165,7 @@ class GuiIterator:
                 on_top=False, oper=lambda w: w.set_data(self)
             )
         else:
-            if self.max_history_shown >= 10 and not self.gui_only:
+            if self._max_history_shown >= 10 and not self.gui_only:
                 from zmlx.ui import plot
                 if isinstance(self.figure_caption, str):
                     caption = self.figure_caption
@@ -128,7 +174,7 @@ class GuiIterator:
                 plot(self.show_timing, caption=caption, on_top=False)
 
     @staticmethod
-    def timing(f):
+    def _timing(f):
         """
         调用函数并计时
         """
@@ -137,12 +183,15 @@ class GuiIterator:
         return timeit.default_timer() - t_beg, r
 
     def __call__(self, *args, forced_plot=False, **kwargs):
-        """
-        调用iterate，并可能自动调用绘图操作. 返回 iterate执行的结果.
+        """调用迭代函数，并按需自动执行绘图。
+
         Args:
-            *args: 迭代函数的参数
-            forced_plot: 是否强制绘图
-            **kwargs: 迭代函数的参数参数
+            *args: 传递给 ``iterate`` 的位置参数。
+            forced_plot: 是否强制执行绘图（首次调用时自动为 True）。
+            **kwargs: 传递给 ``iterate`` 的关键词参数。
+
+        Returns:
+            任意 | None: ``iterate`` 的执行结果（``iterate`` 为 None 时返回 None）。
         """
         if self.iterate is None:  # 此时不需要迭代
             return None
@@ -151,16 +200,16 @@ class GuiIterator:
             assert callable(self.iterate), "The iterate function should be callable."
             return self.iterate(*args, **kwargs)
 
-        t1, r = GuiIterator.timing(f)
+        t1, r = GuiIterator._timing(f)
         t2 = 0.0
-        self.step += 1  # 迭代的步数增加
-        self.time_iter += t1
+        self._step+= 1  # 迭代的步数增加
+        self._time_iter += t1
 
-        if len(self.history) > 100000:  # 限制历史记录的长度
-            self.history = self.history[-50000:]
+        if len(self._history) > 100000:  # 限制历史记录的长度
+            self._history = self._history[-50000:]
 
         if not gui.exists() and self.gui_only:
-            self.history.append((self.step, t1, t2))
+            self._history.append((self._step, t1, t2))
             return r
 
         if gui.exists():
@@ -169,24 +218,24 @@ class GuiIterator:
             f"The GuiIterator.ratio should be in [0, 0.5), but get {self.ratio}"
         )
 
-        if self.step_last_plot is None:
+        if self._step_last_plot is None:
             forced_plot = True  # 确保执行一次绘图
         else:
             if self.max_plot_interval is not None:
-                if self.step - self.step_last_plot > self.max_plot_interval:
+                if self._step- self._step_last_plot > self.max_plot_interval:
                     forced_plot = True  # 距离上次绘图已经过于久远了，因此强制绘图
 
         if (
-            self.time_plot < self.time_iter * self.ratio and self.plot is not None
+            self._time_plot < self._time_iter * self.ratio and self.plot is not None
         ) or forced_plot:
             try:
-                t2 = GuiIterator.timing(self.plot_all)[0]
-                self.time_plot += t2
+                t2 = GuiIterator._timing(self.plot_all)[0]
+                self._time_plot += t2
             except Exception as err:
                 warnings.warn(f"meet exception <{err}> when run <GuiIterator.plot_all>")
 
-        self.history.append((self.step, t1, t2))
-        if self.step % 10 == 0 and self.info is not None:
+        self._history.append((self._step, t1, t2))
+        if self._step% 10 == 0 and self.info is not None:
             try:
                 gui.status(self.info())
             except Exception as err:
@@ -195,16 +244,17 @@ class GuiIterator:
         return r
 
     def plot_all(self):
-        """
-        执行所有的绘图，包括外部的绘图和耗时的绘图
+        """执行所有的绘图操作（外部绘图 + 耗时计时绘图）。
+
+        仅在 GUI 存在或 ``gui_only`` 为 False 时执行。
         """
         if self.gui_only and not gui.exists():
             return
         if callable(self.plot):
             self.plot()
-        self.plot_timing()
+        self._plot_timing()
         # 更新最后一次绘图的时候的step
-        self.step_last_plot = self.step
+        self._step_last_plot = self._step
 
 
 

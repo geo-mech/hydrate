@@ -1,3 +1,8 @@
+"""环境变量模板生成（生成 zml_env_items.json 配置文件）.
+
+Modified by Claude, 2026-08-12
+"""
+
 import os.path
 
 

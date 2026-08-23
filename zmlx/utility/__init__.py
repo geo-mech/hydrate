@@ -1,6 +1,8 @@
 """
 在上一个版本中，类的名字和模块的名字是相同的，这容易产生问题。后续，模块的名字将采用Python建议
 的小写，并逐渐（2026-4-16之后）弃用之前的模块名字。
+
+Modified by Claude, 2026-08-12
 """
 
 from zmlx.exts import SelfPath

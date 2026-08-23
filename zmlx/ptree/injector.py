@@ -1,3 +1,7 @@
+"""注入器属性。
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.alg.fsys import *
 from zmlx.exts import Seepage
 from zmlx.ptree.array import array

@@ -1,3 +1,7 @@
+"""FluData 流体数据属性。
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.alg.fsys import *
 from zmlx.exts import Seepage
 from zmlx.ptree.ptree import PTree, as_ptree

@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.io.base."""
 from zmlx.io.base import TaskFolder
 
 __all__ = ['TaskFolder']

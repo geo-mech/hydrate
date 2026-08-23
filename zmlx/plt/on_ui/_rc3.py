@@ -1,3 +1,7 @@
+""" rc3 绘图工具。
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.plt.on_axes import add_rc3
 from zmlx.plt.on_figure import plot_on_axes
 

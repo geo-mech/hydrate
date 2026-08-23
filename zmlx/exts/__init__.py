@@ -15,7 +15,10 @@
 
 作者: 张召彬 <zhangzhaobin@mail.iggcas.ac.cn>，
      中国科学院地质与地球物理研究所.
+
+Modified by Claude, 2026-08-12
 """
+
 import datetime
 import importlib
 import re
@@ -84,7 +87,7 @@ def feedback(text: str = 'feedback', subject: Optional[str] = None) -> bool:
                             subject=subject,
                             text=text,
                             name_from=None, name_to='Author')
-    except:
+    except Exception:
         return False
 
 
@@ -213,7 +216,7 @@ def reg(code: Optional[str] = None) -> Optional[str]:
                     return lic.load(code)
                 else:
                     return None
-            except:
+            except Exception:
                 if lic.is_admin and len(code) > 0:
                     return lic.create(code)
                 else:
@@ -355,14 +358,14 @@ def __feedback():
                         try:
                             from zmlx.alg.sys import get_city
                             city = f' from {get_city()}'
-                        except:
+                        except Exception:
                             city = ''
                     if feedback(text=text[0: 100000],
                                 subject=f'log <{name}>{city}'):
                         with open(os.path.join(folder_logs_feedback, name),
                                   'w') as f2:
                             f2.write('\n')
-    except:
+    except Exception:
         pass
 
 
@@ -370,7 +373,7 @@ try:
     if app_data.getenv('disable_auto_feedback', default='No',
                        ignore_empty=True) != 'Yes':
         __feedback()
-except:
+except Exception:
     pass
 
 try:
@@ -379,12 +382,12 @@ try:
     if disable_timer == 'Yes':
         timer.enabled(False)
         app_data.log(f'timer disabled')
-except:
+except Exception:
     pass
 
 try:
     app_data.log(f'import zml <zml: v{version}, Python: {sys.version}>')
-except:
+except Exception:
     pass
 
 
@@ -408,6 +411,11 @@ def is_chinese(string: str) -> bool:
 
 
 class Alg:
+    """通用算法集合（C++ 静态方法绑定）。
+
+    包含 link_point2、速度衰减计算、zml 头文件准备等工具方法。
+    """
+
     core.use(None, 'link_point2',
              c_void_p, c_void_p, c_double)
 
@@ -483,7 +491,16 @@ class Alg:
 
 
 class LazyImport:
+    """延迟导入包装器（按需加载模块属性）。"""
+
     def __init__(self, module, name, deprecated_date=None):
+        """初始化延迟导入。
+
+        Args:
+            module: 目标模块名。
+            name: 目标属性名。
+            deprecated_date: 弃用日期（可选）。
+        """
         self.pack = module
         self.name = name
         self.date = deprecated_date

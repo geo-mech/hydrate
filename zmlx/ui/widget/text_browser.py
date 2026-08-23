@@ -1,3 +1,8 @@
+"""文本浏览器 widget（支持上下文菜单清除内容）.
+
+Modified by Claude, 2026-08-12
+"""
+
 from zmlx.system import write_text
 from zmlx.ui.alg import create_action
 from zmlx.ui.gui_buffer import gui

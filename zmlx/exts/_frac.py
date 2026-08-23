@@ -1,3 +1,7 @@
+"""裂缝/水力压裂绑定.
+
+Modified by Claude, 2026-08-12
+"""
 import warnings
 from ctypes import c_double, c_void_p, c_size_t, c_bool, c_char_p
 from typing import Optional, Iterable, Tuple, List, Union
@@ -1206,7 +1210,7 @@ class FractureNetwork(HasHandle):
         try:
             name = type(self).__name__
             log(f'{name} created', tag=f'{name}_Init')
-        except:
+        except Exception:
             pass
 
     def __repr__(self) -> str:

@@ -2,7 +2,10 @@
 根据位置过滤 Mesh3，只保留指定范围内的 Node 及其关联的 Link、Face、Body。
 
 作者: Claude Code
+
+Modified by Claude, 2026-08-12
 """
+
 
 from typing import Callable
 from zmlx.exts import Mesh3

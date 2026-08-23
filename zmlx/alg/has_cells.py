@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.exts."""
 from zmlx.exts import *
 
 _keep = [get_nearest_cell]

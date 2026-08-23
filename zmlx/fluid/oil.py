@@ -87,7 +87,7 @@ if __name__ == '__main__':
 
         show_field2(flu.vis, [1e6, 40e6], [300, 1000])
         show_field2(flu.den, [1e6, 40e6], [300, 1000])
-    except:
+    except Exception:
         pass
 
     """

@@ -53,5 +53,5 @@ if __name__ == '__main__':
         from zmlx.plt import show_flu_def
 
         show_flu_def(flu, [1e6, 20e6], [270, 290])
-    except:
+    except Exception:
         pass

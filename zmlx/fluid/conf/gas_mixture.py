@@ -1,3 +1,7 @@
+"""气体混合物属性（密度、粘度）.
+
+Modified by Claude, 2026-08-12
+"""
 # -*- coding: utf-8 -*-
 
 from zmlx.exts import Interp2, FluDef

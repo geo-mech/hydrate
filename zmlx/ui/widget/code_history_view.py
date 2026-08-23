@@ -1,3 +1,8 @@
+"""脚本执行历史浏览器.
+
+Modified by Claude, 2026-08-12
+"""
+
 import glob
 import os
 

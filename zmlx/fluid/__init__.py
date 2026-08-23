@@ -1,3 +1,10 @@
+"""流体属性定义（水、甲烷、CO2、水合物等）。
+
+提供各种流体的 FluDef 创建函数，支持 cp/（CoolProp）和 rkt/（Reaktoro）两种计算引擎。
+
+Modified by Claude, 2026-08-12
+"""
+
 from zmlx.exts import SelfPath
 from zmlx.fluid._aqueous import create_aqueous
 from zmlx.fluid._mixture import create_mixture

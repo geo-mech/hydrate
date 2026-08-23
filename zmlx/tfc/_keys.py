@@ -1,6 +1,9 @@
 """
 用于管理Seepage的动态属性
+
+Modified by Claude, 2026-08-12
 """
+
 import zmlx.alg.sys as warnings
 
 from zmlx.exts import Seepage

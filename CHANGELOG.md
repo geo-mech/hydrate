@@ -1,5 +1,112 @@
 # CHANGELOG
 
+## v1.8.11 (2026-08-23)
+
+### 文档
+- 恢复 `fluid/conf` 下 29 个物性文件的原始模块 docstring（含文献引用、作者、温度范围），回退 v1.8.6 中被精简掉的科学出处
+
+## v1.8.10 (2026-08-21)
+
+### 变更
+- 变量浏览器（MemView）编辑方法字典改用字符串 key（'int'/'float'/'str'），查找改为 `type(value).__name__`
+- 双击函数/内置函数变量时给出"暂不支持编辑"提示（不再打开默认文本编辑器）
+
+## v1.8.9 (2026-08-20)
+
+### 修复
+- 修复"杀死进程"二次校验失效：`kill_thread` 中漏改的 `self.thread` 改为 `self.console.thread`，消除线程恰好结束时点击"杀死"导致崩溃的隐患
+- 修复"相渗"编辑界面闭包晚绑定：各相渗项现在正确读写各自的曲线（而非最后一条）
+- 修复 git 更新后备路径（pygit2）中"检查工作区干净"因未导入 pygit2 而崩溃
+- 修复线性求解器测试中 ICCG 类名错误（icConjugateGradientSolver → ICCGSolver）
+- 87 处裸 `except:` 改为 `except Exception:`，避免吞掉 Ctrl+C / sys.exit() 等控制流信号
+
+### 变更
+- `rect_3d_intersection.py` 中 `== True/False` 比较改为惯用写法
+- `seepage_mesh/__init__.py` 清理重复 import
+
+## v1.8.8 (2026-08-19)
+
+### 新增
+- "关于"对话框"版本号"一栏附加显示 zmlx 包版本（如 `260819 (zmlx 1.8.8)`），从 pyproject.toml 读取
+
+## v1.8.7 (2026-08-19)
+
+### 文档
+- README 示例由 darcy_1d.py 改为 wat_disp_oil.py
+- 协作说明调整为 Fork+Pull 模式，保留"申请加入仓库"为备选
+- 新增"两个月一次"更新频率说明与 C++ 开源进度说明
+
+## v1.8.6 (2026-08-12)
+
+### 文档
+- 全面规范 22 个子包的 Google 风格文档字符串（568 个文件）
+  - `utility/` (35): 模块/类/方法 docstring 升级为 Args/Returns/Raises 格式
+  - `ui/` (42): MainWindow、核心 widget、垫片 docstring
+  - `alg/` (~80): 补齐 64 个弃用垫片 + 模块 docstring，跳过已有完善文档
+  - `exts/` (34): C++ 绑定核心层模块 docstring
+  - `tfc/` (27): TFC 耦合引擎模块 docstring
+  - `fluid/` (~50): conf/ 子包替换 Spyder 样板为中文 docstring
+  - `geometry/` (20), `seepage_mesh/` (19), `react/` (26), `mesh/` (11)
+  - `io/` (16), `kr/` (8), `system/` (13), `script/` (6), `data/` (11)
+  - `fig/` (5), `filesys/` (23), `base/` (8), `config/` (28), `pg/` (10), `plt/` (66), `ptree/` (15)
+- 弃用垫片统一添加模块 docstring 说明替代路径
+- 签名格式统一移入模块 docstring 末尾
+
+### 修复
+- `CO_gas.py`/`O2_gas.py` 等 8 个文件 docstring 语法错误修复
+- `_opts.py`/`val_range.py` 函数 docstring 被误改修复
+
+## v1.8.5 (2026-08-11)
+
+### 新增
+- `scen/quick_look/`: 2D 单相流压力快速评估模块
+  - `evaluate()`: 基于 SeepageMesh + tfc.create，支持控压点、加速因子
+  - 裂缝支持：`frac_segs` 参数，`tfc.get_cells_along_seg` 追踪线段 → 放大 Face 面积
+  - 多条裂缝同一 Face 取最大 factor，上限 10000 倍
+  - 零外部依赖，控件点压力取自 p 场
+- `scen/quick_look/_widget.py`: `QuickLookWidget` GUI 控件
+  - PARAM_DEFS 元数据驱动参数表单 + 左右布局（参数输入 / 压力图）
+  - p 参数使用 `CodeEdit` 语法高亮编辑器，支持完整函数定义
+  - 参数自动序列化到 `quick_look.json`（500ms 防抖，再次打开自动恢复）
+  - 后台计算使用 `gui.start_func` 管理线程
+  - 结果叠加控压点与裂缝线段，汇总步数/网格/压力范围
+- `scen/quick_look/zml_gui_setup.py`: GUI 集成入口，`帮助 > 加载 > Quick Look 快速评估`
+- `scen/quick_look/_tests/`: test_widget + test_setup + test_frac 无头测试
+
+### 变更
+- GuiIterator: 属性私有化 + @property setter 类型检查
+- `conda_install` / `pip_install`: 接口统一，返回 `bool`，新增 `name`/`show_exists` 参数
+- `scen/quick_look/`: `dt` → `time_forward`，测试文件移至 `_tests/`
+
+### 修复
+- `conda_install`: `_find_conda_exe()` 自动查找 conda.exe 路径
+- 修复 demo ReadMe 中 `wat_disp_oil.py` 被误改为 `example.py`
+
+### C++ 内核
+- `linear_eqs/c_solver.h`: `solve()` 添加 `ZML_TIME` 计时埋点
+
+## v1.8.1 (2026-08-10)
+
+### 新增
+- `install_dep`：conda 环境优先 conda install，失败回退 pip
+- About: 版本号行\"日志\"按钮 + 右键菜单 (超链接/文件/路线图) + 单位行按钮
+
+### 修复
+- DemoView HtmlDelegate 多行 HTML 换行
+
+## v1.8.0 (2026-08-10)
+
+### 新增
+- `install_dep`：conda 环境优先 conda install，失败回退 pip
+- About: 版本号行"日志"按钮，TextBrowser + setMarkdown 显示 CHANGELOG
+- Memory: GUI 显示 Markdown 标准模式文档
+
+### 变更
+- About: 移除硬件码显示及按钮，lic 导入 try/except 安全处理
+
+### 修复
+- DemoView HtmlDelegate 多行 HTML 换行
+
 ## v1.8.0 (2026-08-10)
 
 本次发布涵盖求解器体系重构（code 字符串 + 线程安全 + 持久化）、DemoView 增强（HTML 渲染 + 按文件夹着色）、

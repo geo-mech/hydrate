@@ -1,3 +1,7 @@
+"""三维矩形相交矩阵数据。
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.exts import *
 
 # 读取生成的相交矩阵序号

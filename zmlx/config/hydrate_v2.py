@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.scen.hydrate._config."""
 import zmlx.alg.sys as warnings
 from zmlx.scen.hydrate._config import ConfigV2
 

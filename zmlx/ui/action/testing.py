@@ -1,3 +1,8 @@
+"""测试与帮助菜单动作（播放图片、链接、管理员功能）.
+
+Modified by Claude, 2026-08-12
+"""
+
 import os
 
 from zmlx.system import execute_once

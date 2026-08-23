@@ -1,3 +1,7 @@
+"""Kr 基础模块（Corey/Stone 模型、插值表创建）.
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.alg.base import linspace
 from zmlx.exts import Interp1
 

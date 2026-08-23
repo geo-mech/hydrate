@@ -1,3 +1,7 @@
+"""ToughReact Kf/Kr 插值.
+
+Modified by Claude, 2026-08-12
+"""
 import warnings
 from typing import List, Dict
 

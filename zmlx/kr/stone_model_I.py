@@ -1,3 +1,7 @@
+"""Stone Model I 三相相对渗透率模型.
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.exts import np
 
 

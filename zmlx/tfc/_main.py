@@ -41,7 +41,10 @@ Face的属性：
     rate: 流体流动的速率(用以计算流体的惯性);
     inertia: 惯性系数. 使用速率rate乘以此系数，则得到流体的动量（=m*v）. 根据Face的area*Face两侧的压力差，计算作用力，从而计算动量的
              变量速度。当Face同时定义了rate和inertia之后，才可以去考虑惯性效应。
+
+Modified by Claude, 2026-08-12
 """
+
 import warnings
 from collections.abc import Iterable
 from typing import List, Union, Tuple

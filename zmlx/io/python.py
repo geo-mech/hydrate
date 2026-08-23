@@ -1,3 +1,7 @@
+"""Python 代码文件生成（将数据导出为 .py 脚本）.
+
+Modified by Claude, 2026-08-12
+"""
 def write_py(path, data=None, **kwargs):
     """
     Save the data to a file in .py format. Note that the data must be correctly converted to a string.
@@ -30,7 +34,7 @@ def read_py(path=None, data=None, encoding='utf-8', globals=None, text=None,
         try:
             with open(path, 'r', encoding=encoding) as file:
                 text = file.read()
-        except:
+        except Exception:
             pass
     if text is None:
         if key is None:
@@ -42,12 +46,12 @@ def read_py(path=None, data=None, encoding='utf-8', globals=None, text=None,
     if key is None:
         try:
             return eval(text, globals)
-        except:
+        except Exception:
             return data
     else:
         space = {}
         try:
             exec(text, globals, space)
             return space if key == '*' or key == '' else space.get(key, data)
-        except:
+        except Exception:
             return space if key == '*' or key == '' else data

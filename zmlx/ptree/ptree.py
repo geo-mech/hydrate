@@ -1,3 +1,7 @@
+"""属性树（PTree）核心模块。
+
+Modified by Claude, 2026-08-12
+"""
 from zmlx.alg.fsys import *
 from zmlx.exts import make_parent
 from zmlx.io.json_ex import read as read_json, write as write_json

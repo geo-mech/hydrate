@@ -1,3 +1,7 @@
+"""井筒渗流网格生成。
+
+Modified by Claude, 2026-08-12
+"""
 try:
     from scipy.interpolate import interp1d
 except ImportError:

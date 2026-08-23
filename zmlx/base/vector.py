@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.alg.vec."""
 from zmlx.alg.vec import *
 
 _keep = [Vector]

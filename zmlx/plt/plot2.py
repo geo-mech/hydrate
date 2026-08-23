@@ -1,6 +1,9 @@
 """
 基于Matplotlib的二维绘图
+
+Modified by Claude, 2026-08-12
 """
+
 import zmlx.alg.sys as warnings
 
 warnings.warn(f'The module {__name__} will be removed after 2027-5-23',

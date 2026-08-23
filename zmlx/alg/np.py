@@ -1,5 +1,8 @@
 """
 一些针对numpy的函数. 同时，也默认讲numpy内的内容引入. 因此，在大部分情况下，可以使用此模块来代替numpy
+.
+
+Modified by Claude, 2026-08-12
 """
 from ctypes import c_double, POINTER
 

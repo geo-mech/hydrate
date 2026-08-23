@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.alg.frac."""
 from zmlx.alg.frac import get_frac_cond, g_1cm
 
 __all__ = ['get_frac_cond', 'g_1cm']

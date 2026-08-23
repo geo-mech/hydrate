@@ -1,3 +1,8 @@
+"""动态属性表 widget（根据数据自动生成行）.
+
+Modified by Claude, 2026-08-12
+"""
+
 import sys
 
 from zmlx.ui.pyqt import QtWidgets, QtCore

@@ -1,3 +1,4 @@
+"""已弃用的模块，请改用 zmlx.io.path."""
 from zmlx.io.path import get_path as opath
 
 __all__ = ['opath']

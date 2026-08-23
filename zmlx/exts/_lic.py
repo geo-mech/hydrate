@@ -1,3 +1,7 @@
+"""许可证管理绑定.
+
+Modified by Claude, 2026-08-12
+"""
 from ctypes import (c_char_p, c_int, c_bool, c_double)
 
 from zmlx.exts._dll import DllCore, core, make_c_char_p

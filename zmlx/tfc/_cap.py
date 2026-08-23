@@ -5,7 +5,9 @@
 在这个驱动下，Cell内流体的组分会进行交换，但是，
 各个Cell内流体的“总的体积”均不会发生任何改变。
 
+Modified by Claude, 2026-08-12
 """
+
 
 from zmlx.exts import Seepage, Interp1, np, Vector, const_f64_ptr, f64_ptr
 from zmlx.exts import clock

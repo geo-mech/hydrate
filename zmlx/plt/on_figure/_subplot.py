@@ -1,6 +1,9 @@
 """
 在这个文件中，处理和figure相关的方法
+
+Modified by Claude, 2026-08-12
 """
+
 
 
 def add_subplot(

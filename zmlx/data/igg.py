@@ -1,3 +1,7 @@
+"""IGG 图标加载。
+
+Modified by Claude, 2026-08-12
+"""
 import os.path
 
 from zmlx.alg.image import get_data

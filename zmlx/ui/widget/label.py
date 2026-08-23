@@ -1,3 +1,8 @@
+"""可点击状态标签（支持悬停信息和双击回调）.
+
+Modified by Claude, 2026-08-12
+"""
+
 from zmlx.ui.gui_buffer import gui
 from zmlx.ui.pyqt import QtCore, QtWidgets
 

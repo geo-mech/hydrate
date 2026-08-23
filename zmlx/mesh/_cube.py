@@ -2,7 +2,10 @@
 在长方体区域内创建包含 Node、Link、Face 和 Body 的三维 Mesh3 网格。
 
 作者: Claude Code
+
+Modified by Claude, 2026-08-12
 """
+
 
 from typing import Sequence
 from zmlx.exts import Mesh3
