@@ -3,7 +3,7 @@
 本文件负责：
 1. 创建模型并求解；
 2. 每一步控制生产井压力；
-3. 调用独立 show.py 中的 show_xy(model) 显示实时空间场。
+3. 调用独立 show.py 中的 show_xy(model) 显示实时空间场
 """
 
 import zmlx.tfc as tfc
