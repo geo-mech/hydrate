@@ -3,13 +3,17 @@
 1列数据，用于定义裂缝的颜色（如压力）
 
 Modified by Claude, 2026-08-12
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
+from zmlx.system import warn
 
 
-import zmlx.alg.sys as warnings
 
-warnings.warn(f'The module {__name__} will be removed after 2027-5-23',
-              DeprecationWarning, stacklevel=2)
+warn(
+    'The module zmlx.plt.fn2 已弃用（remove after 2027-5-23）：'
+    '请改用 `from zmlx import show_fn2`',
+    DeprecationWarning, stacklevel=2)
 from zmlx.plt.on_ui import show_fn2
 
 

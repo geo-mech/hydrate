@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 
+from zmlx.system import warn
+# Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 from typing import Callable, Union, Optional, Dict, Any
 from math import exp
-import warnings
 
 import numpy as np
 
@@ -157,7 +158,7 @@ def get_henry_constant(T_kelvin: float, gas_type: str = "He") -> float:
 
     Tmin, Tmax = HENRY_T_LIMIT[gas]
     if T_kelvin < Tmin or T_kelvin > Tmax:
-        warnings.warn(
+        warn(
             f"{gas} Henry 参数温度范围为 {Tmin:.2f}-{Tmax:.2f} K，"
             f"当前 T={T_kelvin:.2f} K，结果属于外推。"
         )

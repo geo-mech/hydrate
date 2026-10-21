@@ -1,8 +1,11 @@
 """网格（Mesh3）绑定.
 
 Modified by Claude, 2026-08-12
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-import warnings
+
+from zmlx.system import warn
 from ctypes import c_double, c_void_p, c_size_t, c_bool, c_char_p, CFUNCTYPE
 from typing import Optional, Iterable, Tuple, List, Union
 
@@ -2409,12 +2412,12 @@ class SeepageMesh(HasHandle, HasCells):
         Notes:
             此方法将在2025-5-27之后被移除，请使用zmlx.seepage_mesh.ascii中的函数。
         """
-        warnings.warn('SeepageMesh.load_ascii will be removed '
+        warn('SeepageMesh.load_ascii will be removed '
                       'after 2025-5-27, '
                       'please use the function in '
-                      'zmlx.seepage_mesh.ascii instead',
+                      'zmlx.seepage_meshes.ascii instead',
                       DeprecationWarning, stacklevel=2)
-        from zmlx.seepage_mesh.io import load_ascii
+        from zmlx.seepage_meshes.io import load_ascii
         load_ascii(*args, **kwargs, mesh=self)
 
     def save_ascii(self, *args, **kwargs):
@@ -2424,12 +2427,12 @@ class SeepageMesh(HasHandle, HasCells):
         Notes:
             此方法将在2025-5-27之后被移除，请使用zmlx.seepage_mesh.ascii中的函数。
         """
-        warnings.warn('SeepageMesh.save_ascii will be removed '
+        warn('SeepageMesh.save_ascii will be removed '
                       'after 2025-5-27, '
                       'please use the function in '
-                      'zmlx.seepage_mesh.ascii instead',
+                      'zmlx.seepage_meshes.ascii instead',
                       DeprecationWarning, stacklevel=2)
-        from zmlx.seepage_mesh.io import save_ascii
+        from zmlx.seepage_meshes.io import save_ascii
         save_ascii(*args, **kwargs, mesh=self)
 
     @staticmethod
@@ -2440,12 +2443,12 @@ class SeepageMesh(HasHandle, HasCells):
         Notes:
             此方法将在2025-5-27之后被移除，请使用zmlx.seepage_mesh.load_mesh中的函数。
         """
-        warnings.warn('SeepageMesh.load_mesh will be removed '
+        warn('SeepageMesh.load_mesh will be removed '
                       'after 2025-5-27, '
                       'please use the function in '
-                      'zmlx.seepage_mesh.load_mesh instead',
+                      'zmlx.seepage_meshes.load_mesh instead',
                       DeprecationWarning, stacklevel=2)
-        from zmlx.seepage_mesh.io import load_mesh as load
+        from zmlx.seepage_meshes.io import load_mesh as load
         return load(*args, **kwargs)
 
     @staticmethod
@@ -2456,12 +2459,12 @@ class SeepageMesh(HasHandle, HasCells):
         Notes:
             此方法将在2025-5-27之后被移除，请使用zmlx.seepage_mesh.cube.create_cube函数。
         """
-        warnings.warn(
+        warn(
             'The zml.SeepageMesh.create_cube will be removed '
             'after 2025-5-27. '
             'please use the function create_cube from zmlx instead',
             DeprecationWarning, stacklevel=2)
-        from zmlx.seepage_mesh.cube import create_cube as create
+        from zmlx.seepage_meshes.cube import create_cube as create
         return create(*args, **kwargs)
 
     @staticmethod
@@ -2473,12 +2476,12 @@ class SeepageMesh(HasHandle, HasCells):
             此方法将在2025-5-27之后被移除，
             请使用zmlx.seepage_mesh.cylinder.create_cylinder函数。
         """
-        warnings.warn(
+        warn(
             'The zml.SeepageMesh.create_cylinder will be removed'
             ' after 2025-5-27. '
-            'please use zmlx.seepage_mesh.cylinder.create_cylinder instead',
+            'please use zmlx.seepage_meshes.cylinder.create_cylinder instead',
             DeprecationWarning, stacklevel=2)
-        from zmlx.seepage_mesh.cylinder import create_cylinder as create
+        from zmlx.seepage_meshes.cylinder import create_cylinder as create
         return create(*args, **kwargs)
 
     core.use(None, 'seepage_mesh_find_inner_face_ids',

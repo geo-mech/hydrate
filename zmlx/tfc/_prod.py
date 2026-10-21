@@ -5,7 +5,7 @@ Modified by Claude, 2026-08-12
 """
 
 
-from zmlx.alg.interp import interp1
+from zmlx.algs.interp import interp1
 from zmlx.exts import clock
 from zmlx.tfc._base import get_time, Seepage, get_configs, put_configs
 

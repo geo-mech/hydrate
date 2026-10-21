@@ -1,30 +1,28 @@
-"""H2O 气相流体属性（基于 NIST 数据表）.
+"""旧子包名（兼容层，**已弃用**）：``h2o_gas`` -> :mod:`zmlx.fluids.h2o_gas`.
 
-Modified by Claude, 2026-08-12
+⚠️ **本子包只是一层转发**：它下面的每个模块在 ``zmlx/fluid/h2o_gas/`` 里各留了一层
+同名转发；本文件再把子包 ``__init__`` **自己**导出的名字转出来
+（例如 ``co2`` 子包的 ``create`` 就定义在它的 ``__init__.py`` 里）。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.fluids.h2o_gas import ...``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-import os
-
-from zmlx.exts import Interp2, FluDef
+from zmlx.system import warn
 
 
-def create(name=None):
-    # 水蒸气的比热参考：
-    # https://zhidao.baidu.com/question/304769103441864644.html
-    return FluDef(
-        den=Interp2(path=os.path.join(os.path.dirname(__file__), 'den.txt')),
-        vis=Interp2(path=os.path.join(os.path.dirname(__file__), 'vis.txt')),
-        specific_heat=1850.0, name=name)
+warn(
+    '``zmlx.fluid.h2o_gas`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.fluids.h2o_gas``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-
-create_flu = create
-
-if __name__ == '__main__':
-    flu = create_flu()
-    print(flu)
-    try:
-        from zmlx.plt import show_field2
-
-        show_field2(flu.den, [1e6, 20e6], [270, 290])
-        show_field2(flu.vis, [1e6, 20e6], [270, 290])
-    except Exception:
-        pass
+from zmlx.fluids.h2o_gas import *  # noqa: F401,F403
+from zmlx.fluids.h2o_gas import (  # noqa: F401
+    create,
+    create_flu
+)

@@ -6,7 +6,7 @@ from scipy.interpolate import NearestNDInterpolator
 
 from zmlx.exts import Tensor2, Tensor3
 from zmlx.ptree.array import array
-from zmlx.utility.fields import Field
+from zmlx.utils.fields import Field
 
 
 class Ts3Interp3:

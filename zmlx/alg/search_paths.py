@@ -1,53 +1,28 @@
-"""搜索路径管理（增删查改搜索路径列表）.
+"""旧模块名（兼容层，**已改名为** :mod:`zmlx.algs.search_paths`）.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/algs/search_paths.py`` 里。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时会发出
+:class:`DeprecationWarning`。**新代码请写** ``from zmlx.algs.search_paths import ...``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-
-import os
-
-
-def get_paths():
-    """返回当前搜索路径列表。"""
-    try:
-        from zmlx.exts import app_data
-        paths = []
-        for line in app_data.getenv(key='path', default='').splitlines():
-            line = line.strip()
-            if os.path.isdir(line):
-                paths.append(line)
-        return paths
-    except Exception:
-        return []
+from zmlx.system import warn
 
 
-def add_path(paths, path):
-    for existed in paths:
-        if os.path.samefile(existed, path):
-            return
-    paths.append(path)
+warn(
+    '``zmlx.alg.search_paths`` 已弃用（2026-10-16）：算法包已改名为 ``zmlx.algs``；'
+    '本转发层将于 **2027-10-16** 删除。请改用 ``from zmlx.algs.search_paths import ...``。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-
-def save_paths(paths):
-    """保存搜索路径列表。"""
-    try:
-        from zmlx.exts import app_data
-        app_data.setenv('path', '\n'.join(paths))
-    except Exception:
-        pass
-
-
-def choose_path():
-    """弹出对话框让用户选择路径。"""
-    from zmlx.ui import gui
-    if not gui.exists():
-        return
-    folder = gui.get_existing_directory('请选择文件夹', os.getcwd())
-    if len(folder) > 0 and os.path.isdir(folder):
-        try:
-            paths = get_paths()
-            add_path(paths, folder)
-            save_paths(paths)
-            gui.information('成功',
-                            f'成功添加了搜索路径: \n<{folder}> \n\n下次启动软件时生效!')
-        except Exception as e:
-            print(e)
+from zmlx.algs.search_paths import *  # noqa: F401,F403
+from zmlx.algs.search_paths import (  # noqa: F401
+    add_path,
+    choose_path,
+    get_paths,
+    save_paths
+)

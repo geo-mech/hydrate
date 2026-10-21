@@ -1,60 +1,37 @@
-"""动态属性表 widget（根据数据自动生成行）.
+"""旧模块名（兼容层，**已弃用**）：``attr_view`` -> :mod:`zmlx.ui.widgets.attr_view`.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/ui/widgets/attr_view.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.ui.widgets.attr_view import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由单数 ``widget`` 改为复数 ``widgets``（单数与 Qt 自己的
+``QtWidgets`` 太像，读代码时极易看错）。但 ``from zmlx.ui.widget.attr_view import ...``
+这条路径仍被三类来源用着，故留一年过渡：① 外部脚本与用户在控制台敲的命令；
+② 历史标签页的 ``gui_restore``（重启时按存下来的字符串重放）；③ 更早的兼容层。
+
+⚠️ 完整的兼容策略见 ``zmlx/ui/widget/__init__.py`` 与 ``widgets/AGENTS.md``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-
-import sys
-
-from zmlx.ui.pyqt import QtWidgets, QtCore
+from zmlx.system import warn
 
 
-class AttrView(QtWidgets.QTableWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self._data = {}
-        header = self.horizontalHeader()
-        if header is not None:
-            header.setSectionResizeMode(QtWidgets.QHeaderView.ResizeMode.Stretch)
-        self.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
+warn(
+    '``zmlx.ui.widget.attr_view`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.ui.widgets.attr_view``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-    def get_count(self):
-        return len(self._data)
-
-    def get_data(self):
-        return self._data
-
-    def show_attrs(self, clear: bool = False, **opts):
-        if clear:
-            self._data.clear()
-        self._data.update(opts)
-        data = []
-        for key, value in self._data.items():
-            if isinstance(value, dict):
-                n = value.get('name')
-                v = value.get('value')
-                if isinstance(n, str) and v is not None:
-                    data.append([n, f'{v}'])
-                    continue
-            data.append([key, f'{value}'])
-
-        self.setRowCount(len(data))
-        self.setColumnCount(2)
-        self.setHorizontalHeaderLabels(['名称', '值'])
-
-        for i in range(len(data)):
-            for j in range(2):
-                item = QtWidgets.QTableWidgetItem(data[i][j])
-                item.setTextAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-                self.setItem(i, j, item)
-
-
-def test():
-    app = QtWidgets.QApplication(sys.argv)
-    w = AttrView()
-    w.show_attrs(a=1, b=2, c=3)
-    w.show()
-    sys.exit(app.exec())
-
-
-if __name__ == "__main__":
-    test()
+from zmlx.ui.widgets.attr_view import *  # noqa: F401,F403
+from zmlx.ui.widgets.attr_view import (  # noqa: F401
+    AttrView,
+    test
+)

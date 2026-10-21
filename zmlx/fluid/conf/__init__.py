@@ -1,9 +1,24 @@
-"""流体物性经验关联式（conf/ — 基于 Yaws 等文献的密度/粘度计算）."""
-from zmlx.fluid.conf.CO2_gas import create_flu as create_co2_gas
-from zmlx.fluid.conf.CO2_liq import create_flu as create_co2_liq
-from zmlx.fluid.conf.c11h24_gas import create_flu as create_light_oil_gas
-from zmlx.fluid.conf.c11h24_liq import create_flu as create_light_oil_liq
-from zmlx.fluid.conf.c22h46_gas import create_flu as create_heavy_oil_gas
-from zmlx.fluid.conf.c22h46_liq import create_flu as create_heavy_oil_liq
-from zmlx.fluid.conf.c2h6_gas import create_flu as create_ethane_gas
-from zmlx.fluid.conf.c2h6_liq import create_flu as create_ethane_liq
+"""旧子包名（兼容层，**已弃用**）：``conf`` -> :mod:`zmlx.fluids.conf`.
+
+⚠️ **本子包只是一层转发**：它下面的每个模块在 ``zmlx/fluid/conf/`` 里各留了一层
+同名转发；本文件再把子包 ``__init__`` **自己**导出的名字转出来
+（例如 ``co2`` 子包的 ``create`` 就定义在它的 ``__init__.py`` 里）。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.fluids.conf import ...``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
+"""
+from zmlx.system import warn
+
+
+warn(
+    '``zmlx.fluid.conf`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.fluids.conf``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
+
+from zmlx.fluids.conf import *  # noqa: F401,F403

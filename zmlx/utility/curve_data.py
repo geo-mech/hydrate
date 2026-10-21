@@ -1,86 +1,34 @@
-"""曲线数据封装（scipy ``interp1d`` 包装，自变量超出范围时钳制到边界值）.
+"""旧模块名（兼容层，**已弃用**）：``curve_data`` -> :mod:`zmlx.utils.curve_data`.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 :mod:`zmlx.utils.curve_data` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.utils.curve_data import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由 ``zmlx.utility`` 改为 ``zmlx.utils`` —— 与 ``zmlx.ui.utils``
+统一拼写（``utility`` 只是 ``utils`` 的同义词，两种写法并存只会让人犹豫用哪个）。
+
+但 ``from zmlx.utility.{mod} import ...`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史脚本 / 笔记里的 import；③ 更早的兼容层。
+
+⚠️ 完整的兼容策略见 ``zmlx/utility/__init__.py``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-
-import os
-
-from scipy.interpolate import interp1d
-
-from zmlx.alg.base import clamp
-from zmlx.exts import is_array, np
+from zmlx.system import warn
 
 
-class CurveData:
-    """曲线数据封装。
+warn(
+    '``zmlx.utility.curve_data`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.utils.curve_data``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-    基于 scipy ``interp1d`` 的一维曲线，当自变量超出取值范围时，
-    自动钳制到边界值（最近点外推）。
-    """
-
-    def __init__(self, *args, **kwargs):
-        """初始化曲线数据，参数透传给 ``set_xy``."""
-        self.x_min = None
-        self.x_max = None
-        self.data = None
-        self.set_xy(*args, **kwargs)
-
-    def set_xy(self, x=None, y=None, *, dat=None, ix=None, iy=None, fname=None):
-        """设置 x 到 y 的映射数据。
-
-        数据来源优先级：直接给定 x/y > 从数据矩阵 dat 中提取列 > 从文件读取。
-        若 x 和 y 均未给定且 dat/fname 也为 None，则不做任何操作。
-
-        Args:
-            x: 横坐标数组。
-            y: 纵坐标数组。
-            dat: 数据矩阵（将通过 ``np.loadtxt`` 加载或由调用者传入）。
-            ix: ``dat`` 中横坐标的列索引，默认 0。
-            iy: ``dat`` 中纵坐标的列索引，默认 1。
-            fname: 数据文件路径（经 ``np.loadtxt`` 读取）。
-        """
-        if x is None or y is None:
-            # x和y没有完全给定，因此导入数据.
-            if dat is None:
-                # 读取文件
-                if fname is None:
-                    return
-                assert os.path.isfile(fname)
-                dat = np.loadtxt(fname=fname)
-            assert dat is not None
-            if ix is None or iy is None:
-                ix, iy = 0, 1
-            # 读取列
-            x = dat[:, ix]
-            y = dat[:, iy]
-        assert len(x) == len(y)
-        self.x_min = np.min(x)
-        self.x_max = np.max(x)
-        self.data = interp1d(x, y)
-
-    def __call__(self, x):
-        """给定 x，返回对应的 y（超出范围时钳制到边界值）。
-
-        Args:
-            x: 横坐标（单个值或数组）。
-
-        Returns:
-            float | ndarray: 插值结果（标量或数组）。
-        """
-        if is_array(x):
-            return self.data(
-                [clamp(item, self.x_min, self.x_max) for item in x])
-        else:
-            return self.data(clamp(x, self.x_min, self.x_max))
-
-
-def _test():
-    data = CurveData(x=[0, 1, 2], y=[1, 0, 1])
-    print(data(0))
-    print(data(0.4))
-    print(data(np.linspace(0, 6, 9)))
-    print(data(-2))
-
-
-if __name__ == '__main__':
-    _test()
+from zmlx.utils.curve_data import *  # noqa: F401,F403

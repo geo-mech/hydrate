@@ -1,61 +1,34 @@
-"""帧率限制器，确保界面更新不超过指定频率.
+"""旧模块名（兼容层，**已弃用**）：``frame_rate_ctrl`` -> :mod:`zmlx.utils.frame_rate_ctrl`.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 :mod:`zmlx.utils.frame_rate_ctrl` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.utils.frame_rate_ctrl import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由 ``zmlx.utility`` 改为 ``zmlx.utils`` —— 与 ``zmlx.ui.utils``
+统一拼写（``utility`` 只是 ``utils`` 的同义词，两种写法并存只会让人犹豫用哪个）。
+
+但 ``from zmlx.utility.{mod} import ...`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史脚本 / 笔记里的 import；③ 更早的兼容层。
+
+⚠️ 完整的兼容策略见 ``zmlx/utility/__init__.py``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
+from zmlx.system import warn
 
-import timeit
 
+warn(
+    '``zmlx.utility.frame_rate_ctrl`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.utils.frame_rate_ctrl``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-class FrameRateCtrl:
-    """帧率限制器。
-
-    包装界面绘图的回调函数，控制两次更新之间的最小时间间隔，
-    从而限制帧率不超过设定值。统计总调用次数与实际执行次数。
-    """
-
-    def __init__(self, update=None, rate=20):
-        """初始化帧率控制器。
-
-        Args:
-            update: 更新界面时执行的回调函数（接收 ``*args, **kwargs``）。
-            rate: 目标帧率（必须大于 0）。
-        """
-        self.last_time = timeit.default_timer() - 2.0e11
-        self.this_time = self.last_time + 1.0e11  # 确保首次调用成功
-        self.update = update
-        self.rate = rate
-        self.times_show = 0
-        self.times_call = 0
-
-    def __call__(self, *args, **kwargs):
-        """按帧率限制调用内核函数。
-
-        Args:
-            *args: 传递给 ``update`` 的位置参数。
-            **kwargs: 传递给 ``update`` 的关键词参数。
-
-        Returns:
-            bool: 本次是否真正执行了更新。
-        """
-        assert self.rate > 1.0e-10, f'帧率必须大于0. rate = {self.rate}'
-        self.times_call += 1
-        if timeit.default_timer() - self.this_time < 1.0 / self.rate:
-            return False
-        else:
-            self.last_time = self.this_time
-            self.this_time = timeit.default_timer()
-            self.times_show += 1
-            if self.update is not None:
-                self.update(*args, **kwargs)
-            return True
-
-    @property
-    def realtime_rate(self):
-        """实时的帧率。
-
-        Returns:
-            float | None: 基于最后一次调用间隔计算的帧率，首次调用后有效。
-        """
-        if self.last_time is not None and self.this_time is not None:
-            return 1.0 / max(1.0e-5, self.this_time - self.last_time)
-        return None
+from zmlx.utils.frame_rate_ctrl import *  # noqa: F401,F403

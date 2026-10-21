@@ -1,35 +1,36 @@
-"""可点击状态标签（支持悬停信息和双击回调）.
+"""旧模块名（兼容层，**已弃用**）：``label`` -> :mod:`zmlx.ui.widgets.label`.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/ui/widgets/label.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.ui.widgets.label import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由单数 ``widget`` 改为复数 ``widgets``（单数与 Qt 自己的
+``QtWidgets`` 太像，读代码时极易看错）。但 ``from zmlx.ui.widget.label import ...``
+这条路径仍被三类来源用着，故留一年过渡：① 外部脚本与用户在控制台敲的命令；
+② 历史标签页的 ``gui_restore``（重启时按存下来的字符串重放）；③ 更早的兼容层。
+
+⚠️ 完整的兼容策略见 ``zmlx/ui/widget/__init__.py`` 与 ``widgets/AGENTS.md``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-
-from zmlx.ui.gui_buffer import gui
-from zmlx.ui.pyqt import QtCore, QtWidgets
+from zmlx.system import warn
 
 
-class Label(QtWidgets.QLabel):
-    sig_double_clicked = QtCore.pyqtSignal()
+warn(
+    '``zmlx.ui.widget.label`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.ui.widgets.label``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-    def __init__(self, parent=None, text=None, status=None,
-                 double_clicked=None):
-        super(Label, self).__init__(parent)
-        self._status = status
-        if text is not None:
-            self.setText(text)
-        if callable(double_clicked):
-            self.sig_double_clicked.connect(lambda: double_clicked())
-
-    def set_status(self, text):
-        self._status = text
-
-    def enterEvent(self, event):
-        if self._status is not None:
-            gui.status(self._status, 3000)
-        super().enterEvent(event)
-
-    def leaveEvent(self, event):
-        super().leaveEvent(event)
-
-    def mouseDoubleClickEvent(self, event):
-        self.sig_double_clicked.emit()
-        super().mouseDoubleClickEvent(event)  # 调用父类的事件处理
+from zmlx.ui.widgets.label import *  # noqa: F401,F403
+from zmlx.ui.widgets.label import (  # noqa: F401
+    Label
+)

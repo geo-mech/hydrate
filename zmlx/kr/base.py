@@ -1,65 +1,42 @@
-"""Kr 基础模块（Corey/Stone 模型、插值表创建）.
+"""旧模块名（兼容层，**已弃用**）：``base`` -> :mod:`zmlx.krs.base`.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/krs/base.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.krs.base import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由 ``zmlx.kr`` 改为 ``zmlx.krs`` —— 与 ``algs`` / ``utils`` /
+``fluids`` / ``reactions`` / ``geometries`` / ``ui.widgets`` 统一用**复数**目录名。
+
+但 ``from zmlx.kr.base import ...`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史脚本 / 笔记里的 import；③ 更早的兼容层。
+
+⚠️ 完整的兼容策略见 ``zmlx/kr/__init__.py``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-from zmlx.alg.base import linspace
-from zmlx.exts import Interp1
+from zmlx.system import warn
 
 
-def create_fracture_kr():
-    """
-    立方定律，导流的能力和裂缝开度的3次方成正比
-    """
-    vs = linspace(0.0, 10.0, 1000)
-    kr = [s ** 3 for s in vs]
-    return vs, kr
+warn(
+    '``zmlx.kr.base`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.krs.base``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
+from zmlx.krs.base import *  # noqa: F401,F403
 
-def create_kr(srg=0.02, srw=0.2, ag=3.5, aw=4.5, count=100):
-    """
-    利用Stone模型创建气水两相的相对渗透率；
-    """
-    assert 1.0 <= ag <= 6.0
-    assert 1.0 <= aw <= 6.0
-    vs = linspace(0.0, 1.0, count)
-    kg = []
-    kw = []
-    for s in vs:
-        if s > srg:
-            k = ((s - srg) / (1 - srw)) ** ag
-            kg.append(max(min(k, 1), 0))
-        else:
-            kg.append(0)
-        if s > srw:
-            k = ((s - srw) / (1 - srw)) ** aw
-            kw.append(max(min(k, 1), 0))
-        else:
-            kw.append(0)
-    return vs, kg, kw
-
-
-def create_krf(faic=0.2, n=2.0, as_interp=False, k_max=1.0, s_max=1.0,
-               count=100):
-    """
-    当部分孔隙空间被水合物占据的时候，计算流体渗透率的折减. 其中faic为临界孔隙度和原始孔隙度的比值;
-    返回：
-        x: 流体的体积占据孔隙空间的比例
-        y: 流体渗透率与原始渗透率的比值
-    参考文献：
-    The Mechanism of Methane Gas Migration Through the Gas Hydrate Stability Zone:
-    Insights From Numerical Simulations. Eq 7
-    """
-    assert 0 <= faic < 0.98
-    assert 1.0 <= n <= 10
-    vs = linspace(0.0, s_max, count)
-    kr = []
-    for s in vs:
-        if s <= faic:
-            kr.append(0)
-        else:
-            k = ((s - faic) / (1 - faic)) ** n
-            kr.append(max(0.0, min(k_max, k)))
-    if as_interp:
-        return Interp1(x=vs, y=kr)
-    else:
-        return vs, kr
+from zmlx.krs.base import (  # noqa: F401
+    Interp1,
+    create_fracture_kr,
+    create_kr,
+    create_krf,
+    linspace,
+)

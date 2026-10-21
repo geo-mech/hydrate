@@ -1,71 +1,26 @@
-"""代码配置管理器（自动从脚本中提取注释配置）.
+"""旧模块名（兼容层，**已改名为** :mod:`zmlx.algs._code_config`）.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/algs/_code_config.py`` 里。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时会发出
+:class:`DeprecationWarning`。**新代码请写** ``from zmlx.algs._code_config import ...``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-
-from typing import List, Optional, Dict, Any
-
-from zmlx.alg._extract_comments import extract_comments
+from zmlx.system import warn
 
 
-def code_config(path: Optional[str] = None, encoding: Optional[str] = None, text: Optional[str] = None,
-                line_by_line: bool = False) -> Dict[str, Any]:
-    """
-    获取脚本中的配置信息.
-    脚本中的配置信息以 # ** 开头，后面的内容为python代码.
-    Args:
-        path: 脚本路径
-        encoding: 脚本编码
-        text: 脚本内容
-        line_by_line: 是否按行处理注释，默认True
-    Returns:
-        配置信息
-    """
-    if text is None and path is not None:
-        from zmlx.io.text import read_text
-        text = read_text(
-            path=path,
-            encoding='utf-8' if encoding is None else encoding,
-            default=None)
+warn(
+    '``zmlx.alg._code_config`` 已弃用（2026-10-16）：算法包已改名为 ``zmlx.algs``；'
+    '本转发层将于 **2027-10-16** 删除。请改用 ``from zmlx.algs._code_config import ...``。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-    if text is None:
-        return {}
-
-    comments: List[str] = extract_comments(text)
-    config = {}
-
-    code_text = ""
-    for line in comments:
-        line = line.strip()
-        if len(line) >= 4:
-            if line[0: 4] == '# **':
-                if line_by_line:
-                    try:
-                        exec(line[4:].strip(), None, config)
-                    except Exception as e:
-                        print(e)
-                else:
-                    code_text += line[4:].strip() + '\n'
-
-    if not line_by_line and len(code_text) > 0:
-        try:
-            exec(code_text, None, config)
-        except Exception as e:
-            print(e)
-
-    return config
-
-
-def test():
-    text = """
-    # ** desc = 'The description'
-    # ** area = 1
-    # ** text = ("x"
-    # **        "y")
-    """
-    cfg = code_config(text=text)
-    print(cfg)
-
-
-if __name__ == '__main__':
-    test()
+from zmlx.algs._code_config import *  # noqa: F401,F403
+from zmlx.algs._code_config import (  # noqa: F401
+    code_config,
+    test
+)

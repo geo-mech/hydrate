@@ -2,19 +2,22 @@
 
 Modified by Claude, 2026-08-12
 """
-from ctypes import c_void_p, c_char_p, c_size_t
 
-from zmlx.exts._ary import Array3, Array2
+from ctypes import c_char_p, c_size_t, c_void_p
+from typing import Optional, Union
+
+from zmlx.exts._ary import Array2, Array3
 from zmlx.exts._dll import core, make_c_char_p
 from zmlx.exts._fmap import FileMap
-from zmlx.exts._tensor import Tensor3, Tensor2
-from zmlx.exts._utils import HasHandle, make_parent, check_ipath
+from zmlx.exts._tensor import Tensor2, Tensor3
+from zmlx.exts._utils import HasHandle, check_ipath, make_parent
 
 
 class Coord2(HasHandle):
     """二维坐标系表示类，包含原点和坐标轴方向信息。"""
-    core.use(c_void_p, 'new_coord2')
-    core.use(None, 'del_coord2', c_void_p)
+
+    core.use(c_void_p, "new_coord2")
+    core.use(None, "del_coord2", c_void_p)
 
     def __init__(self, origin=None, xdir=None, path=None, handle=None):
         """初始化二维坐标系。
@@ -29,10 +32,10 @@ class Coord2(HasHandle):
         if handle is None:
             if isinstance(path, str):
                 self.load(path)
-            if origin is not None and xdir is not None:
+            if origin is not None or xdir is not None:  # 有一个非None即可设置
                 self.set(origin, xdir)
 
-    core.use(None, 'coord2_save', c_void_p, c_char_p)
+    core.use(None, "coord2_save", c_void_p, c_char_p)
 
     def save(self, path):
         """保存坐标系数据到文件。
@@ -44,7 +47,7 @@ class Coord2(HasHandle):
             make_parent(path)
             core.coord2_save(self.handle, make_c_char_p(path))
 
-    core.use(None, 'coord2_load', c_void_p, c_char_p)
+    core.use(None, "coord2_load", c_void_p, c_char_p)
 
     def load(self, path):
         """从文件加载坐标系数据。
@@ -56,10 +59,10 @@ class Coord2(HasHandle):
             check_ipath(path, self)
             core.coord2_load(self.handle, make_c_char_p(path))
 
-    core.use(None, 'coord2_write_fmap', c_void_p, c_void_p, c_char_p)
-    core.use(None, 'coord2_read_fmap', c_void_p, c_void_p, c_char_p)
+    core.use(None, "coord2_write_fmap", c_void_p, c_void_p, c_char_p)
+    core.use(None, "coord2_read_fmap", c_void_p, c_void_p, c_char_p)
 
-    def to_fmap(self, fmt='binary'):
+    def to_fmap(self, fmt="binary"):
         """序列化到文件映射对象。
 
         Args:
@@ -72,7 +75,7 @@ class Coord2(HasHandle):
         core.coord2_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
         return fmap
 
-    def from_fmap(self, fmap: FileMap, fmt='binary'):
+    def from_fmap(self, fmap: FileMap, fmt="binary"):
         """从文件映射加载数据。
 
         Args:
@@ -85,15 +88,17 @@ class Coord2(HasHandle):
     @property
     def fmap(self):
         """二进制序列化访问接口(property形式)。"""
-        return self.to_fmap(fmt='binary')
+        return self.to_fmap(fmt="binary")
 
     @fmap.setter
     def fmap(self, value):
-        self.from_fmap(value, fmt='binary')
+        self.from_fmap(value, fmt="binary")
 
     def __repr__(self):
-        return (f'{type(self).__name__}(handle={int(self.handle)}, '
-                f'origin={self.origin}, xdir={self.xdir})')
+        return (
+            f"{type(self).__name__}(handle={int(self.handle)}, "
+            f"origin={self.origin}, xdir={self.xdir})"
+        )
 
     def __str__(self):
         """返回坐标系的字符串表示。
@@ -101,24 +106,41 @@ class Coord2(HasHandle):
         Returns:
             str: 格式为 zml.Coord2(origin=..., xdir=...)
         """
-        return f'{type(self).__name__}(origin = {self.origin}, xdir = {self.xdir})'
+        return f"{type(self).__name__}(origin = {self.origin}, xdir = {self.xdir})"
 
-    core.use(None, 'coord2_set', c_void_p, c_size_t, c_size_t)
+    core.use(None, "coord2_set", c_void_p, c_size_t, c_size_t)
 
-    def set(self, origin, xdir):
+    def set(
+        self,
+        origin: Optional[Union[Array2, list, tuple]] = None,
+        xdir: Optional[Union[Array2, list, tuple]] = None,
+    ):
         """设置坐标系参数。
 
         Args:
-            origin (Array2|list|tuple): 原点坐标，自动转换为Array2类型
-            xdir (Array2|list|tuple): X轴方向向量，自动转换为Array2类型
+            origin (Array2|list|tuple|None): 原点坐标，自动转换为Array2类型
+            xdir (Array2|list|tuple|None): X轴方向向量，自动转换为Array2类型
         """
-        if not isinstance(origin, Array2):
-            origin = Array2.from_list(origin)
-        if not isinstance(xdir, Array2):
-            xdir = Array2.from_list(xdir)
+        if origin is None and xdir is None:
+            return
+
+        if origin is None:
+            origin = self.origin.get_copy()
+        else:
+            if not isinstance(origin, Array2):
+                origin = Array2.from_list(origin)
+
+        if xdir is None:
+            xdir = self.xdir.get_copy()
+        else:
+            if not isinstance(xdir, Array2):
+                xdir = Array2.from_list(xdir)
+
+        assert isinstance(origin, Array2)
+        assert isinstance(xdir, Array2)
         core.coord2_set(self.handle, origin.handle, xdir.handle)
 
-    core.use(c_void_p, 'coord2_get_origin', c_void_p)
+    core.use(c_void_p, "coord2_get_origin", c_void_p)
 
     @property
     def origin(self) -> Array2:
@@ -129,8 +151,7 @@ class Coord2(HasHandle):
         """
         return Array2(handle=core.coord2_get_origin(self.handle))
 
-    core.use(None, 'coord2_get_xdir',
-             c_void_p, c_size_t)
+    core.use(None, "coord2_get_xdir", c_void_p, c_size_t)
 
     @property
     def xdir(self) -> Array2:
@@ -143,7 +164,7 @@ class Coord2(HasHandle):
         core.coord2_get_xdir(self.handle, temp.handle)
         return temp
 
-    core.use(None, 'coord2_get_ydir', c_void_p, c_size_t)
+    core.use(None, "coord2_get_ydir", c_void_p, c_size_t)
 
     @property
     def ydir(self) -> Array2:
@@ -156,8 +177,8 @@ class Coord2(HasHandle):
         core.coord2_get_ydir(self.handle, temp.handle)
         return temp
 
-    core.use(None, 'coord2_view_array2', c_void_p, c_size_t, c_size_t, c_size_t)
-    core.use(None, 'coord2_view_tensor2', c_void_p, c_size_t, c_size_t, c_size_t)
+    core.use(None, "coord2_view_array2", c_void_p, c_size_t, c_size_t, c_size_t)
+    core.use(None, "coord2_view_tensor2", c_void_p, c_size_t, c_size_t, c_size_t)
 
     def view(self, coord, o, buffer=None):
         """执行坐标系转换。
@@ -177,19 +198,17 @@ class Coord2(HasHandle):
         if isinstance(o, Array2):
             if not isinstance(buffer, Array2):
                 buffer = Array2()
-            core.coord2_view_array2(self.handle, buffer.handle, coord.handle,
-                                    o.handle)
+            core.coord2_view_array2(self.handle, buffer.handle, coord.handle, o.handle)
             return buffer
         elif isinstance(o, Tensor2):
             if not isinstance(buffer, Tensor2):
                 buffer = Tensor2()
-            core.coord2_view_tensor2(self.handle, buffer.handle, coord.handle,
-                                     o.handle)
+            core.coord2_view_tensor2(self.handle, buffer.handle, coord.handle, o.handle)
             return buffer
         else:
             return None
 
-    core.use(None, 'coord2_clone', c_void_p, c_void_p)
+    core.use(None, "coord2_clone", c_void_p, c_void_p)
 
     def clone(self, other):
         """
@@ -211,8 +230,9 @@ class Coord2(HasHandle):
 
 class Coord3(HasHandle):
     """三维笛卡尔坐标系，用于点和张量的坐标转换。"""
-    core.use(c_void_p, 'new_coord3')
-    core.use(None, 'del_coord3', c_void_p)
+
+    core.use(c_void_p, "new_coord3")
+    core.use(None, "del_coord3", c_void_p)
 
     def __init__(self, origin=None, xdir=None, ydir=None, path=None, handle=None):
         """初始化三维坐标系。
@@ -228,12 +248,12 @@ class Coord3(HasHandle):
         if handle is None:
             if isinstance(path, str):
                 self.load(path)
-            if origin is not None and xdir is not None and ydir is not None:
+            if origin is not None or xdir is not None or ydir is not None:
                 self.set(origin, xdir, ydir)
         else:
             assert origin is None and xdir is None and ydir is None
 
-    core.use(None, 'coord3_save', c_void_p, c_char_p)
+    core.use(None, "coord3_save", c_void_p, c_char_p)
 
     def save(self, path):
         """保存坐标系数据到文件。
@@ -245,7 +265,7 @@ class Coord3(HasHandle):
             make_parent(path)
             core.coord3_save(self.handle, make_c_char_p(path))
 
-    core.use(None, 'coord3_load', c_void_p, c_char_p)
+    core.use(None, "coord3_load", c_void_p, c_char_p)
 
     def load(self, path):
         """从文件加载坐标系数据。
@@ -257,10 +277,10 @@ class Coord3(HasHandle):
             check_ipath(path, self)
             core.coord3_load(self.handle, make_c_char_p(path))
 
-    core.use(None, 'coord3_write_fmap', c_void_p, c_void_p, c_char_p)
-    core.use(None, 'coord3_read_fmap', c_void_p, c_void_p, c_char_p)
+    core.use(None, "coord3_write_fmap", c_void_p, c_void_p, c_char_p)
+    core.use(None, "coord3_read_fmap", c_void_p, c_void_p, c_char_p)
 
-    def to_fmap(self, fmt='binary'):
+    def to_fmap(self, fmt="binary"):
         """序列化到文件映射对象。
 
         Args:
@@ -273,7 +293,7 @@ class Coord3(HasHandle):
         core.coord3_write_fmap(self.handle, fmap.handle, make_c_char_p(fmt))
         return fmap
 
-    def from_fmap(self, fmap: FileMap, fmt='binary'):
+    def from_fmap(self, fmap: FileMap, fmt="binary"):
         """从文件映射加载数据。
 
         Args:
@@ -286,15 +306,17 @@ class Coord3(HasHandle):
     @property
     def fmap(self):
         """二进制序列化访问接口(property形式)。"""
-        return self.to_fmap(fmt='binary')
+        return self.to_fmap(fmt="binary")
 
     @fmap.setter
     def fmap(self, value):
-        self.from_fmap(value, fmt='binary')
+        self.from_fmap(value, fmt="binary")
 
     def __repr__(self):
-        return (f'{type(self).__name__}(handle={int(self.handle)}, '
-                f'origin={self.origin}, xdir={self.xdir}, ydir={self.ydir})')
+        return (
+            f"{type(self).__name__}(handle={int(self.handle)}, "
+            f"origin={self.origin}, xdir={self.xdir}, ydir={self.ydir})"
+        )
 
     def __str__(self):
         """获取坐标系的字符串表示。
@@ -302,28 +324,45 @@ class Coord3(HasHandle):
         Returns:
             str: 格式为 zml.Coord3(origin=..., xdir=..., ydir=...)
         """
-        return (f'{type(self).__name__}(origin = {self.origin}, '
-                f'xdir = {self.xdir}, ydir = {self.ydir})')
+        return (
+            f"{type(self).__name__}(origin = {self.origin}, "
+            f"xdir = {self.xdir}, ydir = {self.ydir})"
+        )
 
-    core.use(None, 'coord3_set', c_void_p, c_void_p, c_void_p, c_void_p)
+    core.use(None, "coord3_set", c_void_p, c_void_p, c_void_p, c_void_p)
 
-    def set(self, origin, xdir, ydir):
+    def set(self, origin=None, xdir=None, ydir=None):
         """设置坐标系参数。
 
         Args:
-            origin (Array3|list|tuple): 原点坐标，自动转换为Array3类型
-            xdir (Array3|list|tuple): X轴方向向量，自动转换为Array3类型
-            ydir (Array3|list|tuple): Y轴方向向量，自动转换为Array3类型
+            origin (Array3|list|tuple, optional): 原点坐标，自动转换为Array3类型
+            xdir (Array3|list|tuple, optional): X轴方向向量，自动转换为Array3类型
+            ydir (Array3|list|tuple, optional): Y轴方向向量，自动转换为Array3类型
         """
-        if not isinstance(origin, Array3):
-            origin = Array3.from_list(origin)
-        if not isinstance(xdir, Array3):
-            xdir = Array3.from_list(xdir)
-        if not isinstance(ydir, Array3):
-            ydir = Array3.from_list(ydir)
+        if origin is None and xdir is None and ydir is None:
+            return
+
+        if origin is None:
+            origin = self.origin.get_copy()
+        else:
+            if not isinstance(origin, Array3):
+                origin = Array3.from_list(origin)
+
+        if xdir is None:
+            xdir = self.xdir.get_copy()
+        else:
+            if not isinstance(xdir, Array3):
+                xdir = Array3.from_list(xdir)
+
+        if ydir is None:
+            ydir = self.ydir.get_copy()
+        else:
+            if not isinstance(ydir, Array3):
+                ydir = Array3.from_list(ydir)
+
         core.coord3_set(self.handle, origin.handle, xdir.handle, ydir.handle)
 
-    core.use(c_void_p, 'coord3_get_origin', c_void_p)
+    core.use(c_void_p, "coord3_get_origin", c_void_p)
 
     @property
     def origin(self):
@@ -334,7 +373,7 @@ class Coord3(HasHandle):
         """
         return Array3(handle=core.coord3_get_origin(self.handle))
 
-    core.use(None, 'coord3_get_xdir', c_void_p, c_size_t)
+    core.use(None, "coord3_get_xdir", c_void_p, c_size_t)
 
     @property
     def xdir(self):
@@ -347,7 +386,7 @@ class Coord3(HasHandle):
         core.coord3_get_xdir(self.handle, temp.handle)
         return temp
 
-    core.use(None, 'coord3_get_ydir', c_void_p, c_size_t)
+    core.use(None, "coord3_get_ydir", c_void_p, c_size_t)
 
     @property
     def ydir(self):
@@ -360,8 +399,8 @@ class Coord3(HasHandle):
         core.coord3_get_ydir(self.handle, temp.handle)
         return temp
 
-    core.use(None, 'coord3_view_array3', c_void_p, c_size_t, c_size_t, c_size_t)
-    core.use(None, 'coord3_view_tensor3', c_void_p, c_size_t, c_size_t, c_size_t)
+    core.use(None, "coord3_view_array3", c_void_p, c_size_t, c_size_t, c_size_t)
+    core.use(None, "coord3_view_tensor3", c_void_p, c_size_t, c_size_t, c_size_t)
 
     def view(self, coord, o, buffer=None):
         """执行坐标系间对象转换。
@@ -381,19 +420,17 @@ class Coord3(HasHandle):
         if isinstance(o, Array3):
             if not isinstance(buffer, Array3):
                 buffer = Array3()
-            core.coord3_view_array3(self.handle, buffer.handle, coord.handle,
-                                    o.handle)
+            core.coord3_view_array3(self.handle, buffer.handle, coord.handle, o.handle)
             return buffer
         elif isinstance(o, Tensor3):
             if not isinstance(buffer, Tensor3):
                 buffer = Tensor3()
-            core.coord3_view_tensor3(self.handle, buffer.handle, coord.handle,
-                                     o.handle)
+            core.coord3_view_tensor3(self.handle, buffer.handle, coord.handle, o.handle)
             return buffer
         else:
             return None
 
-    core.use(None, 'coord3_clone', c_void_p, c_void_p)
+    core.use(None, "coord3_clone", c_void_p, c_void_p)
 
     def clone(self, other):
         """

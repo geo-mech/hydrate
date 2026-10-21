@@ -1,40 +1,29 @@
-import os
+"""旧子包名（兼容层，**已弃用**）：``nist/h2o`` -> :mod:`zmlx.fluids.nist.h2o`.
 
-from zmlx.alg.fsys import join_paths
-from zmlx.fluid.alg import from_file
+⚠️ **本子包只是一层转发**：它下面的每个模块在 ``zmlx/fluid/nist/h2o/`` 里各留了一层
+同名转发；本文件再把子包 ``__init__`` **自己**导出的名字转出来
+（例如 ``co2`` 子包的 ``create`` 就定义在它的 ``__init__.py`` 里）。
 
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.fluids.nist.h2o import ...``。
 
-def data_file():
-    return join_paths(os.path.dirname(__file__), 'data.txt')
+Modified by DeepSeek, 2026-10-16
 
-
-def create(t_min=274, t_max=329, p_min=2.0e6, p_max=99.0e6, name=None):
-    """
-    创建液态h2o的定义.
-    """
-    return from_file(
-        fname=join_paths(os.path.dirname(__file__), 'data.txt'),
-        t_min=t_min, t_max=t_max, p_min=p_min, p_max=p_max,
-        name=name, specific_heat=4200)
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
+"""
+from zmlx.system import warn
 
 
-def test():
-    t_min = 274
-    t_max = 329
-    p_min = 1.0e6
-    p_max = 80.0e6
-    flu = create(t_min=t_min, t_max=t_max, p_min=p_min, p_max=p_max)
-    print(flu)
-    try:
-        from zmlx.plt import show_field2
-        show_field2(flu.den, [p_min, p_max], [t_min, t_max], caption='density')
-        show_field2(flu.vis, [p_min, p_max], [t_min, t_max],
-                    caption='viscosity')
-    except Exception:
-        pass
+warn(
+    '``zmlx.fluid.nist.h2o`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.fluids.nist.h2o``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-
-if __name__ == '__main__':
-    from zmlx.ui import gui
-
-    gui.execute(test, close_after_done=False)
+from zmlx.fluids.nist.h2o import *  # noqa: F401,F403
+from zmlx.fluids.nist.h2o import (  # noqa: F401
+    create,
+    data_file,
+    test
+)

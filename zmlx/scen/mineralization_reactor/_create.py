@@ -1,4 +1,4 @@
-from zmlx.seepage_mesh import create_cube
+from zmlx.seepage_meshes import create_cube
 from zmlx.tfc import create as create_tfc
 
 from zmlx.scen.mineralization_reactor._config import (

@@ -15,7 +15,7 @@ def show_field2(f, xr, yr, **opts):
 
 
 def test():
-    from zmlx.fluid.ch4 import create
+    from zmlx.fluids.ch4 import create
     flu = create()
     show_field2(
         flu.den, xr=[4e6, 15e6], yr=[274, 290], caption='Density',

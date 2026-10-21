@@ -29,15 +29,14 @@
 ### `seepage.iterate_until()` — 按条件迭代
 - 功能：持续迭代直到满足指定条件（如达到总时间）。
 
-### `set_cell_ini()` / `make_grid()` — 模型配置
+### `set_cell_ini()` — 模型配置
 - 功能：设置 Cell 初始状态、创建结构化网格。
 
 ---
 
 ## 子模块详解
 
-### `_main.py` — 核心迭代引擎（~68KB）
-- 包含 `iterate()`、`iterate_until()` 等主循环函数
+### `_main.py` — 核心迭代引擎（`iterate()`、`iterate_until()` 等主循环函数）
 - 模型属性关键字：
   - `dt`：时间步长（秒）
   - `time`：当前模拟时间（秒）
@@ -52,7 +51,7 @@
   - `check_dt`：启用 CFL 检查
 - `create()`：创建完整 Seepage 模型，支持网格、流体、初始条件一次性配置
 
-### `_base.py` — 基础工具层（~82KB）
+### `_base.py` — 基础工具层
 - `SeepageNumpy`：Seepage ↔ NumPy 数据适配器
 - 常用函数：`get_step()`、`get_time()`、`get_dt()`、`set_dt()`、`get_cell_key()`、`get_face_key()`、`as_numpy()`
 - `get_face_sum()` / `get_face_diff()`：Face 属性计算
@@ -105,8 +104,8 @@
 - `restore()`：流场计算后恢复固体相
 
 ### `_step.py` — 步进触发器
-- 功能：按迭代步数触发回调函数（通过 slot 机制）
-- 关键函数：`add_setting(start, step, stop, slot)`
+- 功能：按迭代步数触发回调函数（通过 `name` / `args` / `kwds` 指定回调）
+- 关键函数：`add_setting(model, *, start=0, step=1, stop=..., name=None, args=None, kwds=None)`
 
 ### `_time.py` — 时间触发器
 - 功能：按模拟时间触发回调函数
@@ -153,7 +152,7 @@ for step in range(100):
 ## 与其他模块的关系
 
 - **输入**：依赖 `zmlx.exts`（Seepage 等核心类型）
-- **流体定义**：调用 `zmlx.fluid` 获取 `FluDef` 对象
-- **化学反应**：调用 `zmlx.react` 添加 `Reaction` 到模型
+- **流体定义**：调用 `zmlx.fluids` 获取 `FluDef` 对象
+- **化学反应**：调用 `zmlx.reactions` 添加 `Reaction` 到模型
 - **可视化**：通过 `zmlx.plt` 或内建 `show_cells()` 绘图
 - **高层场景**：`zmlx.scen.hydrate`、`zmlx.scen.icp` 等基于 tfc 构建

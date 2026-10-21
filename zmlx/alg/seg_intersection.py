@@ -1,9 +1,12 @@
-"""已弃用的模块，请改用 zmlx.geometry.base."""
-from zmlx.geometry.base import seg_intersection
+"""已弃用的模块，请改用 zmlx.geometries.base.
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
+"""
+from zmlx.system import warn
+from zmlx.geometries.base import seg_intersection
 
 __all__ = ['seg_intersection']
 
-import zmlx.alg.sys as warnings
 
-warnings.warn(f'The module {__name__} will be removed after 2026-4-15',
+warn(f'The module {__name__} will be removed after 2026-4-15',
               DeprecationWarning, stacklevel=2)

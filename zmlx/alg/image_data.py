@@ -1,38 +1,25 @@
-"""图像数据处理（测试用）.
+"""旧模块名（兼容层，**已改名为** :mod:`zmlx.algs.image_data`）.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/algs/image_data.py`` 里。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时会发出
+:class:`DeprecationWarning`。**新代码请写** ``from zmlx.algs.image_data import ...``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-
-from PIL import Image
-
-import zmlx.alg.sys as warnings
-from zmlx.alg.image import get_data
-from zmlx.exts import np
-
-warnings.warn(f'{__name__} will be removed after 2026-4-15', DeprecationWarning,
-              stacklevel=2)
+from zmlx.system import warn
 
 
-def test(img_name, map_name):
-    import matplotlib.pyplot as plt
-    data = get_data(img_name, map_name)
+warn(
+    '``zmlx.alg.image_data`` 已弃用（2026-10-16）：算法包已改名为 ``zmlx.algs``；'
+    '本转发层将于 **2027-10-16** 删除。请改用 ``from zmlx.algs.image_data import ...``。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-    plt.figure(figsize=(10, 5))
-
-    plt.subplot(1, 2, 1)
-    plt.imshow(np.array(Image.open(img_name)))
-    plt.title('Original Cloud Image')
-    plt.axis('off')
-
-    plt.subplot(1, 2, 2)
-    plt.imshow(data, vmin=0, vmax=1)
-    plt.title('Mapped Cloud Image')
-    plt.axis('off')
-
-    plt.show()
-
-
-if __name__ == '__main__':
-    from zmlx.data.path import get_path
-
-    test(get_path('cloud.png'), get_path('cm1.png'))
+from zmlx.algs.image_data import *  # noqa: F401,F403
+from zmlx.algs.image_data import (  # noqa: F401
+    test
+)

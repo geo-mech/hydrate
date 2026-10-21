@@ -42,6 +42,12 @@ def add_subplot(
         axis: 坐标轴
         *args: 传递给on_axes函数的参数
         **kwargs: 传递给on_axes函数的关键字参数
+
+    Note:
+        2026-10-21 修正：``tight_layout`` 一直写在本 Args 里，却直到这时才补进
+        **签名** —— 在此之前，任何把 tight_layout 交给 ``plot_on_axes`` 的调用
+        （例如 ``show_dfn2`` 的默认 opts）都会报
+        ``unexpected keyword argument 'tight_layout'``。
     """
     ax = None  # 子图的Axes实例
     if label is not None:  # 给定了label，则优先去找到已经存在的Axes

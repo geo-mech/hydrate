@@ -2,25 +2,25 @@
 用于水合物计算的配置.
 """
 from zmlx.exts import log, FluDef
-from zmlx.fluid.ch4 import create as create_ch4
-from zmlx.fluid.ch4_hydrate import create as create_ch4_hydrate
-from zmlx.fluid.co2 import create as create_co2
-from zmlx.fluid.co2_hydrate import create as create_co2_hydrate
-from zmlx.fluid.h2o import create as create_h2o
-from zmlx.fluid.h2o_gas import create as create_h2o_gas
-from zmlx.fluid.h2o_ice import create as create_h2o_ice
-from zmlx.kr.base import create_krf
-from zmlx.react import ch4_hydrate as ch4_hydrate_react
-from zmlx.react import co2_hydrate as co2_hydrate_react
-from zmlx.react import dissolution
-from zmlx.react import h2o_ice as icing_react
-from zmlx.react import vapor as vapor_react
-from zmlx.react.alpha.salinity import data as salinity_c2t
+from zmlx.fluids.ch4 import create as create_ch4
+from zmlx.fluids.ch4_hydrate import create as create_ch4_hydrate
+from zmlx.fluids.co2 import create as create_co2
+from zmlx.fluids.co2_hydrate import create as create_co2_hydrate
+from zmlx.fluids.h2o import create as create_h2o
+from zmlx.fluids.h2o_gas import create as create_h2o_gas
+from zmlx.fluids.h2o_ice import create as create_h2o_ice
+from zmlx.krs.base import create_krf
+from zmlx.reactions import ch4_hydrate as ch4_hydrate_react
+from zmlx.reactions import co2_hydrate as co2_hydrate_react
+from zmlx.reactions import dissolution
+from zmlx.reactions import h2o_ice as icing_react
+from zmlx.reactions import vapor as vapor_react
+from zmlx.reactions.alpha.salinity import data as salinity_c2t
 from zmlx.scen.hydrate._cap import create_caps
 from zmlx.scen.hydrate._fluid import create_fludefs
 from zmlx.scen.hydrate._react import create_reactions
 from zmlx.tfc.config import TherFlowConfig
-from zmlx.utility.capillary_effect import CapillaryEffect
+from zmlx.utils.capillary_effect import CapillaryEffect
 
 
 class ConfigV2:

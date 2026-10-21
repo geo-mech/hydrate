@@ -2,7 +2,7 @@
 
 Modified by Claude, 2026-08-12
 """
-from zmlx.alg import clamp
+from zmlx.algs import clamp
 
 try:
     import matplotlib

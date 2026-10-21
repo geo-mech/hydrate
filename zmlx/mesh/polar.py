@@ -1,59 +1,41 @@
-"""极坐标网格生成.
+"""旧模块名（兼容层，**已弃用**）：``polar`` -> :mod:`zmlx.meshes.polar`.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/meshes/polar.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.meshes.polar import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由 ``zmlx.mesh`` 改为 ``zmlx.meshes`` —— 与 ``algs`` / ``utils`` /
+``fluids`` / ``reactions`` / ``geometries`` / ``ui.widgets`` 统一用**复数**目录名。
+
+但 ``from zmlx.mesh.polar import ...`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史脚本 / 笔记里的 import；③ 更早的兼容层。
+
+⚠️ 完整的兼容策略见 ``zmlx/mesh/__init__.py``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-import math
-
-from zmlx.exts import Mesh3, np
+from zmlx.system import warn
 
 
-def create_ring(vr, angle_step=math.pi / 20.0, z=0.0):
-    """
-    建立一个圆环在极坐标下的规则网格.  这里，仍然采用Mesh3的形式返回，但是，其中的x代表半径，y代表角度，z为给定的数值. 因此，Mesh3关于中心
-    体积、面积等的属性，对于这里返回的mesh均不适用.
-    """
-    ja = max(round(math.pi * 2.0 / angle_step), 1) + 1
+warn(
+    '``zmlx.mesh.polar`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.meshes.polar``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-    # 半径的node
-    assert len(vr) >= 2
+from zmlx.meshes.polar import *  # noqa: F401,F403
 
-    # 角度的node
-    va = np.linspace(0, math.pi * 2, ja)
-
-    mesh = Mesh3()
-
-    # 暂存，将所有的node的ID放入到矩阵中，方便后续建立link
-    node_ids = []
-
-    # 添加所有的node
-    for ia in range(len(va) - 1):
-        node_ids.append([mesh.add_node(x=r, y=va[ia], z=z).index for r in vr])
-
-    # 添加所有的link和face
-    for ia in range(len(va) - 1):
-        for ir in range(len(vr) - 1):
-            n00 = mesh.get_node(node_ids[ia][ir])
-            n01 = mesh.get_node(node_ids[ia][ir + 1])
-            n10 = mesh.get_node(
-                node_ids[ia + 1 if ia + 1 < len(node_ids) else 0][ir])
-            n11 = mesh.get_node(
-                node_ids[ia + 1 if ia + 1 < len(node_ids) else 0][ir + 1])
-            mesh.add_face(links=[
-                mesh.add_link([n00, n10]),
-                mesh.add_link([n00, n01]),
-                mesh.add_link([n11, n10]),
-                mesh.add_link([n11, n01])])
-
-    # 完成
-    return mesh
-
-
-def _test1():
-    assert np is not None
-    vr = np.linspace(1.0, 2.0, 20)
-    mesh = create_ring(vr)
-    print(mesh)
-
-
-if __name__ == '__main__':
-    _test1()
+from zmlx.meshes.polar import (  # noqa: F401
+    Mesh3,
+    create_ring,
+    math,
+    np,
+)

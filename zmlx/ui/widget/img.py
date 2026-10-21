@@ -1,211 +1,49 @@
-from zmlx.ui.pyqt import QtCore, QtGui, QtWidgets
+"""旧模块名（兼容层，**已弃用**）：``img`` -> :mod:`zmlx.ui.plugins.builtin.image_browser`.
+
+⚠️ **本模块只是一层转发**，真正的实现（``ImageView``）现在在插件
+``zmlx/ui/plugins/builtin/image_browser.py`` 里 —— 本文件除了下面那几行 import / 别名
+不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写**
+``from zmlx.ui.plugins.builtin.image_browser import ImageView``
+（⚠️ 那是**插件内部**的路径，正常业务代码根本不需要直接造 ``ImageView`` ——
+开图片请调 ``gui.open_image(...)``）。
+
+搬了几次 / 为什么留着
+--------------------
+
+2026-10-16 把「**顶层控件**」（只被装配层打开成一个标签页、**不会被任何控件当组件
+（子控件）用**）集中迁到 ``zmlx/ui/tabs/``；2026-10-22 又把 ``ImageView`` 连同
+``open_image`` 一起并入插件「图片浏览」（搬走后它只剩那个插件在用 —— 「可关掉的功能，
+它的代码也应当能一起关掉」）。本垫片随之改指新位置，老路径继续可用。
+
+⚠️ 这条路径仍被三类来源用着，故留一年过渡：① 外部脚本与用户在控制台敲的命令；
+② 历史标签页的 ``gui_restore``（重启时按存下来的字符串重放）；③ 更早的兼容层
+（``license_count`` / ``license_feedback``）。
+
+⚠️ **本模块现在是** ``ui`` → ``plugins`` 的**逆向 import**（同 ``widget/demo_view.py``）：
+只允许出现在兼容层，正常代码不要效仿。
+
+⚠️ 判据与依赖方向见 ``zmlx/ui/tabs/AGENTS.md``。
+
+Created by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
+Modified by DeepSeek, 2026-10-22: 目标改为插件 ``plugins/builtin/image_browser.py`` ——
+    ``ImageView`` 随 ``open_image`` 并入了「图片浏览」插件
+"""
+from zmlx.system import warn
 
 
-class ImageView(QtWidgets.QGraphicsView):
-    """
-    图片查看器
-    """
+warn(
+    '``zmlx.ui.widgets.img`` 已弃用（2026-10-16）：控件 ``ImageView`` 已迁至插件 '
+    '``zmlx.ui.tabs.img``（2026-10-22 起）；本转发层将于 '
+    '**2027-10-16** 删除。开图片请用 ``gui.open_image(...)``。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.zoomInTimes = 0
-        self.maxZoomInTimes = 22
+from zmlx.ui.tabs.img import ImageView  # noqa: F401
 
-        # 创建场景
-        self.graphicsScene = QtWidgets.QGraphicsScene()
-
-        # 图片
-        self.pixmap = QtGui.QPixmap()
-        self.pixmapItem = QtWidgets.QGraphicsPixmapItem(self.pixmap)
-        self.displayedImageSize = QtCore.QSize(0, 0)
-
-        # 初始化小部件
-        self.__init_widget()
-
-    def __init_widget(self):
-        """
-        初始化小部件
-        """
-        self.resize(1200, 900)
-
-        # 隐藏滚动条
-        self.setVerticalScrollBarPolicy(
-            QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.setHorizontalScrollBarPolicy(
-            QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-
-        # 以鼠标所在位置为锚点进行缩放
-        self.setTransformationAnchor(
-            QtWidgets.QGraphicsView.ViewportAnchor.AnchorUnderMouse)
-
-        # 平滑缩放
-        self.pixmapItem.setTransformationMode(
-            QtCore.Qt.TransformationMode.SmoothTransformation)
-        self.setRenderHints(
-            QtGui.QPainter.RenderHint.Antialiasing
-        )
-
-        # 设置场景
-        self.graphicsScene.addItem(self.pixmapItem)
-        self.setScene(self.graphicsScene)
-
-    def wheelEvent(self, event: QtGui.QWheelEvent):
-        """
-        滚动鼠标滚轮缩放图片
-        """
-        if event.angleDelta().y() > 0:
-            self.zoom_in()
-        else:
-            self.zoom_out()
-
-    def resizeEvent(self, event):
-        """
-        缩放图片
-        """
-        super().resizeEvent(event)
-
-        if self.zoomInTimes > 0:
-            return
-
-        # 调整图片大小
-        ratio = self.__get_scale_ratio()
-        self.displayedImageSize = self.pixmap.size() * ratio
-        if ratio < 1:
-            self.fitInView(self.pixmapItem,
-                           QtCore.Qt.AspectRatioMode.KeepAspectRatio)
-        else:
-            self.resetTransform()
-
-    def set_image(self, image_path: str):
-        """
-        设置显示的图片
-        """
-        self.set_pixmap(QtGui.QPixmap(image_path))
-
-    def set_pixmap(self, pixmap: QtGui.QPixmap):
-        assert isinstance(pixmap, QtGui.QPixmap)
-        self.resetTransform()
-
-        # 刷新图片
-        self.pixmap = pixmap
-        self.pixmapItem.setPixmap(self.pixmap)
-
-        # 调整图片大小
-        self.setSceneRect(QtCore.QRectF(self.pixmap.rect()))
-        ratio = self.__get_scale_ratio()
-        self.displayedImageSize = self.pixmap.size() * ratio
-        if ratio < 1:
-            self.fitInView(self.pixmapItem,
-                           QtCore.Qt.AspectRatioMode.KeepAspectRatio)
-
-    def resetTransform(self):
-        """
-        重置变换
-        """
-        super().resetTransform()
-        self.zoomInTimes = 0
-        self.__set_drag_enabled(False)
-
-    def __is_enable_drag(self):
-        """
-        根据图片的尺寸决定是否启动拖拽功能
-        """
-        v = self.verticalScrollBar().maximum() > 0
-        h = self.horizontalScrollBar().maximum() > 0
-        return v or h
-
-    def __set_drag_enabled(self, is_enabled: bool):
-        """
-        设置拖拽是否启动
-        """
-        self.setDragMode(
-            self.DragMode.ScrollHandDrag if is_enabled else self.DragMode.NoDrag)
-
-    def __get_scale_ratio(self):
-        """
-        获取显示的图像和原始图像的缩放比例
-        """
-        if self.pixmap.isNull():
-            return 1
-
-        pw = self.pixmap.width()
-        ph = self.pixmap.height()
-        rw = min(1, int(self.width() / pw))
-        rh = min(1, int(self.height() / ph))
-        return min(rw, rh)
-
-    def fitInView(self, item: QtWidgets.QGraphicsItem,
-                  mode=QtCore.Qt.AspectRatioMode.KeepAspectRatio):
-        """
-        缩放场景使其适应窗口大小
-        """
-        super().fitInView(item, mode)
-        self.displayedImageSize = self.__get_scale_ratio() * self.pixmap.size()
-        self.zoomInTimes = 0
-
-    def zoom_in(self,
-                view_anchor=QtWidgets.QGraphicsView.ViewportAnchor.AnchorUnderMouse):
-        """ 放大图像 """
-        if self.zoomInTimes == self.maxZoomInTimes:
-            return
-
-        self.setTransformationAnchor(view_anchor)
-
-        self.zoomInTimes += 1
-        self.scale(1.1, 1.1)
-        self.__set_drag_enabled(self.__is_enable_drag())
-
-        # 还原 anchor
-        self.setTransformationAnchor(
-            QtWidgets.QGraphicsView.ViewportAnchor.AnchorUnderMouse)
-
-    def zoom_out(self,
-                 view_anchor=QtWidgets.QGraphicsView.ViewportAnchor.AnchorUnderMouse):
-        """ 缩小图像 """
-        if self.zoomInTimes == 0 and not self.__is_enable_drag():
-            return
-
-        self.setTransformationAnchor(view_anchor)
-
-        self.zoomInTimes -= 1
-
-        # 原始图像的大小
-        pw = self.pixmap.width()
-        ph = self.pixmap.height()
-
-        # 实际显示的图像宽度
-        w = self.displayedImageSize.width() * 1.1 ** self.zoomInTimes
-        h = self.displayedImageSize.height() * 1.1 ** self.zoomInTimes
-
-        if pw > self.width() or ph > self.height():
-            # 在窗口尺寸小于原始图像时禁止继续缩小图像比窗口还小
-            if w <= self.width() and h <= self.height():
-                self.fitInView(self.pixmapItem)
-            else:
-                self.scale(1 / 1.1, 1 / 1.1)
-        else:
-            # 在窗口尺寸大于图像时不允许缩小的比原始图像小
-            if w <= pw:
-                self.resetTransform()
-            else:
-                self.scale(1 / 1.1, 1 / 1.1)
-
-        self.__set_drag_enabled(self.__is_enable_drag())
-
-        # 还原 anchor
-        self.setTransformationAnchor(
-            QtWidgets.QGraphicsView.ViewportAnchor.AnchorUnderMouse)
-
-
-def test():
-    from zmlx.data import get_path
-    import sys
-    app = QtWidgets.QApplication(sys.argv)
-    w = ImageView()
-    w.set_image(get_path('igg.png'))
-    w.show()
-    sys.exit(app.exec())
-
-
-if __name__ == "__main__":
-    test()
+__all__ = ['ImageView']

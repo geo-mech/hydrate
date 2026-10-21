@@ -1,9 +1,11 @@
 """
 二维有限元相关的辅助算法。
-"""
-import zmlx.alg.sys as warnings
 
-warnings.warn(f"{__file__} is deprecated (will be removed after 2027-6-26)", DeprecationWarning, stacklevel=2)
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
+"""
+from zmlx.system import warn
+
+warn(f"{__file__} is deprecated (will be removed after 2027-6-26)", DeprecationWarning, stacklevel=2)
 
 from zmlx.exts import DynSys, Mesh3
 

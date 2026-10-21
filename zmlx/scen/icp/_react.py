@@ -1,6 +1,6 @@
-from zmlx.react import decomposition
-from zmlx.react import vapor
-from zmlx.react.inh import add_inh
+from zmlx.reactions import decomposition
+from zmlx.reactions import vapor
+from zmlx.reactions.inh import add_inh
 
 
 def create_reactions(temp_max=None):

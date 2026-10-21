@@ -4,7 +4,7 @@ Modified by Claude, 2026-08-12
 """
 import copy
 
-from zmlx.geometry.dfn_v3 import from_segs, remove_small
+from zmlx.geometries.dfn_v3 import from_segs, remove_small
 from zmlx.ptree.array import array
 from zmlx.ptree.box import box3
 from zmlx.ptree.dfn2 import dfn2

@@ -1,29 +1,37 @@
-"""熔化反应.
+"""旧模块名（兼容层，**已弃用**）：``melt`` -> :mod:`zmlx.reactions.melt`.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/reactions/melt.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.reactions.melt import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由 ``zmlx.react`` 改为 ``zmlx.reactions`` —— 与 ``algs`` / ``utils`` /
+``fluids`` / ``ui.widgets`` 统一用**复数**目录名（本包装的是一堆**反应**定义，复数才贴切）。
+
+但 ``from zmlx.react.melt import ...`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史脚本 / 笔记里的 import；③ 更早的兼容层。
+
+⚠️ 完整的兼容策略见 ``zmlx/react/__init__.py``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-from zmlx.react import endothermic
+from zmlx.system import warn
 
 
-def create(sol, flu, temp, heat, fa_t=None, fa_c=None, vp=None, vt=None,
-           t2q=None, l2r=True, r2l=True):
-    """
-    创建一个物质融化（或者气化、升华）的反应
+warn(
+    '``zmlx.react.melt`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.reactions.melt``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-    注意：
-        返回一个dict，包含了反应的所有的信息。此dict定义的data可以在
-        zmlx.react.alg.add_reaction中使用，将反应添加到Seepage中
-    """
-    if vt is None or vp is None:
-        p2t = None
-    else:
-        p2t = [vp, vt]
-    return endothermic.create(
-        left=[(sol, 1), ],
-        right=[(flu, 1), ],
-        temp=temp,
-        heat=heat,
-        rate=1.0,
-        fa_t=fa_t,
-        fa_c=fa_c,
-        l2r=l2r, r2l=r2l, p2t=p2t, t2q=t2q)
+from zmlx.reactions.melt import *  # noqa: F401,F403
+from zmlx.reactions.melt import (  # noqa: F401
+    create
+)

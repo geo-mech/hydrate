@@ -1,63 +1,37 @@
-"""水溶液密度比值绘图.
+"""旧模块名（兼容层，**已弃用**）：``rkt.aq._plot`` -> :mod:`zmlx.fluids.rkt.aq._plot`.
 
-提供 plot_density_ratio 函数，绘制 ρ/ρ₀ 随质量分数的变化曲线，
-自动显示溶解度饱和拐点。
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/fluids/rkt.aq._plot.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.fluids.rkt.aq._plot import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由 ``zmlx.fluid`` 改为 ``zmlx.fluids`` —— 与 ``algs`` / ``utils`` /
+``ui.widgets`` 统一用**复数**目录名。
+
+但 ``from zmlx.fluid.rkt.aq._plot import ...`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史脚本 / 笔记里的 import；③ 更早的兼容层。
+
+⚠️ 完整的兼容策略见 ``zmlx/fluid/__init__.py``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
+from zmlx.system import warn
 
-import numpy as np
 
+warn(
+    '``zmlx.fluid.rkt.aq._plot`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.fluids.rkt.aq._plot``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-def plot_density_ratio(label, fn, w_max, P=10.0e6, T=300.0,
-                       n=51, color="steelblue", fn_solubility=None):
-    """绘制气体-水溶液密度比值随质量分数的变化.
-
-    横轴为气体质量分数 w，纵轴为溶液密度与纯水密度的比值 ρ/ρ₀。
-    ρ₀ 值标注于标题中，灰色参考线位于 1.0。
-
-    Args:
-        label: 气体名称（如 'CH4'）
-        fn: 密度函数 fn(w, P, T) → kg/m³
-        w_max: 质量分数上限（根据各气体溶解度不同调整）
-        P: 压力 (Pa)，默认 10 MPa
-        T: 温度 (K)，默认 300 K
-        n: 采样点数
-        color: 曲线颜色
-        fn_solubility: 溶解度函数 fn(P, T) → w_sat（可选，传入后在标题中显示）
-    """
-
-    ws = np.linspace(0, w_max, n)
-    rhos = [fn(w, P=P, T=T) for w in ws]
-
-    for w, rho in zip(ws[::max(1, n // 10)], rhos[::max(1, n // 10)]):
-        print(f"  w = {w:.5f}  ->  rho = {rho:.2f} kg/m3")
-
-    rho0 = rhos[0]
-    ratios = [r / rho0 for r in rhos]
-
-    # 溶解度
-    w_sat_text = ""
-    if fn_solubility is not None:
-        try:
-            w_sat = fn_solubility(P=P, T=T)
-            w_sat_text = f" (solubility w_sat = {w_sat:.4f})"
-        except Exception:
-            pass
-
-    def on_figure(fig):
-        from zmlx.ui import gui
-
-        ref_color = "gray" if not gui.exists() or not gui.in_dark_mode() else "lightgray"
-
-        ax = fig.add_subplot(111)
-        ax.plot(ws, ratios, "o-", markersize=3, color=color)
-        ax.axhline(y=1.0, color=ref_color, linestyle="--", linewidth=0.8)
-        ax.set_xlabel(f"{label} mass fraction w")
-        ax.set_ylabel("Density ratio (rho / rho_0)")
-        ax.set_title(f"H2O-{label} aqueous solution density ratio "
-                     f"(rho_0 = {rho0:.2f} kg/m^3){w_sat_text}\n"
-                     f"T = {T} K, P = {P / 1e6:.0f} MPa")
-        ax.grid(True, alpha=0.3)
-
-    from zmlx.ui import plot
-
-    plot(on_figure, caption=f"H2O-{label}")
+from zmlx.fluids.rkt.aq._plot import *  # noqa: F401,F403
+from zmlx.fluids.rkt.aq._plot import (  # noqa: F401
+    plot_density_ratio
+)

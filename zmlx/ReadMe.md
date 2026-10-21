@@ -10,8 +10,8 @@
 ```
 Layer 5  应用场景          zmlx/scen/          hydrate, icp, frac, ...
 Layer 4  耦合物理引擎       zmlx/tfc/           iterate → solve
-Layer 3  工具与 GUI         zmlx/utility/, ui/  Field, GuiIterator, PyQt6
-Layer 2  物理定义           zmlx/fluid/, react/, kr/
+Layer 3  工具与 GUI         zmlx/utils/, ui/    Field, GuiIterator, PyQt6
+Layer 2  物理定义           zmlx/fluids/, react/, kr/
 Layer 1  Python→C++ 绑定    zmlx/exts/          zml.dll / zml.so
 Layer 0  C++ 内核           ../../zml/          C++17 header-only
 ```
@@ -27,52 +27,37 @@ Layer 0  C++ 内核           ../../zml/          C++17 header-only
 | `zmlx/system/` | 基础服务（无内部依赖） | `app_data`, `is_headless`, `execute_once`, `deprecated` |
 | `zmlx/exts/` | C++ 绑定层 | `Seepage`, `FluDef`, `Cell`, `Face`, `Vector`, `Tensor3` |
 | `zmlx/tfc/` | 耦合引擎 | `seepage.iterate()`, `tfc.create()`, `tfc.solve()` |
-| `zmlx/fluid/` | 流体物性 | `create_ch4`, `create_h2o`, `create_aqueous`, NIST REFPROP |
-| `zmlx/react/` | 化学反应速率 | `create_reaction`, `add_inh` |
-| `zmlx/kr/` | 相对渗透率 | `create_kr`, `create_krf` |
+| `zmlx/fluids/` | 流体物性 | `create_ch4`, `create_h2o`, `create_aqueous`, NIST REFPROP |
+| `zmlx/reactions/` | 化学反应速率 | `create_reaction`, `add_inh` |
+| `zmlx/krs/` | 相对渗透率 | `create_kr`, `create_krf` |
 | `zmlx/plt/` | matplotlib 可视化 | `plot_on_figure`, `add_contourf`, `show_field2` |
 | `zmlx/fig/` | Figure 构建抽象 | `axes2`, `auto_layout`, `contourf`, `tricontourf` |
 | `zmlx/ui/` | PyQt6 GUI | `gui.execute()`, `MainWindow`, `MatplotWidget` |
 | `zmlx/scen/` | 应用场景 | `hydrate.create/solve`, `icp.create` |
-| `zmlx/utility/` | 高层工具 | `Field`, `GuiIterator`, `SaveManager` |
-| `zmlx/alg/` | 通用算法 | `linspace`, `join_paths`, `create_async` |
-| `zmlx/geometry/` | 几何计算 | `get_distance`, `get_angle`, `dfn2` |
+| `zmlx/utils/` | 高层工具 | `Field`, `GuiIterator`, `SaveManager` |
+| `zmlx/algs/` | 通用算法 | `linspace`, `join_paths`, `create_async` |
+| `zmlx/geometries/` | 几何计算 | `get_distance`, `get_angle`, `dfn2` |
 | `zmlx/io/` | 输入输出 | `opath`, `json_ex`, `read_py` |
 | `zmlx/filesys/` | 文件系统 | `list_files`, `make_dirs` |
-| `zmlx/mesh/`, `seepage_mesh/` | 网格生成 | `create_cube`, `create_xz` |
+| `zmlx/meshes/`, `seepage_mesh/` | 网格生成 | `create_cube`, `create_xz` |
 | `zmlx/fem/` | 有限元 | 有限元求解（开发中） |
 
 ---
 
 ## GUI 执行模式
 
-### 正确启动
+入口规则：`gui.execute(main, close_after_done=False)` 只在 `if __name__ == '__main__'` 中调用
+一次（**不要**放在函数内部）；长循环中用 `gui.break_point()` 让界面有机会暂停/终止，这些
+`gui.xxx()` 在无头模式下自动变为空操作。完整说明见 `AGENTS.md` 的「GUI mode」。
 
-```python
-if __name__ == '__main__':
-    gui.execute(main, close_after_done=False)
-```
-
-**不要在函数内部调用 `gui.execute()`**，只在 `__main__` 入口处调用一次。
-
-### 无头模式
+无头模式：
 
 ```bash
 python script.py --no-gui       # 命令行模式
 python script.py --headless     # 等效
 ```
 
-`gui.execute()` 内部通过 `is_headless()` 自动检测。`gui.xxx()` 函数在无头模式下自动变为空操作。
-
-### 调试建议
-
-在长循环中多放 `gui.break_point()`，让界面有机会暂停/终止。
-
-```python
-for step in range(1000):
-    gui.break_point()
-    model.iterate(dt=dt)
-```
+`gui.execute()` 内部通过 `is_headless()` 自动检测。
 
 ---
 
@@ -125,13 +110,13 @@ model.load('path.seepage')
 
 ```bash
 # 批量测试所有 demo（多线程并行）
-python zmlx/demo/test_all_demos.py
+python zmlx/demos/test_all_demos.py
 
 # 快速测试
-python zmlx/demo/test_all_demos.py --timeout 30
+python zmlx/demos/test_all_demos.py --timeout 30
 
 # 单个 demo
-python zmlx/demo/flow_1ph/darcy_1d.py --no-gui
+python zmlx/demos/flow_1ph/darcy_1d.py --no-gui
 ```
 
 ---
@@ -150,7 +135,7 @@ python zmlx/demo/flow_1ph/darcy_1d.py --no-gui
 
 ## 更多
 
-- 建模指南 → `zmlx/demo/ReadMe.md`
-- 版本日志 → `CHANGELOG.md`
-- 项目级指引 → `CLAUDE.md`
+- 建模指南 → `zmlx/demos/ReadMe.md`
+- 版本日志 → `zmlx/data/CHANGELOG.md`
+- 项目级指引 → `AGENTS.md`
 - 各子包详情 → 子包目录下的 `ReadMe.md`

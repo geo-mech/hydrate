@@ -1,86 +1,44 @@
+"""旧模块名（兼容层，**已弃用**）：``cylinder`` -> :mod:`zmlx.seepage_meshes.cylinder`.
+
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/seepage_meshes/cylinder.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.seepage_meshes.cylinder import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由 ``zmlx.seepage_mesh`` 改为 ``zmlx.seepage_meshes`` —— 与 ``algs`` / ``utils`` /
+``fluids`` / ``reactions`` / ``geometries`` / ``ui.widgets`` 统一用**复数**目录名。
+
+但 ``from zmlx.seepage_mesh.cylinder import ...`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史脚本 / 笔记里的 import；③ 更早的兼容层。
+
+⚠️ 完整的兼容策略见 ``zmlx/seepage_mesh/__init__.py``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-创建圆柱形状的渗流网格.
-
-Modified by Claude, 2026-08-12
-"""
-
-import math
-
-from zmlx.seepage_mesh.cube import create_cube
+from zmlx.system import warn
 
 
-def sort_and_deduplicate(arr):
-    """
-    对列表进行排序并去除重复元素
+warn(
+    '``zmlx.seepage_mesh.cylinder`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.seepage_meshes.cylinder``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-    Args:
-        arr: 要处理的列表
+from zmlx.seepage_meshes.cylinder import *  # noqa: F401,F403
 
-    Returns:
-        list: 从小到大排序且无重复元素的新列表
-    """
-    if len(arr) == 0:
-        return []
-
-    # 使用集合去重，然后排序
-    return sorted(set(arr))
-
-
-def create_cylinder(x=(0, 1, 2), r=(0, 1, 2)):
-    """
-    创建一个极坐标下的圆柱体的网格。
-    其中圆柱体的对称轴为x轴。cell的y坐标为r。cell的z坐标为0.
-    """
-    x = sort_and_deduplicate(x)
-    r = sort_and_deduplicate(r)
-
-    assert len(x) >= 2 and len(r) >= 2
-    assert r[0] >= 0
-
-    r_max = r[-1]
-    perimeter = 2.0 * math.pi * r_max
-    mesh = create_cube(x, r, (-perimeter * 0.5, perimeter * 0.5))
-
-    for cell in mesh.cells:
-        (x, y, z) = cell.pos
-        assert 0 < y < r_max
-        cell.vol *= (y / r_max)
-
-    for face in mesh.faces:
-        (i0, i1) = face.link
-        (x0, y0, _) = mesh.get_cell(i0).pos
-        (x1, y1, _) = mesh.get_cell(i1).pos
-        y = (y0 + y1) / 2
-        assert 0 < y < r_max
-        face.area *= (y / r_max)
-
-    return mesh
-
-
-def test_1():
-    m = create_cylinder(x=(0, 1, 2), r=(0, 1, 2))
-    print(m)
-    print(math.pi * 2 * 2 * 2)
-
-
-def create_vertical_cylinder(z=(0, 1, 2), r=(0, 1, 2)):
-    """
-    创建纵向的圆柱
-    """
-    mesh = create_cylinder(x=z, r=r)
-
-    for cell in mesh.cells:
-        x, y, z = cell.pos
-        cell.pos = [y, z, x]
-
-    return mesh
-
-
-def test_2():
-    m = create_vertical_cylinder(z=(0, 1, 2), r=(0, 1, 2))
-    print(m)
-    print(math.pi * 2 * 2 * 2)
-
-
-if __name__ == '__main__':
-    test_2()
+from zmlx.seepage_meshes.cylinder import (  # noqa: F401
+    create_cube,
+    create_cylinder,
+    create_vertical_cylinder,
+    math,
+    sort_and_deduplicate,
+    test_1,
+    test_2,
+)

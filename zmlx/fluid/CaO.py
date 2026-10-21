@@ -1,29 +1,37 @@
+"""旧模块名（兼容层，**已弃用**）：``CaO`` -> :mod:`zmlx.fluids.CaO`.
+
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/fluids/CaO.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.fluids.CaO import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由 ``zmlx.fluid`` 改为 ``zmlx.fluids`` —— 与 ``algs`` / ``utils`` /
+``ui.widgets`` 统一用**复数**目录名。
+
+但 ``from zmlx.fluid.CaO import ...`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史脚本 / 笔记里的 import；③ 更早的兼容层。
+
+⚠️ 完整的兼容策略见 ``zmlx/fluid/__init__.py``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-
-@author: Maryelin
-"""
-
-from zmlx.exts import FluDef
+from zmlx.system import warn
 
 
-def create(name=None):
-    """
-    Calcium oxide appears as an odorless, white or gray-white solid in the form of hard lumps
-    Density, MW = https://pubchem.ncbi.nlm.nih.gov/compound/Calcium-oxide
-    Specific Heat = https://webbook.nist.gov/cgi/cbook.cgi?ID=C1305788&Mask=2
-    liquid Phase Capacity (Shomate equation)
-    Cp = 53.08 J/mol*K @ 900K
-    MW = 56.08 
+warn(
+    '``zmlx.fluid.CaO`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.fluids.CaO``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-    """
-
-    den = 3340
-    vis = 1.0e30
-    specific_heat = 946.51
-    return FluDef(
-        den=den, vis=vis, specific_heat=specific_heat,
-        name=name)
-
-
-if __name__ == '__main__':
-    print(create())
+from zmlx.fluids.CaO import *  # noqa: F401,F403
+from zmlx.fluids.CaO import (  # noqa: F401
+    create
+)

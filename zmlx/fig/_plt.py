@@ -2,9 +2,38 @@
 基于matplotlib来显示绘图元素
 
 Modified by Claude, 2026-08-12
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
+
+Modified by DeepSeek, 2026-11-02: add_to_figure/add_to_axes 先兜底设置中文字体
+（自行建 figure 时中文报 Glyph ... missing from font(s) DejaVu Sans）
 """
 
+from zmlx.system import warn
 from zmlx.plt import on_axes, plot_on_figure, add_axes2, add_axes3, add_subplot
+
+
+def _ensure_chinese_font():
+    """确保 matplotlib 当前用的是中文字体（**幂等**，每次添加元素前都调）.
+
+    ⚠️ 必须在添加元素**之前**调用。中文字体原先只在 ``zmlx.ui.plot`` /
+    ``MatplotWidget`` 这两条「画图」链路上被设置，而 ``zmlx.fig.add_to_figure`` 是
+    **公开入口**：调用者常常自己建 figure、再往里塞项目（``suptitle``/``tight_layout``
+    等），完全不经过 ``zmlx.ui.plot``。此时 ``rcParams`` 还是 matplotlib 默认的
+    ``DejaVu Sans``（没有中文字形），中文在**排版那一刻**就报
+    ``Glyph ... missing from font(s) DejaVu Sans`` —— 而 ``tight_layout`` 正是排版
+    时刻（它会为每个文字算尺寸），所以警告位置总落在这个函数的 ``func(...)`` 行上。
+
+    ⚠️ 这里用幂等的 :func:`zmlx.plt.ensure_chinese_font`，**不是**
+    ``set_chinese_font``：后者带 ``@execute_once``，进程内只执行一次；一旦别处
+    ``plt.style.use('default')`` 把 ``font.sans-serif`` 重置回 ``DejaVu Sans``，
+    再调它只是一次判重返回，补不回来（警告照旧）。
+    """
+    try:
+        from zmlx.plt import ensure_chinese_font
+        ensure_chinese_font()
+    except Exception as err:
+        warn(f'设置中文字体失败：{err}', stacklevel=2)
 
 
 def _get_kernels():
@@ -31,13 +60,13 @@ def _get_kernels():
 def _add_item(ax, ax_item, *, kernels=None, **default_opts):
     if len(ax_item) == 0:  # 没有给定选项
         import warnings
-        warnings.warn('没有给定项目的名称', stacklevel=2)
+        warn('没有给定项目的名称', stacklevel=2)
         return None
 
     name = ax_item[0]  # 项目的名字，可以是kernels中的函数，或者是Axes对象的方法的名字
     if not isinstance(name, str):
         import warnings
-        warnings.warn(f'name 不是字符串：{type(name)}', stacklevel=2)
+        warn(f'name 不是字符串：{type(name)}', stacklevel=2)
         return None
 
     if kernels is None:
@@ -70,7 +99,7 @@ def _add_item(ax, ax_item, *, kernels=None, **default_opts):
         func = getattr(ax, name, None)  # 尝试从Axes对象中获取对应的方法
         if func is None:  # 没有对应的方法
             import warnings
-            warnings.warn(f'没有对应的添加函数或方法：{name}', stacklevel=2)
+            warn(f'没有对应的添加函数或方法：{name}', stacklevel=2)
             return None
         else:
             obj = func(*args, **opts)
@@ -99,6 +128,7 @@ def add_to_axes(ax, *ax_items, kernels=None, **common_opts):
     Returns:
         一个列表，包含添加到Axes上的对象。如果项目的名称为空，则添加None到列表中。
     """
+    _ensure_chinese_font()  # 图例/标题里的中文，见 _ensure_chinese_font 的说明
     if kernels is None:
         kernels = _get_kernels()
     return [_add_item(ax, a, kernels=kernels, **common_opts) for a in ax_items]
@@ -131,16 +161,17 @@ def plot3d(*ax3_items, **opts):
 
 
 def add_to_figure(figure, *fig_items, **common_opts):
+    _ensure_chinese_font()  # 标题里的中文，见 _ensure_chinese_font 的说明
     for a in fig_items:
         if len(a) == 0:  # 没有给定选项
             import warnings
-            warnings.warn('没有给定项目的名称', stacklevel=2)
+            warn('没有给定项目的名称', stacklevel=2)
             continue
 
         name = a[0]  # 项目的名字，可以是kernels中的函数，或者是Axes对象的方法的名字
         if not isinstance(name, str):
             import warnings
-            warnings.warn(f'name 不是字符串：{type(name)}', stacklevel=2)
+            warn(f'name 不是字符串：{type(name)}', stacklevel=2)
             continue
 
         args = [] if 1 >= len(a) else a[1]

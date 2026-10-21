@@ -4,7 +4,7 @@ Modified by Claude, 2026-08-12
 """
 import os.path
 
-from zmlx.alg.image import get_data
+from zmlx.algs.image import get_data
 
 
 def load_igg(vmin=0.0, vmax=1.0, xmin=0.0, xmax=1.0, ymin=0.0, ymax=1.0):

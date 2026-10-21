@@ -25,7 +25,7 @@ def show_flu_def(flu, pr, tr, **opts):
 
 
 def test():
-    from zmlx.fluid import create_ch4
+    from zmlx.fluids import create_ch4
     show_flu_def(create_ch4(), [4e6, 15e6], [274, 290], gui_mode=True)
 
 

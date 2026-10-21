@@ -2,13 +2,16 @@
 热流耦合配置模块。弃用。
 
 Modified by Claude, 2026-08-12
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
 
-import zmlx.alg.sys as warnings
+
+from zmlx.system import warn
 from zmlx.exts import Object, Seepage, get_average_perm, Reaction, log, FluDef
 from zmlx.tfc._main import set_cell_ini
-from zmlx.utility.attr_keys import AttrKeys
-from zmlx.utility.fields import Field
+from zmlx.utils.attr_keys import AttrKeys
+from zmlx.utils.fields import Field
 
 
 class TherFlowConfig(Object):
@@ -22,7 +25,7 @@ class TherFlowConfig(Object):
         """
         给定流体属性进行初始化. 给定的参数应该为流体属性定义(或者多个流体组成的混合物)、或者是化学反应的定义
         """
-        warnings.warn('please use zmlx.config.seepage instead',
+        warn('please use zmlx.config.seepage instead',
                       DeprecationWarning, stacklevel=2)
         log('DeprecationWarning: TherFlowConfig', tag='tag_240306')
 
@@ -692,20 +695,20 @@ class TherFlowConfig(Object):
         return min(dt1, dt2)
 
     def to_fmap(self, *args, **kwargs):
-        warnings.warn('<TherFlowConfig.to_fmap> will be removed after 2024-5-5',
+        warn('<TherFlowConfig.to_fmap> will be removed after 2024-5-5',
                       DeprecationWarning, stacklevel=2)
 
     def from_fmap(self, *args, **kwargs):
-        warnings.warn(
+        warn(
             '<TherFlowConfig.from_fmap> will be removed after 2024-5-5',
             DeprecationWarning, stacklevel=2)
 
     def save(self, *args, **kwargs):
-        warnings.warn('<TherFlowConfig.save> will be removed after 2024-5-5',
+        warn('<TherFlowConfig.save> will be removed after 2024-5-5',
                       DeprecationWarning, stacklevel=2)
 
     def load(self, *args, **kwargs):
-        warnings.warn('<TherFlowConfig.load> will be removed after 2024-5-5',
+        warn('<TherFlowConfig.load> will be removed after 2024-5-5',
                       DeprecationWarning, stacklevel=2)
 
     def update_g0(self, model, fa_g0=None, fa_k=None, fa_s=None, fa_l=None):

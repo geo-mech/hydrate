@@ -32,7 +32,7 @@ def create(
     创建模型(返回Seepage对象).
     """
     if mesh is None:  # 默认的mesh，是使用水平井
-        from zmlx.seepage_mesh.xz_half import create_xz_half
+        from zmlx.seepage_meshes.xz_half import create_xz_half
         mesh = create_xz_half(x_max=300.0)
 
     # 海底的温度

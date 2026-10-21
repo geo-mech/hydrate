@@ -1,7 +1,7 @@
 from zmlx.exts import Seepage
-from zmlx.fluid.co2 import create as create_co2
-from zmlx.fluid.h2o import create as create_h2o
-from zmlx.fluid.solution import create_solute
+from zmlx.fluids.co2 import create as create_co2
+from zmlx.fluids.h2o import create as create_h2o
+from zmlx.fluids.solution import create_solute
 
 from zmlx.scen.mineralization_reactor._config import (
     AQUEOUS_COMPONENTS,

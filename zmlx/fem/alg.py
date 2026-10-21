@@ -1,12 +1,13 @@
-import zmlx.alg.sys as warnings
+from zmlx.system import warn
+# Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 
-warnings.warn(f"{__file__} is deprecated (will be removed after 2027-6-26)", DeprecationWarning, stacklevel=2)
+warn(f"{__file__} is deprecated (will be removed after 2027-6-26)", DeprecationWarning, stacklevel=2)
 
 from zmlx.exts import DynSys, Mesh3, ConjugateGradientSolver, np
 from zmlx.fem.boundary import find_boundary
 from zmlx.fem.create3 import create3
 from zmlx.fem.set_mass import set_mass
-from zmlx.geometry.base import point_distance as get_distance
+from zmlx.geometries.base import point_distance as get_distance
 
 
 def _test1():
@@ -186,7 +187,7 @@ def compute_disp(
 
     if top_stress is None and top_pressure is not None:
         top_stress = top_pressure
-        warnings.warn(
+        warn(
             'The keyword <top_pressure> will not be used, use <top_stress> instead',
             DeprecationWarning, stacklevel=2)
 

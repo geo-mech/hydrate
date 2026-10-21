@@ -1,5 +1,5 @@
-import zmlx.alg.sys as warnings
-
+from zmlx.system import warn
+# Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 
 def create_caps(
         inh_diff=None,
@@ -15,7 +15,7 @@ def create_caps(
 
     # 盐度的扩散
     if inh_diff is not None:
-        warnings.warn(
+        warn(
             'inh_diff已弃用. 后续，请使用 zmlx.config.diffusion的相关功能',
             DeprecationWarning,
             stacklevel=2
@@ -29,7 +29,7 @@ def create_caps(
 
     # 溶解co2的扩散
     if co2_diff is not None:
-        warnings.warn(
+        warn(
             'co2_diff已弃用. 后续，请使用 zmlx.config.diffusion的相关功能',
             DeprecationWarning,
             stacklevel=2
@@ -43,7 +43,7 @@ def create_caps(
 
     # 溶解ch4的扩散
     if ch4_diff is not None:
-        warnings.warn(
+        warn(
             'ch4_diff已弃用. 后续，请使用 zmlx.config.diffusion的相关功能',
             DeprecationWarning,
             stacklevel=2

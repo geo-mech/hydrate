@@ -1,20 +1,25 @@
-"""已弃用的模块，请改用 zmlx.alg.image."""
-import zmlx.alg.sys as warnings
+"""旧模块名（兼容层，**已改名为** :mod:`zmlx.algs.make_video`）.
 
-from zmlx.alg.image import make_video
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/algs/make_video.py`` 里。
 
-warnings.warn(f'The module {__name__} will be removed after 2026-4-15',
-              DeprecationWarning, stacklevel=2)
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时会发出
+:class:`DeprecationWarning`。**新代码请写** ``from zmlx.algs.make_video import ...``。
 
+Modified by DeepSeek, 2026-10-16
 
-def test():
-    # 设置图片文件夹和输出视频文件名
-    image_folder = r'D:\MyData\co2\base\inh'  # 替换为你的图片文件夹路径
-    video_name = r'D:\MyData\co2\base\inh.mp4'
-
-    # 调用函数
-    make_video(image_folder=image_folder, video_name=video_name)
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
+"""
+from zmlx.system import warn
 
 
-if __name__ == '__main__':
-    test()
+warn(
+    '``zmlx.alg.make_video`` 已弃用（2026-10-16）：算法包已改名为 ``zmlx.algs``；'
+    '本转发层将于 **2027-10-16** 删除。请改用 ``from zmlx.algs.make_video import ...``。',
+    DeprecationWarning,
+    stacklevel=2,
+)
+
+from zmlx.algs.make_video import *  # noqa: F401,F403
+from zmlx.algs.make_video import (  # noqa: F401
+    test
+)

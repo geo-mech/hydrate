@@ -1,69 +1,34 @@
-"""热量注入器，支持恒定功率与恒定温度两种注入模式.
+"""旧模块名（兼容层，**已弃用**）：``heat_injector`` -> :mod:`zmlx.utils.heat_injector`.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 :mod:`zmlx.utils.heat_injector` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.utils.heat_injector import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由 ``zmlx.utility`` 改为 ``zmlx.utils`` —— 与 ``zmlx.ui.utils``
+统一拼写（``utility`` 只是 ``utils`` 的同义词，两种写法并存只会让人犹豫用哪个）。
+
+但 ``from zmlx.utility.{mod} import ...`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史脚本 / 笔记里的 import；③ 更早的兼容层。
+
+⚠️ 完整的兼容策略见 ``zmlx/utility/__init__.py``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
+from zmlx.system import warn
 
-from zmlx.alg import get_velocity_after_slowdown_by_viscosity
 
+warn(
+    '``zmlx.utility.heat_injector`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.utils.heat_injector``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-class HeatInjector:
-    """热量注入器。
-
-    对指定 Cell 注入热量，支持两种模式：
-    - 恒定功率：按功率直接提升温度（``power * dt / (mc)``）。
-    - 恒定温度：按传热系数向目标温度靠拢（带粘性减速）。
-    当 ``power`` 不为 None 且大于 0 时优先使用恒定功率模式。
-    """
-
-    def __init__(self, cell, ca_mc, ca_t, power=None, temp=None, cond=None):
-        """初始化热注入器。
-
-        Args:
-            cell: 目标 Cell 对象（支持 ``get_attr`` / ``set_attr``）。
-            ca_mc: 比热属性 ID（``mc`` = 质量 × 比热）。
-            ca_t: 温度属性 ID。
-            power: 恒定注入功率 [W]（None 表示不使用恒定功率模式）。
-            temp: 恒定目标温度 [K]（仅恒定温度模式使用）。
-            cond: 传热系数（仅恒定温度模式使用）。
-        """
-        self.cell = cell
-        self.ca_mc = ca_mc
-        self.ca_t = ca_t
-        self.power = power
-        self.temp = temp
-        self.cond = cond
-
-    def work(self, dt):
-        """执行指定时间的热量注入。
-
-        Args:
-            dt: 工作时间 [s]（<= 0 时直接返回）。
-
-        工作流程：
-            1. 若 ``power`` 大于 0，执行恒定功率注入。
-            2. 否则若 ``temp`` 和 ``cond`` 均有效且 ``cond > 0``，
-               执行恒定温度注入（向目标温度靠拢）。
-        """
-        if dt <= 0:
-            return
-
-        if self.power is not None:
-            if self.power > 0:
-                # 恒定功率注入：直接将能量转化为温度增量
-                t0 = self.cell.get_attr(self.ca_t)
-                t1 = t0 + self.power * dt / self.cell.get_attr(self.ca_mc)
-                self.cell.set_attr(self.ca_t, t1)
-                return
-
-        if self.temp is not None and self.cond is not None:
-            if self.cond > 0:
-                # 恒定温度注入：按传热系数向目标温度靠拢
-                t0 = self.cell.get_attr(self.ca_t)
-                mc = self.cell.get_attr(self.ca_mc)
-                v0 = t0 - self.temp  # 温度差，相当于速度
-                a0 = v0 * self.cond / mc  # 按照当前的温度差，单位时间内温度的改变
-                v1 = get_velocity_after_slowdown_by_viscosity(
-                    v0, a0, dt)  # 之后的温度差
-                t1 = self.temp + v1
-                self.cell.set_attr(self.ca_t, t1)
-                return
+from zmlx.utils.heat_injector import *  # noqa: F401,F403

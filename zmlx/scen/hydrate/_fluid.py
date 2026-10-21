@@ -1,13 +1,15 @@
-import zmlx.alg.sys as warnings
+
+from zmlx.system import warn
+# Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 from zmlx.exts import FluDef
-from zmlx.fluid.ch4 import create as create_ch4
-from zmlx.fluid.ch4_hydrate import create as create_ch4_hydrate
-from zmlx.fluid.co2 import create as create_co2
-from zmlx.fluid.co2_hydrate import create as create_co2_hydrate
-from zmlx.fluid.h2o import create as create_h2o
-from zmlx.fluid.h2o_gas import create as create_h2o_gas
-from zmlx.fluid.h2o_ice import create as create_h2o_ice
-from zmlx.fluid.solution import create_solute
+from zmlx.fluids.ch4 import create as create_ch4
+from zmlx.fluids.ch4_hydrate import create as create_ch4_hydrate
+from zmlx.fluids.co2 import create as create_co2
+from zmlx.fluids.co2_hydrate import create as create_co2_hydrate
+from zmlx.fluids.h2o import create as create_h2o
+from zmlx.fluids.h2o_gas import create as create_h2o_gas
+from zmlx.fluids.h2o_ice import create as create_h2o_ice
+from zmlx.fluids.solution import create_solute
 
 
 def create_fludefs(
@@ -80,7 +82,7 @@ def create_fludefs(
     if inh_def is not None or inh_sol_data is not None:
         if has_inh is not None:  # add warning since 2024-6-11
             if not has_inh:
-                warnings.warn(
+                warn(
                     'Inhibitor data is provided when inhibitors are not needed')
         has_inh = True
 
@@ -127,7 +129,7 @@ def create_fludefs(
         if inh_sol_data is not None:
             liq.add_component(create_solute_x(inh_sol_data), name='inh')
         else:
-            warnings.warn('The dissolved salinity data is not defined')
+            warn('The dissolved salinity data is not defined')
             if inh_def is None:
                 inh_def = FluDef(
                     den=2165.0,
@@ -139,7 +141,7 @@ def create_fludefs(
         if ch4_sol_data is not None:
             liq.add_component(create_solute_x(ch4_sol_data), name='ch4_in_liq')
         else:
-            warnings.warn('The dissolved ch4 data is not defined')
+            warn('The dissolved ch4 data is not defined')
             liq.add_component(ch4_def, name='ch4_in_liq')
 
     if has_co2_in_liq:
@@ -147,7 +149,7 @@ def create_fludefs(
         if co2_sol_data is not None:
             liq.add_component(create_solute_x(co2_sol_data), name='co2_in_liq')
         else:
-            warnings.warn('The dissolved co2 data is not defined')
+            warn('The dissolved co2 data is not defined')
             liq.add_component(co2_def, name='co2_in_liq')
 
     if other_liq is not None:  # 其它的液体

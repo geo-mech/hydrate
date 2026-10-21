@@ -1,4 +1,4 @@
-from zmlx.utility.fields import LinearField
+from zmlx.utils.fields import LinearField
 
 
 def create_t_ini(z_top=0.0, t_top=276.0, grad_t=0.04466):

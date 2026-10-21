@@ -1,60 +1,38 @@
-from typing import Optional, List, Any
+"""旧模块名（兼容层，**已弃用**）：``_aqueous`` -> :mod:`zmlx.fluids._aqueous`.
 
-from zmlx.exts import FluDef
-from zmlx.fluid.h2o import create as create_h2o
-from zmlx.fluid.solution import create_solute
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/fluids/_aqueous.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
 
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.fluids._aqueous import ...``。
 
-def create_aqueous(name: str = 'liq', *, h2o: Optional[FluDef] = None, solutes: Optional[List[List[Any]]] = None,
-                   **others):
-    """
-    创建水溶液定义. 其中h2o是水的定义。在此基础上，添加各种溶质。每一个溶质都是一个List或者Tuple，格式为：
-        name(名字), c(基准浓度), den_times(基准浓度下密度相对于纯水的比例), vis_times(基准浓度下粘度相对于纯水的比例)
+为什么留着而不删
+----------------
 
-    关于密度随浓度线性变化的文献依据，参见：
-        zmlx/fluid/aqueous_density_linearity.md
-    """
-    if h2o is None:
-        h2o = create_h2o()
+2026-10-16 把包名由 ``zmlx.fluid`` 改为 ``zmlx.fluids`` —— 与 ``algs`` / ``utils`` /
+``ui.widgets`` 统一用**复数**目录名。
 
-    liq = FluDef(name=name)
-    liq.add_component(h2o, name='h2o' if len(h2o.name) == 0 else h2o.name)
+但 ``from zmlx.fluid._aqueous import ...`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史脚本 / 笔记里的 import；③ 更早的兼容层。
 
-    if solutes is not None:
-        for solute in solutes:
-            assert len(solute) > 0
-            name, opt = solute[0], solute[1:]
-            sol = create_solute(
-                solvent=h2o,
-                c=opt[0] if 0 < len(opt) else 0.1,
-                den_times=opt[1] if 1 < len(opt) else 1.0,
-                vis_times=opt[2] if 2 < len(opt) else 1.0
-            )
-            liq.add_component(sol, name=name)
+⚠️ 完整的兼容策略见 ``zmlx/fluid/__init__.py``。
 
-    for name, opt in others.items():
-        sol = create_solute(
-            solvent=h2o,
-            c=opt[0] if 0 < len(opt) else 0.1,
-            den_times=opt[1] if 1 < len(opt) else 1.0,
-            vis_times=opt[2] if 2 < len(opt) else 1.0
-        )
-        liq.add_component(sol, name=name)
-    return liq
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
+"""
+from zmlx.system import warn
 
 
-def test_1():
-    liq = create_aqueous(
-        solutes=[
-            ['co2'],
-            ['Ca+'],
-        ],
-        he=[0.1, 1.1, 1.0],
-        h2=[]
-    )
-    for c in liq.components:
-        print(c)
+warn(
+    '``zmlx.fluid._aqueous`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.fluids._aqueous``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-
-if __name__ == '__main__':
-    test_1()
+from zmlx.fluids._aqueous import *  # noqa: F401,F403
+from zmlx.fluids._aqueous import (  # noqa: F401
+    create_aqueous,
+    test_1
+)

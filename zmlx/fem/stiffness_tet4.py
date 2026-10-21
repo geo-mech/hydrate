@@ -1,10 +1,11 @@
-import zmlx.alg.sys as warnings
 
+from zmlx.system import warn
+# Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 from zmlx.fem.elements.c3d4 import stiffness as c3d4_stiffness
 
 
 def stiffness(x0, x1, x2, x3, y0, y1, y2, y3, z0, z1, z2, z3, E, mu):
-    warnings.warn("stiffness is deprecated (will be removed after 2026-3-30), "
+    warn("stiffness is deprecated (will be removed after 2026-3-30), "
                   "use c3d4_stiffness instead",
                   DeprecationWarning, stacklevel=2)
     return c3d4_stiffness(

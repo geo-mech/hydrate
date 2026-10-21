@@ -1,33 +1,38 @@
-from zmlx.exts import FluDef
+"""旧模块名（兼容层，**已弃用**）：``_mixture`` -> :mod:`zmlx.fluids._mixture`.
+
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/fluids/_mixture.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.fluids._mixture import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由 ``zmlx.fluid`` 改为 ``zmlx.fluids`` —— 与 ``algs`` / ``utils`` /
+``ui.widgets`` 统一用**复数**目录名。
+
+但 ``from zmlx.fluid._mixture import ...`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史脚本 / 笔记里的 import；③ 更早的兼容层。
+
+⚠️ 完整的兼容策略见 ``zmlx/fluid/__init__.py``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
+"""
+from zmlx.system import warn
 
 
-def create_mixture(name: str, *components: FluDef, **others) -> FluDef:
-    """
-    创建混合物的定义
-    """
-    assert len(name) > 0, "The name of the mixture is empty."
-    res = FluDef(name=name)
+warn(
+    '``zmlx.fluid._mixture`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.fluids._mixture``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-    for c in components:
-        if isinstance(c, FluDef):
-            assert len(c.name) > 0, "The name of the component is not empty."
-            assert c.component_number == 0, "The component of the mixture must be a single component."
-            res.add_component(c)
-
-    for k, v in others.items():
-        if isinstance(v, FluDef):
-            assert isinstance(k, str), "The component of the mixture must be a string."
-            assert isinstance(v, FluDef), "The component of the mixture must be a FluDef."
-            assert v.component_number == 0, "The component of the mixture must be a single component."
-            res.add_component(name=k, flu=v)
-    return res
-
-
-def test():
-    from zmlx.fluid import h2o, ch4
-    gas = create_mixture('gas', ch4=ch4.create(), h2o=h2o.create())
-    print(gas)
-
-
-if __name__ == '__main__':
-    test()
+from zmlx.fluids._mixture import *  # noqa: F401,F403
+from zmlx.fluids._mixture import (  # noqa: F401
+    create_mixture,
+    test
+)

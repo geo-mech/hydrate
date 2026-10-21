@@ -5,7 +5,7 @@ Modified by Claude, 2026-08-12
 import os
 
 from zmlx.exts import read_text, Mesh3
-from zmlx.seepage_mesh.mesh3 import face_centered
+from zmlx.seepage_meshes.mesh3 import face_centered
 
 
 def load_xy_data():

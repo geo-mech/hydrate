@@ -238,6 +238,17 @@ class Array2(HasHandle):
                 self.set(i, value)
         return self
 
+    def get_copy(self):
+        """
+        返回当前对象的深拷贝。
+
+        Returns:
+            Array2: 新创建的实例。
+        """
+        res = Array2()
+        res.clone(self)
+        return res
+
     core.use(c_double, 'array2_get_angle', c_void_p)
 
     def get_angle(self) -> float:
@@ -481,3 +492,14 @@ class Array3(HasHandle):
                 assert value is not None, "Array3.clone: other[i] is None"
                 self.set(i, value)
         return self
+
+    def get_copy(self):
+        """
+        返回当前对象的深拷贝。
+
+        Returns:
+            Array3: 新创建的实例。
+        """
+        res = Array3()
+        res.clone(self)
+        return res

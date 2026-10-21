@@ -1,9 +1,11 @@
 """
 创建二维的有限元模型
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
 
-import warnings
 
+from zmlx.system import warn
 from zmlx.exts import Mesh3, DynSys, LinearExpr
 from zmlx.fem.attr_getter import attr_getter
 from zmlx.fem.stiff2 import stiff2
@@ -25,7 +27,7 @@ def create2(mesh, fa_E=None, fa_mu=None, fa_den=None, fa_h=None,
     返回：
         DynSys对象，其中的自由度的数量是mesh中node数量的二倍.
     """
-    warnings.warn("create2 is deprecated", DeprecationWarning, stacklevel=2)
+    warn("create2 is deprecated", DeprecationWarning, stacklevel=2)
 
     assert isinstance(mesh, Mesh3)
 

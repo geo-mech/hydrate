@@ -1,16 +1,21 @@
 """rc3 绘图工具。
 
 Modified by Claude, 2026-08-12
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-import zmlx.alg.sys as warnings
+
+from zmlx.system import warn
 from zmlx.plt.on_ui import show_rc3
 
-warnings.warn(f'The module {__name__} will be removed after 2027-5-23',
-              DeprecationWarning, stacklevel=2)
+warn(
+    'The module zmlx.plt.rc3 已弃用（remove after 2027-5-23）：'
+    '请改用 `from zmlx import show_rc3`',
+    DeprecationWarning, stacklevel=2)
 
 
 def test():
-    from zmlx.geometry.dfn_v3 import to_rc3, create_demo
+    from zmlx.geometries.dfn_v3 import to_rc3, create_demo
     import random
     rc3 = to_rc3(create_demo())
     color = []

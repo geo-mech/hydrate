@@ -2,8 +2,8 @@
 定义流体
 """
 
-from zmlx.fluid.h2o import create as create_h2o
-from zmlx.fluid.solution import create_solute
+from zmlx.fluids.h2o import create as create_h2o
+from zmlx.fluids.solution import create_solute
 from zmlx.tfc import Seepage
 
 

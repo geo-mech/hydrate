@@ -2,12 +2,17 @@
 基于Matplotlib的二维绘图
 
 Modified by Claude, 2026-08-12
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
+from zmlx.system import warn
 
-import zmlx.alg.sys as warnings
 
-warnings.warn(f'The module {__name__} will be removed after 2027-5-23',
-              DeprecationWarning, stacklevel=2)
+warn(
+    'The module zmlx.plt.plot2 已弃用（remove after 2027-5-23）：'
+    '请改用 `zmlx.fig` 的声明式 API（``from zmlx import fig`` 后 ``fig.plot2d(...)``）；'
+    '原 ``plot2`` 的数据格式本身也是旧接口',
+    DeprecationWarning, stacklevel=2)
 from zmlx.plt.fig2 import plot2
 
 version = 250401

@@ -19,6 +19,7 @@ Modified by Claude, 2026-08-12
 """
 
 
+import sys
 from ctypes import c_double, c_int, c_void_p, CFUNCTYPE, POINTER
 
 import numpy as np
@@ -41,7 +42,7 @@ def _make_solve_callback(solver_instance):
             return solver_instance._solve_core(
                 n, rows_np, cols_np, vals_np, b_np, x_np, bool(with_guess))
         except Exception as e:
-            print(f'CudaSolver error: {e}')
+            print(f'CudaSolver error: {e}', file=sys.stderr)
             return -1
 
     return callback
@@ -148,7 +149,7 @@ class CudaSolver:
         try:
             return self._solve_core(len(b), rows, cols, vals, b, x, with_guess)
         except Exception as e:
-            print(f'CudaSolver error: {e}')
+            print(f'CudaSolver error: {e}', file=sys.stderr)
             return -1
 
     @property

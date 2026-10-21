@@ -1,22 +1,25 @@
-"""已弃用的模块，请改用 zmlx.alg.base."""
-import zmlx.alg.sys as warnings
+"""旧模块名（兼容层，**已改名为** :mod:`zmlx.algs.code_config`）.
 
-from zmlx.alg.base import code_config
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/algs/code_config.py`` 里。
 
-warnings.warn(f'{__name__} will be removed after 2026-4-15', DeprecationWarning,
-              stacklevel=2)
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时会发出
+:class:`DeprecationWarning`。**新代码请写** ``from zmlx.algs.code_config import ...``。
 
+Modified by DeepSeek, 2026-10-16
 
-def test():
-    text = """
-    # ** desc = 'The description'
-    # ** area = 1
-    # ** text = ("x"
-    # **        "y")
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-    cfg = code_config(text=text)
-    print(cfg)
+from zmlx.system import warn
 
 
-if __name__ == '__main__':
-    test()
+warn(
+    '``zmlx.alg.code_config`` 已弃用（2026-10-16）：算法包已改名为 ``zmlx.algs``；'
+    '本转发层将于 **2027-10-16** 删除。请改用 ``from zmlx.algs.code_config import ...``。',
+    DeprecationWarning,
+    stacklevel=2,
+)
+
+from zmlx.algs.code_config import *  # noqa: F401,F403
+from zmlx.algs.code_config import (  # noqa: F401
+    test
+)

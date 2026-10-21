@@ -1,31 +1,26 @@
-"""跨平台文件打开（替代 os.startfile）.
+"""旧模块名（兼容层，**已改名为** :mod:`zmlx.algs._startfile`）.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/algs/_startfile.py`` 里。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时会发出
+:class:`DeprecationWarning`。**新代码请写** ``from zmlx.algs._startfile import ...``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-
-import os
-import subprocess
+from zmlx.system import warn
 
 
-def startfile(path):
-    """
-    打开文件
-    Args:
-        path: 文件路径
-    """
-    from zmlx.exts import in_linux, in_windows, in_macos
-    if in_windows():
-        os.startfile(path)
-    elif in_linux():
-        subprocess.run(['xdg-open', path], check=True)
-    elif in_macos():
-        subprocess.run(['open', path], check=True)
+warn(
+    '``zmlx.alg._startfile`` 已弃用（2026-10-16）：算法包已改名为 ``zmlx.algs``；'
+    '本转发层将于 **2027-10-16** 删除。请改用 ``from zmlx.algs._startfile import ...``。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-
-def test():
-    from zmlx.io.path import opath
-    startfile(opath())
-
-
-if __name__ == '__main__':
-    test()
+from zmlx.algs._startfile import *  # noqa: F401,F403
+from zmlx.algs._startfile import (  # noqa: F401
+    startfile,
+    test
+)

@@ -1,57 +1,37 @@
+"""旧模块名（兼容层，**已弃用**）：``ch4_hydrate_th`` -> :mod:`zmlx.fluids.ch4_hydrate_th`.
+
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/fluids/ch4_hydrate_th.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.fluids.ch4_hydrate_th import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由 ``zmlx.fluid`` 改为 ``zmlx.fluids`` —— 与 ``algs`` / ``utils`` /
+``ui.widgets`` 统一用**复数**目录名。
+
+但 ``from zmlx.fluid.ch4_hydrate_th import ...`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史脚本 / 笔记里的 import；③ 更早的兼容层。
+
+⚠️ 完整的兼容策略见 ``zmlx/fluid/__init__.py``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-定义甲烷水合物的基本参数
-"""
-
-import math
-
-import zmlx.alg.sys as warnings
-from zmlx.exts import FluDef, Interp2
+from zmlx.system import warn
 
 
-def create(MH, NH=6, t_min=270, t_max=290, p_min=1e6, p_max=40e6, name=None):
-    """
-    根据Tough+Hydrate 1.5手册的27页公式2.30来计算密度。
+warn(
+    '``zmlx.fluid.ch4_hydrate_th`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.fluids.ch4_hydrate_th``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-    看上去还不对，勿用!!
-
-    甲烷水合物的比热随着温度和压力略有变化，但是变化的幅度很小，所以可以视为常数:
-    参考：
-    https://pubs.usgs.gov/fs/2007/3041/pdf/FS-2007-3041.pdf
-
-    大约2100左右
-    """
-    warnings.warn('密度的数值看上去还不对', RuntimeWarning)
-    a1 = 3.38496e-4
-    a2 = 5.40099e-7
-    a3 = -4.76946e-11
-    a4 = 1.0e-10
-    T0 = 298.15
-    P0 = 1.0e5
-    v0 = 1000.0 * MH / (22.712 * NH)
-
-    def get_density(P, T):
-        dP = max(p_min, min(p_max, P)) - P0
-        dT = max(t_min, min(t_max, T)) - T0
-        return 1.0 / (v0 * math.exp(
-            a1 * dT + a2 * dT ** 2 + a3 * dT ** 3 + a4 * dP))
-
-    def create_density():
-        den = Interp2()
-        den.create(p_min, 0.1e6, p_max, t_min, 1, t_max, get_density)
-        return den
-
-    return FluDef(
-        den=create_density(),
-        vis=1.0e30,
-        specific_heat=2100.0, name=name)
-
-
-if __name__ == '__main__':
-    flu = create(100, name='ch4_hydrate')
-    print(flu)
-    try:
-        from zmlx.plt import show_flu_def
-
-        show_flu_def(flu, [1e6, 20e6], [270, 290])
-    except Exception:
-        pass
+from zmlx.fluids.ch4_hydrate_th import *  # noqa: F401,F403
+from zmlx.fluids.ch4_hydrate_th import (  # noqa: F401
+    create
+)

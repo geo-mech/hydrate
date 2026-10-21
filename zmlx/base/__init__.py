@@ -2,9 +2,11 @@
 弃用的包。相关功能，转移到alg中.  此包中的所有内容，将于 2027-5-17之后彻底删除.
 
 Modified by Claude, 2026-08-12
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
+from zmlx.system import warn
 
-import warnings
 
-warnings.warn("The module zmlx.base is deprecated (will be removed after 2027-5-17)",
+warn("The module zmlx.base is deprecated (will be removed after 2027-5-17)",
               DeprecationWarning, stacklevel=2)

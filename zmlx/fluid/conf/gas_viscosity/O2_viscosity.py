@@ -1,19 +1,37 @@
-# -*- coding: utf-8 -*-
-"""O2 气体粘度关联式（Sutherland's law approximation）.
+"""旧模块名（兼容层，**已弃用**）：``conf.gas_viscosity.O2_viscosity`` -> :mod:`zmlx.fluids.conf.gas_viscosity.O2_viscosity`.
 
-Sutherland's law approximation for gas viscosity.
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/fluids/conf.gas_viscosity.O2_viscosity.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
 
-Modified by Claude, 2026-08-12
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.fluids.conf.gas_viscosity.O2_viscosity import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由 ``zmlx.fluid`` 改为 ``zmlx.fluids`` —— 与 ``algs`` / ``utils`` /
+``ui.widgets`` 统一用**复数**目录名。
+
+但 ``from zmlx.fluid.conf.gas_viscosity.O2_viscosity import ...`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史脚本 / 笔记里的 import；③ 更早的兼容层。
+
+⚠️ 完整的兼容策略见 ``zmlx/fluid/__init__.py``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-# Sutherland's law approximation for gas viscosity:
-# https://doc.comsol.com/5.5/doc/com.comsol.help.cfd/cfd_ug_fluidflow_high_mach.08.27.html
+from zmlx.system import warn
 
 
-def vis_o2(P, T):
-    t_ref = 273
-    vis_ref = 1.919e-5
-    s_ref = 139
-    viscosity = vis_ref * (
-            (T / t_ref) ** (3 / 2) * ((t_ref + s_ref) / (
-            T + s_ref)))  # Sutherlands's equation for ideal gas
-    return viscosity
+warn(
+    '``zmlx.fluid.conf.gas_viscosity.O2_viscosity`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.fluids.conf.gas_viscosity.O2_viscosity``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
+
+from zmlx.fluids.conf.gas_viscosity.O2_viscosity import *  # noqa: F401,F403
+from zmlx.fluids.conf.gas_viscosity.O2_viscosity import (  # noqa: F401
+    vis_o2
+)

@@ -1,35 +1,37 @@
-# -*- coding: utf-8 -*-
-"""CO density 气体密度关联式（Yaw's table 临界值）.
+"""旧模块名（兼容层，**已弃用**）：``conf.gas_density.CO_density`` -> :mod:`zmlx.fluids.conf.gas_density.CO_density`.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/fluids/conf.gas_density.CO_density.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.fluids.conf.gas_density.CO_density import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由 ``zmlx.fluid`` 改为 ``zmlx.fluids`` —— 与 ``algs`` / ``utils`` /
+``ui.widgets`` 统一用**复数**目录名。
+
+但 ``from zmlx.fluid.conf.gas_density.CO_density import ...`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史脚本 / 笔记里的 import；③ 更早的兼容层。
+
+⚠️ 完整的兼容策略见 ``zmlx/fluid/__init__.py``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-# critical values from Yaw's table:
-# CO = Carbon Monoxide, PM = KG/MOL
-# R = J/MOL*K, Tc = K, PC = Pa, w = adimentional
-
-from zmlx.exts import np
+from zmlx.system import warn
 
 
-def den_co(P, T):
-    PM = 0.02801
-    R = 8.314472
-    Tc = 132.92
-    Pc = 3.499e6
-    w = 0.066
+warn(
+    '``zmlx.fluid.conf.gas_density.CO_density`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.fluids.conf.gas_density.CO_density``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-    a = 0.42780 * ((R ** 2) * (Tc ** 2.5)) / Pc
-    b = 0.086640 * (R * Tc) / Pc
-
-    # MOLAR VOLUME
-    A = - (R * T) / P
-    B = (1 / P * T ** 0.5) - ((b * R * T) / P) - (b ** 2)
-    C = - (a * b) / (P * T ** 0.5)
-
-    "v_equ = v**3 + A * v**2 + B * v + C"
-
-    v_coef = [1, A, B, C]
-    v_ = np.roots(v_coef)
-
-    den = (1 / (v_.real[0])) * PM
-
-    return den
+from zmlx.fluids.conf.gas_density.CO_density import *  # noqa: F401,F403
+from zmlx.fluids.conf.gas_density.CO_density import (  # noqa: F401
+    den_co
+)

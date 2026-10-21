@@ -1,42 +1,25 @@
+"""旧模块名（兼容层，**已改名为** :mod:`zmlx.algs.np`）.
+
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/algs/np.py`` 里。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时会发出
+:class:`DeprecationWarning`。**新代码请写** ``from zmlx.algs.np import ...``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-一些针对numpy的函数. 同时，也默认讲numpy内的内容引入. 因此，在大部分情况下，可以使用此模块来代替numpy
-.
-
-Modified by Claude, 2026-08-12
-"""
-from ctypes import c_double, POINTER
-
-import zmlx.alg.sys as warnings
-from zmlx.exts import get_pointer64, np
+from zmlx.system import warn
 
 
-def get_pointer(data, dtype=None):
-    """
-    返回指针;
-    """
-    warnings.warn(
-        f'The {__name__}.get_pointer will be removed after 2026-4-17, '
-        f'please use zmlx.get_pointer64 instead.',
-        DeprecationWarning, stacklevel=2)
+warn(
+    '``zmlx.alg.np`` 已弃用（2026-10-16）：算法包已改名为 ``zmlx.algs``；'
+    '本转发层将于 **2027-10-16** 删除。请改用 ``from zmlx.algs.np import ...``。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-    assert np is not None
-
-    if dtype is None or dtype == c_double or dtype == float or dtype == np.float64:
-        return get_pointer64(data)
-
-    if not data.flags.c_contiguous:
-        data = np.ascontiguousarray(data)
-
-    if dtype is None:
-        dtype = c_double
-
-    return data.ctypes.data_as(POINTER(dtype))
-
-
-if __name__ == '__main__':
-    assert np is not None
-    a = np.linspace(0, 3, 10)
-    print(a)
-    p = get_pointer(a)
-    p[2] = 123
-    print(a)
+from zmlx.algs.np import *  # noqa: F401,F403
+from zmlx.algs.np import (  # noqa: F401
+    get_pointer
+)

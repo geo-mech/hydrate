@@ -1,78 +1,41 @@
-"""渗流网格 IO（ASCII 格式读写）。
+"""旧模块名（兼容层，**已弃用**）：``io`` -> :mod:`zmlx.seepage_meshes.io`.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/seepage_meshes/io.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.seepage_meshes.io import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由 ``zmlx.seepage_mesh`` 改为 ``zmlx.seepage_meshes`` —— 与 ``algs`` / ``utils`` /
+``fluids`` / ``reactions`` / ``geometries`` / ``ui.widgets`` 统一用**复数**目录名。
+
+但 ``from zmlx.seepage_mesh.io import ...`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史脚本 / 笔记里的 import；③ 更早的兼容层。
+
+⚠️ 完整的兼容策略见 ``zmlx/seepage_mesh/__init__.py``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-from zmlx.exts import SeepageMesh
+from zmlx.system import warn
 
 
-def load_ascii(cell_file, face_file, mesh=None):
-    """
-    从文件中导入几何结构。其中cell_file定义cell的信息，至少包含4列，分别为x,y,z,vol；
-    face_file定义face的性质，至少包含4裂缝，分别为cell_i0,cell_i1,area,length
-    """
-    if mesh is None:
-        mesh = SeepageMesh()
+warn(
+    '``zmlx.seepage_mesh.io`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.seepage_meshes.io``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-    mesh.clear()
-    with open(cell_file, 'r') as file:
-        for line in file.readlines():
-            vals = [float(s) for s in line.split()]
-            if len(vals) == 0:
-                continue
-            assert len(vals) >= 4
-            cell = mesh.add_cell()
-            assert cell is not None
-            cell.pos = [vals[i] for i in range(0, 3)]
-            cell.vol = vals[3]
-    cell_number = mesh.cell_number
-    with open(face_file, 'r') as file:
-        for line in file.readlines():
-            words = line.split()
-            if len(words) == 0:
-                continue
-            assert len(words) >= 4
-            cell_i0 = int(words[0])
-            cell_i1 = int(words[1])
-            assert cell_i0 < cell_number
-            assert cell_i0 < cell_number
-            area = float(words[2])
-            assert area > 0
-            length = float(words[3])
-            assert length > 0
-            face = mesh.add_face(
-                mesh.get_cell(cell_i0), mesh.get_cell(cell_i1))
-            if face is not None:
-                face.area = area
-                face.length = length
-    # 返回导入的mesh
-    return mesh
+from zmlx.seepage_meshes.io import *  # noqa: F401,F403
 
-
-def save_ascii(cell_file, face_file, mesh):
-    """
-    将当前的网格数据导出到两个文件
-    """
-    with open(cell_file, 'w') as file:
-        for cell in mesh.cells:
-            for elem in cell.pos:
-                file.write('%g ' % elem)
-            file.write('%g\n' % cell.vol)
-    with open(face_file, 'w') as file:
-        for face in mesh.faces:
-            link = face.link
-            file.write('%d %d %g %g\n' % (
-                link[0], link[1], face.area, face.length))
-
-
-def load_mesh(cell_file=None, face_file=None, path=None):
-    """
-    从文件中读取Mesh文件
-    """
-    mesh = SeepageMesh()
-    if path is not None:
-        assert cell_file is None and face_file is None
-        mesh.load(path)
-    else:
-        assert cell_file is not None and face_file is not None
-        load_ascii(cell_file, face_file, mesh=mesh)
-    return mesh
+from zmlx.seepage_meshes.io import (  # noqa: F401
+    SeepageMesh,
+    load_ascii,
+    load_mesh,
+    save_ascii,
+)

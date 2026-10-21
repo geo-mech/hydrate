@@ -1,10 +1,14 @@
-"""已弃用的模块，请改用 zmlx.tfc."""
+"""已弃用的模块，请改用 zmlx.tfc.
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
+"""
+from zmlx.system import warn
 import sys
 
-import zmlx.alg.sys as warnings
+
 from zmlx.tfc import seepage2txt, txt2seepage
 
-warnings.warn(f'The module {__name__} will be removed after 2026-4-15',
+warn(f'The module {__name__} will be removed after 2026-4-15',
               DeprecationWarning, stacklevel=2)
 
 if __name__ == '__main__':

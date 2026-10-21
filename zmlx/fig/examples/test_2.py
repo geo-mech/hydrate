@@ -3,7 +3,7 @@ from zmlx.fig import *
 
 def test_2():
     import numpy as np
-    from zmlx.geometry.dfn2 import dfn2 as make_fractures
+    from zmlx.geometries.dfn2 import dfn2 as make_fractures
 
     x = np.linspace(-5, 5, 30)
     y = np.linspace(-5, 5, 30)

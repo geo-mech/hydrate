@@ -1,75 +1,34 @@
-"""延迟加载函数包装器，用于代码迁移过程中的向后兼容。
+"""旧模块名（兼容层，**已弃用**）：``runtime_fn`` -> :mod:`zmlx.utils.runtime_fn`.
 
-将目标函数包装为在调用时动态导入，可选发出弃用警告并记录日志。
+⚠️ **本模块只是一层转发**，真正的实现全在 :mod:`zmlx.utils.runtime_fn` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
 
-Modified by Claude, 2026-08-12
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.utils.runtime_fn import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由 ``zmlx.utility`` 改为 ``zmlx.utils`` —— 与 ``zmlx.ui.utils``
+统一拼写（``utility`` 只是 ``utils`` 的同义词，两种写法并存只会让人犹豫用哪个）。
+
+但 ``from zmlx.utility.{mod} import ...`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史脚本 / 笔记里的 import；③ 更早的兼容层。
+
+⚠️ 完整的兼容策略见 ``zmlx/utility/__init__.py``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-
-import importlib
-
-import zmlx.alg.sys as warnings
+from zmlx.system import warn
 
 
-class RuntimeFunc:
-    """延迟加载函数包装器。
+warn(
+    '``zmlx.utility.runtime_fn`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.utils.runtime_fn``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-    存储目标包名和函数名，在调用时通过 ``importlib.import_module`` 动态导入目标函数。
-    若配置了 deprecated_name 和 deprecated_date，每次调用时会发出 DeprecationWarning
-    并通过 ``zmlx.exts.log`` 记录使用日志。
-    """
-
-    def __init__(self, pack_name, func_name, deprecated_name=None,
-                 deprecated_date=None):
-        """初始化包装器。
-
-        Args:
-            pack_name: 目标函数的包名（如 ``"zmlx.plt"``）。
-            func_name: 目标函数名（如 ``"show_xy"``）。
-            deprecated_name: 旧的函数名，用于弃用警告。
-            deprecated_date: 旧函数的移除日期，用于警告消息。
-        """
-        self.pack_name = pack_name
-        self.func_name = func_name
-        self.deprecated_name = deprecated_name
-        self.deprecated_date = deprecated_date
-
-    def get_func(self):
-        """动态导入并返回目标函数。
-
-        若配置了弃用信息，发出 DeprecationWarning 并记录使用日志。
-        若导入失败，发出警告并返回 None。
-
-        Returns:
-            callable | None: 目标函数，导入失败时为 None。
-        """
-        if self.deprecated_name is not None:
-            from zmlx.exts import log
-            warnings.warn(
-                f'function "{self.deprecated_name}" will be removed after {self.deprecated_date}, '
-                f'please use "{self.pack_name}.{self.func_name}" instead. ',
-                DeprecationWarning, stacklevel=2)
-            log(text=f'The function "{self.deprecated_name}" is used',
-                tag=f'function_used_{self.deprecated_name}')
-
-        try:
-            mod = importlib.import_module(self.pack_name)
-            return getattr(mod, self.func_name)
-        except Exception as e:
-            warnings.warn(
-                f'meet error when import "{self.func_name}" from "{self.pack_name}". error = "{e}"')
-            return None
-
-    def __call__(self, *args, **kwargs):
-        """调用目标函数。
-
-        Args:
-            *args: 传递给目标函数的位置参数。
-            **kwargs: 传递给目标函数的关键词参数。
-
-        Returns:
-            任意 | None: 目标函数的返回值，导入失败时为 None。
-        """
-        f = self.get_func()
-        if f is not None:
-            return f(*args, **kwargs)
-        return None
+from zmlx.utils.runtime_fn import *  # noqa: F401,F403

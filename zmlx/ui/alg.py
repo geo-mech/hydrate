@@ -3,14 +3,14 @@
 Modified by Claude, 2026-08-12
 """
 
-from zmlx.system import app_data, get_hash
+from zmlx.system import app_data, get_hash, log
 from zmlx.ui.pyqt import QtWidgets
 
 
 def create_action(parent, text, *, icon=None, slot=None):
-    from zmlx.ui.settings import load_icon
-    from zmlx.ui.pyqt import QAction
     from zmlx.ui.gui_buffer import gui
+    from zmlx.ui.pyqt import QAction
+    from zmlx.ui.settings import load_icon
 
     ac = QAction(text, parent)
     if icon is not None:
@@ -27,12 +27,12 @@ def create_action(parent, text, *, icon=None, slot=None):
         def func():
             try:  # 尝试刷新界面
                 slot()
-                app_data.log(f'run <{text}>')
+                log(f'run <{text}>', tag=f'run <{text}>')
                 gui.refresh()
             except Exception as e2:
                 info = f'meet error when run <{text}>. \nInfo = \n {e2}'
                 print(info)
-                app_data.log(info)
+                log(info, tag=info)
 
         ac.triggered.connect(func)
     return ac
@@ -44,8 +44,8 @@ def add_code_history(fname):
         import os
         import shutil
 
+        from zmlx.algs.fsys import time_string
         from zmlx.system import app_data
-        from zmlx.alg.fsys import time_string
         if os.path.isfile(fname):
             t_str = time_string()
             shutil.copy(
@@ -170,6 +170,7 @@ def open_url(url: str, caption=None, on_top=None, zoom_factor=None,
         icon: 标签页图标名称（可选）
     """
     import os
+
     from zmlx.ui.gui_buffer import gui
     from zmlx.ui.pyqt import QWebEngineView
 
@@ -198,7 +199,7 @@ def open_url(url: str, caption=None, on_top=None, zoom_factor=None,
 
     if not use_web_engine:
         if os.path.isfile(url):
-            from zmlx.alg import startfile
+            from zmlx.algs import startfile
             startfile(url)
         else:
             from webbrowser import open_new_tab
@@ -258,6 +259,7 @@ def show_widget(widget, caption=None, use_gui=False, **kwargs):
                     close_after_done=False)
     else:
         import sys
+
         from zmlx.ui.pyqt import QtWidgets
         app = QtWidgets.QApplication(sys.argv)
         w = widget(**kwargs)
@@ -338,6 +340,8 @@ def reg_file_type(desc, exts, *, name=None, save=None, load=None, init=None, wid
         def get_data(view):
             return view.get_data()
 
+    # ⚠️ 本函数**不写静态 docstring**：它的说明在注册前由下面的赋值补全 ——
+    #    需要 ``desc`` / ``exts`` / ``name`` 才知道说「打开的是哪种文件」。
     def open_file(filename):
         if widget_type is None:
             if callable(load):
@@ -363,7 +367,7 @@ def reg_file_type(desc, exts, *, name=None, save=None, load=None, init=None, wid
                         try:
                             save(get_data(x), filename)
                             try:
-                                from zmlx.alg.fsys import getsize_str
+                                from zmlx.algs.fsys import getsize_str
                                 fs = getsize_str(filename)
                                 print(f'成功保存到:\n{filename} ({fs})')
                             except Exception:
@@ -410,6 +414,23 @@ def reg_file_type(desc, exts, *, name=None, save=None, load=None, init=None, wid
                 print(e)
     else:
         new_file = None  # 此时，将不支持“新建”操作
+
+    # 「帮助 → GUI 接口」按 ``__doc__`` 显示说明，所以在**注册前**把这次的类型信息写进去：
+    # 7 个 ``open_xxx`` 才会各自说清「打开的是哪种文件」，而不是统一一句「打开文件」。
+    open_file.__doc__ = (
+        '打开 %s（%s），在标签页里用对应的编辑器显示它。\n\n'
+        'Args:\n'
+        '    filename: 文件路径。文件不存在、或数据解析失败时**只打印错误**，\n'
+        '        不弹窗、不抛异常。\n\n'
+        'Returns:\n'
+        '    None: 建标签页 + 立即载入一次，没有返回值；注册时没有给\n'
+        '        ``widget_type`` 的类型则只载入数据、不开页面。\n\n'
+        'Example:\n'
+        "    >>> gui.open_%s(r'D:/cases/a%s')\n\n"
+        '⚠️ 命令名由 ``reg_file_type(name=...)`` 决定；同时它也是这种文件类型的\n'
+        '「打开」处理器 —— 用户双击这类文件、或调 ``gui.open_file(...)``，都会分派到这里。\n'
+        % (desc, ' / '.join('*' + ext for ext in exts), name, exts[0])
+    )
 
     gui.add_func(f'open_{name}', open_file)
     gui.add_file_handler(
@@ -492,8 +513,8 @@ def edit_in_tab(widget_type, set_data, get_data=None, caption=None, support_refr
 
 def install_package():
     """弹出对话框让用户选择/输入包名并执行 pip install。"""
-    from zmlx.data.dep import package_names, import_names
-    from zmlx.alg.sys import pip_install
+    from zmlx.algs.sys import pip_install
+    from zmlx.data.dep import import_names, package_names
     from zmlx.ui.gui_buffer import gui
     text, ok = gui.get_item(
         '安装第三包包', '输入或者选择你所需要的Python包名，并执行pip安装\n',
@@ -520,7 +541,7 @@ def set_plt_export_dpi():
 
 def play_images():
     """顺序播放当前目录下的所有 jpg/png 图片。"""
-    from zmlx.alg.fsys import list_files
+    from zmlx.algs.fsys import list_files
     from zmlx.ui.gui_buffer import gui
 
     def task():

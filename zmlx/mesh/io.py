@@ -1,36 +1,39 @@
-"""Mesh3 文件读写（trimesh 格式）.
+"""旧模块名（兼容层，**已弃用**）：``io`` -> :mod:`zmlx.meshes.io`.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/meshes/io.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.meshes.io import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由 ``zmlx.mesh`` 改为 ``zmlx.meshes`` —— 与 ``algs`` / ``utils`` /
+``fluids`` / ``reactions`` / ``geometries`` / ``ui.widgets`` 统一用**复数**目录名。
+
+但 ``from zmlx.mesh.io import ...`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史脚本 / 笔记里的 import；③ 更早的兼容层。
+
+⚠️ 完整的兼容策略见 ``zmlx/mesh/__init__.py``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-from zmlx.exts import Mesh3
+from zmlx.system import warn
 
 
-def load_trimesh(node_file, triangle_file, i_beg=0, encoding=None):
-    """
-    利用节点node文件（包含2或者3列，为node的位置）和三角形文件<包含三列，为三角形的编号>
-    """
-    mesh = Mesh3()
+warn(
+    '``zmlx.mesh.io`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.meshes.io``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-    with open(node_file, 'r', encoding=encoding) as file:
-        for line in file.readlines():
-            values = [float(w) for w in line.split()]
-            if len(values) > 0:
-                pos = []
-                for i in range(3):
-                    if i < len(values):
-                        pos.append(values[i])
-                    else:
-                        pos.append(0)
-                mesh.add_node(*pos)
+from zmlx.meshes.io import *  # noqa: F401,F403
 
-    with open(triangle_file, 'r', encoding=encoding) as file:
-        for line in file.readlines():
-            values = [float(w) for w in line.split()]
-            if len(values) == 3:
-                nodes = [mesh.get_node(round(x - i_beg)) for x in values]
-                l01 = mesh.add_link(nodes=[nodes[0], nodes[1]])
-                l12 = mesh.add_link(nodes=[nodes[1], nodes[2]])
-                l20 = mesh.add_link(nodes=[nodes[2], nodes[0]])
-                mesh.add_face(links=[l01, l12, l20])
-
-    return mesh
+from zmlx.meshes.io import (  # noqa: F401
+    Mesh3,
+    load_trimesh,
+)

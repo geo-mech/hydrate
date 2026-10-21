@@ -1,262 +1,37 @@
-"""Matplotlib 画布（MatplotWidget — matplotlib figure 嵌入 Qt）.
+"""旧模块名（兼容层，**已弃用**）：``plt`` -> :mod:`zmlx.ui.widgets.plt`.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/ui/widgets/plt.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.ui.widgets.plt import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由单数 ``widget`` 改为复数 ``widgets``（单数与 Qt 自己的
+``QtWidgets`` 太像，读代码时极易看错）。但 ``from zmlx.ui.widget.plt import ...``
+这条路径仍被三类来源用着，故留一年过渡：① 外部脚本与用户在控制台敲的命令；
+② 历史标签页的 ``gui_restore``（重启时按存下来的字符串重放）；③ 更早的兼容层。
+
+⚠️ 完整的兼容策略见 ``zmlx/ui/widget/__init__.py`` 与 ``widgets/AGENTS.md``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-
-import datetime
-import os
-import sys
-import warnings
-
-from zmlx.system import make_parent
-from zmlx.ui.alg import create_action
-from zmlx.ui.pyqt import QtWidgets, QtGui
+from zmlx.system import warn
 
 
-class MatplotWidget(QtWidgets.QWidget):
-    support_sub_menu = True  # 支持子菜单(since 2026-1-5)
+warn(
+    '``zmlx.ui.widget.plt`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.ui.widgets.plt``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-    def __init__(self, parent=None):
-        """
-        初始化
-        """
-        super(MatplotWidget, self).__init__(parent)
-        for backend in ['QtAgg', 'Qt5Agg']:
-            try:
-                import matplotlib
-                matplotlib.use(backend)
-                break
-            except Exception as err:
-                print(f'Error (when use backend {backend}): {err}')
-        from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
-        import matplotlib.pyplot as plt
-
-        layout = QtWidgets.QVBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)  # 2025-7-5
-        self.setLayout(layout)
-        self.__figure = plt.figure()
-        self.__canvas = FigureCanvasQTAgg(self.__figure)
-        self.context_actions = []  # 额外的右键菜单
-        layout.addWidget(self.__canvas)
-
-        now = datetime.datetime.now()
-        name = now.strftime("%Y-%m-%d-%H-%M-%S-") + f"{now.microsecond:06d}"
-        from zmlx.plt import get_plt_save_path
-        self.__folder_save = get_plt_save_path(name)
-        self.__time_save = None
-
-        # 设置主题
-        bg_color = self.palette().color(QtGui.QPalette.ColorRole.Window)
-        if bg_color.lightness() < 128:  # 处于暗色主题
-            # 应用暗色主题
-            plt.style.use('dark_background')
-            # 额外设置，确保所有元素适配暗色
-            self.figure.patch.set_facecolor('#1e1e1e')  # 设置画布背景色
-
-        # 字体设置在主题之后，避免被主题覆盖
-        try:
-            from zmlx.plt import set_chinese_font
-            set_chinese_font()
-        except Exception:
-            pass
-
-    def set_save_folder(self, folder):
-        self.__folder_save = folder
-
-    @staticmethod
-    def _export_dpi():
-        try:
-            from zmlx.io.env import plt_export_dpi
-            return plt_export_dpi.get_value()
-        except Exception:
-            return 300
-
-    def draw(self, *, savefig=None):
-        """
-        绘图
-        """
-        self.__canvas.draw()
-
-        if isinstance(savefig, str):
-            self.savefig(fname=make_parent(savefig), dpi=self._export_dpi())
-            self.__time_save = datetime.datetime.now()
-            return
-
-        if self.__folder_save is not None:  # 尝试将绘图保存为图片(使用当前的时间)
-            now = datetime.datetime.now()
-            if savefig is None:
-                if self.__time_save is not None:  # 之前保存过，则检查间隔
-                    savefig = abs(now - self.__time_save).total_seconds() >= 5.0
-                else:  # 之前尚未保存过，则直接保存
-                    savefig = True
-            if savefig:
-                name = now.strftime("%Y-%m-%d-%H-%M-%S-") + f"{now.microsecond:06d}.png"
-                path = make_parent(os.path.join(self.__folder_save, name))
-                self.savefig(fname=path, dpi=self._export_dpi())
-                self.__time_save = now  # 记录时间
-
-    def savefig(self, *args, **kwargs):
-        """
-        保存图片
-        """
-        try:
-            self.__figure.savefig(*args, **kwargs)
-        except Exception as e:
-            print(f'Error when save figure: {e}')
-
-    def savefig_by_dlg(self):
-        fpath, _ = QtWidgets.QFileDialog.getSaveFileName(
-            self,
-            caption="请选择保存路径",
-            directory=os.getcwd(),
-            filter='Jpg图片(*.jpg);;Png图片(*.png);;所有文件(*.*)')
-        if fpath is not None and len(fpath) > 0:
-            self.savefig(fname=fpath, dpi=self._export_dpi())
-
-    def save_file(self, open_dir=False, open_fig=False):
-        """
-        自动保存图片到默认路径（以当前时间生成文件名）. 注意，此函数会被系统菜单自动调用
-
-        Args:
-            open_dir: 是否打开保存目录
-            open_fig: 是否用系统默认程序打开图片
-        Returns:
-            成功时返回图片文件路径，失败时返回 None
-        """
-        try:
-            now = datetime.datetime.now()
-            name = now.strftime("%Y-%m-%d-%H-%M-%S-") + f"{now.microsecond:06d}.png"
-            path = make_parent(os.path.join(self.__folder_save, name))
-            self.savefig(fname=path, dpi=self._export_dpi())
-            if open_dir:
-                from zmlx.alg import startfile
-                startfile(self.__folder_save)
-            if open_fig:
-                from zmlx.alg import startfile
-                startfile(path)
-            return path
-        except Exception as e:
-            print(f'Error when save figure auto: {e}')
-            return None
-
-    def copy_to_clipboard(self):
-        """
-        将图片复制到剪切板（保存到临时文件）
-        """
-        try:
-            from zmlx.system import app_data
-            now = datetime.datetime.now()
-            name = now.strftime("%Y-%m-%d-%H-%M-%S-") + f"{now.microsecond:06d}.png"
-            path = app_data.temp(name)
-            self.savefig(fname=path, dpi=self._export_dpi())
-            pixmap = QtGui.QPixmap(path)
-            QtWidgets.QApplication.clipboard().setPixmap(pixmap)
-        except Exception as e:
-            print(f'Error when copy figure to clipboard: {e}')
-
-    def export_data(self):  # 接菜单命令
-        self.savefig_by_dlg()
-
-    @property
-    def figure(self):
-        return self.__figure
-
-    @property
-    def canvas(self):
-        return self.__canvas
-
-    @staticmethod
-    def set_plt_export_dpi():
-        warnings.warn(
-            'set_plt_export_dpi is deprecated, use set_plt_export_dpi in zmlx.ui.alg',
-            DeprecationWarning, stacklevel=2
-        )
-        from zmlx.ui.alg import set_plt_export_dpi as impl
-        impl()
-
-    def get_context_menu(self):
-        from zmlx.ui.alg import set_plt_export_dpi
-        menu = QtWidgets.QMenu(self)
-        menu.addAction(
-            create_action(
-                self, '设置导出图的DPI', icon='set',
-                slot=set_plt_export_dpi))
-        menu.addAction(
-            create_action(
-                self, '导出图', icon='export',
-                slot=self.savefig_by_dlg))
-        menu.addAction(
-            create_action(
-                self, '复制到剪切板', icon='export',
-                slot=lambda: self.copy_to_clipboard()))
-
-        if self.__folder_save is not None:  # 打开自动保存目录
-            if isinstance(self.__folder_save, str):
-                def open_dir():
-                    from zmlx.alg import startfile
-                    startfile(self.__folder_save)
-
-                menu.addAction(
-                    create_action(
-                        self, '打开图片保存目录',
-                        slot=open_dir))
-
-        # 尝试获得提前存储的额外的Action
-        if len(self.context_actions) > 0:
-            menu.addSeparator()
-            for action in self.context_actions:
-                if isinstance(action, dict):
-                    name = action.get('name', None)
-                    if name is not None:
-                        sub_menu = menu.addMenu(name)
-                        assert isinstance(sub_menu, QtWidgets.QMenu)
-                        for item in action.get('items', []):
-                            sub_menu.addAction(item)
-                elif isinstance(action, str):
-                    if action == '':
-                        menu.addSeparator()
-                else:
-                    menu.addAction(action)
-
-        return menu
-
-    def contextMenuEvent(self, event):  # 右键菜单
-        self.get_context_menu().exec(event.globalPos())
-
-    def plot_on_figure(self, on_figure, *, savefig=None):
-        """
-        在控件上面绘图。其中on_figure是回调函数，接受一个Figure类型的参数。
-        Args:
-            on_figure: 回调函数
-            savefig: 是否将图片保存为文件
-        注意：
-            如果多次绘图，建议在绘图之前先调用 figure.clear()
-        """
-        try:
-            on_figure(self.figure)
-        except Exception as e:
-            warnings.warn(f'meet exception <{e}> when run <{on_figure}>')
-        try:
-            self.draw(savefig=savefig)
-        except Exception as e:
-            warnings.warn(f'meet exception <{e}> when run <{self.draw.__name__}>')
-
-
-def test_1():
-    app = QtWidgets.QApplication(sys.argv)
-    w = MatplotWidget()
-
-    def on_figure(fig):
-        ax = fig.subplots()
-        ax.plot([1, 2, 3], [4, 5, 6])
-        ax.plot([1, 2, 3], [1, 3, 8])
-        ax.set_xlabel('x坐标轴')
-        ax.set_ylabel('y坐标轴')
-
-    w.plot_on_figure(on_figure)
-    w.show()
-    sys.exit(app.exec())
-
-
-if __name__ == "__main__":
-    test_1()
+from zmlx.ui.widgets.plt import *  # noqa: F401,F403
+from zmlx.ui.widgets.plt import (  # noqa: F401
+    MatplotWidget,
+    test_1
+)

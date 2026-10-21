@@ -50,7 +50,7 @@
 | `IntVector` | `_vec.py` | `std::vector<int>` |
 | `UintVector` | `_vec.py` | `std::vector<unsigned int>` |
 | `StrVector` | `_vec.py` | `std::vector<std::string>` |
-| `Array2` ~ `Array6` | `_ary.py` | 固定大小数组（2~6 维），用于坐标、颜色等 |
+| `Array2` / `Array3` | `_ary.py` | 固定大小数组（2 维 / 3 维），用于坐标、颜色等 |
 
 ### 张量与矩阵
 | 类型 | 位置 | 描述 |
@@ -58,7 +58,7 @@
 | `Tensor2` | `_tensor.py` | 2D 二阶张量（xx, yy, xy） |
 | `Tensor3` | `_tensor.py` | 3D 二阶张量（xx, yy, zz, xy, xz, yz），支持特征值计算 |
 | `Matrix2` / `Matrix3` | `_mat.py` | 2x2 / 3x3 矩阵 |
-| `MatrixMN` | `_mat.py` | MxN 稀疏/稠密矩阵 |
+| `Tensor3Matrix3` | `_mat.py` | 三阶张量的矩阵表示 |
 
 ### 插值与坐标
 | 类型 | 位置 | 描述 |
@@ -73,7 +73,7 @@
 | 类型 | 位置 | 描述 |
 |------|------|------|
 | `LinearExpr` | `_lexpr.py` | 线性表达式求值器 |
-| `cg_solver_ty` | `_sol.py` | 共轭梯度法线性求解器（Eigen 后端） |
+| `ConjugateGradientSolver` 等 | `_sol.py` | 线性求解器（Eigen 后端）。另有 `SparseLUSolver` / `SimplicialLDLTSolver` / `BiCGSTABSolver` / `ICCGSolver` / `ILUBiCGSTABSolver` |
 | `HasKeys` | `_hk.py` | 动态键-值属性存储（被 Cell/Face 用于用户定义属性） |
 | `ThreadPool` | `_pool.py` | C++ 线程池封装，支持并行任务提交 |
 | `Timer` / `clock` | `_timer.py` | 性能计时和函数计时装饰器 |
@@ -84,11 +84,11 @@
 
 ## 全局函数
 
-### 信息与授权
+### 信息与登录
 | 函数 | 描述 |
 |------|------|
-| `about()` | 返回模块版本、编译器信息和授权状态 |
-| `reg(code)` | 注册或查询机器序列号/授权数据 |
+| `about()` | 返回模块版本、编译器信息和登录状态 |
+| `reg(code)` | 登录或查询机器序列号 |
 | `set_srand(seed)` / `get_rand()` | C++ 随机数生成器控制 |
 | `get_time_compile()` | 返回 C++ 库编译时间戳 |
 | `test_loop(count, parallel)` | 测试 C++ 循环性能 |
@@ -102,23 +102,20 @@
 | `get_average_perm(p0, p1, get_perm)` | 计算两点间平均渗透率（串联效应） |
 | `run(fn)` | 在 DLL 内存检查上下文中执行函数 |
 
-### 模板方法
-```python
-from zmlx.exts import about
-print(about())
-```
-
 ---
 
-## 授权与许可
+## 登录与许可
 
-本软件的 C++ 核心需要授权文件方可使用。
+本软件的 C++ 核心需要登录后方可使用。
 
-- 学术用途：免费，需联系作者获取授权
+- 学术用途：免费，联系作者获取登录信息
 - 商业用途：需联系作者
 - 联系方式：zhangzhaobin@mail.iggcas.ac.cn
 
-可通过 `reg()` 查询硬件序列号，发送给作者获取授权数据。
+可通过 `reg()` 查询硬件序列号，发送给作者。
+
+另外有**在线登录**（`zmlx.exts.web_license`，与只管本机信息的 `zmlx.exts.lic`
+分工）：登录走邮箱验证码，登录后即在本机生效。
 
 ---
 
@@ -128,12 +125,12 @@ print(about())
 zmlx/exts/          ← C++ DLL 绑定层（本模块）
     ↓
 zmlx/tfc/           ← TFC 耦合引擎（基于 Seepage 构建）
-zmlx/fluid/         ← 流体属性（基于 FluDef）
-zmlx/react/         ← 化学反应（基于 Reaction）
-zmlx/kr/            ← 相对渗透率（基于 Interp1）
-zmlx/mesh/          ← 网格（基于 Mesh3 / SeepageMesh）
-zmlx/geometry/      ← 几何计算（基于 Dfn2 等）
-zmlx/alg/           ← 通用算法（独立）
+zmlx/fluids/         ← 流体属性（基于 FluDef）
+zmlx/reactions/         ← 化学反应（基于 Reaction）
+zmlx/krs/            ← 相对渗透率（基于 Interp1）
+zmlx/meshes/          ← 网格（基于 Mesh3 / SeepageMesh）
+zmlx/geometries/      ← 几何计算（基于 Dfn2 等）
+zmlx/algs/          ← 通用算法（独立）
 ```
 
 **重要**：`exts` 是唯一与 C++ DLL 直接交互的模块。上层的所有物理、化学、可视化模块均通过本模块间接调用 C++ 功能。

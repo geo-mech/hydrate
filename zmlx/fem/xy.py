@@ -6,12 +6,15 @@
     基于Mesh3中的Link和Face来定义单元 （给定的Mesh3不应该包含Body）
     使用Node周围的Face的面积、厚度、密度来定义Node的质量。
     Node只有质量，不考虑转动惯量。
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
 
+from zmlx.system import warn
 from enum import Enum
 from typing import List, Optional
 
-from zmlx.alg import sys as warnings
+from zmlx.algs import sys as warnings
 from zmlx.exts import Mesh3, DynSys
 from zmlx.fem import dyn
 from zmlx.fem.elements import planar_strain_cst, planar_stress_cst, truss2
@@ -275,7 +278,7 @@ def get_matrices(
             当仅在第 j个自由度上产生单位位移（dj=1），而其他所有自由度位移为零时，
             在第 i个自由度上需要施加的节点力（或力矩）的大小。
     """
-    warnings.warn("get_matrices is deprecated, please use create_matrices instead",
+    warn("get_matrices is deprecated, please use create_matrices instead",
                   DeprecationWarning,
                   stacklevel=2)
     if get_matrix is None:  # 默认使用常应变三角形单元（平面应变状态）
@@ -298,7 +301,7 @@ def create_dyn(mesh: Mesh3, face_ym, face_mu, face_density, face_thickness, get_
         face_ym为Face的杨氏模量，face_mu为Face的泊松比，face_thickness为Face的厚度, face_density为Face的密度。
         get_matrix为一个函数，用于计算一个Face的刚度矩阵。
     """
-    warnings.warn("create_dyn is deprecated, please use create_model instead",
+    warn("create_dyn is deprecated, please use create_model instead",
                   DeprecationWarning,
                   stacklevel=2)
     masses = get_masses(mesh, face_density=face_density, face_thickness=face_thickness)

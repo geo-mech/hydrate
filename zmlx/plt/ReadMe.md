@@ -2,29 +2,17 @@
 
 ## 概述
 
-`zmlx.plt` 提供基于 matplotlib 的可视化绘图功能，组织为**三层架构**：
-
-1. **`on_axes/`（底层）**：在 `Axes` 对象上绘制图元的 `add_xxx` 函数
-2. **`on_figure/`（中层）**：Figure 级别操作（子图创建、布局计算）和 GUI 桥接
-3. **`on_ui/`（高层）**：一键绘制并显示在 GUI 标签页的 `show_xxx` 函数
+`zmlx.plt` 提供基于 matplotlib 的可视化绘图功能，按**三层架构**组织（`on_axes/`
+底层 → `on_figure/` 中层 → `on_ui/` 高层），各层职责见文末「模块列表」。
 
 ---
 
 ## 推荐绘图方式
 
-所有 matplotlib 绘图应通过 `zmlx.ui.plot` 统一入口。编写一个回调函数操作 `fig` 对象，传入 `plot`：
-
-```python
-from zmlx.ui import plot
-
-def on_figure(fig):
-    ax = fig.add_subplot(111)
-    ax.plot(x, y)
-
-plot(on_figure, caption='标题')
-```
-
-`zmlx.ui.plot` 自动适配三种环境：GUI 标签页 / 无头保存 / 直接 `plt.show()`。
+所有 matplotlib 绘图应通过 `zmlx.ui.plot` 统一入口（`from zmlx.ui import plot`）：
+编写一个回调函数操作 `fig` 对象，再交给 `plot(on_figure, caption=...)`（写法见
+下文「快速开始」方法2）。`zmlx.ui.plot` 自动适配三种环境：GUI 标签页 / 无头保存 /
+直接 `plt.show()`。
 
 **不要**直接 `plt.figure()` + `plt.show()`，应始终使用 `plot(on_figure, ...)`。
 
@@ -117,7 +105,7 @@ plot_on_axes(on_axes, caption='我的图表')
 | `get_cm(name, levels)` | `cmap.py` | 获取颜色映射表（默认 'coolwarm'） |
 | `get_color(cmap, lr, rr, val)` | `cmap.py` | 将数值映射为 RGBA 颜色 |
 | `set_chinese_font()` | `_font.py` | 配置 matplotlib 中文字体 |
-| `plot_no_gui(kernel, fname, ...)` | `_plot.py` | 内部函数，用户应使用 `zmlx.ui.plot` |
+| `_plot_no_gui(...)` | `zmlx/ui/gui_buffer.py` | 内部函数，用户应使用 `zmlx.ui.plot` |
 | `get_plt_save_path(*subdirs)` | `_save.py` | 获取图形保存路径 |
 
 ---
@@ -159,8 +147,33 @@ fig.show(
 | `on_ui/` | 高层一键绘图（show_xxx） |
 | `cmap.py` | 颜色映射管理 |
 | `_font.py` | 中文字体配置 |
-| `_plot.py` | 无 GUI 模式绘图工具 |
+| `zmlx/ui/gui_buffer.py` | 无 GUI 模式绘图工具（`_plot_no_gui`）|
 | `_save.py` | 图形路径管理 |
+
+### 旧路径垫片（已声明弃用，**保留不删除**）
+
+早期把 `plt` 拆成 `on_axes / on_figure / on_ui` 三层之前的老路径，至今仍可导入，
+导入即发一条 `DeprecationWarning`。**它们不会被删除**（留着没有害处），但新代码请一律
+用 `zmlx` 顶层或 `on_axes / on_figure / on_ui` 里的函数：
+
+| 旧路径 | 替代 |
+|---|---|
+| `zmlx.plt.cbar` | `from zmlx import add_cbar` |
+| `zmlx.plt.cells` | `from zmlx import show_cells`（实现在 `zmlx.tfc`）|
+| `zmlx.plt.contourf` / `tricontourf` | `from zmlx import contourf` / `add_contourf`（后者同理加 `add_`）|
+| `zmlx.plt.curve2` / `plotxy` | `from zmlx import plot_xy`（即 `show_xy`）|
+| `zmlx.plt.dfn2` / `fn2` / `field2` / `rc3` / `trimesh` / `trisurf` | `from zmlx import show_dfn2`（其余同理 `show_xxx`）|
+| `zmlx.plt.legend` / `surf` | `from zmlx import add_legend` / `add_surf` |
+| `zmlx.plt.get_cm` / `get_color` | `from zmlx.plt import get_cm / get_color`（`zmlx` 顶层**没有**这两个）|
+| `zmlx.plt.plot_on_axes` / `plot_on_figure` / `plot_trisurf` | `from zmlx import plot_on_axes`（其余同理）|
+| `zmlx.plt.subplot_layout` | `from zmlx import calculate_subplot_layout` |
+| `zmlx.plt.seepage_mesh` | `from zmlx import add_seepage_mesh` |
+| `zmlx.plt.plot2` | `zmlx.fig` 的声明式 API |
+| `zmlx.plt.item` / `plot2d` / `plot3d` | `zmlx.fig.item` / `fig.plot2d` / `fig.plot3d` |
+| `zmlx.plt.data` | `zmlx.data.example_fn2` / `zmlx.data.surf` |
+
+⚠️ `add_*` 系列函数只吃 `ax.plot` 的参数；`cbar`、`caption`、`tight_layout` 这类
+**绘图框架**参数不要直接透传给底层 `ax.plot`（2026-10-21 已让 `add_dfn2` 吸收它们）。
 
 ---
 
