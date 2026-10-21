@@ -1,38 +1,34 @@
-"""弃用函数包装器（延迟导入 + 警告）.
+"""旧模块名（兼容层，**已改名为** :mod:`zmlx.algs.deprecated_func`）.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/algs/deprecated_func.py`` 里。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时会发出
+:class:`DeprecationWarning`。**新代码请写** ``from zmlx.algs.deprecated_func import ...``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-
-import importlib
-
-import zmlx.alg.sys as warnings
-
-warnings.warn(f'{__name__} will be removed after 2026-4-15', DeprecationWarning,
-              stacklevel=2)
-from zmlx.exts import log
-from zmlx.alg.sys import create_deprecated as create, get_deprecated as get
+from zmlx.system import warn
 
 
-def deprecated_func(deprecated_name, pack_name, func_name, date=None):
-    """
-    定义一个废弃的函数.
-    """
+warn(
+    '``zmlx.alg.deprecated_func`` 已弃用（2026-10-16）：算法包已改名为 ``zmlx.algs``；'
+    '本转发层将于 **2027-10-16** 删除。请改用 ``from zmlx.algs.deprecated_func import ...``。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-    def the_function(*args, **kwargs):
-        warnings.warn(
-            f'function "{deprecated_name}" will be removed after {date}, '
-            f'please use "{pack_name}.{func_name}" instead. ',
-            DeprecationWarning, stacklevel=2)
-        log(text=f'The function "{deprecated_name}" is used',
-            tag=f'function_used_{deprecated_name}')
-        try:
-            mod = importlib.import_module(pack_name)
-            f = getattr(mod, func_name)
-            return f(*args, **kwargs)
-        except Exception:
-            pass
+from zmlx.algs.deprecated_func import *  # noqa: F401,F403
+from zmlx.algs.deprecated_func import (  # noqa: F401
+    create,
+    deprecated_func,
+    get,
+    log,
+)
 
-    return the_function
-
-
-__all__ = ['deprecated_func', 'get', 'create']
+# ⚠️ 基准里这几个是**标准库直接 import**（`import time` / `import warnings`），
+#    于是 `zmlx.ui.widget.license_register.time` 这类老路径原本取得到。
+#    审计实测确认过，故按原样补 —— 注意是 import 标准库，不是从目标模块取。
+import importlib  # noqa: F401
+import warnings  # noqa: F401

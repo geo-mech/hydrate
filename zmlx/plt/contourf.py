@@ -1,14 +1,16 @@
 """contourf 绘图工具。
 
 Modified by Claude, 2026-08-12
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
+from zmlx.system import warn
 from zmlx.plt.on_axes import add_contourf
 from zmlx.plt.on_ui import show_contourf as plot_contourf
 
 on_axes = add_contourf
 contourf = plot_contourf
 
-import zmlx.alg.sys as warnings
 
-warnings.warn(f'The module {__name__} will be removed after 2027-5-23',
+warn(f'The module {__name__} will be removed after 2027-5-23',
               DeprecationWarning, stacklevel=2)

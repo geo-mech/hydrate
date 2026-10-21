@@ -2,8 +2,11 @@
 基于matplotlib来显示绘图元素
 
 Modified by Claude, 2026-08-12
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
 
+from zmlx.system import warn
 from zmlx.plt import on_axes, plot_on_figure, add_axes2, add_axes3, add_subplot
 
 
@@ -31,13 +34,13 @@ def _get_kernels():
 def _add_item(ax, ax_item, *, kernels=None, **default_opts):
     if len(ax_item) == 0:  # 没有给定选项
         import warnings
-        warnings.warn('没有给定项目的名称', stacklevel=2)
+        warn('没有给定项目的名称', stacklevel=2)
         return None
 
     name = ax_item[0]  # 项目的名字，可以是kernels中的函数，或者是Axes对象的方法的名字
     if not isinstance(name, str):
         import warnings
-        warnings.warn(f'name 不是字符串：{type(name)}', stacklevel=2)
+        warn(f'name 不是字符串：{type(name)}', stacklevel=2)
         return None
 
     if kernels is None:
@@ -70,7 +73,7 @@ def _add_item(ax, ax_item, *, kernels=None, **default_opts):
         func = getattr(ax, name, None)  # 尝试从Axes对象中获取对应的方法
         if func is None:  # 没有对应的方法
             import warnings
-            warnings.warn(f'没有对应的添加函数或方法：{name}', stacklevel=2)
+            warn(f'没有对应的添加函数或方法：{name}', stacklevel=2)
             return None
         else:
             obj = func(*args, **opts)
@@ -134,13 +137,13 @@ def add_to_figure(figure, *fig_items, **common_opts):
     for a in fig_items:
         if len(a) == 0:  # 没有给定选项
             import warnings
-            warnings.warn('没有给定项目的名称', stacklevel=2)
+            warn('没有给定项目的名称', stacklevel=2)
             continue
 
         name = a[0]  # 项目的名字，可以是kernels中的函数，或者是Axes对象的方法的名字
         if not isinstance(name, str):
             import warnings
-            warnings.warn(f'name 不是字符串：{type(name)}', stacklevel=2)
+            warn(f'name 不是字符串：{type(name)}', stacklevel=2)
             continue
 
         args = [] if 1 >= len(a) else a[1]

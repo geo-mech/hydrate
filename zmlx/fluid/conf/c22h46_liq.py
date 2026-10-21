@@ -1,52 +1,38 @@
-"""C22H46（二十二烷）液体属性.
+"""旧模块名（兼容层，**已弃用**）：``conf.c22h46_liq`` -> :mod:`zmlx.fluids.conf.c22h46_liq`.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/fluids/conf.c22h46_liq.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.fluids.conf.c22h46_liq import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由 ``zmlx.fluid`` 改为 ``zmlx.fluids`` —— 与 ``algs`` / ``utils`` /
+``ui.widgets`` 统一用**复数**目录名。
+
+但 ``from zmlx.fluid.conf.c22h46_liq import ...`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史脚本 / 笔记里的 import；③ 更早的兼容层。
+
+⚠️ 完整的兼容策略见 ``zmlx/fluid/__init__.py``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-import zmlx.alg.sys as warnings
-
-from zmlx.exts import Interp2, FluDef
-from zmlx.fluid.conf.liqu_density.c22h46 import liq_den_c22h46
-from zmlx.fluid.conf.liqu_viscosity.c22h46 import liq_vis_c22h46
+from zmlx.system import warn
 
 
-def create(tmin=280, tmax=700, pmin=1.0e6, pmax=20.0e6, name=None):
-    assert 250 < tmin < tmax < 750
-    assert 0.01e6 < pmin < pmax < 30.0e6
+warn(
+    '``zmlx.fluid.conf.c22h46_liq`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.fluids.conf.c22h46_liq``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-    def liq_den(P, T):
-        density = liq_den_c22h46(P, T)
-        return density
-
-    def get_density(P, T):
-        return liq_den(P, T)
-
-    def create_density():
-        den = Interp2()
-        den.create(pmin, 1e6, pmax, 280, 10, 750, get_density)
-        return den
-
-    def liq_vis(P, T):
-        viscosity = liq_vis_c22h46(P, T)
-        return viscosity
-
-    def get_viscosity(P, T):
-        return liq_vis(P, T)
-
-    def create_viscosity():
-        vis = Interp2()
-        vis.create(pmin, 1e6, pmax, tmin, 10, tmax, get_viscosity)
-        return vis
-
-    specific_heat = 2379.27  # J/kg K
-    return FluDef(den=create_density(), vis=create_viscosity(),
-                  specific_heat=specific_heat, name=name)
-
-
-def create_flu(*args, **kwargs):
-    warnings.warn('use function <create> instead', DeprecationWarning,
-                  stacklevel=2)
-    return create(*args, **kwargs)
-
-
-if __name__ == '__main__':
-    flu = create()
+from zmlx.fluids.conf.c22h46_liq import *  # noqa: F401,F403
+from zmlx.fluids.conf.c22h46_liq import (  # noqa: F401
+    create,
+    create_flu
+)

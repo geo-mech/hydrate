@@ -17,51 +17,51 @@ def _from_text(text, find=None, name=None):
         return None
 
     if text == '@c11h24':
-        from zmlx.fluid.c11h24 import create
+        from zmlx.fluids.c11h24 import create
         return create(name=name)
 
     if text == '@ch4_lyx':
-        from zmlx.fluid.ch4_lyx import create
+        from zmlx.fluids.ch4_lyx import create
         return create(name=name)
 
     if text == '@co2':
-        from zmlx.fluid.co2 import create
+        from zmlx.fluids.co2 import create
         return create(name=name)
 
     if text == '@h2o_gas':
-        from zmlx.fluid.h2o_gas import create
+        from zmlx.fluids.h2o_gas import create
         return create(name=name)
 
     if text == '@ch4':
-        from zmlx.fluid.ch4 import create
+        from zmlx.fluids.ch4 import create
         return create(name=name)
 
     if text == '@ch4_hydrate':
-        from zmlx.fluid.ch4_hydrate import create
+        from zmlx.fluids.ch4_hydrate import create
         return create(name=name)
 
     if text == '@char':
-        from zmlx.fluid.char import create
+        from zmlx.fluids.char import create
         return create(name=name)
 
     if text == '@co2_hydrate':
-        from zmlx.fluid.co2_hydrate import create
+        from zmlx.fluids.co2_hydrate import create
         return create(name=name)
 
     if text == '@h2o':
-        from zmlx.fluid.h2o import create
+        from zmlx.fluids.h2o import create
         return create(name=name)
 
     if text == '@h2o_ice':
-        from zmlx.fluid.h2o_ice import create
+        from zmlx.fluids.h2o_ice import create
         return create(name=name)
 
     if text == '@kerogen':
-        from zmlx.fluid.kerogen import create
+        from zmlx.fluids.kerogen import create
         return create(name=name)
 
     if text == '@oil':
-        from zmlx.fluid.oil import create
+        from zmlx.fluids.oil import create
         return create(name=name)
 
     if find is not None:

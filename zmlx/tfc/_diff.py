@@ -4,11 +4,13 @@
 @2025-10-2
 
 Modified by Claude, 2026-08-12
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
 
 from typing import Optional
 
-from zmlx.alg.sys import warn
+from zmlx.system import warn
 from zmlx.exts import clock, calc_recommended_dt
 from zmlx.tfc._base import (
     as_numpy, Seepage, reg_cell_tmp, reg_face_tmp,

@@ -1,53 +1,39 @@
-import zmlx.alg.sys as warnings
+"""旧模块名（兼容层，**已弃用**）：``kerogen`` -> :mod:`zmlx.fluids.kerogen`.
 
-from zmlx.exts import FluDef
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/fluids/kerogen.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
 
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.fluids.kerogen import ...``。
 
-def create_flu_v0():
-    """
-    Maryelin: for kerogen density:
-        Dang, S. (2016). "A new approach to measure organic density." PETROPHYSICS.
+为什么留着而不删
+----------------
 
+2026-10-16 把包名由 ``zmlx.fluid`` 改为 ``zmlx.fluids`` —— 与 ``algs`` / ``utils`` /
+``ui.widgets`` 统一用**复数**目录名。
 
-    Maryelin: For the specific heat it was a little more difficult,
-            usually the specific heat of the rock shale is assumed,
-            so I followed this reference that studies the specific heat of the rock with TOC
+但 ``from zmlx.fluid.kerogen import ...`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史脚本 / 笔记里的 import；③ 更早的兼容层。
 
-            Waples, D. W. and J. S. Waples (2004).
-            "A Review and Evaluation of Specific Heat Capacities of Rocks, Minerals, and Subsurface Fluids.
-            Part 1: Minerals and Nonporous Rocks." Natural Resources Research 13(2): 97-122.
+⚠️ 完整的兼容策略见 ``zmlx/fluid/__init__.py``。
 
-    """
-    den = 1500
-    specific_heat = 2000
-    return FluDef(
-        den=den,
-        vis=1.0e30,
-        specific_heat=specific_heat)
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
+"""
+from zmlx.system import warn
 
 
-def create(name=None):
-    """
-    Data from Maryelin.
+warn(
+    '``zmlx.fluid.kerogen`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.fluids.kerogen``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-    Maryelin:
-        This professor, because this time I made sure to look for more references that were more accurate for kerogen.
-        It does not mean that the previous one are wrong, but with those articles I have better justification.
-    """
-
-    den = 2590  # kg/m3 Longmaxi FM (Baoyun Zhao 2021)
-    vis = 1.0e30
-    specific_heat = 829  # J/ Kg K # Longmaxi Fm. Xiang etal, 2020
-    return FluDef(
-        den=den, vis=vis, specific_heat=specific_heat,
-        name=name)
-
-
-def create_flu(*args, **kwargs):
-    warnings.warn('use function <create> instead', DeprecationWarning,
-                  stacklevel=2)
-    return create(*args, **kwargs)
-
-
-if __name__ == '__main__':
-    print(create())
+from zmlx.fluids.kerogen import *  # noqa: F401,F403
+from zmlx.fluids.kerogen import (  # noqa: F401
+    create,
+    create_flu,
+    create_flu_v0
+)

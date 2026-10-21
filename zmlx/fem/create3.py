@@ -1,9 +1,11 @@
 """
 创建3维的有限元模型。
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
 
-import warnings
 
+from zmlx.system import warn
 from zmlx.exts import Mesh3, DynSys, LinearExpr
 from zmlx.fem.attr_getter import attr_getter
 from zmlx.fem.stiff3 import stiff3
@@ -21,7 +23,7 @@ def create3(mesh, ba_E=None, ba_mu=None, ba_den=None, b_E=1.0, b_mu=0.2,
     返回：
         DynSys对象，其中的自由度的数量是mesh中node数量的二倍.
     """
-    warnings.warn("create3 is deprecated", DeprecationWarning, stacklevel=2)
+    warn("create3 is deprecated", DeprecationWarning, stacklevel=2)
 
     assert isinstance(mesh, Mesh3)
 

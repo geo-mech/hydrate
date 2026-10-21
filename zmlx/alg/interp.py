@@ -1,30 +1,26 @@
+"""旧模块名（兼容层，**已改名为** :mod:`zmlx.algs.interp`）.
+
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/algs/interp.py`` 里。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时会发出
+:class:`DeprecationWarning`。**新代码请写** ``from zmlx.algs.interp import ...``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-插值相关的函数
-.
-
-Modified by Claude, 2026-08-12
-"""
-try:
-    from scipy.interpolate import interp1d
-except ImportError:
-    interp1d = None
+from zmlx.system import warn
 
 
-def create_interp1d(d=None, x=None, y=None, **kwargs):
-    """
-    利用一个包含了两列的numpy矩阵来创建一个一维的插值体
-    """
-    assert interp1d is not None, 'scipy.interpolate.interp1d is not installed.'
-    if x is None or y is None:
-        x = d[:, 0]
-        y = d[:, 1]
-    return interp1d(x, y, **kwargs)
+warn(
+    '``zmlx.alg.interp`` 已弃用（2026-10-16）：算法包已改名为 ``zmlx.algs``；'
+    '本转发层将于 **2027-10-16** 删除。请改用 ``from zmlx.algs.interp import ...``。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-
-def interp1(x, y, xq, kind='linear'):
-    """
-    实施一维的插值，类似Matlab的interp1函数
-    """
-    assert interp1d is not None, 'scipy.interpolate.interp1d is not installed.'
-    f = interp1d(x, y, kind=kind)
-    return f(xq)
+from zmlx.algs.interp import *  # noqa: F401,F403
+from zmlx.algs.interp import (  # noqa: F401
+    create_interp1d,
+    interp1
+)

@@ -23,6 +23,8 @@ import datetime
 import importlib
 import re
 import sys
+from zmlx.system import log, warn
+# Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 import warnings
 from ctypes import c_uint
 
@@ -33,7 +35,7 @@ from zmlx.exts._dll import *
 from zmlx.exts._timer import Timer, timer, clock
 from zmlx.exts._ver import data_version
 from zmlx.exts._str import String
-from zmlx.exts._lic import lic
+from zmlx.exts._lic import lic, web_license
 from zmlx.exts._pool import ThreadPool
 from zmlx.exts._fmap import FileMap
 from zmlx.exts._vec import *
@@ -66,27 +68,58 @@ create_dict = dict
 def feedback(text: str = 'feedback', subject: Optional[str] = None) -> bool:
     """向软件作者发送诊断信息用于产品改进。
 
+    走服务端接口 ``web_license.feedback``：机器码由 C++ 侧自己算。
+
+    ⚠️ **不再有直连 SMTP 的兜底路径**：机器没授权时也能提交反馈，但接口本身
+    **不可用**（没有 DLL，或这一版没有该导出）时直接返回 False —— 那种情况下
+    改用服务端代发（``web_license.mail``）同样发不出去：它依赖同一个 DLL，门槛
+    还更高（要求已注册且授权有效）。详见 ``zmlx.system.sendmail``。
+
+    ⚠️ **不在本地预判「接口可不可用」**：``web_license`` 的公开方法本来就承诺
+    **不抛异常、一切失败都以一句文本返回**，那些描述**不以任何成功记号开头**，
+    走到下面同样得到 False —— 判据只留一处，两边不会漂。
+
     Args:
         text (str, optional): 反馈内容，默认为'feedback'
-        subject (str, optional): 邮件主题，默认为None
+        subject (str, optional): [已忽略] 服务端接口没有「主题」字段，
+            保留参数只为兼容旧签名。
 
     Returns:
-        bool: 发送成功或禁用反馈时返回True，失败返回False
+        bool: 确实发出去了（或服务端答「刚发过」）返回True；失败、
+            接口不可用、以及**反馈被禁用**时返回 False
 
     Note:
-        - 可通过设置环境变量disable_feedback='Yes'永久禁用
-        - 实际发送使用sendmail函数实现
-        - 默认收件人为zhangzhaobin@mail.iggcas.ac.cn
+        - 可通过设置环境变量disable_feedback='Yes'永久禁用。⚠️ 禁用时返回
+          **False**（不是 True）：语义是「这次没有发送」，调用方据此不会把
+          日志标记成「已反馈」
     """
     try:
-        if app_data.getenv('disable_feedback', default='No',
-                           ignore_empty=True) == 'Yes':
+        if (
+            app_data.getenv("disable_feedback", default="No", ignore_empty=True)
+            == "Yes"
+        ):
+            return False
+
+        # ⚠️ **不在这里预判「接口可不可用」**：``web_license`` 的**公开方法**
+        #    本来就承诺「不抛异常、失败以一句文本返回」，那些描述都不以成功
+        #    记号开头，照样走 return False。
+        #    外部调用 ``web_license`` 请**只用它的公开方法**，别再摸 ``core``。
+        reply = str(web_license.feedback(text) or "")
+        # ⚠️ 成功记号是 'Succeed'（不是 'Yes'）。判定只看开头 7 个字符：
+        #    超长时服务端会在成功记号后追加截断说明段，不能整串比较。
+        #    本判定**本地实现**（_lic 只留 License / lic / WebLicense /
+        #    web_license，不再提供判定函数）。
+        if str(reply).strip()[:7].lower() == "succeed":
             return True
-        else:
-            return sendmail('zhangzhaobin@mail.iggcas.ac.cn',
-                            subject=subject,
-                            text=text,
-                            name_from=None, name_to='Author')
+        # 限流不算失败：这段内容确实已经发出去过了。
+        # ⚠️ 返回 True 是有意的：调用方（`zmlx` 导入时的自动反馈）把它当作「这文件不用再发」
+        #    的标记，返回 False 会让它反复撞限流。
+        if reply.strip().lower().startswith(
+            "the feedback was already sent recently"
+        ):
+            return True
+        print(f"feedback rejected: {reply}")
+        return False
     except Exception:
         return False
 
@@ -185,7 +218,7 @@ def fetch_m(folder: Optional[str] = None):
     Warns:
         DeprecationWarning: 该函数将在 2025-8-11 之后被移除。
     """
-    warnings.warn('This function will be removed after 2025-8-11',
+    warn('This function will be removed after 2025-8-11',
                   DeprecationWarning, stacklevel=2)
     if folder is None:
         core.fetch_m(make_c_char_p(''))
@@ -332,61 +365,24 @@ def get_average_perm(p0, p1, get_perm, sample_dist=None, depth=0):
     return k1 * k2 * 2.0 / (k1 + k2)
 
 
-def __feedback():
-    """自动收集并反馈日志文件。
-
-    该函数会检查日志文件夹中的日志文件，并将未反馈过的日志文件发送到指定邮箱。
-    已反馈的日志文件会被标记，避免重复发送。
-
-    Returns:
-        None
-    """
-    try:
-        folder_logs = app_data.root('logs')
-        if not os.path.isdir(folder_logs):
-            return
-        folder_logs_feedback = app_data.root('logs_feedback')
-        make_dirs(folder_logs_feedback)
-        has_feedback = set(os.listdir(folder_logs_feedback))
-        date = datetime.datetime.now().strftime("%Y-%m-%d.log")
-        city = None
-        for name in os.listdir(folder_logs):
-            if name != date and name not in has_feedback:
-                with open(os.path.join(folder_logs, name), 'r') as f1:
-                    text = f1.read()
-                    if city is None:
-                        try:
-                            from zmlx.alg.sys import get_city
-                            city = f' from {get_city()}'
-                        except Exception:
-                            city = ''
-                    if feedback(text=text[0: 100000],
-                                subject=f'log <{name}>{city}'):
-                        with open(os.path.join(folder_logs_feedback, name),
-                                  'w') as f2:
-                            f2.write('\n')
-    except Exception:
-        pass
-
-
-try:
-    if app_data.getenv('disable_auto_feedback', default='No',
-                       ignore_empty=True) != 'Yes':
-        __feedback()
-except Exception:
-    pass
+# ⚠️ 原先这里有一段 `__feedback()`：导入 exts 时自动收集并提交历史日志。
+#    2026-10-17 已**整段移到 `zmlx/__init__.py` 底部**（用户要求：导入 zmlx 时执行）。
+#    理由不只是「触发时机」—— exts 是 DLL 绑定层（第 1 层），不该在导入期做
+#    「读文件 + 联网提交」这类应用级副作用；包入口的底部才是「整个 zmlx 已就绪」那一刻。
+#    行为一字未改：只提交**非当天**且未反馈过的日志，开关仍是 `disable_auto_feedback`。
 
 try:
     disable_timer = app_data.getenv(key='disable_timer', encoding='utf-8',
                                     default='No', ignore_empty=True)
     if disable_timer == 'Yes':
         timer.enabled(False)
-        app_data.log(f'timer disabled')
+        log('timer disabled', tag='timer disabled')
 except Exception:
     pass
 
 try:
-    app_data.log(f'import zml <zml: v{version}, Python: {sys.version}>')
+    _msg = f'import zml <zml: v{version}, Python: {sys.version}>'
+    log(_msg, tag=_msg)
 except Exception:
     pass
 
@@ -404,7 +400,7 @@ def contain_chinese(string: str) -> bool:
 
 
 def is_chinese(string: str) -> bool:
-    warnings.warn("is_chinese is deprecated (will be removed after 2027-4-14), use contain_chinese instead",
+    warn("is_chinese is deprecated (will be removed after 2027-4-14), use contain_chinese instead",
                   DeprecationWarning,
                   stacklevel=2)
     return contain_chinese(string)
@@ -459,9 +455,9 @@ class Alg:
         Note:
             基于粘性阻力与速度成正比的假设，使用指数衰减模型计算
         """
-        warnings.warn(
+        warn(
             'deprecated and will be removed after 2026-4-24. '
-            'Use zmlx.alg.alpha.get_velocity_after_slowdown_by_viscosity instead.',
+            'Use zmlx.algs.alpha.get_velocity_after_slowdown_by_viscosity instead.',
             DeprecationWarning, stacklevel=2)
         return core.get_velocity_after_slowdown_by_viscosity(
             v0, a0, time)
@@ -506,7 +502,7 @@ class LazyImport:
         self.date = deprecated_date
 
     def __get_origin(self):
-        warnings.warn(
+        warn(
             f'function in zml will be removed after {self.date}, '
             f'please use <{self.pack}.{self.name}> instead.',
             DeprecationWarning,
@@ -547,17 +543,17 @@ print_tag = LazyImport(
 first_only = LazyImport(
     'zmlx.filesys.first_only', 'first_only', '2025-1-21')
 add_keys = LazyImport(
-    'zmlx.utility.AttrKeys', 'add_keys', '2025-1-21')
+    'zmlx.utils.AttrKeys', 'add_keys', '2025-1-21')
 AttrKeys = LazyImport(
-    'zmlx.utility.AttrKeys', 'AttrKeys', '2025-1-21')
+    'zmlx.utils.AttrKeys', 'AttrKeys', '2025-1-21')
 install = LazyImport(
-    'zmlx.alg.install', 'install', '2025-1-21')
+    'zmlx.algs.install', 'install', '2025-1-21')
 prepare_dir = LazyImport(
     'zmlx.filesys.prepare_dir', 'prepare_dir', '2025-1-21')
 time2str = LazyImport(
-    'zmlx.alg.time2str', 'time2str', '2025-1-21')
+    'zmlx.algs.time2str', 'time2str', '2025-1-21')
 mass2str = LazyImport(
-    'zmlx.alg.mass2str', 'mass2str', '2025-1-21')
+    'zmlx.algs.mass2str', 'mass2str', '2025-1-21')
 make_fpath = LazyImport(
     'zmlx.filesys.make_fpath', 'make_fpath', '2025-1-21')
 get_last_file = LazyImport(
@@ -571,4 +567,4 @@ TherFlowConfig = LazyImport(
 SeepageTher = LazyImport(
     'zmlx.config.TherFlowConfig', 'TherFlowConfig', '2025-1-21')
 Field = LazyImport(
-    'zmlx.utility.Field', 'Field', '2025-1-21')
+    'zmlx.utils.Field', 'Field', '2025-1-21')

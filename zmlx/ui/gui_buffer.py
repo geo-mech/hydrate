@@ -23,11 +23,41 @@ gui.execute() 启动主程序时才会生效。在非 GUI 模式下，这些调�
 入口的 if __name__ == '__main__' 块中。如果在函数内部调用 gui.execute，
 会导致嵌套执行，产生不可预期的行为。
 
-参考 demo 文件（如 zmlx/demo/flow_1ph/darcy_1d.py）了解更多示例。
+参考 demo 文件（如 zmlx/demos/flow_1ph/darcy_1d.py）了解更多示例。
+
+== 跨线程动界面：四条通道 ==
+
+**控制台线程 / 任意后台线程里，永远不要直接碰 Qt 控件**，按下面的分工选：
+
+======================  ==========================  =========  ===============
+想要什么                 用什么                       同步？      拿得到结果
+======================  ==========================  =========  ===============
+改界面（有导出函数）      ``gui.xxx(...)``             ✅ 阻塞     ✅
+改界面（没有导出函数）    ``gui.call(func, ...)``      ✅ 阻塞     ✅
+跑长任务                  ``gui.start(func, ...)``     ❌ 立刻返回  `Console.result`
+稍后在 GUI 线程跑一下      ``gui.add_task(func)``       ❌          ❌
+======================  ==========================  =========  ===============
+
+⚠️ ``gui.start`` 是**单任务**的：控制台只有一个线程槽位，忙的时候再调会被**静默丢弃**
+（只响一声）。调之前必须判 ``gui.is_running()`` —— 完整规则、死锁警告与排查表见
+[`AGENTS.md`](AGENTS.md) §6。
+
+⚠️ **``Console`` 仍是长任务唯一槽位。** 上表第 3 行说的「跑长任务」= 要能被暂停/停止的
+仿真、批量计算。**多个短/中任务并发**是另一件事，用
+``zmlx.ui.utils.thread_runner``（§6.8），别反复调 ``gui.start``（第二个必被丢），
+也别自己写 ``QThread`` 子类。判据：需要暂停/继续/停止 ⇒ ``gui.start``；
+并行做完再回写界面 ⇒ ``thread_runner``。
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
+Modified by DeepSeek, 2026-10-20: 补「四条通道」；``call`` / ``start`` / ``add_task``
+    由动态代理改为显式方法（带 docstring，便于检索）
+Modified by DeepSeek, 2026-10-20: 补「Console 仍是长任务唯一槽位」，指向 thread_runner 的分工
 """
 
+from zmlx.system import warn
 import datetime
 import os
+import sys
 from typing import Optional, Tuple, List, Union
 
 from zmlx.system import app_data, is_headless, make_parent
@@ -49,6 +79,165 @@ class GuiBuffer:
         if self.__api is not None:
             return self.__api.command(*args, **kwargs)
         else:
+            return None
+
+    def call(self, func, *args, **kwargs):
+        """**在 GUI 线程**执行任意可调用对象，并把结果（或异常）带回调用者.
+
+        这是「想动界面，但没有现成的 ``gui.xxx`` 导出函数」时的正道 —— 把要做的
+        那一步包成 callable 交给它即可，例如（内核线程里）::
+
+            gui.call(self.btn.setEnabled, False)
+            gui.call(lambda: w.setWindowTitle('跑完了'))
+
+        ⚠️ **为什么需要它**：Qt 控件只能在 GUI 线程碰。直接在后台线程
+        ``widget.setXxx(...)`` 属未定义行为（轻则不刷新，重则崩）。``GuiApi.command``
+        本来就能把「命令名 + 参数」派发过去，``call`` 只是把「命令名」换成「任意
+        callable」—— 因此**闭包里的控件访问也在 GUI 线程里发生**。
+
+        ⚠️ 它是**同步**的：调用线程会阻塞到 GUI 线程执行完（异常也会在调用线程重新
+        抛出）。所以别在 GUI 线程里调一个「要等内核线程」的东西（会互等死锁），也别
+        在持有锁的时候调（GUI 线程可能正等这把锁）。只要「稍后跑一下」、不要结果，
+        用 ``add_task`` 而不是它。
+
+        Args:
+            func: 要在 GUI 线程执行的可调用对象。
+            *args: 传给 ``func`` 的位置参数。
+            **kwargs: 传给 ``func`` 的关键词参数。
+
+        Returns:
+            ``func`` 的返回值；无界面（headless）时就在当前线程直接执行后返回。
+        """
+        if self.__api is None:  # 没有界面：不存在「GUI 线程」这件事
+            return func(*args, **kwargs)
+        return self.command('call', func, *args, **kwargs)
+
+    def start(
+            self, func, *, text_beg=None, text_end=None, post_task=None,
+            file=None, name=None, add_history=True):
+        """在**控制台线程**里执行 ``func`` —— 界面里跑长任务的唯一正规通道.
+
+        转发到 ``Console.start_func``（``main.py`` 里注册为命令 ``start``）。
+
+        ⚠️ **单任务**：控制台只有一个线程槽位，同一时刻只允许一个任务。忙的时候
+        再调 ``start`` 会**被直接丢弃**（只响一声 ``play_error()``，没有异常、
+        没有返回值区分）。所以调用前请自己判 :meth:`is_running`，并把「忙」如实
+        告诉用户 —— 否则用户看到的是「点了没反应」。
+
+        ⚠️ 任务体里操作界面**必须**走 ``gui.xxx`` / :meth:`call` / ``print``
+        （``sys.stdout`` 会自己投递到 GUI 线程），不能直接碰控件。
+
+        ⚠️ ``post_task`` 在任务结束后执行，**运行在 GUI 线程**（``Console`` 的
+        ``__kernel_exited`` 槽），即使任务抛异常也会执行 —— 适合回写按钮/状态。
+        任务的返回值存在 ``Console.result`` 里（``gui.command('get_console')`` 可拿）。
+
+        Args:
+            func: 要执行的可调用对象（**不要**传字符串：字符串走 ``exec`` 分支，
+                那是给「运行脚本文件」用的）。
+            text_beg: 开始提示（蓝色打印到控制台），如 ``'Start: xxx'``。
+            text_end: 结束提示。
+            post_task: 任务结束后的收尾回调（GUI 线程执行，异常也会执行）。
+            file: 记录用的文件名（只影响提示与历史）。
+            name: 记录用的 ``__name__``（只影响 ``app_data.space``）。
+            add_history: 是否记进「运行历史」（可再点「运行上一次」重跑）。
+                临时性任务（例如插件「临时加载」）应当传 ``False``。
+
+        Returns:
+            None
+        """
+        if self.__api is None:  # 无界面：没有控制台线程，直接跑
+            try:
+                return func()
+            finally:
+                if callable(post_task):
+                    post_task()
+        return self.command(
+            'start', func, text_beg=text_beg, text_end=text_end,
+            post_task=post_task, file=file, name=name,
+            add_history=add_history)
+
+    def add_task(self, task):
+        """把 ``task`` 投递到 GUI 线程执行（**异步**、不返回结果）.
+
+        与 :meth:`call` 的区别只有两点：不等结果、异常只能靠 ``TaskProc`` 打印。
+        高频投递（例如 ``sys.stdout.write``）用它，别用 ``call``。
+        """
+        api = self.__api
+        if api is None:
+            return task()
+        return api.command('add_task', task)
+
+    def plot(self, kernel, *args, fname=None, dpi=None, caption=None,
+             on_top=None, icon=None, clear=None, tight_layout=None,
+             suptitle=None, folder_save=None, savefig=None,
+             position=None, **kwargs):
+        """绘图 —— 渲染留在**调用者自己的线程**，GUI 线程只做「建标签页」和「贴图」。
+
+        ⚠️ 与旧实现的两点区别（2026-10-18 重写 ``MatplotWidget`` 之后）：
+
+        1. **渲染在当前线程完成**。旧实现整条链（含 ``canvas.draw()``）都在 GUI
+           线程里，一次重图（contourf / 大量面片，实测数秒）就把界面卡死。现在只有
+           「建 / 找标签页」必须回 GUI 线程（约 1 ms）；用户回调与 Agg 渲染都在
+           这里做，GUI 线程只贴一张位图（≈ 6 ms）。
+        2. **回调里捕获的数据必须是快照**。旧实现是同步的（内核等到画完才走），
+           所以「传一个内核正在改写的数组」碰巧安全；现在回调就在**本线程**执行，
+           请自己 ``copy()``。
+
+        ⚠️ **返回时机没变**：仍然是「这一帧画完之后」才返回。所以内核连续推图
+        不会丢帧 —— 这正是「每次都要接住」的要求（不需要排队，也不需要等待）。
+
+        Args:
+            kernel: 绘图的回调函数，函数的原型为：
+                def kernel(figure, *args, **kwargs):
+                    ...
+            *args: 传递给 kernel 函数的参数
+            fname: 输出的文件名
+            dpi: 输出的分辨率
+            caption: 窗口的标题
+            on_top: 是否置顶
+            icon: 窗口的图标
+            clear: 是否清除之前的内容
+            tight_layout: 是否自动调整子图参数，以防止重叠
+            suptitle: 图表的标题
+            folder_save: 自动保存图的文件夹
+            savefig: 是否自动保存图（bool，或者文件名）
+            position: 标签页的位置（'top' / 'right'）
+            **kwargs: 传递给 kernel 函数的关键字参数
+
+        Returns:
+            Figure | None: 成功时返回 figure（与旧实现一致）
+        """
+        if not self.exists():
+            return _plot_no_gui(
+                kernel, *args, fname=fname, dpi=300 if dpi is None else dpi,
+                caption=caption, clear=clear, tight_layout=tight_layout,
+                suptitle=suptitle, folder_save=folder_save, **kwargs)
+        try:
+            # ① GUI 线程：建 / 找标签页（唯一不能在本线程做的事）
+            widget = self.command(
+                'get_plot_widget', position=position, caption=caption,
+                on_top=on_top, icon=icon, folder_save=folder_save)
+            if widget is None:
+                warn('gui.plot: 无法创建绘图标签页')
+                return None
+            # ② 本线程：清屏 + 用户回调 + Agg 渲染（耗时全在这里）
+            from zmlx.ui.widgets.tab_widget import TabWidget
+            on_figure = TabWidget.make_on_figure(
+                kernel, args, kwargs,
+                clear=True if clear is None else clear,
+                suptitle=suptitle, tight_layout=tight_layout)
+            if fname is not None:
+                savefig = False  # 不自动保存图（下面单独导出）
+            widget.plot_on_figure(on_figure=on_figure, savefig=savefig)
+            # ③ 本线程：按需导出（内部持锁，且先对齐 figure 尺寸 → 必然清晰）
+            if fname is not None:
+                if dpi is None:
+                    from zmlx.io.env import plt_export_dpi
+                    dpi = plt_export_dpi.get_value()
+                widget.savefig(fname=fname, dpi=dpi)
+            return widget.figure  # 返回 Figure 对象，后续进一步处理
+        except Exception as err:
+            warn('meet exception <{0}> when run <{1}>'.format(err, kernel))
             return None
 
     def set(self, api):
@@ -196,7 +385,7 @@ class GuiBuffer:
                            close_after_done=close_after_done,
                            add_history=add_history)
         except Exception as execute_err:
-            print(f'call gui failed: {execute_err}')
+            print(f'call gui failed: {execute_err}', file=sys.stderr)
             return fx()
 
 
@@ -279,8 +468,7 @@ def _plot_no_gui(kernel, *args, fname=None, dpi=300, caption=None, clear=None, t
             plt.show()
             return fig
     except Exception as err:
-        import zmlx.alg.sys as warnings
-        warnings.warn(f'meet exception <{err}> when run <{kernel}>')
+        warn(f'meet exception <{err}> when run <{kernel}>')
         return None
 
 
@@ -308,7 +496,7 @@ def plot(kernel, *args, gui_only=False, gui_mode=None,
             gui.break_point()
             return gui.plot(kernel, *args, fname=fname, dpi=dpi, **kwargs)
         except Exception as plot_err:
-            print(f'plot failed: {plot_err}')
+            print(f'plot failed: {plot_err}', file=sys.stderr)
             return None
 
     if gui.exists():
@@ -390,7 +578,7 @@ def add_action(
 
 
 def proc_argv(argv=None):
-    from zmlx.alg import fsys
+    from zmlx.algs import fsys
     if not isinstance(argv, (list, tuple)):
         return
     if len(argv) < 2:

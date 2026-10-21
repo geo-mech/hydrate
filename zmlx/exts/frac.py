@@ -1,7 +1,10 @@
 """裂缝模块公共 API（DllCore 封装）.
 
 Modified by Claude, 2026-08-12
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
+from zmlx.system import warn
 from zmlx.exts import *
 
 core = DllCore(dll_obj=load_cdll(name='frac.dll',
@@ -603,7 +606,7 @@ class InfManager2(HasHandle):
             进而计算流体的厚度。这个厚度就是对裂缝开度的一个
             非常硬的约束，也是后续计算裂缝的dn和ds的时候的边界条件.
         """
-        warnings.warn('please use FractureNetwork2.update_boundary instead',
+        warn('please use FractureNetwork2.update_boundary instead',
                       DeprecationWarning, stacklevel=2)
         if isinstance(seepage, Seepage):
             if fh is None:

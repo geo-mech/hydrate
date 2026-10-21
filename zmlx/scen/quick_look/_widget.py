@@ -182,7 +182,7 @@ class QuickLookWidget(QtWidgets.QWidget):
         right_layout = QtWidgets.QVBoxLayout(right)
         right_layout.setContentsMargins(0, 0, 0, 0)
         try:
-            from zmlx.ui.widget.plt import MatplotWidget
+            from zmlx.ui.widgets.plt import MatplotWidget
             self._plot = MatplotWidget(right)
         except Exception:
             self._plot = None
@@ -217,7 +217,7 @@ class QuickLookWidget(QtWidgets.QWidget):
         if ptype == 'code':
             # 优先使用项目专用的代码编辑器控件（语法高亮）；失败时退回 QTextEdit
             try:
-                from zmlx.ui.widget.code_edit import CodeEdit
+                from zmlx.ui.widgets.code_edit import CodeEdit
                 w = CodeEdit()
             except Exception:
                 w = QtWidgets.QTextEdit()
@@ -372,10 +372,20 @@ class QuickLookWidget(QtWidgets.QWidget):
         except Exception as err:
             QtWidgets.QMessageBox.warning(self, '参数错误', str(err))
             return
-        self._run_btn.setEnabled(False)
-        self._last_result = None
 
         from zmlx.ui import gui
+
+        # ⚠️ **先确认内核空闲，再禁用按钮**：``Console.start_func`` 在内核已经在
+        #    跑的时候会直接 ``return``（只响一声错误音），此时 ``post_task``
+        #    永远不会被调用 —— 而按钮已经置灰，``_on_finished`` 又正是唯一把它
+        #    恢复的地方，于是按钮**永久灰掉**，用户只能重开这个页面。
+        if gui.exists() and gui.is_running():
+            QtWidgets.QMessageBox.information(
+                self, '内核忙', '内核正在运行，请等它结束后再试。')
+            return
+
+        self._run_btn.setEnabled(False)
+        self._last_result = None
         gui.start_func(
             lambda: self._compute(params),
             post_task=self._on_finished,

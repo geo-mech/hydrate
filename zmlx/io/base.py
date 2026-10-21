@@ -1,11 +1,15 @@
 """IO 基础模块（文件追加、文本读写、TaskFolder 等核心函数）.
 
 Modified by Claude, 2026-08-12
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
+from zmlx.system import warn
 import os
+import sys
 from io import StringIO
 
-import zmlx.alg.sys as warnings
+
 from zmlx.exts import make_dirs, make_parent, np
 
 
@@ -41,7 +45,7 @@ def append_file(filename, text, encoding=None):
             with open(make_parent(filename), 'a', encoding=encoding) as file:
                 file.write(text)
     except Exception as err:
-        warnings.warn(
+        warn(
             f'meet exception in append_file. filename={filename}. error={err}')
 
 
@@ -59,7 +63,7 @@ def get_text_back(filename, max_length=None):
             return file.read()[-max_length:]
 
     except Exception as e:
-        print(f"Error reading file: {str(e)}")
+        print(f"Error reading file: {str(e)}", file=sys.stderr)
         return None
 
 
@@ -70,7 +74,7 @@ class TaskFolder:
 
     def __init__(self, *names, **kwargs):
         from zmlx.io.path import get_path
-        from zmlx.alg.fsys import print_tag
+        from zmlx.algs.fsys import print_tag
         # 找到数据目录
         self.folder = get_path(*names, **kwargs)
 
@@ -85,7 +89,7 @@ class TaskFolder:
         """
         返回文件路径，并确保上一级目录的存在
         """
-        from zmlx.alg.fsys import join_paths
+        from zmlx.algs.fsys import join_paths
         if len(args) > 0:
             return make_parent(join_paths(self.folder, *args))
         else:

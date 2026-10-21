@@ -4,8 +4,8 @@ Modified by Claude, 2026-08-12
 """
 from scipy.interpolate import NearestNDInterpolator, LinearNDInterpolator
 
-from zmlx.alg.base import join_cols
-from zmlx.alg.fsys import *
+from zmlx.algs.base import join_cols
+from zmlx.algs.fsys import *
 from zmlx.exts import Interp3, np
 from zmlx.ptree.array import array
 from zmlx.ptree.box import box3

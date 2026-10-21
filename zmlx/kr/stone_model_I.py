@@ -1,69 +1,39 @@
-"""Stone Model I 三相相对渗透率模型.
+"""旧模块名（兼容层，**已弃用**）：``stone_model_I`` -> :mod:`zmlx.krs.stone_model_I`.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/krs/stone_model_I.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.krs.stone_model_I import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由 ``zmlx.kr`` 改为 ``zmlx.krs`` —— 与 ``algs`` / ``utils`` /
+``fluids`` / ``reactions`` / ``geometries`` / ``ui.widgets`` 统一用**复数**目录名。
+
+但 ``from zmlx.kr.stone_model_I import ...`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史脚本 / 笔记里的 import；③ 更早的兼容层。
+
+⚠️ 完整的兼容策略见 ``zmlx/kr/__init__.py``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-from zmlx.exts import np
+from zmlx.system import warn
 
 
-def stone_model_I(swir, sorg, sorw, sgc, krwro, kroiw, krgro, nw, nsorw, ng,
-                  nog):
-    """
-    An oil-gas-water three-phase relative permeability model.
+warn(
+    '``zmlx.kr.stone_model_I`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.krs.stone_model_I``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-    By Maryelin.
-    """
+from zmlx.krs.stone_model_I import *  # noqa: F401,F403
 
-    assert swir < 1
-    # oil-water system and gas-oil system Corey two phases model
-    # variables
-    sw = np.linspace(swir, 1 - sorw, 20, endpoint=True)
-    sg = np.linspace(sgc, 1 - sorg, 20, endpoint=True)
-    so = 1 - sg
-    # Models Corey, 1954
-    krw = krwro * ((sw - swir) / (1 - sorw - swir)) ** nw
-
-    krow = kroiw * ((1 - sw - sorw) / (1 - sorw - swir)) ** nsorw
-
-    krg = krgro * ((sg - sgc) / (1 - sgc - sorg - swir)) ** ng
-    krg[krg >= 1] = 1
-
-    krog = kroiw * ((1 - sg - sorg - swir) / (1 - sgc - sorg - swir)) ** nog
-
-    # Stone Model I normalized by Aziz and Settari, 1979
-    # swc = swir
-    # Fayers and Mattews 1984
-    a = 1 - (sg / (1 - swir - sorg))
-    som = (a * sorw) + ((1 - a) * sorg)
-    s_o = np.abs(so - som) / (1 - swir - som)  # so>= som
-    s_w = np.abs(sw - swir) / (1 - swir - som)  # sw >= swir
-    s_g = (sg) / (1 - swir - som)
-    s_o[s_o >= 1.0] = 1 - swir
-    s_w[s_w >= 1.0] = 1 - sorw
-    s_g[s_g >= 1.0] = 1 - sorg
-    kro0 = kroiw
-    kro = (s_o / kro0) * (krow / (1 - s_w)) * (krog / (1 - s_g))
-    kro[kro >= 1] = 1
-    return sw, krw, sg, krg, so, kro
-
-
-if __name__ == '__main__':
-    try:
-        sw, krw, sg, krg, so, kro = stone_model_I(swir=0.1, sorg=0.1, sorw=0.1,
-                                                  sgc=0.1, krwro=0.9, kroiw=1,
-                                                  krgro=0.9,
-                                                  nw=2,
-                                                  nsorw=2, ng=2, nog=2)
-
-
-        def f(fig):
-            ax = fig.subplots()
-            ax.plot(sw, krw)
-            ax.plot(sg, krg)
-            ax.plot(so, kro)
-
-
-        from zmlx.exts import plot
-
-        plot(f)
-    except Exception as err:
-        print(err)
+from zmlx.krs.stone_model_I import (  # noqa: F401
+    np,
+    stone_model_I,
+)

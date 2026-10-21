@@ -501,6 +501,12 @@ class Interp2(HasHandle):
         Note:
             - 当 xmin == xmax 或 dx == 0 时，在 X 方向上视为常数场
             - 当 ymin == ymax 或 dy == 0 时，在 Y 方向上视为常数场
+            - ⚠️ ``dx`` / ``dy`` 只是**采样密度的期望值**（内核会取整、并优先
+              保证**[xmin, xmax] 两端**都被采样）。实际采样网格因此是
+              ``n = int((xmax - xmin) / dx) + 1`` 段、步长
+              ``(xmax - xmin) / n``，**略小于**传入的 dx。
+              （v1.10.3 之前内核把传入的 dx 当成实际步长写进了插值器，导致
+              整条轴被压缩 ``(n-1)/n`` —— 陡函数可有两位数百分比的偏差。）
         """
         assert xmin <= xmax and dx >= 0
         assert ymin <= ymax and dy >= 0

@@ -1,90 +1,43 @@
+"""旧模块名（兼容层，**已弃用**）：``edit`` -> :mod:`zmlx.seepage_meshes.edit`.
+
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/seepage_meshes/edit.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.seepage_meshes.edit import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由 ``zmlx.seepage_mesh`` 改为 ``zmlx.seepage_meshes`` —— 与 ``algs`` / ``utils`` /
+``fluids`` / ``reactions`` / ``geometries`` / ``ui.widgets`` 统一用**复数**目录名。
+
+但 ``from zmlx.seepage_mesh.edit import ...`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史脚本 / 笔记里的 import；③ 更早的兼容层。
+
+⚠️ 完整的兼容策略见 ``zmlx/seepage_mesh/__init__.py``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-用以交换mesh的坐标，从而实现不同的方向的模拟。
-
-since 2025-2-6
-
-Modified by Claude, 2026-08-12
-"""
-
-from zmlx.exts import SeepageMesh
+from zmlx.system import warn
 
 
-def add_cell_face(mesh: SeepageMesh, *, offset, pos=None, cell=None, vol=1.0,
-                  area=1.0, length=1.0):
-    """
-    找到位于pos位置的Cell，并在pos + offset的位置添加新的Cell，并将此Cell的体积设置为vol。
-    然后在两个Cell之间建立新的Face，并将新Face的面积设置为area，流动距离设置为length
-    """
-    if cell is None:
-        cell = mesh.get_nearest_cell(pos=pos)
+warn(
+    '``zmlx.seepage_mesh.edit`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.seepage_meshes.edit``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-    if cell is None:
-        return None
+from zmlx.seepage_meshes.edit import *  # noqa: F401,F403
 
-    index = cell.index  # 需要去连接的cell的id，提前找到，避免后续找到新添加的cell
-    pos = cell.pos
-
-    # 添加虚拟的cell
-    cell = mesh.add_cell()
-    cell.pos = [pos[i] + offset[i] for i in range(3)]
-    cell.vol = vol
-
-    # 添加虚拟的face来连接
-    f = mesh.add_face(cell, mesh.get_cell(index))
-    f.area = area
-    f.length = length
-
-    # 返回连接的index
-    return index
-
-
-def scale(mesh: SeepageMesh, factor: float, on_pos=True, on_area=True,
-          on_vol=True, on_dist=True):
-    """
-    对渗流的网格进行缩放.
-    """
-    if on_pos or on_vol:
-        for cell in mesh.cells:
-            assert isinstance(cell, SeepageMesh.Cell)
-            if on_pos:
-                pos = [v * factor for v in cell.pos]
-                cell.pos = pos
-            if on_vol:
-                cell.vol *= factor ** 3
-
-    if on_area or on_dist:
-        for face in mesh.faces:
-            assert isinstance(face, SeepageMesh.Face)
-            if on_area:
-                face.area *= factor ** 2
-            if on_dist:
-                face.dist *= factor
-
-    return mesh
-
-
-def swap_yz(mesh):
-    """
-    交换y和z坐标
-    """
-    for cell in mesh.cells:
-        x, y, z = cell.pos
-        cell.pos = [x, z, y]
-
-
-def swap_xz(mesh):
-    """
-    交换x和z坐标
-    """
-    for cell in mesh.cells:
-        x, y, z = cell.pos
-        cell.pos = [z, y, x]
-
-
-def swap_xy(mesh):
-    """
-    交换x和y坐标
-    """
-    for cell in mesh.cells:
-        x, y, z = cell.pos
-        cell.pos = [y, x, z]
+from zmlx.seepage_meshes.edit import (  # noqa: F401
+    SeepageMesh,
+    add_cell_face,
+    scale,
+    swap_xy,
+    swap_xz,
+    swap_yz,
+)

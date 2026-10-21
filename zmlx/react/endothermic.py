@@ -1,116 +1,37 @@
-"""吸热反应基础类.
+"""旧模块名（兼容层，**已弃用**）：``endothermic`` -> :mod:`zmlx.reactions.endothermic`.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/reactions/endothermic.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.reactions.endothermic import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由 ``zmlx.react`` 改为 ``zmlx.reactions`` —— 与 ``algs`` / ``utils`` /
+``fluids`` / ``ui.widgets`` 统一用**复数**目录名（本包装的是一堆**反应**定义，复数才贴切）。
+
+但 ``from zmlx.react.endothermic import ...`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史脚本 / 笔记里的 import；③ 更早的兼容层。
+
+⚠️ 完整的兼容策略见 ``zmlx/react/__init__.py``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-from zmlx.alg.base import clamp
+from zmlx.system import warn
 
 
-def create(left, right, temp, heat, rate=None, fa_t=None, fa_c=None, l2r=True,
-           r2l=True, p2t=None,
-           t2q=None, inhibitors=None):
-    """
-    创建吸热的化学反应（以及其逆过程）。其中左侧的物质转化为右侧的物质会吸收热量。温度的升高会促使这种反应的发生.
-        left：定义左侧物质的序号和权重
-        right：定义右侧物质的序号和权重
-        temp：定义反应发生的参考温度
-        heat：定义在参考温度下反应发生的时候所消耗的热量
-            （1kg的左侧物质，转化为1kg的右侧的物质）
-        rate：反应的速率（当温度超过平衡温度1度的时候）.
-            只有当t2q未给定的时候，rate才会有作用.
-        fa_t：流体的温度属性
-        fa_c：流体的比热属性
-        l2r：是否允许左侧的物质转化为右侧的物质
-        r2l：是否允许右侧的物质转化为左侧的物质
-        p2t：温度压力曲线。定义不同压力下的临界反应温度.
-            如果p2t没有给定，则默认使用temp作为所有压力下的临界温度.
+warn(
+    '``zmlx.react.endothermic`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.reactions.endothermic``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-    注意：
-        返回一个dict，包含了反应的所有的信息。此dict定义的data可以在
-        zmlx.react.alg.add_reaction中使用，将反应添加到Seepage中
-    """
-    data = {}
-
-    if fa_t is None:
-        fa_t = 'temperature'  # 后续动态注册属性id
-
-    if not isinstance(fa_t, str):
-        if fa_t > 9999:
-            fa_t = 'temperature'
-
-    if fa_c is None:
-        fa_c = 'specific_heat'  # 后续动态注册属性id
-
-    if not isinstance(fa_c, str):
-        if fa_c > 9999:
-            fa_c = 'specific_heat'
-
-    # 左侧的物质
-    components = []
-    for kind, weight in left:
-        assert weight > 0
-        components.append({'kind': kind,
-                           'weight': -clamp(abs(weight), 1.0e-5, 1.0),
-                           'fa_t': fa_t, 'fa_c': fa_c})
-
-    # 右侧的物质
-    for kind, weight in right:
-        assert weight > 0
-        components.append({'kind': kind,
-                           'weight': clamp(abs(weight), 1.0e-5, 1.0),
-                           'fa_t': fa_t, 'fa_c': fa_c})
-
-    # 组分、权重等信息
-    data['components'] = components
-
-    # 参考温度
-    assert temp > 0
-
-    # 在参考温度下，反应吸收的热量
-    assert heat > 0
-
-    if p2t is not None:
-        # 设置温度压力曲线 (如果给定的话)
-        data['p2t'] = p2t
-    else:
-        # 设置分解的温度曲线 <与压力无关的曲线>
-        data['p2t'] = ([0.01e6, 100e6], [temp, temp])
-
-    # 设置反应发生的参考温度和在参考温度下的热量
-    data['temp'] = temp
-    data['heat'] = -heat  # 加上负号非常重要，因为heat为吸收的热量，但是反应的定义需要释放的热量.
-
-    # 定义反应的速率
-    if t2q is not None:
-        # assert rate is None
-        t, q = t2q
-        assert len(t) == len(q)
-        assert len(t) >= 3
-    else:
-        # 反应的速率
-        assert rate > 0
-        dt_max = 1.0e3
-        t = [-dt_max, 0, dt_max]
-        q = [-rate * dt_max, 0, rate * dt_max]
-
-    for i in range(len(t)):
-        if t[i] < 0:
-            # 温度低，右侧物质转化为左侧, q <= 0
-            if not r2l:
-                q[i] = 0
-            else:
-                q[i] = min(0, q[i])
-        if t[i] > 0:
-            # 温度高，左侧物质转化为右侧，q >= 0
-            if not l2r:
-                q[i] = 0
-            else:
-                q[i] = max(0, q[i])
-
-    data['t2q'] = (t, q)
-
-    # 其它数据
-    assert inhibitors is None or isinstance(inhibitors, list)
-    data['inhibitors'] = inhibitors if inhibitors is not None else []
-
-    # 完成，返回数据
-    return data
+from zmlx.reactions.endothermic import *  # noqa: F401,F403
+from zmlx.reactions.endothermic import (  # noqa: F401
+    create
+)

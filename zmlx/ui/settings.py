@@ -6,7 +6,7 @@ Modified by Claude, 2026-08-12
 
 import os
 
-from zmlx.alg.base import clamp
+from zmlx.algs.base import clamp
 from zmlx.system import app_data, read_text, write_text
 from zmlx.io.json_ex import read as read_json
 from zmlx.ui.alg import get_current_screen_geometry
@@ -417,21 +417,44 @@ def get_env_items():
         return []
 
 
-def add_env_item(label=None, key=None, items=None, note=None):
+def add_env_item(label=None, key=None, items=None, note=None, kind=None,
+                 default=None, **extra):
+    """登记一条环境变量配置项（供「设置 → 系统」表单使用）。
+
+    Args:
+        label: 显示用的名称。
+        key: 环境变量键名（必须给出，否则忽略）。
+        items: 枚举型的可选项列表。
+        note: 说明文字。
+        kind: 控件类型 —— ``'bool'`` / ``'enum'`` / ``'int'`` / ``'str'``。
+            缺省时由界面按「有 items → enum，否则 str」推断。
+        default: **代码里真正采用的默认值**。界面按它初始化控件，所以它必须与
+            读取该键的那段代码逐字一致（见 ``zmlx/ui/data/zml_env_items.py``）。
+        **extra: 其它字段（如 ``int`` 型的 ``min`` / ``max``），原样透传给界面。
+
+    Note:
+        ⚠️ 这里**必须**用 ``**extra`` 兜住未知字段：早先的实现只接受固定的四个
+        关键字，于是在 JSON 里新加 ``kind`` / ``default`` 时会被静默丢弃
+        （实测：15 项全部报 ``unexpected keyword argument 'kind'``，界面退化成
+        全部显示「未设置」）—— 那正是本界面撒谎的根源。
+    """
     if key is None:
         return
+    item = dict(label=label, key=key, items=items, note=note)
+    if kind is not None:
+        item['kind'] = kind
+    if default is not None:
+        item['default'] = default
+    item.update(extra)
     env_items = get_env_items()
-    for item in env_items:
-        if item['key'] == key:
-            item.update(dict(label=label, items=items, note=note))
+    for elem in env_items:
+        if elem['key'] == key:
+            elem.update(item)
             app_data.put('env_items', env_items)
             return
-    env_items.append(dict(
-        label=label,
-        key=key,
-        items=items,
-        note=note))
+    env_items.append(item)
     app_data.put('env_items', env_items)
+
 
 
 def __env_items_init():

@@ -2,29 +2,17 @@
 
 ## 概述
 
-`zmlx.plt` 提供基于 matplotlib 的可视化绘图功能，组织为**三层架构**：
-
-1. **`on_axes/`（底层）**：在 `Axes` 对象上绘制图元的 `add_xxx` 函数
-2. **`on_figure/`（中层）**：Figure 级别操作（子图创建、布局计算）和 GUI 桥接
-3. **`on_ui/`（高层）**：一键绘制并显示在 GUI 标签页的 `show_xxx` 函数
+`zmlx.plt` 提供基于 matplotlib 的可视化绘图功能，按**三层架构**组织（`on_axes/`
+底层 → `on_figure/` 中层 → `on_ui/` 高层），各层职责见文末「模块列表」。
 
 ---
 
 ## 推荐绘图方式
 
-所有 matplotlib 绘图应通过 `zmlx.ui.plot` 统一入口。编写一个回调函数操作 `fig` 对象，传入 `plot`：
-
-```python
-from zmlx.ui import plot
-
-def on_figure(fig):
-    ax = fig.add_subplot(111)
-    ax.plot(x, y)
-
-plot(on_figure, caption='标题')
-```
-
-`zmlx.ui.plot` 自动适配三种环境：GUI 标签页 / 无头保存 / 直接 `plt.show()`。
+所有 matplotlib 绘图应通过 `zmlx.ui.plot` 统一入口（`from zmlx.ui import plot`）：
+编写一个回调函数操作 `fig` 对象，再交给 `plot(on_figure, caption=...)`（写法见
+下文「快速开始」方法2）。`zmlx.ui.plot` 自动适配三种环境：GUI 标签页 / 无头保存 /
+直接 `plt.show()`。
 
 **不要**直接 `plt.figure()` + `plt.show()`，应始终使用 `plot(on_figure, ...)`。
 
@@ -117,7 +105,7 @@ plot_on_axes(on_axes, caption='我的图表')
 | `get_cm(name, levels)` | `cmap.py` | 获取颜色映射表（默认 'coolwarm'） |
 | `get_color(cmap, lr, rr, val)` | `cmap.py` | 将数值映射为 RGBA 颜色 |
 | `set_chinese_font()` | `_font.py` | 配置 matplotlib 中文字体 |
-| `plot_no_gui(kernel, fname, ...)` | `_plot.py` | 内部函数，用户应使用 `zmlx.ui.plot` |
+| `_plot_no_gui(...)` | `zmlx/ui/gui_buffer.py` | 内部函数，用户应使用 `zmlx.ui.plot` |
 | `get_plt_save_path(*subdirs)` | `_save.py` | 获取图形保存路径 |
 
 ---
@@ -159,7 +147,7 @@ fig.show(
 | `on_ui/` | 高层一键绘图（show_xxx） |
 | `cmap.py` | 颜色映射管理 |
 | `_font.py` | 中文字体配置 |
-| `_plot.py` | 无 GUI 模式绘图工具 |
+| `zmlx/ui/gui_buffer.py` | 无 GUI 模式绘图工具（`_plot_no_gui`）|
 | `_save.py` | 图形路径管理 |
 
 ---

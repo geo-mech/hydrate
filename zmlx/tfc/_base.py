@@ -6,14 +6,17 @@ base模块定义渗流类Seepage的一些基础的接口。注意，此模块不
 的数据接口。当然，一切的定义，本质上都是基于Seepage类的成员函数。
 
 Modified by Claude, 2026-08-12
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
 
+from zmlx.system import warn
 import ctypes
 import os
 from ctypes import c_void_p
 from typing import Dict, Optional
 
-from zmlx.alg import sys as warnings, time2str, clamp
+from zmlx.algs import sys as warnings, time2str, clamp
 from zmlx.exts import (
     Seepage, Vector, is_array, Map, ThreadPool, np, clock, f64_ptr, const_f64_ptr, FluDef, calc_recommended_dt
 )
@@ -543,7 +546,7 @@ def get_attr(model: Seepage, key, default_val=None, cast=None,
             **valid_range)
     else:
         if default_val is None and show_warning:
-            warnings.warn(
+            warn(
                 f'The key ({key_backup}) is None '
                 f'and default_val is None when get_attr')
         value = default_val
@@ -580,7 +583,7 @@ def set_attr(model: Seepage, key=None, value=None, **key_values):
         if value is not None:
             model.set_attr(key, value)
         else:
-            warnings.warn(f'The value is None while set key = {key}')
+            warn(f'The value is None while set key = {key}')
 
     # 如果给定了关键词列表，那么就设置多个属性.
     if len(key_values) > 0:
@@ -747,7 +750,7 @@ def get_cfl(model: Seepage) -> float:
         return value
     value = get_attr(model, key='dv_relative', default_val=None, left=1.0e-10, right=1.0e20, show_warning=False)
     if value is not None:
-        warnings.warn("cfl not defined, using previous dv_relative value", DeprecationWarning, stacklevel=2)
+        warn("cfl not defined, using previous dv_relative value", DeprecationWarning, stacklevel=2)
         return value
     else:
         return 0.1
@@ -770,13 +773,13 @@ def set_cfl(model: Seepage, value):
 
 
 def get_dv_relative(model: Seepage):
-    warnings.warn("dv_relative is deprecated (remove after 2027-6-17), please use cfl instead",
+    warn("dv_relative is deprecated (remove after 2027-6-17), please use cfl instead",
                   DeprecationWarning, stacklevel=2)
     return get_cfl(model)
 
 
 def set_dv_relative(model: Seepage, value):
-    warnings.warn("dv_relative is deprecated (remove after 2027-6-17), please use cfl instead",
+    warn("dv_relative is deprecated (remove after 2027-6-17), please use cfl instead",
                   DeprecationWarning, stacklevel=2)
     set_cfl(model, value)
 
@@ -1531,7 +1534,7 @@ def seepage2txt(path=None, processes=None):
     Returns:
         None
     """
-    from zmlx.alg.fsys import change_fmt
+    from zmlx.algs.fsys import change_fmt
     if path is None:
         path = os.getcwd()
     change_fmt(
@@ -1544,7 +1547,7 @@ def txt2seepage(path=None, processes=None):
     """
     将txt文件转化为seepage （注意，文件必须存储在models中）
     """
-    from zmlx.alg.fsys import change_fmt
+    from zmlx.algs.fsys import change_fmt
     if path is None:
         path = os.getcwd()
     change_fmt(

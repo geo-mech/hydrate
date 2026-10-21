@@ -1,8 +1,11 @@
-"""模块可用性检测（已弃用的过渡文件）."""
+"""模块可用性检测（已弃用的过渡文件）.
 
-import zmlx.alg.sys as warnings
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
+"""
+from zmlx.system import warn
 
-warnings.warn(f'{__name__} will be removed after 2027-5-25', DeprecationWarning, stacklevel=2)
+
+warn(f'{__name__} will be removed after 2027-5-25', DeprecationWarning, stacklevel=2)
 
 from zmlx.alg.sys import has_module
 

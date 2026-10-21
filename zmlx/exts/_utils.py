@@ -2,12 +2,15 @@
 定义不依赖于DLL的通用的函数或者类
 
 Modified by Claude, 2026-08-12
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
 
 
+from zmlx.system import warn
 import ctypes
 import os
-import warnings
+
 from ctypes import c_void_p, c_double, POINTER
 from typing import Any
 from typing import Optional, Callable
@@ -140,7 +143,7 @@ def attr_in_range(value, *, left=None, right=None, min=None, max=None):
     判断属性值是否在给定的范围内
     """
     if min is not None:
-        warnings.warn(
+        warn(
             'The argument <min> of <_attr_in_range> '
             'will be removed after 2025-4-5, use <left> instead',
             DeprecationWarning, stacklevel=2)
@@ -148,7 +151,7 @@ def attr_in_range(value, *, left=None, right=None, min=None, max=None):
         left = min
 
     if max is not None:
-        warnings.warn(
+        warn(
             'The argument <max> of <_attr_in_range> '
             'will be removed after 2025-4-5, use <right> instead',
             DeprecationWarning, stacklevel=2)

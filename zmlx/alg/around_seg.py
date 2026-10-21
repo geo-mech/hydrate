@@ -1,36 +1,28 @@
-"""查找线段周围的 Cell 和 Face（用于裂缝-网格交互）.
+"""旧模块名（兼容层，**已改名为** :mod:`zmlx.algs.around_seg`）.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/algs/around_seg.py`` 里。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时会发出
+:class:`DeprecationWarning`。**新代码请写** ``from zmlx.algs.around_seg import ...``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-
-from zmlx.geometry.base import seg_point_distance as get_seg_point_distance
-
-
-def get_cells_around_seg(seg, dist, model):
-    """
-    返回给定线段一定距离范围内的所有的Cell. 需要Cell定义pos属性
-    """
-    return [cell for cell in model.cells if
-            get_seg_point_distance(seg, cell.pos) <= dist]
+from zmlx.system import warn
 
 
-def get_cell_ids_around_seg(seg, dist, model):
-    """
-    返回给定线段一定距离范围内的所有的Cell的Index. 需要Cell定义pos属性
-    """
-    return [cell.index for cell in get_cells_around_seg(seg, dist, model)]
+warn(
+    '``zmlx.alg.around_seg`` 已弃用（2026-10-16）：算法包已改名为 ``zmlx.algs``；'
+    '本转发层将于 **2027-10-16** 删除。请改用 ``from zmlx.algs.around_seg import ...``。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-
-def get_faces_around_seg(seg, dist, model):
-    """
-    返回给定线段一定距离范围内的所有的face. 需要face定义pos属性
-    """
-    return [face for face in model.faces if
-            get_seg_point_distance(seg, face.pos) <= dist]
-
-
-def get_face_ids_around_seg(seg, dist, model):
-    """
-    返回给定线段一定距离范围内的所有的face的Index. 需要face定义pos属性
-    """
-    return [face.index for face in get_faces_around_seg(seg, dist, model)]
+from zmlx.algs.around_seg import *  # noqa: F401,F403
+from zmlx.algs.around_seg import (  # noqa: F401
+    get_cell_ids_around_seg,
+    get_cells_around_seg,
+    get_face_ids_around_seg,
+    get_faces_around_seg
+)

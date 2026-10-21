@@ -4,7 +4,7 @@ Modified by Claude, 2026-08-12
 """
 import os
 
-from zmlx.alg.fsys import join_paths
+from zmlx.algs.fsys import join_paths
 from zmlx.exts import make_parent
 
 

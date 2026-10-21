@@ -1,76 +1,38 @@
-"""通用文本编辑器（ObjEditByText — 使用文本形式编辑任意对象）.
+"""旧模块名（兼容层，**已弃用**）：``edit_by_text`` -> :mod:`zmlx.ui.widgets.edit_by_text`.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/ui/widgets/edit_by_text.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.ui.widgets.edit_by_text import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由单数 ``widget`` 改为复数 ``widgets``（单数与 Qt 自己的
+``QtWidgets`` 太像，读代码时极易看错）。但 ``from zmlx.ui.widget.edit_by_text import ...``
+这条路径仍被三类来源用着，故留一年过渡：① 外部脚本与用户在控制台敲的命令；
+② 历史标签页的 ``gui_restore``（重启时按存下来的字符串重放）；③ 更早的兼容层。
+
+⚠️ 完整的兼容策略见 ``zmlx/ui/widget/__init__.py`` 与 ``widgets/AGENTS.md``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-
-from typing import Any
-
-from zmlx.ui.alg import create_action
-from zmlx.ui.pyqt import QtCore, QtWidgets
-from zmlx.ui.widget import CodeEdit
+from zmlx.system import warn
 
 
-class CodeEditEx(CodeEdit):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.context_actions = []
+warn(
+    '``zmlx.ui.widget.edit_by_text`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.ui.widgets.edit_by_text``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-    def contextMenuEvent(self, event):
-        menu = QtWidgets.QMenu(self)
-        for action in self.context_actions:
-            menu.addAction(action)
-        menu.exec(event.globalPos())
-
-
-class ObjEditByText(QtWidgets.QWidget):
-    """
-    将所有的数据都转化为字符串来进行编辑
-    """
-    sig_changed = QtCore.pyqtSignal()  # 右键-应用的时候触发
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self._data = None
-        main_layout = QtWidgets.QVBoxLayout(self)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        self.code_edit = CodeEditEx(self)
-        main_layout.addWidget(self.code_edit)
-        self.code_edit.context_actions = [
-            create_action(self, '重置', slot=lambda: self.set_data(self._data)),
-            create_action(self, '应用', slot=self.sig_changed.emit),
-        ]
-
-    def set_data(self, data: Any):
-        self._data = data
-        self.code_edit.setText("value = " + repr(self._data))
-
-    def get_data(self):
-        try:
-            space = {}
-            try:
-                exec(self.code_edit.get_text(), space)
-            except Exception as err:
-                print(err)
-            data = space.get('value', None)
-            if type(data) == type(self._data):
-                return data
-            else:
-                print(f"类型错误: 期望{type(self._data)}，但得到{type(data)}")
-                return self._data
-        except Exception as err:
-            print(err)
-            return self._data
-
-
-def test():
-    import sys
-    app = QtWidgets.QApplication(sys.argv)
-    w = ObjEditByText()
-    w.sig_changed.connect(lambda: print(w.get_data()))
-    w.set_data(3)
-    w.show()
-    sys.exit(app.exec())
-
-
-if __name__ == "__main__":
-    test()
+from zmlx.ui.widgets.edit_by_text import *  # noqa: F401,F403
+from zmlx.ui.widgets.edit_by_text import (  # noqa: F401
+    CodeEditEx,
+    ObjEditByText,
+    test
+)

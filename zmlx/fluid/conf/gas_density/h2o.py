@@ -1,26 +1,37 @@
+"""旧模块名（兼容层，**已弃用**）：``conf.gas_density.h2o`` -> :mod:`zmlx.fluids.conf.gas_density.h2o`.
+
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/fluids/conf.gas_density.h2o.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.fluids.conf.gas_density.h2o import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由 ``zmlx.fluid`` 改为 ``zmlx.fluids`` —— 与 ``algs`` / ``utils`` /
+``ui.widgets`` 统一用**复数**目录名。
+
+但 ``from zmlx.fluid.conf.gas_density.h2o import ...`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史脚本 / 笔记里的 import；③ 更早的兼容层。
+
+⚠️ 完整的兼容策略见 ``zmlx/fluid/__init__.py``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-Created on Thu Jan 26 17:34:56 2023
-
-@author: Maryelin
-"""
-"""
-H2O
-
-https://github.com/drunsinn/pyXSteam
-
-XSteam provides (mostly) accurate steam and water properties
-from 0 - 1000 bar and from 0 - 2000 °C
-according to the IAPWS release IF-97.
-
-Also includes thermal conductivity and viscosity,
-
-"""
-
-from pyXSteam.XSteam import XSteam
+from zmlx.system import warn
 
 
-def den_h2o(P, T):  # units p = Pa
-    pressure = P * (1 / 1000000)
-    steamTable = XSteam(XSteam.UNIT_SYSTEM_BARE)  # m/kg/sec/K/MPa/W
-    density = steamTable.rho_pt(pressure, T)
-    return density
+warn(
+    '``zmlx.fluid.conf.gas_density.h2o`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.fluids.conf.gas_density.h2o``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
+
+from zmlx.fluids.conf.gas_density.h2o import *  # noqa: F401,F403
+from zmlx.fluids.conf.gas_density.h2o import (  # noqa: F401
+    den_h2o
+)

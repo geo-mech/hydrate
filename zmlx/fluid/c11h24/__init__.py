@@ -1,36 +1,29 @@
-"""C11H24（十一烷）流体属性.
+"""旧子包名（兼容层，**已弃用**）：``c11h24`` -> :mod:`zmlx.fluids.c11h24`.
 
-Modified by Claude, 2026-08-12
+⚠️ **本子包只是一层转发**：它下面的每个模块在 ``zmlx/fluid/c11h24/`` 里各留了一层
+同名转发；本文件再把子包 ``__init__`` **自己**导出的名字转出来
+（例如 ``co2`` 子包的 ``create`` 就定义在它的 ``__init__.py`` 里）。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.fluids.c11h24 import ...``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-import os
-
-from zmlx.exts import Interp2, FluDef
+from zmlx.system import warn
 
 
-def create(name=None, specific_heat=None):
-    if specific_heat is None:
-        specific_heat = 2157.82  # J/kg K
-    return FluDef(
-        den=Interp2(path=os.path.join(os.path.dirname(__file__), 'den.txt')),
-        vis=Interp2(path=os.path.join(os.path.dirname(__file__), 'vis.txt')),
-        specific_heat=specific_heat, name=name)
+warn(
+    '``zmlx.fluid.c11h24`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.fluids.c11h24``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-
-def create_flu(*args, **kwargs):
-    import zmlx.alg.sys as warnings
-    warnings.warn('use function <create> instead', DeprecationWarning,
-                  stacklevel=2)
-    return create(*args, **kwargs)
-
-
-def show_all():
-    from zmlx.plt import show_field2
-    flu = create()
-    show_field2(flu.den, [1e6, 40e6], [280, 1000], caption='den.txt')
-    show_field2(flu.vis, [1e6, 40e6], [280, 1000], caption='vis.txt')
-
-
-if __name__ == '__main__':
-    from zmlx.ui import gui
-
-    gui.execute(show_all, close_after_done=False)
+from zmlx.fluids.c11h24 import *  # noqa: F401,F403
+from zmlx.fluids.c11h24 import (  # noqa: F401
+    create,
+    create_flu,
+    show_all
+)

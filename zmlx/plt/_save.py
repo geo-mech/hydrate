@@ -39,7 +39,7 @@ def get_plt_save_path(*subdirs):
     from zmlx.system import app_data, get_hash
     import re
 
-    from zmlx.alg import join_paths
+    from zmlx.algs import join_paths
 
     # 非法路径字符（Windows + 通用控制字符）
     _INVALID_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')

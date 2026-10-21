@@ -1,5 +1,9 @@
-"""已弃用的模块，请改用 zmlx.alg.sys."""
-from zmlx.alg.sys import create_deprecated as create, get_deprecated as get
+"""已弃用的模块，请改用 zmlx.algs.sys.
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
+"""
+from zmlx.system import warn
+from zmlx.algs.sys import create_deprecated as create, get_deprecated as get
 
 _deprecated_funcs = dict(
     opath=create('zmlx.io.path', 'get_path', '2026-2-11'),
@@ -16,7 +20,6 @@ def __getattr__(name):
                current_pack_name='zmlx.filesys.opath')
 
 
-import zmlx.alg.sys as warnings
 
-warnings.warn(f'The module {__name__} will be removed after 2026-4-15',
+warn(f'The module {__name__} will be removed after 2026-4-15',
               DeprecationWarning, stacklevel=2)

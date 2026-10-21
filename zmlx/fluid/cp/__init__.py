@@ -1,43 +1,24 @@
-"""基于 CoolProp 的纯流体物性计算.
+"""旧子包名（兼容层，**已弃用**）：``cp`` -> :mod:`zmlx.fluids.cp`.
 
-使用 Helmholtz 能量状态方程，对标 NIST REFPROP，误差 < 0.1%。
-覆盖 8 种流体，每种提供密度、粘度、比热三个函数。
+⚠️ **本子包只是一层转发**：它下面的每个模块在 ``zmlx/fluid/cp/`` 里各留了一层
+同名转发；本文件再把子包 ``__init__`` **自己**导出的名字转出来
+（例如 ``co2`` 子包的 ``create`` 就定义在它的 ``__init__.py`` 里）。
 
-    导入:   from zmlx.fluid.cp import h2o_density
-    调用:   rho = h2o_density(P=10e6, T=300)   # P(Pa), T(K) → kg/m³
-    绘图:   python -m zmlx.fluid.cp._ch4
-    对比:   python -m zmlx.fluid.rkt._compare_rkt_and_cp
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.fluids.cp import ...``。
 
-流体列表
---------
-    H₂O     Water        h2o_density / h2o_viscosity / h2o_specific_heat
-    H₂      Hydrogen     h2_density  / h2_viscosity  / h2_specific_heat
-    He      Helium       he_density  / he_viscosity  / he_specific_heat
-    CH₄     Methane      ch4_density / ch4_viscosity / ch4_specific_heat
-    C₂H₆    Ethane       c2h6_density/ c2h6_viscosity/ c2h6_specific_heat
-    N₂      Nitrogen     n2_density  / n2_viscosity  / n2_specific_heat
-    O₂      Oxygen       o2_density  / o2_viscosity  / o2_specific_heat
-    CO₂     CO2          co2_density / co2_viscosity / co2_specific_heat
+Modified by DeepSeek, 2026-10-16
 
-绘图
-----
-    from zmlx.fluid.cp._plot import plot_contours
-    plot_contours("CH4", ch4_density, ch4_viscosity, ch4_specific_heat)
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
+from zmlx.system import warn
 
-try:
-    from zmlx.fluid.cp._c2h6 import c2h6_density, c2h6_specific_heat, c2h6_viscosity
-    from zmlx.fluid.cp._co2 import co2_density, co2_specific_heat, co2_viscosity
-    from zmlx.fluid.cp._h2 import h2_density, h2_specific_heat, h2_viscosity
-    from zmlx.fluid.cp._h2o import h2o_density, h2o_specific_heat, h2o_viscosity
-    from zmlx.fluid.cp._he import he_density, he_specific_heat, he_viscosity
-    from zmlx.fluid.cp._ch4 import ch4_density, ch4_specific_heat, ch4_viscosity
-    from zmlx.fluid.cp._n2 import n2_density, n2_specific_heat, n2_viscosity
-    from zmlx.fluid.cp._o2 import o2_density, o2_specific_heat, o2_viscosity
-except ModuleNotFoundError as e:
-    raise ModuleNotFoundError(
-        f"{e}\n\nCoolProp 未安装，请运行:  pip install CoolProp\n"
-        f"CoolProp is not installed. Run: pip install CoolProp"
-    ) from e
 
-from zmlx.fluid.cp._create_fludef import create_fludef
+warn(
+    '``zmlx.fluid.cp`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.fluids.cp``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
+
+from zmlx.fluids.cp import *  # noqa: F401,F403

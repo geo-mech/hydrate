@@ -1,11 +1,14 @@
-"""已弃用的模块，请改用 zmlx.kr.base."""
+"""已弃用的模块，请改用 zmlx.kr.base.
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
+"""
+from zmlx.system import warn
 from zmlx.kr.base import create_krf
 
 __all__ = ['create_krf']
 
-import zmlx.alg.sys as warnings
 
-warnings.warn(f'The module {__name__} will be removed after 2026-4-15, please import from "zmlx" instead',
+warn(f'The module {__name__} will be removed after 2026-4-15, please import from "zmlx" instead',
               DeprecationWarning, stacklevel=2)
 
 

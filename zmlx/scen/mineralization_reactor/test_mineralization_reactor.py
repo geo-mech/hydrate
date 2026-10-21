@@ -95,14 +95,14 @@ class MineralizationReactorTests(unittest.TestCase):
             self.assertTrue(math.isfinite(cell.get_attr(keys['pH'])))
 
     def test_hydrate_co2_model_can_run_mineralization_slot(self):
-        from zmlx.demo.hydrate import co2 as co2_demo
+        from zmlx.demos.hydrate import co2 as co2_demo
         from zmlx.scen.mineralization_reactor import (
             add_to_co2_model,
             co2_key_fields,
             co2_mineralization_reaction,
             state_from_co2_cell,
         )
-        from zmlx.seepage_mesh import create_cube
+        from zmlx.seepage_meshes import create_cube
         from zmlx.tfc import step_iteration
 
         mesh = create_cube(
@@ -202,7 +202,7 @@ class MineralizationReactorTests(unittest.TestCase):
         test_text = (folder / 'test_mineralization_reactor.py').read_text(encoding='utf-8')
         co2_text = (
             Path(__file__).resolve().parents[3]
-            / 'zmlx' / 'demo' / 'hydrate' / 'co2.py'
+            / 'zmlx' / 'demos' / 'hydrate' / 'co2.py'
         ).read_text(encoding='utf-8')
 
         self.assertIn('from zmlx.ui import plot', show_text)

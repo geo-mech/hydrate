@@ -1,106 +1,42 @@
-"""标签页列表管理 widget（查看/删除已打开的标签页）.
+"""旧模块名（兼容层，**已弃用**）：``tab_detail_view`` -> :mod:`zmlx.ui.tabs.tab_detail_view`.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/ui/tabs/tab_detail_view.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.ui.tabs import TabDetailView``
+（或 ``from zmlx.ui.tabs.tab_detail_view import TabDetailView``）。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把「**顶层控件**」（只被装配层打开成一个标签页、**不会被任何控件当组件
+（子控件）用**）集中迁到 ``zmlx/ui/tabs/``；本目录只留**底层控件**（会被
+``addWidget()`` 进别处的、或被继承的）以及宿主不是标签页的常驻控件（状态栏按钮 /
+右侧栏面板 / 标签容器 / 对话框组件集）。
+
+但 ``from zmlx.ui.widgets.tab_detail_view import TabDetailView`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史标签页的 ``gui_restore``（重启时按存下来的
+字符串重放）；③ 更早的兼容层（``license_count`` / ``license_feedback``）。
+
+⚠️ 判据与依赖方向见 ``zmlx/ui/tabs/AGENTS.md``。
+
+Created by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
+from zmlx.system import warn
 
-from zmlx.ui.pyqt import QtCore, QtWidgets
 
+warn(
+    '``zmlx.ui.widgets.tab_detail_view`` 已弃用（2026-10-16）：控件 ``TabDetailView`` 已迁至 '
+    '``zmlx.ui.tabs.tab_detail_view``；本转发层将于 **2027-10-16** 删除。'
+    '请改用 ``from zmlx.ui.tabs import TabDetailView``。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-class TabDetailView(QtWidgets.QTableWidget):
-    class TabWrapper:
-        def __init__(self, *tab_widgets):
-            self.tab_widgets = tab_widgets
-
-        def count(self):
-            return sum([w.count() for w in self.tab_widgets])
-
-        def get(self, index):
-            for widget_idx in range(len(self.tab_widgets)):
-                widget = self.tab_widgets[widget_idx]
-                if index < widget.count():
-                    return widget.tabText(index), type(widget.widget(index)).__name__
-                else:
-                    index -= widget.count()
-            return "", ""
-
-        def remove(self, index):
-            for widget_idx in range(len(self.tab_widgets)):
-                widget = self.tab_widgets[widget_idx]
-                if index < widget.count():
-                    widget.close_tab(index)
-                    break
-                else:
-                    index -= widget.count()
-
-        def show(self, index):
-            for widget_idx in range(len(self.tab_widgets)):
-                widget = self.tab_widgets[widget_idx]
-                if index < widget.count():
-                    if not widget.isVisible():
-                        widget.setVisible(True)
-                    widget.setCurrentIndex(index)
-                    break
-                else:
-                    index -= widget.count()
-
-    def __init__(self, parent=None, obj=None, header_labels=None):
-        super().__init__(parent)
-        self.header_labels = header_labels
-        self.obj = obj
-        self._init_ui()
-        self._connect_signals()
-        self.refresh()
-
-    def _init_ui(self):
-        self.setColumnCount(3)
-        if self.header_labels is not None:
-            assert len(self.header_labels) == 3
-            self.setHorizontalHeaderLabels(
-                self.header_labels)
-        else:
-            self.setHorizontalHeaderLabels(['标题', '类型', '操作'])
-        self.horizontalHeader().setSectionResizeMode(
-            QtWidgets.QHeaderView.ResizeMode.Stretch)
-        self.verticalHeader().setVisible(True)
-        self.setContextMenuPolicy(
-            QtCore.Qt.ContextMenuPolicy.CustomContextMenu)  # 启用右键菜单
-
-    def _connect_signals(self):
-        self.cellClicked.connect(self._on_cell_clicked)
-        self.customContextMenuRequested.connect(
-            self._show_context_menu)  # 右键菜单信号
-
-    def refresh(self):
-        if (not hasattr(self.obj, 'count')
-                or not hasattr(self.obj, 'get')
-                or not hasattr(self.obj, 'remove')
-                or not hasattr(self.obj, 'show')):
-            return
-        row_count = self.obj.count()
-        self.setRowCount(row_count)
-
-        for row in range(row_count):
-            value, name = self.obj.get(row)
-            # 数值列（直接显示值）
-            self.setItem(row, 0, QtWidgets.QTableWidgetItem(str(value)))
-            # 类型列（使用type获取类型）
-            self.setItem(row, 1, QtWidgets.QTableWidgetItem(name))
-            # 删除按钮
-            btn = QtWidgets.QToolButton(self)
-            btn.setText('x')
-            btn.clicked.connect(lambda _, r=row: self._handle_delete(r))
-            self.setCellWidget(row, 2, btn)
-
-    def _handle_delete(self, row):
-        self.obj.remove(row)
-        self.refresh()
-
-    def _on_cell_clicked(self, row, column):
-        if column in (0, 1):
-            self.obj.show(row)
-
-    def _show_context_menu(self, pos):
-        menu = QtWidgets.QMenu(self)
-        refresh_action = menu.addAction("刷新表格")
-        refresh_action.triggered.connect(self.refresh)
-        menu.exec(self.viewport().mapToGlobal(pos))
+from zmlx.ui.tabs.tab_detail_view import *  # noqa: F401,F403
+from zmlx.ui.tabs.tab_detail_view import (  # noqa: F401
+    TabDetailView
+)

@@ -1,55 +1,43 @@
-"""README.md 浏览器 widget.
+"""旧模块名（兼容层，**已弃用**）：``readme_browser`` -> :mod:`zmlx.ui.tabs.readme_browser`.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/ui/tabs/readme_browser.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.ui.tabs import ReadMeBrowser``
+（或 ``from zmlx.ui.tabs.readme_browser import ReadMeBrowser``）。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把「**顶层控件**」（只被装配层打开成一个标签页、**不会被任何控件当组件
+（子控件）用**）集中迁到 ``zmlx/ui/tabs/``；本目录只留**底层控件**（会被
+``addWidget()`` 进别处的、或被继承的）以及宿主不是标签页的常驻控件（状态栏按钮 /
+右侧栏面板 / 标签容器 / 对话框组件集）。
+
+但 ``from zmlx.ui.widgets.readme_browser import ReadMeBrowser`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史标签页的 ``gui_restore``（重启时按存下来的
+字符串重放）；③ 更早的兼容层（``license_count`` / ``license_feedback``）。
+
+⚠️ 判据与依赖方向见 ``zmlx/ui/tabs/AGENTS.md``。
+
+Created by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-
-import os
-
-from zmlx.system import read_text
-from zmlx.ui.alg import create_action, open_url
-from zmlx.ui.gui_buffer import gui
-from zmlx.ui.widget.text_browser import TextBrowser
+from zmlx.system import warn
 
 
-class ReadMeBrowser(TextBrowser):
-    def __init__(self, parent=None):
-        super(ReadMeBrowser, self).__init__(parent)
-        self._load()
-        self.context_actions.append(create_action(self, "重新导入并显示ReadMe", slot=self._load))
-        self.context_actions.append(create_action(self, "关于", slot=gui.show_about))
-        self.context_actions.append(create_action(self, "注册", slot=gui.show_reg_tool))
+warn(
+    '``zmlx.ui.widgets.readme_browser`` 已弃用（2026-10-16）：控件 ``ReadMeBrowser`` 已迁至 '
+    '``zmlx.ui.tabs.readme_browser``；本转发层将于 **2027-10-16** 删除。'
+    '请改用 ``from zmlx.ui.tabs import ReadMeBrowser``。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-    def _load(self):
-        from zmlx import get_path
-        path = get_path('..', 'README.md')
-        if os.path.isfile(path):
-            self.setOpenLinks(True)
-            self.setOpenExternalLinks(True)
-            self.setMarkdown(read_text(path=path, encoding='utf-8'))
-            self.set_status(path)
-        else:
-            self.setText("未找到ReadMe文件, 并已经尝试打开代码库的主页")
-            open_url(
-                url='https://gitee.com/geomech/hydrate',
-                on_top=True,
-                caption='IGG-Hydrate',
-                icon='home'
-            )
-
-
-# ============================================================
-# 测试
-# ============================================================
-
-def test_1():
-    import sys
-    from zmlx.ui.pyqt import QtWidgets
-    app = QtWidgets.QApplication(sys.argv)
-    w = ReadMeBrowser()
-    w.resize(600, 520)
-    w.show()
-    sys.exit(app.exec())
-
-
-if __name__ == "__main__":
-    test_1()
+from zmlx.ui.tabs.readme_browser import *  # noqa: F401,F403
+from zmlx.ui.tabs.readme_browser import (  # noqa: F401
+    ReadMeBrowser,
+    _ReadMeContent
+)

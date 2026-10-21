@@ -1,44 +1,37 @@
-"""凝固反应.
+"""旧模块名（兼容层，**已弃用**）：``freeze`` -> :mod:`zmlx.reactions.freeze`.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/reactions/freeze.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.reactions.freeze import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由 ``zmlx.react`` 改为 ``zmlx.reactions`` —— 与 ``algs`` / ``utils`` /
+``fluids`` / ``ui.widgets`` 统一用**复数**目录名（本包装的是一堆**反应**定义，复数才贴切）。
+
+但 ``from zmlx.react.freeze import ...`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史脚本 / 笔记里的 import；③ 更早的兼容层。
+
+⚠️ 完整的兼容策略见 ``zmlx/react/__init__.py``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-from zmlx.react import melt
+from zmlx.system import warn
 
 
-def create(flu, sol, vp, vt, temp, heat, fa_t=None, fa_c=None, t2q=None,
-           l2r=True, r2l=True):
-    """
-    创建一个从液体到固体结冰的反应，或者从气体到液体的凝结过程(默认：平衡态的反应，反应的速率给的非常大);
+warn(
+    '``zmlx.react.freeze`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.reactions.freeze``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-    其中：
-        当模拟结冰/融化时：flu为液体，sol为固体；假设融化吸热
-        当模拟凝结/蒸发时：flu为气体，sol为液体；假设蒸发吸热
-
-    相变的温度和压力相关：
-        vp为压力，vt温度
-
-    相变的耗能由temp和heat指定：
-        temp为参考温度，heat为在该参考温度下发生1kg物质相变的时候所消耗（或产生）的能量，大于0
-
-    流体的温度和比热：
-        fa_t和fa_c为流体的属性，代表流体的温度和比热;
-
-    相变的速度由t2q指定，必须满足：
-        当温度t等于0的时候，q等于0；
-        当温度t小于0的时候，q大于0；
-        当温度t大于0的时候，q小于0；
-
-    注意：
-        返回一个dict，包含了反应的所有的信息。此dict定义的data可以在
-        zmlx.react.alg.add_reaction中使用，将反应添加到Seepage中
-    """
-    if t2q is not None:
-        t, q = t2q
-        q = [-x for x in q]
-        t2q = [t, q]
-
-    return melt.create(
-        sol=sol, flu=flu, vp=vp, vt=vt, temp=temp, heat=heat,
-        fa_t=fa_t, fa_c=fa_c, t2q=t2q,
-        l2r=r2l, r2l=l2r,  # 和melt相比，方向改变
-    )
+from zmlx.reactions.freeze import *  # noqa: F401,F403
+from zmlx.reactions.freeze import (  # noqa: F401
+    create
+)

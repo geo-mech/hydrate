@@ -2,10 +2,12 @@
 用于管理Seepage的动态属性
 
 Modified by Claude, 2026-08-12
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
 
-import zmlx.alg.sys as warnings
 
+from zmlx.system import warn
 from zmlx.exts import Seepage
 
 
@@ -86,8 +88,8 @@ def frac_keys(m=None):
     注意：
         将裂缝的属性保存到seepage中并不是好的选项.
     """
-    warnings.warn(
-        'please use zmlx.utility.AttrKeys instead, '
+    warn(
+        'please use zmlx.utils.AttrKeys instead, '
         'this function will be removed after 2026-4-9',
         DeprecationWarning, stacklevel=2)
     return DynKeys(m, 'fr_')
@@ -99,8 +101,8 @@ def vtx_keys(m=None):
     注意：
         将裂缝的属性保存到seepage中并不是好的选项.
     """
-    warnings.warn(
-        'please use zmlx.utility.AttrKeys instead, '
+    warn(
+        'please use zmlx.utils.AttrKeys instead, '
         'this function will be removed after 2026-4-9',
         DeprecationWarning, stacklevel=2)
     return DynKeys(m, 've_')

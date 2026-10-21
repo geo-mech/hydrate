@@ -1,64 +1,42 @@
-"""Mesh3 → SeepageMesh 转换。
+"""旧模块名（兼容层，**已弃用**）：``mesh3`` -> :mod:`zmlx.seepage_meshes.mesh3`.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/seepage_meshes/mesh3.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.seepage_meshes.mesh3 import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由 ``zmlx.seepage_mesh`` 改为 ``zmlx.seepage_meshes`` —— 与 ``algs`` / ``utils`` /
+``fluids`` / ``reactions`` / ``geometries`` / ``ui.widgets`` 统一用**复数**目录名。
+
+但 ``from zmlx.seepage_mesh.mesh3 import ...`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史脚本 / 笔记里的 import；③ 更早的兼容层。
+
+⚠️ 完整的兼容策略见 ``zmlx/seepage_mesh/__init__.py``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-from zmlx.exts import SeepageMesh, Mesh3
-from zmlx.geometry.base import point_distance
+from zmlx.system import warn
 
 
-def face_centered(mesh, thick=1.0):
-    """
-    从Mesh3来创建SeepageMesh，将Mesh3的Face作为新建SeepageMesh的Cell，将Mesh3的Link作为新建SeepageMesh的Face。
-        其中Mesh3中Face的厚度利用thick来给定.
+warn(
+    '``zmlx.seepage_mesh.mesh3`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.seepage_meshes.mesh3``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-    zzb. since 24-1-29
-    """
-    assert isinstance(mesh, Mesh3)
-    assert thick > 0
+from zmlx.seepage_meshes.mesh3 import *  # noqa: F401,F403
 
-    res = SeepageMesh()
-
-    # 将Mesh3的Face作为SeepageMesh的Cell
-    for face in mesh.faces:
-        assert isinstance(face, Mesh3.Face)
-        cel = res.add_cell()
-        cel.vol = face.area * thick
-        cel.pos = face.pos
-
-    # 将Mesh3的Link作为SeepageMesh的Face
-    for link in mesh.links:
-        assert isinstance(link, Mesh3.Link)
-        if link.face_number < 2:
-            continue
-        # 新的face的面积
-        area = link.length * thick
-        pos = link.pos
-        for i0 in range(link.face_number):
-            face0 = link.get_face(i0)
-            dist0 = point_distance(face0.pos, pos)
-            for i1 in range(i0 + 1, link.face_number):
-                face1 = link.get_face(i1)
-                dist1 = point_distance(face1.pos, pos)
-                dist = dist0 + dist1  # 总的流动距离
-                fac = res.add_face(
-                    res.get_cell(face0.index),
-                    res.get_cell(face1.index))
-                fac.area = area
-                fac.length = dist
-
-    # 成功
-    return res
-
-
-def test():
-    mesh3 = Mesh3.create_cube(
-        x1=-20, y1=-20, z1=0, x2=20, y2=20, z2=0, dx=1,
-        dy=1, dz=1)
-    print(mesh3)
-
-    mes = face_centered(mesh=mesh3, thick=1)
-    print(mes)
-
-
-if __name__ == '__main__':
-    test()
+from zmlx.seepage_meshes.mesh3 import (  # noqa: F401
+    Mesh3,
+    SeepageMesh,
+    face_centered,
+    point_distance,
+    test,
+)

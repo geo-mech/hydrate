@@ -1,4 +1,4 @@
-from zmlx.alg import time2str, join_paths, make_fname
+from zmlx.algs import time2str, join_paths, make_fname
 from zmlx.exts import Seepage, np
 from zmlx.fig import *
 from zmlx.tfc import as_numpy, seepage

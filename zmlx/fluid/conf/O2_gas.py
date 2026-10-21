@@ -1,93 +1,38 @@
-"""O2 气体属性.
+"""旧模块名（兼容层，**已弃用**）：``conf.O2_gas`` -> :mod:`zmlx.fluids.conf.O2_gas`.
 
-@author: Maryelin
-Ref: https://www.engineeringtoolbox.com/oxygen-d_978.html
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/fluids/conf.O2_gas.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
 
-Modified by Claude, 2026-08-12
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.fluids.conf.O2_gas import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由 ``zmlx.fluid`` 改为 ``zmlx.fluids`` —— 与 ``algs`` / ``utils`` /
+``ui.widgets`` 统一用**复数**目录名。
+
+但 ``from zmlx.fluid.conf.O2_gas import ...`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史脚本 / 笔记里的 import；③ 更早的兼容层。
+
+⚠️ 完整的兼容策略见 ``zmlx/fluid/__init__.py``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-
-import matplotlib.pyplot as plt
-
-import zmlx.alg.sys as warnings
-from zmlx.exts import Interp2, FluDef, np
-from zmlx.fluid.conf.gas_density.O2_density import *
-from zmlx.fluid.conf.gas_viscosity.O2_viscosity import *
+from zmlx.system import warn
 
 
-def create(tmin=280, tmax=700, pmin=1.0e6, pmax=20.0e6, name=None):
-    assert 250 < tmin < tmax < 750
-    assert 0.01e6 < pmin < pmax < 30.0e6
+warn(
+    '``zmlx.fluid.conf.O2_gas`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.fluids.conf.O2_gas``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-    def liq_den(P, T):
-        density = den_O2(P, T)
-        return density
-
-    def get_density(P, T):
-        return liq_den(P, T)
-
-    def create_density():
-        den = Interp2()
-        den.create(pmin, 1e6, pmax, 280, 10, 750, get_density)
-        return den
-
-    def liq_vis(P, T):
-        viscosity = vis_o2(P, T)
-        return viscosity
-
-    def get_viscosity(P, T):
-        return liq_vis(P, T)
-
-    def create_viscosity():
-        vis = Interp2()
-        vis.create(pmin, 1e6, pmax, tmin, 10, tmax, get_viscosity)
-        return vis
-
-    specific_heat = 1090  # J/kg K
-    return FluDef(den=create_density(), vis=create_viscosity(),
-                  specific_heat=specific_heat, name=name)
-
-
-def create_flu(*args, **kwargs):
-    warnings.warn('use function <create> instead', DeprecationWarning,
-                  stacklevel=2)
-    return create(*args, **kwargs)
-
-
-if __name__ == '__main__':
-    flu = create()
-
-    # Crear mallas de presión y temperatura
-    P_values = np.linspace(1.0e6, 20.0e6, 100)
-    T_values = np.linspace(280, 700, 100)
-    P_grid, T_grid = np.meshgrid(P_values, T_values)
-
-    # Calcular densidad y viscosidad en función de P y T
-    density_grid = np.zeros_like(P_grid)
-    viscosity_grid = np.zeros_like(P_grid)
-
-    for i in range(P_grid.shape[0]):
-        for j in range(P_grid.shape[1]):
-            p = P_grid[i, j]
-            t = T_grid[i, j]
-            density_grid[i, j] = den_O2(p, t)
-            viscosity_grid[i, j] = vis_o2(p, t)
-
-    # Gráficos de superficie para la densidad
-    plt.figure(figsize=(8, 6))
-    cp_density = plt.contourf(P_grid / 1e6, T_grid, density_grid,
-                              cmap='coolwarm')
-    plt.title('Densidad del Oxígeno')
-    plt.xlabel('Presión (MPa)')
-    plt.ylabel('Temperatura (K)')
-    cbar_density = plt.colorbar(cp_density, label='Densidad (kg/m^3)')
-    plt.show()
-
-    # Gráficos de superficie para la viscosidad
-    plt.figure(figsize=(8, 6))
-    cp_viscosity = plt.contourf(P_grid / 1e6, T_grid, viscosity_grid,
-                                cmap='coolwarm')
-    plt.title('Viscosidad del Oxígeno')
-    plt.xlabel('Presión (MPa)')
-    plt.ylabel('Temperatura (K)')
-    cbar_viscosity = plt.colorbar(cp_viscosity, label='Viscosidad (Pa·s)')
-    plt.show()
+from zmlx.fluids.conf.O2_gas import *  # noqa: F401,F403
+from zmlx.fluids.conf.O2_gas import (  # noqa: F401
+    create,
+    create_flu
+)

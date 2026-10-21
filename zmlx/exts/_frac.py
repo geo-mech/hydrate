@@ -1,8 +1,11 @@
 """裂缝/水力压裂绑定.
 
 Modified by Claude, 2026-08-12
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-import warnings
+
+from zmlx.system import warn
 from ctypes import c_double, c_void_p, c_size_t, c_bool, c_char_p
 from typing import Optional, Iterable, Tuple, List, Union
 
@@ -921,7 +924,7 @@ class FractureNetwork(HasHandle):
             """
             流体的映射数据（已弃用，请使用flu_expr）
             """
-            warnings.warn(
+            warn(
                 f'{type(self).__name__}: flu is deprecated,'
                 f' please use flu_expr instead.',
                 DeprecationWarning, stacklevel=2)
@@ -932,7 +935,7 @@ class FractureNetwork(HasHandle):
             """
             流体的映射数据（已弃用，请使用flu_expr）
             """
-            warnings.warn(
+            warn(
                 f'{type(self).__name__}: flu is deprecated,'
                 f' please use flu_expr instead.',
                 DeprecationWarning, stacklevel=2)
@@ -1680,7 +1683,7 @@ class FracAlg:
 
     @staticmethod
     def update_disp(network: FractureNetwork, *args, **kwargs):
-        warnings.warn(
+        warn(
             'FracAlg.update_disp will be removed after 2026-2-11, '
             'use FractureNetwork.update_disp instead',
             DeprecationWarning, stacklevel=2)
@@ -1688,7 +1691,7 @@ class FracAlg:
 
     @staticmethod
     def add_frac(network: FractureNetwork, p0, p1, lave, *, data=None):
-        warnings.warn(
+        warn(
             'FracAlg.add_frac will be removed after 2026-2-11, '
             'use FractureNetwork.add_fracture instead',
             DeprecationWarning, stacklevel=2)
@@ -1696,7 +1699,7 @@ class FracAlg:
 
     @staticmethod
     def extend_tip(network: FractureNetwork, *args, **kwargs):
-        warnings.warn(
+        warn(
             'FracAlg.extend_tip will be removed after 2026-2-11, '
             'use FractureNetwork.extend_tip instead',
             DeprecationWarning, stacklevel=2)
@@ -1704,7 +1707,7 @@ class FracAlg:
 
     @staticmethod
     def get_induced(network: FractureNetwork, fa_xy, fa_yy, matrix):
-        warnings.warn(
+        warn(
             'FracAlg.get_induced will be removed after 2026-2-11, '
             'use FractureNetwork.get_induced instead',
             DeprecationWarning, stacklevel=2)

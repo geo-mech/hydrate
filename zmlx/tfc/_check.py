@@ -35,7 +35,7 @@ def check_seepage(model: Seepage) -> List[str]:
     if model.cell_number > 0:
         z0, z1 = model.get_pos_range(2)
         if abs(z0 - z1) > 10.0:
-            from zmlx.geometry import point_distance
+            from zmlx.geometries import point_distance
             if point_distance(model.gravity, [0, 0, -9.8]) > 1.0:
                 problems.append(
                     f"对于宏观尺度的模型，重力应该为[-0.0, 0.0, -9.8]，当前为{model.gravity}"

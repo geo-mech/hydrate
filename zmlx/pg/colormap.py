@@ -1,8 +1,11 @@
 """pyqtgraph 颜色映射工具。
 
 Modified by Claude, 2026-08-12
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-import zmlx.alg.sys as warnings
+
+from zmlx.system import warn
 
 try:
     import numpy as np
@@ -20,7 +23,7 @@ def from_matplotlib(name='coolwarm'):
     try:
         return pgc.get(name, source='matplotlib')
     except Exception as e:
-        warnings.warn(f'{e}, please update the pyqtgraph! ', UserWarning)
+        warn(f'{e}, please update the pyqtgraph! ', UserWarning)
         colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255)]  # 红色、绿色、蓝色
         return pg.ColorMap(np.linspace(0, 1, len(colors)), colors)
 

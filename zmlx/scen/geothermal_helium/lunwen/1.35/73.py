@@ -11,7 +11,7 @@ from zmlx import PressureController
 from zmlx.exts import get_pos_range
 from zmlx.scen.geothermal_helium.helium.fluid import create
 from zmlx.scen.geothermal_helium.helium.show import show_xy
-from zmlx.seepage_mesh import create_xy, add_cell_face
+from zmlx.seepage_meshes import create_xy, add_cell_face
 from zmlx.tfc._step import add_setting as add_step_setting
 from zmlx.ui import gui
 

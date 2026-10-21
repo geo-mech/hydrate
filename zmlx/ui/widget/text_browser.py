@@ -1,49 +1,36 @@
-"""文本浏览器 widget（支持上下文菜单清除内容）.
+"""旧模块名（兼容层，**已弃用**）：``text_browser`` -> :mod:`zmlx.ui.widgets.text_browser`.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/ui/widgets/text_browser.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.ui.widgets.text_browser import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由单数 ``widget`` 改为复数 ``widgets``（单数与 Qt 自己的
+``QtWidgets`` 太像，读代码时极易看错）。但 ``from zmlx.ui.widget.text_browser import ...``
+这条路径仍被三类来源用着，故留一年过渡：① 外部脚本与用户在控制台敲的命令；
+② 历史标签页的 ``gui_restore``（重启时按存下来的字符串重放）；③ 更早的兼容层。
+
+⚠️ 完整的兼容策略见 ``zmlx/ui/widget/__init__.py`` 与 ``widgets/AGENTS.md``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-
-from zmlx.system import write_text
-from zmlx.ui.alg import create_action
-from zmlx.ui.gui_buffer import gui
-from zmlx.ui.pyqt import QtWidgets, QAction
+from zmlx.system import warn
 
 
-class TextBrowser(QtWidgets.QTextBrowser):
+warn(
+    '``zmlx.ui.widget.text_browser`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.ui.widgets.text_browser``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self._status = None
-        self.context_actions = [create_action(self, "清除内容", icon='clean', slot=self.clear)]
-
-    def contextMenuEvent(self, event):
-        # 创建菜单并添加清除动作
-        self.get_context_menu().exec(event.globalPos())
-
-    def get_context_menu(self):
-        menu = super().createStandardContextMenu()
-        menu.addSeparator()
-        for action in self.context_actions:
-            if isinstance(action, QAction):
-                menu.addAction(action)
-            else:
-                menu.addSeparator()
-        return menu
-
-    def set_status(self, text):
-        self._status = text
-
-    def enterEvent(self, event):
-        if self._status is not None:
-            gui.status(self._status, 3000)
-        super().enterEvent(event)
-
-    def export_data(self):
-        fpath, _ = QtWidgets.QFileDialog.getSaveFileName(
-            self, '导出文本',
-            '',
-            f'文本文件 (*.txt)')
-        if len(fpath) > 0:
-            write_text(
-                path=fpath, text=self.toPlainText(),
-                encoding='utf-8')
+from zmlx.ui.widgets.text_browser import *  # noqa: F401,F403
+from zmlx.ui.widgets.text_browser import (  # noqa: F401
+    TextBrowser
+)

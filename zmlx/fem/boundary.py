@@ -1,6 +1,7 @@
-import zmlx.alg.sys as warnings
+from zmlx.system import warn
+# Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 
-warnings.warn(f"{__file__} is deprecated (will be removed after 2027-6-26)", DeprecationWarning, stacklevel=2)
+warn(f"{__file__} is deprecated (will be removed after 2027-6-26)", DeprecationWarning, stacklevel=2)
 
 from zmlx.exts import DynSys
 

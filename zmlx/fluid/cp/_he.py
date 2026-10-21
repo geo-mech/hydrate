@@ -1,70 +1,39 @@
-"""氦气物性：密度、粘度、比热（CoolProp）.
+"""旧模块名（兼容层，**已弃用**）：``cp._he`` -> :mod:`zmlx.fluids.cp._he`.
 
-    he_density(P, T)       → kg/m³
-    he_viscosity(P, T)     → Pa·s
-    he_specific_heat(P, T) → J/(kg·K)
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/fluids/cp._he.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
 
-与 zmlx.fluid.rkt 的 He 高度一致（误差 < 1%），单原子气体 EOS 简单。
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.fluids.cp._he import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由 ``zmlx.fluid`` 改为 ``zmlx.fluids`` —— 与 ``algs`` / ``utils`` /
+``ui.widgets`` 统一用**复数**目录名。
+
+但 ``from zmlx.fluid.cp._he import ...`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史脚本 / 笔记里的 import；③ 更早的兼容层。
+
+⚠️ 完整的兼容策略见 ``zmlx/fluid/__init__.py``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-
-from CoolProp.CoolProp import PropsSI
-
-_FLUID = "Helium"
+from zmlx.system import warn
 
 
-def he_density(P, T):
-    """获取氦气在给定压力和温度下的密度.
+warn(
+    '``zmlx.fluid.cp._he`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.fluids.cp._he``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-    Args:
-        P: 压力 (Pa)
-        T: 温度 (K)
-
-    Returns:
-        氦气的密度 (kg/m³)
-    """
-    if P <= 0:
-        raise ValueError(f"P must be > 0, got {P}")
-    if T <= 0:
-        raise ValueError(f"T must be > 0, got {T}")
-    return PropsSI("D", "T", T, "P", P, _FLUID)
-
-
-def he_viscosity(P, T):
-    """获取氦气在给定压力和温度下的动力粘度.
-
-    Args:
-        P: 压力 (Pa)
-        T: 温度 (K)
-
-    Returns:
-        氦气的动力粘度 (Pa·s)
-    """
-    if P <= 0:
-        raise ValueError(f"P must be > 0, got {P}")
-    if T <= 0:
-        raise ValueError(f"T must be > 0, got {T}")
-    return PropsSI("V", "T", T, "P", P, _FLUID)
-
-
-def he_specific_heat(P, T):
-    """获取氦气在给定压力和温度下的定压比热容.
-
-    Args:
-        P: 压力 (Pa)
-        T: 温度 (K)
-
-    Returns:
-        氦气的定压比热容 (J/(kg·K))
-    """
-    if P <= 0:
-        raise ValueError(f"P must be > 0, got {P}")
-    if T <= 0:
-        raise ValueError(f"T must be > 0, got {T}")
-    return PropsSI("C", "T", T, "P", P, _FLUID)
-
-
-if __name__ == "__main__":
-    from zmlx.ui import gui
-    from zmlx.fluid.cp._plot import plot_contours
-    gui.execute(lambda: plot_contours("He", he_density, he_viscosity, he_specific_heat),
-                close_after_done=False)
+from zmlx.fluids.cp._he import *  # noqa: F401,F403
+from zmlx.fluids.cp._he import (  # noqa: F401
+    he_density,
+    he_specific_heat,
+    he_viscosity
+)

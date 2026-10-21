@@ -13,6 +13,8 @@
     pool: 用于并行的线程池对象。 这个pool，一般不需要做特殊的设置。在迭代的时候，会自动创建一个pool.
 
 Modified by Claude, 2026-08-12
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
 
 

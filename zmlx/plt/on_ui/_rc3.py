@@ -38,7 +38,7 @@ def show_rc3(
 
 
 def test():
-    from zmlx.geometry.dfn_v3 import to_rc3, create_demo
+    from zmlx.geometries.dfn_v3 import to_rc3, create_demo
     import random
     rc3 = to_rc3(create_demo())
     color = []

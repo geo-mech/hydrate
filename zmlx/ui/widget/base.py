@@ -1,26 +1,33 @@
-from zmlx.ui.widget.about import About
-from zmlx.ui.widget.app_path_edit import AppPathEdit
-from zmlx.ui.widget.code_edit import CodeEdit
-from zmlx.ui.widget.code_history_view import CodeHistoryView
-from zmlx.ui.widget.console_state_label import ConsoleStateLabel
-from zmlx.ui.widget.cwd_view import CwdView
-from zmlx.ui.widget.demo_view import DemoView
-from zmlx.ui.widget.env_edit import EnvEdit
-from zmlx.ui.widget.feedback_tool import FeedbackTool
-from zmlx.ui.widget.label import Label
-from zmlx.ui.widget.output_history_view import OutputHistoryView
-from zmlx.ui.widget.output_widget import OutputWidget
-from zmlx.ui.widget.readme_browser import ReadMeBrowser
-from zmlx.ui.widget.reg_tool import RegTool
-from zmlx.ui.widget.setup_file_edit import SetupFileEdit
-from zmlx.ui.widget.tab_detail_view import TabDetailView
-from zmlx.ui.widget.tab_widget import TabWidget
-from zmlx.ui.widget.text_browser import TextBrowser
-from zmlx.ui.widget.text_file_edit import TextFileEdit
-from zmlx.ui.widget.timer_view import TimerView
+"""旧模块名（兼容层，**已弃用**）：``base`` -> :mod:`zmlx.ui.widgets.base`.
 
-_keep = [
-    CodeEdit, TextFileEdit, SetupFileEdit, AppPathEdit, EnvEdit, TextBrowser, ReadMeBrowser, TabDetailView,
-    CodeHistoryView, OutputHistoryView, DemoView, CwdView, TimerView, About, FeedbackTool, RegTool, Label,
-    ConsoleStateLabel, TabWidget, OutputWidget
-]
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/ui/widgets/base.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.ui.widgets.base import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由单数 ``widget`` 改为复数 ``widgets``（单数与 Qt 自己的
+``QtWidgets`` 太像，读代码时极易看错）。但 ``from zmlx.ui.widget.base import ...``
+这条路径仍被三类来源用着，故留一年过渡：① 外部脚本与用户在控制台敲的命令；
+② 历史标签页的 ``gui_restore``（重启时按存下来的字符串重放）；③ 更早的兼容层。
+
+⚠️ 完整的兼容策略见 ``zmlx/ui/widget/__init__.py`` 与 ``widgets/AGENTS.md``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
+"""
+from zmlx.system import warn
+
+
+warn(
+    '``zmlx.ui.widget.base`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.ui.widgets.base``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
+
+from zmlx.ui.widgets.base import *  # noqa: F401,F403

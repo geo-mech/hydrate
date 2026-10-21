@@ -1,112 +1,44 @@
-"""三角形渗流网格。
+"""旧模块名（兼容层，**已弃用**）：``triangle`` -> :mod:`zmlx.seepage_meshes.triangle`.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/seepage_meshes/triangle.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.seepage_meshes.triangle import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由 ``zmlx.seepage_mesh`` 改为 ``zmlx.seepage_meshes`` —— 与 ``algs`` / ``utils`` /
+``fluids`` / ``reactions`` / ``geometries`` / ``ui.widgets`` 统一用**复数**目录名。
+
+但 ``from zmlx.seepage_mesh.triangle import ...`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史脚本 / 笔记里的 import；③ 更早的兼容层。
+
+⚠️ 完整的兼容策略见 ``zmlx/seepage_mesh/__init__.py``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-from zmlx.exts import SeepageMesh, Mesh3
-from zmlx.geometry.base import get_center
-from zmlx.geometry.base import point_distance
+from zmlx.system import warn
 
 
-def split_triangles(vertexes: list, triangles: list):
-    """
-    将一个三角形分割成为4个(同样形状的);
-    """
-    v2 = vertexes.copy()
-    t2 = [sorted(triangle) for triangle in triangles]
+warn(
+    '``zmlx.seepage_mesh.triangle`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.seepage_meshes.triangle``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-    lnk_ids = {}
-    # 添加各个边的中心点 (并且获得点的id)
-    for triangle in t2:
-        for lk in [(triangle[0], triangle[1]), (triangle[0], triangle[2]),
-                   (triangle[1], triangle[2])]:
-            p0 = v2[lk[0]]
-            p1 = v2[lk[1]]
-            lnk_ids[lk] = len(v2)
-            v2.append(get_center(p0, p1))
+from zmlx.seepage_meshes.triangle import *  # noqa: F401,F403
 
-    t3 = []
-    for triangle in t2:
-        a = triangle[0]
-        b = lnk_ids.get((triangle[0], triangle[1]))
-        c = lnk_ids.get((triangle[0], triangle[2]))
-        t3.append(sorted([a, b, c]))
-
-        a = triangle[1]
-        b = lnk_ids.get((triangle[0], triangle[1]))
-        c = lnk_ids.get((triangle[1], triangle[2]))
-        t3.append(sorted([a, b, c]))
-
-        a = triangle[2]
-        b = lnk_ids.get((triangle[0], triangle[2]))
-        c = lnk_ids.get((triangle[1], triangle[2]))
-        t3.append(sorted([a, b, c]))
-
-        a = lnk_ids.get((triangle[0], triangle[1]))
-        b = lnk_ids.get((triangle[0], triangle[2]))
-        c = lnk_ids.get((triangle[1], triangle[2]))
-        t3.append(sorted([a, b, c]))
-
-    return v2, t3
-
-
-def create(x0, y0, x1, y1, x2, y2, n_max=None, n_split=None):
-    """
-    在一个三角形区域，通过不断的四等分，来获得三角形剖分；
-    """
-    v = [[x0, y0], [x1, y1], [x2, y2]]
-    t = [[0, 1, 2]]
-
-    # 给定默认的参数
-    assert n_max is not None or n_split is not None
-    if n_max is None:
-        n_max = 9999999
-    if n_split is None:
-        n_split = 9999
-
-    for step in range(n_split):
-        if len(t) * 4 <= n_max:
-            v, t = split_triangles(v, t)
-        else:
-            break
-
-    mesh3 = Mesh3()
-
-    for p in v:
-        mesh3.add_node(x=p[0], y=p[1], z=0)
-
-    for i, j, k in t:
-        link_ids = []
-        for i0, i1 in [(i, j), (j, k), (i, k)]:
-            link = mesh3.add_link(
-                nodes=[mesh3.get_node(i0), mesh3.get_node(i1)])
-            link_ids.append(link.index)
-        links = [mesh3.get_link(i) for i in link_ids]
-        mesh3.add_face(links=links)
-
-    mesh = SeepageMesh()
-
-    for face in mesh3.faces:
-        assert isinstance(face, Mesh3.Face)
-        cell = mesh.add_cell()
-        cell.pos = face.pos
-        cell.vol = face.area
-
-    for link in mesh3.links:
-        assert isinstance(link, Mesh3.Link)
-        if link.face_number == 2:
-            c0 = mesh.get_cell(link.get_face(0).index)
-            c1 = mesh.get_cell(link.get_face(1).index)
-            face = mesh.add_face(c0, c1)
-            face.area = link.length
-            face.length = point_distance(c0.pos, c1.pos)
-
-    return mesh
-
-
-def test():
-    mesh = create(0, 0, 1, 0, 0, 1, n_split=5)
-    print(mesh)
-
-
-if __name__ == '__main__':
-    test()
+from zmlx.seepage_meshes.triangle import (  # noqa: F401
+    Mesh3,
+    SeepageMesh,
+    create,
+    get_center,
+    point_distance,
+    split_triangles,
+    test,
+)

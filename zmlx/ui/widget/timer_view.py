@@ -1,88 +1,42 @@
-"""CPU 计时表（TimerView — 函数耗时统计与显示）.
+"""旧模块名（兼容层，**已弃用**）：``timer_view`` -> :mod:`zmlx.ui.tabs.timer_view`.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/ui/tabs/timer_view.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.ui.tabs import TimerView``
+（或 ``from zmlx.ui.tabs.timer_view import TimerView``）。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把「**顶层控件**」（只被装配层打开成一个标签页、**不会被任何控件当组件
+（子控件）用**）集中迁到 ``zmlx/ui/tabs/``；本目录只留**底层控件**（会被
+``addWidget()`` 进别处的、或被继承的）以及宿主不是标签页的常驻控件（状态栏按钮 /
+右侧栏面板 / 标签容器 / 对话框组件集）。
+
+但 ``from zmlx.ui.widgets.timer_view import TimerView`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史标签页的 ``gui_restore``（重启时按存下来的
+字符串重放）；③ 更早的兼容层（``license_count`` / ``license_feedback``）。
+
+⚠️ 判据与依赖方向见 ``zmlx/ui/tabs/AGENTS.md``。
+
+Created by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-
-import timeit
-
-from zmlx.alg.base import time2str, clamp
-from zmlx.exts import make_parent, timer
-from zmlx.ui.pyqt import QtCore, QtWidgets
+from zmlx.system import warn
 
 
-class TimerView(QtWidgets.QTableWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.horizontalHeader().setSectionResizeMode(
-            QtWidgets.QHeaderView.ResizeMode.Stretch)
-        self.setEditTriggers(
-            QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.horizontalHeader().sectionClicked.connect(self._on_header_clicked)
+warn(
+    '``zmlx.ui.widgets.timer_view`` 已弃用（2026-10-16）：控件 ``TimerView`` 已迁至 '
+    '``zmlx.ui.tabs.timer_view``；本转发层将于 **2027-10-16** 删除。'
+    '请改用 ``from zmlx.ui.tabs import TimerView``。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-        self._sort_col = 0       # 当前排序的列
-        self._sort_asc = True    # True=升序，False=降序
-
-        self.timer = QtCore.QTimer()
-        self.timer.timeout.connect(self.refresh)
-        self.timer.start(500)
-        self.refresh()
-
-    def _on_header_clicked(self, col):
-        """点击列标题时切换排序方式。"""
-        if self._sort_col == col:
-            self._sort_asc = not self._sort_asc  # 同列 → 切换升降序
-        else:
-            self._sort_col = col
-            self._sort_asc = True  # 换列 → 默认升序
-        self.refresh()
-
-    def export_data(self):
-        fpath, _ = QtWidgets.QFileDialog.getSaveFileName(
-            self, '导出Timer',
-            '',
-            f'Text File(*.txt)')
-        with open(make_parent(fpath), 'w', encoding='utf-8') as file:
-            for key, val in timer.key2nt.items():
-                n, t = val
-                file.write(f'{key}\t{n}\t{t}\n')
-
-    def refresh(self):
-        """
-        更新
-        """
-        if not self.isVisible():
-            return
-
-        cpu_t = timeit.default_timer()
-
-        data = []
-        for key, nt in timer.key2nt.items():
-            n, t = nt
-            data.append([f'{key}', n, t, t / n])
-
-        # 按当前排序列排序
-        reverse = not self._sort_asc
-        data.sort(key=lambda row: row[self._sort_col], reverse=reverse)
-
-        # 格式化显示（排序在原始值上进行，此处转为字符串）
-        for row in data:
-            row[1] = f'{row[1]}'             # 调用次数
-            row[2] = time2str(row[2])        # 总耗时
-            row[3] = time2str(row[3])        # 单次耗时
-
-        self.setRowCount(len(data))
-        self.setColumnCount(4)
-        self.setHorizontalHeaderLabels(
-            ['名称', '调用次数', '总耗时', '单次耗时'])
-        self.horizontalHeader().setSectionResizeMode(
-            0, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
-
-        for i_row in range(len(data)):
-            for i_col in range(4):
-                self.setItem(
-                    i_row, i_col,
-                    QtWidgets.QTableWidgetItem(data[i_row][i_col]))
-
-        cpu_t = timeit.default_timer() - cpu_t
-        msec = clamp(int(cpu_t * 200 / 0.001), 200, 8000)
-        self.timer.setInterval(msec)
+from zmlx.ui.tabs.timer_view import *  # noqa: F401,F403
+from zmlx.ui.tabs.timer_view import (  # noqa: F401
+    TimerView
+)

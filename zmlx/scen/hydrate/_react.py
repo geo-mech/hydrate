@@ -1,10 +1,10 @@
-from zmlx.react import ch4_hydrate as ch4_hydrate_react
-from zmlx.react import co2_hydrate as co2_hydrate_react
-from zmlx.react import dissolution
-from zmlx.react import h2o_ice as icing_react
-from zmlx.react import vapor as vapor_react
-from zmlx.react.alpha.salinity import data as salinity_c2t
-from zmlx.react.inh import add_inh
+from zmlx.reactions import ch4_hydrate as ch4_hydrate_react
+from zmlx.reactions import co2_hydrate as co2_hydrate_react
+from zmlx.reactions import dissolution
+from zmlx.reactions import h2o_ice as icing_react
+from zmlx.reactions import vapor as vapor_react
+from zmlx.reactions.alpha.salinity import data as salinity_c2t
+from zmlx.reactions.inh import add_inh
 
 
 def create_reactions(

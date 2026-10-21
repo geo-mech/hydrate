@@ -1,83 +1,42 @@
-"""脚本执行历史浏览器.
+"""旧模块名（兼容层，**已弃用**）：``code_history_view`` -> :mod:`zmlx.ui.tabs.code_history_view`.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/ui/tabs/code_history_view.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.ui.tabs import CodeHistoryView``
+（或 ``from zmlx.ui.tabs.code_history_view import CodeHistoryView``）。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把「**顶层控件**」（只被装配层打开成一个标签页、**不会被任何控件当组件
+（子控件）用**）集中迁到 ``zmlx/ui/tabs/``；本目录只留**底层控件**（会被
+``addWidget()`` 进别处的、或被继承的）以及宿主不是标签页的常驻控件（状态栏按钮 /
+右侧栏面板 / 标签容器 / 对话框组件集）。
+
+但 ``from zmlx.ui.widgets.code_history_view import CodeHistoryView`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史标签页的 ``gui_restore``（重启时按存下来的
+字符串重放）；③ 更早的兼容层（``license_count`` / ``license_feedback``）。
+
+⚠️ 判据与依赖方向见 ``zmlx/ui/tabs/AGENTS.md``。
+
+Created by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-
-import glob
-import os
-
-from zmlx.system import read_text
-from zmlx.ui.pyqt import QtCore, QtWidgets
-from zmlx.ui.widget.code_edit import CodeEdit
+from zmlx.system import warn
 
 
-class CodeHistoryView(QtWidgets.QWidget):
-    def __init__(self, parent=None, count_max=100):
-        super().__init__(parent)
-        self.__current_folder = None
-        self.count_max = count_max
+warn(
+    '``zmlx.ui.widgets.code_history_view`` 已弃用（2026-10-16）：控件 ``CodeHistoryView`` 已迁至 '
+    '``zmlx.ui.tabs.code_history_view``；本转发层将于 **2027-10-16** 删除。'
+    '请改用 ``from zmlx.ui.tabs import CodeHistoryView``。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-        layout = QtWidgets.QHBoxLayout(self)
-
-        # 左侧文件列表（保持与之前相同）
-        self._list = QtWidgets.QListWidget()
-        self._list.itemClicked.connect(self.__show_content)
-        layout.addWidget(self._list, stretch=2)
-
-        # 右侧代码编辑器
-        self._edit = CodeEdit()
-        layout.addWidget(self._edit, stretch=5)
-
-        self._list.clear()
-        self._edit.clear()
-
-    def set_folder(self, folder, count_max=None):
-        """
-        设置目标文件夹，自动过滤.py文件
-        """
-        if count_max is not None:
-            self.count_max = count_max
-
-        self.__current_folder = os.path.abspath(folder)
-        self.__refresh_list()
-
-        if self._list.count() > 0:
-            self._list.setCurrentRow(0)
-            self.__show_content(self._list.currentItem())
-
-    def console_exec(self):
-        self._edit.console_exec()
-
-    def __refresh_list(self):
-        """
-        刷新.py文件列表
-        """
-        self._list.clear()
-
-        if not self.__current_folder or not os.path.isdir(
-                self.__current_folder):
-            return
-
-        pattern = os.path.join(self.__current_folder, "*.py")
-        files = [(f, QtCore.QFileInfo(f).lastModified()) for f in
-                 glob.glob(pattern)]
-        sorted_files = sorted(files, key=lambda x: x[1], reverse=True)
-
-        for idx, (file_path, mtime) in enumerate(sorted_files, 1):
-            if idx > self.count_max:
-                break
-            time_str = QtCore.QDateTime.toString(
-                mtime, "yyyy-MM-dd hh:mm")
-            text = read_text(file_path, encoding='utf-8')
-            text = text[:300]
-            item = QtWidgets.QListWidgetItem(
-                f"\n{idx:02d}.\t{time_str}\n\n{text}\n--------------\n\n")
-            item.setData(QtCore.Qt.ItemDataRole.UserRole, file_path)
-            self._list.addItem(item)
-
-    def __show_content(self, item):
-        """
-        使用CodeEdit打开文件
-        """
-        file_path = item.data(QtCore.Qt.ItemDataRole.UserRole)
-        self._edit.open(file_path)  # 依赖CodeEdit自身的错误处理
+from zmlx.ui.tabs.code_history_view import *  # noqa: F401,F403
+from zmlx.ui.tabs.code_history_view import (  # noqa: F401
+    CodeHistoryView
+)

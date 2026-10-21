@@ -3,14 +3,17 @@
 透明度两个通道.
 
 Modified by Claude, 2026-08-12
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
 
 
-import zmlx.alg.sys as warnings
-from zmlx.alg.base import clamp
+
+from zmlx.system import warn
+from zmlx.algs.base import clamp
 from zmlx.exts import is_array
-from zmlx.geometry import rect_3d as rect3
-from zmlx.geometry.base import point_distance as get_distance
+from zmlx.geometries import rect_3d as rect3
+from zmlx.geometries.base import point_distance as get_distance
 from zmlx.pg.colormap import coolwarm
 from zmlx.pg.get_color import get_color
 from zmlx.pg.plot3 import *
@@ -114,7 +117,7 @@ def show_rc3(rc3, color=None, alpha=None, cmap=None, caption=None, on_top=None,
 
     widget = get_widget(caption=caption, on_top=on_top)
     if widget is None:
-        warnings.warn(
+        warn(
             f'The widget is None. caption = {caption}, on_top = {on_top}')
         return
 
@@ -147,7 +150,7 @@ def show_rc3(rc3, color=None, alpha=None, cmap=None, caption=None, on_top=None,
 
 
 def test():
-    from zmlx.geometry.dfn_v3 import to_rc3, create_demo
+    from zmlx.geometries.dfn_v3 import to_rc3, create_demo
     import random
     rc3 = to_rc3(create_demo())
     color = []

@@ -2,18 +2,21 @@
 二维的曲线
 
 Modified by Claude, 2026-08-12
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
 
-import zmlx.alg.sys as warnings
+
+from zmlx.system import warn
 from zmlx.plt.on_ui import show_xy as plot_xy
 
-warnings.warn(f'The module {__name__} will be removed after 2027-5-23',
+warn(f'The module {__name__} will be removed after 2027-5-23',
               DeprecationWarning, stacklevel=2)
 
 
 def plotxy(*args, **kwargs):
-    import zmlx.alg.sys as warnings
-    warnings.warn(
+    import zmlx.algs.sys as warnings
+    warn(
         "plotxy is deprecated, please use plot_xy instead",
         DeprecationWarning,
         stacklevel=2)

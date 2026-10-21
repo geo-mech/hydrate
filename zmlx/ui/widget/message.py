@@ -1,224 +1,48 @@
-"""通知消息系统（MessageEdit 消息中心 widget）.
+"""旧模块名（兼容层，**已弃用**）：``message`` -> :mod:`zmlx.ui.tabs.message`.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/ui/tabs/message.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.ui.tabs import MessageEdit``
+（或 ``from zmlx.ui.tabs.message import MessageEdit``）。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把「**顶层控件**」（只被装配层打开成一个标签页、**不会被任何控件当组件
+（子控件）用**）集中迁到 ``zmlx/ui/tabs/``；本目录只留**底层控件**（会被
+``addWidget()`` 进别处的、或被继承的）以及宿主不是标签页的常驻控件（状态栏按钮 /
+右侧栏面板 / 标签容器 / 对话框组件集）。
+
+但 ``from zmlx.ui.widgets.message import MessageEdit`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史标签页的 ``gui_restore``（重启时按存下来的
+字符串重放）；③ 更早的兼容层（``license_count`` / ``license_feedback``）。
+
+⚠️ 判据与依赖方向见 ``zmlx/ui/tabs/AGENTS.md``。
+
+Created by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-
-import os
-import time
-
-from zmlx.system import app_data, get_hash, log as zml_log
-from zmlx.io.json_ex import read, write
-from zmlx.ui import gui
-from zmlx.ui.alg import create_action
-from zmlx.ui.pyqt import QtWidgets
-from zmlx.ui.widget import Label
+from zmlx.system import warn
 
 
-def add_message(text, *, code=None, color=None):
-    fname = app_data.root('message', get_hash(text) + '.json')
-    data = dict(text=text, code=code, color=color)
-    write(fname, data)
+warn(
+    '``zmlx.ui.widgets.message`` 已弃用（2026-10-16）：控件 ``MessageEdit`` 已迁至 '
+    '``zmlx.ui.tabs.message``；本转发层将于 **2027-10-16** 删除。'
+    '请改用 ``from zmlx.ui.tabs import MessageEdit``。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-    while get_message_count() > 50:
-        data = get_messages()
-        keys = list(data)
-        keys.sort(key=lambda x: data[x]['time'])
-        del_message(keys[0])
-
-
-def test_1():
-    for idx in range(6):
-        add_message(f'M{idx}', code=f'{idx}', color='green')
-        time.sleep(0.1)
-
-
-def get_message_count():
-    folder = app_data.root('message')
-    if not os.path.isdir(folder):
-        return 0
-    return len(os.listdir(folder))
-
-
-def get_messages():
-    folder = app_data.root('message')
-    if not os.path.isdir(folder):
-        return {}
-    result = {}
-    for name in os.listdir(folder):
-        if name.endswith('.json'):
-            try:
-                path = os.path.join(folder, name)
-                data = read(path)
-                data['time'] = os.path.getmtime(path)
-                result[name] = data
-            except Exception as err:
-                print(err)
-    return result
-
-
-def test_2():
-    data = get_messages()
-    print(data)
-    print(list(data))
-
-
-def del_message(name):
-    path = app_data.root('message', name)
-    if os.path.isfile(path):
-        os.remove(path)
-
-
-def del_all_messages():
-    keys = list(get_messages())
-    for key in keys:
-        del_message(key)
-
-
-def test_3():
-    data = get_messages()
-    for key, val in data.items():
-        del_message(key)
-        break
-    print(get_messages())
-
-
-class MessageEdit(QtWidgets.QTableWidget):
-    class RemoveButton(QtWidgets.QToolButton):
-        def __init__(self, parent, key, refresh):
-            super().__init__(parent)
-            self.setText('x')
-            self.key = key
-            self.refresh = refresh
-            self.clicked.connect(self.on_clicked)
-
-        def on_clicked(self):
-            del_message(self.key)
-            self.refresh()
-            gui.refresh_action('show_messages')  # 刷新Action
-
-    class CodeExecute:
-        def __init__(self, code):
-            self.code = code
-
-        def __call__(self):
-            if isinstance(self.code, str):
-                if gui.exists():
-                    gui.start(self.code)
-                else:
-                    print(self.code)
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setColumnCount(4)
-        self.setAlternatingRowColors(True)
-        self.setSelectionBehavior(
-            QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
-        self.setEditTriggers(
-            QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
-        headers = ["#", "时间", "消息", ""]
-        self.setHorizontalHeaderLabels(headers)
-        header = self.horizontalHeader()
-        mode = QtWidgets.QHeaderView.ResizeMode
-        header.setSectionResizeMode(0, mode.ResizeToContents)
-        header.setSectionResizeMode(1, mode.ResizeToContents)
-        header.setSectionResizeMode(2, mode.Stretch)
-        header.setSectionResizeMode(3, mode.ResizeToContents)
-        self.verticalHeader().setVisible(False)
-        self.setShowGrid(False)
-        self.refresh()
-
-    def refresh(self):
-        messages = get_messages()
-        keys = list(messages)
-        keys.sort(key=lambda x: messages[x]['time'])
-
-        self.setRowCount(len(keys))
-        for row, key in enumerate(keys):
-            self.setItem(row, 0, QtWidgets.QTableWidgetItem(str(row + 1)))
-            data = messages[key]
-            # 时间
-            local_time = time.localtime(data['time'])
-            formatted_time = time.strftime("%Y-%m-%d %H:%M:%S", local_time)
-            self.setItem(row, 1, QtWidgets.QTableWidgetItem(
-                formatted_time))
-            # 消息
-            label = Label(parent=self, text=data.get('text', ''),
-                          double_clicked=MessageEdit.CodeExecute(
-                              data.get('code', None)))
-            label.setWordWrap(True)
-            color = data.get('color', None)
-            if color:
-                label.setStyleSheet(f"color: {color};")
-            self.setCellWidget(row, 2, label)
-            # 关闭
-            self.setCellWidget(
-                row, 3,
-                MessageEdit.RemoveButton(self, key, self.refresh))
-
-        if self.rowCount() == 0:  # 尝试关闭标签
-            gui.close_tab_object(self)
-
-    def contextMenuEvent(self, event):
-        # 创建菜单并添加清除动作
-        self.get_context_menu().exec(event.globalPos())
-
-    def get_context_menu(self):
-        menu = QtWidgets.QMenu(self)
-        menu.addAction(create_action(self, "刷新", icon='refresh',
-                                     slot=self.refresh))
-
-        def clear():
-            del_all_messages()
-            self.refresh()
-
-        menu.addAction(create_action(self, '清空', icon='clean',
-                                     slot=clear))
-
-        return menu
-
-
-def test_4():
-    import sys
-    from zmlx.ui.pyqt import QtWidgets
-    app = QtWidgets.QApplication(sys.argv)
-    w = MessageEdit()
-    w.show()
-    sys.exit(app.exec())
-
-
-def setup_ui():
-    def show_messages(on_top=True):
-        """
-        显示消息标签，默认在前端显示
-        """
-
-        def oper(w):
-            w.gui_restore = 'gui.show_messages()'
-            w.refresh()
-
-        gui.get_widget(MessageEdit, caption='通知', oper=oper,
-                       on_top=on_top, caption_color='red', icon='info')
-
-    gui.add_func('show_messages', show_messages)
-
-    def get_text():
-        return f'通知({get_message_count()})'
-
-    gui.add_action(
-        menu='显示', text=get_text, slot=show_messages,
-        name='show_messages',
-        is_visible=lambda: get_message_count() > 0,
-        on_toolbar=True, icon='info',
-    )
-
-    def add_and_show(text, *, code=None, color=None):
-        add_message(text, code=code, color=color)
-        # 为了避免某些频繁的消息，对于添加消息的时候，默认不再强制在前端显示
-        # 2026-1-14
-        # 如果某个标签在显示的时候，会添加消息，那么，on_top=True会使得这个标签无法正常显示
-        show_messages(on_top=False)
-        zml_log(text)
-        gui.refresh_action('show_messages')
-
-    gui.add_func('add_message', add_and_show)
-    gui.add_func('message', add_and_show)
+from zmlx.ui.tabs.message import *  # noqa: F401,F403
+from zmlx.ui.tabs.message import (  # noqa: F401
+    MessageEdit,
+    add_message,
+    del_all_messages,
+    del_message,
+    get_message_count,
+    get_messages,
+    setup_ui
+)

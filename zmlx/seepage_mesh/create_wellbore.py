@@ -1,13 +1,16 @@
-"""已弃用的模块，请改用 zmlx.seepage_mesh.wellbore."""
+"""已弃用的模块，请改用 zmlx.seepage_mesh.wellbore.
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
+"""
+from zmlx.system import warn
 from zmlx.seepage_mesh.wellbore import create_wellbore
 
 __all__ = [
     'create_wellbore'
 ]
 
-import zmlx.alg.sys as warnings
 
-warnings.warn(
+warn(
     f'The modulus {__name__} is deprecated (use zmlx.seepage_mesh.wellbore) and '
     f'will be removed after 2026-4-16',
     DeprecationWarning, stacklevel=2)

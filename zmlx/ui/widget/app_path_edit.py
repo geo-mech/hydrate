@@ -1,56 +1,42 @@
-"""路径搜索浏览器 widget.
+"""旧模块名（兼容层，**已弃用**）：``app_path_edit`` -> :mod:`zmlx.ui.tabs.app_path_edit`.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/ui/tabs/app_path_edit.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.ui.tabs import AppPathEdit``
+（或 ``from zmlx.ui.tabs.app_path_edit import AppPathEdit``）。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把「**顶层控件**」（只被装配层打开成一个标签页、**不会被任何控件当组件
+（子控件）用**）集中迁到 ``zmlx/ui/tabs/``；本目录只留**底层控件**（会被
+``addWidget()`` 进别处的、或被继承的）以及宿主不是标签页的常驻控件（状态栏按钮 /
+右侧栏面板 / 标签容器 / 对话框组件集）。
+
+但 ``from zmlx.ui.widgets.app_path_edit import AppPathEdit`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史标签页的 ``gui_restore``（重启时按存下来的
+字符串重放）；③ 更早的兼容层（``license_count`` / ``license_feedback``）。
+
+⚠️ 判据与依赖方向见 ``zmlx/ui/tabs/AGENTS.md``。
+
+Created by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
+from zmlx.system import warn
 
-from zmlx.ui.pyqt import QtWidgets
 
+warn(
+    '``zmlx.ui.widgets.app_path_edit`` 已弃用（2026-10-16）：控件 ``AppPathEdit`` 已迁至 '
+    '``zmlx.ui.tabs.app_path_edit``；本转发层将于 **2027-10-16** 删除。'
+    '请改用 ``from zmlx.ui.tabs import AppPathEdit``。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-class AppPathEdit(QtWidgets.QWidget):
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        layout = QtWidgets.QVBoxLayout(self)
-
-        label = QtWidgets.QLabel(self)
-        label.setText('请在此输入文件名: ')
-        layout.addWidget(label)
-
-        self.fname_edit = QtWidgets.QLineEdit(self)
-        self.fname_edit.textChanged.connect(self.update_files)
-        layout.addWidget(self.fname_edit)
-
-        label = QtWidgets.QLabel(self)
-        label.setText('完整路径如下: ')
-        layout.addWidget(label)
-
-        self.output = QtWidgets.QTextBrowser(self)
-        layout.addWidget(self.output)
-
-        button = QtWidgets.QPushButton(self)
-        button.setText('添加搜索路径')
-        button.clicked.connect(self.add_path)
-        layout.addWidget(button)
-
-        self.update_files()
-
-    def update_files(self):
-        from zmlx.system import app_data
-        filename = self.fname_edit.text()
-        if len(filename) == 0:
-            text = ''
-            for path in app_data.get_paths():
-                text = text + path + '\n'
-            self.output.setPlainText(text)
-            return
-        results = app_data.find_all(filename)
-        if len(results) == 0:
-            self.output.setPlainText('未找到')
-            return
-        else:
-            self.output.setPlainText('\n'.join(results))
-
-    @staticmethod
-    def add_path():
-        from zmlx.alg.search_paths import choose_path
-        choose_path()
+from zmlx.ui.tabs.app_path_edit import *  # noqa: F401,F403
+from zmlx.ui.tabs.app_path_edit import (  # noqa: F401
+    AppPathEdit
+)

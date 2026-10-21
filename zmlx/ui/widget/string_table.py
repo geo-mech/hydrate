@@ -1,82 +1,42 @@
-"""通用字符串表格 widget.
+"""旧模块名（兼容层，**已弃用**）：``string_table`` -> :mod:`zmlx.ui.tabs.string_table`.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/ui/tabs/string_table.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.ui.tabs import StringTable``
+（或 ``from zmlx.ui.tabs.string_table import StringTable``）。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把「**顶层控件**」（只被装配层打开成一个标签页、**不会被任何控件当组件
+（子控件）用**）集中迁到 ``zmlx/ui/tabs/``；本目录只留**底层控件**（会被
+``addWidget()`` 进别处的、或被继承的）以及宿主不是标签页的常驻控件（状态栏按钮 /
+右侧栏面板 / 标签容器 / 对话框组件集）。
+
+但 ``from zmlx.ui.widgets.string_table import StringTable`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史标签页的 ``gui_restore``（重启时按存下来的
+字符串重放）；③ 更早的兼容层（``license_count`` / ``license_feedback``）。
+
+⚠️ 判据与依赖方向见 ``zmlx/ui/tabs/AGENTS.md``。
+
+Created by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-
-import math
-
-from zmlx.ui.pyqt import QtWidgets, QtCore
+from zmlx.system import warn
 
 
-class StringTable(QtWidgets.QTableWidget):
-    def __init__(self, parent=None, data_columns=3):
-        """
-        创建字符串列表表格控件
+warn(
+    '``zmlx.ui.widgets.string_table`` 已弃用（2026-10-16）：控件 ``StringTable`` 已迁至 '
+    '``zmlx.ui.tabs.string_table``；本转发层将于 **2027-10-16** 删除。'
+    '请改用 ``from zmlx.ui.tabs import StringTable``。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-        Args:
-            parent: 父控件
-            data_columns: 数据列数 (默认3列)
-        """
-        super().__init__(parent)
-        # 保存列数参数
-        self.data_columns = max(1, data_columns)  # 确保至少1列
-        self.setColumnCount(1 + self.data_columns)  # 序号列 + 数据列
-        self.setHorizontalHeaderLabels(
-            ['序号'] + [f'数据 {i + 1}' for i in range(self.data_columns)])
-
-        # 设置列宽：序号列尽可能窄
-        self.horizontalHeader().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeMode.Fixed)
-        self.setColumnWidth(0, 40)  # 40像素宽度的序号列
-        for i in range(1, self.columnCount()):
-            self.horizontalHeader().setSectionResizeMode(i, QtWidgets.QHeaderView.ResizeMode.Stretch)
-
-        # 表格样式设置
-        self.verticalHeader().setVisible(False)
-        self.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.setAlternatingRowColors(True)
-
-    def set_data(self, data):
-        """设置要显示的数据
-
-        Args:
-            data (list): 字符串列表
-        """
-        # 计算需要多少行（ceil(数据个数/列数)）
-        row_count = math.ceil(len(data) / self.data_columns) if data else 0
-        self.setRowCount(row_count)
-
-        # 清除现有数据
-        self.clearContents()
-
-        # 填充表格
-        for i in range(len(data)):
-            row = i // self.data_columns
-            col = (i % self.data_columns) + 1  # 数据列从第2列开始（0列是序号）
-
-            # 序号列（0列）
-            if self.item(row, 0) is None:
-                index_item = QtWidgets.QTableWidgetItem(
-                    str(row * self.data_columns + 1))
-                index_item.setTextAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-                self.setItem(row, 0, index_item)
-
-            # 数据列
-            data_item = QtWidgets.QTableWidgetItem(data[i])
-            self.setItem(row, col, data_item)
-
-        # 为空白单元格添加占位符保持表格整洁
-        if row_count > 0:
-            for row in range(row_count):
-                # 处理第一列（序号）
-                if self.item(row, 0) is None:
-                    index = row * self.data_columns + 1
-                    index_item = QtWidgets.QTableWidgetItem(str(index))
-                    index_item.setTextAlignment(
-                        QtCore.Qt.AlignmentFlag.AlignCenter)
-                    self.setItem(row, 0, index_item)
-
-                # 处理数据列
-                for col in range(1, self.columnCount()):
-                    if self.item(row, col) is None:
-                        empty_item = QtWidgets.QTableWidgetItem("")
-                        self.setItem(row, col, empty_item)
+from zmlx.ui.tabs.string_table import *  # noqa: F401,F403
+from zmlx.ui.tabs.string_table import (  # noqa: F401
+    StringTable
+)

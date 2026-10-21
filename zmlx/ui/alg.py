@@ -3,7 +3,7 @@
 Modified by Claude, 2026-08-12
 """
 
-from zmlx.system import app_data, get_hash
+from zmlx.system import app_data, get_hash, log
 from zmlx.ui.pyqt import QtWidgets
 
 
@@ -27,12 +27,12 @@ def create_action(parent, text, *, icon=None, slot=None):
         def func():
             try:  # 尝试刷新界面
                 slot()
-                app_data.log(f'run <{text}>')
+                log(f'run <{text}>', tag=f'run <{text}>')
                 gui.refresh()
             except Exception as e2:
                 info = f'meet error when run <{text}>. \nInfo = \n {e2}'
                 print(info)
-                app_data.log(info)
+                log(info, tag=info)
 
         ac.triggered.connect(func)
     return ac
@@ -45,7 +45,7 @@ def add_code_history(fname):
         import shutil
 
         from zmlx.system import app_data
-        from zmlx.alg.fsys import time_string
+        from zmlx.algs.fsys import time_string
         if os.path.isfile(fname):
             t_str = time_string()
             shutil.copy(
@@ -198,7 +198,7 @@ def open_url(url: str, caption=None, on_top=None, zoom_factor=None,
 
     if not use_web_engine:
         if os.path.isfile(url):
-            from zmlx.alg import startfile
+            from zmlx.algs import startfile
             startfile(url)
         else:
             from webbrowser import open_new_tab
@@ -363,7 +363,7 @@ def reg_file_type(desc, exts, *, name=None, save=None, load=None, init=None, wid
                         try:
                             save(get_data(x), filename)
                             try:
-                                from zmlx.alg.fsys import getsize_str
+                                from zmlx.algs.fsys import getsize_str
                                 fs = getsize_str(filename)
                                 print(f'成功保存到:\n{filename} ({fs})')
                             except Exception:
@@ -493,7 +493,7 @@ def edit_in_tab(widget_type, set_data, get_data=None, caption=None, support_refr
 def install_package():
     """弹出对话框让用户选择/输入包名并执行 pip install。"""
     from zmlx.data.dep import package_names, import_names
-    from zmlx.alg.sys import pip_install
+    from zmlx.algs.sys import pip_install
     from zmlx.ui.gui_buffer import gui
     text, ok = gui.get_item(
         '安装第三包包', '输入或者选择你所需要的Python包名，并执行pip安装\n',
@@ -520,7 +520,7 @@ def set_plt_export_dpi():
 
 def play_images():
     """顺序播放当前目录下的所有 jpg/png 图片。"""
-    from zmlx.alg.fsys import list_files
+    from zmlx.algs.fsys import list_files
     from zmlx.ui.gui_buffer import gui
 
     def task():

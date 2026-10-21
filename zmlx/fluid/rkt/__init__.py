@@ -1,48 +1,24 @@
-"""基于 Reaktoro 的纯流体物性计算.
+"""旧子包名（兼容层，**已弃用**）：``rkt`` -> :mod:`zmlx.fluids.rkt`.
 
-使用 Supcrt98 (HKF) 数据库，适用于高温高压地质化学场景。
-覆盖 7 种流体，每种提供密度、比热两个函数（不含粘度）。
+⚠️ **本子包只是一层转发**：它下面的每个模块在 ``zmlx/fluid/rkt/`` 里各留了一层
+同名转发；本文件再把子包 ``__init__`` **自己**导出的名字转出来
+（例如 ``co2`` 子包的 ``create`` 就定义在它的 ``__init__.py`` 里）。
 
-    导入:   from zmlx.fluid.rkt import h2o_density
-    调用:   rho = h2o_density(P=10e6, T=300)   # P(Pa), T(K) → kg/m³
-    绘图:   python -m zmlx.fluid.rkt._ch4
-    对比:   python -m zmlx.fluid.rkt._compare_rkt_and_cp
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.fluids.rkt import ...``。
 
-与 CoolProp (cp/) 的关系
--------------------------
-    Reaktoro 使用 Supcrt98 地质化学数据库（HKF 模型），精度低于 CoolProp
-    的 Helmholtz EOS，但支持水溶液多相平衡（见 rkt.aq/）。
+Modified by DeepSeek, 2026-10-16
 
-    H₂O 和 He 两个引擎高度一致（误差 < 1%），可互换使用。
-    对 CO₂ / CH₄ 在近临界区差异显著，工程精度推荐使用 cp/。
-
-流体列表
---------
-    H₂O     h2o_density / h2o_specific_heat
-    H₂      h2_density  / h2_specific_heat
-    He      he_density  / he_specific_heat
-    CH₄     ch4_density / ch4_specific_heat
-    N₂      n2_density  / n2_specific_heat
-    O₂      o2_density  / o2_specific_heat
-    CO₂     co2_density / co2_specific_heat
-
-    C₂H₆ 在 Supcrt98 中不可用；如需乙烷请使用 cp/。
-
-绘图
-----
-    from zmlx.fluid.rkt._plot import plot_contours
-    plot_contours("H2O", h2o_density, h2o_specific_heat)
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
+from zmlx.system import warn
 
-try:
-    from zmlx.fluid.rkt._co2 import co2_density, co2_specific_heat
-    from zmlx.fluid.rkt._h2 import h2_density, h2_specific_heat
-    from zmlx.fluid.rkt._h2o import h2o_density, h2o_specific_heat
-    from zmlx.fluid.rkt._he import he_density, he_specific_heat
-    from zmlx.fluid.rkt._ch4 import ch4_density, ch4_specific_heat
-    from zmlx.fluid.rkt._n2 import n2_density, n2_specific_heat
-    from zmlx.fluid.rkt._o2 import o2_density, o2_specific_heat
-except ModuleNotFoundError as e:
-    raise ModuleNotFoundError(
-        f"{e}\n\nReaktoro 未安装，请运行:  conda install -c conda-forge reaktoro"
-    ) from e
+
+warn(
+    '``zmlx.fluid.rkt`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.fluids.rkt``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
+
+from zmlx.fluids.rkt import *  # noqa: F401,F403

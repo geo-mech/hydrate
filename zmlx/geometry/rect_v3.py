@@ -1,32 +1,39 @@
-"""三维矩形 v3 版本.
+"""旧模块名（兼容层，**已弃用**）：``rect_v3`` -> :mod:`zmlx.geometries.rect_v3`.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/geometries/rect_v3.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.geometries.rect_v3 import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由 ``zmlx.geometry`` 改为 ``zmlx.geometries`` —— 与 ``algs`` / ``utils`` /
+``fluids`` / ``reactions`` / ``ui.widgets`` 统一用**复数**目录名。
+
+但 ``from zmlx.geometry.rect_v3 import ...`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史脚本 / 笔记里的 import；③ 更早的兼容层
+（本包内那 10 个改名之前就已弃用的垫片，它们**原地保留**、不搬进新包）。
+
+⚠️ 完整的兼容策略见 ``zmlx/geometry/__init__.py``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-from zmlx.geometry.point import point_distance as get_distance
-from zmlx.geometry.segment import seg_intersection
+from zmlx.system import warn
 
 
-def get_area(v3):
-    """
-    返回一个裂缝的面积
-    """
-    assert len(v3) == 6
-    x0, y0, z0, x1, y1, z1 = v3
-    return get_distance((x0, y0), (x1, y1)) * abs(z0 - z1)
+warn(
+    '``zmlx.geometry.rect_v3`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.geometries.rect_v3``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-
-def intersected(a, b):
-    """
-    返回两个给定的竖直裂缝a和b是否相交
-    """
-    if a is None or b is None:
-        return False
-    assert len(a) == 6 and len(b) == 6
-    az0, az1 = a[2], a[5]
-    bz0, bz1 = b[2], b[5]
-    if max(bz0, bz1) <= min(az0, az1):
-        return False
-    if min(bz0, bz1) >= max(az0, az1):
-        return False
-    xy = seg_intersection(*a[0: 2], *a[3: 5], *b[0: 2], *b[3: 5])
-    return xy is not None
+from zmlx.geometries.rect_v3 import *  # noqa: F401,F403
+from zmlx.geometries.rect_v3 import (  # noqa: F401
+    get_area,
+    intersected
+)

@@ -1,50 +1,27 @@
-"""裂缝宽度与传导率计算（基于 Crouch & Starfield 1983）.
+"""旧模块名（兼容层，**已改名为** :mod:`zmlx.algs.frac`）.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/algs/frac.py`` 里。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时会发出
+:class:`DeprecationWarning`。**新代码请写** ``from zmlx.algs.frac import ...``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-
-from math import sqrt, pow
-
-from zmlx.alg.base import clamp
+from zmlx.system import warn
 
 
-def get_frac_width(pos, half_length, shear_modulus, poisson_ratio,
-                   fluid_net_pressure):
-    """
-    计算无限大空间内，一个内部充满流体的裂缝的缝宽的理论值。
-    参考文献：
-    Crouch, S.L.; Starfield, A.M.
-    Boundary Element Methods in Solid Mechanics; George Allen & Unwin: London, UK, 1983.
-    参数：
-    pos:               位置
-    half_length:       裂缝的半长
-    shear_modulus:     剪切模量
-    poisson_ratio:     泊松比
-    fluid_net_pressure:裂缝内流体的净压力
-    return:            裂缝的开度
-    """
-    assert shear_modulus > 0
-    assert 0 < poisson_ratio < 0.5
-    x = 2.0 * (1.0 - poisson_ratio) / shear_modulus
-    y = sqrt(max(0.0, 1 - pow(pos / half_length, 2)))
-    return x * y * fluid_net_pressure * half_length
+warn(
+    '``zmlx.alg.frac`` 已弃用（2026-10-16）：算法包已改名为 ``zmlx.algs``；'
+    '本转发层将于 **2027-10-16** 删除。请改用 ``from zmlx.algs.frac import ...``。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-
-def get_frac_cond(fracture_aperture, fracture_length, fracture_height,
-                  fluid_viscosity):
-    """
-    计算裂缝的导流系数 (假设裂缝的横截面积是一个矩形)
-    """
-    if fracture_aperture <= 0.0:
-        return 1.0e-30
-    assert fracture_aperture < 1e50
-    assert fracture_length > 1e-50
-    assert fluid_viscosity > 1e-50
-    # Assume the cross-section is a Rectangle. This may be not right 2020-9-15
-    fluid_viscosity = clamp(fluid_viscosity, 1.0e-10, 1.0e5)
-    return clamp((fracture_aperture ** 3) * fracture_height / (
-            fluid_viscosity * fracture_length * 12.0),
-                 1.0e-30, 1.0e20)
-
-
-g_1cm = get_frac_cond(1.0e-3, 1.0, 1.0, 1.0) * 10.0  # 1cm缝宽对应导流系数
+from zmlx.algs.frac import *  # noqa: F401,F403
+from zmlx.algs.frac import (  # noqa: F401
+    g_1cm,
+    get_frac_cond,
+    get_frac_width
+)

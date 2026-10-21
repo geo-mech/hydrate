@@ -1,76 +1,40 @@
-"""水合物渗流网格。
+"""旧模块名（兼容层，**已弃用**）：``hydrate`` -> :mod:`zmlx.seepage_meshes.hydrate`.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/seepage_meshes/hydrate.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.seepage_meshes.hydrate import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由 ``zmlx.seepage_mesh`` 改为 ``zmlx.seepage_meshes`` —— 与 ``algs`` / ``utils`` /
+``fluids`` / ``reactions`` / ``geometries`` / ``ui.widgets`` 统一用**复数**目录名。
+
+但 ``from zmlx.seepage_mesh.hydrate import ...`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史脚本 / 笔记里的 import；③ 更早的兼容层。
+
+⚠️ 完整的兼容策略见 ``zmlx/seepage_mesh/__init__.py``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-from zmlx.exts import np
-from zmlx.seepage_mesh.cube import create_cube
+from zmlx.system import warn
 
 
-def create_xz(x_max, z_min, z_max, dx, dz, upper=0, lower=0):
-    """
-    创建一个具有上覆层和下伏层的二维网格
+warn(
+    '``zmlx.seepage_mesh.hydrate`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.seepage_meshes.hydrate``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-    参数:
-    - x_max: x方向的最大值
-    - z_min: z方向的最小值
-    - z_max: z方向的最大值
-    - dx: x方向的网格间距
-    - dz: z方向的网格间距
-    - upper: 上覆层的厚度
-    - lower: 下伏层的厚度
+from zmlx.seepage_meshes.hydrate import *  # noqa: F401,F403
 
-    返回:
-    - 一个二维网格
-
-    注意:
-    - 上覆层和下伏层的厚度不能超过总厚度的90%
-    - x方向的网格数量必须在5到200之间
-    """
-    # 创建x
-    assert x_max > 0
-    jx = round(x_max / dx) + 1
-    assert 5 <= jx <= 200
-    vx = np.linspace(0, x_max, jx)
-
-    # 创建z
-    assert upper >= 0
-    assert lower >= 0
-    assert upper + lower < (z_max - z_min) * 0.9
-
-    # 创建z方向的网格
-    if lower > dz:
-        jz = round(lower / (dz * 3)) + 1
-        assert jz >= 2
-        vz1 = np.linspace(
-            z_min, z_min + lower, jz, endpoint=False).tolist()
-        z0 = z_min + lower
-    else:
-        vz1 = []
-        z0 = z_min
-
-    if upper > dz:
-        jz = round(upper / (dz * 3)) + 1
-        assert jz >= 2
-        vz3 = np.linspace(
-            z_max, z_max - upper, jz, endpoint=False).tolist()
-        vz3.reverse()
-        z1 = z_max - upper
-    else:
-        vz3 = []
-        z1 = z_max
-
-    # 中间水合物层的网格
-    jz = round((z1 - z0) / dz) + 1
-    assert jz >= 2
-    vz2 = np.linspace(z0, z1, jz).tolist()
-
-    # 所有的z方向的网格节点
-    vz = vz1 + vz2 + vz3  # z方向的节点
-
-    return create_cube(x=vx, y=[-0.5, 0.5], z=vz)
-
-
-if __name__ == '__main__':
-    print(create_xz(
-        x_max=50, z_min=-100, z_max=0, dx=1, dz=1, upper=30,
-        lower=30))
+from zmlx.seepage_meshes.hydrate import (  # noqa: F401
+    create_cube,
+    create_xz,
+    np,
+)

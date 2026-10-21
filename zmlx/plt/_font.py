@@ -4,6 +4,8 @@ matplotlib 字体配置工具。
 Modified by Claude, 2026-08-12
 """
 
+import sys
+
 from zmlx.system import execute_once, in_windows, in_linux, in_macos
 
 
@@ -47,4 +49,4 @@ def set_chinese_font():
             'legend.fontsize': 'large',
         })
     except Exception as font_err:
-        print(f'Error when set font: {font_err}')
+        print(f'Error when set font: {font_err}', file=sys.stderr)

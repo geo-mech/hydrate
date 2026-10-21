@@ -5,15 +5,18 @@
 2024-4-3
 
 Modified by Claude, 2026-08-12
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
 
-import zmlx.alg.sys as warnings
+
+from zmlx.system import warn
 from zmlx.exts import Seepage, np, const_f64_ptr, f64_ptr
 from zmlx.tfc._base import as_numpy
 from zmlx.tfc._base import get_face_sum, get_face_diff, get_face_left, \
     get_face_right
 
-warnings.warn(f'<{__name__}> will be removed after 2025-4-13',
+warn(f'<{__name__}> will be removed after 2025-4-13',
               DeprecationWarning, stacklevel=2)
 
 

@@ -1,10 +1,14 @@
 """DLL 加载与 C 函数注册（zml.dll 入口）.
 
 Modified by Claude, 2026-08-12
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
+from zmlx.system import log, warn
 import ctypes
 import os
-import warnings
+import sys
+
 from ctypes import c_bool, c_char_p, c_void_p, c_size_t, c_int, CFUNCTYPE
 from ctypes import cdll
 from typing import Optional, Any, Callable
@@ -39,7 +43,7 @@ class _NullFunction:
             - 保持与正常函数相同地调用接口
         """
         info = f'calling null function {self.name}(args={args}, kwargs={kwargs})'
-        warnings.warn(info, stacklevel=2)
+        warn(info, stacklevel=2)
 
 
 def get_func(dll_obj: Optional[ctypes.CDLL], restype: Any, name: str, *argtypes: Any) -> Callable:
@@ -67,10 +71,16 @@ def get_func(dll_obj: Optional[ctypes.CDLL], restype: Any, name: str, *argtypes:
     if fn is None:
         if dll_obj is not None:
             info = f'Warning: can not find function <{name}> in <{dll_obj}>'
-            warnings.warn(info, stacklevel=2)
+            warn(info, stacklevel=2)
         return _NullFunction(name)
-    if restype is not None:
-        fn.restype = restype
+    # ⚠️ ``None`` 就是 ctypes 的「void」，但必须**显式赋值**：以前这里是
+    #    ``if restype is not None: fn.restype = restype``，于是 None 被跳过、
+    #    ctypes 保留缺省的 ``c_int`` —— 一个 C++ 的 void 函数在 Python 侧就会
+    #    “返回”返回寄存器里的残留值（随机整数），调用方据此分支便时对时错
+    #    （v1.10.2 已发现 vmole_roll_back / forcemap_erode 两处声明问题）。
+    #    已核对：全部 771 个 ``use(None, ...)`` 声明的导出在 C++ 侧返回的都是
+    #    void，所以这里把 None 当 void 处理是安全的。
+    fn.restype = restype
     if len(argtypes) > 0:
         fn.argtypes = argtypes
     assert callable(fn), f"function {name} is not callable"
@@ -102,7 +112,7 @@ def load_cdll(name: str, *, first: Optional[str] = None) -> Optional[ctypes.CDLL
             assert isinstance(path, str)
             return cdll.LoadLibrary(path)
         except Exception as e:
-            warnings.warn(
+            warn(
                 f'Error load library from <{path}>. Message = {e}',
                 stacklevel=2)
             return None
@@ -110,7 +120,7 @@ def load_cdll(name: str, *, first: Optional[str] = None) -> Optional[ctypes.CDLL
         try:
             return cdll.LoadLibrary(name)
         except Exception as e:
-            warnings.warn(
+            warn(
                 f'Error load library from <{name}>. Message = {e}',
                 stacklevel=2)
             return None
@@ -148,10 +158,14 @@ class DllCore:
         self.safe_mode = True
         # 检查动态链接库是否成功加载
         if self.dll is None:
-            warnings.warn("DllCore: dll_obj is None", category=RuntimeWarning, stacklevel=2)
+            warn("DllCore: dll_obj is None", category=RuntimeWarning, stacklevel=2)
 
         # 已经声明的DLL函数接口
         self._dll_funcs = {}
+        # 声明过、但**符号在 DLL 里实际不存在**的接口名（登记进去的是
+        # _NullFunction 占位符）。供调用方判断「这个导出到底在不在」，
+        # 见 is_null_func()。
+        self._null_funcs = set()
 
         self.dll_has_error = get_func(self.dll, c_bool, 'has_error')
         self.dll_pop_error = get_func(
@@ -317,7 +331,7 @@ class DllCore:
             error = self.pop_error()
             while self.has_error():
                 error = f'{error} \n\n {self.pop_error()}'
-            app_data.log(error)
+            log(error, tag=error)
             raise RuntimeError(error)
 
     def set_error_handle(self, func: Callable[[str], None]):
@@ -425,12 +439,12 @@ class DllCore:
             - 保证错误状态重置
         """
         while self.has_error():
-            print('\nError: \n', self.pop_error(), '\n')
+            print('\nError: \n', self.pop_error(), '\n', file=sys.stderr)
         result = fn()
         self.check_error()
         if self.has_warning():  # Print the warning information
             while self.has_warning():
-                print('\nWarning: \n', self.pop_warning(), '\n')
+                print('\nWarning: \n', self.pop_warning(), '\n', file=sys.stderr)
         return result
 
     def print_logs(self, path: Optional[str] = None):
@@ -465,18 +479,43 @@ class DllCore:
         if self.has_dll():
             if self._dll_funcs.get(name) is not None:
                 info = f'Warning: function <{name}> already exists'
-                warnings.warn(info, stacklevel=2)
+                warn(info, stacklevel=2)
             else:
                 func = get_func(self.dll, restype, name, *argtypes)
                 if func is not None:
                     self._dll_funcs[name] = lambda *args: self.run(
                         lambda: func(*args))
+                    if isinstance(func, _NullFunction):
+                        # 符号在 DLL 里找不到，get_func 给的是占位符 —— 仍然登记
+                        # （调用它只会发一条警告并返回 None，是安全的），但要把
+                        # 名字记下来，好让调用方能提前判断"这个导出不存在"。
+                        self._null_funcs.add(name)
 
     def get_dll_funcs(self):
         """
         返回内核函数字典
         """
         return self._dll_funcs
+
+    def is_null_func(self, name: str) -> bool:
+        """判断某个已声明的接口是否只是「符号不存在的占位符」.
+
+        ⚠️ ``use()`` 在 DLL 里找不到符号时，会把 ``_NullFunction`` 占位符**照样
+        登记**进 ``_dll_funcs``（调用它只发一条警告并返回 ``None``，不抛异常）。
+        因此 ``get_dll_funcs().get(name) is None`` **不能**用来判断"这个导出到底
+        在不在"—— 符号缺失时它同样不是 None。要判断请用本方法。
+
+        Args:
+            name (str): 之前用 ``use()`` 声明过的接口名。
+
+        Returns:
+            bool: True 表示该符号在 DLL 里不存在（拿到的是占位符）。
+
+        Note:
+            - 旧 DLL 缺少新版本才加的导出时，本方法返回 True；
+              调用方据此可以提前返回 "dll not found" 之类的可读提示。
+        """
+        return name in self._null_funcs
 
     def __getattr__(self, name: str):
         """动态获取已声明的内核函数。
@@ -508,4 +547,4 @@ try:
     version = core.version
 except Exception as version_error:
     version = 110101
-    warnings.warn(f'Meet error when get version: {version_error}', stacklevel=2)
+    warn(f'Meet error when get version: {version_error}', stacklevel=2)

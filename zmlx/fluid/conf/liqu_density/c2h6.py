@@ -1,66 +1,37 @@
+"""旧模块名（兼容层，**已弃用**）：``conf.liqu_density.c2h6`` -> :mod:`zmlx.fluids.conf.liqu_density.c2h6`.
+
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/fluids/conf.liqu_density.c2h6.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.fluids.conf.liqu_density.c2h6 import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由 ``zmlx.fluid`` 改为 ``zmlx.fluids`` —— 与 ``algs`` / ``utils`` /
+``ui.widgets`` 统一用**复数**目录名。
+
+但 ``from zmlx.fluid.conf.liqu_density.c2h6 import ...`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史脚本 / 笔记里的 import；③ 更早的兼容层。
+
+⚠️ 完整的兼容策略见 ``zmlx/fluid/__init__.py``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-Created on Thu Jan 26 19:09:14 2023
-
-Density of Compressed liquid base on:
-Thomson, G. H., Brobst, K. R., & Hankinson, R. W. (1982).
-An improved correlation for densities of compressed liquids and liquid mixtures. 
-AIChE Journal, 28(4), 671–676. doi:10.1002/aic.690280420
-
-Vapor Pressure by: 
-Antoine, C. 1888. Tensions des Vapeurs: Nouvelle Relation Entre les Tensions et les Tempé. Compt.Rend. 107:681-684.
-Yaws, Carl L. The Yaws Handbook of Vapor Pressure: Antoine Coefficients. 1 edition. Houston, Tex: Gulf Publishing Company, 2007.
-
-Vs = Saturation liquid Volumen using the packages 
-chemicals: Chemical properties component of Chemical Engineering Design Library (ChEDL)
-https://chemicals.readthedocs.io/index.html
-https://github.com/CalebBell/chemicals
-https://chemicals.readthedocs.io/chemicals.volume.html#pure-high-pressure-liquid-correlations
-
-TEMP = (20-280)K
-"""
-import \
-    chemicals  # pip install chemicals (https://chemicals.readthedocs.io/index.html#installation)
-
-from zmlx.exts import np
+from zmlx.system import warn
 
 
-def liq_den_c2h6(P, T):
-    # parameters COSTALD
-    a = -9.070217
-    b = 62.45326
-    d = -135.1102
-    f = 4.79594
-    g = 0.250047
-    h = 1.14188
-    j = 0.0861488
-    k = 0.0344483
+warn(
+    '``zmlx.fluid.conf.liqu_density.c2h6`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.fluids.conf.liqu_density.c2h6``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-    # compound properties
-    PM = 0.03707  # Kg/mol
-    Tc = 305.42  # K
-    Pc = 4.8746E+6  # Pa
-    Vc = 1.455e-4  # m3/mol
-    omega = 0.099
-
-    # Vapor Pressure Antoine (Yaws Carl)
-    t = T - 273.15  # convert kelvin to celsius
-    A = 6.95335
-    B = 699.106
-    C = 260.264
-    LOGP = A - (B / (t + C))
-    Pv = 10 ** (LOGP) * 133.32  # convert mmHg to Pa
-    Psat = Pv
-
-    # Saturation liquid Volumen
-    Vs = chemicals.volume.COSTALD(T, Tc, Vc, omega)
-
-    # COSTALD EQUATION
-    e = np.exp(f + omega * (g + h * omega))
-    C = j + k * omega
-    tau = (1.0 - T / Tc)
-    tau13 = tau ** (1.0 / 3.0)
-    B = Pc * (-1.0 + a * tau13 + b * tau13 * tau13 + d * tau + e * tau * tau13)
-    l = (B + P) / (B + Psat)
-    V = Vs * (1.0 - C * np.log(l))  # m3/mol
-    den = (1 / V) * PM
-    return den
+from zmlx.fluids.conf.liqu_density.c2h6 import *  # noqa: F401,F403
+from zmlx.fluids.conf.liqu_density.c2h6 import (  # noqa: F401
+    liq_den_c2h6
+)

@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "IggHydrate"
-version = "1.8.11"
+version = "1.9.0"
 description = "IggHydrate - Comprehensive hydrate simulation tool (import as 'zmlx', conflicts with other zmlx packages - uninstall them first)"
 authors = [
     { name = "Zhaobin Zhang", email = "zhangzhaobin@mail.iggcas.ac.cn" }
@@ -59,7 +59,9 @@ accelerate = ["numba"]
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["*"]
-exclude = ["tests*", "*tests*"]
+# ⚠️ _private 下是**内部说明**（授权体系的原理、协议细节），
+#    刻意**不随发行包发布**，见 zmlx/_private/AUTHORIZATION_NOTES.md 的文件头。
+exclude = ["tests*", "*tests*", "_private*", "*_private*"]
 
 [tool.setuptools]
 include-package-data = true
@@ -67,4 +69,5 @@ py-modules = ["zml", "zml_ui"]
 
 [tool.setuptools.package-data]
 # Include all files in zmlx directory
-"zmlx" = ["**/*"]
+# ⚠️ 排除 _private：那里放的是不对外公开的内部说明（同上）。
+"zmlx" = ["**/*", "!_private/**", "!_private"]

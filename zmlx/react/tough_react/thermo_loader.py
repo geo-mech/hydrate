@@ -1,74 +1,38 @@
-"""ToughReact 热力学数据加载.
+"""旧模块名（兼容层，**已弃用**）：``tough_react.thermo_loader`` -> :mod:`zmlx.reactions.tough_react.thermo_loader`.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/reactions/tough_react/thermo_loader.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.reactions.tough_react.thermo_loader import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由 ``zmlx.react`` 改为 ``zmlx.reactions`` —— 与 ``algs`` / ``utils`` /
+``fluids`` / ``ui.widgets`` 统一用**复数**目录名（本包装的是一堆**反应**定义，复数才贴切）。
+
+但 ``from zmlx.react.tough_react.thermo_loader import ...`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史脚本 / 笔记里的 import；③ 更早的兼容层。
+
+⚠️ 完整的兼容策略见 ``zmlx/react/__init__.py``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-import codecs
+from zmlx.system import warn
 
-import numpy as np
 
-# 1. 读取 tdat 文件（Latin-1 编码）
-with codecs.open('thermo_data.tdat', 'r', 'latin-1') as f:
-    lines = [line.rstrip('\n') for line in f]
+warn(
+    '``zmlx.react.tough_react.thermo_loader`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.reactions.tough_react.thermo_loader``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-# 2. 找到包含给定反应物的反应条目
-reactants = ['Ca++', 'CO3--']
-target_block = None
-for i, line in enumerate(lines):
-    if 'species in reaction' in line:
-        # 解析化学计量行，提取正计量的物种名
-        parts = line.split()
-        try:
-            n = int(parts[0])
-        except Exception:
-            continue
-        # 回溯寻找反应名称行
-        name_line = None
-        k = i - 1
-        while k >= 0:
-            if lines[k].strip() == '' or lines[k].startswith('*') or lines[k].startswith(' '):
-                k -= 1
-            else:
-                name_line = lines[k].strip()
-                break
-        # 提取物种列表
-        species_tokens = []
-        m = i + 1
-        while m < len(lines) and len(species_tokens) // 2 < n:
-            tokens = lines[m].strip().split()
-            species_tokens.extend(tokens)
-            m += 1
-        species = [species_tokens[j * 2 + 1] for j in range(n)]
-        # 检查是否包含反应物列表（兼容 CO3-- 与 HCO3-）
-        names = [s for s in species if float(species_tokens[2 * species.index(s)]) > 0]
-        if 'Ca++' in names and any(sp in names for sp in ['CO3--', 'HCO3-']):
-            target_block = (name_line, species_tokens, m)
-            break
-
-# 3. 解析目标反应的 logK 数据
-if target_block:
-    name_line, species_tokens, m = target_block
-    # 从 m 行开始取出后续的 logK 数值
-    log10K_values = []
-    while len(log10K_values) < 8 and m < len(lines):
-        nums = [float(x) for x in lines[m].split() if x.replace('.', '', 1).replace('-', '', 1).isdigit()]
-        log10K_values.extend(nums)
-        m += 1
-    log10K = np.array(log10K_values[:8])
-    T_C = np.array([0, 25, 60, 100, 150, 200, 250, 300])
-    T_K = T_C + 273.15
-    K_vals = 10 ** log10K
-
-    # 4. 拟合 Van't Hoff 曲线
-    invT = 1.0 / T_K
-    lnK = np.log(K_vals)
-    slope, intercept = np.polyfit(invT, lnK, 1)
-    # 任意温度计算 K(T) 和归一化 k(T)
-    T_query = np.linspace(273.15, 573.15, 101)  # 0°C 到 300°C
-    lnK_query = intercept + slope * (1.0 / T_query)
-    K_query = np.exp(lnK_query)
-    k_norm = K_query / np.max(K_query)
-
-    # 5. 输出结果（表格和图形）
-    print("T(°C)\tlog10K\tK\tk_norm")
-    for Tc, lnKv, Kv, kn in zip(T_query - 273.15, lnK_query / np.log(10), K_query, k_norm):
-        print(f"{Tc:.0f}\t{(lnKv):.2f}\t{Kv:.2e}\t{kn:.3f}")
+from zmlx.reactions.tough_react.thermo_loader import *  # noqa: F401,F403
+from zmlx.reactions.tough_react.thermo_loader import (  # noqa: F401
+    reactants,
+    target_block
+)

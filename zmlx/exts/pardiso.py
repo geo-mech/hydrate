@@ -13,9 +13,12 @@
     # solver.ctx → 上下文指针 (solver.handle)
 
 Modified by Claude, 2026-08-12
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
 
 
+from zmlx.system import warn
 import ctypes
 import os
 import sys
@@ -81,7 +84,7 @@ def _load_pardiso_dll():
         return ctypes.CDLL(dll_path)
     except OSError as e:
         import warnings
-        warnings.warn(f'Cannot load pardiso.dll: {e}')
+        warn(f'Cannot load pardiso.dll: {e}')
         return None
 
 

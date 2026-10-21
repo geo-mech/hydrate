@@ -1,37 +1,38 @@
-import zmlx.alg.sys as warnings
+"""旧模块名（兼容层，**已弃用**）：``h2o_ice`` -> :mod:`zmlx.fluids.h2o_ice`.
 
-from zmlx.exts import FluDef
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/fluids/h2o_ice.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
 
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.fluids.h2o_ice import ...``。
 
-def create(name=None):
-    """
-    冰的密度：https://zhidao.baidu.com/question/327692583825967245.html
-    https://baike.baidu.com/item/%E5%86%B0/84742
+为什么留着而不删
+----------------
 
-    冰在0℃下密度为0.917 g/cm³。
-    在常压环境下，冰的熔点为0℃。0℃水冻结成冰时，体积会增大约1/9（水体积最小时为4℃）。据观测，封闭条件下水冻结时，体积增加所产生的压强可达2500大气压。
+2026-10-16 把包名由 ``zmlx.fluid`` 改为 ``zmlx.fluids`` —— 与 ``algs`` / ``utils`` /
+``ui.widgets`` 统一用**复数**目录名。
 
+但 ``from zmlx.fluid.h2o_ice import ...`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史脚本 / 笔记里的 import；③ 更早的兼容层。
 
-    冰的比热：
-    https://zhidao.baidu.com/question/919092470639544179.html
+⚠️ 完整的兼容策略见 ``zmlx/fluid/__init__.py``。
 
-    冰的比热容是：2100J/(KG.℃)
-    比热容的单位：J/(kg•°C)
-    """
-    den = 917.0
-    specific_heat = 2100.0
-    return FluDef(
-        den=den,
-        vis=1.0e30,
-        specific_heat=specific_heat, name=name)
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
+"""
+from zmlx.system import warn
 
 
-def create_flu(*args, **kwargs):
-    warnings.warn('use function <create> instead', DeprecationWarning,
-                  stacklevel=2)
-    return create(*args, **kwargs)
+warn(
+    '``zmlx.fluid.h2o_ice`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.fluids.h2o_ice``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-
-if __name__ == '__main__':
-    flu = create()
-    print(flu)
+from zmlx.fluids.h2o_ice import *  # noqa: F401,F403
+from zmlx.fluids.h2o_ice import (  # noqa: F401
+    create,
+    create_flu
+)

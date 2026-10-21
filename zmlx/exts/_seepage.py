@@ -1,18 +1,21 @@
 """渗流模型（Seepage）绑定 — 核心模块.
 
 Modified by Claude, 2026-08-12
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
+from zmlx.system import warn
 import ctypes
 import math
-import warnings
+
 from ctypes import c_double, c_void_p, c_size_t, c_bool, c_char_p, POINTER, c_int64
 from typing import Optional, Iterable, Tuple, List, Union, Any
 
+from zmlx.exts import web_license
 from zmlx.exts._dll import core, make_c_char_p
 from zmlx.exts._fmap import FileMap
 from zmlx.exts._interp import Interp1, Interp2
 from zmlx.exts._lexpr import LinearExpr
-from zmlx.exts._lic import lic
 from zmlx.exts._map import Map
 from zmlx.exts._mesh import Groups
 from zmlx.exts._pool import ThreadPool
@@ -608,11 +611,11 @@ class Reaction(HasHandle):
                         lambda m, ind: m.get_component(ind))
 
     def add_inhibitor(self, *args, **kwargs):
-        warnings.warn(
+        warn(
             'Reaction.add_inhibitor will be removed after 2026-5-31, '
-            'use zmlx.react.alg.add_inhibitor instead',
+            'use zmlx.reactions.alg.add_inhibitor instead',
             DeprecationWarning, stacklevel=2)
-        from zmlx.react import alg
+        from zmlx.reactions import alg
         return alg.add_inhibitor(self, *args, **kwargs)
 
     def clear_inhibitors(self):
@@ -697,7 +700,7 @@ class Reaction(HasHandle):
         Warnings:
             此方法已弃用，将在2024-1-1之后移除，请使用 <adjust_weights>。
         """
-        warnings.warn(
+        warn(
             'Use <adjust_weights>. <adjust_widghts> will be '
             'removed after 2024-1-1',
             DeprecationWarning, stacklevel=2)
@@ -1561,7 +1564,7 @@ class FluData(HasHandle):
             bool: 如果流体的粘性系数大于等于0.5e30，则返回True；
             否则返回False。
         """
-        warnings.warn('FluData.is_solid will be deleted '
+        warn('FluData.is_solid will be deleted '
                       'after 2024-5-5',
                       DeprecationWarning, stacklevel=2)
         return self.vis >= 0.5e30
@@ -2083,7 +2086,7 @@ class CellData(HasHandle):
         self.k = k
         v0 = v - p * k
         if v0 <= 0:
-            warnings.warn(
+            warn(
                 f'v0 (= {v0}) <= 0 at {self.pos}. '
                 f'p={p}, v={v}, dp={dp}, dv={dv}')
         self.v0 = v0
@@ -2686,7 +2689,7 @@ class Cell(CellData):
         return Iterator(self, self.face_number, lambda m, ind: m.get_face(ind))
 
     def set_ini(self, *args, **kwargs):
-        warnings.warn("set_ini is deprecated (removed after 2027-6-3). Please use zmlx.tfc.set_cell_ini instead.",
+        warn("set_ini is deprecated (removed after 2027-6-3). Please use zmlx.tfc.set_cell_ini instead.",
                       stacklevel=2, category=DeprecationWarning)
         from zmlx.tfc import set_cell_ini
         set_cell_ini(self, *args, **kwargs)
@@ -3392,7 +3395,7 @@ class Injector(HasHandle):
         Returns:
             int: 固定返回0。
         """
-        warnings.warn('Property Injector.time '
+        warn('Property Injector.time '
                       'has been removed',
                       DeprecationWarning, stacklevel=2)
         return 0
@@ -3408,7 +3411,7 @@ class Injector(HasHandle):
         Args:
             _: 此参数无实际作用。
         """
-        warnings.warn('Property Injector.time '
+        warn('Property Injector.time '
                       'has been removed',
                       DeprecationWarning, stacklevel=2)
 
@@ -3639,7 +3642,7 @@ class Injector(HasHandle):
         """
         assert isinstance(model, Seepage)
         if time is None:
-            warnings.warn(
+            warn(
                 'time is None for Injector, '
                 'use time=0 as default')
             time = 0
@@ -3804,8 +3807,8 @@ class FlowSol(HasHandle):
                 dt_error: 1 (当dt错误的时候；)；若存在此key，则迭代失败
                 dt: 实际采用的时间步长。
         """
-        # 检查计算模块是否有授权
-        lic.check_once()
+        # 检查流动功能是否有授权（feature='flow'；每个 feature 每次运行最多查一次）
+        web_license.check_once(feature='flow')
 
         if solver is None:
             solver = self.get_sol()
@@ -3825,7 +3828,7 @@ class FlowSol(HasHandle):
             ca_p = 1000000000
 
         if dv_rela is not None:
-            warnings.warn("Option dv_rela is deprecated and will be removed after 2027-6-15",
+            warn("Option dv_rela is deprecated and will be removed after 2027-6-15",
                           DeprecationWarning, stacklevel=2)
 
         if cfl is None and dv_rela is not None:
@@ -3874,14 +3877,14 @@ class FlowSol(HasHandle):
         Returns:
             float: 建议的时间步长。
         """
-        warnings.warn("FlowSol.get_recommended_dt is deprecated (will be removed after 2027-6-8).", DeprecationWarning,
+        warn("FlowSol.get_recommended_dt is deprecated (will be removed after 2027-6-8).", DeprecationWarning,
                       stacklevel=2)
 
         real_cfl = core.seepage_fs_get_dv(self.handle)
         real_cfl = max(1.0e-6, real_cfl)
 
         if dv_relative is not None:
-            warnings.warn("dv_relative is deprecated and will be removed after 2027-6-15",
+            warn("dv_relative is deprecated and will be removed after 2027-6-15",
                           DeprecationWarning, stacklevel=2
                           )
 
@@ -3965,7 +3968,8 @@ class ThermalSol(HasHandle):
         Returns:
             dict: 包含迭代报告的字典。
         """
-        lic.check_once()
+        # 检查传热功能是否有授权（feature='thermal'；每个 feature 每次运行最多查一次）
+        web_license.check_once(feature='thermal')
 
         if dt <= 0 or ca_t is None or ca_mc is None or fa_g is None:  # 此时无法迭代，直接返回
             return None
@@ -4029,7 +4033,7 @@ class ThermalSol(HasHandle):
         Returns:
             float: 建议的时间步长。
         """
-        warnings.warn("ThermalSol.get_recommended_dt is deprecated (will be removed after 2027-6-8).",
+        warn("ThermalSol.get_recommended_dt is deprecated (will be removed after 2027-6-8).",
                       DeprecationWarning,
                       stacklevel=2)
         assert ca_mc is not None, "ca_mc must be specified"
@@ -4041,7 +4045,7 @@ class ThermalSol(HasHandle):
         prev_cfl = max(1.0e-6, prev_cfl)
 
         if dv_relative is not None:
-            warnings.warn("dv_relative is deprecated and will be removed after 2027-6-15",
+            warn("dv_relative is deprecated and will be removed after 2027-6-15",
                           DeprecationWarning, stacklevel=2
                           )
 
@@ -4561,10 +4565,10 @@ class Seepage(HasHandle, HasCells):
                             temp.mass = 1.0  # 将质量设置为宏观的量，确保属性可以被使用(since 2025-12-9)
                         inj.flu.clone(temp)
                     else:
-                        warnings.warn(
+                        warn(
                             f"do not have fluid {inj.fid} in cell {cell_id}", RuntimeWarning, stacklevel=2)
                 else:
-                    warnings.warn(
+                    warn(
                         f"do not have cell when try to use insitu FluData", RuntimeWarning, stacklevel=2)
 
         return inj
@@ -4612,7 +4616,7 @@ class Seepage(HasHandle, HasCells):
             pool: 线程池
         """
         if time is None:
-            warnings.warn(
+            warn(
                 'time is None for Injector, use time=0 as default')
             time = 0
         if dt is None:
@@ -5209,8 +5213,8 @@ class Seepage(HasHandle, HasCells):
         """
         if not isinstance(data, Reaction):
             assert isinstance(data, dict)
-            from zmlx.react import alg
-            warnings.warn(
+            from zmlx.reactions import alg
+            warn(
                 'The none Reaction type will '
                 'not be supported after 2026-2-7',
                 DeprecationWarning, stacklevel=2)
@@ -5265,13 +5269,13 @@ class Seepage(HasHandle, HasCells):
 
         Warnings:
             zml.Reaction.create_reaction 将在2026-2-7之后移除，
-            请使用 zmlx.react.create_reaction 代替。
+            请使用 zmlx.reactions.create_reaction 代替。
         """
-        warnings.warn(
+        warn(
             'zml.Reaction.create_reaction will be '
             'remove after 2026-2-7',
             DeprecationWarning, stacklevel=2)
-        from zmlx.react.alg import create_reaction as create
+        from zmlx.reactions.alg import create_reaction as create
         return create(self, **kwargs)
 
     @property
@@ -5962,19 +5966,19 @@ class Seepage(HasHandle, HasCells):
             assert fid is None
             all_right = True
             if ca_g is None:
-                warnings.warn('ca_g is None in Seepage.exchange_heat')
+                warn('ca_g is None in Seepage.exchange_heat')
                 all_right = False
             if ca_t is None:
-                warnings.warn('ca_t is None in Seepage.exchange_heat')
+                warn('ca_t is None in Seepage.exchange_heat')
                 all_right = False
             if ca_mc is None:
-                warnings.warn('ca_mc is None in Seepage.exchange_heat')
+                warn('ca_mc is None in Seepage.exchange_heat')
                 all_right = False
             if fa_t is None:
-                warnings.warn('fa_t is None in Seepage.exchange_heat')
+                warn('fa_t is None in Seepage.exchange_heat')
                 all_right = False
             if fa_c is None:
-                warnings.warn('fa_c is None in Seepage.exchange_heat')
+                warn('fa_c is None in Seepage.exchange_heat')
                 all_right = False
             if all_right:
                 core.seepage_exchange_heat(
@@ -6087,7 +6091,7 @@ class Seepage(HasHandle, HasCells):
         """
         if ps0 is None:
             if isinstance(vs0, Vector):
-                warnings.warn(
+                warn(
                     'parameter <vs0> of Seepage.diffusion '
                     'will be removed after 2025-4-6',
                     DeprecationWarning, stacklevel=2)
@@ -6097,7 +6101,7 @@ class Seepage(HasHandle, HasCells):
 
         if pk is None:
             if isinstance(vk, Vector):
-                warnings.warn(
+                warn(
                     'parameter <vk> of Seepage.diffusion '
                     'will be removed after 2025-4-6',
                     DeprecationWarning, stacklevel=2)
@@ -6107,7 +6111,7 @@ class Seepage(HasHandle, HasCells):
 
         if pg is None:
             if isinstance(vg, Vector):
-                warnings.warn(
+                warn(
                     'parameter <vg> of Seepage.diffusion '
                     'will be removed after 2025-4-6',
                     DeprecationWarning, stacklevel=2)
@@ -6117,7 +6121,7 @@ class Seepage(HasHandle, HasCells):
 
         if ppg is None:
             if isinstance(vpg, Vector):
-                warnings.warn(
+                warn(
                     'parameter <vpg> of Seepage.diffusion '
                     'will be removed after 2025-4-6',
                     DeprecationWarning, stacklevel=2)
@@ -6364,7 +6368,7 @@ class Seepage(HasHandle, HasCells):
         Returns:
             float: 推荐的时间步长
         """
-        warnings.warn("Seepage.get_recommended_dt is deprecated (will be removed after 2027-6-8).", DeprecationWarning,
+        warn("Seepage.get_recommended_dt is deprecated (will be removed after 2027-6-8).", DeprecationWarning,
                       stacklevel=2)
         if ca_t is not None and ca_mc is not None:
             thermal_sol = self.get_thermal_sol()
@@ -6678,7 +6682,7 @@ class Seepage(HasHandle, HasCells):
         Returns:
             SeepageNumpy: 用于和numpy交互数据的SeepageNumpy对象
         """
-        warnings.warn(
+        warn(
             'Seepage.numpy will be removed after 2025-1-21. '
             'Use zmlx.as_numpy Instead.'
             , DeprecationWarning, stacklevel=2)
@@ -6715,7 +6719,7 @@ class Seepage(HasHandle, HasCells):
         Returns:
             Vector: 包含指定元素属性的Vector对象
         """
-        warnings.warn(
+        warn(
             'please use function <Seepage.cells_write> '
             'and <Seepage.faces_write> instead. '
             'Will remove after 2024-6-14', DeprecationWarning, stacklevel=2)
@@ -6751,7 +6755,7 @@ class Seepage(HasHandle, HasCells):
             value (Vector): 要设置的属性值
             index (int, optional): 属性的索引，默认为None
         """
-        warnings.warn(
+        warn(
             'please use function <Seepage.cells_read> '
             'and <Seepage.faces_read> instead. '
             'will be removed after 2024-6-14', DeprecationWarning, stacklevel=2)
@@ -7566,7 +7570,9 @@ class Thermal(HasHandle):
             dt (float): 时间步长
             solver: 求解器对象，必须提供 fn/ctx
         """
-        lic.check_once()
+        # 检查传热功能是否有授权（feature='thermal'，与 ThermalSol.iterate 同一个
+        # feature：同一个功能名共用一套闸门，每次运行只会真正查一次）
+        web_license.check_once(feature='thermal')
         assert solver is not None
         core.thermal_iterate(self.handle, dt, solver.fn, solver.ctx)
 

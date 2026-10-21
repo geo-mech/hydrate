@@ -15,7 +15,7 @@
 """
 
 from zmlx.exts import Seepage
-from zmlx.fluid.solution import create_solute
+from zmlx.fluids.solution import create_solute
 from zmlx.tfc import create as create_tfc
 from zmlx import Interp2
 from iapws import IAPWS97

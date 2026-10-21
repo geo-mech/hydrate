@@ -2,22 +2,24 @@
 计算各个face的位置流体压力的梯度，并作为一个numpy的数组返回
 
 Modified by Claude, 2026-08-12
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
 
+from zmlx.system import warn
 from zmlx.exts import FluDef, const_f64_ptr
 from zmlx.tfc._sand import get_face_pressure_gradient
 
 _keep = [get_face_pressure_gradient]
 
-import zmlx.alg.sys as warnings
 
-warnings.warn(f'{__name__} will be removed after 2027-5-25', DeprecationWarning, stacklevel=2)
+warn(f'{__name__} will be removed after 2027-5-25', DeprecationWarning, stacklevel=2)
 
 
 def test_1():
     from zmlx.exts import np
     from zmlx import tfc
-    from zmlx.seepage_mesh.cube import create_cube
+    from zmlx.seepage_meshes.cube import create_cube
     assert np is not None
 
     mesh = create_cube(

@@ -1,38 +1,25 @@
-import unittest
+"""旧模块名（兼容层，**已改名为** :mod:`zmlx.algs.is_sorted`）.
 
-import zmlx.alg.sys as warnings
-from zmlx.alg.base import is_sorted
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/algs/is_sorted.py`` 里。
 
-warnings.warn(f'{__name__} will be removed after 2026-4-15', DeprecationWarning,
-              stacklevel=2)
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时会发出
+:class:`DeprecationWarning`。**新代码请写** ``from zmlx.algs.is_sorted import ...``。
 
+Modified by DeepSeek, 2026-10-16
 
-class TestIsSorted(unittest.TestCase):
-
-    def test_sorted_list(self):
-        # 测试已排序的列表
-        vx = [1, 2, 3, 4, 5]
-        self.assertTrue(is_sorted(vx))
-
-    def test_unsorted_list(self):
-        # 测试未排序的列表
-        vx = [5, 4, 3, 2, 1]
-        self.assertFalse(is_sorted(vx))
-
-    def test_custom_compare_function(self):
-        # 测试自定义比较函数
-        def custom_compare(a, b):
-            return a % 2 == b % 2
-
-        vx = [2, 4, 6, 8, 10]
-        self.assertTrue(is_sorted(vx, custom_compare))
-
-    def test_invalid_compare_parameter(self):
-        # 测试无效的比较参数
-        vx = [1, 2, 3]
-        with self.assertRaises(ValueError):
-            is_sorted(vx, 123)
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
+"""
+from zmlx.system import warn
 
 
-if __name__ == '__main__':
-    unittest.main()
+warn(
+    '``zmlx.alg.is_sorted`` 已弃用（2026-10-16）：算法包已改名为 ``zmlx.algs``；'
+    '本转发层将于 **2027-10-16** 删除。请改用 ``from zmlx.algs.is_sorted import ...``。',
+    DeprecationWarning,
+    stacklevel=2,
+)
+
+from zmlx.algs.is_sorted import *  # noqa: F401,F403
+from zmlx.algs.is_sorted import (  # noqa: F401
+    TestIsSorted
+)

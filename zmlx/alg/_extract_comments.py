@@ -1,49 +1,26 @@
-"""从 Python 源码中提取注释（基于 tokenize 模块）.
+"""旧模块名（兼容层，**已改名为** :mod:`zmlx.algs._extract_comments`）.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/algs/_extract_comments.py`` 里。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时会发出
+:class:`DeprecationWarning`。**新代码请写** ``from zmlx.algs._extract_comments import ...``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-
-import tokenize
-from io import StringIO
-from typing import List
+from zmlx.system import warn
 
 
-def extract_comments(text: str) -> List[str]:
-    """
-    从Python代码字符串中提取所有注释
+warn(
+    '``zmlx.alg._extract_comments`` 已弃用（2026-10-16）：算法包已改名为 ``zmlx.algs``；'
+    '本转发层将于 **2027-10-16** 删除。请改用 ``from zmlx.algs._extract_comments import ...``。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-    Args:
-        text: 包含Python代码的字符串
-
-    Returns:
-        包含所有注释内容的列表，每个元素是一个字符串
-    """
-    code_io = StringIO(text)
-    tokens = tokenize.generate_tokens(code_io.readline)
-    res = []
-    for tok_type, tok_string, start, end, line_text in tokens:
-        if tok_type == tokenize.COMMENT:
-            res.append(tok_string)
-    return res
-
-
-def test():
-    code = '''
-    # 这是一个单行注释
-    def example():
-        """这是一个文档字符串
-        可以跨多行"""
-        x = 1       # 行尾注释
-        y = "# 这不是注释，是字符串"
-        return x + y
-
-        #  ddd
-    '''
-
-    comments = extract_comments(code)
-    for comment in comments:
-        print(comment)
-
-
-if __name__ == '__main__':
-    test()
+from zmlx.algs._extract_comments import *  # noqa: F401,F403
+from zmlx.algs._extract_comments import (  # noqa: F401
+    extract_comments,
+    test
+)

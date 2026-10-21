@@ -1,5 +1,7 @@
-import zmlx.alg.sys as warnings
-from zmlx.kr.base import create_krf
+
+from zmlx.system import warn
+# Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
+from zmlx.krs.base import create_krf
 from zmlx.scen.hydrate._cap import create_caps
 from zmlx.scen.hydrate._fluid import create_fludefs
 from zmlx.scen.hydrate._react import create_reactions
@@ -79,21 +81,21 @@ def create_opts(
         co2_cap = None
 
     if ch4_diff is not None:
-        warnings.warn(
+        warn(
             'ch4_diff已弃用. 后续，请使用 zmlx.config.diffusion的相关功能',
             DeprecationWarning,
             stacklevel=2
         )
 
     if inh_diff is not None:
-        warnings.warn(
+        warn(
             'inh_diff已弃用. 后续，请使用 zmlx.config.diffusion的相关功能',
             DeprecationWarning,
             stacklevel=2
         )
 
     if co2_diff is not None:
-        warnings.warn(
+        warn(
             'co2_diff已弃用. 后续，请使用 zmlx.config.diffusion的相关功能',
             DeprecationWarning,
             stacklevel=2

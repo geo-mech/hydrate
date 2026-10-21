@@ -1,99 +1,42 @@
-"""工作目录文件浏览器 widget.
+"""旧模块名（兼容层，**已弃用**）：``cwd_view`` -> :mod:`zmlx.ui.tabs.cwd_view`.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/ui/tabs/cwd_view.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.ui.tabs import CwdView``
+（或 ``from zmlx.ui.tabs.cwd_view import CwdView``）。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把「**顶层控件**」（只被装配层打开成一个标签页、**不会被任何控件当组件
+（子控件）用**）集中迁到 ``zmlx/ui/tabs/``；本目录只留**底层控件**（会被
+``addWidget()`` 进别处的、或被继承的）以及宿主不是标签页的常驻控件（状态栏按钮 /
+右侧栏面板 / 标签容器 / 对话框组件集）。
+
+但 ``from zmlx.ui.widgets.cwd_view import CwdView`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史标签页的 ``gui_restore``（重启时按存下来的
+字符串重放）；③ 更早的兼容层（``license_count`` / ``license_feedback``）。
+
+⚠️ 判据与依赖方向见 ``zmlx/ui/tabs/AGENTS.md``。
+
+Created by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-
-import os
-import time
-import timeit
-
-from zmlx.alg.base import fsize2str, clamp
-from zmlx.ui.gui_buffer import gui
-from zmlx.ui.pyqt import QtCore, QtWidgets
+from zmlx.system import warn
 
 
-class CwdView(QtWidgets.QTableWidget):
-    def __init__(self, parent=None):
-        super(CwdView, self).__init__(parent)
-        self.horizontalHeader().setSectionResizeMode(
-            QtWidgets.QHeaderView.ResizeMode.Stretch)
-        self.setEditTriggers(
-            QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
+warn(
+    '``zmlx.ui.widgets.cwd_view`` 已弃用（2026-10-16）：控件 ``CwdView`` 已迁至 '
+    '``zmlx.ui.tabs.cwd_view``；本转发层将于 **2027-10-16** 删除。'
+    '请改用 ``from zmlx.ui.tabs import CwdView``。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-        self.clicked.connect(self.item_clicked)
-        self.doubleClicked.connect(self.item_double_clicked)
-        self.timer = QtCore.QTimer()
-        self.timer.timeout.connect(self.refresh)
-        self.timer.start(500)
-        self.refresh()
-
-    def __refresh(self):
-        folder = os.getcwd()
-        data = [['..', '文件夹', '', ''], ]
-        try:
-            names = os.listdir(folder)
-        except Exception as err:
-            print(err)
-            names = []
-        for name in names:
-            path = os.path.join(folder, name)
-            try:
-                if os.path.isfile(path):
-                    data.append([name, '文件', fsize2str(os.path.getsize(path)),
-                                 f'{time.ctime(os.path.getmtime(path))}'])
-                    continue
-
-                if os.path.isdir(path):
-                    data.append([name, '文件夹', '', ''])
-                    continue
-            except Exception as err:
-                print(err)
-        self.setRowCount(len(data))
-        self.setColumnCount(4)
-        self.setHorizontalHeaderLabels(['名称', '类型', '大小', '修改时间'])
-        self.horizontalHeader().setSectionResizeMode(
-            0, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
-        for i_row in range(len(data)):
-            for i_col in range(4):
-                self.setItem(i_row, i_col,
-                             QtWidgets.QTableWidgetItem(data[i_row][i_col]))
-
-    def refresh(self):
-        cpu_t = timeit.default_timer()
-        #
-        try:
-            self.__refresh()
-        except Exception as err:
-            print(err)
-            self.clear()
-        #
-        cpu_t = timeit.default_timer() - cpu_t
-        msec = clamp(int(cpu_t * 200 / 0.001), 200, 8000)
-        self.timer.setInterval(msec)
-
-    def item_clicked(self, index):
-        if index.column() != 0:
-            return
-        item = self.item(index.row(), index.column())
-        text = item.text()
-        if text == '..':
-            fpath = os.path.dirname(os.getcwd())
-        else:
-            fpath = os.path.join(os.getcwd(), text)
-
-        if os.path.isfile(fpath):
-            ext = os.path.splitext(fpath)[-1]
-            if ext is not None:
-                if ext.lower() == '.py' or ext.lower() == '.pyw':
-                    gui.open_code(fpath)
-
-    def item_double_clicked(self, index):
-        if index.column() != 0:
-            return
-        item = self.item(index.row(), index.column())
-        text = item.text()
-        if text == '..':
-            fpath = os.path.dirname(os.getcwd())
-        else:
-            fpath = os.path.join(os.getcwd(), text)
-        gui.open_file(fpath)
+from zmlx.ui.tabs.cwd_view import *  # noqa: F401,F403
+from zmlx.ui.tabs.cwd_view import (  # noqa: F401
+    CwdView
+)

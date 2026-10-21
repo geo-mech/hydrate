@@ -1,10 +1,12 @@
 """三维散点图显示。
 
 Modified by Claude, 2026-08-12
-"""
-import zmlx.alg.sys as warnings
 
-from zmlx.geometry.base import point_distance
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
+"""
+
+from zmlx.system import warn
+from zmlx.geometries.base import point_distance
 from zmlx.pg.colormap import coolwarm
 from zmlx.pg.get_color import get_color
 from zmlx.pg.plot3 import *
@@ -45,7 +47,7 @@ def show_scatter3(pos=None, size=None, color=None, alpha=None, pxMode=True,
     assert color is not None
     if len(np.shape(
             color)) != 2:  # 真正最终使用的color是一个N行4列的二位数组。当发现给定的数据不是二维的时候，则利用colormap来创建
-        warnings.warn(
+        warn(
             'The given color is not 2d Array (n*4). Will compute color by colormap and this is Slow!')
         if len(np.shape(color)) == 0:
             color = np.ones(shape=count, dtype=float) * color
@@ -89,7 +91,7 @@ def show_scatter3(pos=None, size=None, color=None, alpha=None, pxMode=True,
 
     widget = get_widget(caption=caption, on_top=on_top)
     if widget is None:
-        warnings.warn(
+        warn(
             f'The widget is None. caption = {caption}, on_top = {on_top}')
         return
 

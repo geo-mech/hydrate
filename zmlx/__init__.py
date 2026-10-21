@@ -2,8 +2,14 @@
 说明：
     1. 优先从zmlx中import，只有当zmlx中没有定义，再考虑从次一级文件夹import；
     2. 用户可添加文件，但勿修改现有文件内容；
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
+# 版本号：必须与 pyproject.toml 中的 version 保持一致（提交时同步更新，见 AGENTS.md）
+__version__ = '1.9.0'
+
 # 导入其它的内容，兼容之前的代码
+from zmlx.system import warn
 import timeit
 
 # 单独导入zml
@@ -30,7 +36,7 @@ def get_dir() -> str:
 
 
 if contain_chinese(get_dir()):
-    warnings.warn('Please make sure to install zmlx in a pure English path, '
+    warn('Please make sure to install zmlx in a pure English path, '
                   'otherwise it may cause unpredictable errors.')
 
 setenv = app_data.setenv
@@ -43,7 +49,7 @@ try:
         app_data.add_path(os.path.join(__folder, 'data'))
         app_data.add_path(os.path.join(__folder, 'ui', 'data'))
 except Exception as err:
-    warnings.warn(f'meet exception when add path to app_data. error = {err}')
+    warn(f'meet exception when add path to app_data. error = {err}')
 
 ########################################
 # system
@@ -53,7 +59,7 @@ from zmlx.system import (
 
 ########################################
 # alg
-from zmlx.alg import (
+from zmlx.algs import (
     create_async, apply_async, sbatch, first_only, print_tag, join_paths, make_fname, clamp, linspace,
     time2str, mass2str, fsize2str, fsys, fsys as path
 )
@@ -72,7 +78,7 @@ from zmlx.data import create_c10000, load_igg
 
 ########################################
 # fluid
-from zmlx.fluid import (
+from zmlx.fluids import (
     create_ch4, create_ch4_hydrate, create_co2, create_co2_hydrate,
     create_h2o, create_h2o_gas, create_h2o_ice, h2o,
     ch4, from_data, from_file, load_fludefs, create_aqueous
@@ -80,7 +86,7 @@ from zmlx.fluid import (
 
 ########################################
 # geometry
-from zmlx.geometry import (
+from zmlx.geometries import (
     get_angle, get_center, get_seg_angle, seg_intersection, triangle_area,
     point_distance, seg_point_distance, get_norm, dfn2, dfn_v3, rect_3d, rect_v3
 )
@@ -91,7 +97,7 @@ from zmlx.io import opath, json_ex
 
 ########################################
 # kr
-from zmlx.kr import create_kr, create_krf
+from zmlx.krs import create_kr, create_krf
 
 ########################################
 # plt
@@ -115,7 +121,7 @@ import zmlx.fig as fig
 
 ########################################
 # react
-from zmlx.react import load_reactions, create_reaction, add_reaction, create_inh, add_inh
+from zmlx.reactions import load_reactions, create_reaction, add_reaction, create_inh, add_inh
 
 ########################################
 # scen
@@ -123,7 +129,7 @@ from zmlx.scen import hydrate, icp
 
 ########################################
 # seepage_mesh
-from zmlx.seepage_mesh import (
+from zmlx.seepage_meshes import (
     create_cube_seepage_mesh,
     create_cube, create_xz, create_xyz, create_cylinder,
     seepage_mesh_rescale, swap_yz, swap_xy, swap_xz,
@@ -140,7 +146,7 @@ from zmlx.ui import (
 
 ########################################
 # utility
-from zmlx.utility import (
+from zmlx.utils import (
     load_field3, Field, LinearField, AttrKeys, add_keys, RuntimeFunc, GuiIterator, get_gui_iter, PressureController, SaveManager,
     SeepageCellMonitor, CapillaryEffect
 )
@@ -170,7 +176,7 @@ def _env(*args):
      PyQt6, PyQt6-WebEngine, pyqt6-qscintilla, PyOpenGL,
      dulwich, pillow, pyvista, pyvistaqt, vtk, pandas, openpyxl 等
     """
-    from zmlx.alg import install_dep
+    from zmlx.algs import install_dep
     install_dep()
 
 
@@ -365,7 +371,7 @@ def _test(args):
     以无头模式运行所有 demo 测试。
     """
     import subprocess, sys, os
-    script = os.path.join(os.path.dirname(__file__), 'demo', 'test_all_demos.py')
+    script = os.path.join(os.path.dirname(__file__), 'demos', 'test_all_demos.py')
     if not isinstance(args, list):
         args = []
     subprocess.run([sys.executable, script, '--no-gui'] + args)
@@ -390,6 +396,120 @@ def main(argv):
         help - 显示帮助
     """
     _cmds.execute(argv)
+
+
+########################################
+# 自动反馈历史日志（导入 zmlx 时执行一次）
+#
+# ⚠️ **必须留在文件底部**：此刻整个 zmlx（含 `ui` 等）都已加载完 —— 这既是「导入 zmlx
+#    完成」的准确时点，也保证这个动作不会插进任何一个子包的导入过程。
+# ⚠️ 这段原先在 ``zmlx/exts/__init__.py`` 的导入期执行（2026-10-17 移来）。exts 是
+#    DLL 绑定层（第 1 层），不该在导入时做「读日志文件 + 联网提交」这类应用级副作用；
+#    包入口的底部才是它该待的地方。
+# 行为：只提交 **非当天** + **最近 `_FEEDBACK_MONTHS` 个月内** + 没反馈过的日志；
+# 开关仍是 ``disable_auto_feedback=Yes``（界面：设置 → 不向开发者反馈）。
+#
+# ⚠️ 过期不再补发（2026-10-17 用户要求）：超过两个月的日志，**即便从未反馈过也不再
+#    尝试** —— 隔了那么久的运行环境已经对不上，发上去只会给排查添噪音。
+#    这些老文件**不打标记**（``logs_feedback/`` 里不会多出空文件）：标记的语义是
+#    「这条已经发过」，没发过就不该有标记；代价只是每次 import 多几次文件名比较。
+
+#: 只反馈最近这么多个月内的日志（按**日历月**算，不是 30 天 × N）
+_FEEDBACK_MONTHS = 2
+
+
+def _feedback_cutoff(months: int = _FEEDBACK_MONTHS, today=None):
+    """返回「最近 months 个月」的起点日期（**含**当天）。
+
+    ⚠️ 按**日历月**而不是「60 天」：用户说的是「两个月」—— 2026-08-17 那份日志在
+       2026-10-17 刚好满两个月，按 60 天算会多留 1~2 天，把「刚好过期」的又发出去。
+    ⚠️ 月底要夹到目标月的最后一天：3-31 往前两个月是 1-31，那天不存在。
+
+    Args:
+        months: 往前推多少个月（默认 :data:`_FEEDBACK_MONTHS`）。
+        today: 起算日（``datetime.date``）；``None`` 表示今天。仅供自测传入。
+    """
+    import calendar
+    import datetime
+
+    if today is None:
+        today = datetime.date.today()
+    year, month = today.year, today.month - months
+    while month <= 0:
+        month += 12
+        year -= 1
+    day = min(today.day, calendar.monthrange(year, month)[1])
+    return datetime.date(year, month, day)
+
+
+def _log_date(name: str):
+    """从 ``YYYY-MM-DD.log`` 里取日期；名字不合规返回 ``None``（跳过，不去猜）。"""
+    import datetime
+
+    try:
+        return datetime.datetime.strptime(name, '%Y-%m-%d.log').date()
+    except Exception:
+        return None
+
+
+def _feedback_logs():
+    """自动收集并反馈历史日志文件。
+
+    检查 ``app_data.root('logs')`` 下的日志，把**非当天**、**最近两个月内**、且没反馈
+    过的那些提交给作者；提交成功的（含服务端答「刚发过」的）在 ``logs_feedback/`` 写
+    一个同名空文件作标记，避免重复发送。
+
+    ⚠️ 超过两个月的日志**直接跳过、也不打标记**：时间太久，环境已对不上，发上去没用。
+
+    本函数**不抛异常**：它是导入期的副作用，任何失败都必须静默 —— 否则一次网络问题
+    就会让 ``import zmlx`` 直接失败。
+    """
+    try:
+        import datetime
+        import os
+
+        from zmlx.exts import feedback
+        from zmlx.system import make_dirs
+
+        folder_logs = app_data.root('logs')
+        if not os.path.isdir(folder_logs):
+            return
+        folder_logs_feedback = app_data.root('logs_feedback')
+        make_dirs(folder_logs_feedback)
+        has_feedback = set(os.listdir(folder_logs_feedback))
+        date = datetime.datetime.now().strftime('%Y-%m-%d.log')
+        cutoff = _feedback_cutoff()
+        city = None
+        for name in os.listdir(folder_logs):
+            if name == date or name in has_feedback:
+                continue
+            day = _log_date(name)
+            if day is None or day < cutoff:
+                continue
+            with open(os.path.join(folder_logs, name), 'r',
+                      encoding='utf-8') as f1:
+                text = f1.read()
+            if city is None:
+                try:
+                    from zmlx.algs.sys import get_city
+                    city = f' from {get_city()}'
+                except Exception:
+                    city = ''
+            if feedback(text=text[0: 100000],
+                        subject=f'log <{name}>{city}'):
+                with open(os.path.join(folder_logs_feedback, name),
+                          'w') as f2:
+                    f2.write('\n')
+    except Exception:
+        pass
+
+
+try:
+    if app_data.getenv('disable_auto_feedback', default='No',
+                       ignore_empty=True) != 'Yes':
+        _feedback_logs()
+except Exception:
+    pass
 
 
 if __name__ == "__main__":

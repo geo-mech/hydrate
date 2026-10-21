@@ -1,4 +1,4 @@
-from zmlx.react import dissolution
+from zmlx.reactions import dissolution
 
 def create_reactions(has_he=True, has_n2=True, others=None):
     """

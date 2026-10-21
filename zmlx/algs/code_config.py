@@ -1,0 +1,25 @@
+"""已弃用的模块，请改用 zmlx.algs.base.
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
+"""
+
+from zmlx.system import warn
+from zmlx.algs.base import code_config
+
+warn(f'{__name__} will be removed after 2026-4-15', DeprecationWarning,
+              stacklevel=2)
+
+
+def test():
+    text = """
+    # ** desc = 'The description'
+    # ** area = 1
+    # ** text = ("x"
+    # **        "y")
+"""
+    cfg = code_config(text=text)
+    print(cfg)
+
+
+if __name__ == '__main__':
+    test()

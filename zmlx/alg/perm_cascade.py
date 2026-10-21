@@ -1,38 +1,27 @@
-"""渗透率级联平均（串联与并联等效渗透率计算）.
+"""旧模块名（兼容层，**已改名为** :mod:`zmlx.algs.perm_cascade`）.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/algs/perm_cascade.py`` 里。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时会发出
+:class:`DeprecationWarning`。**新代码请写** ``from zmlx.algs.perm_cascade import ...``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-
-def get_average2(l1, k1, l2, k2):
-    """
-    获得两段串联的平均值.
-    """
-    assert l1 > 0 and l2 > 0
-    if k1 <= 0 or k2 <= 0:
-        return 0
-    else:
-        return k1 * k2 * (l1 + l2) / (l1 * k2 + l2 * k1)
+from zmlx.system import warn
 
 
-def get_average(*perm):
-    """
-    返回多段（长度相等）串联的平均的渗透率.
-    """
-    assert len(perm) > 0
-    k1 = perm[0]
-    l1 = 1
-    for i in range(1, len(perm)):
-        k2 = perm[i]
-        l2 = 1
-        k1 = get_average2(l1, k1, l2, k2)
-        l1 += l2
-    return k1
+warn(
+    '``zmlx.alg.perm_cascade`` 已弃用（2026-10-16）：算法包已改名为 ``zmlx.algs``；'
+    '本转发层将于 **2027-10-16** 删除。请改用 ``from zmlx.algs.perm_cascade import ...``。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-
-def test():
-    perm = [10, 1, 0.1]
-    print(get_average(*perm))
-
-
-if __name__ == '__main__':
-    test()
+from zmlx.algs.perm_cascade import *  # noqa: F401,F403
+from zmlx.algs.perm_cascade import (  # noqa: F401
+    get_average,
+    get_average2,
+    test
+)

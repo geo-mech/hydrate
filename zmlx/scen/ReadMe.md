@@ -20,8 +20,9 @@
 | `icp/` | 是 | 原位转化（干酪根热解/重油裂解） |
 | `frac/` | 否 | 裂缝模拟（兼容旧版 `zmlx.config.frac`） |
 | `geothermal_helium/` | 否 | 地热伴生氦气开采 |
+| `helium/` | 否 | 氦气流体定义（`create_fludefs`）与体积分数可视化 |
 | `mineralization_reactor/` | 否 | CO₂ 矿化封存（Reaktoro 化学耦合） |
-| `rkt_tests/` | 否 | Reaktoro 化学热力学基准测试/教程 |
+| `rkt/` | 否 | Reaktoro 化学热力学基准测试/教程 |
 | `quick_look/` | 否 | 2D 单相流压力快速评估 |
 | `uv_equilibrium/` | 否 | 气-水固定体积-内能（UV）平衡计算 |
 
@@ -33,13 +34,13 @@
 - 位置：`zmlx/scen/hydrate/`
 - 功能：模拟水合物成藏、降压开发、注热开发、CO₂ 置换等过程
 - 主要导出：`create()`、`create_fludefs()`、`create_reactions()`、`create_caps()`、`create_opts()`、`solve()`、`show_2d()`
-- 应用案例：`zmlx/demo/hydrate/` 中的多个 demo 脚本
+- 应用案例：`zmlx/demos/hydrate/` 中的多个 demo 脚本
 
 ### icp/ — 原位转化（油页岩/重油）
 - 位置：`zmlx/scen/icp/`
 - 功能：模拟干酪根热解、重油裂解、原位加热开采
 - 主要导出：`create()`、`create_fludefs()`、`create_reactions()`、`solve()`、`show_xz()`
-- 应用案例：`zmlx/demo/heavy_oil/` 中的 ICP demo
+- 应用案例：`zmlx/demos/heavy_oil/` 中的 ICP demo
 
 ### frac/ — 裂缝模拟
 - 位置：`zmlx/scen/frac/`
@@ -56,8 +57,8 @@
 - 功能：将 Reaktoro 化学热力学与渗流传质耦合，模拟 CO₂ 注入后与岩石矿物反应形成碳酸盐矿物
 - 特点：完整的配置系统、矿物列表、物种验证
 
-### rkt_tests/ — Reaktoro 基准测试
-- 位置：`zmlx/scen/rkt_tests/`
+### rkt/ — Reaktoro 基准测试
+- 位置：`zmlx/scen/rkt/`
 - 功能：Reaktoro 化学热力学功能演示和教程
 - 内容：8 个基础教程脚本 + 平衡计算示例
 
@@ -65,7 +66,8 @@
 - 位置：`zmlx/scen/quick_look/`
 - 功能：矩形区域内单相 Darcy 渗流压力分布快速计算
 - 导出：`evaluate()`（支持控压点、裂缝线段、加速因子）
-- GUI：`zml_gui_setup.py` 集成，`帮助 > 加载 > Quick Look 快速评估` 打开参数输入与结果显示控件
+- GUI：`zml_plugin.py` 集成，`帮助 > 加载 > Quick Look 快速评估` 打开参数输入与结果显示控件
+  ⚠️ 该插件声明 `# ** enabled = False`（**默认不加载**）：需在「设置 → 插件」里勾选并重启，菜单入口才会出现
 
 ### uv_equilibrium/ — 气-水 UV 平衡
 - 位置：`zmlx/scen/uv_equilibrium/`
@@ -101,7 +103,7 @@ icp.solve(model, time_forward=10*365*24*3600)
 ## 与其他模块的关系
 
 - `zmlx.tfc`：所有场景模块均基于 TFC 引擎构建
-- `zmlx.fluid`：场景使用其中定义的流体物性
-- `zmlx.react`：场景使用其中定义的化学反应
+- `zmlx.fluids`：场景使用其中定义的流体物性
+- `zmlx.reactions`：场景使用其中定义的化学反应
 - `zmlx.exts`：底层 Seepage 等数据结构
 - `zmlx.plt` / `zmlx.ui`：结果可视化

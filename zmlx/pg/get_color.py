@@ -2,7 +2,7 @@
 
 Modified by Claude, 2026-08-12
 """
-from zmlx.alg.base import clamp
+from zmlx.algs.base import clamp
 
 
 def get_color(cmap, lr, rr, val):

@@ -43,23 +43,27 @@ Face的属性：
              变量速度。当Face同时定义了rate和inertia之后，才可以去考虑惯性效应。
 
 Modified by Claude, 2026-08-12
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
 
-import warnings
+from zmlx.system import warn
+import sys
+
 from collections.abc import Iterable
 from typing import List, Union, Tuple
 
-from zmlx.alg import join_cols, join_paths, print_tag
+from zmlx.algs import join_cols, join_paths, print_tag
 from zmlx.exts import (
     get_average_perm, Tensor3, make_parent, SeepageMesh, get_distance as point_distance, app_data)
-from zmlx.react import add_reaction
+from zmlx.reactions import add_reaction
 from zmlx.tfc import _cap, _cond, _diff, _fluid, _heating, _inj, _prod, _sand, _solid, _step, _time
 from zmlx.tfc._base import *
 from zmlx.tfc._keys import cell_keys, face_keys, flu_keys
 from zmlx.tfc._opts import merge_opts
 from zmlx.tfc._plt import show_cells
 from zmlx.ui import gui, show_attrs, progress
-from zmlx.utility import get_gui_iter, GuiIterator, SaveManager, SeepageCellMonitor, Field
+from zmlx.utils import get_gui_iter, GuiIterator, SaveManager, SeepageCellMonitor, Field
 
 
 @clock
@@ -245,7 +249,7 @@ def iterate(*local_opts: Union[Seepage, dict], pool: Optional[ThreadPool] = None
     if len(models) <= 1:  # 不需要并行
         pool = None
     elif pool is None:
-        warnings.warn(
+        warn(
             'The pool is None, but there are more than 1 models to iterate.', UserWarning, stacklevel=2)
 
     # 首先，要清空dt_next.
@@ -327,7 +331,7 @@ def iterate(*local_opts: Union[Seepage, dict], pool: Optional[ThreadPool] = None
 
 
 def parallel_iterate(*args, **kwargs):
-    warnings.warn(
+    warn(
         'parallel_iterate is deprecated (will be removed after 2026-12-9), use iterate instead',
         DeprecationWarning, stacklevel=2)
     return iterate(*args, **kwargs)
@@ -343,7 +347,7 @@ def iterate_until(*local_opts: Union[Seepage, dict], pool: Optional[ThreadPool] 
         def condition(m: Seepage):
             return get_time(m) < target_time
     else:  # 目标时间永远无法达到
-        warnings.warn('target_time is infinite, so the condition is None.', UserWarning, stacklevel=2)
+        warn('target_time is infinite, so the condition is None.', UserWarning, stacklevel=2)
         # 此时，由于不检查时间终点，因此，必须对迭代次数有限制，以防止死循环
         assert n_loop_max < 999999999, f'n_loop_max must be less than 999999999 when target_time is infinite. n_loop_max = {n_loop_max}'
         condition = None
@@ -362,7 +366,7 @@ def parallel_sync(*args, **kwargs):
     """
     并行地迭代，直到给定的目标时间
     """
-    warnings.warn(
+    warn(
         'parallel_sync is deprecated (will be removed after 2026-12-9), use iterate_until instead',
         DeprecationWarning, stacklevel=2)
     return iterate_until(*args, **kwargs)
@@ -578,21 +582,23 @@ def solve(
                     for idx in plot_rate:
                         monitor.plot_rate(index=idx, caption=f'Rate_{index}.{idx}')  # 显示生产曲线
         except Exception as e:
-            print(f'Error when plot the monitor. Error = {e}')
+            print(f'Error when plot the monitor. Error = {e}', file=sys.stderr)
 
         if extra_plot is not None:  # 一些额外的，非标准的绘图操作
             if callable(extra_plot):
                 try:
                     extra_plot()
                 except Exception as err:
-                    print(f'Error when run the extra plot. Function = {extra_plot.__name__}, Error = {err}')
+                    print(f'Error when run the extra plot. Function = {extra_plot.__name__}, Error = {err}',
+                          file=sys.stderr)
             elif isinstance(extra_plot, Iterable):
                 for extra_plot_i in extra_plot:
                     if callable(extra_plot_i):
                         try:
                             extra_plot_i()
                         except Exception as err:
-                            print(f'Error when run the extra plot. Function = {extra_plot_i.__name__}, Error = {err}')
+                            print(f'Error when run the extra plot. Function = {extra_plot_i.__name__}, Error = {err}',
+                                  file=sys.stderr)
 
     def save_monitors():
         if folder is not None:
@@ -674,10 +680,12 @@ def solve(
         opt_iter['slots'] = slots
 
     def main_loop():  # 主循环
+        if folder is not None:  # 设置 matplotlib 自动保存路径
+            app_data.put('matplotlib_autosave', join_paths(folder, 'figures'))
+
         if gui.exists():
             if folder is not None:  # 显示求解的目录
                 gui.title(f'Solve Seepage: {folder}')
-                app_data.put('matplotlib_autosave', join_paths(folder, 'figures'))
             else:
                 gui.title(f'Solve Seepage: Data Folder Not Set')
 
@@ -687,7 +695,16 @@ def solve(
 
             for item3 in monitors:  # 更新所有的监控点
                 monitor = item3.get('monitor')
-                monitor.update(dt=3600.0)
+                # ⚠️ 采样间隔要跟着**本步实际用的 dt**走，不能写死 3600.0：
+                #    monitor.update(dt) 的 dt 是「记录数据的最小时间间隔」
+                #    （见 SeepageCellMonitor.update）。写死 1 小时会让采样率与
+                #    物理步长脱钩 —— dt_max 大于 1 小时时每步都记，小于 1 小时
+                #    时最多每小时才记一次，产率曲线随之失真。
+                # ⚠️ 但仍要留一个**下限**：步长通常远小于 1 小时，若完全跟随
+                #    步长就等于「每步都记」，vt/vm 会随步数线性膨胀（长算例的
+                #    内存与存档都会成倍增长）。取 1 小时既保留了原先的采样密度，
+                #    又能在步长大于 1 小时时按步记录。
+                monitor.update(dt=max(get_dt(model), 3600.0))
 
             gui_show()
 
@@ -720,13 +737,13 @@ def solve(
         gui_mode = False
 
     if gui_mode:  # 警告：solve 内部启动 GUI 将在 1 年内弃用
-        warnings.warn(
+        warn(
             'tfc.solve(gui_mode=True) is deprecated and will be removed after 2027-07-15. '
             'Please use gui.execute() to wrap the solve call instead:\n'
             '    gui.execute(lambda: tfc.solve(model, ...), close_after_done=False)\n'
-            'See demo examples: zmlx/demo/hydrate/prod_v2_inj_hot_water.py, '
-            'zmlx/demo/hydrate/prod_v2_electric_heating.py, '
-            'zmlx/demo/flow_2ph/wat_disp_oil.py',
+            'See demo examples: zmlx/demos/hydrate/prod_v2_inj_hot_water.py, '
+            'zmlx/demos/hydrate/prod_v2_electric_heating.py, '
+            'zmlx/demos/flow_2ph/wat_disp_oil.py',
             DeprecationWarning, stacklevel=2)
         gui.execute(func=main_loop, close_after_done=close_after_done)
     else:
@@ -791,7 +808,7 @@ def get_inited(
         if point_distance(gravity, [0, 0, -10]) > 1.0:
             print(f'Warning: In general, gravity should be [0,0, -10], '
                   f'but here it is {gravity}, '
-                  f'please make sure this is the setting you need')
+                  f'please make sure this is the setting you need', file=sys.stderr)
 
     if time is not None:
         set_time(model, time)
@@ -938,7 +955,7 @@ def create(
         model.gravity = gravity
         if point_distance(gravity, [0, 0, -9.8]) > 1.0:
             if 'gravity' not in warnings_ignored:
-                warnings.warn(f'In general, gravity should be [0, 0, -9.8], '
+                warn(f'In general, gravity should be [0, 0, -9.8], '
                               f'but here it is {gravity}, '
                               f'please make sure this is the setting you need',
                               stacklevel=2)
@@ -954,7 +971,7 @@ def create(
 
     if dv_relative is not None:
         set_cfl(model, dv_relative)
-        warnings.warn("dv_relative is deprecated (remove after 2027-6-17), please use cfl instead",
+        warn("dv_relative is deprecated (remove after 2027-6-17), please use cfl instead",
                       DeprecationWarning, stacklevel=2)
     if cfl is not None:
         set_cfl(model, cfl)
@@ -1145,7 +1162,7 @@ def set_model(
     assert isinstance(model, Seepage), f'set_model expect Seepage, but got {type(model).__name__}'
     if len(ignores) > 0:
         print(f'Warning: The following arguments ignored in '
-              f'zmlx.config.seepage.set_model: {list(ignores.keys())}')
+              f'zmlx.config.seepage.set_model: {list(ignores.keys())}', file=sys.stderr)
 
     if mesh is not None:
         assert isinstance(mesh, SeepageMesh)

@@ -15,6 +15,7 @@ Modified by Claude, 2026-08-12
 """
 
 
+import sys
 from ctypes import c_double, c_int, c_void_p, cast, CFUNCTYPE, POINTER
 
 import numpy as np
@@ -53,7 +54,7 @@ def _make_solve_callback(solver_instance):
             x_np[:] = result
             return 0
         except Exception as e:
-            print(f'SciPySolver error: {e}')
+            print(f'SciPySolver error: {e}', file=sys.stderr)
             return -1
 
     return callback
@@ -113,7 +114,7 @@ class SciPySolver:
             x_np[:] = result
             return 0
         except Exception as e:
-            print(f'SciPySolver error: {e}')
+            print(f'SciPySolver error: {e}', file=sys.stderr)
             return -1
 
     @property

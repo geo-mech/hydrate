@@ -1,11 +1,11 @@
 from zmlx.exts import FluDef
-from zmlx.fluid import c11h24
-from zmlx.fluid import char
-from zmlx.fluid import kerogen
-from zmlx.fluid import oil
-from zmlx.fluid.ch4 import create as create_ch4
-from zmlx.fluid.h2o import create as create_h2o
-from zmlx.fluid.h2o_gas import create as create_steam
+from zmlx.fluids import c11h24
+from zmlx.fluids import char
+from zmlx.fluids import kerogen
+from zmlx.fluids import oil
+from zmlx.fluids.ch4 import create as create_ch4
+from zmlx.fluids.h2o import create as create_h2o
+from zmlx.fluids.h2o_gas import create as create_steam
 
 
 def create_fludefs():

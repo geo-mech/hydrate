@@ -1,10 +1,12 @@
 """ rc3 绘图工具。
 
 Modified by Claude, 2026-08-12
-"""
-import warnings
 
-from zmlx.geometry import rect_3d as rect3
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
+"""
+
+from zmlx.system import warn
+from zmlx.geometries import rect_3d as rect3
 from zmlx.plt.cmap import get_cm
 from zmlx.plt.on_axes._cbar import add_cbar
 
@@ -39,21 +41,21 @@ def add_rc3(
         if face_color is None:
             face_color = deprecated_opts['color']
         else:
-            warnings.warn(f'Option <color> is deprecated (remove after 2026-12-9), use <face_color> instead',
+            warn(f'Option <color> is deprecated (remove after 2026-12-9), use <face_color> instead',
                           DeprecationWarning, stacklevel=2)
 
     if 'alpha' in deprecated_opts:
         if face_alpha is None:
             face_alpha = deprecated_opts['alpha']
         else:
-            warnings.warn(f'Option <alpha> is deprecated (remove after 2026-12-9), use <face_alpha> instead',
+            warn(f'Option <alpha> is deprecated (remove after 2026-12-9), use <face_alpha> instead',
                           DeprecationWarning, stacklevel=2)
 
     if 'cmap' in deprecated_opts:
         if face_cmap is None:
             face_cmap = deprecated_opts['cmap']
         else:
-            warnings.warn(f'Option <cmap> is deprecated (remove after 2026-12-9), use <face_cmap> instead',
+            warn(f'Option <cmap> is deprecated (remove after 2026-12-9), use <face_cmap> instead',
                           DeprecationWarning, stacklevel=2)
 
     if face_color is None:  # 此时用颜色来代替序号

@@ -9,7 +9,7 @@
 ## 快速开始
 
 ```python
-from zmlx import *
+from zmlx.io import load_txt, load_col, append_file
 
 # 文本文件
 data = load_txt('data.txt')           # 读取文本为 list
@@ -48,7 +48,7 @@ data = read_py('output.py')
 | `get_path(*args, tag, key)` | 返回输出文件路径（从环境变量读取工作目录） |
 | `set_path(folder, tag, key)` | 设置输出目录（写入环境变量） |
 
-### `json_ex.py` — JSON 读写
+### `json_ex.py` — JSON 读写（继承标准库 json）
 
 | 函数 | 描述 |
 |------|------|
@@ -75,25 +75,13 @@ data = read_py('output.py')
 |------|------|
 | `load_xyz(ipath, ix, iy, iz)` | 从文本文件加载 XYZ 坐标（numpy.loadtxt），支持按列索引提取 |
 
----
-
-## 模块列表
-
-| 模块 | 描述 |
-|------|------|
-| `base.py` | 核心 IO 函数（load_txt, load_col, append_file, TaskFolder） |
-| `path.py` | 工作目录和输出路径管理 |
-| `json_ex.py` | JSON 文件读写（继承标准库 json） |
-| `python.py` | Python 格式文件读写 |
-| `text.py` | 纯文本文件读写 |
-| `xyz.py` | XYZ 坐标数据加载 |
-| `env/plt_export_dpi.py` | matplotlib 导出 DPI 环境变量配置 |
+### `env/plt_export_dpi.py` — matplotlib 导出 DPI 环境变量配置
 
 ---
 
 ## 与其他模块的关系
 
 - `zmlx.exts`：依赖 `make_dirs`、`make_parent`、`read_text`、`write_text`
-- `zmlx.alg.fsys`：IO 基础函数迁移目标
-- `zmlx.mesh.io`：三角网格文件加载（`load_trimesh`）
-- 注：`zmlx.io` 中的部分函数（如 `load_trimesh`）已迁移到 `zmlx.mesh.io`
+- `zmlx.algs.fsys`：IO 基础函数迁移目标
+- `zmlx.meshes.io`：三角网格文件加载（`load_trimesh`）
+- 注：`zmlx.io` 中的部分函数（如 `load_trimesh`）已迁移到 `zmlx.meshes.io`

@@ -2,7 +2,7 @@
 
 Modified by Claude, 2026-08-12
 """
-from zmlx.alg.fsys import *
+from zmlx.algs.fsys import *
 from zmlx.exts import Seepage
 from zmlx.ptree.array import array
 from zmlx.ptree.fludata import fludata

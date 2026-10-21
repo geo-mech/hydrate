@@ -1,78 +1,38 @@
-"""氦气密度和比热（基于 Reaktoro + Supcrt98 数据库）."""
+"""旧模块名（兼容层，**已弃用**）：``rkt._he`` -> :mod:`zmlx.fluids.rkt._he`.
 
-from reaktoro import (
-    ChemicalProps,
-    ChemicalState,
-    ChemicalSystem,
-    GaseousPhase,
-    SupcrtDatabase,
-    speciate,
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/fluids/rkt._he.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.fluids.rkt._he import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由 ``zmlx.fluid`` 改为 ``zmlx.fluids`` —— 与 ``algs`` / ``utils`` /
+``ui.widgets`` 统一用**复数**目录名。
+
+但 ``from zmlx.fluid.rkt._he import ...`` 这条路径仍被三类来源用着，故留一年过渡：
+① 外部脚本与用户在控制台敲的命令；② 历史脚本 / 笔记里的 import；③ 更早的兼容层。
+
+⚠️ 完整的兼容策略见 ``zmlx/fluid/__init__.py``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
+"""
+from zmlx.system import warn
+
+
+warn(
+    '``zmlx.fluid.rkt._he`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.fluids.rkt._he``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
 )
 
-_DB = SupcrtDatabase("supcrt98")
-_SYS = None
-
-
-def _get_system():
-    global _SYS
-    if _SYS is None:
-        gases = GaseousPhase(speciate("He"))
-        _SYS = ChemicalSystem(_DB, gases)
-    return _SYS
-
-
-def he_density(P, T):
-    """获取氦气在给定压力和温度下的密度.
-
-    Args:
-        P: 压力 (Pa)
-        T: 温度 (K)
-
-    Returns:
-        氦气的密度 (kg/m³)
-    """
-    if P <= 0:
-        raise ValueError(f"P must be > 0, got {P}")
-    if T <= 0:
-        raise ValueError(f"T must be > 0, got {T}")
-
-    system = _get_system()
-    state = ChemicalState(system)
-    state.temperature(T, "K")
-    state.pressure(P, "Pa")
-    state.set("He(g)", 1.0, "mol")
-
-    props = ChemicalProps(state)
-    return props.phaseProps("GaseousPhase").density()
-
-
-def he_specific_heat(P, T):
-    """获取氦气在给定压力和温度下的定压比热容.
-
-    Args:
-        P: 压力 (Pa)
-        T: 温度 (K)
-
-    Returns:
-        氦气的定压比热容 (J/(kg·K))
-    """
-    if P <= 0:
-        raise ValueError(f"P must be > 0, got {P}")
-    if T <= 0:
-        raise ValueError(f"T must be > 0, got {T}")
-
-    system = _get_system()
-    state = ChemicalState(system)
-    state.temperature(T, "K")
-    state.pressure(P, "Pa")
-    state.set("He(g)", 1.0, "mol")
-
-    props = ChemicalProps(state)
-    return props.specificHeatCapacityConstP()
-
-
-if __name__ == "__main__":
-    from zmlx.ui import gui
-    from zmlx.fluid.rkt._plot import plot_contours
-    gui.execute(lambda: plot_contours("He", he_density, he_specific_heat),
-                close_after_done=False)
+from zmlx.fluids.rkt._he import *  # noqa: F401,F403
+from zmlx.fluids.rkt._he import (  # noqa: F401
+    he_density,
+    he_specific_heat
+)

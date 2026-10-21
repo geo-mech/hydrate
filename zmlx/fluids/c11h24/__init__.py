@@ -1,0 +1,39 @@
+"""C11H24（十一烷）流体属性.
+
+Modified by Claude, 2026-08-12
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
+"""
+from zmlx.system import warn
+import os
+
+from zmlx.exts import Interp2, FluDef
+
+
+def create(name=None, specific_heat=None):
+    if specific_heat is None:
+        specific_heat = 2157.82  # J/kg K
+    return FluDef(
+        den=Interp2(path=os.path.join(os.path.dirname(__file__), 'den.txt')),
+        vis=Interp2(path=os.path.join(os.path.dirname(__file__), 'vis.txt')),
+        specific_heat=specific_heat, name=name)
+
+
+def create_flu(*args, **kwargs):
+    import zmlx.algs.sys as warnings
+    warn('use function <create> instead', DeprecationWarning,
+                  stacklevel=2)
+    return create(*args, **kwargs)
+
+
+def show_all():
+    from zmlx.plt import show_field2
+    flu = create()
+    show_field2(flu.den, [1e6, 40e6], [280, 1000], caption='den.txt')
+    show_field2(flu.vis, [1e6, 40e6], [280, 1000], caption='vis.txt')
+
+
+if __name__ == '__main__':
+    from zmlx.ui import gui
+
+    gui.execute(show_all, close_after_done=False)

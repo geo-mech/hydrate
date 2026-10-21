@@ -1,8 +1,11 @@
 """入侵渗流（Invasion Percolation）绑定.
 
 Modified by Claude, 2026-08-12
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-import warnings
+
+from zmlx.system import warn
 from ctypes import c_double, c_void_p, c_size_t, c_bool, c_char_p, POINTER
 from typing import Union
 
@@ -1989,7 +1992,7 @@ class InvasionPercolation(HasHandle):
         Returns:
             调用zmlx.alg.ip_nodes_write模块的ip_nodes_write函数的结果。
         """
-        warnings.warn('remove after 2025-6-2', DeprecationWarning, stacklevel=2)
+        warn('remove after 2025-6-2', DeprecationWarning, stacklevel=2)
         return ip_nodes_write(self, *args, **kwargs)
 
     core.use(None, 'ip_write_node_radi', c_void_p, POINTER(c_double))

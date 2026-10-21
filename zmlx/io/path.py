@@ -1,11 +1,14 @@
 """路径管理工具（数据目录、缓存路径、临时文件）.
 
 Modified by Claude, 2026-08-12
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
+from zmlx.system import warn
 import os
 
-import zmlx.alg.sys as warnings
-from zmlx.alg.fsys import in_directory, join_paths
+
+from zmlx.algs.fsys import in_directory, join_paths
 from zmlx.exts import app_data, get_dir, contain_chinese, make_parent, make_dirs
 
 
@@ -32,25 +35,25 @@ def get_path(*args, tag=None, key=None):
         root = app_data.getenv(key, encoding='utf-8')
 
     if root is None:
-        # warnings.warn(f'The root is None. (key={key})')
+        # warn(f'The root is None. (key={key})')
         return None
 
     if contain_chinese(root):
-        warnings.warn(f'The root contains Chinese. key={key}, root = {root}')
+        warn(f'The root contains Chinese. key={key}, root = {root}')
         return None
 
     # 检查根目录是否存在需要的tag
     if tag is not None:
         f_name = os.path.join(root, tag)
         if not os.path.isfile(f_name):
-            warnings.warn(f'The required tag file not exists: {f_name}')
+            warn(f'The required tag file not exists: {f_name}')
             return None
 
     # 找到所需要的路径
     if len(args) > 0:
         for arg in args:
             if contain_chinese(arg):
-                warnings.warn(f'String contains Chinese. args = {args}')
+                warn(f'String contains Chinese. args = {args}')
                 return None
         path = join_paths(root, *args)
     else:
@@ -71,7 +74,7 @@ def set_path(folder=None, tag=None, key=None):
     设置输出目录＜等同于UI界面设置的工作目录＞
     """
     if folder is None:
-        warnings.warn('The given folder is None')
+        warn('The given folder is None')
         return
 
     # 转化为绝对路径，这很重要

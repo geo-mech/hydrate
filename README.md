@@ -10,7 +10,7 @@
 
 [张召彬](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/201703/t20170306_4755492.html)<sup>
 1,2,x</sup>, [李守定](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/201412/t20141218_4278784.html)<sup>
-1,2</sup>, [李晓](https://igg.cas.cn/sourcedb_igg_cas/cn/zjrck/200907/t20090713_2065538.html)<sup>1,2</sup>, 徐涛<sup>
+1,2</sup>, 李晓<sup>1,2</sup>, 徐涛<sup>
 1,2</sup>, 李宇轩<sup>1,2</sup>, Maryelin Josefina Briceño Montilla<sup>1,2</sup>, 谢卓然<sup>1,2</sup>, 李晓旗<sup>1,2</sup>, 张韬<sup>1,2</sup>
 
 <sup>1</sup>[中国科学院地质与地球物理研究所](https://igg.cas.cn/)(北京, 100029);
@@ -64,7 +64,7 @@
    `git pull`);
 5. 将`hydrate`文件夹添加到Python搜索路径<sup>④</sup>;
 6. 运行`python -m zmlx ui`打开界面;
-7. 参考[`zmlx/demo`](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)建模<sup>⑤</sup>.
+7. 参考[`zmlx/demos`](https://gitee.com/geomech/hydrate/tree/master/zmlx/demos)建模<sup>⑤</sup>.
 
 > 注：<sup>①</sup>
 > 软件内核采用Visual Studio 2019编译，建议安装
@@ -73,17 +73,35 @@
 > <sup>②</sup>
 > 推荐[WinPython](https://gitee.com/geomech/hydrate/attach_files),
 > [Miniconda](https://www.anaconda.com/docs/getting-started/miniconda/main)
-> 等Python发行版; <sup>③</sup> 运行脚本`zmlx/script/install_dep.py`可自动安装所有依赖包(
+> 等Python发行版; <sup>③</sup> 运行脚本`zmlx/scripts/install_dep.py`可自动安装所有依赖包(
 > 基于[pip](https://pypi.org/project/pip/))；
 > <sup>④</sup> 使得Python中`import zmlx`可用; <sup>⑤</sup>
-> 建议在[demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)
-> 的基础上，向前追溯函数的实现; 另外，[demo](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo)中案例仅供测试，作者不保证其参数的合理性.
+> 建议在[demos](https://gitee.com/geomech/hydrate/tree/master/zmlx/demos)
+> 的基础上，向前追溯函数的实现; 另外，[demos](https://gitee.com/geomech/hydrate/tree/master/zmlx/demos)中案例仅供测试，作者不保证其参数的合理性.
+
+### 作为 Python 库使用
+
+`zmlx` 除提供界面外，也可作为 Python 库导入到脚本中，实现建模、求解与后处理的自动化。安装完成后（见上文「安装」），即可：
+
+```python
+import zmlx                # 顶层 API：建模、流体、求解、绘图等常用函数
+```
+
+常用入口集中在 `zmlx` 顶层命名空间，例如：
+
+```python
+from zmlx import seepage, create_ch4, create_h2o   # 模型与流体定义
+from zmlx.tfc import solve                          # 多场耦合求解
+from zmlx import plot_xy, show_xy                   # 绘图
+```
+
+完整的建模流程可参考 [`zmlx/demos`](https://gitee.com/geomech/hydrate/tree/master/zmlx/demos)。
 
 ### 学习/快速入门
 
-建议从 [`zmlx/demo`](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo) 开始学习。Demo 目录包含 **100+ 个可运行示例**，覆盖了单相流、两相流、水合物开发、热传导、力学等各类问题。
+建议从 [`zmlx/demos`](https://gitee.com/geomech/hydrate/tree/master/zmlx/demos) 开始学习。Demo 目录包含 **100+ 个可运行示例**，覆盖了单相流、两相流、水合物开发、热传导、力学等各类问题。
 
-> 参阅 [`zmlx/demo/ReadMe.md`](https://gitee.com/geomech/hydrate/tree/master/zmlx/demo/ReadMe.md) 获取完整的建模指南，包括：
+> 参阅 [`zmlx/demos/ReadMe.md`](https://gitee.com/geomech/hydrate/tree/master/zmlx/demos/ReadMe.md) 获取完整的建模指南，包括：
 > - 建模方法与空间分布函数
 > - 边界条件设置（定压、恒温、井）
 > - 时间步进策略
@@ -93,8 +111,8 @@
 
 运行方式：
 ```bash
-python zmlx/demo/flow_2ph/wat_disp_oil.py              # GUI 模式
-python zmlx/demo/flow_2ph/wat_disp_oil.py --no-gui     # 命令行模式
+python zmlx/demos/flow_2ph/wat_disp_oil.py              # GUI 模式
+python zmlx/demos/flow_2ph/wat_disp_oil.py --no-gui     # 命令行模式
 ```
 
 ### 协作/开发
@@ -122,12 +140,43 @@ python zmlx/demo/flow_2ph/wat_disp_oil.py --no-gui     # 命令行模式
 > 注：反馈或推送给代码，务必在[主仓库](https://gitee.com/geomech/hydrate)
 > 进行，作者不会关注[镜像仓库](https://github.com/geo-mech/hydrate)的变化.
 
-### 授权
+### 登录与使用
 
-[告知作者](https://gitee.com/geomech/hydrate/issues/ID5HZX)后可免费使用。
+本软件可免费用于学术研究，发表文章时请声明使用了本软件。商业使用须联系作者获得许可。
 
-> 注：① 软件会基于网络检查版本。对于过期的版本，仍然可以运行，但是计算的速度会受到限制。因此，请确保使用最新版，并确保电脑联网。
-> ② 目前，软件在Python层面开源，而C++层面的代码则以动态库形式提供（在后续稳定之后，也会逐步开放）。
+#### 需要登录：把「本机」关联到你的邮箱
+
+安装完成后必须先用邮箱完成一次登录，把本机与你的邮箱关联起来，软件才能正常使用
+（未登录时，计算过程会提示登录）：
+
+1. 打开界面（`python -m zmlx ui`或者运行`zml_ui.pyw`）；
+2. 打开[登录页面](https://gitee.com/geomech/hydrate#登录与使用 "在本机界面里直接打开登录窗口")，
+   入口是**菜单：帮助 → 用户 → 登录**（或界面状态栏右下角「未登录」的按钮）；
+3. 按页面提示依次填写姓名、单位、邮箱，点「发送验证码」；
+4. 到邮箱里收取 6 位数字验证码，填进「验证码」框，点「登录」；
+5. 页面会显示登录结果与服务器原始答复；成功后状态栏右侧变为「已登录：<姓名>」。
+
+要把这台电脑交还给别人（或不再使用）时，在登录页面点「**在这台电脑上退出**」即可：
+只影响这一台电脑，登录邮箱与其它电脑都不受影响，需要时用同一个邮箱重新登录就能恢复。
+
+> 注：① 邮箱是标识本机的唯一凭据 —— 换机器时用同一个邮箱再走一遍上面的流程即可；
+> ② 当前的登录体系依赖网络，如果需要离线使用，请联系作者。
+
+### 隐私声明
+
+本软件有两类网络访问。
+
+一、自动反馈运行日志（可关闭）。启动时会把上次运行的日志自动发送给开发者，用于定位崩溃
+与报错、改进软件质量；内容只是程序自身的日志，不含你的模型数据或计算结果。
+
+不希望发送，就在[系统变量](zmlx://gui/show_env_edit)里把「不向开发者反馈」设为 `Yes`；也可以先在
+[反馈记录](zmlx://gui/show_feedbacks_view)里看看自己究竟反馈了什么，再决定要不要关。
+
+> 但强烈不建议关闭：这是开发者发现真实问题的主要途径 —— 你遇到的那个崩溃、那次卡顿，
+> 很可能正是靠它才被定位并修好的。
+
+二、联网查询（无法关闭）。本软件采用邮箱登录（见上文「登录与使用」），登录状态校验
+需要访问服务器。这是软件正常运行所必需的，关掉将无法使用。
 
 ### 关于软件名
 

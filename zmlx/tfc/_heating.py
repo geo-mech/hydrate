@@ -29,7 +29,7 @@ Modified by Claude, 2026-08-12
 """
 
 
-from zmlx.alg.vec import to_numpy
+from zmlx.algs.vec import to_numpy
 from zmlx.exts import Seepage, np, clock
 from zmlx.tfc._base import get_dt, as_numpy, get_configs, add_config
 

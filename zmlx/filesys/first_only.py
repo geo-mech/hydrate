@@ -1,9 +1,12 @@
-"""已弃用的模块，请改用 zmlx.alg.fsys."""
-import zmlx.alg.sys as warnings
+"""已弃用的模块，请改用 zmlx.algs.fsys.
 
-from zmlx.alg.fsys import first_only
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
+"""
 
-warnings.warn(f'The module {__name__} will be removed after 2026-4-15',
+from zmlx.system import warn
+from zmlx.algs.fsys import first_only
+
+warn(f'The module {__name__} will be removed after 2026-4-15',
               DeprecationWarning, stacklevel=2)
 
 __all__ = ['first_only']

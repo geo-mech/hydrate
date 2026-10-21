@@ -1,58 +1,37 @@
-"""并行计算开关复选框（CoreParallelEdit）.
+"""旧模块名（兼容层，**已弃用**）：``_parallel`` -> :mod:`zmlx.ui.widgets._parallel`.
 
-Modified by Claude, 2026-08-12
+⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/ui/widgets/_parallel.py`` 里 ——
+本文件除了下面那几行 import / 别名不该再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.ui.widgets._parallel import ...``。
+
+为什么留着而不删
+----------------
+
+2026-10-16 把包名由单数 ``widget`` 改为复数 ``widgets``（单数与 Qt 自己的
+``QtWidgets`` 太像，读代码时极易看错）。但 ``from zmlx.ui.widget._parallel import ...``
+这条路径仍被三类来源用着，故留一年过渡：① 外部脚本与用户在控制台敲的命令；
+② 历史标签页的 ``gui_restore``（重启时按存下来的字符串重放）；③ 更早的兼容层。
+
+⚠️ 完整的兼容策略见 ``zmlx/ui/widget/__init__.py`` 与 ``widgets/AGENTS.md``。
+
+Modified by DeepSeek, 2026-10-16
+
+Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-
-import sys
-
-from zmlx.system import app_data
-from zmlx.ui.pyqt import QtWidgets
-
-try:
-    from zmlx.exts import core
-except ImportError:
-    core = None
+from zmlx.system import warn
 
 
-def _parallel_enabled(value=None):
-    """
-    设置/检查内核并行是否启用
-    """
-    key = 'disable_parallel'
-    if value is not None:
-        if value:
-            app_data.setenv(key=key, value='No')
-        else:
-            app_data.setenv(key=key, value='Yes')
-    else:
-        value = app_data.getenv(key=key, default='') != 'Yes'
-    if core is not None:
-        core.parallel_enabled = value
-    return value
+warn(
+    '``zmlx.ui.widget._parallel`` 已弃用（2026-10-16）：请改用 '
+    '``zmlx.ui.widgets._parallel``；本转发层将于 **2027-10-16** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-
-class CoreParallelEdit(QtWidgets.QCheckBox):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setText("内核并行")
-        self.setToolTip(
-            '在C++层面，是否对for循环进行并行化. 任务比较大的时候，并行有益. '
-            '但是，在任务比较小的时候，并行可能会导致性能下降.'
-        )
-        self.setChecked(_parallel_enabled())
-        self.stateChanged.connect(self._changed)
-
-    def _changed(self):
-        enabled = self.isChecked()
-        _parallel_enabled(enabled)
-
-
-def test():
-    app = QtWidgets.QApplication(sys.argv)
-    w = CoreParallelEdit()
-    w.show()
-    sys.exit(app.exec())
-
-
-if __name__ == "__main__":
-    test()
+from zmlx.ui.widgets._parallel import *  # noqa: F401,F403
+from zmlx.ui.widgets._parallel import (  # noqa: F401
+    CoreParallelEdit,
+    test
+)
