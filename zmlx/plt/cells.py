@@ -10,5 +10,7 @@ from zmlx.tfc import show_cells
 _keep = [show_cells]
 
 
-warn(f'The module {__name__} will be removed after 2027-5-23',
-              DeprecationWarning, stacklevel=2)
+warn(
+    'The module zmlx.plt.cells 已弃用（remove after 2027-5-23）：'
+    '请改用 `from zmlx import show_cells`（或 `from zmlx.tfc import show_cells`）',
+    DeprecationWarning, stacklevel=2)

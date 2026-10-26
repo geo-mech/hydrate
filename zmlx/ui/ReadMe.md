@@ -2,7 +2,7 @@
 
 ## 概述
 
-`zmlx.ui` 提供基于 PyQt6（自动降级至 PyQt5）的完整图形用户界面系统，包括多标签页编辑器、代码编辑器、文件浏览器、控制台（后台线程执行脚本）、matplotlib 绘图、图像/PDF 查看、环境变量管理等功能。
+`zmlx.ui` 提供基于 PyQt6（自动降级至 PyQt5）的完整图形用户界面系统，包括多标签页编辑器、代码编辑器、文件浏览器、控制台（后台线程执行脚本）、matplotlib 绘图、图像查看、环境变量管理等功能。（PDF 查看由插件 `plugins/builtin/pdf_view.py` 提供，默认启用，依赖可选库 `PyQt6-WebEngine`。）
 
 **设计目标**：
 - 提供最基础的 UI 功能
@@ -54,9 +54,48 @@ python demo.py --headless     # 等效
 `gui.break_point()`，否则界面会卡死直到计算结束。完整函数表见
 [`projects/zml/AGENTS.md`](../../AGENTS.md) 的「`gui.*` functions」。
 
+### 右侧栏的宽度与可见性会被记住（2026-10-26）
+
+`MainWindow` 的中央区是一个水平 `QSplitter`：**左边**是顶部标签页（拉伸因子 1），
+**右边**是右侧栏（控制台常驻其中，拉伸因子 0）。三件事都自动保存 / 恢复：
+
+| 行为 | 什么时候 | 存哪 |
+|---|---|---|
+| **拖动分隔条** | 任何时候（`splitter` 可拖，用户决定宽度） | `resizeEvent` 把「> 0 的宽度」记到 `_last_console_width` |
+| **宽度记忆** | 关闭窗口时 `settings.save_console_width(win)` | `app_data` 的 `main_window_console_width_px` |
+| **可见性恢复** | 关闭时写 `console_visible`（`Yes`/`No`），下次 `__on_show` 读 | `app_data` 的 `console_visible` |
+| **宽度恢复** | 启动时 `init_splitter_sizes()`：存盘值夹到 `[settings.MIN_CONSOLE_WIDTH, 窗口宽度×MAX_CONSOLE_RATIO]`；**没有存盘时按 `DEFAULT_CONSOLE_RATIO`（0.22，2026-10-26 由 0.30 调窄）** | —— |
+
+⚠️ **隐藏时不会用 0 覆盖已存宽度**：隐藏后 `splitter.sizes()` 的右项是 0；重新显示时
+`set_side_tabs_visible(True)` 会还原成隐藏前的宽度。
+
+### 「显示 → 重置布局」：改乱了就点它（2026-10-26）
+
+`MainWindow.reset_layout(ask=True)`，菜单「显示 → 重置布局」，也是命令 `gui.reset_layout()`。
+它做两件事：
+
+1. **当前窗口立即生效**：右侧栏恢复显示 + 默认宽度（`settings.DEFAULT_CONSOLE_RATIO`，约 22%）；
+2. **清掉存盘**（`settings.reset_layout(style_sheet=None)`，键表见 `settings.LAYOUT_KEYS`）：
+   右侧栏宽度 / 上次可见宽度 / 是否显示 —— 下次启动也是默认。
+
+⚠️⚠️ **它不碰这两样**（2026-10-26 按用户要求收窄）：
+
+- **窗口大小 / 位置** —— 那是用户自己拖出来的，重置布局不该把窗口拽回屏幕居中 75%；
+  `main_window_size*` 因此**不在** `LAYOUT_KEYS` 里，存盘值保留；
+- **样式表** —— 外观不是布局，清掉等于把用户的主题一起删了；`reset_layout()` 的
+  `style_sheet` 参数默认就是 `None`（真要清得显式传）。
+
+⚠️ **不清的东西**：已打开的标签页、插件名单、工作路径 —— 那些也不是布局。
+
+⚠️ 实现上的坑（都实测过）：
+- `settings.save()` 写的是**文件**（`app_data.temp(key)`），若要清样式表必须**删文件**才算真清；
+- 只重排右侧栏时不必动窗口几何，但**宽度也不能读 `splitter.width()`** —— 父布局没重排完
+  时它可能是旧值。默认宽度从**父控件布局**反推（`_splitter_target_width`）。
+  ⚠️ 也**不要**用 `QSplitter.activate()` —— 那是 `QLayout` 的方法，`QSplitter` 上没有。
+
 ### 切标签页会调用当前页的 `refresh()`（重要）
 
-`MainWindow` 把 `top_tabs.currentChanged` 接到 `refresh()`（菜单「显示 → 刷新」走同一条路径），
+`MainWindow` 把 `top_tabs.currentChanged` 接到 `refresh()`（菜单「操作 → 刷新」走同一条路径），
 **每次切到某个标签页，该控件的 `refresh()` 就会被调一次**。因此 `refresh()` 里不能做慢操作
 （读磁盘、解析文件、联网、重画图表）：需要的话必须放进后台 `QThread`，结果用信号回传主线程。
 
@@ -134,7 +173,7 @@ plot(on_figure, caption="图标题")
 控件该放哪，见 [`tabs/AGENTS.md`](tabs/AGENTS.md)。
 ⚠️ `widgets/` 里还有两类，既不是"被标签页复用的底层组件"、也不是"标签页页面"：
 **宿主不是标签页的常驻控件**（状态栏 `VersionButton` / `LicenseButton`、右侧栏 `OutputWidget`、
-标签容器 `TabWidget`）与**对话框/表单组件集**（`seepage.py` / `editors.py` / `float_edit.py`）。
+标签容器 `TabWidget`）与**对话框/表单组件集**（`editors/`（子包：**全部编辑器都在这里**））。
 
 ### widgets/ —— 通用控件
 
@@ -146,8 +185,10 @@ plot(on_figure, caption="图标题")
 | `OutputWidget` | 输出面板（文本 + 属性 + 进度条）；文本支持 **ANSI 颜色**：`print` 里的 `\033[3xm` 等转义码会被上色，控件不支持的序列（擦行 / 清屏 / 光标定位 / OSC）一律**删除**而不是显示成乱码，`sys.stderr` 的内容显示成红色，控制台的**系统提示**（时间戳分隔行、`Start` / `Done` / `Time used`）显示成蓝色（浅色主题深蓝 / 暗色主题浅蓝） |
 | `MarkdownView` | Markdown 查看器（表格 / 代码块 / 可点链接）；公开方法只有 `set_markdown()` 与 `set_link_callback()`；**默认优先用第三方 `markdown` 库**渲染（未装则提示一次并回退 Qt 自带 `setMarkdown`；设置键 `md_by_html` 写成 `No` 可强制 Qt） |
 | `AttrView` | 属性键值表格查看器 |
-| `VersionButton` | 状态栏：版本号按钮（点击→关于）。⚠️ 也会被 `MainWindow.console_state()` 借去显示控制台「运行中/已暂停」（空串恢复版本号）；服务端报了新版本时补「（有更新）」后缀 |
-| `LicenseButton` | 状态栏：登录状态按钮（点击→登录）。**固定就是一个按钮**，文字在「登录查询中... / 已登录：<姓名> / 未登录 / 登录状态未知」之间变；查询自带后台线程（`LicenseStateThread`，parent 留空 + 模块级登记表，见 `widget/AGENTS.md` 的线程契约）；查到的「是否有更新」经 `sig_update` 转给 `VersionButton` |
+| `RunStateLight` | 状态栏（**「并行」复选框左边**）：**运行状态灯**——圆点 + 文字，在「○ 空闲 / ● 运行中 / ⏸ 已暂停」之间切换，状态由 `MainWindow.refresh()` 按 `is_running()` / `is_paused()` 设置。⚠️ 2026-10-26 新加：把原先**借**版本按钮显示的控制台状态接了过来。★ 它是**按钮**（`QToolButton`）：**点击 = `gui.show_console()`** —— 把右侧栏（控制台）显示出来 / 切过去，悬停提示末尾也写了这句。圆点是**字符**（`●`/`○`/`⏸`）而不是 `QPixmap`（`QLabel.setText()` 会 `clearContents()` 把 pixmap 清掉，实测） |
+| `VersionButton` | 状态栏：版本号按钮（`QToolButton`，点击→关于），显示 **`版本: <zmlx.__version__>`**（如 `版本: 1.9.7`；2026-10-26 起，原先显示的是内核编译时间 `Oct 21 2026`）。⚠️ **不设任何尺寸策略**（不重写 `sizeHint`、不写 QSS、不锁宽高），紧凑交给 `QToolButton` 默认行为。⚠️ 2026-10-26 起**只属于版本号**；服务端报了新版本时补「（有更新）」后缀；内核编译时间挪到悬停提示里。⚠️ 历史公开方法 `MainWindow.console_state()` 仍保留（照旧写本按钮），只为兼容外部调用 |
+| `LicenseButton` | 状态栏：登录状态按钮（`QToolButton`，点击→登录）。**固定就是一个按钮**，文字在「登录查询中... / 已登录：<姓名> / 未登录 / 登录状态未知」之间变；查询自带后台线程（`LicenseStateThread`，parent 留空 + 模块级登记表，见 `widget/AGENTS.md` 的线程契约）；查到的「是否有更新」经 `sig_update` 转给 `VersionButton`。⚠️ 与另两个一样**不设尺寸策略**，只保留 `MAX_BUTTON_WIDTH` 这个**宽度上限**（超长显示名不能把状态栏撑宽） |
+| `editors/`（子包） | **数据编辑器集合**：`set_data()` 给数据 → 用户编辑 → `get_data()` 取回。含 `ArrayEdit`（numpy 矩阵）、`XyEdit` / `XyzEdit`（曲线 / 曲面）、`Interp1Edit` / `Interp2Edit`（插值）、`TextEdit` / `ArrayTextEdit`，读写工具 `NumpyAlgs`；**单浮点数** `Slider` / `Dial`；通用包装器 `ObjectEdit`（+ `TextInput` / `IntSpin` / `FloatSpin`）。⚠️ 2026-10-21 由单文件 `editors.py` 拆成子包，并先后并入原 `widgets/seepage.py` 与 `widgets/float_edit.py` 的全部控件 —— 至此 **`widgets/` 根目录只剩纯控件**；**老路径 `from zmlx.ui.widgets.editors import X` 不变**，`widgets/seepage.py` / `widgets/float_edit.py` 已成弃用垫片（前者**不再提供 `setup_ui`**）。⚠️ 2026-10-22 渗流相关的 10 个类（`SeepageEdit` / `FludefEdit`、容器 `SeepageFormEdit` / `SeepageTabEdit`、组合编辑器 `SeepageSummary` / `SeepageKrEdit` / `SeepageInterp1Edit`、单字段行 `TextFieldEdit` / `IntFieldEdit` / `FloatFieldEdit`，在 `seepage_edit.py` / `field_edit.py`）一度搬进插件包 `zmlx/scen/editors/`，同日又**搬回本子包**（它们是纯控件，那个插件包已整体删除），`__all__` 27 → 18 → 28。类上没有静态 `setup_ui`；文件类型注册（`gui.open_numpy_array` / `gui.open_seepage` 等）由**插件** [`plugins/builtin/editors.py`](plugins/builtin/editors.py) 完成（`setup_file_types()`，默认启用；原 `extra_setups/editors.py` 与 `plugins/builtin/editors_menu.py`、`seepage_menu.py` 都已合并进它并删除）。**加/改编辑器的规范见 [`widgets/editors/AGENTS.md`](widgets/editors/AGENTS.md)** |
 | ... | 更多控件详见 `widgets/` 目录 |
 
 ### tabs/ —— 标签页专用控件
@@ -156,33 +197,33 @@ plot(on_figure, caption="图标题")
 
 | 控件 | 描述 |
 |------|------|
-| `About` | 「关于」页：快信息（版本 / 路径 / Python / Qt，本地读取）在装配表格时就填好，「慢信息」（管理员权限 / 登录状态，要联网）走后台线程回填；表格只读（双击不弹编辑器）。版本号一行形如 `261007 (zmlx 1.10.22)` |
+| `About` | 「关于」页：快信息（版本 / 路径 / Python / Qt，本地读取）在装配表格时就填好，「慢信息」（管理员权限 / 登录状态，要联网）走后台线程回填；表格只读（双击不弹编辑器）。版本号一行形如 `261007 (zmlx 1.10.22)`。每行最后一列按行配一个按钮（ReadMe / 更新 / 日志 / 登录 / 统计 / 打开），「代码行数」那一行是 **架构**（→ 帮助 → 架构；2026-10-26 加） |
 | `CheckCountView` | 「帮助 → 查询 → 登录记录」：某个邮箱对应用的登录查询次数，按天柱状图（⚠️ **原生 Qt 绘制**，非 matplotlib）；左侧邮箱名单仅管理员可见。⚠️ 名字说的是"这是 `check_count` 那个接口的视图"，不是"登录检查"——数据是被数出来的那些 check 的**次数** |
 | `FeedbackTool` | 用户反馈工具：一个输入框 + 一个按钮，把文本提交给作者；有未提交内容时 `need_save()` 为真（菜单「保存」据此点亮），关标签前会问一次是否存盘 |
 | `FeedbacksView` | 「帮助 → 查询 → 反馈记录」：某个用户**某一天**的反馈文件名 + 单条反馈的内容（**本人或管理员**）；内容按「合法 JSON → 缩进 / 否则原文 / 二进制 → hex 摘要」三级显示，JSON 记录会把 `text` **单独拿出来**（与其余字段分两块、可拖动）；`Truncated:` 与 0 字节文件分别提示；⚠️ **不落盘**——显示的可能是别人的反馈正文，故本控件**不实现** `save_file()`。★ **左栏「选什么」、右栏「看什么」**：邮箱与日期都只在左栏输入，发起查询的按钮也只有左栏那个「刷新文件」——右侧只有一个只读的邮箱回显（`date_view` / `query_button` 分别是左栏日期框与「刷新文件」的**别名**，为兼容旧调用而保留） |
 | `LicenseRegister` | 登录控件（邮箱验证码 + 登录本机）：**一个控件、两种形态** —— 未登录时填资料收验证码走 `submit`，已登录后同一个按钮变「更新信息」；换绑邮箱 = 直接改邮箱框 |
 | `CwdView` | 当前目录文件浏览器（`refresh()`：切回本页时重扫目录） |
-| `DemoView` | Demo 脚本浏览器（⚠️ 列表**异步载入**：先显示「正在载入 ...」占位行，扫描在后台线程；切标签页不阻塞） |
+| `DemoView` | Demo 脚本浏览器（⚠️ 列表**异步载入**：先显示「正在载入 ...」占位行，扫描在后台线程；切标签页不阻塞）。⚠️ **2026-10-22 不在 `ui/tabs/` 了**：它只有「示例浏览」插件在用，已随 `gui.show_demo` 整体并入 `plugins/builtin/demo_menu.py`；老路径 `from zmlx.ui.widget import DemoView` 仍可用（弃用垫片已改指新位置） |
 | `GuiIteratorEdit` | GUI 迭代器面板：迭代耗时曲线（⚠️ **原生 Qt 绘制**，非 matplotlib）+ ratio / 最大绘图间隔编辑 |
 | `MemView` | 内存变量查看/编辑器 |
 | `MessageEdit` | 通知消息中心（控制台命令 `gui.show_messages()`）：列出通知条目，双击执行 / 删除 |
-| `SolverSelector` | 求解器选择面板 |
+| `SolverSelector` | 求解器选择面板。⚠️ **2026-10-22 不在 `ui/tabs/` 了**：它只有「求解器」插件在用，已随 `gui.show_solver_selector` 整体并入 `plugins/builtin/solver_menu.py`（默认**不加载**）；老路径 `from zmlx.ui.tabs import SolverSelector` 与 `from zmlx.ui.widget import SolverSelector` 仍可用 |
 | `TabDetailView` | 已打开标签页总览（开在**右侧栏**）：列出标题 / 类型 / 关闭按钮，点击切页、双击删除；⚠️ 主窗口的刷新链到不了它（`MainWindow.refresh` 只刷顶栏当前页），故**可见时每秒自刷**（`refresh()` + `showEvent`/`hideEvent` 起停计时器） |
 | `TimerView` | CPU 计时表（`refresh()` + 自带 `QTimer`） |
 | `AppPathEdit` | 搜索路径浏览器 |
 | `CodeHistoryView` | 历史代码浏览 |
 | `EnvEdit` | 环境变量编辑器（菜单「设置 → 系统」）：按 `data/zml_env_items.py` 每项的 `kind` 选控件、按 `default` 初始化 —— **界面初始显示的就是程序实际生效的取值**；选「默认」或「全部还原为默认」= 删除持久化文件。⚠️ 系统环境变量优先：被覆盖的键显示生效值并置灰 |
-| `Fn2Widget` | 2D 裂缝网络可视化 |
-| `ImageView` | 图片查看器 |
+| `Fn2Widget` | 2D 裂缝网络可视化。⚠️ **2026-10-22 不在 `ui/tabs/` 了**：它只有「二维裂缝查看」插件在用，已随 `gui.show_fn2` 整体并入 `plugins/builtin/fn2_view.py`（默认启用，同时注册 `.fn2` 文件类型）；老路径 `from zmlx.ui.widget import Fn2Widget` 仍可用 |
+| `ImageView` | 图片查看器（滚轮缩放 / 拖拽）。⚠️ 2026-10-22 曾连同 `open_image` 并入「图片浏览」插件，**同日还原**：欢迎页在 `MainWindow` 构造期就要用 `gui.open_image`，它是**底层能力**，不该随插件开关消失 |
 | `OutputHistoryView` | 历史输出浏览 |
-| `PgConsole` | 交互式 Python 控制台（可选依赖：没装 pyqtgraph 时该名字为 `None`） |
+| `PgConsole` | 交互式 Python 控制台（可选依赖：没装 pyqtgraph 时该名字为 `None`）。⚠️ **2026-10-22 不在 `ui/tabs/` 了**：它只有「Python 控制台」插件在用，已随 `gui.show_pg_console` 整体并入 `plugins/builtin/pg_console.py`（默认启用）；老路径 `from zmlx.ui.widget import PgConsole` 仍可用 |
 | `ReadMeBrowser` | ReadMe 查看器：`QWidget` 容器 = **左侧标题目录**（`QTreeWidget`，标题层级归一化后建树）+ **右侧正文**（私有 `_ReadMeContent`，继承 `MarkdownView`）；点目录项把该小节顶到视口顶部，滚动正文时目录自动高亮当前小节；微信 / 登录 / `zmlx/demos` / 新建Issue 等链接就地处理（显示本地二维码、打开登录控件或 Demo 浏览器，而不是去开浏览器） |
 | `RegTool` | 许可登录工具（旧的 USB 序列号 + 授权码方式，已不挂界面，留作离线授权码那条老路） |
-| `PluginListEdit` | 插件列表编辑器（「设置 → 插件」）：七列「启用 / 优先级 / 名称 / 描述 / 来源 / 状态 / 临时加载」。可勾选启用、改高/正常/低优先级；「来源」区分**自动发现**与**手动登记**，**只有手动登记的能移除**（自动发现的移了下次扫描也会回来，只能禁用）。**临时加载**：点按钮**当场执行**该插件脚本（不必勾选、不必重启），不写任何设置；每个插件在本次运行只加载一次 —— **启动时已执行过的也算**（勾选着启动的插件，按钮直接显示「已加载」且点不动），失败可重试。⚠️ **没有「文件」列**（2026-10-19 移除）：**完整路径在名称列的鼠标悬停提示里**，双击任意一行可在代码编辑器中打开。⚠️ **不支持拖动排序** —— 顺序由插件来源决定，用户只控制「是否执行」与「谁先执行」。⚠️ **刷新只更新状态、不重建表单**（2026-10-21）：表格已有内容时 `refresh()` 只重算「启用 / 优先级 / 状态」并原地写回（不起线程、不扫目录、不读文件），名称 / 描述 / 来源三列不动；只有首次显示、或插件集合变了（添加 / 移除 / 恢复默认）才重扫重铺 |
+| `PluginListEdit` | 插件列表编辑器（「设置 → 插件」）：七列「默认加载 / 优先级 / 名称 / 描述 / 来源 / 状态 / 临时加载」。可勾选「默认加载」（= 启动时是否自动加载；2026-10-25 由「启用」改名）、改高/正常/低优先级；「来源」区分**自动发现**与**手动登记**，**只有手动登记的能移除**（自动发现的移了下次扫描也会回来，只能禁用）。**临时加载**：点按钮**当场执行**该插件脚本（不必勾选、不必重启），不写任何设置；每个插件在本次运行只加载一次 —— **启动时已执行过的也算**（勾选着启动的插件，按钮直接显示「已加载」且点不动），失败可重试。⚠️ **没有「文件」列**（2026-10-19 移除）：**完整路径在名称列的鼠标悬停提示里**，双击任意一行可在代码编辑器中打开。⚠️ **不支持拖动排序** —— 顺序由插件来源决定，用户只控制「是否执行」与「谁先执行」。⚠️ **刷新只更新状态、不重建表单**（2026-10-21）：表格已有内容时 `update_items()` 只重算「默认加载 / 优先级 / 状态」并原地写回（不起线程、不扫目录、不读文件），名称 / 描述 / 来源三列不动；只有首次显示、或插件集合变了（添加 / 移除 / 恢复默认）才重扫重铺 |
 | `StringTable` | 字符串表格查看器 |
-| `StyleSheetEdit` | 窗口样式表(QSS)编辑器（「设置 → 样式表」）：可选字体/配色/圆角等参数实时生成，也可直接用自定义文本；应用走转接出来的 `gui.set_style_sheet(text)`，**落盘与参数记忆都由控件自己负责**（写入 `zml_window_style.qss`） |
+| `StyleSheetEdit` | 窗口样式表(QSS)编辑器（「设置 → 样式表」）：可选字体/配色/圆角等参数实时生成，也可直接用自定义文本；应用走转接出来的 `gui.set_style_sheet(text)`，**落盘与参数记忆都由控件自己负责**（写入 `zml_window_style.qss`）。⚠️ **2026-10-22 不在 `ui/tabs/` 了**：它只有「样式表」插件在用，已随 `gui.show_style_sheet` 整体并入 `plugins/builtin/style_sheet_menu.py`；老路径 `from zmlx.ui.widget import StyleSheetEdit` 仍可用（弃用垫片已改指新位置） |
 | `TextFileEdit` | 可编辑文本文件视图 |
-| `ImageBrowser` | **图片浏览器**：打开即扫描「工作路径」及其下 2 层子目录的图片（格式以 Qt 图片插件为准，默认不收 `pdf`），左侧缩略图相册（手机相册式），点哪张右侧显示大图；支持上一张/下一张、按帧率连续播放（进度条 + 循环开关）、以及显式「刷新」按钮。⚠️ **故意不实现 `refresh()`**（切标签不自动重扫）；三个后台线程（扫描/缩略图/解码）全部压低 OS 优先级，解码**按显示尺寸**；关标签走 `cleanup_before_tab_close()`；播放中切走标签会自动暂停并亮出「继续播放」。单文件自足（只依赖 `zmlx.ui.pyqt`）。**入口**：菜单「文件 → 图片浏览」或命令 `gui.show_image_browser()`（挂载点 `plugins/builtin/image_browser.py`，不动 `main.py`） |
+| `ImageBrowser` | **图片浏览器**：打开即扫描「工作路径」及其下 2 层子目录的图片（格式以 Qt 图片插件为准，默认不收 `pdf`），左侧缩略图相册（手机相册式），点哪张右侧显示大图；支持上一张/下一张、按帧率连续播放（进度条 + 循环开关）、以及显式「刷新」按钮。⚠️ **故意不实现 `refresh()`**（切标签不自动重扫）；三个后台线程（扫描/缩略图/解码）全部压低 OS 优先级，解码**按显示尺寸**；关标签走 `cleanup_before_tab_close()`；播放中切走标签会自动暂停并亮出「继续播放」。单文件自足（只依赖 `zmlx.ui.pyqt`）。**入口**：菜单「文件 → 浏览 → 图片」或命令 `gui.show_image_browser()`（挂载点 `plugins/builtin/image_browser.py`，不动 `main.py`） |
 
 ### extra_setups/ —— 额外菜单动作自带的页面
 
@@ -280,8 +321,84 @@ zmlx.ui/
 | `widget/` | **兼容垫片**：转发到 `widgets/` 与 `tabs/`（导入即发 `DeprecationWarning`，2027-10-16 删） |
 | `tabs/` | 标签页专用控件（实现了 `cleanup_before_tab_close()` 的那一类） |
 | `extra_setups` | 额外菜单动作（注册新菜单放这里） |
-| `plugins/` | 插件机制：**发现 + 记录状态 + 执行** `zml_plugin.py`（旧名 `zml_gui_setup.py` 仅作兼容）。三个概念各占一个变量：名单 `zml_plugins`（有哪些）、优先级 `high/normal/low`（谁先跑）、禁用标记（跑不跑）。公共 API 只有 11 个：`get_files` / `get_priority` / `set_priority` / `is_disabled` / `set_disabled` / `is_standard` / `add_file` / `remove_file` / `is_loaded` / `load_now` / `get_load_error`（后三个是**临时加载**：当场执行、不写盘、进程内只跑一次）。⚠️ **没有排序接口**。⚠️ **本目录只放机制**（`__init__.py` / `_alg.py` / `_registry.py`）；**内置插件在 `builtin/` 子目录**（2026-10-19 下沉）——**目录即语义**：`builtin/` 里除 `__init__.py` 外每个 `.py` 都会被启动时执行，工具模块不要放进去（放上层并以 `_` 开头）。内置插件共 **12 个**：默认启用 `image_browser.py`（文件 → 图片浏览）、`style_sheet_menu.py`（设置 → 样式表）；默认不加载 `admin_menu.py`（Admin 功能）、`editors_menu.py`（文件 → 生成测试数据）、`seepage_menu.py`（Seepage 示例数据）、`solver_menu.py`（设置 → 求解器）、`runtime_env.py`（设置 → 运行环境）、`fractal_demo.py`（演示 → 经典分形，控件本体也在这个文件里）、`vtk_view.py`、`zip_files.py`、`tetris.py` / `lianliankan.py`（两个彩蛋）。默认状态写在各插件顶部的 `# ** enabled = False` 里，用户勾选后以用户的为准。⚠️ 插件与 `extra_setups/` 的分工：**用户可关掉的非核心功能**放这里，**产品功能**（授权查询、用户管理）留 `extra_setups` |
+| `plugins/` | 插件机制：**发现 + 记录状态 + 执行** `zml_plugin.py`（旧名 `zml_gui_setup.py` 仅作兼容）。⚠️ **「插件」的定义、标准写法、三个概念与两个旋钮见下一节「插件是什么」**。三个概念各占一个变量：名单 `zml_plugins`（有哪些）、优先级 `high/normal/low`（谁先跑）、禁用标记（跑不跑）。公共 API 只有 11 个：`get_files` / `get_priority` / `set_priority` / `is_disabled` / `set_disabled` / `is_standard` / `add_file` / `remove_file` / `is_loaded` / `load_now` / `get_load_error`（后三个是**临时加载**：当场执行、不写盘、进程内只跑一次）。⚠️ **没有排序接口**。⚠️ **本目录只放机制**（`__init__.py` / `_alg.py` / `_registry.py`）；**内置插件在 `builtin/` 子目录**（2026-10-19 下沉）——**目录即语义**：`builtin/` 里除 `__init__.py` 外每个 `.py` 都会被启动时执行，工具模块不要放进去（放上层并以 `_` 开头）。内置插件共 **15 个**：默认启用 `doc_view.py`（帮助 → 日志 / 路线图；另注册 `gui.show_changelog` / `gui.show_roadmap`）、`image_browser.py`（文件 → 浏览 → 图片；另注册 `gui.show_image_browser`）、`style_sheet_menu.py`（设置 → 样式表）、`pdf_view.py`（文件 → 打开 `.pdf`，另注册 `gui.open_pdf`）、`demo_menu.py`（帮助 → 示例，另注册 `gui.show_demo`）、`fn2_view.py`（文件 → 打开 `.fn2`，另注册 `gui.show_fn2`）、`pg_console.py`（显示 → 控制台(pg)；另注册 `gui.show_pg_console`，需要 pyqtgraph）、`viewers.py`（耗时 / 浏览→工作目录 / 标签列表 / 路径四个小入口）、`editors.py`（数据编辑器：7 种文件类型 + 「帮助 → 其它 → 生成测试数据」）；默认不加载 `admin_menu.py`（Admin 功能）、`solver_menu.py`（设置 → 求解器）、`runtime_env.py`（设置 → 运行环境）、`fractal_demo.py`（演示 → 经典分形，控件本体也在这个文件里）、`vtk_view.py`、`zip_files.py`。⚠️ 2026-10-22：原 `editors_menu.py` + `seepage_menu.py` **合并成** [`editors.py`](plugins/builtin/editors.py)（默认启用；中途曾住进 `zmlx/scen/editors/`，同日退回 `builtin/`，勾选记录由 `_registry` 自动迁移），原 `tetris.py` + `lianliankan.py` **合并成** [`zmlx/scen/easter_eggs/`](../scen/easter_eggs/ReadMe.md)（彩蛋，默认不启用）—— 后者**不在 `builtin/`**。默认状态写在各插件顶部的 `# ** enabled = False` 里，用户勾选后以用户的为准。⚠️ 插件与 `extra_setups/` 的分工：**用户可关掉的非核心功能**放这里，**产品功能**（授权查询、用户管理）留 `extra_setups` |
 | `data/` | 默认配置数据 |
+
+### 插件是什么：一句话定义
+
+> **插件 = 界面启动时，在控制台（console）线程里被执行的一段代码。
+> 执行时，机制会自动把运行空间里的 `__name__` 设为 `'__zml_plugin__'`。
+> 除此之外，没有其它限制。**
+
+没有基类要继承、没有固定入口函数要定义、不需要注册成某种对象 —— 机制只把源码
+`exec` 到一个**独立命名空间**里（里面只有 `__name__` 与 `__file__` 两样），
+其余一切靠插件自己 `import`。
+
+**因此「能否正确、快速地执行」是插件作者自己的责任**：
+
+| 作者要保证 | 不保证的后果 |
+|---|---|
+| 在 `__name__ == '__zml_plugin__'` 下能跑通 | 把注册放进 `if __name__ == '__main__':` ⇒ 插件加载时**静默不执行**（`_alg` 有一条警告兜底，但**不报错**） |
+| 执行要快 | 它处在**界面启动的关键路径**上、同步执行；慢一点就是整个软件启动变慢，且不会提示是哪个插件 |
+
+**标准写法**（两支用两个独立的 `if`，不要写成 `elif` —— 便于在 PyCharm 里单独调试）：
+
+```python
+from zmlx.system import execute_once
+from zmlx.ui import gui
+
+
+@execute_once(file=__file__)      # 一次运行里可能被调多次，防止重复挂菜单
+def setup_ui():
+    gui.add_action(menu='帮助', text='我的功能', slot=...)
+    gui.add_action(menu='帮助', name='---')          # 分隔线（专用写法，不用给其它参数）
+    gui.add_action(menu='帮助', text='我的另一项', slot=...)
+
+
+if __name__ == '__zml_plugin__':
+    setup_ui()                    # 插件机制执行：只注册，不开窗口
+
+if __name__ == '__main__':
+    setup_ui()                    # 直接 python 运行：方便自测
+```
+
+⚠️ `name='---'` 是**分隔符**（2026-10-26 加）：它不建 action、不占名字、不判重，
+只在菜单末尾插一条线；`on_toolbar=True` 对它不生效（工具栏的分隔符仍要自己
+`QToolBar.insertSeparator`）。
+
+放在哪：外部插件的标准文件名是 `zml_plugin.py`，放在项目目录即可（**首次启动自动发现**，
+之后可在「设置 → 插件」里增删）；随包分发的是 `plugins/builtin/` 下的 `.py`（**目录即语义**，
+除 `__init__.py` 外每个都是插件，不需要登记）。⚠️ 2026-10-22 起还多一处：**自包含的插件可以
+整个住进 `zmlx/scen/<包>/`**（`scen/easter_eggs/zml_plugin.py` + 它 import 的实现模块），
+自动发现会展开 `scen` 下**一层**子目录 —— 这样「可关掉的功能」连同它的装配代码能一起搬走，
+`ui/` 里不留死代码。两种位置地位相同，都按「启用 / 禁用」控制。
+⚠️ 但**控件不属于插件**：只有装配代码与实现在同一个可关掉的功能里时才配这种形态
+（2026-10-22 数据编辑器就因此从 `scen/editors/` 退回 `plugins/builtin/editors.py`，
+控件留在 `ui/widgets/editors/`）。
+
+哪些功能该做成插件：**关掉它，软件还能不能正常用？** 能 → 插件（`plugins/builtin/` 或
+`scen/<包>/`）；不能（授权查询、用户管理这类**产品功能**）→ 留在 `extra_setups/`。
+
+### 插件的三个概念与两个旋钮
+
+「设置 → 插件」（`PluginListEdit`）里的七列：默认加载 / 优先级 / 名称 / 描述 / 来源 / 状态 / 临时加载。
+
+| 概念 | 存在哪 | 作用 |
+|---|---|---|
+| **名单** | `zml_plugins`（有序） | 有哪些插件、按什么顺序显示与执行 |
+| **优先级** | `zml_plugins` 的标记 | `high` / `normal` / `low`，只决定**谁先执行** |
+| **禁用** | `zml_plugins` 的标记 | 启动时**不执行**这段代码 |
+
+⚠️ **界面不支持拖动排序**（`setDragDropMode(NoDragDrop)`），也没有「上移 / 下移」接口 ——
+**顺序不是用户能调的**（`add_file()` 登记的追加到末尾、自动发现按扫描顺序、`builtin/` 按文件名排序）。
+**优先级是唯一能改执行先后的旋钮**：执行时按「高 → 正常 → 低」分三段、段内仍按名单顺序；
+它**不改变列表里行的位置**。列表的**优先级列带色块**：高=红、低=绿、正常不画。
+
+⚠️ **「禁用」≠ 撤销**：它只表示**下次启动不执行**；已派生的菜单项 / 后台线程不回收 ⇒
+改启用状态必须**重启**。而「临时加载」是另一件事：**当场跑一次**（不写盘、不必重启），
+与勾选互不写入，重启后是否执行**仍只看勾选**。
+
+⚠️ **插件之间不该有先后依赖**（每个插件应独立、完整）；优先级只是万一排不开时的兜底手段。
 
 ### 命名遗留：显示叫「插件」，标识符仍叫 `setup_files`
 

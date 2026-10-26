@@ -87,19 +87,11 @@ from zmlx.ui.widgets.version_button import VersionButton  # noqa: F401
 #: ⚠️ 只收**当年 ``widget/__init__.py`` 就导出过**的那些名字，**不扩大 API 面**。
 _TABS = {
     'About': 'about',
-    'AppPathEdit': 'app_path_edit',
     'CheckCountView': 'check_count_view',
     'CodeHistoryView': 'code_history_view',
-    'CwdView': 'cwd_view',
-    'DemoView': 'demo_view',
     'EnvEdit': 'env_edit',
     'FeedbackTool': 'feedback_tool',
     'FeedbacksView': 'feedbacks_view',
-    'Fn2FracView': 'fn2',
-    'Fn2Widget': 'fn2',
-    'GraphicsView': 'fn2',
-    'Hf2ColorMap': 'fn2',
-    'Hf2Data': 'fn2',
     'ImageView': 'img',
     'LicenseRegister': 'license_register',
     'MemView': 'mem_view',
@@ -107,23 +99,50 @@ _TABS = {
     'ReadMeBrowser': 'readme_browser',
     'RegTool': 'reg_tool',
     'PluginListEdit': 'plugin_list_edit',
-    'StyleSheetEdit': 'style_sheet_edit',
-    'TabDetailView': 'tab_detail_view',
     'TextFileEdit': 'text_file_edit',
-    'TimerView': 'timer_view',
+}
+
+#: 名字 -> 插件模块（**不再是** ``zmlx.ui.tabs``）。
+#:
+#: ⚠️ 2026-10-22 起这些控件随各自的 ``show_xxx`` 并入插件（都只有那个插件在用），
+#: ``tabs`` 里已经没有了。单列一张表是为了让「去哪找」一眼可见，也免得 ``_TABS``
+#: 的说明与实际不符。
+_PLUGINS = {
+    'DemoView': 'zmlx.ui.plugins.builtin.demo_menu',
+    'StyleSheetEdit': 'zmlx.ui.plugins.builtin.style_sheet_menu',
+    'Fn2Widget': 'zmlx.ui.plugins.builtin.fn2_view',
+    'GraphicsView': 'zmlx.ui.plugins.builtin.fn2_view',
+    'Hf2ColorMap': 'zmlx.ui.plugins.builtin.fn2_view',
+    'Hf2Data': 'zmlx.ui.plugins.builtin.fn2_view',
+    'AppPathEdit': 'zmlx.ui.plugins.builtin.viewers',
+    'CwdView': 'zmlx.ui.plugins.builtin.viewers',
+    'TabDetailView': 'zmlx.ui.plugins.builtin.viewers',
+    'TimerView': 'zmlx.ui.plugins.builtin.viewers',
+    'SolverSelector': 'zmlx.ui.plugins.builtin.solver_menu',
 }
 
 
 def __getattr__(name):
-    """PEP 562：按需把 :mod:`zmlx.ui.tabs` 的名字转发过来（理由见上面那段 ⚠️）.
+    """PEP 562：按需把 :mod:`zmlx.ui.tabs`（或插件）的名字转发过来（理由见上面那段 ⚠️）.
 
     ⚠️ **本转发已弃用**（2026-10-16 起，**2027-10-16** 删除）：它只为兼容老路径
     ``from zmlx.ui.widget import Xxx``。新代码请用 ``from zmlx.ui.tabs import Xxx``。
     """
     mod = _TABS.get(name)
-    if mod is None:
+    plugin = _PLUGINS.get(name)
+    if mod is None and plugin is None:
         raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
     import importlib
+
+    if plugin is not None:
+        warn(
+            f'``zmlx.ui.widget.{name}`` 已弃用（2026-10-16）：控件已随插件迁至 '
+            f'``{plugin}``；本兼容包将于 **2027-10-16** 删除。'
+            f'请改用 ``from {plugin} import {name}``。',
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return getattr(importlib.import_module(plugin), name)
 
     warn(
         f'``zmlx.ui.widget.{name}`` 已弃用（2026-10-16）：控件已迁至 '
@@ -136,4 +155,4 @@ def __getattr__(name):
 
 
 def __dir__():
-    return sorted(set(list(globals()) + list(_TABS)))
+    return sorted(set(list(globals()) + list(_TABS) + list(_PLUGINS)))

@@ -31,7 +31,7 @@
 |---|---|---|
 | 收什么 | **底层控件** + **宿主非标签页的常驻控件** + **对话框组件集** | **顶层控件**：只被装配层打开成一个标签页，**不被任何控件复用**（**26 个**） |
 | 判据 | 会被其它控件 `addWidget()` 进去 / 被继承 / 宿主是状态栏·侧栏·容器 / 注册成对话框里的一行 | 不被任何控件复用 |
-| 例子 | `CodeEdit`、`TextBrowser`、`MarkdownView`、`MatplotWidget`、`Label`、`AttrView`、`ObjEditByText`、`editors.py`；`LicenseButton`、`VersionButton`、`OutputWidget`、`TabWidget`；`seepage.py`、`float_edit.py` | `About`、`CheckCountView`、`MemView`、`TimerView`、`ReadMeBrowser`、`EnvEdit`、`StyleSheetEdit`、`ImageView`、`Fn2Widget`、`PgConsole`……（26 个，全表见那边 §3） |
+| 例子 | `CodeEdit`、`TextBrowser`、`MarkdownView`、`MatplotWidget`、`Label`、`AttrView`、`ObjEditByText`、`editors/`（**子包**：全部编辑器都在这里）；`LicenseButton`、`VersionButton`、`RunStateLight`（状态栏运行状态灯）、`OutputWidget`、`TabWidget` | `About`、`CheckCountView`、`MemView`、`ReadMeBrowser`、`EnvEdit`……（⚠️ `TimerView` / `StyleSheetEdit` / `ImageView` / `Fn2Widget` / `PgConsole` 等已随插件搬走，全表见那边 §3） |
 
 ⚠️ **本目录不得 import `zmlx.ui.tabs.*`** —— 一旦有人这么做，就说明那个 tabs 控件**正在
 被别人当组件用**，它就不再是顶层控件，**该搬回本目录**。反向是允许的：`tabs/` 可以复用
@@ -40,7 +40,8 @@
 （现成的例子是 `../utils/lic_utils.py`），不要横向互相引用。
 
 ⚠️ **唯一例外**：本目录下那 26 个**转发 shim**（`about.py` / `img.py` / …）**确实** import
-了 `tabs/` —— 它们是兼容层，**不是控件**，属于预期。检查「有没有反向依赖」时要把它们
+了 `tabs/`（2026-10-22 起 `img.py` 改指插件 `plugins/builtin/image_browser.py`）—— 它们是
+兼容层，**不是控件**，属于预期。检查「有没有反向依赖」时要把它们
 排除掉，否则会产生噪音。
 
 ⚠️ **这些转发层已弃用**（2026-10-16 起，**2027-10-16 删除**）：26 个模块级 shim、
@@ -143,7 +144,7 @@ class _Qss:                              # 不实例化，纯粹当命名空间�
 - **全局常量会被别的模块 import 走**，之后就再也改不动了；`_Qss.DEFAULT_OPTIONS` 至少带着归属。
 - 外观 / 生成规则这类「只被本控件用」的东西，本来就不该出现在模块的公共命名空间里。
 
-范例：`style_sheet_edit.py`（整个模块级 = import + 4 个类 + `test_1` + 主入口）。
+范例：`style_sheet_menu.py`（整个模块级 = import + 4 个类 + `test_1` + 主入口）。
 
 ### 命名
 
@@ -317,7 +318,7 @@ self.context_actions = [create_action(self, '清除内容', icon='clean', slot=s
 
 - 宿主控件通常实现 `contextMenuEvent()`，在 `super().createStandardContextMenu()`（或自己的菜单）
   之后把 `context_actions` 逐项加入；元素可以是 `QAction`，也可以是 `None` / 分隔符占位。
-  现成写法：`text_browser.py`、`tab_widget.py`、`editors.py`、`plt.py`。
+  现成写法：`text_browser.py`、`tab_widget.py`、`editors/` 子包、`plt.py`。
 - `create_action(parent, text, *, icon=None, slot=None)` 会**包装**你的 slot：调用后写
   `app_data.log('run <text>')` 并 `gui.refresh()`，所以 slot 里不用自己记日志。
 - 可勾选项：`action.setCheckable(True)` + 在 slot 里读 `action.isChecked()`；勾选状态要落到
@@ -338,7 +339,7 @@ self.context_actions = [create_action(self, '清除内容', icon='clean', slot=s
 | 颜色不设置 | 按钮显示「默认」+ 空心图标（❌ 不要靠置灰） |
 
 只有**整块都不参与**时才 `setEnabled(False)`（例：模式切到「自定义文本」后，参数区整体不参与
-生成），并且要在界面上写明原因（顶部那句说明）。范例：`style_sheet_edit.py` 的 `_update_enabled`。
+生成），并且要在界面上写明原因（顶部那句说明）。范例：`style_sheet_menu.py` 的 `_update_enabled`。
 
 ⚠️ 还有一种同源毛病：**载入状态与界面不一致**（参数写着「护眼绿」、文本框却空着），用户点
 「应用」还以为没生效。载入时就要让两者自洽（见 §3「落盘状态有两份时」）。
@@ -392,7 +393,7 @@ self.context_actions = [create_action(self, '清除内容', icon='clean', slot=s
 - **产物为空**（没在用自定义配置）时，参数也回到默认 —— 否则会留下「参数写着护眼绿、文本框却
   空着」这种自相矛盾的状态，用户点「应用」还以为没生效（实际是把空配置又应用了一遍）。
 
-范例：`style_sheet_edit.py`（`zml_window_style.qss` = 产物，`zml_style_options.json` = 参数）。
+范例：`style_sheet_menu.py`（`zml_window_style.qss` = 产物，`zml_style_options.json` = 参数）。
 
 ### 只在一种 PyQt 下能跑的 API：两种绑定都要写
 
@@ -420,7 +421,7 @@ self.setIcon(QtGui.QIcon(pixmap))                     # ✅ 不受样式表 / �
 # self.setStyleSheet(f'background-color: {color}')    # ❌ 和用户主题打架
 ```
 
-范例：`style_sheet_edit.py` 的 `_ColorButton`（色块 + 十六进制文本，「未设置」时显示「默认」）。
+范例：`style_sheet_menu.py` 的 `_ColorButton`（色块 + 十六进制文本，「未设置」时显示「默认」）。
 
 ### Qt 自带渲染 vs 第三方渲染（以 Markdown 为例）
 
@@ -456,13 +457,13 @@ self.setIcon(QtGui.QIcon(pixmap))                     # ✅ 不受样式表 / �
 
 | 想学什么 | 看哪个文件 |
 |---|---|
-| 最小控件 + 缩放/交互 | `img.py`（`ImageView`，QGraphicsView） |
+| 最小控件 + 缩放/交互 | `../plugins/builtin/image_browser.py`（`ImageView`，QGraphicsView；2026-10-22 由 `tabs/img.py` 并入「图片浏览」插件） |
 | 上下文菜单 + 状态栏提示 + 导出 | `text_browser.py`（本目录多数控件的基类） |
 | 可选依赖 + 整套回退 | `code_edit.py`（QsciScintilla → QTextEdit） |
 | 后台线程 + 信号回主线程 | `demo_view.py`（`DemoScanThread`）、`tabs/about.py`（`AboutThread`） |
 | 原生 `QPainter` 绘图（简单展示图别用 matplotlib） | `gui_iter_edit.py`、`tabs/check_count_view.py` |
 | `app_data` 开关 + 复选框 | `_parallel.py`、`env_edit.py` |
 | Markdown / 可选库 / 设置键 / 右键勾选项 | `md_view.py` |
-| 模块级「干净」的样板（常量与生成器装进私有命名空间类） | `style_sheet_edit.py`（`_Qss`） |
-| 参数 + 产物双模式的落盘判据 / 取色按钮（图标画色块） / 转接 gui API 而不动 `MainWindow` | `style_sheet_edit.py`（`StyleSheetEdit`、`_ColorButton`） |
+| 模块级「干净」的样板（常量与生成器装进私有命名空间类） | `style_sheet_menu.py`（`_Qss`） |
+| 参数 + 产物双模式的落盘判据 / 取色按钮（图标画色块） / 转接 gui API 而不动 `MainWindow` | `style_sheet_menu.py`（`StyleSheetEdit`、`_ColorButton`） |
 | 按链接文字就地处理（不开浏览器） | `readme_browser.py`（微信 → 本地二维码、注册 → `gui.show_reg_tool()`、`zmlx/demos` → `gui.show_demo()`） |

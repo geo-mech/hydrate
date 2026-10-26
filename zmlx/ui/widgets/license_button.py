@@ -316,10 +316,16 @@ def query_license_state(read_cache=True):
     return 'bound', name, '\n'.join(lines), update
 
 
-class LicenseButton(QtWidgets.QPushButton):
+class LicenseButton(QtWidgets.QToolButton):
     """状态栏上的登录状态按钮：显示本机登录情况，点击打开登录页面。
 
     首次显示时会自动查一次（见 :meth:`showEvent`）。
+
+    ⚠️ 2026-10-26：控件由 ``QPushButton`` 改为 ``QToolButton``（与状态栏里的
+    ``VersionButton`` / ``RunStateLight`` 一致），**尺寸交给 Qt 默认**
+    （不重写 ``sizeHint``、不写 padding QSS）。唯一保留的尺寸约束是
+    :data:`MAX_BUTTON_WIDTH` 这个**上限**（超长显示名不能把状态栏撑宽），
+    它不是"写死高度/宽度"，与"去尺寸策略"并不冲突。
 
     Attributes:
         sig_update: 信号，携带「服务端是否报了更新的版本」这一个布尔。
@@ -338,11 +344,9 @@ class LicenseButton(QtWidgets.QPushButton):
         self._license_state = None     # 当前展示的状态；None = 还没查过
         self._license_started = False  # 是否已经起过一次查询（showEvent 只起一次）
 
-        self.setFlat(True)  # 看起来像一行字，但仍是真按钮
         self.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
         # 状态栏在窗口角落，不抢键盘焦点：鼠标可点即可
         self.setFocusPolicy(QtCore.Qt.FocusPolicy.NoFocus)
-        self.setAutoDefault(False)  # 免得在对话框里被回车误触发
         self.clicked.connect(lambda: gui.show_reg_tool())
 
         # 宽度上限：状态栏是很窄的一条，不能让超长显示名把它撑宽。

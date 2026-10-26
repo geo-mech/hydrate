@@ -25,6 +25,7 @@
 | `rkt/` | 否 | Reaktoro 化学热力学基准测试/教程 |
 | `quick_look/` | 否 | 2D 单相流压力快速评估 |
 | `uv_equilibrium/` | 否 | 气-水固定体积-内能（UV）平衡计算 |
+| `easter_eggs/` | 否 | **彩蛋（插件包）**：连连看 + 螺螺是方块，挂在「帮助 → 彩蛋」 |
 
 ---
 
@@ -72,6 +73,16 @@
 ### uv_equilibrium/ — 气-水 UV 平衡
 - 位置：`zmlx/scen/uv_equilibrium/`
 - 功能：气-水两相系统的固定体积-内能（UV）平衡计算
+
+### easter_eggs/ — 彩蛋游戏（插件包）
+- 位置：`zmlx/scen/easter_eggs/`
+- 功能：两个彩蛋游戏，作为**一个可关闭的插件**（默认**不启用**）挂在「帮助 → 彩蛋」
+- 内容：`zml_plugin.py`（入口）、`lianliankan.py`（连连看）、`tetris.py`（螺螺是方块）、`__init__.py`、`ReadMe.md`
+- 命令：`gui.show_lianliankan()` / `gui.show_tetris()`
+- ⚠️ **一个子包、一个入口、两个模块**：两个游戏各自完全自含（约 190 / 215 KB），而一个目录
+  只能有一个 `zml_plugin.py` —— 所以「设置 → 插件」里一行（彩蛋），菜单里两项
+- ⚠️ 2026-10-22 由 `ui/plugins/builtin/tetris.py` + `lianliankan.py` 合并而来；旧名单记录自动改写
+- 详见 [`easter_eggs/ReadMe.md`](easter_eggs/ReadMe.md)
 
 ---
 

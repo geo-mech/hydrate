@@ -32,9 +32,13 @@ def _parallel_enabled(value=None):
 
 
 class CoreParallelEdit(QtWidgets.QCheckBox):
+    #: 复选框显示文字。⚠️ 2026-10-26 由「内核并行」简化为「并行」：状态栏那一格到底
+    #: 只是在开关**内核**的 for 循环并行，说明写在悬停提示里即可，不必占着状态栏宽度。
+    TEXT = '并行'
+
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setText("内核并行")
+        self.setText(self.TEXT)
         self.setToolTip(
             '在C++层面，是否对for循环进行并行化. 任务比较大的时候，并行有益. '
             '但是，在任务比较小的时候，并行可能会导致性能下降.'

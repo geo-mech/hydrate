@@ -35,7 +35,9 @@ if __name__ == '__zml_plugin__':
     # 插件机制执行时 ``__name__`` 是 ``'__zml_plugin__'``：只注册
     # 「帮助 → 加载 → Quick Look 快速评估」这一项，不要开窗口。
     main()
-elif __name__ == '__main__':
+
+if __name__ == '__main__':
+    # ⚠️ 用独立的 ``if`` 而不是 ``elif``：两种运行方式的判断互不相干。
     if gui.exists():
         main()
     else:

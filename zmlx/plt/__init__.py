@@ -34,7 +34,17 @@
 
 除了以上几类函数之外，plt包中的其它内容，将逐渐废弃.
 
+⚠️ **已过期的弃用项（未删除，仍可导入，只声明）**：
+    根目录下的 ``cbar`` / ``cells`` / ``contourf`` / ``curve2`` / ``dfn2`` /
+    ``field2`` / ``fn2`` / ``legend`` / ``plotxy`` / ``plot_trisurf`` /
+    ``rc3`` / ``subplot_layout`` / ``surf`` / ``trimesh`` / ``trisurf`` /
+    ``seepage_mesh``，以及内层的 ``item`` / ``plot2d`` / ``plot3d``。
+    它们是早期拆分出 ``on_axes`` / ``on_figure`` / ``on_ui`` 之前的老路径，
+    早已到期但**按此前的决定保留**（留着没有害处）。
+    新代码请直接用 ``from zmlx import add_xxx / show_xxx``；详见 ``ReadMe.md``。
+
 Modified by Claude, 2026-08-12
+Modified by DeepSeek, 2026-10-21: 修正各垫片的告警文案，修复若干垫片本身的 bug（期限未动）
 """
 
 
@@ -94,6 +104,11 @@ from zmlx.plt.on_ui import (
 from zmlx.plt._font import set_chinese_font
 from zmlx.plt._save import get_plt_save_path, set_plt_save_path
 from zmlx.system import deprecated
+
+# ``item`` / ``plot2d`` / ``plot3d`` 已迁往 ``zmlx.fig``，这里只留转发垫片。
+# 2026-10-21：原先 ``zmlx.plt.on_axes`` 里也有一份完全相同的定义（两份独立对象、
+# 各发一条告警），已删掉那一份 —— 它还会在下面 ``plot_on_axes`` 的导入里被遮蔽。
+# 期限沿用各自原有的声明（本次不改动任何期限）。
 
 
 @deprecated(remove_after="2027-6-1", alternative="zmlx.fig.item")

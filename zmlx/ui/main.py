@@ -20,7 +20,6 @@ import os
 import sys
 from typing import List, Optional, Tuple, Union
 
-
 from zmlx.algs.fsys import has_permission, samefile, time_string
 from zmlx.exts import contain_chinese, core, get_dir, lic
 from zmlx.system import app_data, get_hash, log
@@ -48,8 +47,13 @@ from zmlx.ui.utils import FileHandler, GuiApi, TaskProc
 from zmlx.ui.widgets import CodeEdit, OutputWidget, TabWidget
 from zmlx.ui.widgets._parallel import CoreParallelEdit
 from zmlx.ui.widgets.license_button import LicenseButton
+from zmlx.ui.widgets.run_state_light import (
+    STATE_IDLE,
+    STATE_PAUSED,
+    STATE_RUNNING,
+    RunStateLight,
+)
 from zmlx.ui.widgets.version_button import VersionButton
-
 
 class Action(QAction):
     """可更新视图的 QAction（支持动态 enabled/visible/text）。"""
@@ -74,13 +78,18 @@ class Action(QAction):
             if isinstance(text, str):
                 self.setText(text)
 
-
 class MainWindow(QtWidgets.QMainWindow):
     """zmlx 主窗口。
 
     管理标签页容器（TabWidget）、控制台（Console）、菜单栏、工具栏、
     状态栏和文件处理器（FileHandler）。是 GUI 应用的核心窗口类。
     """
+
+    #: :meth:`add_action` 里表示「**在这里插一条分隔线**」的 magic name（2026-10-26 加）。
+    #: 见 :meth:`add_action` 的 Note：它不建 action，只在菜单末尾 ``addSeparator()``。
+    #: ⚠️ 只有 ``---`` 这一个取值；不要扩展成 ``'----'`` 之类（需求只要一条线，多一种写法
+    #: 就多一处要解释的地方）。
+    SEPARATOR_NAME = "---"
 
     sig_cwd_changed = QtCore.pyqtSignal(str)
     sig_do_task = QtCore.pyqtSignal()
@@ -114,9 +123,17 @@ class MainWindow(QtWidgets.QMainWindow):
                 exts=[".txt", ".json", ".xml", ".qss"],
                 func=dict(open_file=self.open_text, new_file=new_empty_file),
             ),
-            dict(desc="二维裂缝", exts=[".fn2"], func=self.show_fn2),
+            # ⚠️ 「二维裂缝」(.fn2) 2026-10-22 **已移出**：它指向的 ``show_fn2`` 连同
+            #    ``Fn2Widget`` 控件都搬进了插件 ``plugins/builtin/fn2_view.py``，
+            #    ``.fn2`` 文件类型由那个插件自己注册（默认启用，所以「文件 → 打开」
+            #    照常能选到 .fn2）。
+            # ⚠️ 「图片」走 ``self.open_image``：它是**底层能力**（欢迎页在构造期就要用），
+            #    2026-10-22 曾短暂搬进插件，同日还原 —— 文件类型不必随插件开关。
             dict(desc="图片", exts=[".png", ".jpg"], func=self.open_image),
-            dict(desc="PDF文件", exts=[".pdf"], func=self.open_pdf),
+            # ⚠️ 「PDF文件」(.pdf) 2026-10-22 **已移除**：它指向的 ``open_pdf`` 需要可选库
+            #    ``QWebEngineView``，不该常驻在骨架里。``.pdf`` 因此不再有专门的处理器 ——
+            #    「文件 → 打开」选到 .pdf 时会走 ``FileHandler.show_info``（显示文件信息），
+            #    而不是报错。
         ]:
             self.add_file_handler(**opt)
 
@@ -126,6 +143,20 @@ class MainWindow(QtWidgets.QMainWindow):
         h_layout = QtWidgets.QVBoxLayout(widget)
         splitter = QtWidgets.QSplitter(widget)
         splitter.setOrientation(QtCore.Qt.Orientation.Horizontal)
+        # ⚠️ 分隔条要**可拖**：右侧栏（控制台）的宽度由用户决定，不能是固定比例。
+        #    ``setStretchFactor`` 只决定「窗口缩放时谁跟着长」——左边（顶部标签页）拿走
+        #    全部增量，右边保持用户拖出来的宽度。⚠️ 拉伸因子 (1, 0) 相当于「右侧栏不参与
+        #    伸缩」，但**不是**「右侧栏不可调」；真正的可调性看 ``setChildrenCollapsible``
+        #    与 ``setHandleWidth``。默认值已经很合适，这里只把「能不能拖没」说清楚。
+        splitter.setChildrenCollapsible(True)
+        #: 左侧（顶部标签页）与右侧（控制台那一栏）之间的分隔条。
+        #: ⚠️ 2026-10-26 起它成了**公开属性** ``self.splitter``：宽度要存盘 / 恢复
+        #: （``settings.save_console_width`` / ``load_console_width``），而那两个函数
+        #: 要拿到它。原先它是个局部变量。
+        self.splitter = splitter
+        #: 右侧栏「上次可见时」的宽度（像素）。隐藏时 ``splitter.sizes()`` 里那一项是 0，
+        #: 用它保住用户拖出来的宽度；``resizeEvent`` 里更新、关窗时存盘时一并写入。
+        self._last_console_width = None
 
         # 顶部标签页
         self.top_tabs = TabWidget(splitter)
@@ -148,6 +179,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.__init_gui_api()  # 在成员声明了之后，第一时间初始化API
         self.__init_actions()
 
+        # 右侧栏的初始宽度（**必须在布局就位之后设**，否则 ``setSizes`` 会被随后的
+        # 布局计算覆盖掉）：窗口宽度的 ~22%（``settings.DEFAULT_CONSOLE_RATIO``，
+        # 2026-10-26 由 30% 调窄），夹在 [MIN_CONSOLE_WIDTH, MAX_CONSOLE_RATIO] 之间；
+        # 有上次存的宽度就用那个。
+        self.init_splitter_sizes()
+
         # 设置标签的形状和位置
         set_position(self.top_tabs)
         set_shape(self.top_tabs)
@@ -157,12 +194,25 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # 连接信号
         self.sig_cwd_changed.connect(self.refresh)
-        self.sig_cwd_changed.connect(self.view_cwd)
+        # ⚠️ 「工作路径变了就刷新浏览页」原来直接连 ``self.view_cwd``，但那个方法
+        #    2026-10-22 已搬进插件 ``plugins/builtin/viewers.py``。这里改成**按命令名**调
+        #    ``gui.view_cwd``（插件注册的命令）—— 插件被禁用 / 未装时命令不存在，
+        #    安静跳过，不会让界面启动就崩。
+        self.sig_cwd_changed.connect(self.__refresh_cwd_view_if_any)
 
         self.console.sig_refresh.connect(self.refresh)
-        # ---- 状态栏右侧的三个常驻控件（按添加顺序从左到右）----
-        # 「内核并行」开关：它是**全局**的运行期开关（存 app_data 的 disable_parallel，
+        # ---- 状态栏右侧的四个常驻控件（按添加顺序从左到右）----
+        # 「运行状态灯」：圆点 + 文字，显示控制台正在空闲 / 运行 / 暂停。
+        # ⚠️ 2026-10-26 新加：这个位置原先由**版本按钮借用**（``console_state`` 往那格写
+        #    「控制台：运行中」），一物两用 —— 用户看那格时不知道它此刻代表版本还是状态。
+        #    现在拆开：状态归本控件，版本按钮**只属于版本号**。
+        self.run_state_light = RunStateLight(self)
+        self.statusBar().addPermanentWidget(self.run_state_light)
+
+        # 「并行」开关：它是**全局**的运行期开关（存 app_data 的 disable_parallel，
         # 并写 core.parallel_enabled），所以放在状态栏这个「全局且常驻」的位置。
+        # ⚠️ 2026-10-26：显示文字由「内核并行」改为「并行」（更短，状态栏不挤）；
+        #    它管的仍是**内核**里的 for 循环并行，说明留在 CoreParallelEdit 的 tooltip 里。
         #
         # ⚠️ **原先它挂在控制台的输出面板里**（``OutputWidget``），而那个面板可以不开 /
         #    被收起 —— 开关就跟着看不见了；而「大任务开并行、小任务关掉」是随时可能想
@@ -170,13 +220,25 @@ class MainWindow(QtWidgets.QMainWindow):
         self.parallel_edit = CoreParallelEdit(self)
         self.statusBar().addPermanentWidget(self.parallel_edit)
 
-        # 版本号（点击 → 「关于」）。``console_state()`` 会借用它显示控制台运行状态。
+        # 版本号（点击 → 「关于」）。⚠️ 2026-10-26 起**只属于版本号**：
+        # 控制台运行状态改由上面的 ``run_state_light`` 显示。
         self.version_button = VersionButton(self)
         self.statusBar().addPermanentWidget(self.version_button)
 
         # 授权状态（点击 → 注册页面）。首次显示时自己起后台线程查一次。
         self.license_button = LicenseButton(self)
         self.statusBar().addPermanentWidget(self.license_button)
+
+        # ---- 尺寸策略：**一处也不设**（2026-10-26 按用户要求删掉）----
+        # 这三个按钮 2026-10-26 起都是 ``QToolButton``（原来是 ``QPushButton``）：
+        # QToolButton 默认就紧凑（不会像 QPushButton 那样在文字两侧各留一大截），
+        # 所以之前那些「重写 sizeHint / padding QSS / 手动锁宽高 / 统一最小高度」
+        # 全部取消 —— 尺寸完全交给 Qt 按字体算，换高分屏 / 调大字体也不会裁切。
+        #
+        # ⚠️ 曾经在这里做过 ``setMinimumHeight(基准)`` 之类的高度对齐（先试 ``setFixedHeight``，
+        #    发现换字体后会被裁切，改成只设下限）。已一并删除：用户明确要求"去除掉尺寸
+        #    相关的策略"。若将来又发现几个控件高低不齐，**先查是不是有人给某个控件写了
+        #    自定义 sizeHint / QSS**，而不是在这里加补偿代码。
 
         # 授权查询的答复里带着「最新版本」时，让版本按钮补上「（有更新）」后缀。
         # ⚠️ 这是两个**兄弟控件**之间的值传递，用 Qt 信号连接即可（在装配时就连好、
@@ -204,6 +266,9 @@ class MainWindow(QtWidgets.QMainWindow):
             filename = settings.find_icon_file("welcome")
             if filename is not None:
                 if os.path.isfile(filename):
+                    # ⚠️ 欢迎页在 ``MainWindow`` **构造期**就要显示 —— 这正是
+                    #    ``open_image`` 必须是**底层方法**、不能做成插件的原因
+                    #    （2026-10-22 曾搬进插件，同日还原）。
                     self.open_image(filename, caption="Welcome")
         except Exception as err:
             print(f"Error: {err}")
@@ -249,8 +314,9 @@ class MainWindow(QtWidgets.QMainWindow):
             # print 的东西用户根本看不见（面板是关着的）。
             #
             # ⚠️ **不要**写进 ``version_button``（右侧角落里那个版本按钮）：
-            #    它固定显示版本号（只在仿真运行时被 ``console_state`` 借用去显示
-            #    「运行中/已暂停」），把 print 的内容塞进去会把它顶掉。
+            #    它固定显示版本号，把 print 的内容塞进去会把它顶掉。
+            # ⚠️ 也别写进 ``run_state_light``（它的「运行中 / 已暂停」由 ``refresh``
+            #    按控制台状态设置，塞文本进去下一次 ``refresh`` 就会被覆盖）。
             # ⚠️ 也不走 ``gui.status(text, 3000)`` 那种**带超时**的写法：那是瞬时
             #    消息，会被下一条消息（甚至鼠标划过状态栏控件）顶掉，用户错过就
             #    再也看不到；这里要的是「常驻到最后一次输出」，所以不传 timeout
@@ -300,7 +366,36 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def showEvent(self, event):
         super(MainWindow, self).showEvent(event)
+        # ⚠️ 第一次显示时才恢复右侧栏宽度（2026-10-26）：``QSplitter.setSizes`` 必须在
+        #    窗口**已有真实尺寸**之后设，否则会被随后的布局计算覆盖。只做一次 ——
+        #    之后用户拖出来的宽度由 ``resizeEvent`` 跟踪，不该被再次覆盖。
+        if not getattr(self, '_splitter_restored', False):
+            self._splitter_restored = True
+            self.init_splitter_sizes()
         self.refresh()
+
+    def resizeEvent(self, event):
+        """窗口尺寸变了：记下右侧栏（控制台）当前可见的宽度.
+
+        宽度的三个来源（2026-10-26 加的「右侧栏可调 + 尺寸记忆」）：
+
+        1. **用户拖分隔条** —— 直接改 ``splitter.sizes()``；
+        2. **窗口缩放** —— 拉伸因子是 ``(1, 0)``，增量全给左边，右边保持用户拖出来的宽度；
+        3. **隐藏 / 显示右侧栏**（``操作 → 隐藏/显示``）—— 隐藏时 ``sizes()`` 里那一项是 0。
+
+        本方法只做一件事：**只要右侧栏可见且宽度 > 0，就把宽度记到
+        ``self._last_console_width``**。关窗时由 ``__on_close`` 交给
+        ``settings.save_console_width`` 存盘；隐藏状态下不会用 0 把已记的宽度覆盖掉。
+        """
+        super(MainWindow, self).resizeEvent(event)
+        try:
+            if not self.right_tabs.isVisible():
+                return
+            sizes = self.splitter.sizes()
+            if len(sizes) >= 2 and sizes[1] > 0:
+                self._last_console_width = int(sizes[1])
+        except Exception as err:
+            print(f"Error: {err}")
 
     def __init_gui_api(self):
         # 默认，将所有新的定义的函数都添加到GUI API中
@@ -396,22 +491,12 @@ class MainWindow(QtWidgets.QMainWindow):
             is_enabled=not_running,
         )
 
-        self.add_action(
-            menu="文件",
-            name="quit",
-            icon="quit",
-            text="退出",
-            slot=self.close,
-        )
-
-        self.add_action(
-            menu="文件",
-            name="view_cwd",
-            icon="cwd",
-            text="浏览",
-            shortcut="Ctrl+B",
-            slot=self.view_cwd,
-        )
+        # ⚠️ **「退出」排在文件菜单的最后**（2026-10-26 归位）：历史版本里它一直在末尾
+        #    （`… 新建 → 脚本 → … → 导入 → 保存 → 导出 → 退出`，见 v1.8.17 / v1.9.19），
+        #    而当时它排在「脚本」后面，是因为那时后面**还没有**导入 / 保存 / 导出
+        #    （2026-10-07 才加）。这里把它的注册挪到导出之后，顺序回到「退出在最后」，
+        #    菜单里其余条目（工作路径 → 打开 → 新建 → 脚本 → 导入 → 保存 → 导出）一个字没动。
+        #    ⚠️ action name ``quit`` 不变。
 
         def import_data():
             widget = self.get_current_widget()
@@ -493,8 +578,23 @@ class MainWindow(QtWidgets.QMainWindow):
             ),
         )
 
+        # 「退出」放最后（历史顺序，见上面那段说明）
         self.add_action(
-            menu="显示", name="refresh", icon="refresh", text="刷新", slot=self.refresh
+            menu="文件",
+            name="quit",
+            icon="quit",
+            text="退出",
+            slot=self.close,
+        )
+
+        # ⚠️ 「刷新」2026-10-26 由「显示」**移到「操作」**：它是**动作**（重设标题、
+        #    刷新当前页、重算所有菜单项的灰/亮），而「显示」那一组收的是**页面入口**
+        #    （变量 / 耗时 / 标签列表 / 通知 …）。原来它与那些页面入口并列，读起来
+        #    像是"打开一个叫刷新的页面"。
+        #    ⚠️ ``name`` 仍是 ``'refresh'``（ribbon 配置、已保存的界面布局按 name 定位）；
+        #    本项**不在工具栏上**（原来也不在），所以只影响菜单里那一行。
+        self.add_action(
+            menu="操作", name="refresh", icon="refresh", text="刷新", slot=self.refresh
         )
 
         self.add_action(
@@ -505,13 +605,22 @@ class MainWindow(QtWidgets.QMainWindow):
             slot=self.show_memory,
         )
 
+        # ★ 「显示 → 重置布局」（2026-10-26 新加）：布局现在可调（右侧栏可拖、宽度与
+        #    可见性都会记住），这是"改乱了怎么办"的出口。槽指向本类的公开方法
+        #    ``reset_layout`` —— 它同时被自动注册成 ``gui.reset_layout()``，所以脚本里
+        #    可以 ``gui.reset_layout(ask=False)`` 无确认地重置。
+        #    ⚠️ 菜单文字用「重置布局」四个字，与 Ribbon/界面上其它两字菜单不同 —— 它本来
+        #       就不是"打开一个页面"，长一点反而不会被误点。
+        #    ⚠️ 文案必须与 :meth:`reset_layout` 的实际范围一致：**只动右侧栏**，
+        #       不动窗口大小、不动样式表（2026-10-26 用户要求）。改行为时一起改这里。
         self.add_action(
             menu="显示",
-            name="timer",
-            icon="clock",
-            tooltip="显示cpu耗时统计的结果",
-            text="耗时",
-            slot=self.show_timer,
+            name="reset_layout",
+            icon="refresh",
+            tooltip="把右侧栏的宽度与显示状态恢复成默认"
+                    "（窗口大小、样式表、已打开的标签页都不受影响）",
+            text="重置布局",
+            slot=self.reset_layout,
         )
 
         # 标签列表：原先**只有**标签栏右键菜单里那一个入口（「列出标签」），
@@ -520,14 +629,6 @@ class MainWindow(QtWidgets.QMainWindow):
         #    而 ``load_icon`` 对找不到的名字会返回**空图标**（不报错、只是没图形）；
         #    与其拿一个语义无关的图（如 ``variables`` 的 (x)）凑数，不如不画。
         #    将来若补了合适的图，在这里加一个 ``icon=`` 即可。
-        self.add_action(
-            menu="显示",
-            name="tab_details",
-            tooltip="列出已经打开的标签页（可以切过去或关掉），等同于标签栏右键的「列出标签」",
-            text="标签列表",
-            slot=self.show_tab_details,
-        )
-
         def exec_enabled():
             if self.is_running():
                 return False
@@ -552,6 +653,18 @@ class MainWindow(QtWidgets.QMainWindow):
             is_enabled=exec_enabled,
         )
 
+        # ⚠️ 快捷键（2026-10-26 统一）：**运行 / 暂停 / 继续 / 再次运行**必须各占一个键，
+        #    不能有两个 action 抢同一个。原先「运行」与「继续」都是 ``Ctrl+R``、
+        #    「继续」与「再次运行」都是 ``Ctrl+Shift+R``，而 Qt 对重复快捷键触发哪个
+        #    是**不确定的**（暂停后按 Ctrl+R 有可能重开一次任务，而不是继续）。
+        #    现在的分配：
+        #        Ctrl+R       运行
+        #        Ctrl+Shift+P 暂停
+        #        Ctrl+Shift+R 继续（暂停之后的"接着跑"）
+        #        Ctrl+Q       停止
+        #        F5           再次运行
+        #    给「暂停」补了快捷键：原先它一个都没有，而任务执行中的人最想按的恰恰是它。
+
         def pause_enabled():
             c = self.get_console()
             if not c.is_running():
@@ -564,6 +677,7 @@ class MainWindow(QtWidgets.QMainWindow):
             icon="pause",
             tooltip="暂停内核的执行 (需要提前在脚本内设置break_point)",
             text="暂停",
+            shortcut="Ctrl+Shift+P",
             slot=lambda: self.get_console().set_pause(True),
             on_toolbar=True,
             is_enabled=pause_enabled,
@@ -575,7 +689,7 @@ class MainWindow(QtWidgets.QMainWindow):
             icon="begin",
             tooltip=None,
             text="继续",
-            shortcut="Ctrl+R",
+            shortcut="Ctrl+Shift+R",
             slot=lambda: self.get_console().set_pause(False),
             on_toolbar=True,
             is_enabled=lambda: self.is_running() and self.get_console().get_pause(),
@@ -602,6 +716,12 @@ class MainWindow(QtWidgets.QMainWindow):
             is_enabled=self.is_running,
         )
 
+        # ⚠️ 「隐藏」与「显示」是一对**互斥**的开关（``is_enabled`` 互为取反），所以
+        #    它们**共用** ``Ctrl+H`` 是对的：任何时刻只有一项可用，不会真的竞争。
+        #    ⚠️ 这里**刻意写字符串**：本机 PyQt6 6.9.1 的 ``QKeySequence.StandardKey``
+        #    里**没有** ``ToggleTabView`` / ``ShowTabView`` 这两个成员（实测 71 个成员里
+        #    与 Tab 相关的只有 ``AddTab``，``hasattr`` 两者都是 False），若写成 StandardKey
+        #    就会 ``AttributeError``，整个窗口起不来。
         self.add_action(
             menu="操作",
             name="console_hide",
@@ -620,6 +740,7 @@ class MainWindow(QtWidgets.QMainWindow):
             icon="console",
             tooltip="显示主窗口右侧的控制台",
             text="显示",
+            # ⚠️ 与「隐藏」**共用** ``Ctrl+H`` —— 理由同上。
             shortcut="Ctrl+H",
             slot=self.show_console,
             on_toolbar=True,
@@ -631,7 +752,13 @@ class MainWindow(QtWidgets.QMainWindow):
             name="console_start_last",
             text="再次运行",
             tooltip="在控制台重新执行上一次的操作",
-            shortcut="Ctrl+Shift+R",
+            # ⚠️ 2026-10-26：**原先这里也是 ``Ctrl+Shift+R``、与「继续」撞车**。现在
+            #    「继续」占 ``Ctrl+Shift+R``，本项改用 ``F5``（「重新运行」在多数 IDE 里
+            #    就是 F5，用户不必重新记）。⚠️ 它**不能**用 ``Ctrl+R``：那是「运行」的。
+            #    ⚠️ ``F5`` **不是**直接取 ``StandardKey.Refresh``：本机实测 ``Refresh``
+            #    恰好解析成 ``F5``，但那是"碰巧"—— 其他平台/主题下它可能是 ``Ctrl+R``，
+            #    正好又和「运行」撞车。写死 ``F5`` 才稳定。
+            shortcut="F5",
             on_toolbar=True,
             slot=self.get_console().start_last,
             is_enabled=lambda: (
@@ -678,21 +805,11 @@ class MainWindow(QtWidgets.QMainWindow):
             slot=self.edit_setup_files
         )
 
-        self.add_action(
-            menu="设置",
-            name="search",
-            icon="set",
-            text="路径",
-            slot=self.show_file_finder,
-        )
-
         # ★ 「设置 → 求解器」**不在这里**（2026-10-18 移）：那一行 ``add_action``
         #    已搬进插件 ``plugins/builtin/solver_menu.py``（默认不加载）。
-        #    ⚠️ 但 ``show_solver_selector`` 这个方法**必须留着** —— 它是本类的
-        #    公开方法，``__init_gui_api`` 会自动把名字注册成命令
-        #    ``gui.show_solver_selector``；已保存的标签页存的就是
-        #    ``gui_restore = "gui.show_solver_selector()"``，删了方法那些标签页
-        #    就恢复不了。
+        #    ⚠️ 2026-10-22 起 ``show_solver_selector`` 方法**也搬过去了**（连同控件），
+        #    命令由那边 `gui.add_func` 注册；本类**不留**同名方法 —— 见
+        #    「``show_solver_selector`` 已搬到插件」那段注释。
 
         self.add_action(
             menu="设置",
@@ -704,55 +821,56 @@ class MainWindow(QtWidgets.QMainWindow):
         # ★ 「设置 → 样式表」**不在这里**（2026-10-18 移）：那一行 ``add_action``
         #    已搬进插件 ``plugins/builtin/style_sheet_menu.py``（**默认启用** —— 样式是用户
         #    随时会调的外观设置，做成插件只是为了**可被禁用**，不是为了藏起来）。
-        #    ⚠️ 但 ``show_style_sheet`` 这个方法**必须留着** —— 它是本类的公开方法，
-        #    ``__init_gui_api`` 会自动把名字注册成命令 ``gui.show_style_sheet``；
-        #    已保存的标签页存的就是 ``gui_restore = "gui.show_style_sheet()"``。
+        #    ⚠️ 2026-10-22 起 ``show_style_sheet`` 方法与 ``StyleSheetEdit`` 控件也一并搬到
+        #    那个插件了（它只有这个插件在用 → 完全自含）。命令 ``gui.show_style_sheet``
+        #    由插件显式注册；插件没启用时由 ``extra_setups/plugin_placeholders.py`` 的
+        #    占位给出一句提示（所以命令**总是存在**，历史标签页照常重放）。
 
         # ---- 「帮助」菜单 ----
         #
         # 最终结构（两级，没有更深的一层）::
         #
-        #     帮助 ─┬─ ReadMe
-        #           ├─ 关于
-        #           ├─ 示例
-        #           ├─ ▸ 用户 → 登录 · 反馈 · 管理
-        #           ├─ ▸ 查询 → 登录记录 · 反馈记录
-        #           └─ 架构
+        #     帮助 ─┬─ 关于                (Ctrl+Shift+A)
+        #           ├─ ReadMe              (F1)
+        #           ├─ 登录
+        #           ├─ 反馈
+        #           ├─ ▸ 用户 → 管理 · 登录记录 · 反馈记录   ← 构造期建，紧跟「反馈」
+        #           ├─ 示例                ← 插件「示例浏览」注册（构造后追加，排在子菜单后）
+        #           └─ ▸ 其它 / 架构        ← extra_setups 后注册
+        #
+        # ★ 2026-10-26：「用户」子菜单排在「反馈」**正下方**（用户点名的顺序）。
+        #   上一版（2026-10-24）为了「高频操作别点两下」把登录 / 反馈提到一级、并把关于
+        #   放到了 ReadMe 后面 —— 那次**顺带把「关于」挪了位置**。现在关于回到最上面，
+        #   登录 / 反馈仍在一级（「直接点一下就到位」这个改进保留）。
+        #
+        # ★ 2026-10-24：`登录` / `反馈` 在**一级**，`查询` 子菜单**并入 `用户`**
+        #   （「管理 / 登录记录 / 反馈记录」三项并列其下）。
         #
         # ★ 2026-10-19：原先独立的顶层「用户」菜单**整体并入「帮助」**（菜单栏因此
-        #   少一个顶层菜单）。⚠️ **没有三级菜单**：原先的「用户 → 查询 → …」是**三层**，
-        #   现在把「查询」提到「帮助」下面，于是「登录记录 / 反馈记录」只处在
-        #   帮助 → 查询 → X 这一层，与「帮助 → 用户 → 登录」同深。
+        #   少一个顶层菜单）。⚠️ **没有三级菜单**：登录记录 / 反馈记录现在处于
+        #   「帮助 → 用户 → X」这一层，与「管理」同深。
         #
-        # ⚠️ 顺序由**建菜单 / 注册的先后**决定，先来的排在前面。两条规则各管一半：
+        # ⚠️ 顺序由**建菜单 / 注册的先后**决定，先来的排在前面。两条规则：
         #
-        #    1. **子菜单的位置在它被创建那一刻就定死了**：``get_menu(['帮助','用户'])``
-        #       一旦建出「用户」，它就立刻追加到「帮助」末尾；之后往里塞条目只是
-        #       **填充内容**，不会让它再换位置。
-        #    2. 普通条目（ReadMe / 关于 / 示例）由下面的 ``add_action`` 按顺序追加。
+        #    1. **子菜单的位置**：``get_menu`` 把新子菜单插在「骨架条目」之后、
+        #       「插件条目」之前（判据是「是不是 ``__init_actions`` 期间加的」，见
+        #       :meth:`_sub_menu_insert_after`）。所以本函数末尾那次
+        #       ``get_menu(['帮助','用户'])`` 建出来的「用户」正好落在「反馈」之后、
+        #       「示例」（插件后挂）之前。
+        #    2. 普通条目由下面的 ``add_action`` 按顺序追加；**这里写的顺序就是显示顺序**。
         #
-        #   所以这里的分组顺序就是**最终显示顺序**：先登记文档类条目（ReadMe / 关于 /
-        #   示例），**再**在末尾 ``get_menu`` 建出两个子菜单 —— 于是「用户 / 查询」排在
-        #   文档条目**之后**（2026-10-19 按用户要求下移；此前它们在最前面，很抢眼）。
-        #   ⚠️ 子菜单里的条目本身不在这里：由 ``extra_setups/*.py`` 在 ``MainWindow``
-        #   构造**之后**（控制台内核里）填进去 —— 那不影响子菜单的位置。
-        #   想再调整先后，就挪动下面「三组之间」的分界：``get_menu`` 两行放在哪一段，
-        #   两个子菜单就出现在哪一段的末尾。
+        #   ⚠️ 「示例」不在这里：它由插件 ``demo_menu`` 在**控制台内核**里注册，
+        #   晚于 ``__init_actions`` —— 所以它是「插件条目」，排在子菜单之后。
         #
-        # ⚠️ **action name 一律沿用旧名**（``reg`` / ``feedback``）：ribbon 配置、
-        #    已保存的界面布局都按 name 定位，改名会让它们失效。
+        # ⚠️⚠️ **菜单路径必须逐字一致**：``extra_setups/user_admin.py`` 与
+        #   ``extra_setups/license_query.py`` 注册时写的是 ``['帮助', '用户']``。
+        #   任何一处写成别的（例如旧的 ``['帮助', '查询']``），``get_menu`` 就会**另建**
+        #   一个同名子菜单，界面上出现两个「用户」。
+        #
+        # ⚠️ **action name 一律沿用旧名**（``readme`` / ``about`` / ``reg`` / ``feedback``）：
+        #    ribbon 配置、已保存的界面布局、外部脚本都按 name 定位，改名会让它们失效。
 
-        # ---- 第一组：文档类条目 ----
-        self.add_action(
-            menu="帮助",
-            name="readme",
-            icon="info",
-            text="ReadMe",
-            shortcut="F1",
-            slot=self.show_readme,
-            on_toolbar=True,
-        )
-
+        # ---- 第 1 组：关于（历史顺序里排第一）----
         def about():
             print(lic.desc)
             self.show_about()
@@ -767,37 +885,20 @@ class MainWindow(QtWidgets.QMainWindow):
             is_enabled=not_running,
         )
 
+        # ---- 第 2 组：ReadMe（最常用的文档入口，紧跟在关于之后）----
         self.add_action(
             menu="帮助",
-            name="demo",
-            icon="demo",
-            tooltip=None,
-            text="示例",
-            slot=self.show_demo,
+            name="readme",
+            icon="info",
+            text="ReadMe",
+            shortcut="F1",
+            slot=self.show_readme,
             on_toolbar=True,
-            is_enabled=None,
-            is_visible=lambda: not app_data.get("HIDE_DEMO_MENU", False),
         )
 
-        # ---- 第二组：两个子菜单（位置在这里定下 = 排在文档条目之后）----
-        self.get_menu(["帮助", "用户"])    # 「用户」子菜单（条目在 extra_setups）
-        self.get_menu(["帮助", "查询"])    # 「查询」子菜单（条目在 extra_setups）
-
-        # ★ 「登录 / 反馈」注册在「帮助 → 用户」下；「管理」与两条记录页**不在这里**：
-        #    它们各只是一个菜单条目，控件与注册分别在 ``extra_setups/user_admin.py``
-        #    与 ``extra_setups/license_query.py``（那两个文件的文档写清了为什么这样分）。
-        #    本文件只留主窗口自己真正用到的东西。
-        #
-        #    ⚠️ 它们的命令（``gui.show_user_admin`` / ``gui.show_check_count_view`` /
-        #    ``gui.show_feedbacks_view``）也由各自文件用 ``gui.add_func`` 注册 ——
-        #    原先靠 ``__init_gui_api`` 扫描本类的公开方法来注册，方法搬走之后必须
-        #    由那边补上。旧名（``show_license_count`` / ``show_license_feedback``）
-        #    作为**别名**也一并注册，好让老标签页的 ``gui_restore`` 还能恢复。
-        #    ⚠️ 它们注册的 menu 必须写 ``['帮助', '用户']`` / ``['帮助', '查询']``
-        #    （与上面两行逐字一致），否则 ``get_menu`` 会另建同一个名字的菜单，
-        #    界面上出现两个「用户」或两个「查询」。
+        # ---- 第 3 组：登录 / 反馈（一级，点一次就到）----
         self.add_action(
-            menu=["帮助", "用户"],
+            menu="帮助",
             name="reg",
             icon="reg",
             text="登录",
@@ -805,13 +906,191 @@ class MainWindow(QtWidgets.QMainWindow):
         )
 
         self.add_action(
-            menu=["帮助", "用户"],
+            menu="帮助",
             name="feedback",
             text="反馈",
             icon="info",
             slot=self.show_feedback,
             is_enabled=not_running,
         )
+
+    # ⚠️ 「帮助 → 示例」2026-10-22 **已搬到插件** ``plugins/builtin/demo_menu.py``
+    #    （默认启用）：菜单项与 ``gui.show_demo`` 命令都由那边的 ``setup_ui()`` 注册。
+    #    ⚠️ 这里**不要再加菜单项** —— 加回来会出现**两个**「帮助 → 示例」。
+    #    ``gui.show_demo`` 的**占位**在 ``extra_setups/plugin_placeholders.py`` 里。
+
+    # ---- 第 4 组：「用户」子菜单（条目在 extra_setups；位置 = 紧跟「反馈」之后）----
+        self.get_menu(["帮助", "用户"])
+
+        # ★ 「管理 / 登录记录 / 反馈记录」三项都注册在「帮助 → 用户」下（2026-10-24
+        #    起「查询」不再单独存在）。它们**不在这里注册**：分别在
+        #    ``extra_setups/user_admin.py`` 与 ``extra_setups/license_query.py``。
+        #
+        #    ⚠️ 它们的命令（``gui.show_user_admin`` / ``gui.show_check_count_view`` /
+        #    ``gui.show_feedbacks_view``）也由各自文件用 ``gui.add_func`` 注册 ——
+        #    原先靠 ``__init_gui_api`` 扫描本类的公开方法来注册，方法搬走之后必须
+        #    由那边补上。旧名（``show_license_count`` / ``show_license_feedback``）
+        #    作为**别名**也一并注册，好让老标签页的 ``gui_restore`` 还能恢复。
+        #    ⚠️ 它们注册的 menu 必须写 ``['帮助', '用户']``（与上面一行逐字一致），
+        #    否则 ``get_menu`` 会另建一个同名菜单，界面上出现两个「用户」。
+        #
+        #    ⚠️ 它的位置**不需要**在这里额外安排：「用户」是构造期建的子菜单，而
+        #    ``get_menu`` 会把新子菜单插在「骨架条目」之后 —— 也就是紧跟上面刚挂的
+        #    「反馈」之后、插件条目（示例 etc.）之前（2026-10-26 的规则，见
+        #    ``_sub_menu_insert_after``）。
+
+        # ★ 记下「骨架自己注册了哪些条目」（2026-10-26）：``get_menu`` 靠它把子菜单夹在
+        #   「骨架条目」与「插件后挂条目」之间。**必须放在本函数的最后** —— 上面所有
+        #   ``add_action`` / ``get_menu`` 都跑完之后再记，才是完整的骨架集合。
+        self._record_builtin_actions()
+
+    def reset_layout(self, ask=True):
+        """「显示 → 重置布局」：把窗口布局恢复成默认（**立即生效 + 清掉存盘，下次启动也默认**）.
+
+        ★ 2026-10-26 新加。布局现在可调（右侧栏可拖、宽度 / 可见性都会记住），所以需要
+        一个「改乱了怎么办」的出口。
+
+        立即做的事（**当前窗口**）：
+
+        1. 右侧栏恢复默认宽度（``settings.DEFAULT_CONSOLE_RATIO``，约 22%；夹在
+           ``settings.MIN_CONSOLE_WIDTH`` 以上）；
+        2. 右侧栏恢复显示。
+
+        同时调 ``settings.reset_layout()`` 清掉存盘的布局类键（右侧栏宽度 / 可见性）——
+        **下次启动也是默认**。
+
+        ⚠️⚠️ **2026-10-26 按用户要求收窄了范围**：本操作**不碰**这两样东西 ——
+
+        - **窗口大小 / 位置**：用户把窗口拖成什么尺寸是"他知道自己在干什么"，重置布局
+          不该把它拽回屏幕居中 75%；
+        - **样式表**：外观（字体 / 配色 / 圆角）不是布局，清掉等于把用户的主题一起删了。
+          ``settings.reset_layout()`` 的 ``style_sheet`` 参数因此传空元组。
+
+        ⚠️ **不清的东西**：已打开的标签页（那是内容，不是布局）、插件名单、工作路径。
+
+        Args:
+            ask: 为真时先弹一个确认框（默认）；脚本里调用传 ``ask=False`` 直接执行。
+
+        Returns:
+            bool: 真执行了返回 True；用户取消 / 出错返回 False。
+        """
+        try:
+            if ask:
+                reply = QtWidgets.QMessageBox.question(
+                    self,
+                    "重置布局",
+                    "将右侧栏的宽度与显示状态恢复成默认。\n"
+                    "（窗口大小、样式表、已打开的标签页都不受影响）\n\n确定继续吗？",
+                )
+                if reply != QtWidgets.QMessageBox.StandardButton.Yes:
+                    return False
+
+            # 1) 清存盘（下次启动也回到默认）。
+            # ⚠️ **不传 style_sheet**：清掉样式表等于把用户的主题删了，而它不是布局。
+            # ⚠️ ``settings.reset_layout`` 只删 ``settings.LAYOUT_KEYS`` 里的键 —— 窗口尺寸
+            #    （``main_window_size*``）不在其中，所以"下次启动的窗口大小"也保持原样。
+            cleared = settings.reset_layout(style_sheet=None)
+            print(f"布局已重置，清除的存盘项：{cleared}")
+
+            # 2) 当前窗口立即生效：显示右侧栏 + 默认宽度。
+            # ⚠️ 这里**只重排右侧栏**，窗口几何一概不动（用户要的是「右侧栏改乱了」时
+            #    点一下复原，而不是把窗口也拽回去）。宽度从父控件布局反推、当场就对，
+            #    不需要等事件循环（见 ``_reset_splitter_sizes``）。
+            self._last_console_width = None
+            self.set_side_tabs_visible(True)
+            self._reset_splitter_sizes()
+
+            self.refresh()
+            return True
+        except Exception as err:
+            print(f"Error when reset_layout: {err}")
+            return False
+
+    def _reset_splitter_sizes(self):
+        """把右侧栏设成**默认比例**（窗口宽度的 ~30%）.
+
+        抽出来给 :meth:`reset_layout` 用：它要在「窗口几何改完」之后**立刻**重新分配，
+        而 ``init_splitter_sizes`` 会去读存盘（那时已清空，语义一样，但这里更直白）。
+
+        ⚠️ **宽度不能取 ``splitter.width()``**：``setGeometry`` 之后布局还没重排，那里读到的
+        是**旧**宽度（实测：新窗口 582 px 时仍返回 582 之前的值，按它分配就成了 78%）。
+        改成从**父控件**的布局反推：``splitter.width()`` 若已等于新窗口宽度就直接用，
+        否则用 ``父控件宽度 - 父布局的边距 - 分隔条宽度`` —— 这个数**当场就是对的**，
+        不用等下一轮事件循环。
+
+        ⚠️ 窗口比 ``MIN_CONSOLE_WIDTH`` 还窄时，按 :data:`settings.MAX_CONSOLE_RATIO` 夹断，
+        免得把左边挤没。
+        """
+        splitter = getattr(self, 'splitter', None)
+        if splitter is None:
+            return
+        total = self._splitter_target_width()
+        if total <= 0:
+            return
+        default = max(settings.MIN_CONSOLE_WIDTH,
+                      int(total * settings.DEFAULT_CONSOLE_RATIO))
+        default = min(default, max(1, int(total * settings.MAX_CONSOLE_RATIO)))
+        self._last_console_width = int(default)
+        splitter.setSizes([max(1, total - default), int(default)])
+
+    def _splitter_target_width(self):
+        """估算 splitter 在**当前窗口几何**下应有的宽度（不依赖布局是否已刷新）.
+
+        Returns:
+            int: 宽度（像素）；算不出来返回 0。
+        """
+        splitter = getattr(self, 'splitter', None)
+        if splitter is None:
+            return 0
+        width = splitter.width()
+        # 父控件（中央 widget）的布局：左右边距 + 分隔条宽度都要扣掉
+        try:
+            parent = splitter.parentWidget()
+            if parent is not None:
+                layout = parent.layout()
+                if layout is not None:
+                    margins = layout.contentsMargins()
+                    computed = (parent.width() - margins.left() - margins.right()
+                                - splitter.handleWidth())
+                    if computed > 0:
+                        return computed
+        except Exception as err:
+            print(f"Error when compute splitter width: {err}")
+        if width <= 0:
+            return max(self.width(), 800)
+        return width
+
+    def init_splitter_sizes(self):
+        """给「顶部标签页 / 右侧栏」设初始宽度（有存盘记录就用记录）.
+
+        ★ 2026-10-26：右侧栏从「固定比例、拖不动」改成「**用户可拖 + 宽度记下来**」。
+        本方法负责**启动时**那一半（恢复），另一半在 ``resizeEvent``（跟踪用户拖出来
+        的宽度）与 ``__on_close``（关窗存盘，走 ``settings.save_console_width``）。
+
+        ⚠️ **必须在窗口已布局之后调用**：``QSplitter.setSizes`` 设完会被紧随其后的
+        第一次布局计算覆盖 —— 所以这里不在 ``__init__`` 里图省事，而是由
+        ``showEvent``（第一次）触发；``__init__`` 末尾那次调用只是**兜底**（不显示窗口
+        直接跑脚本时也要有个合理比例）。
+
+        ⚠️ **默认宽度** = ``splitter`` 宽度 × :data:`settings.DEFAULT_CONSOLE_RATIO`
+        （2026-10-26 由 0.30 调成 0.22）；用户拖过之后以存盘值为准，这个比例**只在
+        没有记录时**生效。
+        """
+        splitter = getattr(self, 'splitter', None)
+        if splitter is None:
+            return
+        total = splitter.width()
+        if total <= 0:
+            # 还没布局：用窗口宽度估算（``QSplitter`` 会按比例分）
+            total = max(self.width(), 800)
+        default = max(settings.MIN_CONSOLE_WIDTH,
+                      int(total * settings.DEFAULT_CONSOLE_RATIO))
+        default = min(default, max(1, int(total * settings.MAX_CONSOLE_RATIO)))
+        width = settings.load_console_width(self, default_width=default)
+        if width is None:
+            width = default
+        self._last_console_width = int(width)
+        splitter.setSizes([max(1, total - width), int(width)])
 
     def list_member_functions(self):
         """
@@ -880,10 +1159,141 @@ class MainWindow(QtWidgets.QMainWindow):
             if sub_menu is None:
                 sub_menu = QtWidgets.QMenu(menu)
                 sub_menu.setTitle(key)
-                menu.addAction(sub_menu.menuAction())
+                # ⚠️⚠️ **新子菜单排在「菜单自身注册的条目」之后、插件条目之前**
+                #    （2026-10-26 定的最终规则，替换此前「永远排到最后」）：
+                #
+                #    文件  工作路径 · 打开 · 新建 · 脚本 · 导入 · 保存 · 导出 · 退出   →  ▸ 浏览
+                #    帮助  关于 · ReadMe · 登录 · 反馈   →  ▸ 用户   →  示例（插件后挂的）
+                #
+                #    为什么不是「追加到末尾」：插件（``demo_menu`` 等）在启动后才往菜单里
+                #    **追加**普通条目，子菜单于是被挤到它们后面（实测「帮助 → 用户」跑到
+                #    「示例」之后、「文件 → 浏览」跑到「更新」之后）。
+                #    为什么不是「第一个普通条目之前」：``get_menu`` 在构造期就会被调用
+                #    （本类 ``__init_actions`` 末尾），那时普通条目还没挂完 —— 子菜单会落到
+                #    最前面（实测「帮助 → 用户」跑到了「关于」头上）。
+                #
+                #    ★ 所以判据是「**这一段**是菜单自己注册的、还是插件后来追加的」：
+                #    ``MainWindow`` **构造完成**时，菜单里已有的条目 = 骨架自己注册的
+                #    （动画顺序就是代码里的书写顺序）；构造之后新增的 = 插件 / extra_setups
+                #    后挂的。子菜单插在「构造期最后一条」之后 —— 即**夹在两段之间**。
+                #    构造期创建的菜单（例如「帮助 → 用户」）：那时菜单里还没有任何插件条目，
+                #    于是它落在所有条目之后；插件随后追加的条目排在它后面。两种情形都对。
+                #
+                #    ⚠️ 锚点**每次调用时现算**（见 :meth:`_sub_menu_insert_after`），
+                #    而不是记一个"第几条"，这样即使某个插件用自己的 ``get_menu`` 又建了
+                #    子菜单，索引也不会错位。
+                #    ⚠️ **不能复用已有子菜单的 action 去 addAction**：同一个 action 在一个
+                #    菜单里只能出现一次，那样 Qt 会把它**直接挪**到末尾、连带打乱别的顺序
+                #    （实测「文件」的固有条目因此被整块甩到了「浏览」之后）。
+                menu.insertAction(
+                    self._sub_menu_insert_after(menu), sub_menu.menuAction())
             menu = sub_menu  # 设置为当前层级的目录
         # 完成了所有的遍历，找到对应的menu
         return menu
+
+    def _sub_menu_insert_after(self, menu):
+        """返回「把新子菜单插在**它后面**」的那个 action（锚点）.
+
+        规则见 :meth:`get_menu` 里那段说明：子菜单要夹在「菜单自身注册的条目」与
+        「插件后挂的条目」之间。
+
+        判据：遍历（按显示顺序），**第一个「在 ``__init_actions`` 之后才加进去的」普通
+        条目之前的位置**就是子菜单该去的地方。因为 ``__init_actions`` 在构造期同步跑完，
+        那时菜单里的条目是连续的一段前缀；之后追加的都在后面。
+
+        Args:
+            menu: 父菜单（``QMenu``）。
+
+        Returns:
+            QAction | None: ``insertAction`` 的锚点（插在它前面）；``None`` = 插到末尾。
+        """
+        actions = menu.actions()
+        if not actions:
+            return None
+        # 构造期最后一条普通条目（子菜单不参与，它们由本方法自己归位）
+        last_builtin = None
+        for idx, action in enumerate(actions):
+            if action.menu() is not None:
+                continue
+            if self._is_builtin_action(action):
+                last_builtin = action
+        if last_builtin is None:
+            # 这个菜单里一个"骨架自己注册的条目"都没有 —— 落到末尾
+            return None
+        idx = actions.index(last_builtin)
+        # 找「构造期最后一条」之后的第一条 —— 新子菜单就插在它前面（没有就插到末尾）
+        for action in actions[idx + 1:]:
+            if action.menu() is not None:
+                continue  # 跳过已有的子菜单
+            return action
+        return None
+
+    def _is_builtin_action(self, action):
+        """判断一个 action 是不是**骨架（``MainWindow``）自己在构造期注册的**.
+
+        做法：``__init_actions`` 跑完时把当时已有的 action 记进
+        ``self._builtin_actions``（id 集合），之后新增的（插件 / extra_setups）不在里面。
+
+        ⚠️ 用 **id()** 而不是 objectName：后者可空、可重复，而 ``QAction`` 是 Qt 对象，
+        在界面存活期间 id 稳定。
+
+        Args:
+            action: ``QAction``。
+
+        Returns:
+            bool: 是构造期注册的返回 True。
+        """
+        return id(action) in getattr(self, '_builtin_actions', ())
+
+    def _record_builtin_actions(self):
+        """记下**当前**菜单栏里的全部 action（＝骨架在 ``__init_actions`` 里注册的）.
+
+        在 ``__init_actions`` 的最后调用一次（见那里）。插件与 ``extra_setups`` 在
+        ``MainWindow`` 构造**之后**才挂条目 —— 它们都不在这个集合里，于是
+        :meth:`_sub_menu_insert_after` 能把「骨架条目」与「插件条目」分开。
+        """
+        actions = set()
+        try:
+            for top in self.menuBar().actions():
+                menu = top.menu()
+                if menu is None:
+                    actions.add(id(top))
+                    continue
+                for action in menu.actions():
+                    actions.add(id(action))
+                    sub = action.menu()
+                    if sub is not None:
+                        for sub_action in sub.actions():
+                            actions.add(id(sub_action))
+        except Exception as err:
+            print(f"Error when record builtin actions: {err}")
+        self._builtin_actions = actions
+
+    @staticmethod
+    def _push_sub_menus_to_end(menu):
+        """把菜单里的**子菜单组**整体挪到末尾（组内先后不变，普通条目顺序不变）.
+
+        ⚠️ 2026-10-26：``get_menu`` 与 ``add_action`` 已**不再调用**它 —— 子菜单改成
+        夹在「骨架条目」与「插件条目」之间（见 :meth:`_sub_menu_insert_after`）。
+        方法保留，供外部脚本 / 调试一次性把子菜单收到底部。
+
+        ``insertAction(None, action)`` 会把该 action 移到末尾；按原顺序逐个挪一遍，
+        子菜单之间的相对顺序就保持不变。对「本来就在末尾」的菜单是空操作。
+
+        Args:
+            menu: 父菜单（``QMenu``）。
+        """
+        sub_actions = [a for a in menu.actions() if a.menu() is not None]
+        if not sub_actions:
+            return
+        ordered = menu.actions()
+        # 已经全在末尾（最后一个子菜单后面没有普通条目）就不用动
+        last_sub = sub_actions[-1]
+        idx = ordered.index(last_sub)
+        if idx == len(ordered) - 1:
+            return
+        for action in sub_actions:
+            menu.insertAction(None, action)
 
     def get_toolbar(self, name: str):
         """
@@ -912,7 +1322,60 @@ class MainWindow(QtWidgets.QMainWindow):
         添加一个Action. 这是一个新的版本，将替代后续的直接基于File的ActionX的创建方法，
         并且将支持动态地创建Action。
         Since 2026-6-9.
+
+        Args:
+            menu: 菜单路径。``str`` 表示一级菜单名（``'显示'``），``list`` 表示多级路径
+                （``['帮助', '用户']``）。⚠️ 每一级的标题必须与别处注册时**逐字一致**，
+                否则 :meth:`get_menu` 会另建一个同名菜单。省略时归到「其它」。
+            text: 菜单文字。可以是 ``str``，也可以是一个**返回文字的 callable**
+                （每次刷新时重新取，用于带计数的标题）。省略时用 ``name``。
+            name: action 的 objectName，用于 :meth:`get_action` 按名字查重。
+                省略时：``overwritable=False`` 会按 menu + text 生成一个 ``auto_<hash>`` 名字
+                用来判重；``overwritable=True`` 时由下面的 ``unnamed_001`` 递增分配。
+            slot: 点击后执行的动作（经 :meth:`parse_value` 解析，见那里的三种形态）。
+            icon: 图标名（``zml/ui/data/zml_icons/`` 下的文件名，不带扩展名）。
+                ⚠️ 名字不存在时**静默**得到空图标，不会报错。
+            tooltip: 悬停提示。
+            shortcut: 快捷键，``str`` 或 ``QKeySequence``。
+            on_toolbar: 为真时同时把该 action 挂到同名工具栏上（用 ``menu`` 的第一级命名）。
+            is_enabled: 可选的 callable，动态决定该项是否可用。
+            is_visible: 可选的 callable，动态决定该项是否可见。
+            overwritable: **「同名 action 已经存在时怎么办」**，与字面「能否被覆盖」无关：
+
+                - ``True``（默认）：已存在就发出一个 ``UserWarning``，然后**另起自动名**
+                  （``unnamed_001`` …）再挂一条 —— 于是菜单里出现**两条**；
+                - ``False``：已存在就**直接 ``return``**，什么都不挂。
+
+                两种取值都**不会**替换 / 合并已存在的 action。想让「后挂的」显示出来，
+                正确的做法是**让先挂的那条不存在**（例如：插件菜单项不要做占位）。
+
+                ⚠️ 2026-10-25 实测更正：此前这里的注释写成「同名时直接返回」，
+                实际行为见上面两条；``show_pg_console`` 的菜单一度因此「命令是真的、
+                点菜单却只打印提示」。
+
+        Note:
+            **分隔符**：``name='---'``（即 :attr:`SEPARATOR_NAME`）时本函数**不建 action**，
+            只在 `menu` 末尾插一条分隔线，其余参数全部忽略（`text` / `slot` / `shortcut` /
+            `on_toolbar` / `overwritable` 一个都不用给）。用法::
+
+                gui.add_action(menu='操作', name='---')
+                gui.add_action(menu='操作', name='my_cmd', text='我的命令', slot=...)
+
+            - 只用于**菜单**：``on_toolbar`` 在这里不生效（工具栏的分隔符仍要用
+              ``QToolBar.insertSeparator`` 自己插）；
+            - **不判重**：连插两条就是两条分隔线，也不会占 ``unnamed_XXX`` 的序号
+              （它根本没有 action，菜单项列表里只是多了一条分隔）；
+            - 无界面时（``gui.exists()`` 为假）整个调用 no-op，与 :func:`zmlx.ui.gui_buffer.add_action` 一致。
         """
+        if name == self.SEPARATOR_NAME:
+            # 分隔符：只影响菜单，不建 action（见 docstring 的 Note）。
+            # ⚠️ 这里**不能**走到下面的 ``get_action(name=...)`` 判重 —— 那是按 objectName
+            #    查找，分隔符没有名字，查不到却会走一遍全树的 findChildren（白费）。
+            if menu is None:
+                menu = "其它"
+            self.get_menu(menu).addSeparator()
+            return
+
         if not overwritable:
             if name is None:  # 此时，需要给定一个name (仅仅用于判断是否已存在)
                 if isinstance(text, str):  # 此时，给定一个默认的name
@@ -924,6 +1387,10 @@ class MainWindow(QtWidgets.QMainWindow):
                         name = "auto_" + get_hash("_".join(menu + [text]))
 
         if self.get_action(name=name, create_empty=False) is not None:
+            # 同名 action 已经存在 —— 见 docstring 的 ``overwritable`` 两条：
+            #   False → 什么都不挂，直接返回；
+            #   True  → 警告一声、把 name 置 None，下面另起 unnamed_XXX 再挂一条
+            #           （所以菜单里会出现**两条**，不是「替换」）。
             if not overwritable:
                 assert name is not None, (
                     f"Error: name should not be None when action not overwritable"
@@ -996,7 +1463,13 @@ class MainWindow(QtWidgets.QMainWindow):
             toolbar_name = menu if isinstance(menu, str) else menu[0]
             self.get_toolbar(toolbar_name).addAction(action)
 
-        self.get_menu(menu).addAction(action)
+        target = self.get_menu(menu)
+        target.addAction(action)
+        # ⚠️ 2026-10-26：**不再在这里把子菜单归位**。子菜单现在夹在「骨架条目」与
+        #    「插件后挂条目」之间（见 ``get_menu`` / ``_sub_menu_insert_after``），
+        #    而普通条目一律追加到末尾 —— 两者天然不冲突：插件追加的普通条目本来就在
+        #    子菜单之后，不需要再挪。⚠️ 之前这里调 ``_push_sub_menus_to_end`` 会把子菜单
+        #    一路顶到底，导致「帮助 → 用户」跑到「示例」之后。
 
     def get_action(self, name, create_empty=True):
         """
@@ -1177,9 +1650,14 @@ class MainWindow(QtWidgets.QMainWindow):
     def console_state(self, text):
         """在状态栏的版本按钮上显示控制台运行状态（空串 = 恢复显示版本号）.
 
-        ⚠️ 这里**借用**版本按钮当作「控制台状态显示位」，是沿用已久的行为
-        （见 ``VersionButton`` 的模块文档）；传空串由 ``VersionButton.setText``
-        回退到版本号，调用方就是靠这个来「清除」。
+        ⚠️⚠️ **2026-10-26 起主窗口自己不再调它**：运行状态改由状态栏的**运行状态灯**
+        （:class:`~zmlx.ui.widgets.run_state_light.RunStateLight`）显示，版本按钮
+        **只属于版本号**。本方法**保留**只是为了不破坏外部调用方（它是公开方法，
+        且被自动注册成 ``gui.console_state``）—— 行为与以前完全一样：写的就是版本按钮。
+
+        新代码请直接调状态灯：``gui.window().run_state_light.set_state('running')``
+        （状态名见 :mod:`zmlx.ui.widgets.run_state_light`），或改 :meth:`refresh` 里
+        那段状态判断 —— 那里才是「谁在什么时候更新状态灯」的唯一来源。
 
         Args:
             text: 要显示的文本；超过 20 字符会被截断。
@@ -1224,10 +1702,34 @@ class MainWindow(QtWidgets.QMainWindow):
         self.console.start_last()
 
     def set_side_tabs_visible(self, visible: bool):
+        """显示 / 隐藏右侧栏（顶部标签页区之外的那一栏，控制台常驻其中）.
+
+        ★ 2026-10-26：**宽度记忆**。隐藏后 ``splitter.sizes()`` 里那一项是 0，所以：
+
+        - **隐藏前**先把当前宽度记到 ``self._last_console_width``；
+        - **显示时**按记下的宽度还原（用户拖出来的宽度不该因为一次隐藏就丢掉）；
+        - 关窗时由 ``__on_close`` → ``settings.save_console_width`` 存盘，下次启动
+          ``init_splitter_sizes`` 恢复。
+
+        ⚠️ 菜单「操作 → 隐藏/显示」与公开方法 ``gui.set_console_visible`` 走的都是这里。
         """
-        设置控制台是否可见
-        """
+        if not visible:
+            try:
+                sizes = self.splitter.sizes()
+                if len(sizes) >= 2 and sizes[1] > 0:
+                    self._last_console_width = int(sizes[1])
+            except Exception as err:
+                print(f"Error: {err}")
         self.right_tabs.setVisible(visible)
+        if visible:
+            try:
+                width = getattr(self, '_last_console_width', None)
+                if isinstance(width, int) and width > 0:
+                    total = self.splitter.width()
+                    if total > 0:
+                        self.splitter.setSizes([max(1, total - width), width])
+            except Exception as err:
+                print(f"Error: {err}")
         self.refresh()  # 刷新窗口
 
     def set_console_visible(self, visible: bool):
@@ -1304,6 +1806,31 @@ class MainWindow(QtWidgets.QMainWindow):
                 except Exception as err:
                     print(err)
 
+    def __refresh_cwd_view_if_any(self):
+        """工作路径变了：若「浏览」页存在就刷新它（2026-10-22）.
+
+        ⚠️ 「浏览」页（`CwdView`）已搬进插件 `plugins/builtin/viewers.py`，
+        `view_cwd` 不再是本类的方法。所以
+        :attr:sig_cwd_changed 连的是本函数，由它**按命令名**去调 ——
+
+        ⚠️ 插件未加载 / 被禁用时，``gui.view_cwd`` 由
+        ``extra_setups/plugin_placeholders.py`` 的**占位**顶上：它只打印一句「请先启用
+        插件」的提示、**什么都不做**，所以这里不会再报 `not found`，也不会误开标签页。
+        ⚠️ 但仍然用 `gui.get_func` 判断、**不要** `try: gui.view_cwd() except`：
+        后者会把命令内部真正的异常也一起吞掉，排查时看不出是「没这个命令」还是
+        「这个命令自己报错了」。这个判断现在只防「gui 尚未接好」这类极端情况。
+        """
+        from zmlx.ui import gui as _gui
+
+        if not _gui.exists():
+            return
+        if _gui.get_func('view_cwd') is None:
+            return  # gui 不可用（正常启动后插件命令或占位总有一个）
+        try:
+            _gui.view_cwd()
+        except Exception as err:
+            print(f'Error when refresh cwd view: {err}')
+
     def refresh(self):
         """
         尝试刷新标题以及当前的页面
@@ -1337,13 +1864,17 @@ class MainWindow(QtWidgets.QMainWindow):
         running = self.is_running()
         pause = self.is_paused()
 
-        if not running:  # 只要发现没有运行，就关闭进度条显示
-            self.console_state("")  # 显示默认
+        # 控制台运行状态：显示在状态栏的**运行状态灯**上（圆点 + 文字）。
+        # ⚠️ 2026-10-26：原先这里是 ``self.console_state('控制台：运行中')`` —— 往版本按钮
+        #    那一格写状态，等于让版本号一物两用。现在改走 ``run_state_light``，
+        #    版本按钮**只显示版本号**。⚠️ ``console_state`` 方法本身**保留**（公开方法，
+        #    外部脚本可能还在调），只是主窗口自己不再调它。
+        if not running:
+            self.run_state_light.set_state(STATE_IDLE)
+        elif pause:
+            self.run_state_light.set_state(STATE_PAUSED)
         else:
-            if pause:
-                self.console_state("控制台：已暂停")
-            else:
-                self.console_state("控制台：运行中")
+            self.run_state_light.set_state(STATE_RUNNING)
 
         if running:
             self.get_output_widget().text_browser.setStyleSheet(
@@ -1490,31 +2021,17 @@ class MainWindow(QtWidgets.QMainWindow):
             **kwargs,
         )
 
-    def show_fn2(self, filepath, **kwargs):
-        warn(
-            "gui.show_fn2 will be removed after 2026-3-5, "
-            "please use zmlx.plt.show_fn2 instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        from zmlx.ui.tabs.fn2 import Fn2Widget
+    # ⚠️ ``show_fn2`` 2026-10-22 **已搬到插件** ``plugins/builtin/fn2_view.py``
+    #    （默认启用）：方法、``Fn2Widget`` 控件、``.fn2`` 文件类型都在那边，
+    #    那个插件现在**完全自含**。
+    #    ⚠️ 它**一直是弃用的**（方法体里有 ``warn('gui.show_fn2 will be removed after
+    #    2026-3-5, please use zmlx.plt.show_fn2 instead')``）—— 那条警告搬过去时**原样保留**。
+    #    ⚠️ 本类**不留方法**；占位在 ``extra_setups/plugin_placeholders.py``。
 
-        if kwargs.get("caption") is None:
-            kwargs["caption"] = "Fractures"
-        widget = self.get_widget(the_type=Fn2Widget, **kwargs)
-        assert widget is not None
-        widget.open_fn2_file(filepath)
-
-    def view_cwd(self):
-        from zmlx.ui.tabs import CwdView
-
-        def oper(w):
-            w.refresh()
-            w.gui_restore = f"""gui.view_cwd()"""  # 用于重启
-
-        self.get_widget(
-            the_type=CwdView, caption="浏览", on_top=True, oper=oper, icon="cwd"
-        )
+    # ⚠️ `view_cwd` 2026-10-22 **已搬到插件** `plugins/builtin/viewers.py`
+    #    （默认启用）：方法、`CwdView` 控件与「文件 → 浏览 → 工作目录」菜单项都在那边
+    #    （2026-10-26 起收进「浏览」子菜单，与「图片」并列）；本类**不留方法**；
+    #    占位在 ``extra_setups/plugin_placeholders.py``。
 
     def progress(
         self,
@@ -1632,8 +2149,18 @@ class MainWindow(QtWidgets.QMainWindow):
             )
 
     def open_image(self, fname, caption=None, on_top=True):
-        """
-        打开一个图片
+        """用 :class:`~zmlx.ui.tabs.img.ImageView` 打开（或切到）一个图片标签页.
+
+        Args:
+            fname: 图片路径。不是 ``str`` 或文件不存在时**什么都不做**（保持一致的历史行为）。
+            caption: 标签页标题；缺省用文件名。
+            on_top: 是否置顶。
+
+        ⚠️ **本方法 2026-10-22 曾搬进插件** ``plugins/builtin/image_browser.py``，
+        同日**还原**：欢迎页（``__init_actions`` 里那段）在 ``MainWindow`` 构造期就要用它
+        —— 它是**底层能力**，不该随插件开关而消失。
+
+        ⚠️ ``gui_restore`` 里写的是 ``gui.open_image(**{...})``：命令名与参数名都不能改。
         """
         if isinstance(fname, str):
             if os.path.isfile(fname):
@@ -1651,45 +2178,12 @@ class MainWindow(QtWidgets.QMainWindow):
                     the_type=ImageView, caption=caption, on_top=on_top, oper=oper
                 )
 
-    def open_pdf(self, fname, caption=None, on_top=True):
-        """
-        打开一个pdf
-        """
-        assert isinstance(fname, str), f"The given fname is not a string: {fname}"
-        if not os.path.isfile(fname):
-            print(f"File not exist: {fname}")
-            return
-        if QWebEngineView is None or QWebEngineSettings is None:
-            print("QWebEngineView is not installed")
-            return
-
-        def oper(w):
-            kwds = dict(fname=fname, caption=caption, on_top=on_top)
-            w.gui_restore = f"""gui.open_pdf(**{kwds})"""  # 用于重启
-            w._settings().setAttribute(
-                QWebEngineSettings.WebAttribute.PluginsEnabled, True
-            )
-            w._settings().setAttribute(
-                QWebEngineSettings.WebAttribute.PdfViewerEnabled, True
-            )
-            if fname.startswith("file://"):
-                w.load(QtCore.QUrl(fname))
-            else:
-                w.load(
-                    QtCore.QUrl(
-                        QtCore.QUrl.fromLocalFile(os.path.abspath(fname)).toString()
-                    )
-                )
-
-        if caption is None:
-            caption = os.path.basename(fname)
-
-        self.get_widget(
-            the_type=QWebEngineView,
-            caption=caption,
-            on_top=on_top,
-            oper=oper,
-        )
+    # ⚠️ ``open_pdf`` 2026-10-22 **已移除**（``MainWindow`` 不再提供它，也不再注册
+    #    ``.pdf`` 文件处理器）。PDF 查看依赖**可选库** ``QWebEngineView``，与核心骨架无关。
+    #    ⚠️ 如果将来要把「用浏览器打开 PDF」加回来，请做成**插件**（放到
+    #    ``ui/plugins/builtin/``，或在 ``scen/<包>/zml_plugin.py``），并在插件里自己
+    #    ``gui.add_func('open_pdf', ...)`` —— 它原来之所以是 ``gui.open_pdf``，靠的是
+    #    本类「所有公开方法自动注册」这条规则，方法搬走/删除后命令名会一起消失。
 
     def new_code(self):
         fname, _ = QtWidgets.QFileDialog.getSaveFileName(
@@ -1824,20 +2318,11 @@ class MainWindow(QtWidgets.QMainWindow):
             if os.path.isfile(filename):
                 self.sig_play_sound.emit(filename)
 
-    def show_tab_details(self):
-        from zmlx.ui.tabs import TabDetailView
-
-        def oper(w):
-            w.gui_restore = f"""gui.show_tab_details()"""
-
-        self.get_widget(
-            the_type=TabDetailView,
-            caption="标签列表",
-            on_top=True,
-            type_kw={"obj": TabDetailView.TabWrapper(*self.get_tab_widgets())},
-            oper=oper,
-            position="right",
-        )
+    # ⚠️ `show_tab_details` 2026-10-22 **已搬到插件** `plugins/builtin/viewers.py`
+    #    （默认启用）：方法与 `TabDetailView` 控件、「显示 → 标签列表」菜单项都在那边；
+    #    本类**不留方法**；占位在 ``extra_setups/plugin_placeholders.py``。
+    #    ⚠️ 插件用 `gui.get_tab_widgets()`（本类的**公开方法**，自动注册成命令）
+    #    取标签容器 —— 所以 `get_tab_widgets` 必须留在本类，别搬走。
 
     def show_code_history(self, folder, caption=None):
         from zmlx.ui.tabs import CodeHistoryView
@@ -1874,28 +2359,10 @@ class MainWindow(QtWidgets.QMainWindow):
             the_type=OutputHistoryView, caption="输出历史", on_top=True, oper=oper
         )
 
-    def show_demo(self):
-        f = app_data.get("show_demo")
-        if callable(f):
-            f()
-        else:
-            from zmlx.ui.tabs import DemoView
-
-            def oper(w):
-                # force=True：显式打开本页时一定核对一遍（忽略 DemoView 内部的
-                # RESCAN_INTERVAL 闸门），这样「刚加了 demo 文件」马上能看到；
-                # 而切标签页走 MainWindow.refresh 的普通 refresh()，不受影响
-                w.refresh(force=True)
-                w.gui_restore = f"""gui.show_demo()"""
-
-            self.get_widget(
-                the_type=DemoView,
-                caption="示例",
-                on_top=True,
-                oper=oper,
-                icon="demo",
-                tooltip="内置在模型中的示例。单击条目可以打开，然后，请点击工具条的运行按钮来执行",
-            )
+    # ⚠️ ``show_demo`` 2026-10-22 **已搬到插件** ``plugins/builtin/demo_menu.py``
+    #    （默认启用）：它只是在「开一个 DemoView 标签页」，控件本体在 ``ui/tabs/``，
+    #    与主窗口骨架无关。命令 ``gui.show_demo`` 由那边的 ``setup_ui()`` 用
+    #    ``gui.add_func`` 注册；本类**不留方法**，占位在 ``extra_setups/plugin_placeholders.py``。
 
     def show_memory(self):
         from zmlx.ui.tabs import MemView
@@ -1908,57 +2375,30 @@ class MainWindow(QtWidgets.QMainWindow):
             the_type=MemView, caption="变量", on_top=True, icon="variables", oper=oper
         )
 
-    def show_timer(self):
-        from zmlx.ui.tabs import TimerView
+    # ⚠️ `show_timer` 2026-10-22 **已搬到插件** `plugins/builtin/viewers.py`
+    #    （默认启用）：方法、`TimerView` 控件与「显示 → 耗时」菜单项都在那边；
+    #    本类**不留方法**；占位在 ``extra_setups/plugin_placeholders.py``。
 
-        def oper(w):
-            w.refresh()
-            w.gui_restore = f"""gui.show_timer()"""
+    # ⚠️ ``show_pg_console`` 2026-10-22 **已搬到插件**
+    #    ``plugins/builtin/pg_console.py``（默认启用）：方法、``PgConsole`` 控件都在那边，
+    #    那个插件现在**完全自含**。
+    #    ⚠️ 命令 ``gui.show_pg_console`` 由插件 ``setup_ui()`` 用 ``gui.add_func`` 显式注册
+    #    （它原来靠的是本类「所有公开方法自动注册」）。
+    #    ⚠️ 与旧实现的一处差别：缺 ``pyqtgraph`` 时**会打印一句 pip 提示**，而旧代码是
+    #    静默 ``return``（点了没反应，无从排查）。
+    #    ⚠️ 本类**不留方法**；占位在 ``extra_setups/plugin_placeholders.py``。
 
-        self.get_widget(
-            the_type=TimerView, caption="耗时", on_top=True, icon="clock", oper=oper
-        )
+    # ⚠️ `show_file_finder` 2026-10-22 **已搬到插件** `plugins/builtin/viewers.py`
+    #    （默认启用）：方法、`AppPathEdit` 控件与「设置 → 路径」菜单项都在那边；
+    #    本类**不留方法**；占位在 ``extra_setups/plugin_placeholders.py``。
 
-    def show_pg_console(self):
-        from zmlx.ui.tabs.pg import PgConsole
-
-        if PgConsole is None:
-            return
-
-        def oper(w):
-            w.gui_restore = f"""gui.show_pg_console()"""
-
-        self.get_widget(
-            the_type=PgConsole,
-            caption="Python控制台",
-            on_top=True,
-            icon="console",
-            oper=oper,
-        )
-
-    def show_file_finder(self):
-        from zmlx.ui.tabs import AppPathEdit
-
-        def oper(w):
-            w.gui_restore = f"""gui.show_file_finder()"""
-
-        self.get_widget(
-            the_type=AppPathEdit, caption="路径", on_top=True, icon="set", oper=oper
-        )
-
-    def show_solver_selector(self):
-        from zmlx.ui.tabs.solver_selector import SolverSelector
-
-        def oper(w):
-            w.gui_restore = "gui.show_solver_selector()"
-
-        self.get_widget(
-            the_type=SolverSelector,
-            caption="求解器",
-            on_top=True,
-            icon="set",
-            oper=oper,
-        )
+    # ⚠️ ``show_solver_selector`` 2026-10-22 **已搬到插件** ``plugins/builtin/solver_menu.py``：
+    #    方法、控件 ``SolverSelector``（原 ``ui/tabs/solver_selector.py``）与
+    #    「设置 → 求解器」菜单项都在那边，合成一个可关闭的单元。命令
+    #    ``gui.show_solver_selector`` 由那边的 ``setup_ui()`` 显式注册（它原来靠本类
+    #    「所有公开方法自动注册」）。⚠️ 本类**不再提供**同名方法 —— 有它的话自动注册会
+    #    把插件（或 ``extra_setups/plugin_placeholders.py`` 的占位）悄悄顶掉。
+    #    ⚠️ 插件默认**不加载**，所以默认只有占位在给出「请先启用它」的提示。
 
     def show_env_edit(self):
         from zmlx.ui.tabs import EnvEdit
@@ -1975,36 +2415,24 @@ class MainWindow(QtWidgets.QMainWindow):
             type_kw=dict(items=settings.get_env_items()),
         )
 
-    def show_style_sheet(self):
-        """显示「样式表」标签页（可视化生成 QSS，或直接编辑文本后应用）。
+    # ⚠️ ``show_style_sheet`` 2026-10-22 **已搬到插件**
+    #    ``plugins/builtin/style_sheet_menu.py``（默认启用）：方法与「设置 → 样式表」
+    #    菜单项、以及控件 ``StyleSheetEdit`` 都在那边，那个插件现在**完全自含**。
+    #    ⚠️ 命令 ``gui.show_style_sheet`` 仍可用 —— 由插件 ``setup_ui()`` 用
+    #    ``gui.add_func`` 显式注册（它原来靠的是本类「所有公开方法自动注册」）。
+    #    ⚠️ 本类**不留方法**；占位在 ``extra_setups/plugin_placeholders.py``。
+    #    ⚠️ 注意 ``gui.set_style_sheet`` / ``gui.get_style_sheet`` **仍在**
+    #    ``__init_gui_api`` 里（它们直接转接 Qt 的 ``setStyleSheet`` / ``styleSheet``，
+    #    与插件无关）—— 所以禁用插件时已落盘的样式照常生效，只是没有可视化编辑器。
 
-        控件本体见 :class:`zmlx.ui.widget.style_sheet_edit.StyleSheetEdit`。
-        本类**不参与**样式的读写：只是把 Qt 自己的 ``setStyleSheet`` /
-        ``styleSheet`` 在 :meth:`__init_gui_api` 里转接成
-        ``gui.set_style_sheet`` / ``gui.get_style_sheet``，生成、应用与落盘
-        都在控件里做。
-        """
-        from zmlx.ui.tabs import StyleSheetEdit
-
-        def oper(w):
-            w.gui_restore = "gui.show_style_sheet()"
-
-        self.get_widget(
-            the_type=StyleSheetEdit,
-            caption="样式表",
-            on_top=True,
-            icon="set",
-            oper=oper,
-            tooltip="可视化设置字体/配色等并生成样式表(QSS)；也可以直接编辑样式表文本",
-        )
-
-    def show_calendar(self):
-        def oper(w):
-            w.gui_restore = f"""gui.show_calendar()"""
-
-        self.get_widget(
-            the_type=QtWidgets.QCalendarWidget, caption="日历", on_top=True, oper=oper
-        )
+    # ⚠️ ``show_calendar`` 2026-10-22 **已搬到插件** ``plugins/builtin/admin_menu.py``：
+    #    它只是「开一个 Qt 自带的 QCalendarWidget 标签页」，而这个功能的条目本来就在
+    #    那个插件里（「帮助 → 显示 → 日历」）。
+    #    ⚠️ 命令 ``gui.show_calendar`` 由插件 ``setup_ui()`` 用 ``gui.add_func`` 显式注册 ——
+    #    它原来靠的是本类「所有公开方法自动注册」。
+    #    ⚠️ 那个插件默认**不加载**（``# ** enabled = False``）：所以默认只有本类的
+    #    **占位**（``extra_setups/plugin_placeholders.py``）在给出「请先启用它」的提示；
+    #    启用插件后命令才真正打开日历。
 
     def show_string_table(self, data, caption=None, data_columns=3):
         from zmlx.ui.tabs.string_table import StringTable
@@ -2037,7 +2465,11 @@ class MainWindow(QtWidgets.QMainWindow):
 
         def oper(w):
             w.gui_restore = f"""gui.edit_setup_files()"""
-            w.refresh()  # 每次打开都按最新名单重建（插件可能刚被执行过）
+            # 每次打开都拉一次最新数据（插件可能刚被执行过）。
+            # ⚠️ 方法叫 ``update_items`` 而不是 ``refresh`` —— 后者会被
+            #    ``MainWindow.refresh()`` 在**每次切到这个标签页**时调用，
+            #    白白重算一遍（见该方法的说明）。
+            w.update_items()
 
         self.get_widget(
             the_type=PluginListEdit,
@@ -2066,15 +2498,13 @@ class MainWindow(QtWidgets.QMainWindow):
                 tooltip="显示ReadMe信息，与IGG-Hydrate网站首页的ReadMe保持一致",
             )
 
-    def show_changelog(self):
-        """显示 CHANGELOG.md。"""
-        self._show_md("CHANGELOG.md", "修改记录",
-                      restore="gui.show_changelog()")
-
-    def show_roadmap(self):
-        """显示 ROADMAP.md。"""
-        self._show_md("ROADMAP.md", "未来工作",
-                      restore="gui.show_roadmap()")
+    # ⚠️ ``show_changelog`` / ``show_roadmap`` / ``_show_md`` 2026-10-22 **已搬到插件**
+    #    ``plugins/builtin/doc_view.py``（默认启用）：它们只是「读包内 md → 开一个
+    #    ``TextBrowser`` 标签页」，与骨架无关。命令 ``gui.show_changelog`` /
+    #    ``gui.show_roadmap`` 由那边的 ``setup_ui()`` 显式注册（原先靠本类「所有公开
+    #    方法自动注册」）—— ``ui/tabs/about.py`` 的「日志 / 路线图」按钮与历史标签页的
+    #    ``gui_restore`` 都直接用这两个命令名。
+    #    ⚠️ 本类**不再提供**同名方法：有它的话自动注册会把插件悄悄顶掉。
 
     def check_update(self):
         """在控制台线程中执行 git 更新检查。"""
@@ -2094,47 +2524,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.console.start_func(task, add_history=False)
 
-    def _show_md(self, filename, caption, restore=None):
-        """加载并显示随包发布的 Markdown 文档。
-
-        文档（README / CHANGELOG / ROADMAP）只存在于包内 `zmlx/data/` 目录：仓库根目录
-        已不再保留副本，因此直接读包内那一份 —— pip 安装环境与开发环境读到的是同一个
-        文件，不再需要任何同步步骤。
-
-        Args:
-            filename: 要显示的 md 文件名（如 ``CHANGELOG.md``）。
-            caption: 标签页标题。
-            restore: **公开入口**给出的「重启后如何还原这个标签页」的 GUI 命令
-                （如 ``'gui.show_changelog()'``）。``None`` 表示不设。
-
-        ⚠️ **恢复命令必须由公开入口传进来，不能在这里写死**：本方法是**私有**
-        方法，不在 ``gui_api`` 白名单里（以 ``_`` 开头的方法一律被排除），
-        而 ``gui_restore`` 会被存进标签页状态、重启时按原样用 ``gui.xxx(...)``
-        重放。这里若硬写 ``gui._show_md(...)``，重放时就会报
-        ``gui function <_show_md> not found``（见 zmlx/ui/utils.py 的
-        ``GuiApi.__proc``），标签页再也打不开。
-        """
-        from zmlx.data import get_path as data_path
-        from zmlx.data import read_doc
-        from zmlx.ui.widgets import TextBrowser
-
-        text = read_doc(filename)
-        if text is None:
-            print(f"未找到文件: {filename}")
-            return
-        path = data_path(filename)
-
-        def oper(w: TextBrowser):
-            if restore is not None:
-                w.gui_restore = restore
-            w.setOpenLinks(True)
-            w.setOpenExternalLinks(True)
-            w.setMarkdown(text)
-            w.set_status(path)
-
-        self.get_widget(
-            the_type=TextBrowser, caption=caption, on_top=True, icon="info", oper=oper
-        )
+    # ⚠️ ``_show_md`` 2026-10-22 随 ``show_changelog`` / ``show_roadmap`` 一起搬进了
+    #    插件 ``plugins/builtin/doc_view.py``（见上方那段注释）。
 
     def show_reg_tool(self):
         """显示登录控件（邮箱验证码 + 登录本机硬件码）。
@@ -2267,20 +2658,16 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.get_widget(the_type=TextBrowser, caption=caption, on_top=on_top, oper=oper)
 
-    def get_vtk_view(self, caption=None, on_top=None, init=None, oper=None):
-        """
-        打开一个QtInteractor窗口
-        Args:
-            caption: 窗口的标题
-            on_top: 是否将窗口置顶
-            init: 初始化函数
-            oper: 操作函数
-        """
-        from pyvistaqt import QtInteractor
-
-        return self.get_widget(
-            the_type=QtInteractor, caption=caption, on_top=on_top, init=init, oper=oper
-        )
+    # ⚠️ **插件命令的「占位」不在本类里**（2026-10-22）：`get_vtk_view`、
+    #    `show_style_sheet`、`show_demo`、`show_fn2`、`show_pg_console`、`open_pdf`、
+    #    `show_solver_selector`、`show_timer`、`view_cwd`、`show_tab_details`、
+    #    `show_file_finder`、`show_calendar`、`show_changelog`、`show_roadmap` 这 14 条命令
+    #    的实现都在插件里；「插件没启用时给一句可操作提示」的占位函数放在
+    #    ``extra_setups/plugin_placeholders.py`` —— 它**恰好在插件之前**执行
+    #    （``extra_setups.setup_ui()`` → ``plugins.load_all()``），所以「先挂占位、
+    #    插件再覆盖」是同一根顺序链上的一前一后，不依赖本类的自动注册。
+    #    ⚠️ **不要在本类里再加同名方法**：自动注册会把插件（或占位）的版本覆盖掉，
+    #    而且读代码时看不出这层关系 —— 规则见 ``plugins/AGENTS.md`` §2。
 
     def show_gui_iter(self, data=None, caption=None, on_top=None):
         if data is None:
@@ -2336,11 +2723,9 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         self.license_button.update_license_state(read_cache=read_cache)
 
-
 class MySplashScreen(QtWidgets.QSplashScreen):
     def mousePressEvent(self, event):
         pass
-
 
 def __make_splash(app):
     splash_fig = settings.load_pixmap("splash")
@@ -2364,7 +2749,6 @@ def __make_splash(app):
         return splash
     else:
         return None
-
 
 class _RedStderr:
     """把写入 stderr 的内容在送进控制台之前**整段染红**。
@@ -2404,7 +2788,6 @@ class _RedStderr:
             raise AttributeError(name)
         return getattr(self._target, name)
 
-
 def __exception_hook(the_type, value, tb):
     message = f"""Exception Type: {the_type}
 Message : {value}
@@ -2413,7 +2796,6 @@ still unresolved, please contact the author (email: 'zhangzhaobin@mail.iggcas.ac
     # 走 stderr：__on_init 把 stderr 换成了 _RedStderr，于是这条消息在控制台里是**红色**的
     # （这是「真正的异常」最主要的出口）。⚠️ 别用 print(message)：那是 stdout，不会有颜色。
     print(message, file=sys.stderr)
-
 
 def __restore_history(win):
     # 恢复窗口的输出历史
@@ -2428,7 +2810,11 @@ def __restore_history(win):
 
             filename = get_latest_file(app_data.root("output_history"))
             if filename is not None:
-                if 0 < get_size_mb(filename) < 0.5:
+                # ⚠️ 门槛放宽到 4 MB：历史现在存成 **HTML**（见 OutputWidget.SUFFIX），
+                #    每段文本都带 <span style=...> 标签，体积约为纯文本的 5-10 倍；
+                #    仍按原来 0.5 MB 卡的话，稍微长一点的输出就会被挡在门外 ——
+                #    而「被挡掉」的表现与「没保存」完全一样（重启后是空的）。
+                if 0 < get_size_mb(filename) < 4.0:
                     win.get_output_widget().load_text(filename)
     except Exception as Err:
         print(f"Error: {Err}")
@@ -2439,13 +2825,12 @@ def __restore_history(win):
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     win.write(f"\033[34m====== {now} ======\033[0m \n")
 
-
 def __save_history(win):
-    # 保存输出历史
+    # 保存输出历史（扩展名取 OutputWidget.SUFFIX 即 .html —— 只有 HTML 才带得上颜色）
+    from zmlx.ui.widgets.output_widget import OutputWidget
     win.get_output_widget().save_text(
-        app_data.root("output_history", f"{time_string()}.txt")
+        app_data.root("output_history", f"{time_string()}{OutputWidget.SUFFIX}")
     )
-
 
 def __on_init(win):
     # step 1
@@ -2464,7 +2849,6 @@ def __on_init(win):
     # step 5. stdout and stderr
     sys.stdout = win
     sys.stderr = _RedStderr(win)  # stderr 的内容统一显示成红色（见 _RedStderr）
-
 
 def __on_exit(win):
     # step 5. stdout and stderr (此时，界面不应该再接收print，这是首先要做的)
@@ -2485,13 +2869,30 @@ def __on_exit(win):
     if callable(sys_excepthook):
         sys.excepthook = sys_excepthook  # 恢复原来的异常处理函数
 
-
 def __on_show(win):
     """
     在首次显示窗口之后执行的操作
     """
     # 必须在窗口正式显示之后，否则此函数可能会出错
     settings.load_window_size(win)
+
+    # 恢复右侧栏（控制台那一栏）的可见性（2026-10-26）。
+    # ⚠️ **必须在 load_window_size 之后**：先有窗口尺寸，splitter 才分得出宽度；
+    # ⚠️ 只有「明确存了 No」才隐藏；**没存过**（首次运行 / 老版本升级上来）保持显示。
+    try:
+        if app_data.getenv(
+            key="console_visible", encoding="utf-8", default="", ignore_empty=True
+        ) == "No":
+            win.set_side_tabs_visible(False)
+    except Exception as err:
+        print(f"Error: {err}")
+
+    # 窗口尺寸定下来之后再恢复一次右侧栏宽度：``showEvent`` 里那次可能还早于
+    # ``load_window_size``（窗口默认尺寸），这次才是用户真正看到的那个尺寸。
+    try:
+        win.init_splitter_sizes()
+    except Exception as err:
+        print(f"Error: {err}")
 
     # 设置窗口风格
     try:
@@ -2510,7 +2911,6 @@ def __on_show(win):
     except Exception as err:
         print(f"Error: {err}")
 
-
 def __add_code_history():
     try:  # 在尝试调用gui执行的时候，添加代码执行历史
         if len(sys.argv) == 1:
@@ -2521,7 +2921,6 @@ def __add_code_history():
                 add_code_history(filepath)
     except Exception as err:
         print(f"Error: {err}")
-
 
 def __check():
     messages = []
@@ -2540,7 +2939,6 @@ def __check():
             for i in range(len(messages)):
                 text += f"{i + 1}. {messages[i]}\n"
             gui.information("注意", text)
-
 
 def __restore_tabs(filename=None):
     """
@@ -2567,7 +2965,6 @@ def __restore_tabs(filename=None):
         if gui.count_tabs() == 0:
             gui.show_readme()
 
-
 def __console_kernel(code):
     """
     在控制台线程执行的工作
@@ -2581,12 +2978,24 @@ def __console_kernel(code):
     except Exception as err:
         print(f"Error when setup action: {err}")
 
-    if app_data.get("run_setup", True):  # 执行插件脚本(默认执行)
+    # 是否执行插件脚本 —— **默认执行**（没设置过就是 True）。
+    #
+    # ⚠️ 键名 2026-10-22 由 ``run_setup`` 改为 ``run_plugins``：旧名是
+    #    ``zml_gui_setup.py`` 那个文件名的残留，而插件文件早就改叫 ``zml_plugin.py`` 了
+    #    （``setup`` 这个词和「插件」对不上，光看名字猜不出这一行在干什么）。
+    #
+    # ⚠️ **两层 get 是兼容，不是笔误**：外层先看新名，取不到再回落旧名，旧名也取不到
+    #    才用 ``True``。于是——
+    #    · 老调用方 ``put('run_setup', False)`` 仍然生效（见 ``gui_buffer`` 的
+    #      ``open_gui_without_setup()``，那是「这一次不跑插件」的唯一开关）；
+    #    · **没有设置过时默认仍然是「跑」** —— 插件默认**不是**全部禁用。
+    #    旧名保留到 2027-10-22（一年），届时删掉内层那个 ``get`` 即可。
+    if app_data.get("run_plugins", app_data.get("run_setup", True)):
         try:
             from zmlx.ui import plugins
-            plugins.run_setup()
+            plugins.load_all()
         except Exception as err:
-            print(f"Error when run setup: {err}")
+            print(f"Error when loading plugins: {err}")
 
     if app_data.get("init_check", False):
         __check()
@@ -2599,7 +3008,6 @@ def __console_kernel(code):
     else:
         return None
 
-
 def __console_done(win, code, close_after_done):
     """
     在控制台线程结束之后执行的操作
@@ -2607,7 +3015,6 @@ def __console_done(win, code, close_after_done):
     app_data.put("console_result", win.get_console().result)  # 获得结果
     if close_after_done and code is not None:
         win.close()
-
 
 def __save_tabs(filename=None):
     """
@@ -2625,7 +3032,6 @@ def __save_tabs(filename=None):
         filename = app_data.temp("tab_start_code.json")
     write_json(filename, data)
 
-
 def __save_tab_files():
     for tabs in gui.get_tab_widgets():
         for idx in range(tabs.count()):
@@ -2636,14 +3042,17 @@ def __save_tab_files():
                 except Exception as e:
                     print(e)
 
-
 def __on_close(win):
-    # 存储是否显示控制台
+    # 存储是否显示控制台（⚠️ 判断的是**整个右侧栏**：``right_tabs`` 才是 splitter 里的那一栏，
+    # 控制台只是它里面常驻的一个标签页 —— 见 ``set_side_tabs_visible``）
     app_data.setenv(
         key="console_visible",
-        value="Yes" if win.get_output_widget().isVisible() else "No",
+        value="Yes" if win.right_tabs.isVisible() else "No",
+        encoding="utf-8",
     )
     settings.save_window_size(win)
+    # 右侧栏宽度（2026-10-26）：用户拖出来的宽度要留住
+    settings.save_console_width(win)
 
     # 尝试保存tab
     if app_data.get("restore_tabs", False):
@@ -2672,7 +3081,6 @@ def __on_close(win):
 
     except Exception as err2:
         print(f"Error: {err2}")
-
 
 def execute(code=None, keep_cwd=True, close_after_done=True, add_history=True):
     """启动 zmlx GUI 应用程序。
@@ -2743,7 +3151,6 @@ def execute(code=None, keep_cwd=True, close_after_done=True, add_history=True):
 
     # 返回运行的结果
     return app_data.get("console_result", None)
-
 
 def get_window():
     """返回当前 MainWindow 实例（可能为 None）。"""

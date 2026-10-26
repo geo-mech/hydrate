@@ -1,485 +1,88 @@
-"""Seepage 模型编辑器（Cell/Face/流体定义编辑、批量操作）.
+"""旧模块（**已弃用**）：``widgets/seepage.py`` -> :mod:`zmlx.ui.widgets.editors.seepage_edit`.
+
+⚠️ **本模块只是一层转发**，真正的实现在 :mod:`zmlx.ui.widgets.editors.seepage_edit` 与
+:mod:`zmlx.ui.widgets.editors.field_edit` 里 —— 本文件除了下面那几行 import / 别名不该
+再有任何内容。
+
+⚠️⚠️ **本转发层将于 2027-10-21 删除**（2026-10-21 起弃用，保留一年）。导入本模块时
+会发出 :class:`DeprecationWarning`。**新代码请写**
+``from zmlx.ui.widgets.editors.seepage_edit import SeepageEdit, FludefEdit``。
+
+为什么搬来搬去
+--------------
+
+``seepage.py`` 里的 10 个类**全部**成对实现了 ``set_data()`` / ``get_data()`` ——
+按本仓的定义（给数据 → 编辑 → 取回）它们就是**编辑器**，与 ``editors/`` 里的
+``ArrayEdit`` / ``Interp1Edit`` 是同一类东西，只是面向的模型不同。2026-10-21 先搬进
+``widgets/editors/``（与其它编辑器同处），2026-10-22 曾连同装配代码搬进插件包
+``zmlx/scen/editors/``，同一天那个插件包又整体取消：**控件回到本子包**（它们本就属于
+编辑器子包），装配代码合成 ``plugins/builtin/editors.py`` 一个插件文件。
+
+⚠️ **本模块不再提供 ``setup_ui``**：它原来注册的 ``gui.open_seepage`` / ``gui.open_fludef``
+现在由插件 ``zmlx/ui/plugins/builtin/editors.py`` 的 ``setup_file_types()`` 注册。
+
+为什么留一年
+------------
+
+历史标签页的 ``gui_restore`` 会把命令字符串存下来、重启时按原文重放；外部脚本也可能
+直接 ``from zmlx.ui.widgets.seepage import SeepageEdit``。所以老路径必须继续可用 ——
+本文件得指向新位置。⚠️ 新位置在**同层**（``ui/widgets/editors/``），所以这里不再有
+``ui`` → ``scen`` 那种倒置分层的 import。
+
+⚠️ 更老的 ``zmlx.ui.widget.seepage`` 仍然可用（它转发到**本模块**，导入时两条
+``DeprecationWarning`` 都会发），2027-10-16 先于本模块删除。
 
 Modified by Claude, 2026-08-12
+Modified by DeepSeek, 2026-10-21: 控件全部搬进 ``widgets/editors/seepage_edit.py`` 与
+    ``field_edit.py``，本文件退化为弃用垫片
+Modified by DeepSeek, 2026-10-22: 注册入口移进插件（当时的 ``zmlx/scen/editors/``）
+Modified by DeepSeek, 2026-10-22: 目标一度改为 ``zmlx.scen.editors``（控件随插件搬进 ``scen/``）
+Modified by DeepSeek, 2026-10-22: 插件包取消，目标改回 ``zmlx.ui.widgets.editors``
 """
-
-from zmlx.exts import Seepage, FluDef
-from zmlx.tfc import seepage
-from zmlx.ui.alg import h_spacer
-from zmlx.ui.widgets.editors import *
-
-
-class FludefEdit(QtWidgets.QWidget):
-    sig_changed = QtCore.pyqtSignal()
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.data = FluDef()
-
-        layout = QtWidgets.QVBoxLayout(self)
-        self.setLayout(layout)
-
-        layout1 = QtWidgets.QHBoxLayout(self)
-        layout.addLayout(layout1)
-
-        self.den_view = Interp2Edit(
-            self, title='密度 (kg/m^3)', xlabel='压力 (Pa)', ylabel='温度 (K)',
-            zlabel='密度',
-            view_init={'elev': 30, 'azim': -120},
-        )
-        layout1.addWidget(self.den_view)
-
-        self.vis_view = Interp2Edit(
-            self, title='粘性 (Pa.s)', xlabel='压力 (Pa)', ylabel='温度 (K)',
-            zlabel='粘性',
-            view_init={'elev': 30, 'azim': -120},
-        )
-        layout1.addWidget(self.vis_view)
-
-        layout2 = QtWidgets.QHBoxLayout(self)
-        layout.addLayout(layout2)
-
-        layout2.addItem(h_spacer())
-        layout2.addWidget(QtWidgets.QLabel('流体名字: '))
-        self.name_edit = QtWidgets.QLineEdit(self)
-        layout2.addWidget(self.name_edit)
-        layout2.addWidget(QtWidgets.QLabel('比热: '))
-        self.c_edit = QtWidgets.QLineEdit(self)
-        layout2.addWidget(self.c_edit)
-
-        self.den_view.sig_changed.connect(self._den_changed)
-        self.vis_view.sig_changed.connect(self._vis_changed)
-        self.name_edit.editingFinished.connect(self._name_changed)
-        self.c_edit.editingFinished.connect(self._specific_heat_changed)
-
-    def set_data(self, data):
-        if isinstance(data, FluDef):
-            self.data = data
-            self.name_edit.setText(self.data.name)
-            self.den_view.set_data(self.data.den)
-            self.vis_view.set_data(self.data.vis)
-            self.c_edit.setText(f'{self.data.specific_heat:.2f}')
-
-    def get_data(self):
-        return self.data
-
-    def _den_changed(self):
-        self.data.den.clone(self.den_view.get_data())
-        self.sig_changed.emit()
-        print('更新了密度数据')
-
-    def _vis_changed(self):
-        self.data.vis.clone(self.vis_view.get_data())
-        self.sig_changed.emit()
-        print('更新了粘度数据')
-
-    def _name_changed(self):
-        self.data.name = self.name_edit.text()
-        self.sig_changed.emit()
-        print('更改了名字')
-
-    def _specific_heat_changed(self):
-        # ⚠️ 必须兜住 ValueError：c_edit 是普通 QLineEdit（没有 validator），
-        #    而 editingFinished 在**回车/失焦**时对任意文本都会触发 —— 用户
-        #    随手敲进 "abc" 就会让 float() 抛异常。异常从槽里逃出去时 PyQt 会
-        #    调 qFatal() **直接终止进程**（实测退出码 0xC0000409），既没有
-        #    Python 异常可捕获，也没有任何提示。
-        try:
-            value = float(self.c_edit.text())
-        except ValueError:
-            print(f'比热无效（应为数字）: {self.c_edit.text()!r}')
-            return
-        self.data.specific_heat = value
-        self.sig_changed.emit()
-        print('更改了比热')
-
-    @staticmethod
-    def setup_ui():
-        gui.reg_file_type(
-            '流体定义 FluDef', ['.fludef', '.xml', '.txt'],
-            name='fludef',
-            init=FluDef,
-            widget_type=FludefEdit
-        )
-
-
-class SeepageTextEdit(QtWidgets.QTextEdit):
-    sig_changed = QtCore.pyqtSignal()
-
-    def __init__(self, parent=None, *, get_value=None, set_value=None):
-        super().__init__(parent)
-        self.data = None
-        self.get_value = get_value
-
-        if callable(set_value):
-            def on_changed():
-                if isinstance(self.data, Seepage):
-                    set_value(self.data, self.toPlainText())
-                    self.sig_changed.emit()
-
-            self.textChanged.connect(on_changed)
-        else:
-            self.setReadOnly(True)
-
-    def get_data(self):
-        return self.data
-
-    def set_data(self, data):
-        self.data = data
-        if isinstance(self.data, Seepage):
-            self.setPlainText(self.get_value(self.data))
-
-
-class SeepageIntEdit(QtWidgets.QSpinBox):
-    sig_changed = QtCore.pyqtSignal()
-
-    def __init__(self, parent=None, *, get_value=None, set_value=None, value_range=None):
-        super().__init__(parent)
-        self.data = None
-        self.get_value = get_value
-
-        if value_range is not None:
-            self.setRange(*value_range)
-        else:
-            self.setRange(-999999999, 999999999)
-
-        if callable(set_value):
-            def on_changed():
-                if isinstance(self.data, Seepage):
-                    set_value(self.data, self.value())
-                    self.sig_changed.emit()
-
-            self.valueChanged.connect(on_changed)
-        else:
-            self.setReadOnly(True)
-
-    def get_data(self):
-        return self.data
-
-    def set_data(self, data):
-        self.data = data
-        if isinstance(self.data, Seepage):
-            self.setValue(self.get_value(self.data))
-
-
-class SeepageFloatEdit(QtWidgets.QDoubleSpinBox):
-    sig_changed = QtCore.pyqtSignal()
-
-    def __init__(self, parent=None, *, get_value=None, set_value=None, value_range=None):
-        super().__init__(parent)
-        self.data = None
-        self.get_value = get_value
-
-        if value_range is not None:
-            self.setRange(*value_range)
-        else:
-            self.setRange(-1e20, 1e20)
-
-        if callable(set_value):
-            def on_changed():
-                if isinstance(self.data, Seepage):
-                    set_value(self.data, self.value())
-                    self.sig_changed.emit()
-
-            self.valueChanged.connect(on_changed)
-        else:
-            self.setReadOnly(True)
-
-    def get_data(self):
-        return self.data
-
-    def set_data(self, data):
-        self.data = data
-        if isinstance(self.data, Seepage):
-            self.setValue(self.get_value(self.data))
-
-
-class SeepageFormEdit(QtWidgets.QScrollArea):
-    sig_changed = QtCore.pyqtSignal()
-
-    def __init__(self, parent=None, *, items=None):
-        super().__init__(parent)
-        self.editors = []
-        self.data = None
-        self.setWidgetResizable(True)
-        self.set_items(items)
-
-    def get_data(self):
-        return self.data
-
-    def set_data(self, data):
-        self.data = data
-        for edit in self.editors:
-            edit.set_data(self.data)
-
-    def set_items(self, items):
-        # 清除现有的编辑器和布局
-        self._clear_ui()
-
-        if items is None or len(items) == 0:
-            return
-
-        # 创建新的内容和布局
-        content = QtWidgets.QWidget()
-        form_layout = QtWidgets.QFormLayout(content)
-        self.setWidget(content)
-
-        # 添加新的元素
-        for desc, widget in items:
-            form_layout.addRow(desc, widget)
-            self.editors.append(widget)
-            if hasattr(widget, 'sig_changed'):
-                widget.sig_changed.connect(self.sig_changed.emit)
-
-        # 如果已经有数据，设置到新控件中
-        if self.data is not None:
-            self.set_data(self.data)
-
-    def _clear_ui(self):
-        """清除现有的UI元素"""
-        # 清除编辑器列表
-        self.editors.clear()
-
-        # 清除现有的widget和布局
-        old_widget = self.takeWidget()
-        if old_widget is not None:
-            old_widget.deleteLater()
-
-
-class SeepageTabEdit(QtWidgets.QTabWidget):
-    sig_changed = QtCore.pyqtSignal()
-
-    def __init__(self, parent=None, *, items=None):
-        super().__init__(parent)
-        self.editors = []
-        self.data = None
-        self.setTabPosition(QtWidgets.QTabWidget.TabPosition.West)
-        self.set_items(items)
-
-    def get_data(self):
-        return self.data
-
-    def set_data(self, data):
-        self.data = data
-        for edit in self.editors:
-            edit.set_data(self.data)
-
-    def set_items(self, items):
-        # 清除现有的标签页
-        self._clear_ui()
-
-        if items is None or len(items) == 0:
-            return
-
-        # 添加新的标签页
-        for desc, widget in items:
-            self.addTab(widget, desc)
-            self.editors.append(widget)
-            if hasattr(widget, 'sig_changed'):
-                widget.sig_changed.connect(self.sig_changed.emit)
-
-        # 如果已经有数据，设置到新控件中
-        if self.data is not None:
-            self.set_data(self.data)
-
-    def _clear_ui(self):
-        """清除现有的UI元素"""
-        # 清除所有标签页
-        while self.count() > 0:
-            widget = self.widget(0)
-            if widget is not None:
-                widget.deleteLater()
-            self.removeTab(0)
-
-        # 清除编辑器列表
-        self.editors.clear()
-
-
-class SeepageSummary(SeepageFormEdit):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        items = [
-            ('模型描述', SeepageTextEdit(
-                self,
-                get_value=lambda model: model.get_text('note'),
-                set_value=lambda model, text: model.set_text('note', text)
-            )),
-            ('Cell数量', SeepageIntEdit(
-                self,
-                get_value=lambda model: model.cell_number
-            )),
-            ('Face数量', SeepageIntEdit(
-                self,
-                get_value=lambda model: model.face_number
-            )),
-            ('流体数量', SeepageIntEdit(
-                self,
-                get_value=lambda model: model.fludef_number
-            )),
-            ('流体结构', SeepageTextEdit(
-                self,
-                get_value=lambda model: str(seepage.list_fludefs(self.data)),
-            )),
-            ('反应数量', SeepageIntEdit(
-                self,
-                get_value=lambda model: model.reaction_number
-            )),
-            ('相渗数量', SeepageIntEdit(
-                self,
-                get_value=lambda model: model.kr_number
-            )),
-            ('当前步长 [秒]', SeepageFloatEdit(
-                self,
-                get_value=lambda model: seepage.get_dt(model),
-                set_value=lambda model, value: seepage.set_dt(model, value)
-            )),
-            ('当前时间 [秒]', SeepageFloatEdit(
-                self,
-                get_value=lambda model: seepage.get_time(model),
-                set_value=lambda model, value: seepage.set_time(model, value)
-            )),
-            ('时间步', SeepageIntEdit(
-                self,
-                get_value=lambda model: seepage.get_step(model),
-                set_value=lambda model, value: seepage.set_step(model, value)
-            )),
-            ('CFL数', SeepageFloatEdit(
-                self,
-                get_value=lambda model: seepage.get_cfl(model),
-                set_value=lambda model, value: seepage.set_cfl(model, value)
-            )),
-        ]
-        self.set_items(items)
-
-
-class SeepageInterp1Edit(QtWidgets.QWidget):
-    sig_changed = QtCore.pyqtSignal()
-
-    def __init__(self, parent=None, *, get_value=None, set_value=None):
-        super().__init__(parent)
-        layout = QtWidgets.QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        self.edit = Interp1Edit(self)
-        layout.addWidget(self.edit)
-        self.get_value = get_value
-        self.data = None
-        self.setMinimumSize(200, 300)
-
-        def do_set():
-            if callable(set_value) and isinstance(self.data, Seepage):
-                c = self.edit.get_data()
-                if isinstance(c, Interp1):
-                    set_value(self.data, c.get_copy())
-                    self.sig_changed.emit()
-
-        if callable(set_value):
-            self.edit.sig_changed.connect(do_set)
-
-    def get_data(self):
-        return self.data
-
-    def set_data(self, data):
-        self.data = data
-        if callable(self.get_value) and isinstance(self.data, Seepage):
-            c = self.get_value(self.data)
-            if isinstance(c, Interp1):
-                self.edit.set_data(c.get_copy())
-
-
-class SeepageKrEdit(QtWidgets.QWidget):
-    sig_changed = QtCore.pyqtSignal()
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        layout = QtWidgets.QVBoxLayout(self)
-        self.form = SeepageFormEdit(self)
-        self.form.sig_changed.connect(self.sig_changed.emit)
-        layout.addWidget(self.form)
-
-        layout2 = QtWidgets.QHBoxLayout()
-        layout2.addItem(h_spacer())
-        button = QtWidgets.QPushButton('添加')
-        button.clicked.connect(self._add)
-        layout2.addWidget(button)
-
-        button = QtWidgets.QPushButton('移除')
-        button.clicked.connect(self._remove)
-        layout2.addWidget(button)
-
-        layout.addLayout(layout2)
-
-    def _add(self):
-        data = self.get_data()
-        if isinstance(data, Seepage):
-            data.kr_number += 1
-            self.set_data(data)
-            self.sig_changed.emit()
-
-    def _remove(self):
-        data = self.get_data()
-        if isinstance(data, Seepage):
-            if data.kr_number > 0:
-                data.kr_number -= 1
-                self.set_data(data)
-                self.sig_changed.emit()
-
-    def get_data(self):
-        return self.form.get_data()
-
-    def set_data(self, data: Seepage):
-        items = [
-            ('默认相渗', SeepageInterp1Edit(
-                self, get_value=lambda model: model.get_kr(),
-                set_value=lambda model, value: model.set_default_kr(value)))
-        ]
-        count = min(10, data.kr_number)
-        for idx in range(count):
-            items.append(
-                (f'相渗{idx}', SeepageInterp1Edit(
-                    self, get_value=lambda model, idx=idx: model.get_kr(idx),
-                    set_value=lambda model, value, idx=idx: model.set_kr(index=idx, kr=value)))
-            )
-
-        self.form.set_items(items)
-        self.form.set_data(data)
-
-
-class SeepageEdit(SeepageTabEdit):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        items = [
-            ('概览', SeepageSummary(self)),
-            ('相渗', SeepageKrEdit(self)),
-        ]
-        self.set_items(items)
-
-    @staticmethod
-    def setup_ui():
-        gui.reg_file_type(
-            'Seepage文件', ['.seepage', '.xml', '.txt'],
-            name='seepage',
-            save=lambda data, name: data.save(name),
-            load=lambda name: Seepage(path=name),
-            init=lambda: Seepage(),
-            widget_type=SeepageEdit
-        )
-
-
-@execute_once(file=__file__)
-def setup_ui():
-    """让 ``FludefEdit`` / ``SeepageEdit`` 各自注册「文件类型」与 ``gui.open_xxx`` 命令.
-
-    ⚠️ **这里只注册文件类型，不挂菜单**（2026-10-18 改）：原来这里还挂了一个
-    「帮助 → 加载 → Seepage功能」入口，点开才生成一条造 ``Example.fludef`` 的
-    **示例数据**条目。那部分已搬进插件 :mod:`zmlx.ui.plugins.seepage_menu`
-    （默认不加载，现在是「文件 → 生成测试数据」）—— 造示例文件是演示用的动作，
-    不该跟着控件模块一起常驻。
-
-    本函数仍由 ``extra_setups/__init__.py`` 调用：**「打开已有 .seepage 文件」是
-    常规能力**，与插件是否启用无关。
-    """
-    for obj in [FludefEdit, SeepageEdit]:
-        try:
-            obj.setup_ui()
-        except Exception as e:
-            print(e)
+from zmlx.system import warn
+
+warn(
+    '``zmlx.ui.widgets.seepage`` 已弃用（2026-10-21）：控件在 '
+    '``zmlx.ui.widgets.editors``（``seepage_edit`` / ``field_edit``）；'
+    '``gui.open_seepage`` 等命令由插件 ``zmlx/ui/plugins/builtin/editors.py`` 注册；'
+    '本转发层将于 **2027-10-21** 删除。',
+    DeprecationWarning,
+    stacklevel=2,
+)
+
+from zmlx.ui.widgets.editors.field_edit import (  # noqa: F401
+    FloatFieldEdit, IntFieldEdit, TextFieldEdit)
+from zmlx.ui.widgets.editors.seepage_edit import (  # noqa: F401
+    FludefEdit,
+    SeepageEdit,
+    SeepageFormEdit,
+    SeepageInterp1Edit,
+    SeepageKrEdit,
+    SeepageSummary,
+    SeepageTabEdit,
+)
+
+# ---- 旧类名兼容（2026-10-22 ``SeepageXxxEdit`` → ``XxxFieldEdit``）----
+# 本模块是老路径的转发层，当年导出的正是旧名，所以旧名必须在这里继续可用。
+# ⚠️ 用模块级 ``__getattr__``（PEP 562）而不是 ``SeepageTextEdit = TextFieldEdit``：
+#    只在**有人真正取这个名字**时才发警告，导入本模块本身不再多出一条。
+_FIELD_OLD_NAMES = {
+    'SeepageTextEdit': 'TextFieldEdit',
+    'SeepageIntEdit': 'IntFieldEdit',
+    'SeepageFloatEdit': 'FloatFieldEdit',
+}
+
+
+def __getattr__(name):
+    """旧类名转发 + :class:`DeprecationWarning`（未知名字照常 ``AttributeError``）。"""
+    new_name = _FIELD_OLD_NAMES.get(name)
+    if new_name is None:
+        raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
+    warn(
+        f'``{__name__}.{name}`` 的类已改名（2026-10-22）：请改用 '
+        f'``zmlx.ui.widgets.editors.field_edit.{new_name}``；旧名将于 **2027-10-22** 删除'
+        '（本转发层本身也在 2027-10-21 删除）。',
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    return globals()[new_name]

@@ -319,10 +319,15 @@ class _ReadMeContent(MarkdownView):
 
     @staticmethod
     def _show_demo_readme():
-        """用 MarkdownView 打开本地的 ``zmlx/demos/ReadMe.md``（而不是去开 gitee 网页）."""
+        """用 MarkdownView 打开本地的 ``zmlx/demos/ReadMe.md``（而不是去开 gitee 网页）.
+
+        ⚠️ 目录名用**新名** ``demos``：``demos/`` 由 ``demo/`` 改名为复数，
+        ``get_path('demo', ...)`` 会拼出已不存在的 ``zmlx/demo/ReadMe.md``，
+        于是本地处理失败、退回 ``open_url`` 去开网页。
+        """
         from zmlx import get_path
         from zmlx.system import read_text
-        path = get_path('demo', 'ReadMe.md')
+        path = get_path('demos', 'ReadMe.md')
         text = read_text(path, encoding='utf-8') if os.path.isfile(path) else None
         if text is None:
             raise FileNotFoundError(f'未找到本地的 {path}')

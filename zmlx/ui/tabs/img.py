@@ -2,8 +2,10 @@ from zmlx.ui.pyqt import QtCore, QtGui, QtWidgets
 
 
 class ImageView(QtWidgets.QGraphicsView):
-    """
-    图片查看器
+    """图片查看器（滚轮缩放、拖拽平移）.
+
+    ⚠️ 类定义**原样**搬自 ``ui/tabs/img.py``（2026-10-22），**没有改动一个字符** ——
+    老路径 ``from zmlx.ui.tabs import ImageView`` 仍指向这里（见模块文档）。
     """
 
     def __init__(self, parent=None):

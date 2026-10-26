@@ -40,7 +40,11 @@ class OutputHistoryView(QtWidgets.QWidget):
 
         if folder is not None:
             self.current_folder = folder
-            self.current_ext = 'txt'
+            # ⚠️ 扩展名取 OutputWidget.SUFFIX（.html）：历史自 2026-10-26 起存成富文本，
+            #    写死 'txt' 会让这一页**列不出任何新文件**（旧 .txt 仍会一起列出，见
+            #    refresh_file_list）。少一个依赖反向耦合：这里只导入 SUFFIX 常量。
+            from zmlx.ui.widgets.output_widget import OutputWidget
+            self.current_ext = OutputWidget.SUFFIX
             self.refresh_file_list()
 
             if self.file_list.count() > 0:
@@ -53,9 +57,11 @@ class OutputHistoryView(QtWidgets.QWidget):
         if not self.current_folder or not os.path.isdir(self.current_folder):
             return
 
-        pattern = os.path.join(self.current_folder, f"*.{self.current_ext}")
+        # 同一目录里既有旧版 .txt 也有新版 .html，两种都要列出（按修改时间倒序混排）
         files = [(f, QtCore.QFileInfo(f).lastModified()) for f in
-                 glob.glob(pattern)]
+                 glob.glob(os.path.join(self.current_folder, '*.txt'))]
+        files += [(f, QtCore.QFileInfo(f).lastModified()) for f in
+                  glob.glob(os.path.join(self.current_folder, f'*{self.current_ext}'))]
         sorted_files = sorted(files, key=lambda x: x[1], reverse=True)
 
         for idx, (file_path, mtime) in enumerate(sorted_files, 1):
@@ -73,8 +79,14 @@ class OutputHistoryView(QtWidgets.QWidget):
     def show_file_content(self, item):
         file_path = item.data(QtCore.Qt.ItemDataRole.UserRole)
         try:
-            with open(file_path, "r") as f:
+            # ⚠️ 必须显式 encoding='utf-8'（默认取系统编码，中文 Windows 上是 GBK）
+            with open(file_path, "r", encoding='utf-8') as f:
                 text = f.read()
+            if str(file_path).lower().endswith('.html'):
+                # 新版历史：HTML 富文本，保留颜色 / 粗体
+                self.text_view.setHtml(text)
+            else:
+                # 旧版历史：纯文本
                 self.text_view.setText(text)
         except Exception as err:
             self.text_view.setText(

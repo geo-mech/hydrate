@@ -787,7 +787,7 @@ class GuiIteratorEdit(QtWidgets.QWidget):
             f'History: {len(self._iter._history)}')
 
     def refresh(self):
-        """框架的被动刷新：切到本页 / 菜单「显示 → 刷新」时调用.
+        """框架的被动刷新：切到本页 / 菜单「操作 → 刷新」时调用.
 
         ⚠️ 为什么这里可以**同步**画图、而不用 v1.9.14 那套「延后一拍」：那时一次重画要
         63 ms（matplotlib 重建整张图 + 绘制画布），现在没有那个开销了 —— 这里只是把

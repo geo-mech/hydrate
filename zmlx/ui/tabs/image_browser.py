@@ -110,7 +110,8 @@
 已挂到界面上（2026-10-16 补做）
 -------------------------------
 
-菜单 **「文件 → 图片浏览」**，命令 ``gui.show_image_browser()``。⚠️ 挂载**不在**
+菜单 **「文件 → 浏览 → 图片」**（2026-10-26 起在「浏览」子菜单里，原先直接挂在
+「文件 → 图片浏览」），命令 ``gui.show_image_browser()``。⚠️ 挂载**不在**
 ``main.py`` 里，而在 ``../plugins/builtin/image_browser.py``（本目录既有做法：新增菜单动作
 放 ``extra_setups``，主窗口文件不动）。本模块因此**仍然没有**被注册进
 ``tabs/__init__.py``（``extra_setups`` 那侧按子模块路径直接 import）—— 那与「它是顶层
@@ -124,6 +125,8 @@
 Created by DeepSeek, 2026-10-16
 Modified by DeepSeek, 2026-10-16: 挂载到菜单「显示 → 图片浏览」（见 extra_setups）；
 连带修掉「扫描结果回来时标签页已关」的空引用报错（三个线程回调补判 None）。
+Modified by DeepSeek, 2026-10-26: 挂载点搬到「文件 → 浏览 → 图片」（与「工作目录」同一个
+子菜单，挂载点仍是 `plugins/builtin/image_browser.py`）；命令名与控件均未变
 """
 
 import collections

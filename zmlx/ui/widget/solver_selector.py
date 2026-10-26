@@ -1,44 +1,53 @@
-"""旧模块名（兼容层，**已弃用**）：``solver_selector`` -> :mod:`zmlx.ui.tabs.solver_selector`.
+"""旧模块名（兼容层，**已弃用**）：``solver_selector`` -> :mod:`zmlx.ui.plugins.builtin.solver_menu`.
 
-⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/ui/tabs/solver_selector.py`` 里 ——
-本文件除了下面那几行 import / 别名不该再有任何内容。
+⚠️ **本模块只是一层转发**，真正的实现（``SolverSelector`` / ``SOLVER_META`` /
+``PARAM_DEFS``）现在在插件 ``zmlx/ui/plugins/builtin/solver_menu.py`` 里 —— 本文件除了
+下面那几行 import / 别名不该再有任何内容。
 
 ⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
-会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.ui.tabs import SolverSelector``
-（或 ``from zmlx.ui.tabs.solver_selector import SolverSelector``）。
+会发出 :class:`DeprecationWarning`。**新代码请写**
+``from zmlx.ui.plugins.builtin.solver_menu import SolverSelector``
+（⚠️ 那是**插件内部**的路径，正常业务代码不需要直接造 ``SolverSelector`` ——
+打开求解器面板请调 ``gui.show_solver_selector()``）。
 
-为什么留着而不删
-----------------
+搬了几次 / 为什么留着
+--------------------
 
-2026-10-16 把「**顶层控件**」（只被装配层打开成一个标签页、**不会被任何控件当组件
-（子控件）用**）集中迁到 ``zmlx/ui/tabs/``；本目录只留**底层控件**（会被
-``addWidget()`` 进别处的、或被继承的）以及宿主不是标签页的常驻控件（状态栏按钮 /
-右侧栏面板 / 标签容器 / 对话框组件集）。
+2026-10-16 把「**顶层控件**」集中迁到 ``zmlx/ui/tabs/``；2026-10-22 又把
+``SolverSelector`` 连同 ``show_solver_selector`` 一起并入插件「求解器」（搬走后它只剩
+那个插件在用 —— 「可关掉的功能，它的代码也应当能一起关掉」）。本垫片随之改指新位置，
+老路径继续可用。
 
-但 ``from zmlx.ui.widgets.solver_selector import SolverSelector`` 这条路径仍被三类来源用着，故留一年过渡：
-① 外部脚本与用户在控制台敲的命令；② 历史标签页的 ``gui_restore``（重启时按存下来的
-字符串重放）；③ 更早的兼容层（``license_count`` / ``license_feedback``）。
+⚠️ 这条路径仍被三类来源用着，故留一年过渡：① 外部脚本与用户在控制台敲的命令；
+② 历史标签页的 ``gui_restore``（重启时按存下来的字符串重放）；③ 更早的兼容层
+（``license_count`` / ``license_feedback``）。
+
+⚠️ **本模块现在是** ``ui`` → ``plugins`` 的**逆向 import**（同 ``widget/img.py`` /
+``widget/demo_view.py``）：只允许出现在兼容层，正常代码不要效仿。
 
 ⚠️ 判据与依赖方向见 ``zmlx/ui/tabs/AGENTS.md``。
 
 Created by DeepSeek, 2026-10-16
 
 Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
+Modified by DeepSeek, 2026-10-22: 目标改为插件 ``plugins/builtin/solver_menu.py`` ——
+    ``SolverSelector`` 随 ``show_solver_selector`` 并入了「求解器」插件
 """
 from zmlx.system import warn
 
 
 warn(
-    '``zmlx.ui.widgets.solver_selector`` 已弃用（2026-10-16）：控件 ``SolverSelector`` 已迁至 '
-    '``zmlx.ui.tabs.solver_selector``；本转发层将于 **2027-10-16** 删除。'
-    '请改用 ``from zmlx.ui.tabs import SolverSelector``。',
+    '``zmlx.ui.widgets.solver_selector`` 已弃用（2026-10-16）：控件 ``SolverSelector`` 已迁至插件 '
+    '``zmlx.ui.plugins.builtin.solver_menu``（2026-10-22 起）；本转发层将于 '
+    '**2027-10-16** 删除。打开求解器面板请用 ``gui.show_solver_selector()``。',
     DeprecationWarning,
     stacklevel=2,
 )
 
-from zmlx.ui.tabs.solver_selector import *  # noqa: F401,F403
-from zmlx.ui.tabs.solver_selector import (  # noqa: F401
+from zmlx.ui.plugins.builtin.solver_menu import (  # noqa: F401
     PARAM_DEFS,
     SOLVER_META,
-    SolverSelector
+    SolverSelector,
 )
+
+__all__ = ['PARAM_DEFS', 'SOLVER_META', 'SolverSelector']

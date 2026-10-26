@@ -12,5 +12,8 @@ on_axes = add_contourf
 contourf = plot_contourf
 
 
-warn(f'The module {__name__} will be removed after 2027-5-23',
-              DeprecationWarning, stacklevel=2)
+warn(
+    'The module zmlx.plt.contourf 已弃用（remove after 2027-5-23）：'
+    '请改用 `from zmlx import contourf`（即 show_contourf）'
+    '或 `from zmlx import add_contourf`',
+    DeprecationWarning, stacklevel=2)

@@ -314,6 +314,151 @@ def save_window_size(win):
         print(err)
 
 
+#: 右侧栏（控制台那一栏）的宽度——存盘键（2026-10-26 加）。
+#: ⚠️ 键名带 ``_px`` 后缀：``app_data.getenv`` 会**先查 ``os.environ``**，用
+#: ``console_width`` 这种通用词会被外部环境变量静默掩盖（见 ``widgets/AGENTS.md``）。
+KEY_CONSOLE_WIDTH = 'main_window_console_width_px'
+
+#: 「上次可见时」的右侧栏宽度——:func:`save_console_width` 的兜底键。
+LAST_VISIBLE_WIDTH_KEY = 'main_window_console_width_last_visible_px'
+
+#: 右侧栏宽度的**下限**（像素）。低于它，控制台里的命令行输入框就窄到没法输入了。
+#: ⚠️ 上限由**窗口本身**决定（见 :func:`load_console_width`），不在这里写死 ——
+#: 否则换个屏幕、换个窗口尺寸，恢复出来的宽度就可能把左边挤没。
+#: ⚠️ 2026-10-26 由 160 降到 120：右侧栏默认宽度改成约 22% 之后，窗口一窄就会先撞上这个
+#: 下限（表现是「比例调小了、右边却一点没变窄」）。120 px 仍放得下控制台底部那行输入框。
+MIN_CONSOLE_WIDTH = 120
+
+#: 右侧栏的**默认宽度占窗口宽度的比例**（2026-10-26 加）。用户没有存过宽度时用它。
+#: ⚠️ 历史值是 ``0.30``；默认布局偏宽（控制台那一栏挤占了左边工作区），改成 ``0.22``。
+#: 用户拖过之后就一直是用户的宽度（存盘），这个比例只在没有记录时生效。
+DEFAULT_CONSOLE_RATIO = 0.22
+
+#: 右侧栏宽度的上限比例（相对 ``splitter`` 宽度）。窗口很窄时把比例夹到它以内，
+#: 免得把左边挤没。
+MAX_CONSOLE_RATIO = 0.60
+
+
+def save_console_width(win):
+    """记下右侧栏（控制台那一栏）的宽度，供下次启动恢复.
+
+    ⚠️ **隐藏时不覆盖已存的宽度**：右侧栏隐藏后 ``splitter.sizes()`` 里那一项是 **0**，
+    直接存 0 就等于「用户把控制台拖没了」—— 下次恢复时只能退回默认值。
+    所以只记 ``> 0`` 的那个，另外把「隐藏前最后一次可见时的宽度」也存一份兜底。
+
+    Args:
+        win: 主窗口（``MainWindow``）。需要有 ``splitter`` / ``right_tabs``；
+            缺了（或还没建好）就什么都不做。
+    """
+    try:
+        splitter = getattr(win, 'splitter', None)
+        right_tabs = getattr(win, 'right_tabs', None)
+        if splitter is None or right_tabs is None:
+            return
+        sizes = splitter.sizes()
+        if len(sizes) < 2:
+            return
+        width = int(sizes[1])
+        if width <= 0:
+            return  # 隐藏中：保留上次的宽度，别用 0 覆盖
+        app_data.setenv(KEY_CONSOLE_WIDTH, str(width), encoding='utf-8')
+        last = getattr(win, '_last_console_width', None)
+        if isinstance(last, int) and last > 0:
+            app_data.setenv(
+                LAST_VISIBLE_WIDTH_KEY, str(last), encoding='utf-8')
+    except Exception as err:
+        print(err)
+
+
+def load_console_width(win, default_width):
+    """恢复右侧栏宽度；没有记录 / 记录不可用时返回 ``None``.
+
+    取 :data:`KEY_CONSOLE_WIDTH`（没有就退到 :data:`LAST_VISIBLE_WIDTH_KEY`），
+    夹到「:data:`MIN_CONSOLE_WIDTH` ~ 窗口宽度的 :data:`MAX_CONSOLE_RATIO`」之间；
+    窗口太窄、夹完也放不下时返回 ``None``，由调用方用 ``default_width`` 这个默认值。
+
+    Args:
+        win: 主窗口（取当前宽度作上限参考）。
+        default_width: 默认宽度（窗口宽度的一个比例），拿不到记录时用它。
+
+    Returns:
+        int | None: 可用的宽度；没有记录时 ``None``。
+    """
+    try:
+        text = app_data.getenv(
+            KEY_CONSOLE_WIDTH, encoding='utf-8', default='', ignore_empty=True)
+        if not text:
+            text = app_data.getenv(
+                LAST_VISIBLE_WIDTH_KEY, encoding='utf-8', default='',
+                ignore_empty=True)
+        if not text:
+            return None
+        width = int(float(text))
+        upper = max(MIN_CONSOLE_WIDTH + 1, int(win.width() * MAX_CONSOLE_RATIO))
+        return clamp(width, MIN_CONSOLE_WIDTH, upper)
+    except Exception as err:
+        print(err)
+        return None
+
+
+#: 「重置布局」涉及的全部存盘键（2026-10-26 加）。
+#: ⚠️ 与 :func:`reset_layout` 一一对应：**以后新增任何「布局类」存盘键都要加进来**，
+#: 否则「重置布局」会"重置不干净"，用户点了还以为没生效。
+#:
+#: ⚠️⚠️ **这里只放「右侧栏」那几项**（2026-10-26 按用户要求收窄）。**不**包含：
+#:   - ``main_window_size*`` —— 用户拖出来的窗口大小/位置是"他知道自己在干什么"，
+#:     「重置布局」不该把窗口拽回屏幕居中 75%；
+#:   - 样式表（``zml_window_style.qss``）—— 外观不是布局。
+LAYOUT_KEYS = (
+    KEY_CONSOLE_WIDTH,            # 右侧栏宽度
+    LAST_VISIBLE_WIDTH_KEY,       # 右侧栏上次可见宽度
+    'console_visible',            # 右侧栏是否显示
+)
+
+
+def reset_layout(style_sheet=None):
+    """「显示 → 重置布局」：清掉存盘的**布局类**设置，下次启动回到默认.
+
+    清哪些（见 :data:`LAYOUT_KEYS`）：右侧栏宽度、上次可见宽度、是否显示。
+    **窗口大小 / 位置不在其中**，样式表**默认也不清**（见下）。
+
+    ⚠️ **只清「布局」这一类的键**：不碰插件名单、不碰历史标签页、不碰工作路径 ——
+    那些不是布局，清掉会让用户丢东西。要清更多得自己往 :data:`LAYOUT_KEYS` 里加。
+
+    Args:
+        style_sheet: 要一并清掉的样式表键（tuple）。**默认 ``None`` = 不动样式表**
+            （2026-10-26 按用户要求：外观不是布局）。传了才清 —— 样式表存的是**文件**
+            （``settings.save`` 写到 ``app_data.temp(key)``），只写空串不算真清，
+            所以要**删除文件**、再写一次空串兜底。
+
+    Returns:
+        list[str]: 真正清掉的键名（供界面提示用）。
+    """
+    keys = list(LAYOUT_KEYS)
+    style_keys = [k for k in (style_sheet or ())
+                  if isinstance(k, str) and len(k) > 0]
+    keys.extend(style_keys)
+    cleared = []
+    for key in keys:
+        try:
+            app_data.setenv(key, '', encoding='utf-8')
+            cleared.append(key)
+        except Exception as err:
+            print(err)
+    for key in style_keys:
+        try:
+            path = app_data.temp(key)
+            if isinstance(path, str) and os.path.isfile(path):
+                os.remove(path)
+        except Exception as err:
+            print(err)
+        try:
+            save(key, '', encoding='utf-8')  # 兜底：删不掉时至少把内容清空
+        except Exception as err:
+            print(err)
+    return cleared
+
+
 def save_cwd():
     try:
         app_data.setenv('current_work_directory', os.getcwd(), encoding='utf-8')

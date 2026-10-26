@@ -28,9 +28,13 @@
    :meth:`_ArchitectureView.show_section` / 点链接 / 顶部按钮三者用的是**同一套**机制 ——
    不会出现"我自己记的栈和控件的历史对不上"。顶部「返回 / 前进」直接连
    ``backward()`` / ``forward()``，永远可以回到上一步。
-3. **图**：五张图全部用**原生 Qt**（``QPainter``）画：颜色只从 ``QPalette`` 取，
+3. **图**：六张配图全部用**原生 Qt**（``QPainter``）画：颜色只从 ``QPalette`` 取，
    换主题（暗色 / 用户自定义样式表）时会**自动重画**。不用 matplotlib —— 那会往输出目录
    写 PNG，而且慢（见 ``widgets/AGENTS.md`` 的「图表控件：简单图用原生 Qt」）。
+   ⚠️ 它们是**文档内嵌图片**（``QTextCursor.insertImage`` 插进去的位图资源），
+   不是浮在正文上的控件 —— 滚动、换行、选中全由 Qt 负责。``_Figure`` 只当**离屏渲染器**。
+   2026-10-24 之前是悬浮 ``QWidget`` + 文档坐标，那套「两套坐标系」把图钉死在屏幕固定
+   位置（不随滚动、压住正文、窗口一小就看不见），缺陷记录见 PLAN ``T-20261023-05``。
 4. **链接**：正文里三种链接，点击统一交给 :meth:`_ArchitectureView._on_link`：
 
    ==========================  =========================================================
@@ -86,6 +90,32 @@ GUI 命令                      ``gui.show_architecture()``
   ``print(gui.get().get_func('<命令>'))`` 确认）；
 - 每条 ``zmlx://doc/<路径>`` 都必须真的存在（正文里的路径都相对**仓库根目录**）。
 
+打开时为什么先显示骨架（2026-10-24）
+-------------------------------------
+
+整篇渲染实测约 **322 ms**（``markdown``→HTML 90 + ``setHtml`` 39 + 6 张配图
+``QPainter`` 渲染 89），全塞进构造里就是「点菜单后界面卡一下」。所以改成两步：
+
+1. :meth:`_ArchitectureView._load_skeleton` —— 目录 + 一句「正在排版……」，约 27 ms；
+2. ``QTimer.singleShot(_RENDER_DELAY_MS, _load)`` —— 隔一小段再做整篇排版。
+
+⚠️ **延迟必须是 50 ms，不能是 0**（2026-10-24 实测）：``singleShot(0, ...)`` 在事件
+循环**一开头**就触发，骨架那帧还没画就被整篇排版（约 300 ms）占掉 ⇒ 用户看到的仍然
+是全文。实测首帧内容：0 ms 时为「全文」，50 ms 起才是「骨架」。详见
+``_ArchitectureView._RENDER_DELAY_MS`` 的对照表。
+
+⚠️ **没有引入线程**：那 90 ms 的 markdown→HTML 是唯一能挪到后台的纯 Python 部分，
+其余 ``setHtml`` / 配图全是 Qt 绘制、本来就只能在 GUI 线程做。实测后台最多只能移走
+1/3，却要额外背一套线程生命周期与关标签收尾 —— 不划算。
+
+⚠️ 两个必须记住的配套点（都是实测踩出来的）：
+
+- **骨架里不放 ``@@figure:`` 占位**：占位一出现，:meth:`_on_contents_changed` 就会
+  把它当成「图片丢了」去补救；
+- **排版前请求的跳转要补做**：``gui.show_architecture('pitfalls')`` 是在骨架阶段调到
+  :meth:`show_section` 的，那次跳转作用在马上要被替换掉的骨架上 ⇒ 由 ``_pending_section``
+  记下、:meth:`_load` 结束时补跳（否则静默丢失，实测滚动值停在 0）。
+
 Created by DeepSeek, 2026-10-18
 """
 
@@ -106,8 +136,15 @@ class _Catalog:
     - ``key``：锚点名。既用于 ``[文字](#key)`` 页内跳转，也是
       ``gui.show_architecture(key)`` 的参数，还显示在顶部「ID」里；
     - ``title``：标题（同时是左侧目录的文字，**必须与正文里的 ``## 标题`` 逐字一致**）；
-    - ``figure``：可选，``(图键, 图标题, 建议宽, 建议高)``；图键对应 :class:`_Figure`
-      里的一支画法；
+    - ``figure``：可选，``(图键, 图标题, 设计宽, 设计高)``；图键对应 :class:`_Figure`
+      里的一支画法。
+      ⚠️ **这两个数只用来算宽高比**，实际显示高度按当前列宽等比换算
+      （见 :meth:`_ArchitectureView._figure_height`）。所以填的值必须反映**画布内容的
+      真实形状** —— 画布是 **1000×1000 正方形**，所以这里填**近似 1:1**
+      （统一写 ``900×900``）；写成宽扁的会在 ``paintEvent`` 的 ``min(w,h)/1000``
+      里被按高度缩小、两侧留白。
+      2026-10-24 之前这里写的是 ``860×330`` 这类宽扁数字，把图压成 1/3、字全糊在一起
+      （PLAN ``T-20261023-05``）。
     - ``body``：Markdown 正文。可用 ``{repo}`` / ``{zmlx}`` 两个占位符（见 :meth:`text`）。
     """
 
@@ -215,7 +252,7 @@ def _build_pages():
 > 本页所有**蓝色的字都可以点**：「帮助 → 示例」这类是**菜单项**（点它 = 真的去点那个菜单），
 > `zmlx/tfc/` 这类是**代码或文档**，`#锚点` 这类是**本页内的小节**。
 > 顶部有「返回 / 前进 / 回到开头」，点了哪里都能退回来看。
-''', ('overview', '从「一个算例」到「屏幕上的图」：五步与对应的代码', 860, 330)),
+''', ('overview', '从「一个算例」到「屏幕上的图」：五步与对应的代码', 900, 900)),
 
         E('map', '全图导航：这个代码库的骨架', '''\
 下面这张"骨架图"是本页全部内容的入口：左列是你会问的问题，右列是回答它的小节。
@@ -315,7 +352,7 @@ zmlx/demos   create()   iterate()     tfc.get_p()   plot_on_figure()
 - **旧名兼容包**（`zmlx/alg/` `zmlx/fluid/` `zmlx/react/` `zmlx/kr/` `zmlx/mesh/`
   `zmlx/geometry/` `zmlx/utility/` `zmlx/seepage_mesh/` `zmlx/demo/`）导入会发
   `DeprecationWarning`，**2027-10-16 删除** —— 新代码用复数名。
-''', ('layers', '六层架构：越往上越接近「应用」，越往下越接近「机器」', 900, 600)),
+''', ('layers', '六层架构：越往上越接近「应用」，越往下越接近「机器」', 900, 900)),
 
         E('packages', '子包索引', '''\
 `zmlx/` 下一共有 **30 多个**子包。下表按用途分组，**点包名**可以打开该目录的文档
@@ -336,7 +373,7 @@ zmlx/demos   create()   iterate()     tfc.get_p()   plot_on_figure()
 
 | 包 | 定位 | 核心对象 |
 |---|---|---|
-| [`zmlx/scen/`](zmlx://doc/zmlx/scen/) | **应用场景（131 个模块，最大的子包）** | `hydrate.create/solve`、`icp.create`、`frac`、`geothermal_helium`、`mineralization_reactor`、`quick_look`、`uv_equilibrium` |
+| [`zmlx/scen/`](zmlx://doc/zmlx/scen/) | **应用场景（最大的子包）** | `hydrate.create/solve`、`icp.create`、`frac`、`geothermal_helium`、`mineralization_reactor`、`quick_look`、`uv_equilibrium`、`editors` |
 
 ### 几何与网格
 
@@ -970,7 +1007,7 @@ python zmlx/demos/test_all_demos.py [--jobs N] [--timeout N] [--verbose]
 
 结果分类：退出码 `0` = 通过、`-1` = 超时（计算量大，非错误）、`-2` = 测试框架自身出错、
 其它非零 = 失败。
-''', ('demos', 'demo 的推荐学习顺序（由浅入深）', 900, 360)),
+''', ('demos', 'demo 的推荐学习顺序（由浅入深）', 900, 900)),
 
         E('data_flow', '一次求解发生了什么', '''\
 这一页把"按一下运行"拆开看：一次 `iterate()` 里到底按什么顺序做了哪些事。
@@ -1063,7 +1100,7 @@ model.save('model.seepage')
 model = Seepage()
 model.load('model.seepage')
 ```
-''', ('data_flow', '一次时间步：主流程与 iterate 内部的子过程顺序', 900, 480)),
+''', ('data_flow', '一次时间步：主流程与 iterate 内部的子过程顺序', 900, 900)),
 
         E('boundary', '边界条件与井', '''\
 `zmlx` **不是**用"指定边界上的值"来做边界条件的，而是**通过操作模型属性**让某个区域
@@ -1499,6 +1536,12 @@ xlim / ylim / legend / grid`；图元素 `fig.subplot / axes2 / axes3 / auto_lay
 **其它场景**：`scen/frac`（裂缝网络）、`scen/helium`（氦气）、`scen/quick_look`（快速评估）、
 `scen/mineralization_reactor`（需要 Reaktoro）、`scen/geothermal_helium`、`scen/uv_equilibrium`、
 `scen/rkt` —— 多数是实验性或论文复现代码，API 不稳定。
+
+⚠️ `scen/` 下只有 `easter_eggs` 是「包自己就是一个插件」的子包（2026-10-22）：
+`zml_plugin.py` 与两个游戏模块放在同一个包里，默认不启用，挂「帮助 → 彩蛋」。
+其它场景只是在包根放一个 `zml_plugin.py` 当入口（`quick_look` / `frac`），实现仍在各处。
+⚠️ 数据编辑器一度也是这种形态（`scen/editors/`），同一天取消了 —— 控件退回
+`zmlx/ui/widgets/editors/`，装配合成 `zmlx/ui/plugins/builtin/editors.py` 一个文件。
 '''),
 
         E('gui', '图形界面（zmlx/ui/）', '''\
@@ -1553,6 +1596,7 @@ python script.py --headless     # 等效
 | `zmlx/ui/widgets/` | **底层控件**：会被别的控件当作零件用（编辑器、Markdown 视图、图表……） |
 | `zmlx/ui/tabs/` | **顶层控件**：只被打开成一个标签页，不被任何控件复用 |
 | [`zmlx/ui/extra_setups/`](zmlx://doc/zmlx/ui/extra_setups/) | **额外菜单动作**：新增菜单项放这里，**不动 `main.py`** |
+| [`zmlx/ui/plugins/`](zmlx://doc/zmlx/ui/plugins/) | **插件机制**（发现 / 记录状态 / 执行 `zml_plugin.py`），内置插件在 `builtin/` 子目录 —— 用户能关掉的功能放那里 |
 
 ### 控件分两处，判据只有一条
 
@@ -1574,6 +1618,10 @@ python script.py --headless     # 等效
 | `gui.get_widget(...)` | 打开（或切到）一个标签页 —— **同一类型 + 同一标题只开一个** |
 | `gui.add_func(name, fn)` | 注册一个命令，之后 `gui.name()` 就能调 |
 | `gui.add_action(...)` | 往菜单加一项 |
+| `gui.add_action(menu='操作', name='---')` | **插一条分隔线**（`name='---'` 是分隔符的专用写法，其余参数都不用给；2026-10-26 加） |
+
+⚠️ **分隔符只能加在菜单里**：`name='---'` 不建 action、不带名字、不判重（连插两条就是两条线），
+`on_toolbar=True` 对它**不生效** —— 想给工具栏分隔，仍要自己 `QToolBar.insertSeparator`。
 
 ### 三条最容易踩的界面规矩
 
@@ -1586,7 +1634,7 @@ python script.py --headless     # 等效
 完整的控件清单见 [`zmlx/ui/ReadMe.md`](zmlx://doc/zmlx/ui/ReadMe.md)；
 写新控件前先看 [`zmlx/ui/widgets/AGENTS.md`](zmlx://doc/zmlx/ui/widgets/AGENTS.md) 与
 [`zmlx/ui/tabs/AGENTS.md`](zmlx://doc/zmlx/ui/tabs/AGENTS.md)。
-''', ('gui_map', '主窗口的结构：每个区域里有什么', 860, 430)),
+''', ('gui_map', '主窗口的结构：每个区域里有什么', 900, 900)),
 
         E('gui_map', '界面地图：菜单通向哪里', '''\
 下表的**菜单路径可以点** —— 点它等于真的去点那个菜单项（在仿真运行时那几项会置灰，
@@ -1595,43 +1643,67 @@ python script.py --headless     # 等效
 ### 五个顶层菜单
 
 ⚠️ 2026-10-19：原先的顶层「用户」菜单已**整体并入「帮助」**，菜单栏回到五个顶层菜单；
-并且**没有任何三级菜单**（原先「用户 → 查询 → …」那一层已取消）。
+并且**没有任何三级菜单**（2026-10-24 起「查询」子菜单已并入「用户」；2026-10-26 起
+「文件 → 浏览」**有一个子菜单**，仍是两级，见下）。
 
 ### 文件
+
+⚠️ 2026-10-26：「浏览」与「图片浏览」合并成一个**子菜单**「文件 → 浏览」，其下两项
+「工作目录」（原「文件 → 浏览」）与「图片」。两者都是「看文件」的入口，原先却分在两处
+（图片浏览还是插件提供的、可被关掉）—— 现在同进同出。
+
+⚠️ **其余条目保持原本顺序**（2026-10-26 核对过历史版本）：唯一调整是把「退出」放回
+**末尾** —— 它在历史版本里一直在最后，是 2026-10-07 加入导入 / 保存 / 导出时被夹到了
+「脚本」后面。
 
 | 菜单路径 | 快捷键 | 打开什么 |
 |---|---|---|
 | 文件 → 工作路径 | `Ctrl+W` | 选择工作目录（**所有相对路径的基准**，开工前先设好） |
-| 文件 → 打开 | `Ctrl+O` | 按扩展名分发：`.py` 进代码编辑器、`.txt/.json` 进文本编辑器、`.png/.jpg` 进图片查看、`.pdf` 进浏览器 |
+| 文件 → 打开 | `Ctrl+O` | 按扩展名分发：`.py` 进代码编辑器、`.txt/.json` 进文本编辑器、`.png/.jpg` 进图片查看、`.pdf` 进内置浏览器（**由插件 `pdf_view` 提供**，可关闭） |
 | 文件 → 新建 | `Ctrl+N` | 新建各类文件 |
 | 文件 → 脚本 | | 打开工作目录下的 `temp_code.py` |
 | 文件 → 保存 / 导入 / 导出 | `Ctrl+S` / — / `Ctrl+Shift+S` | **作用于当前标签页**（这一页有 `save_file` 才亮） |
 | 文件 → 退出 | | 关窗口（内核在跑时会先问一句） |
-| [文件 → 浏览](zmlx://gui/view_cwd) | `Ctrl+B` | 当前目录的文件浏览器 |
+| ▸ 文件 → 浏览 → [图片](zmlx://gui/show_image_browser) | | 左侧缩略图相册 + 右侧大图的图片浏览器（「图片浏览」插件提供） |
+| ▸ 文件 → 浏览 → [工作目录](zmlx://gui/view_cwd) | `Ctrl+B` | 当前目录的文件列表（「小型查看器」插件提供：双击打开文件，含子文件夹） |
+
+⚠️ 上面那张表按**真实显示顺序**写：`工作路径 → 打开 → 新建 → 脚本 → 导入 → 保存 → 导出 →
+退出`，最后才是**子菜单**「▸浏览」（``get_menu`` 让子菜单永远排在所有普通条目之后）。
+子菜单内部按**登记先后**排 —— ``builtin/`` 按文件名加载，``image_browser.py``（i）先于
+``viewers.py``（v），所以「图片」在「工作目录」之前。
 
 ### 显示
 
+⚠️ 2026-10-26：「刷新」已从「显示」**移到「操作」** —— 它是动作，而这一组收的是页面入口。
+
 | 菜单路径 | 打开什么 |
 |---|---|
-| 显示 → 刷新 | 重设标题、刷新当前页、刷新所有菜单项的灰/亮状态 |
 | 显示 → 变量 | 全局变量查看器（`app_data`） |
+| [显示 → 重置布局](zmlx://gui/reset_layout) | 把**右侧栏**的宽度与显示状态恢复成默认（2026-10-26 加）。⚠️ **不动窗口大小、不动样式表**，已打开的标签页也不受影响 |
 | 显示 → 耗时 | CPU 计时统计表 |
 | 显示 → 标签列表 | 已开标签页总览（开在**右侧栏**） |
-| 文件 → 图片浏览 | 左侧缩略图相册 + 右侧大图的图片浏览器 |
+| 文件 → 浏览 → 图片 | 左侧缩略图相册 + 右侧大图的图片浏览器 |
 | 显示 → 通知(N) | 通知中心（**有消息时才出现**） |
 
 ### 操作
 
 | 菜单路径 | 快捷键 | 打开什么 |
 |---|---|---|
+| 操作 → 刷新 | | 重设标题、刷新当前页、刷新所有菜单项的灰/亮状态 |
 | 操作 → 运行 | `Ctrl+R` | 执行当前标签页的代码（在**后台线程**里跑） |
-| 操作 → 暂停 / 继续 | — / `Ctrl+R` | 暂停 / 继续（**需要脚本里调了 `gui.break_point()`**） |
+| 操作 → 暂停 | `Ctrl+Shift+P` | 暂停（**需要脚本里调了 `gui.break_point()`**） |
+| 操作 → 继续 | `Ctrl+Shift+R` | 继续（同样需要 `break_point`） |
 | 操作 → 停止 | `Ctrl+Q` | 安全终止（同样需要 `break_point`） |
 | 操作 → 强制结束 | | 直接 `terminate()` 线程（可能丢结果） |
-| 操作 → 隐藏 / 显示 | `Ctrl+H` | 右侧栏（输出面板）的显示与隐藏 |
-| 操作 → 再次运行 | `Ctrl+Shift+R` | 重跑上一次执行的脚本 |
+| 操作 → 隐藏 / 显示 | `Ctrl+H` | 右侧栏（输出面板）的显示与隐藏（两项**共用** `Ctrl+H`：任一刻只有一项可用） |
+| 操作 → 再次运行 | `F5` | 重跑上一次执行的脚本 |
 | 操作 → 关闭所有页面 | | 关掉顶部所有标签页 |
 | 操作 → 播放图片 | | 顺序播放当前目录的图片 |
+
+⚠️ **2026-10-26 快捷键调整**（原先三处互相顶掉）：`运行` 与 `继续` 都写 `Ctrl+R`、
+`继续` 与 `再次运行` 都写 `Ctrl+Shift+R`，Qt 遇到重复快捷键时触发哪个**不确定**。
+现在：`运行`=`Ctrl+R`、`暂停`=`Ctrl+Shift+P`、`继续`=`Ctrl+Shift+R`、`停止`=`Ctrl+Q`、
+`再次运行`=`F5`。`暂停` 原先**没有**快捷键，这是新补的。
 
 ### 设置
 
@@ -1647,33 +1719,47 @@ python script.py --headless     # 等效
 
 ### 帮助
 
-账号与授权相关的动作收在**「用户」**子菜单里，两个在线记录页收在**「查询」**子菜单里，
-其余是文档类条目。
+**登录 / 反馈**是高频操作，直接放在「帮助」**一级**；账号管理与两个在线记录页
+（管理 / 登录记录 / 反馈记录）收在**唯一的**「用户」子菜单里，其余是文档类条目。
 
-⚠️ **2026-10-19 结构调整**：原先**独立的顶层「用户」菜单整体并回了「帮助」**
-（菜单栏因此少一个顶层菜单），于是原先的 `用户 → 查询 → X` 变成了 `帮助 → 查询 → X` ——
-**不再有任何三级菜单**，两个子菜单彼此同深。同日「用户」「查询」两个子菜单还**下移到**
+⚠️ **2026-10-26 顺序回到「原本的」**：`关于` 回到最上面，其余沿用一级的登录 / 反馈 ——
+即 **关于 → ReadMe → 登录 → 反馈 → ▸用户 → 示例 / 其它**。上一版（2026-10-24）把
+`关于` 挪到了 ReadMe 之后，与更早的历史（`ReadMe → 关于 → 示例`）不一致，这次改回。
+
+⚠️ **2026-10-24 结构调整**：`登录` / `反馈` 从「用户」子菜单**提到一级**（高频操作
+不该点两下），`查询` 子菜单**并入「用户」**（「查记录」与「管账号」本来不是两层概念）
+⇒ 现在**只剩一个子菜单**，仍是两级、没有任何三级菜单。
+
+⚠️ **子菜单永远排在所有普通条目之后**（2026-10-26 定）：`get_menu` 新建子菜单时把它归到
+末尾、`add_action` 每次挂完条目再归位一次 —— 所以「▸用户」「▸其它」「▸浏览」总在最后一组。
+「示例」是**插件**在启动后才挂的，位置由「插件注册」与「子菜单归位」的先后决定
+（默认加载下它在「架构」之后，见下方「结构」）。
+
+历史：2026-10-19 原先**独立的顶层「用户」菜单整体并回了「帮助」**（菜单栏因此少一个
+顶层菜单），原先的 `用户 → 查询 → X` 变成 `帮助 → 查询 → X`；同日两个子菜单下移到
 文档类条目之后（原先排在最前面，太抢眼）。
 
-结构（两级，即菜单里的实际先后）::
+结构（两级，即菜单里的实际先后；默认插件全开时的实测顺序）::
 
-    帮助 ─┬─ ReadMe
-          ├─ 关于
-          ├─ 示例
-          ├─ ▸ 用户 → 登录 · 反馈 · 管理
-          ├─ ▸ 查询 → 登录记录 · 反馈记录
-          └─ 架构
+    帮助 ─┬─ 关于
+          ├─ ReadMe
+          ├─ 登录
+          ├─ 反馈
+          ├─ 示例        ← 插件「示例浏览」注册（晚于骨架，落在「架构」前后）
+          ├─ 架构        ← extra_setups 注册
+          ├─ ▸ 其它 → 生成测试数据 …（插件「数据编辑器」）
+          └─ ▸ 用户 → 管理 · 登录记录 · 反馈记录
 
 | 菜单路径 | 快捷键 | 打开什么 |
 |---|---|---|
 | [帮助 → ReadMe](zmlx://gui/show_readme) | `F1` | 软件说明：安装、登录、反馈、隐私 |
 | [帮助 → 关于](zmlx://gui/show_about) | `Ctrl+Shift+A` | 版本、安装路径、Python / Qt 版本、登录状态 |
 | [帮助 → 示例](zmlx://gui/show_demo) | | Demo 浏览器（110 个可运行算例） |
-| [帮助 → 用户 → 登录](zmlx://gui/show_reg_tool) | | 邮箱验证码登录 |
-| [帮助 → 用户 → 反馈](zmlx://gui/show_feedback) | | 给作者提交反馈 |
+| [帮助 → 登录](zmlx://gui/show_reg_tool) | | 邮箱验证码登录 |
+| [帮助 → 反馈](zmlx://gui/show_feedback) | | 给作者提交反馈 |
 | [帮助 → 用户 → 管理](zmlx://gui/show_user_admin) | | 按用户查看并修改授权的到期日与功能清单（**仅管理员**；非管理员只看到自己的信息与一条出路） |
-| [帮助 → 查询 → 登录记录](zmlx://gui/show_check_count_view) | | 某邮箱的查询次数（按天柱状图，**要联网**） |
-| [帮助 → 查询 → 反馈记录](zmlx://gui/show_feedbacks_view) | | 某用户某天的反馈内容（**要联网**） |
+| [帮助 → 用户 → 登录记录](zmlx://gui/show_check_count_view) | | 某邮箱的查询次数（按天柱状图，**要联网**） |
+| [帮助 → 用户 → 反馈记录](zmlx://gui/show_feedbacks_view) | | 某用户某天的反馈内容（**要联网**） |
 | [帮助 → 架构](zmlx://gui/show_architecture) | | **就是本页** |
 
 ### 插件的菜单（默认大多不加载）
@@ -1685,13 +1771,22 @@ python script.py --headless     # 等效
 
 | 插件 | 菜单 | 默认 |
 |---|---|---|
-| `image_browser` | 文件 → 图片浏览 | **启用** |
+| `image_browser` | 文件 → 浏览 → 图片 | **启用** |
 | `vtk_view` | 帮助 → VtkView | 不加载 |
 | `zip_files` | 操作 → 零碎文件处理 | 不加载 |
-| `editors_menu` | 文件 → 生成测试数据（5 条） | 不加载 |
-| `seepage_menu` | 文件 → 生成测试数据（1 条） | 不加载 |
 | `admin_menu` | 操作 / 帮助 / 帮助→打开 / 帮助→显示 共 14 条 | 不加载 |
-| `tetris` / `lianliankan` | 帮助 → 彩蛋 | 不加载 |
+
+⚠️ 2026-10-22 起，原来的 `tetris` + `lianliankan` **合并成一个插件**
+`zmlx/scen/easter_eggs/`（彩蛋，默认**不启用**）：一个开关，「帮助 → 彩蛋」下两项
+（连连看 / 螺螺是方块）。它也**不在** `plugins/builtin/` 里。
+
+⚠️ 2026-10-22 起，原来的 `editors_menu` + `seepage_menu` **合并成一个插件**
+`builtin/editors.py`（数据编辑器，默认**启用**）：它同时注册 7 种文件类型
+（「文件 → 打开 / 新建」）与「帮助 → 其它 → 生成测试数据」下 6 条示例数据
+（2026-10-25 由「文件 → 生成测试数据」下沉到「帮助 → 其它」下 —— 造示例是调试入口，
+不是日常的文件操作）。
+⚠️ 它曾一度住进 `zmlx/scen/editors/`（「包自己就是一个插件」），同日取消：控件退回
+`ui/widgets/editors/`，装配只剩这一个文件。
 
 ⚠️ **想用哪个就去「设置 → 插件」里勾上，然后重启** —— 没勾的插件，它那些菜单项
 在界面上根本不出现。
@@ -1700,10 +1795,15 @@ python script.py --headless     # 等效
 
 - **工具栏**：文件（工作路径 / 打开 / 新建 / 保存 / 导出）、操作（运行 / 暂停 / 停止）、
   帮助（ReadMe / 示例）、显示（通知）；
-- **状态栏右侧**三个常驻控件：**内核并行**复选框、**版本号**按钮（→关于）、
+- **状态栏右侧**四个常驻控件（从左到右）：**运行状态灯**（○ 空闲 / ● 运行中 /
+  ⏸ 已暂停，2026-10-26 加；**点它会显示控制台**，等价于 `gui.show_console()`）、
+  **并行**复选框（内核的 for 循环是否并行化，
+  2026-10-26 由「内核并行」简化）、**版本号**按钮（→关于）、
   **登录状态**按钮（→登录页）；
 - **标签栏右键**：关闭所有 / 列出标签 / 重命名 / 关闭 / 关闭其它；
 - **控制台**（右侧栏）：可以直接敲任意 `gui.xxx()` 命令，见 [命令与控制台](#gui_cmds)。
+  ⚠️ 右侧栏与顶部标签页区之间是一条**可拖动的分隔条**：宽度、以及「上次是否显示」
+  都会在关窗时记住、下次启动恢复（2026-10-26）。
 
 ### 本页链接的三种去向
 
@@ -1741,20 +1841,20 @@ gui.show_architecture('data_model')      # 直接跳到"核心数据模型"
 gui.show_readme()                        # 帮助 → ReadMe
 gui.show_demo()                          # 帮助 → 示例
 gui.show_about()                         # 帮助 → 关于
-gui.show_reg_tool()                      # 帮助 → 用户 → 登录
+gui.show_reg_tool()                      # 帮助 → 登录
 gui.show_env_edit()                      # 设置 → 系统
 gui.show_gui_iter()                      # 设置 → 迭代器
 gui.show_style_sheet()                   # 设置 → 样式表
 gui.show_solver_selector()               # 设置 → 求解器
 gui.show_file_finder()                   # 设置 → 路径
 gui.edit_setup_files()                   # 设置 → 插件
-gui.view_cwd()                           # 文件 → 浏览
+gui.view_cwd()                           # 文件 → 浏览 → 工作目录
 gui.show_changelog()                     # 修改记录
 gui.show_memory()                        # 显示 → 变量
 gui.show_timer()                         # 显示 → 耗时
-gui.show_image_browser()                 # 文件 → 图片浏览
-gui.show_check_count_view()              # 帮助 → 查询 → 登录记录
-gui.show_feedbacks_view()                # 帮助 → 查询 → 反馈记录
+gui.show_image_browser()                 # 文件 → 浏览 → 图片
+gui.show_check_count_view()              # 帮助 → 用户 → 登录记录
+gui.show_feedbacks_view()                # 帮助 → 用户 → 反馈记录
 ```
 
 ### 打开文件
@@ -1871,9 +1971,9 @@ print(gui.list_actions())      # 所有菜单项的名字
 ### 顺手可以用的工具
 
 - [「设置 → 迭代器」](zmlx://gui/show_gui_iter)：跑 demo 时打开，能看见每一步耗多久；
-- [「文件 → 浏览」](zmlx://gui/view_cwd)：确认相对路径的基准；
+- [「文件 → 浏览 → 工作目录」](zmlx://gui/view_cwd)：确认相对路径的基准；
 - 控制台：`gui.show_architecture()` 随时回到本页。
-''', ('reading', '三条阅读路线', 900, 350)),
+''', ('reading', '三条阅读路线', 900, 900)),
 
         E('run', '运行与测试', '''\
 ### 三种运行方式
@@ -1979,8 +2079,9 @@ python zmlx/scripts/write_pip_config.py  # 换成清华镜像源（下载慢时�
 |---|---|---|
 | 一个**顶层**页面（只当标签页用） | `zmlx/ui/tabs/` | 判据：不被别的控件当零件用 |
 | 一个**底层**控件（会被别人嵌进去） | `zmlx/ui/widgets/` | 规范见 [`widgets/AGENTS.md`](zmlx://doc/zmlx/ui/widgets/AGENTS.md) |
-| 一个**菜单项 / 命令** | `zmlx/ui/extra_setups/` | **不要改 `main.py`** —— 本页就是这么挂上去的 |
-| 一个跨线程调用 | `zmlx/ui/utils/` 里的 `GuiApi` | 不要从后台线程直接碰控件 |
+| 一个**菜单项 / 命令**（产品功能） | `zmlx/ui/extra_setups/` | **不要改 `main.py`** —— 本页就是这么挂上去的 |
+| 一个**菜单项 / 命令**（用户能关掉的工具） | `zmlx/ui/plugins/builtin/` | 第六节「插件体系」有完整对照 |
+| 一个**跨线程调用** | `zmlx/ui/utils/` 里的 `GuiApi` | 不要从后台线程直接碰控件 |
 
 ### 往 `extra_setups/` 里加菜单项的最小写法
 
@@ -2027,23 +2128,118 @@ def setup_ui():
    必须显式写 `is_visible=lambda: True`；
 4. **`oper` 里不要放有副作用的动作** —— 点一次菜单就会执行一次。
 
-### 不改代码也能加菜单项：插件脚本
+### 插件体系：不改代码、也不改框架就能加东西
 
-界面启动时会执行 `zml_plugin.py`。你可以把"注册一个菜单项"写进这个文件，放在搜索路径下
-（或在[「设置 → 插件」](zmlx://gui/edit_setup_files) 里指定）：
+上面几节说的都是「**改** zmlx」。插件是另一条路：**加一个文件**就够了 ——
+不用改 `main.py`，不用改任何 `__init__.py`，也不用改
+[`extra_setups/__init__.py`](zmlx://doc/zmlx/ui/extra_setups/__init__.py)。
+
+#### 判据：放 `plugins/` 还是 `extra_setups/`
+
+> **关掉它，软件还能不能正常用？** 能 → 插件；不能 → `extra_setups/`。
+
+| 放哪 | 收什么 | 用户能关掉吗 |
+|---|---|---|
+| `zmlx/ui/plugins/builtin/` | **非核心功能**：工具、演示、彩蛋 | ✅ 能 |
+| [`zmlx/ui/extra_setups/`](zmlx://doc/zmlx/ui/extra_setups/) | **产品功能**：授权查询、用户管理 | ❌ 不能 |
+
+把「授权查询」做成插件，等于允许用户关掉产品功能 —— 那是错的。
+
+#### 插件就是一段代码，没有接口要继承
+
+**定义只有一句**：
+
+> 插件 = **界面启动时，在控制台（console）线程里被执行的一段代码**。
+> 执行时，机制会自动把运行空间里的 `__name__` 设为 `'__zml_plugin__'`。
+> **除此之外，没有其它限制。**
+
+不是某个基类的子类，也不需要 `register()` 成某种对象，**也没有固定入口函数** ——
+机制不做「找 `main()` / 找 `setup_ui()`」这种事，它只 `exec` 你写下的代码。
+所以「在哪一行注册」完全由作者决定：顶层直接调用、放进
+`if __name__ == '__zml_plugin__':` 分支、包成函数再调，**都合法**。
+它可以是挂菜单、注册 `gui` 命令、开标签页（`gui.get_widget`）、起后台任务，
+或者什么都不挂、只做一次性初始化。
+
+⚠️⚠️ **「能否正确、快速地执行」是作者自己的责任** —— 机制什么也不替你保证：
+
+| 作者要保证 | 不保证的后果 |
+|---|---|
+| **在 `__name__ == '__zml_plugin__'` 下能跑通** | 把注册放进 `__main__` 分支 = 插件加载时**静默不执行**（有一条警告兜底，但不报错） |
+| **执行要快** | 它处在界面启动的**关键路径**上、同步执行；慢一点就是整个软件启动变慢，且不会提示是哪个插件 |
+
+唯一的基本条件是**动界面必须走 `gui.xxx(...)`**：插件体跑在**控制台内核线程**里，
+`gui.*` 会把调用派发到 GUI 线程；直接抓 `MainWindow` 或改控件就是跨线程操作，
+轻则显示错乱、重则崩，而且 `main.py` 的内部结构会变成事实上的公共 API。
+⚠️ 这条不等于「不能写 Qt 代码」：插件可以自己定义 `QWidget` 子类，
+只是**把控件挂到窗口上**必须走 `gui.get_widget(...)`。
+
+#### 一个最小的插件
 
 ```python
-# zml_plugin.py
+# my_plugin/zml_plugin.py            ← 文件名必须是 zml_plugin.py
+# ** name = '我的备忘'
+# ** desc = '在帮助菜单里加一条说明'
+# ** enabled = True                  # 可选；省略视为启用
 from zmlx.ui import gui
+from zmlx.system import execute_once
 
-gui.add_action(menu='帮助', name='my_note', text='我的备忘',
-               slot=lambda: gui.information('备忘', '记得改渗透率'),
-               overwritable=False)
+
+@execute_once(file=__file__)         # 一次运行里可能被调多次，防止重复挂菜单
+def setup_ui():
+    gui.add_action(menu='帮助', name='my_note', text='我的备忘',
+                   slot=lambda: gui.information('备忘', '记得改渗透率'),
+                   overwritable=False)
+
+
+if __name__ == '__zml_plugin__':
+    setup_ui()      # 被插件机制执行：只注册，不开窗口
+
+if __name__ == '__main__':
+    setup_ui()      # 直接 python 运行：方便自测
 ```
 
-> 旧文件名 `zml_gui_setup.py` 仍然兼容，但已不推荐；新写的插件请用 `zml_plugin.py`。
+顶部三行 `# ** name` / `# ** desc` / `# ** enabled` 是**可选的元数据**，只给
+「设置 → 插件」列表显示用（解析走 `zmlx.algs.code_config`，**不执行插件体**）。
 
-执行时机见 [`zmlx/ui/plugins/`](zmlx://doc/zmlx/ui/plugins/) 的 `run_setup`。
+#### 放在哪、什么时候执行
+
+| 位置 | 文件名 | 谁把它登记进名单 |
+|---|---|---|
+| 你的工程目录（任意搜索路径下，或 `zmlx/scen/` 的一层子目录） | `zml_plugin.py` | **首次启动自动发现**（只扫一次；之后可在「设置 → 插件」里手动添加 / 移除） |
+| `zmlx/ui/plugins/builtin/` | 任意名（但**不要**叫 `zml_plugin.py`） | **不需要登记** —— 目录即语义，除 `__init__.py` 外每个 `.py` 都是插件 |
+
+执行时机：界面启动时 `main.py` 在控制台内核线程里调 `plugins.load_all()`，
+把**启用**的插件在各自**独立命名空间**里逐个 `exec`。
+⚠️ 这意味着插件**处在启动的关键路径上**：顶层只该「接线」（`gui.add_action` /
+`gui.add_func`），扫描目录、读大文件、跑计算一律推迟到菜单被点的那一刻、或扔进后台线程。
+
+#### 三个概念，只用两个旋钮
+
+「设置 → 插件」（[`gui.edit_setup_files()`](zmlx://gui/edit_setup_files)）里的七列是：
+
+- **启用** —— 决定**下次启动**跑不跑（持久设置）；
+- **优先级** —— 高 / 正常 / 低，只决定谁**先**执行，**不**改列表顺序，也没有排序接口；
+- **临时加载** —— 点一下**当场**执行（不写盘、不必重启），每个插件在本次运行只跑一次；
+  它与「启用」互不写入，重启后是否执行**仍只看勾选**。
+
+⚠️ **「禁用」≠ 撤销**：它只表示**下次启动不执行这段代码**；插件已经派生的菜单项、
+后台线程不会被回收。所以改了启用状态要**重启**才看得出效果。
+
+⚠️ 插件之间**不共享**命名空间（只有 `__name__ == '__zml_plugin__'` 与 `__file__`），
+模块级常量不会互相覆盖 —— 要用 `app_data` 就**自己 import**。
+
+#### 别踩这四条
+
+1. **把注册代码整段放进 `if __name__ == '__main__':`** —— 机制执行时 `__name__` 是
+   `'__zml_plugin__'`，那段**不会执行**，表现为「勾上了、菜单却没出现」且不报错；
+2. **往 `plugins/builtin/` 放工具模块** —— 会被当成插件执行。工具放上一层并以 `_` 开头；
+3. **插件文件不是 UTF-8** —— 读取按 UTF-8，读不出即记为失败（其余插件照常执行）；
+4. **改了插件文件名却忘了路径迁移** —— 名单里存的是**绝对路径**，旧记录会被当「文件缺失」
+   静默跳过，用户勾开过的插件悄悄退回默认状态。
+
+规范与完整清单：加插件的六步、目录分层与禁忌见
+[`zmlx/ui/plugins/AGENTS.md`](zmlx://doc/zmlx/ui/plugins/AGENTS.md)（§0 讲清「为什么要有插件」），
+13 个内置插件各挂在哪见 [`zmlx/ui/ReadMe.md`](zmlx://doc/zmlx/ui/ReadMe.md) 的 `plugins/` 一行。
 
 ### 加一份文档
 
@@ -2137,7 +2333,7 @@ gui.add_action(menu='帮助', name='my_note', text='我的备忘',
 
 | 现象 | 原因 | 办法 |
 |---|---|---|
-| 状态栏「未登录」，悬停显示 `服务器原话：Please register with your email first.` | 本机从未用邮箱登录过 | 走 [「帮助 → 用户 → 登录」](zmlx://gui/show_reg_tool)，填姓名 / 单位 / 邮箱 → 发验证码 → 填 6 位码 |
+| 状态栏「未登录」，悬停显示 `服务器原话：Please register with your email first.` | 本机从未用邮箱登录过 | 走 [「帮助 → 登录」](zmlx://gui/show_reg_tool)，填姓名 / 单位 / 邮箱 → 发验证码 → 填 6 位码 |
 | 状态栏「登录状态未知」 | **没查到，不代表没登录** —— 可能是离线、超时（最长 60 秒）或服务端回了别的文案 | 先看悬停里的"服务器原话"：连接问题查网络，过期问题重新登录 |
 | `计算中 stderr：The software is not logged in for feature <flow> on this computer.` | 授权校验没过。⚠️ 每个 feature 每次运行**只查一次**，断网那次不会重试 | 按提示登录（GUI 模式下程序会自动弹登录窗）；重启程序可让闸门复位 |
 | 登录页：`本机 zml.dll 未加载。` / `硬件码为空` | `machine_id()` 返回空 —— 根因几乎总是 **dll 没加载** | 先修 dll（见上一节） |
@@ -2155,7 +2351,7 @@ gui.add_action(menu='帮助', name='my_note', text='我的备忘',
 | 点「运行」没反应、只响一声错误音 | **内核已经在跑了**（同一时刻只允许一个）。⚠️ 这一处没有文字提示 | 先停止 / 等当前算完 |
 | `call gui failed: ...` 之后程序照常跑但没界面 | `zmlx.ui.main` 起不来（通常是 **Qt 没装**），**自动降级为无界面运行** | 这是优雅降级不是崩溃。要界面就 `pip install PyQt6` |
 | `Warning: qtpy was imported before the Qt binding was pinned; ...` | 你的脚本在 `import zmlx` **之前**就 import 了 `qtpy`，两套绑定混用会**原生崩溃** `0xC0000409` | 把 `import qtpy` / `pyvistaqt` / `pyqtribbon` 移到 `import zmlx` **之后** |
-| `QWebEngineView is not installed` | 缺 **PyQt6-WebEngine**（PDF 查看、内嵌网页都用它） | `pip install PyQt6-WebEngine`，装完**重启进程** |
+| `QWebEngineView is not installed` | 缺 **PyQt6-WebEngine**（内嵌网页 `open_url` 与 PDF 查看 `open_pdf` 都用它） | `pip install PyQt6-WebEngine`，装完**重启进程** |
 | `Error when setup action: ...` / `Error when setup xxx: ...` | 界面启动时某个附加模块挂了（每个模块有独立的兜底，**不会**拦住整个界面） | 看是哪一项：多半缺 pyvista 等可选库。⚠️ 插件（`plugins/`）的失败**不走这条**：报错落在启动日志里 `Exec File: <路径>` 后跟 `Failed: ...`，同时在消息区弹出 `path = ..., error = ...` |
 | `gui function <xxx> not found` | 脚本调了不存在的 `gui.xxx()` | 用 `print(gui.list_all())` 核对名字 |
 
@@ -2440,6 +2636,65 @@ class _Palette:
                          | QtCore.Qt.TextFlag.TextWordWrap, text)
         painter.restore()
 
+    @classmethod
+    def text_fit(cls, painter, palette, rect, text, size=0.0, bold=False,
+                 kind='text', align=None, min_ratio=0.55):
+        """同 :meth:`text`，但**放不下就把字号缩下来**，保证不出框、不缺字.
+
+        ⚠️ 为什么必须有它：``text`` 用的是 ``painter.drawText(rect, flags, text)`` ——
+        Qt 会把超出 ``rect`` 的部分**直接裁掉**（不是溢出，是整段看不见）。而各图的
+        文本框宽、字号都是写死的常数，字一长就出现「``low_1p``」「L4 的标题压住路径行」
+        「工具栏条目在右边界被切」这类现象（PLAN ``T-20261024-01``）。
+
+        做法：二分收缩字号，取「仍能完整放进 rect」的最大字号；最多收到 ``min_ratio``
+        倍。**仍放不下就按最小字号画** —— 宁可小一点，也不要缺字（缺字会读错）。
+
+        ⚠️ 注意 ``_Palette.font`` 用的是 ``setPointSizeF``，1 pt ≈ 1.33 逻辑像素，
+        所以「size=26 的文字」在画布上约占 35 单位高 —— 估算框宽时按 1.33 倍算。
+
+        Args:
+            painter: 画笔。
+            palette: 调色板。
+            rect: 文本框（画布坐标）。
+            text: 文字（可含 ``
+``）。
+            size: 期望字号；``<=0`` 表示不收缩、直接交给 :meth:`text`。
+            bold: 是否加粗。
+            kind: 颜色种类（``text`` / ``muted`` …）。
+            align: 对齐方式（默认居中）。
+            min_ratio: 字号最多收缩到原值的多少倍。
+
+        Returns:
+            float: 实际使用的字号（便于自检；``size<=0`` 时返回 0）。
+        """
+        size = float(size)
+        if size <= 0:
+            cls.text(painter, palette, rect, text, size=size, bold=bold,
+                     kind=kind, align=align)
+            return 0.0
+        flags = int((align if align is not None else QtCore.Qt.AlignmentFlag.AlignCenter)
+                    | QtCore.Qt.TextFlag.TextWordWrap)
+        # ⚠️ 留 2% 安全边距：``QFontMetricsF`` 报「940 恰好放进 940 的框」时，
+        #    ``drawText`` 仍会切掉最后一字的右边缘（实测 2026-10-24，工具栏那一行）。
+        limit_w = rect.width() * 0.98
+        limit_h = rect.height() * 0.98
+        target = QtCore.QRectF(0.0, 0.0, limit_w, limit_h)
+        low = size * float(min_ratio)
+        high = size
+        best = low
+        for _ in range(12):
+            mid = (low + high) / 2.0
+            metrics = QtGui.QFontMetricsF(cls.font(mid, bold=bold))
+            need = metrics.boundingRect(target, flags, text)
+            if need.width() <= limit_w and need.height() <= limit_h:
+                best = mid
+                low = mid
+            else:
+                high = mid
+        cls.text(painter, palette, rect, text, size=best, bold=bold,
+                 kind=kind, align=align)
+        return best
+
 
 class _Figure(QtWidgets.QWidget):
     """一张配图（只画图，不处理交互）.
@@ -2447,9 +2702,15 @@ class _Figure(QtWidgets.QWidget):
     绘制坐标系统一用一块 **1000×1000 的逻辑画布**，再按控件实际大小**等比缩放**，
     所以拉大窗口时文字不会糊、也不会溢出。
 
-    ⚠️ **调色板变化要重画**：用户在「设置 → 样式表」里换了配色、或者切了暗色模式之后，
-    ``QPalette`` 会变 —— :meth:`event` 里按 ``QEvent.Type.PaletteChange`` 重新 ``update()``。
-    **不要**缓存像素（那就把颜色定死了）。
+    ⚠️ **它只是「渲染器」，不是可见控件**（2026-10-24 起）：本类从不 ``show()``，
+    由 :meth:`_ArchitectureView._render_figure` 用 ``QWidget.render(painter)`` 画进
+    ``QImage``，再作为**文档内嵌图片**插进正文。所以这里只管「怎么画」，
+    「放在哪、怎么滚动」全归 ``QTextDocument``。
+
+    ⚠️ **配色一律现取 ``QPalette``**：换样式表 / 切暗色模式后，视图会重新调
+    ``_render_figure`` 重画一张 —— 位图本身是**缓存**，缓存的有效期由
+    ``_ArchitectureView.changeEvent``（``PaletteChange`` / ``FontChange``）管。
+    ⚠️ **不要**在 ``paintEvent`` 里读 ``self.grab()`` 或写文件。
 
     Attributes:
         kind: 画哪一张图 —— ``overview`` / ``layers`` / ``data_flow`` / ``gui_map`` /
@@ -2482,7 +2743,11 @@ class _Figure(QtWidgets.QWidget):
         return self._wanted
 
     def event(self, e):
-        """调色板一变就重画（颜色是从调色板现取的，不能缓存）."""
+        """调色板一变就 ``update()``（离屏渲染时这不会触发重画，重画由视图负责）.
+
+        ⚠️ 保留它是为了「万一被直接 ``show()`` 出来调试」时行为仍然正确 ——
+        正常路径下本控件不可见，重画由 :meth:`_ArchitectureView.changeEvent` 驱动。
+        """
         if e.type() == QtCore.QEvent.Type.PaletteChange:
             self.update()
         return super().event(e)
@@ -2566,23 +2831,25 @@ class _Figure(QtWidgets.QWidget):
             rect = QtCore.QRectF(x, top, width, height)
             _Palette.box(painter, palette, rect, '', _Palette.layer(i * 1.3, dark), dark,
                          radius=12.0)
-            _Palette.text(painter, palette, QtCore.QRectF(x + 8, top + 26, width - 16, 52),
-                          title, size=36.0, bold=True)
-            _Palette.text(painter, palette, QtCore.QRectF(x + 8, top + 92, width - 16, 44),
+            # ⚠️ 标题框只有 width-16 ≈ 163 宽；size 36 时「③ 推进时间」需要 185 ⇒
+            #    折成两行、压住下面的 api 行。改成 22，并让过长的那条（⑤）精简。
+            _Palette.text_fit(painter, palette, QtCore.QRectF(x + 8, top + 26, width - 16, 52),
+                          title, size=22.0, bold=True)
+            _Palette.text_fit(painter, palette, QtCore.QRectF(x + 8, top + 92, width - 16, 44),
                           api, size=30.0, kind='muted')
-            _Palette.text(painter, palette, QtCore.QRectF(x + 10, top + 172, width - 20, 200),
-                          detail, size=27.0)
+            _Palette.text_fit(painter, palette, QtCore.QRectF(x + 6, top + 172, width - 12, 200),
+                          detail, size=24.0)
             if i + 1 < n:
                 _Palette.arrow(painter, palette,
                                QtCore.QPointF(x + width + 2, top + height / 2),
                                QtCore.QPointF(x + width + gap - 3, top + height / 2))
-        _Palette.text(painter, palette, QtCore.QRectF(20, 70, 960, 70),
+        _Palette.text_fit(painter, palette, QtCore.QRectF(20, 70, 960, 70),
                       '从「一个算例」到「屏幕上的图」',
                       size=46.0, bold=True)
-        _Palette.text(painter, palette, QtCore.QRectF(20, 148, 960, 48),
+        _Palette.text_fit(painter, palette, QtCore.QRectF(20, 148, 960, 48),
                       '下面每个方框都能在左侧目录里找到对应的小节',
                       size=26.0, kind='muted')
-        _Palette.text(painter, palette, QtCore.QRectF(20, 720, 960, 200),
+        _Palette.text_fit(painter, palette, QtCore.QRectF(20, 720, 960, 200),
                       '所有阶段的中间产物只有一个：Seepage 对象'
                       '（cell / face / fluid / reaction）。\n'
                       '这正是“多场耦合”能够成立的原因 —— '
@@ -2596,7 +2863,7 @@ class _Figure(QtWidgets.QWidget):
     def _draw_layers(self, painter, palette, dark):
         """从上到下六层堆叠，右侧标注依赖方向."""
         layers = [
-            ('L5  应用场景', 'zmlx/scen/', 'hydrate · icp · frac · helium'),
+            ('L5  应用场景', 'zmlx/scen/', 'hydrate · icp · frac · helium · editors'),
             ('L4  耦合物理引擎', 'zmlx/tfc/', 'iterate → solve'),
             ('L3  工具与界面', 'zmlx/ui/  zmlx/utils/  zmlx/plt/', 'Field · GuiIterator · PyQt6'),
             ('L2  物理定义', 'zmlx/fluids/  zmlx/reactions/  zmlx/krs/', 'FluDef · Reaction · kr 曲线'),
@@ -2609,15 +2876,19 @@ class _Figure(QtWidgets.QWidget):
             y = top + i * (row_h + gap)
             rect = QtCore.QRectF(left, y, right - left, row_h)
             _Palette.box(painter, palette, rect, '', _Palette.layer(i, dark), dark, radius=8.0)
-            _Palette.text(painter, palette, QtCore.QRectF(left + 18, y + 6, 300, 42),
+            # ⚠️ 标题框必须**整行宽**（原先写死 300）：``_Palette.text`` 一律带
+            #    ``TextWordWrap``，而 300 装不下「L4  耦合物理引擎」这种长名字 ⇒ 折行后
+            #    溢出 42 高的框、压住下面的路径行（2026-10-24 图第一次真正显示出来才发现，
+            #    见 PLAN ``T-20261024-01``）。
+            _Palette.text_fit(painter, palette, QtCore.QRectF(left + 18, y + 6, right - left - 36, 42),
                           name, size=31.0, bold=True,
                           align=QtCore.Qt.AlignmentFlag.AlignLeft
                                 | QtCore.Qt.AlignmentFlag.AlignVCenter)
-            _Palette.text(painter, palette, QtCore.QRectF(left + 18, y + 52, right - left - 36, 32),
+            _Palette.text_fit(painter, palette, QtCore.QRectF(left + 18, y + 52, right - left - 36, 32),
                           path, size=26.0, bold=False,
                           align=QtCore.Qt.AlignmentFlag.AlignLeft
                                 | QtCore.Qt.AlignmentFlag.AlignVCenter)
-            _Palette.text(painter, palette, QtCore.QRectF(left + 18, y + 84, right - left - 36, 28),
+            _Palette.text_fit(painter, palette, QtCore.QRectF(left + 18, y + 84, right - left - 36, 28),
                           cores, size=22.0, kind='muted',
                           align=QtCore.Qt.AlignmentFlag.AlignLeft
                                 | QtCore.Qt.AlignmentFlag.AlignVCenter)
@@ -2627,16 +2898,16 @@ class _Figure(QtWidgets.QWidget):
         y0 = top + 18
         y1 = top + len(layers) * (row_h + gap) - gap - 18
         _Palette.arrow(painter, palette, QtCore.QPointF(x, y0), QtCore.QPointF(x, y1))
-        _Palette.text(painter, palette, QtCore.QRectF(x - 14, 6, 220, 30),
+        _Palette.text_fit(painter, palette, QtCore.QRectF(x - 14, 6, 220, 30),
                       '上层', size=22.0, kind='muted',
                       align=QtCore.Qt.AlignmentFlag.AlignLeft)
-        _Palette.text(painter, palette, QtCore.QRectF(x - 14, y1 + 6, 220, 30),
+        _Palette.text_fit(painter, palette, QtCore.QRectF(x - 14, y1 + 6, 220, 30),
                       '底层', size=22.0, kind='muted',
                       align=QtCore.Qt.AlignmentFlag.AlignLeft)
         painter.save()
         painter.translate(x + 30, (y0 + y1) / 2)
         painter.rotate(90)
-        _Palette.text(painter, palette, QtCore.QRectF(-240, -18, 480, 36),
+        _Palette.text_fit(painter, palette, QtCore.QRectF(-240, -18, 480, 36),
                       '上层可以调用下层 · 下层绝不 import 上层',
                       size=24.0, kind='muted')
         painter.restore()
@@ -2659,11 +2930,11 @@ class _Figure(QtWidgets.QWidget):
             y = top + i * gap
             rect = QtCore.QRectF(left, y, width, height)
             _Palette.box(painter, palette, rect, '', _Palette.layer(color, dark), dark, radius=9.0)
-            _Palette.text(painter, palette, QtCore.QRectF(left + 14, y + 4, 130, height - 8),
-                          title, size=26.0, bold=True,
+            _Palette.text_fit(painter, palette, QtCore.QRectF(left + 12, y + 4, 160, height - 8),
+                          title, size=20.0, bold=True,
                           align=QtCore.Qt.AlignmentFlag.AlignLeft
                                 | QtCore.Qt.AlignmentFlag.AlignVCenter)
-            _Palette.text(painter, palette, QtCore.QRectF(left + 132, y + 4, width - 144, height - 8),
+            _Palette.text_fit(painter, palette, QtCore.QRectF(left + 176, y + 4, width - 188, height - 8),
                           detail, size=22.0,
                           align=QtCore.Qt.AlignmentFlag.AlignLeft
                                 | QtCore.Qt.AlignmentFlag.AlignVCenter)
@@ -2681,7 +2952,7 @@ class _Figure(QtWidgets.QWidget):
         x0 = 560.0
         y0 = 66.0
         row = 38.0
-        _Palette.text(painter, palette, QtCore.QRectF(x0, 22, 420, 34),
+        _Palette.text_fit(painter, palette, QtCore.QRectF(x0, 22, 420, 34),
                       'iterate 内部按此顺序执行', size=24.0, bold=True,
                       align=QtCore.Qt.AlignmentFlag.AlignLeft)
         for i, text in enumerate(subs):
@@ -2690,12 +2961,12 @@ class _Figure(QtWidgets.QWidget):
             rect = QtCore.QRectF(x0, y, 416.0, row - 8)
             _Palette.box(painter, palette, rect, '',
                          _Palette.layer(2 if major else 5, dark), dark, radius=4.0)
-            _Palette.text(painter, palette, QtCore.QRectF(x0 + 10, y, 396, row - 8),
+            _Palette.text_fit(painter, palette, QtCore.QRectF(x0 + 10, y, 396, row - 8),
                           text, size=21.0, bold=major,
                           align=QtCore.Qt.AlignmentFlag.AlignLeft
                                 | QtCore.Qt.AlignmentFlag.AlignVCenter)
 
-        _Palette.text(painter, palette, QtCore.QRectF(24, 636, 950, 300),
+        _Palette.text_fit(painter, palette, QtCore.QRectF(24, 636, 950, 300),
                       '▪ 流动求解与传热求解是两个独立的线性系统，在同一时间步里按固定顺序先后求解。\n'
                       '▪ 每一步都会提交“下一步建议步长”，最终取所有建议里的最小值 —— 这就是自适应步长。\n'
                       '▪ 固体相（水合物 / 冰 / 干酪根）在流动求解前被临时弹出，因为固体不参与流动。',
@@ -2711,7 +2982,7 @@ class _Figure(QtWidgets.QWidget):
         def block(rect, text, index, radius=7.0, size=24.0):
             _Palette.box(painter, palette, rect, '', _Palette.layer(index, dark), dark,
                          radius=radius)
-            _Palette.text(painter, palette, rect, text, size=size, bold=False)
+            _Palette.text_fit(painter, palette, rect, text, size=size, bold=False)
 
         block(QtCore.QRectF(30, 30, 940, 58),
               '菜单栏    文件 · 显示 · 操作 · 设置 · 帮助', 3, size=25.0)
@@ -2725,8 +2996,9 @@ class _Figure(QtWidgets.QWidget):
         block(QtCore.QRectF(30, 510, 940, 110),
               '控制台（后台线程执行脚本）\n可以直接敲任意 gui.xxx() 命令', 0, size=25.0)
         block(QtCore.QRectF(30, 634, 940, 46),
-              '状态栏    内核并行 · 版本号（→关于） · 进度 · 登录状态（→登录页）', 5, size=23.0)
-        _Palette.text(painter, palette, QtCore.QRectF(30, 700, 940, 200),
+              '状态栏    运行状态灯 · 并行 · 版本号（→关于） · 进度 · 登录状态（→登录页）',
+              5, size=23.0)
+        _Palette.text_fit(painter, palette, QtCore.QRectF(30, 700, 940, 200),
                       '运行脚本的地方是"控制台线程"，界面在"GUI 线程"。\n'
                       '任何时候脚本里想动界面，都必须走 gui.xxx()（它会自动派发到 GUI 线程）。',
                       size=24.0, kind='muted')
@@ -2744,7 +3016,7 @@ class _Figure(QtWidgets.QWidget):
         lane_h = 260.0
         for i, (name, steps) in enumerate(lanes):
             y = 70.0 + i * (lane_h + 30.0)
-            _Palette.text(painter, palette, QtCore.QRectF(20, y + 60, 200, 130),
+            _Palette.text_fit(painter, palette, QtCore.QRectF(20, y + 60, 200, 130),
                           name, size=30.0, bold=True,
                           align=QtCore.Qt.AlignmentFlag.AlignLeft
                                 | QtCore.Qt.AlignmentFlag.AlignVCenter)
@@ -2754,13 +3026,13 @@ class _Figure(QtWidgets.QWidget):
                 rect = QtCore.QRectF(x, y + 60.0, width, 130.0)
                 _Palette.box(painter, palette, rect, '', _Palette.layer(i * 2 + j, dark),
                              dark, radius=10.0)
-                _Palette.text(painter, palette, rect, step, size=26.0)
+                _Palette.text_fit(painter, palette, rect, step, size=26.0)
                 if j + 1 < len(steps):
                     _Palette.arrow(painter, palette,
                                    QtCore.QPointF(x + width + 4, y + 125.0),
                                    QtCore.QPointF(x + width + 22, y + 125.0))
                 x += width + 26.0
-        _Palette.text(painter, palette, QtCore.QRectF(20, 20, 960, 46),
+        _Palette.text_fit(painter, palette, QtCore.QRectF(20, 20, 960, 46),
                       '三条阅读路线', size=38.0, bold=True,
                       align=QtCore.Qt.AlignmentFlag.AlignLeft)
 
@@ -2784,30 +3056,37 @@ class _Figure(QtWidgets.QWidget):
         width = (right - left) / n - 8.0
         base_y, rise = 830.0, 92.0
         box_h = 150.0
-        _Palette.text(painter, palette, QtCore.QRectF(20, 24, 960, 56),
+        _Palette.text_fit(painter, palette, QtCore.QRectF(20, 24, 960, 56),
                       '推荐的 demo 学习顺序（由浅入深）',
                       size=40.0, bold=True, align=QtCore.Qt.AlignmentFlag.AlignLeft)
-        _Palette.text(painter, palette, QtCore.QRectF(20, 92, 960, 44),
+        _Palette.text_fit(painter, palette, QtCore.QRectF(20, 92, 960, 44),
                       '每个主题目录下都有十几个算例；'
                       '本页「示例集导读」一节列出了全部 13 个目录。',
                       size=24.0, kind='muted', align=QtCore.Qt.AlignmentFlag.AlignLeft)
+        # ⚠️ **先画连线、再画方框**：反过来的话连线会从方框上穿过、压住里面的字
+        #    （2026-10-24 实测：七条斜线正压在 flow_dy / thermal 的名字上）。
+        #    连线画在「下方框的顶边 → 上方框的底边」之间 —— 那是台阶的斜缝，
+        #    画完方框之后只露出缝里那一段，看起来才是「一级级往上走」。
+        for i in range(1, n):
+            x0 = left + (i - 1) * (right - left) / n + width / 2.0
+            y0 = base_y - (i - 1) * rise
+            x1 = left + i * (right - left) / n + width / 2.0
+            y1 = base_y - i * rise + box_h
+            _Palette.arrow(painter, palette,
+                           QtCore.QPointF(x0 + 10, y0 + 2),
+                           QtCore.QPointF(x1 - 10, y1 - 2))
+
         for i, (name, topic, count) in enumerate(steps):
             x = left + i * (right - left) / n
             y = base_y - i * rise
             rect = QtCore.QRectF(x, y, width, box_h)
             _Palette.box(painter, palette, rect, '', _Palette.layer(i, dark), dark, radius=10.0)
-            _Palette.text(painter, palette, QtCore.QRectF(x, y + 14, width, 46),
+            _Palette.text_fit(painter, palette, QtCore.QRectF(x + 4, y + 14, width - 8, 46),
                           name, size=26.0, bold=True)
-            _Palette.text(painter, palette, QtCore.QRectF(x, y + 64, width, 40),
+            _Palette.text_fit(painter, palette, QtCore.QRectF(x + 4, y + 64, width - 8, 40),
                           topic, size=23.0)
-            _Palette.text(painter, palette, QtCore.QRectF(x, y + 106, width, 34),
+            _Palette.text_fit(painter, palette, QtCore.QRectF(x, y + 106, width, 34),
                           '%d 个' % count, size=21.0, kind='muted')
-            if i > 0:
-                px = left + (i - 1) * (right - left) / n + width / 2
-                py = base_y - (i - 1) * rise
-                _Palette.arrow(painter, palette,
-                               QtCore.QPointF(px + 6, py - 4),
-                               QtCore.QPointF(x + width / 2 - 6, y + box_h + 5))
 
 
 # ======================================================================
@@ -2834,9 +3113,23 @@ class _ArchitectureView(QtWidgets.QWidget):
         self._syncing = False        # 防止「目录 ↔ 正文」互相触发成环
         self.context_actions = []
 
+        #: 配图相关状态（见 :meth:`_place_figures`）
+        self._placing = False        # 正在插图片：期间不要被 contentsChanged 递归触发
+        self._figures_width = 0      # 上次按多宽渲染的（宽度没变就不重画）
+        self._pending_ensure = False  # 已经排了一次「补回配图」的调用
+        #: 拖动窗口时 ``resizeEvent`` 会连续触发，配图重画要防抖
+        self._figure_timer = QtCore.QTimer(self)
+        self._figure_timer.setSingleShot(True)
+        self._figure_timer.setInterval(120)
+        self._figure_timer.timeout.connect(self._refresh_figure_images)
+
         #: 浏览历史（**自己维护**，理由见 :meth:`_goto`）
         self._history = []
         self._history_index = -1
+        #: 排版完成前请求过的小节（由 :meth:`_load` 补做，见那里的说明）
+        self._pending_section = None
+        #: 是否已经完成过一次整篇排版（``False`` 时文档里只有骨架）
+        self._rendered = False
 
         self.content = self._create_content()
         self.toc = self._create_toc()
@@ -2856,11 +3149,42 @@ class _ArchitectureView(QtWidgets.QWidget):
         layout.addWidget(self.navigation)
         layout.addWidget(splitter, 1)
 
-        self._load()
+        # ⚠️ 两步走（2026-10-24）：先把**骨架**铺上去，整篇排版往后推。
+        #    实测整篇渲染约 322 ms（markdown→HTML 90 + setHtml 39 + 6 张配图 89），
+        #    全放在构造里就是「点菜单后界面卡半秒」。
+        #    ⚠️ 这里**不引入线程**：剩下的 setHtml / 配图都是 Qt 绘制，
+        #       本来就只能在 GUI 线程做（实测后台最多只能移走那 90 ms）。
+        self._load_skeleton()
         self._sync_navigation()
-        # 图的位置要等文档排版完才算得准：此时控件还没 show，
-        # blockBoundingRect 还是全 0。所以先挂一次延时，等事件循环转起来再摆。
-        QtCore.QTimer.singleShot(0, self._layout_figures)
+        # 图片尺寸依赖视口宽度，而此刻控件还没 show（视口宽度不准）——
+        # 所以整篇排版也必须在事件循环转起来、拿到真实宽度之后再做。
+        #
+        # ⚠️ 为什么**不是** ``singleShot(0, ...)``：0 ms 的定时器在事件循环**一开头**
+        #    就触发，而此刻骨架还没真正画到屏幕上 ⇒ 那一帧被 300 ms 的排版占掉，
+        #    用户看到的仍是「卡一下」。留一段延迟，让事件循环先把手头的绘制做完。
+        #    实测：骨架帧本身只要 5~10 ms，整帧 245~305 ms。
+        QtCore.QTimer.singleShot(self._RENDER_DELAY_MS, self._load)
+
+    #: 骨架铺完后，等多久再做整篇排版（毫秒）.
+    #:
+    #: 唯一的用途：**让骨架那一帧先真正画到屏幕上**。
+    #:
+    #: ⚠️⚠️ 这个值不能是 0（2026-10-24 实测）：``singleShot(0, ...)`` 会在事件循环
+    #: **一开头**就触发，此时骨架那帧还没画 ⇒ 被整篇排版（约 300 ms）占掉，
+    #: 用户看到的**仍然是全文**，等于白拆。实测首帧内容与耗时：
+    #:
+    #: ==========  ==========  ==========  ==========
+    #: 延迟         首帧上屏     正文就绪     首帧是骨架
+    #: ==========  ==========  ==========  ==========
+    #: 0 ms        297 ms      307 ms      否（全文）
+    #: 50 ms         7 ms      287 ms      是
+    #: 100 ms       13 ms      325 ms      是
+    #: 200 ms       14 ms      434 ms      是
+    #: ==========  ==========  ==========  ==========
+    #:
+    #: ⇒ 取 **50 ms**：骨架绘制本身只要 5~10 ms，50 ms 已经足够它上屏（剩下是给人眼的
+    #: 余量）；再往上首帧**不再变快**，只是让正文更晚 —— 100 ms 就白多等约 38 ms。
+    _RENDER_DELAY_MS = 50
 
     # ------------------------------------------------------------------
     # 构造各个部件
@@ -2888,6 +3212,9 @@ class _ArchitectureView(QtWidgets.QWidget):
         view.backwardAvailable.connect(self._sync_navigation)
         view.forwardAvailable.connect(self._sync_navigation)
         view.verticalScrollBar().valueChanged.connect(self._sync_toc)
+        # 正文被**整篇重渲染**时把配图补回来（右键切换 markdown 渲染方式就这样，
+        # 见 MarkdownView._toggle_html）—— 否则会看到裸的 ``@@figure:layers@@``。
+        view.document().contentsChanged.connect(self._on_contents_changed)
         return view
 
     def _create_toc(self):
@@ -2959,6 +3286,37 @@ class _ArchitectureView(QtWidgets.QWidget):
     # ------------------------------------------------------------------
     # 渲染
     # ------------------------------------------------------------------
+    def _load_skeleton(self):
+        """先铺一层**轻量骨架**：目录 + 一句「正在排版…」，正文留待下一轮事件循环.
+
+        为什么要分两步
+        --------------
+
+        整篇渲染实测约 **322 ms**（``markdown`` 库转 HTML 90 + ``setHtml`` 39 +
+        6 张配图 ``QPainter`` 渲染 89 + 杂项），全部塞进 ``__init__`` 就是
+        「点菜单后界面明显卡一下」。
+
+        ⚠️ 为什么**不**把这个活挪到后台线程：其中只有那 90 ms 的 markdown→HTML 是
+        纯 Python，剩下的 ``setHtml`` / 配图渲染都是 **Qt** 操作，本来就只能在 GUI 线程做。
+        实测后台最多只能移走 1/3，却要额外背上一套线程生命周期与关标签收尾 —— 不划算。
+
+        ⚠️ 骨架里**不放** ``@@figure:`` 占位：占位符一旦出现在文档里，
+        :meth:`_on_contents_changed` 会把它当成「图片丢了」而去补救。骨架的使命只是
+        「让标签页立刻有形」，真正的排版由 :meth:`_load` 一次做完。
+        """
+        marks = list(_Catalog.PAGE_KEYS)
+        tree = self.toc
+        tree.clear()
+        for item in _Catalog.entries():
+            node = QtWidgets.QTreeWidgetItem([item['title']])
+            node.setData(0, QtCore.Qt.ItemDataRole.UserRole, item['key'])
+            node.setToolTip(0, item['key'])
+            tree.addTopLevelItem(node)
+        if tree.topLevelItemCount() > 0:
+            tree.setCurrentItem(tree.topLevelItem(0))
+        self.content.setPlainText('正在排版……（共 %d 节）' % len(marks))
+        self.content.set_status('zmlx 架构：正在排版，请稍候…')
+
     def _load(self):
         """（重新）渲染全部页面.
 
@@ -2986,81 +3344,248 @@ class _ArchitectureView(QtWidgets.QWidget):
         self.content.set_status('zmlx 架构：左侧目录可跳转，顶部可返回 / 前进')
         self._place_figures()
         self._reload_toc()
+        # ⚠️ 必须在补做跳转**之前**置位：``show_section`` 要看到 ``_rendered`` 为真才会真的跳。
+        self._rendered = True
+
+        # ⚠️ 补做「排版前就请求过的小节跳转」：``gui.show_architecture('pitfalls')`` 会在
+        #    控件刚构造完（还是骨架）、``singleShot(0, _load)`` 还没跑时就调 ``show_section``。
+        #    那次跳转作用在**马上要被替换掉的**骨架上 ⇒ 不补做就等于跳转丢失
+        #    （2026-10-24 实测：排版完成后 scroll 仍是 0，而排版后再跳是 29883）。
+        pending, self._pending_section = self._pending_section, None
+        if pending is not None:
+            try:
+                self.show_section(pending)
+            except Exception as err:
+                print('Warning: 打开小节 <%s> 失败: %s' % (pending, err))
+
+    #: 配图左右各留多少像素（让图片与正文左边界对齐）
+    _FIGURE_MARGIN = 8
+
+    def _figure_width(self):
+        """配图应渲染的宽度（逻辑像素）：跟着正文视口走，两侧留一点边距.
+
+        Returns:
+            int: 不小于 240 的像素宽度。
+        """
+        width = int(self.content.viewport().width()) - 2 * self._FIGURE_MARGIN
+        return max(240, width)
+
+    @staticmethod
+    def _figure_url(key):
+        """配图在文档里的**资源名**（同时用作 ``QTextImageFormat`` 的名字）.
+
+        ⚠️ 必须是 URL；重画时靠这个**同一个名字**覆盖资源（``addResource`` 同名即替换），
+        所以**不要**每次生成随机名 —— 那样旧图会一直留在文档资源表里。
+
+        Args:
+            key: 配图的键（``layers`` / ``demos`` …）。
+
+        Returns:
+            QtCore.QUrl: ``zml-figure://<key>``。
+        """
+        return QtCore.QUrl('zml-figure://%s' % key)
+
+    def _figure_height(self, aspect, width):
+        """按声明的**宽高比**算出实际显示高度.
+
+        ⚠️ 高度必须跟着宽度走，不能写死：``_Figure.paintEvent`` 用
+        ``min(w, h) / 1000`` 缩放 1000×1000 的参考画布 —— 只要 ``h`` 小于 ``w``，
+        内容就会被**按高度**缩小、两侧留白，字也跟着变小（2026-10-24 之前声明的
+        ``860×330`` 就这么把图压到 1/3，文字全糊在一起）。
+
+        Args:
+            aspect: 声明的 ``高 / 宽``。
+            width: 实际列宽。
+
+        Returns:
+            int: 显示高度（像素）。
+        """
+        return max(120, int(round(float(width) * float(aspect))))
+
+    def _render_figure(self, fig, width, height):
+        """把一个**离屏**的 :class:`_Figure` 画成 :class:`QtGui.QImage`.
+
+        ⚠️ ``_Figure`` 现在只剩「渲染器」这一个身份：它从不 ``show()``，
+        ``paintEvent`` 里那套 1000×1000 逻辑画布 + ``painter.scale`` 的代码**一行没改**。
+
+        ⚠️ 按 ``devicePixelRatio`` 放大**位图尺寸**再交给 Qt 按逻辑尺寸显示，否则高分屏上
+        位图会被放大得发虚（这正是当年 ``MatplotWidget`` 停用 ``FigureCanvasQTAgg``
+        之后留下的老问题，见 ``ui/widgets/plt.py`` 的模块文档）。
+
+        ⚠️⚠️ **不要**再对 ``painter`` 调 ``scale(ratio, ratio)``：``QImage`` 一旦设了
+        ``setDevicePixelRatio``，``QPainter`` 的逻辑坐标系**已经**按它放大了 ——
+        再手动缩放就是**两次**，图会被放大 ~DPR 倍、右下角整块裁掉
+        （2026-10-24 实测：175% 缩放下 1029×330 的图被画成 1800×577 只露出左上角）。
+
+        Args:
+            fig: 待渲染的 ``_Figure``（父对象给它的调色板决定配色）。
+            width: 逻辑宽度。
+            height: 逻辑高度。
+
+        Returns:
+            QtGui.QImage: 可直接 ``document().addResource`` 的位图。
+        """
+        width = max(1, int(width))
+        height = max(1, int(height))
+        ratio = 1.0
+        try:
+            ratio = max(1.0, float(self.devicePixelRatioF()))
+        except Exception:
+            pass
+        image = QtGui.QImage(int(width * ratio), int(height * ratio),
+                             QtGui.QImage.Format.Format_ARGB32_Premultiplied)
+        image.fill(QtCore.Qt.GlobalColor.transparent)
+        image.setDevicePixelRatio(ratio)
+
+        fig.set_wanted_size(width, height)
+        fig.resize(width, height)
+        painter = QtGui.QPainter(image)
+        try:
+            fig.render(painter)
+        finally:
+            painter.end()
+        return image
 
     def _place_figures(self):
-        """把正文里的 ``@@figure:键@@`` 占位换成真正的 :class:`_Figure` 控件.
+        """把正文里的 ``@@figure:键@@`` 占位换成**真正嵌在文档里的图片**.
 
-        做法分三步：
+        ⚠️⚠️ **2026-10-24 改写（缺陷见 PLAN ``T-20261023-05``）**：旧实现造一个
+        ``QWidget`` 挂到 ``self.content`` 下，再把 ``blockBoundingRect()`` 返回的
+        **文档坐标**直接当控件坐标用 —— 两者不是一个坐标系：文档 y 从 0 数到三万多，
+        控件 y 只在视口那么高之内。后果（当时实测）：图被钉在屏幕固定位置（**不随滚动**）、
+        恰好落在视口内的那张**压住正文**、其余全在视口外（**窗口越小越看不到**）。
 
-        1. 把占位符所在的整行**删掉** —— 它不能留在正文里，否则用户会看到
-           一行“``@@figure:layers@@``”；
-        2. 就在那个位置插一个**空段落**，并把它的行高固定为图的高度 ——
-           这就是“图占的地方”，正文会为它让位；
-        3. 记下这个段落的**字符位置**，等下次排版时用它反查回那个 block。
+        现在改为**文档内嵌图片**：``QTextCursor.insertImage`` 把它放进段落里，
+        滚动 / 换行 / 选中 / 打印全部由 Qt 负责，不再有「两套坐标系」。
 
-        图跟着正文一起滚动，不用另开绘图区。
+        ⚠️ 图片宽度依赖**视口宽度**，而 :meth:`_load` 在控件 ``show()`` 之前就跑
+        ⇒ 首帧宽度可能不准，由 :meth:`_refresh_figure_images` 在 resize / 换主题时重画。
         """
         self._figures = []
+        self._placing = True
         document = self.content.document()
-        for item in _Catalog.entries():
-            figure = item.get('figure')
-            if figure is None:
-                continue
-            key, caption, width, height = figure
+        width = self._figure_width()
+        try:
+            for item in _Catalog.entries():
+                figure = item.get('figure')
+                if figure is None:
+                    continue
+                key, caption, box_w, box_h = figure
+                # 只取**宽高比**：实际高度跟着当前列宽走（见 :meth:`_figure_height`）
+                aspect = float(box_h) / max(1.0, float(box_w))
+                height = self._figure_height(aspect, width)
 
-            found = document.find('@@figure:%s@@' % key)
-            if found.isNull():
-                continue
+                found = document.find('@@figure:%s@@' % key)
+                if found.isNull():
+                    continue
 
-            # 1) 全选占位行并删掉
-            cursor = QtGui.QTextCursor(found)
-            cursor.movePosition(QtGui.QTextCursor.MoveOperation.StartOfBlock)
-            cursor.movePosition(QtGui.QTextCursor.MoveOperation.EndOfBlock,
-                                QtGui.QTextCursor.MoveMode.KeepAnchor)
-            if cursor.hasSelection():
-                cursor.removeSelectedText()
+                # 1) 删掉占位行（只删行内文字，段落本身留着给图片当容器）
+                cursor = QtGui.QTextCursor(found)
+                cursor.movePosition(QtGui.QTextCursor.MoveOperation.StartOfBlock)
+                cursor.movePosition(QtGui.QTextCursor.MoveOperation.EndOfBlock,
+                                    QtGui.QTextCursor.MoveMode.KeepAnchor)
+                if cursor.hasSelection():
+                    cursor.removeSelectedText()
 
-            # 2) 这一段的行高定死（图就显示在这里）
-            block_format = cursor.blockFormat()
-            block_format.setLineHeight(float(height), 4)   # 4 = FixedHeight
-            cursor.setBlockFormat(block_format)
+                # 2) 离屏画一张图，插进这个空段落
+                fig = _Figure(self.content, kind=key, caption=caption)
+                # ⚠️⚠️ 必须 ``hide()``，光设 ``WA_DontShowOnScreen`` 不够：
+                #    那是「不映射到屏幕」，但 ``QWidget.grab()`` / ``render()`` **仍会
+                #    递归绘制子控件** —— 六张图全挂在 ``content`` 的 (0,0)，最晚创建的
+                #    那张会盖在最上面，截图/打印时看到的是它而不是正文
+                #    （2026-10-24 实测：截图上永远是 ``reading`` 那张）。
+                #    ``hide()`` 之后 ``isVisible()`` 为假、不再被绘制，而 ``render()``
+                #    对隐藏控件**照常可用**（这正是离屏渲染的标准用法）。
+                fig.setAttribute(QtCore.Qt.WidgetAttribute.WA_DontShowOnScreen, True)
+                fig.hide()
+                image = self._render_figure(fig, width, height)
+                url = self._figure_url(key)
+                document.addResource(
+                    QtGui.QTextDocument.ResourceType.ImageResource, url, image)
+                fmt = QtGui.QTextImageFormat()
+                fmt.setName(url.toString())
+                fmt.setWidth(width)
+                fmt.setHeight(height)
+                position = cursor.position()
+                cursor.insertImage(fmt)
+                # 存的是**宽高比**而不是高度：窗口一变，高度要按新宽度重算
+                self._figures.append((key, position, fig, aspect))
+        finally:
+            self._placing = False
+        self._figures_width = width
 
-            # 3) 记下这个空段落的起始位置（排版之后不变）
-            anchor = QtGui.QTextCursor(cursor.block())
-            position = anchor.position()
+    def _refresh_figure_images(self):
+        """按**当前视口宽度**与**当前调色板**重画所有配图.
 
-            fig = _Figure(self.content, kind=key, caption=caption)
-            fig.set_wanted_size(width, height)
-            self._figures.append((key, position, fig, height))
-        self._layout_figures()
-
-    def _layout_figures(self):
-        """把每张图摆到它那个空段落的位置，并撑满可用宽度.
-
-        定位靠 :meth:`_place_figures` 记下的**字符位置** 反查回 block，而不是去搜文本 ——
-        按文本搜会把多张图对到同一个段落（实测踩过）。
+        ``resizeEvent`` / ``changeEvent``（换主题、换字体）/ :meth:`refresh` 都走这里。
+        资源名不变 ⇒ ``addResource`` 直接替换旧位图，再 ``markContentsDirty`` 让排版重算。
         """
         if not self._figures:
             return
-        layout = self.content.document().documentLayout()
-        viewport_width = max(240, int(self.content.viewport().width()) - 16)
-        for key, position, fig, height in self._figures:
+        document = self.content.document()
+        width = self._figure_width()
+        for key, position, fig, aspect in self._figures:
             try:
-                cursor = QtGui.QTextCursor(self.content.document())
-                cursor.setPosition(max(0, int(position)))
-                rect = layout.blockBoundingRect(cursor.block())
-                # ⚠️ 父对象必须是 **QTextBrowser 本体**（不是 viewport）：
-                #    文档坐标是对整个等待区域的，放在 Browser 下子控件会
-                #    随着滚动条一起平移；放在 viewport（不动的窗口）下反而不跟。
-                fig.setParent(self.content)
-                fig.setGeometry(int(rect.left()), int(rect.top()),
-                                viewport_width, int(height))
-                fig.show()
+                height = self._figure_height(aspect, width)
+                image = self._render_figure(fig, width, height)
+                url = self._figure_url(key)
+                document.addResource(
+                    QtGui.QTextDocument.ResourceType.ImageResource, url, image)
+                fmt = QtGui.QTextImageFormat()
+                fmt.setName(url.toString())
+                fmt.setWidth(width)
+                fmt.setHeight(height)
+                # 图片只占**一个**字符（object replacement char）⇒ 选中它再套格式
+                cursor = QtGui.QTextCursor(document)
+                cursor.setPosition(int(position))
+                cursor.setPosition(int(position) + 1,
+                                   QtGui.QTextCursor.MoveMode.KeepAnchor)
+                cursor.setCharFormat(fmt)
             except Exception as err:
-                print('Warning: 摆放配图 <%s> 失败: %s' % (key, err))
+                print('Warning: 重画配图 <%s> 失败: %s' % (key, err))
+        document.markContentsDirty(0, document.characterCount())
+        self._figures_width = width
 
-    # ------------------------------------------------------------------
-    # 目录
+    def _ensure_figures(self):
+        """文档里还留着 ``@@figure:`` 占位就重新放一遍.
+
+        ⚠️ 什么时候会留占位：``MarkdownView`` 右键切换「用 markdown 库渲染」时会
+        ``setHtml``/``setMarkdown`` **整篇重渲染**，而源码里本来就写着占位符 ——
+        于是图片没了、占位文字回来了。这一步是自愈：发现占位就重新插入。
+        """
+        if self._placing:
+            return
+        document = self.content.document()
+        if document.find('@@figure:').isNull():
+            return
+        self._place_figures()
+
+    def _on_contents_changed(self):
+        """``contentsChanged`` 回调：只在「占位符回来了」时才排一次补救.
+
+        ⚠️ 我们自己插图片/改图片格式也会触发这个信号，所以必须用 :attr:`_placing`
+        与 :attr:`_pending_ensure` 两道闸挡住递归；判断依据是**文档里是否还有占位符**，
+        没有就直接返回 —— 这样本回调对正常渲染是**零动作**的。
+        """
+        if getattr(self, '_placing', True) or getattr(self, '_pending_ensure', True):
+            return
+        try:
+            if self.content.document().find('@@figure:').isNull():
+                return
+        except Exception:
+            return
+        self._pending_ensure = True
+        # 延到本轮排版结束再做：此刻文档正处在 setHtml/setMarkdown 的中途
+        QtCore.QTimer.singleShot(0, self._do_ensure_figures)
+
+    def _do_ensure_figures(self):
+        """（内部）执行一次延后的「补回配图」."""
+        self._pending_ensure = False
+        try:
+            self._ensure_figures()
+        except Exception as err:
+            print('Warning: 补回配图失败: %s' % err)
+
     # ------------------------------------------------------------------
     def _reload_toc(self):
         """按 :data:`_PAGES` 的顺序重建左侧目录."""
@@ -3169,8 +3694,10 @@ class _ArchitectureView(QtWidgets.QWidget):
         keys = [item['key'] for item in _Catalog.entries()]
         key = self._current_key()
         index = keys.index(key) + 1 if key in keys else 1
+        # 骨架阶段（还没排版）视口顶部认不出小节 ⇒ 显示「…」而不是字面的 None
+        show = key if key is not None else '…'
         try:
-            self._position.setText('  %02d / %02d  ·  %s  ' % (index, len(keys), key))
+            self._position.setText('  %02d / %02d  ·  %s  ' % (index, len(keys), show))
         except Exception:
             pass
 
@@ -3192,6 +3719,11 @@ class _ArchitectureView(QtWidgets.QWidget):
             self._sync_navigation()
             self._sync_toc()
             return False
+        # 还没排版完（文档里只有骨架）：先记下，等 :meth:`_load` 排完再补做 ——
+        # 否则这次跳转作用在马上要被替换掉的骨架上，等于白跳。
+        if not self._rendered:
+            self._pending_section = key
+            return True
         self._goto(key, record=True)
         return True
 
@@ -3269,24 +3801,53 @@ class _ArchitectureView(QtWidgets.QWidget):
 
     def showEvent(self, event):
         super().showEvent(event)
-        # 第一次显示时文档才真正排版，这时才能算出每张图该在哪
-        self._layout_figures()
+        # 第一次显示才知道真实视口宽度 ⇒ 按它重画一遍配图
+        if self._figures_width != self._figure_width():
+            self._refresh_figure_images()
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        self._layout_figures()
+        # ⚠️ 拖动窗口时这个事件会连续触发，而重画 6 张图并不便宜 ⇒ 防抖到停下来再画
+        if self._figures:
+            self._figure_timer.start()
+
+    def changeEvent(self, event):
+        super().changeEvent(event)
+        # 换主题（暗色 / 自定义样式表）或换字体：``_Figure`` 的配色是从 ``QPalette``
+        # 现取的，位图必须跟着重画 —— 否则图会停在旧配色上（这正是旧实现
+        # "不要缓存像素"那条注释的等价要求）。
+        #
+        # ⚠️ **不能在这里立即重画**：``PaletteChange`` 是**同步**派发的，
+        #    此刻调色板往往还没传播到 ``content`` 的子控件；立即画出来用的是旧配色
+        #    （2026-10-24 实测：切暗色后图仍是浅色背景）。交给防抖定时器，
+        #    等本轮事件循环把调色板发完再画。
+        if event.type() in (QtCore.QEvent.Type.PaletteChange,
+                            QtCore.QEvent.Type.FontChange):
+            if getattr(self, '_figures', None):
+                self._figure_timer.start()
 
     def refresh(self):
         """GUI 刷新钩子（切回本页时被调）：只做很轻的事.
 
-        ⚠️ **不重建正文** —— 那会丢掉滚动位置与历史栈。这里只把按钮状态与图的位置核对一遍。
+        ⚠️ **不重建正文** —— 那会丢掉滚动位置与历史栈。这里只把按钮状态核对一遍；
+        配图只在「宽度变了」或「占位符又回来了」时才动。
         """
         self._sync_navigation()
-        self._layout_figures()
+        self._ensure_figures()
+        if self._figures and self._figures_width != self._figure_width():
+            self._refresh_figure_images()
 
     def cleanup_before_tab_close(self):
-        """关标签页时的收尾：本页没有线程 / 定时器，把配图摘掉即可（**不阻塞**）."""
-        for fig in self._figures:
+        """关标签页时的收尾：停掉防抖定时器，把**离屏渲染器**摘掉（**不阻塞**）.
+
+        ⚠️ 配图现在在文档里是**位图资源**（滚动/排版由 Qt 管），这几个 ``_Figure``
+        只是渲染用的离屏控件 —— 留着会白白占内存，所以一并删掉。
+        """
+        try:
+            self._figure_timer.stop()
+        except Exception:
+            pass
+        for _key, _position, fig, _height in self._figures:
             try:
                 fig.setParent(None)
                 fig.deleteLater()

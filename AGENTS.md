@@ -7,6 +7,29 @@ Guidance for AI agents working in `projects/zml/` — the Python side (IGG-Hydra
 
 **IGG-Hydrate** is a reservoir multi-field coupling simulator (Thermal-Hydraulic-Mechanical-Chemical).
 
+## Public API and release compatibility
+
+This package is published as **IGG-Hydrate** (<https://gitee.com/geomech/hydrate>), so treat
+everything here as **publicly shipped code**:
+
+- **API stability**: `zmlx/__init__.py` defines the public API. Changes must be *additive*
+  (new params with defaults, new functions). Never remove, rename, or change the meaning of an
+  existing signature. Renames need a forwarding shim that emits `DeprecationWarning` and states a
+  definite removal date (convention: one year), see the "包名" section below.
+- **Version numbers**: `pyproject.toml` and `zmlx/__init__.py` (`__version__`) must always
+  agree — `zmlx` is not pip-installed, so `importlib.metadata.version('IggHydrate')` returns
+  nothing and callers rely on `__version__`.
+- **Version numbering scheme**: in `x.y.z`, the **patch number z increments with ordinary
+  development commits** — it orders work in progress and is not a release marker. A **minor
+  version bump (y + 1, z reset to 0)** is a release: that `x.y.0` is the version users receive.
+  Consequence for `CHANGELOG.md`: patch-level entries record development history, and the
+  accumulated patch entries are consolidated into one summary under the new `x.y.0` heading at
+  release time.
+- **`CHANGELOG.md`** (`zmlx/data/CHANGELOG.md`) is written per commit; published release notes
+  are consolidated from it at release time.
+- **Keep this file public-facing**: durable engineering guidance only — no personal notes,
+  scratch reasoning, or pointers to files that do not ship in this directory.
+
 ## Architecture
 
 Strict layering — upper layers may use lower ones, never the reverse:
@@ -158,9 +181,47 @@ warn('参数越界，已改用默认值', UserWarning, stacklevel=2)
 
 ---
 
+## 0. 追加提交（amend）
+
+当用户说「**追加提交**」（或「追加到当前提交」「并进上一个提交」）时，**不要走「1. 提交」的完整流程**：
+
+**判据：是否存在尚未推送的提交？**
+
+```bash
+git log origin/master..HEAD --oneline     # 有输出 = 存在未推送提交
+```
+
+| 情况 | 怎么做 |
+|---|---|
+| **有**未推送提交 | **追加到最近那个**：`git add -A` + `git commit --amend`，**不升版本号**、**不新增 CHANGELOG 条目**（若本次改动值得记，**补进那个提交对应的 CHANGELOG 条目**即可） |
+| **没有**未推送提交 | 没有可追加的目标 ⇒ **退回「1. 提交」的完整流程**（升版本号 + 新增 CHANGELOG 条目） |
+
+⚠️ **为什么这样分**：未推送的提交还没到别人手里，追加进去等于「这次提交还没定稿」，不必为一个
+中间状态多出一个小版本号（否则一天能刷出 v1.9.4 ~ v1.9.9 六个版本，CHANGELOG 反而读不出东西）。
+一旦推送出去就是公开历史，只能新增提交、不能再改。
+
+⚠️⚠️ **追加时的两个硬性要求**：
+
+1. **提交描述要一起更新** —— `--amend` 会沿用旧描述，必须把本次改动补进去（照旧用
+   `== 分类标题 ==` + 条目的格式）。⚠️ **Windows PowerShell 里不要用 `-m "多行"`
+   （实测会把换行吃掉，标题与正文挤成一行）**，一律写进临时文件再用 `-F <文件>`：
+   ```bash
+   git commit --amend -F /path/to/msg.txt
+   ```
+2. **`--amend` 会改掉提交哈希**。改完用 `git log --oneline -1` 看一眼标题是否干净、
+   `git log -1 --format=%B` 确认正文换行还在。
+
+⚠️ **绝对不要 `amend` 已推送的提交**（会与远端历史分叉）。不确定时先跑一次
+`git log origin/master..HEAD --oneline` 确认目标提交确实未推送。
+
+---
+
 ## 1. 提交（commit）
 
 当用户要求「提交」时，执行以下操作：
+
+⚠️ **先看一眼有没有未推送的提交**：如果用户只是说「提交」而**已有未推送提交**，仍按本节
+完整流程走（新版本 + 新条目）—— 只有用户明确说「**追加**」时才走上一节。
 
 1. **读取未提交修改**：运行 `git diff --stat HEAD` 和 `git status`，阅读实际改动内容，
    用 1-2 句话总结本次修改的核心内容

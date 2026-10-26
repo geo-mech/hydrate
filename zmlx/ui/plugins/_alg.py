@@ -3,7 +3,7 @@
 本模块只做三件事：
 
 1. **发现**：扫描目录、找出 ``zml_plugin.py`` / ``zml_gui_setup.py``；
-2. **执行**：按名单顺序逐个执行插件脚本（:func:`run_setup`）；
+2. **执行**：按名单顺序逐个执行插件脚本（:func:`load_all`）；
 3. **临时加载**：:func:`load_now` 当场执行**单个**插件（界面「设置 → 插件」里的按钮），
    并记下「本次运行跑过哪些」以防重复执行（:func:`is_loaded`）。
 
@@ -47,7 +47,7 @@ from zmlx.ui.plugins._registry import (
 # 本模块已经做过「迁移 + 首次自动发现」的标记（进程内一次）
 _scanned = False
 
-#: 插件被 ``run_setup`` 执行时，命名空间里的 ``__name__`` 就是**这个值**.
+#: 插件被 ``load_all`` 执行时，命名空间里的 ``__name__`` 就是**这个值**.
 #: 插件文件靠它区分「被插件机制执行」与「被人 ``python xxx.py`` 直接运行」——
 #: 两种情况都是「顶层代码」，只有 ``__name__`` 能把它们分开。
 #: 典型用法（插件文件末尾）::
@@ -65,7 +65,7 @@ _scanned = False
 _PLUGIN_FLAG = '__zml_plugin__'
 
 #: :func:`get_meta` 的缓存：``{规范化路径: (mtime, meta)}``.
-#: ``is_disabled`` 会在 ``run_setup`` 的循环里逐个调 ``get_meta``，不缓存就要反复
+#: ``is_disabled`` 会在 ``load_all`` 的循环里逐个调 ``get_meta``，不缓存就要反复
 #: 读文件、跑一遍 ``code_config``。用 mtime 做键，改了文件自动失效。
 _meta_cache = {}
 
@@ -210,6 +210,16 @@ class _Folders:
         结果并入名单后就不再重复扫描。临时目录（见 :meth:`is_temp`）在**展开之前**
         就被剔除，免得白白遍历几千个子目录。
 
+        ⚠️ **2026-10-22 起 ``zmlx/scen`` 纳入自动发现**（它本来**不在**
+        ``app_data.get_paths()`` 里，只有这一处会查）。于是随包分发的自包含插件可以
+        整个住在 ``scen/<包>/`` 下（``scen/easter_eggs/zml_plugin.py``），入口与它
+        import 的实现模块同处一包。
+
+        ⚠️ **只取 ``scen`` 的「一层子目录」**，与其它搜索路径完全一致 —— 因此
+        ``scen/<包>/zml_plugin.py`` 是**唯一**的自包含形态。不要往 ``scen/<包>/<子包>/
+        zml_plugin.py`` 嵌套：那样「``scen/<包>`` 自己算不算插件」就没有答案了
+        （插件机制按目录判语义，一个目录里只能有一个 ``zml_plugin.py``）。
+
         Returns:
             list[str]: 候选目录。
         """
@@ -218,7 +228,9 @@ class _Folders:
         folders = [f for f in app_data.get_paths() if not _Folders.is_temp(f)]
         try:
             from zmlx.scen import get_path as scen_path
-            folders.append(scen_path())  # 附加 scen 文件夹
+            scen = scen_path()
+            if scen not in folders:
+                folders.append(scen)  # 附加 scen 文件夹
         except Exception:
             pass
 
@@ -326,7 +338,7 @@ def get_files():
     """返回**全部**插件的路径（含禁用、含文件已不存在的），按执行先后排好.
 
     ⚠️ **不预先过滤禁用**：要不要执行由调用方按 :func:`is_disabled` 自己判断
-    （``run_setup`` 就是这么做的）。这样界面也能直接用同一个列表画出「全部插件」
+    （``load_all`` 就是这么做的）。这样界面也能直接用同一个列表画出「全部插件」
     —— 否则用户勾掉一个插件后，它就从界面上消失了，再也没法勾回来。
 
     Returns:
@@ -370,20 +382,36 @@ def get_meta(path):
     没有 enabled ``True``（默认加载）
     ==========  ==========================================================
 
-    ⚠️ ``enabled`` 是**默认值**，不是强制开关：用户显式勾选/取消过之后，
-    一律以用户的为准（见 :func:`is_disabled`）。
+    ⚠️ 另外两个键**只读不生效**（2026-10-23 加，为将来的插件依赖预留）：::
+
+        # ** inner_name = 'image_browser'
+        # ** dependencies = ['viewers', 'data_editor']
+
+    - ``inner_name``：内部标识（``str | None``）。**没写就是 ``None``，不回落到文件名**
+      —— 一旦回落，等于每个插件都有标识符，「没写」与「写了」就分不清了。
+    - ``dependencies``：依赖的 ``inner_name`` 列表（``list[str] | None``）。
+      **缺省是 ``None`` 而不是 ``[]``**：``None`` = 没声明，``[]`` = 明确声明「无依赖」。
+    - 两者**当前完全不起作用**：不排序、不校验存在性与唯一性、界面也不显示。
+      写错只会得到一条警告，不会被丢掉整个配置（宽松校验，见 `_parse_dependencies`）。
+
+    ⚠️ ``enabled`` 的含义是「**默认是否自动加载**」，不是「能否执行」、也不是强制
+    开关：① 用户显式勾选/取消过之后一律以用户的为准（见 :func:`is_disabled`）；
+    ② 即使被判为「禁用」，:func:`load_now`（临时加载）与「被其它插件作为依赖拉起」
+    都**照样执行**它 —— 「禁用」过滤的只有 :func:`load_all` 那一层（2026-10-24 定）。
 
     ⚠️ 这里**只读文本、不执行插件体**：``code_config`` 只 ``exec`` 那些注释行，
     插件本身的代码一行都不跑。所以给一个坏文件调用它也是安全的。
 
-    ⚠️ **结果按 (路径, mtime) 缓存**：``is_disabled`` 会在 ``run_setup`` 的循环里
+    ⚠️ **结果按 (路径, mtime) 缓存**：``is_disabled`` 会在 ``load_all`` 的循环里
     逐个调用它，不缓存的话每次都要读一遍文件。
 
     Args:
         path: 插件文件路径。
 
     Returns:
-        dict: ``{'name': str, 'desc': str, 'enabled': bool}``。
+        dict: ``{'name': str, 'desc': str, 'enabled': bool,
+        'inner_name': str | None, 'dependencies': list[str] | None}``。
+        后两个键只读不生效（见上）。
     """
     key = _norm(path)
     try:
@@ -415,9 +443,72 @@ def get_meta(path):
     if not isinstance(enabled, bool):
         enabled = True  # 没写 / 写错 → 默认加载
 
-    meta = {'name': name.strip(), 'desc': desc.strip(), 'enabled': enabled}
+    inner_name = _parse_inner_name(cfg.get('inner_name', None), path)
+    dependencies = _parse_dependencies(cfg.get('dependencies', None), path)
+
+    meta = {'name': name.strip(), 'desc': desc.strip(), 'enabled': enabled,
+            'inner_name': inner_name, 'dependencies': dependencies}
     _meta_cache[key] = (mtime, meta)
     return meta
+
+
+def _parse_inner_name(value, path):
+    """把 ``# ** inner_name`` 解析成 ``str | None``（**不做任何推断**）.
+
+    ⚠️ 没写就是 ``None``，**不要**回落到文件名 —— 见 PLAN ``T-20261023-08``：
+    一旦回落，等于每个插件都「有了标识符」，「没写」与「写了」就分不清了。
+    ``name`` 那条「没写用文件名」的规则**不要**照搬到这里。
+
+    Args:
+        value: ``code_config`` 里读到的原始值。
+        path: 插件路径（只用于警告文字）。
+
+    Returns:
+        str | None: 去首尾空白的名字；没写 / 写错 / 全空白时为 ``None``。
+    """
+    if value is None:
+        return None
+    if isinstance(value, str):
+        value = value.strip()
+        return value if len(value) > 0 else None
+    warn(f'插件 {path} 的 inner_name 应为字符串，已忽略：{value!r}', stacklevel=3)
+    return None
+
+
+def _parse_dependencies(value, path):
+    """把 ``# ** dependencies`` 解析成 ``list[str] | None``（宽松校验，绝不抛异常）.
+
+    ⚠️ 缺省是 ``None`` 而**不是** ``[]``：``None`` = 没声明，``[]`` = 明确声明「无依赖」
+    —— 将来做依赖解析时两者语义不同。
+
+    ⚠️ 校验刻意宽松：这只是**默认不起作用**的预留字段，一个写坏的 ``dependencies``
+    不该让整个插件列表垮掉（与「配置写坏了也用兜底值」的既有行为一致）。
+
+    ⚠️ **不校验**：不查重、不查依赖指向的插件是否存在 —— 那是将来真正启用依赖功能时的事。
+
+    Args:
+        value: ``code_config`` 里读到的原始值。
+        path: 插件路径（只用于警告文字）。
+
+    Returns:
+        list[str] | None: 去空白、丢掉空串与坏项之后的列表；没写 / 类型不对时为 ``None``。
+    """
+    if value is None:
+        return None
+    if not isinstance(value, (list, tuple)):
+        warn(f'插件 {path} 的 dependencies 应为列表，已忽略：{value!r}', stacklevel=3)
+        return None
+    result = []
+    dropped = []
+    for item in value:
+        if isinstance(item, str) and len(item.strip()) > 0:
+            result.append(item.strip())
+        else:
+            dropped.append(item)
+    if dropped:
+        warn(f'插件 {path} 的 dependencies 里有 {len(dropped)} 项不是有效字符串，'
+             f'已丢弃：{dropped!r}', stacklevel=3)
+    return result
 
 
 def rescan():
@@ -589,6 +680,89 @@ def _run_plugin(path):
     exec(text, _make_space(path))
 
 
+def _looks_like_path(text):
+    """这个字符串**看起来**是路径吗（用来区分「文件不存在」与「没有这个插件」）.
+
+    ⚠️ 只服务于**错误信息**：传入一个不存在的路径时，用户要看到的是
+    「文件不存在：<那个路径>」，而不是「找不到插件」。所以不能只看
+    ``os.path.isfile``，得先判断它长得像不像路径。
+
+    Args:
+        text: 已去空白的字符串。
+
+    Returns:
+        bool: 看起来像路径返回 True。
+    """
+    if len(text) == 0:
+        return False
+    if text.endswith('.py') or text.endswith('.pyw'):
+        return True
+    if os.path.isabs(text):
+        return True
+    return (os.sep in text) or ('/' in text)
+
+
+def _find_by_inner_name(name):
+    """按 ``inner_name`` 在名单里找插件路径（**精确相等**，取第一个）.
+
+    ⚠️ 遍历顺序**固定为** :func:`get_files` 的顺序（名单顺序 + 优先级分段）——
+    不要另起一套，否则同一个名字在不同调用点可能命中不同插件。
+
+    ⚠️ 不做大小写折叠、不做前缀/模糊匹配、不做 stem 推断。
+
+    Args:
+        name: 已去空白的 ``inner_name``。
+
+    Returns:
+        str | None: 第一个匹配项的路径；没有匹配返回 None。
+    """
+    hits = []
+    for path in get_files():
+        try:
+            inner = get_meta(path).get('inner_name', None)
+        except Exception:      # 读不出配置的插件不该让查找整体失败
+            continue
+        if isinstance(inner, str) and inner == name:
+            hits.append(path)
+    if len(hits) == 0:
+        return None
+    if len(hits) > 1:
+        warn(f'inner_name {name!r} 命中 {len(hits)} 个插件，取第一个：{hits[0]}\n'
+             f'其余：{hits[1:]}', stacklevel=3)
+    return hits[0]
+
+
+def _resolve(target):
+    """把「**路径或 `inner_name`**」统一解析成路径.
+
+    判定顺序**固定**（不能反过来）：
+    1. 是一个**存在的文件** → 当路径，原样返回；
+    2. 否则在名单里找 ``inner_name == target`` → 返回那个插件的路径；
+    3. 都不是：看起来像路径（有分隔符 / ``.py`` 结尾 / 绝对路径）→ 原样返回，
+       交给调用处报「文件不存在」；否则返回 ``None``（调用处报「找不到插件」）。
+
+    ⚠️ 顺序的理由：路径是**可验证的**（文件在不在），名字是**自称的**。
+    这样**现有按路径调用的行为一个字节都不变** —— 凡是今天能用的路径都走第 1 步。
+
+    Args:
+        target: 路径或 ``inner_name``。
+
+    Returns:
+        str | None: 解析出的路径；无法识别时为 None。
+    """
+    if not isinstance(target, str):
+        return None
+    text = target.strip()
+    if len(text) == 0:
+        return None
+    if os.path.isfile(text):
+        return text
+    hit = _find_by_inner_name(text)
+    if hit is not None:
+        return hit
+    return text if _looks_like_path(text) else None
+
+
 def is_loaded(path):
     """本次运行里这个插件**是否已经执行过**（启动时执行的也算）.
 
@@ -596,54 +770,55 @@ def is_loaded(path):
     后者是「用户**要不要**它跑」（持久设置）。临时加载过的插件仍然可以是「禁用」状态
     —— 禁用只影响**下次启动**。
 
+    ⚠️ 参数接受「**路径或 `inner_name`**」（2026-10-24）：先经 :func:`_resolve`
+    解析成路径再查表 —— 因为 :data:`_loaded` 的键**永远只能是规范化路径**，
+    否则同一个插件会有「路径」与「名字」两把钥匙，「只加载一次」立刻失效。
+
     Args:
-        path: 插件文件路径。
+        path: 插件文件路径，或插件的 ``inner_name``。
 
     Returns:
-        bool: 本次运行已成功执行过返回 True。
+        bool: 本次运行已成功执行过返回 True；名字解析不出来也返回 False。
     """
-    return _norm(path) in _loaded
+    target = _resolve(path)
+    if target is None:
+        return False
+    return _norm(target) in _loaded
 
 
 def get_load_error(path):
     """读上一次临时加载失败的原因.
 
+    ⚠️ 参数同样接受「**路径或 `inner_name`**」（2026-10-24）：先解析成路径再查
+    :data:`_load_errors` —— 键永远只是规范化路径，不能拿名字当键。
+
     Args:
-        path: 插件文件路径。
+        path: 插件文件路径，或插件的 ``inner_name``。
 
     Returns:
         str | None: 例如 ``'NameError: ...'``；没失败过、或后来成功了，返回 None。
     """
-    return _load_errors.get(_norm(path))
+    target = _resolve(path)
+    if target is None:
+        # 解析不出来时，``load_now`` 把错误记在「输入原样规范化」的键下 —— 这里要
+        # 用**同一个键**取回来，否则按名字查失败原因永远是 None（2026-10-24 实测踩到）。
+        return _load_errors.get(_norm(path) if isinstance(path, str) else '')
+    return _load_errors.get(_norm(target))
 
 
-def load_now(path):
-    """**立即执行**一个插件脚本（临时加载）：不改名单、不改启用状态、不写盘.
+def load_one(path, *, ignore_disabled=True):
+    """执行**一个**插件（:func:`load_now` 与 :func:`load_all` 共用的那一段）.
 
-    这就是界面「设置 → 插件」里那一列按钮做的事 —— 想试一个默认不加载的插件，
-    不必勾选、不必重启，点一下就看到它的菜单。
-
-    ⚠️ **线程**：本函数在**调用它的线程**里执行，自己**不建线程** —— 怎么安排线程是
-    调用方的事。界面上的「临时加载」按钮交给 ``gui.start``（界面的**控制台线程**，
-    与启动时的 :func:`run_setup` 同一条通道）。插件体里的 ``gui.add_action`` /
-    ``gui.add_func`` 都由 ``gui`` 缓冲区派发到 GUI 线程，所以本函数**不需要**在
-    GUI 线程调用，也**没有**任何线程亲和性要求。
-
-    ⚠️ **重复加载有两重保证**：
-    ① 本函数用 :data:`_loaded` 拦住第二次调用（直接返回 False，不执行）；
-    ② 插件若按约定用了 ``@execute_once(file=__file__)``，即使被别处重复执行，
-       注册也只会发生一次。
-    第一重是**必需的**：``execute_once`` 只是建议，不是所有插件都用了它 —— 而一个有
-    副作用的插件（比如往菜单里加一项）被执行两次，就会真的出现两个菜单项。
-
-    ⚠️ **失败不记入** :data:`_loaded`：报错后用户通常会去改文件，改完要能再点一次。
-    失败原因存在 :data:`_load_errors` 里，用 :func:`get_load_error` 取。
+    ⚠️ **成功才写** :data:`_loaded`，失败才写 :data:`_load_errors` —— 标记时机是
+    「执行成功之后」，提前标记会让失败的插件被误认为已执行（依赖递归也靠这个标记截断环）。
 
     Args:
-        path: 插件脚本路径。
+        path: 插件脚本路径（**必须是真实路径**，不解析名字；解析由调用方做）。
+        ignore_disabled: True（默认）不管禁用状态；False 则已禁用就不执行。
 
     Returns:
-        bool: 真的执行了返回 True；文件不存在、或本次运行已经加载过，返回 False。
+        bool: 真的执行了返回 True；文件不存在 / 已经加载过 / （严格模式下）被禁用 /
+        抛异常，都返回 False。
     """
     key = _norm(path)
     if len(key) == 0 or not os.path.isfile(path):
@@ -651,8 +826,12 @@ def load_now(path):
         return False
     if key in _loaded:
         return False
+    if not ignore_disabled and is_disabled(path):
+        # ⚠️ 不写进 _load_errors：这不是「加载失败」，而是「按设置不该执行」。
+        #    用户之后取消禁用、再点一次，仍应当能正常加载。
+        return False
     try:
-        # 与 run_setup 同样的处理：先让插件所在目录的**上级**可 import
+        # 先让插件所在目录的**上级**可 import
         folder = os.path.dirname(os.path.dirname(path))
         if folder not in sys.path:
             sys.path.append(folder)
@@ -670,7 +849,128 @@ def load_now(path):
     return True
 
 
-def run_setup():
+def load_with_deps(path, *, ignore_disabled=True):
+    """执行一个插件，**成功之后**再递归执行它声明的 ``dependencies``.
+
+    顺序**不可调换**（PLAN ``T-20261023-10``）::
+
+        ① 执行自己 → ② 成功了才标记（:func:`load_one` 内部做）
+        → ③ 再逐个递归拉依赖 → ④ 自己失败就**不标记、不碰依赖**
+
+    ⚠️ 这个顺序**天然处理循环依赖**：A ⇄ B 时，A 执行成功即被标记，递归到 B、B 成功
+    也被标记，再回到 A 时 ``A 已在 _loaded`` → 停。反过来（先拉依赖再执行自己）会无限递归。
+
+    ⚠️ **依赖一律不看「禁用」**：「禁用」的语义只有一条 —— **启动时不自动加载它**。
+    而依赖不是「自动加载」的，是被主插件的关系**拉起来**的。所以递归这一层固定
+    ``ignore_disabled=True``；只有**最外层**（用户/启动循环指定的那个）才看调用方传的
+    ``ignore_disabled``。
+
+    ⚠️ **依赖失败只警告，不影响主插件的返回值**：主插件已经执行成功，没法回滚 ——
+    这是「先执行自己」带来的必然取舍。
+
+    Args:
+        path: 插件脚本路径（真实路径）。
+        ignore_disabled: 只作用于**最外层**；递归时一律 True（见上）。
+
+    Returns:
+        bool: 主插件是否成功执行。
+    """
+    if not load_one(path, ignore_disabled=ignore_disabled):
+        return False
+
+    try:
+        deps = get_meta(path).get('dependencies', None) or []
+    except Exception as err:
+        warn(f'读插件依赖失败：{path}（{err}）', stacklevel=2)
+        deps = []
+
+    for name in deps:
+        target = _resolve(name)
+        if target is None:
+            warn(f'插件 {path} 依赖的 {name!r} 找不到（既不是存在的文件，'
+                 f'也没有同名 inner_name），已跳过', stacklevel=2)
+            continue
+        if _norm(target) in _loaded:
+            # ⚠️ **已在本次运行执行过就直接跳过，不要当成失败**：循环依赖（A ⇄ B）
+            #    正是靠这一步自然结束的 —— 若在这里调 load_with_deps，它会因为
+            #    load_one 返回 False（已加载）而**误报**一条「依赖加载失败」警告
+            #    （2026-10-24 实测踩到）。
+            continue
+        if not load_with_deps(target, ignore_disabled=True):
+            reason = _load_errors.get(_norm(target), '未知原因')
+            warn(f'插件 {path} 依赖的 {name!r} 加载失败：{reason}', stacklevel=2)
+    return True
+
+
+def load_now(path, *, ignore_disabled=True):
+    """**立即执行**一个插件脚本（临时加载）：不改名单、不改启用状态、不写盘.
+
+    这就是界面「设置 → 插件」里那一列按钮做的事 —— 想试一个默认不加载的插件，
+    不必勾选、不必重启，点一下就看到它的菜单。
+
+    ⚠️⚠️ **默认不受「禁用」限制**（2026-10-22 定稿，推翻同日的上一次改动）：
+    两个入口的语义**不同**，把它们绑在一起会**让这个按钮彻底没用**：
+
+    ==============  ==========================================================
+    入口               「启用 / 禁用」意味着什么
+    ==============  ==========================================================
+    ``load_all``    **持久设置**：下次启动跑不跑 —— 必须尊重它
+    ``load_now``     **用户当场要求试一下** —— 与设置无关，也不改设置
+    ==============  ==========================================================
+
+    推论很致命：**启用的插件启动时早就执行过**（``is_loaded`` 为真、按钮显示
+    「已加载」且点不动），所以**唯一能点「加载」的恰好是禁用的插件**。于是
+    「临时加载尊重禁用」= 按钮对谁都无效（2026-10-22 实测：17 项里 14 项禁用，
+    点谁都没反应，且不报错）。
+
+    现在恢复原语义：默认执行，**不写任何设置**，重启后仍按「默认加载」勾选决定
+    （「设置 → 插件」第一列，2026-10-25 由「启用」改名）。
+    需要严格模式（「禁用的就别跑」）时，由调用方显式传 ``ignore_disabled=False``。
+
+    ⚠️ **线程**：本函数在**调用它的线程**里执行，自己**不建线程** —— 怎么安排线程是
+    调用方的事。界面上的「临时加载」按钮交给 ``gui.start``（界面的**控制台线程**，
+    与启动时的 :func:`load_all` 同一条通道）。插件体里的 ``gui.add_action`` /
+    ``gui.add_func`` 都由 ``gui`` 缓冲区派发到 GUI 线程，所以本函数**不需要**在
+    GUI 线程调用，也**没有**任何线程亲和性要求。
+
+    ⚠️ **重复加载有两重保证**：
+    ① 本函数用 :data:`_loaded` 拦住第二次调用（直接返回 False，不执行）；
+    ② 插件若按约定用了 ``@execute_once(file=__file__)``，即使被别处重复执行，
+       注册也只会发生一次。
+    第一重是**必需的**：``execute_once`` 只是建议，不是所有插件都用了它 —— 而一个有
+    副作用的插件（比如往菜单里加一项）被执行两次，就会真的出现两个菜单项。
+
+    ⚠️ **失败不记入** :data:`_loaded`：报错后用户通常会去改文件，改完要能再点一次。
+    失败原因存在 :data:`_load_errors` 里，用 :func:`get_load_error` 取。
+
+    ⚠️ **被依赖拉起的插件即使「禁用」也会执行**（2026-10-24）：本函数成功后会把
+    它声明的 ``dependencies`` 递归拉起来，而递归那一层**一律不看禁用** ——
+    禁用只表示「启动时不自动加载它」，而被拉起的插件不是被自动加载的。
+    详见 :func:`load_with_deps`。
+
+    Args:
+        path: 插件脚本路径，**或插件的 ``inner_name``**（2026-10-24 起）。名字按
+            :func:`_resolve` 的规则解析成路径；解析不出来才报错。
+        ignore_disabled: True（默认）= 不管禁用状态都执行 —— 这正是「临时加载」的
+            语义。传 False 则退回「已禁用就不执行」
+
+    Returns:
+        bool: 真的执行了返回 True；文件不存在、名字解析不出来、本次运行已经加载过
+        （或在严格模式下被禁用），返回 False。
+    """
+    target = _resolve(path)
+    if target is None:
+        # ⚠️ 键只能是**规范化路径**；解析不出来时用输入原样当键（只为让调用方
+        #    按同样的输入把错误取回去，绝不会和某个真实路径撞上）。
+        _load_errors[_norm(path) if isinstance(path, str) else ''] = (
+            f'找不到插件：{path!r}（既不是存在的文件，也没有同名 inner_name）')
+        return False
+    # ⚠️ 走 load_with_deps：主插件成功之后会把它声明的 dependencies 递归拉起来
+    #    （2026-10-24 起，见 PLAN T-20261023-10）。
+    return load_with_deps(target, ignore_disabled=ignore_disabled)
+
+
+def load_all():
     """依次执行所有**启用**的插件脚本（注册菜单、添加面板等）。
 
     ⚠️ 「禁用」的语义只有一条：**这段代码不执行**。:func:`get_files` 返回的是
@@ -689,30 +989,55 @@ def run_setup():
     「接线」—— 挂菜单（``gui.add_action``）、注册 ``gui`` 命令（``gui.add_func``）、
     注册文件类型；重活一律推迟到用户真正用到时，或放进后台线程。判据与反例见
     ``AGENTS.md`` §0.5。
-    """
-    from zmlx.ui import gui
 
+    ⚠️ **每个插件走 :func:`load_with_deps`**（2026-10-24 起）：主插件成功后会递归
+    拉起它声明的 ``dependencies``。由此产生两个必须知道的行为：
+
+    1. **被依赖拉起的插件不看禁用**：「禁用」只表示「启动时不自动加载它」，而依赖是
+       被主插件的关系拉起来的，不是自动加载的 ⇒ 它会被执行。这是本轮**唯一**的行为变化。
+    2. **循环里要跳过已加载的**：B 若已被 A 的依赖递归拉起，等循环走到 B 时必须
+       什么都不做（否则菜单挂两次）。
+    """
     the_logs = []
     for path in get_files():
+        # ⚠️ **先看「已加载」，再看「禁用」**：被依赖递归拉起的插件可能同时也是禁用的，
+        #    这时它确实执行过了，日志要记 `Exec File:` —— 放到禁用判断之后就会被
+        #    错记成「跳过（禁用）」，界面状态列跟着显示错（2026-10-24 实测踩到）。
+        if _norm(path) in _loaded:
+            the_logs.append(f'Exec File: {path}')
+            continue
         if is_disabled(path):
             the_logs.append(f'Skipped (disabled): {path}')
             continue
         if not os.path.isfile(path):
             the_logs.append(f'Skipped (missing): {path}')
             continue
-        try:
-            # 确保包含插件脚本的包能够被正确 import
-            folder = os.path.dirname(os.path.dirname(path))
-            if folder not in sys.path:
-                sys.path.append(folder)
-
+        if load_with_deps(path):
             the_logs.append(f'Exec File: {path}')
-            _run_plugin(path)
-            _loaded[_norm(path)] = None  # 记进「本次运行已执行」，供临时加载去重
-        except Exception as err:
-            the_logs.append(f'Failed: {err}')
-            gui.add_message(f'path = {path}, error = {err}')
+        else:
+            error = _load_errors.get(_norm(path), '未知原因')
+            the_logs.append(f'Failed: {error}')
     app_data.put('gui_setup_logs', the_logs)
+
+
+def run_setup():
+    """旧名（**已弃用**）：请改用 :func:`load_all`.
+
+    ⚠️ 本转发层只做**单向转发**，将于 **2027-10-23** 删除。
+
+    保留它有两个理由：① 外部工作区里的脚本可能还在调它；② 每次调用都留一条
+    ``DeprecationWarning``（经 :func:`zmlx.system.warn`，于是也进「今天用到过没有」
+    的日志），这样才能判断**到底还有没有人在用**，而不是凭感觉删。
+
+    ⚠️ **不要在垫片里重复实现一遍逻辑** —— 复制会带来两份 ``_loaded`` 记账，
+    「只加载一次」立刻失效。这里只有转发。
+
+    Returns:
+        None
+    """
+    warn('``plugins.run_setup`` 已改名为 ``plugins.load_all``；本转发层将于'
+         ' 2027-10-23 删除。', DeprecationWarning, stacklevel=2)
+    return load_all()
 
 
 def test_1():

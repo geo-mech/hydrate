@@ -76,7 +76,7 @@ Qt 会发 ``PaletteChange``，控件当场重取配色、重套样式并重画�
 Modified by DeepSeek, 2026-10-11: 由 fractal/widgets/fractal.py 更名（FractalWindow →
 FractalEvolutionView），Qt 导入改走 zmlx.ui.pyqt，尺寸改为自适应（去掉 940×700 的硬下限）。
 本文件**既是插件、也是控件本体**（单文件自足，只依赖 ``zmlx.ui.pyqt``）。
-作为插件被 ``run_setup`` 执行时，它只注册命令 ``gui.show_classic_fractal()`` 与
+作为插件被 ``load_all`` 执行时，它只注册命令 ``gui.show_classic_fractal()`` 与
 菜单「演示 → 经典分形」；``# ** enabled = False`` 表示**默认不加载** —— 在
 「设置 → 插件」里勾上、重启后菜单才会出现。直接运行本文件
 （``python zmlx/ui/plugins/builtin/fractal_demo.py``）则单独开一个窗口自测。
@@ -1228,9 +1228,12 @@ class FractalEvolutionView(QtWidgets.QWidget):
             scale = dict((p[0], p[6]) for p in self.PARAMS)[key]
             fmt = dict((p[0], p[5]) for p in self.PARAMS)[key]
             shown = int(round(sld / scale))
+            # ⚠️ try/finally 不可省：中途抛异常而没复位 ``blockSignals``，滑块会永久哑掉
             slider.blockSignals(True)
-            slider.setValue(shown)
-            slider.blockSignals(False)
+            try:
+                slider.setValue(shown)
+            finally:
+                slider.blockSignals(False)
             label.setText(fmt.format(shown))
 
     def _relayout(self) -> None:
@@ -2050,7 +2053,7 @@ def test_1() -> int:
 
 
 # ---------------------------------------------------------------------------
-# 插件入口：注册命令与菜单（被 run_setup exec 执行时才会跑）
+# 插件入口：注册命令与菜单（被 load_all exec 执行时才会跑）
 # ---------------------------------------------------------------------------
 def show_classic_fractal():
     """打开「经典分形」标签页（菜单项与 ``gui.show_classic_fractal()`` 都走它）."""
@@ -2062,7 +2065,7 @@ def show_classic_fractal():
 
 @execute_once(file=__file__)
 def setup_ui():
-    """注册命令与菜单项（本文件作为插件被 ``run_setup`` 执行时调用）.
+    """注册命令与菜单项（本文件作为插件被 ``load_all`` 执行时调用）.
 
     ⚠️ 本函数在**控制台内核线程**里执行，``gui.add_func`` / ``gui.add_action``
     会被 GuiApi 派发到主线程执行（见 ``zmlx/ui/main.py`` 的 ``__console_kernel``）。
@@ -2080,11 +2083,14 @@ def setup_ui():
 
 
 if __name__ == '__zml_plugin__':
-    # 插件路径：由 run_setup exec 执行，**没人会替我们调 setup_ui()**，所以在
+    # 插件路径：由 load_all exec 执行，**没人会替我们调 setup_ui()**，所以在
     # 模块顶层自己调（见 zmlx/ui/plugins/__init__.py）。
     setup_ui()
-elif __name__ == '__main__':
+
+if __name__ == '__main__':
     # 直接运行本文件：独立窗口自测（等价于搬入前的 ``python -m ...``）。
+    # ⚠️ 用独立的 ``if`` 而不是 ``elif``：两种运行方式的判断互不相干，
+    #    各自独立判断更清楚，也便于在 IDE 里单独调试下面这一支。
     if '--benchmark' in sys.argv:
         FractalEvolutionView.benchmark()
         sys.exit(0)

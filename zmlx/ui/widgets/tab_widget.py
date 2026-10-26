@@ -34,8 +34,14 @@ class TabWidget(QtWidgets.QTabWidget):
         if self.count() >= 1:
             menu.addAction(
                 create_action(self, '关闭所有', slot=self.close_all_tabs))
-            menu.addAction(
-                create_action(self, '列出标签', slot=gui.show_tab_details))
+            # ⚠️ 「列出标签」（``gui.show_tab_details``）2026-10-22 起由插件
+            #    ``plugins/builtin/viewers.py`` 提供；插件被禁用时由
+            #    ``extra_setups/plugin_placeholders.py`` 的**占位**顶上（只打印提示）。
+            #    这里仍按命令存在性决定要不要加这一项 —— 菜单项点了要「开标签页」，
+            #    给一条只会打印提示的菜单项没有意义。
+            if gui.get_func('show_tab_details') is not None:
+                menu.addAction(
+                    create_action(self, '列出标签', slot=gui.show_tab_details))
             if tab_index is not None:
                 menu.addSeparator()
                 menu.addAction(create_action(

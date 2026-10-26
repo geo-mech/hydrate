@@ -10,8 +10,10 @@ from zmlx.system import warn
 
 
 
-warn(f'The module {__name__} will be removed after 2027-5-23',
-              DeprecationWarning, stacklevel=2)
+warn(
+    'The module zmlx.plt.fn2 已弃用（remove after 2027-5-23）：'
+    '请改用 `from zmlx import show_fn2`',
+    DeprecationWarning, stacklevel=2)
 from zmlx.plt.on_ui import show_fn2
 
 

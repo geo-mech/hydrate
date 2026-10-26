@@ -10,5 +10,7 @@ from zmlx.plt.on_axes import add_cbar
 _keep = [add_cbar]
 
 
-warn(f'The module {__name__} will be removed after 2027-5-23',
-              DeprecationWarning, stacklevel=2)
+warn(
+    'The module zmlx.plt.cbar 已弃用（remove after 2027-5-23）：'
+    '请改用 `from zmlx import add_cbar`',
+    DeprecationWarning, stacklevel=2)

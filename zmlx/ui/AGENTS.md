@@ -52,12 +52,27 @@ from zmlx.ui.tabs import ImageBrowser                       # ❌ 新元素不�
 
 ## 3. 挂到界面上：走 `extra_setups/`，不动 `main.py`
 
-给界面新增一个**入口**（菜单项、命令）时，**不要**去改 `main.py`（那个文件 2600 多行，
-是所有界面的共用枢纽）。放到 [`extra_setups/`](extra_setups/)：它就是「额外菜单动作」的
-落脚处，与 `vtk_view` / `testing` / `tetris` / `image_browser` 同一套路。
+给界面新增一个**入口**（菜单项、命令）时，**不要**去改 `main.py`（那个文件 2760 行，
+是所有界面的共用枢纽）。放到 [`extra_setups/`](extra_setups/)：它就是「**必须加载**的装配」
+的落脚处。
+
+⚠️ **本章只讲「放哪」**。**怎么放**（`@execute_once`、模块顶层不许有语句、必须登记到
+`__init__.py`、启动顺序契约、加菜单项前的三问）在
+[`extra_setups/AGENTS.md`](extra_setups/AGENTS.md) —— 那里是唯一来源，本节不复制。
+
+⚠️ **先判一次「能不能关」**（判据与完整对照表见那份文档 §1）：
+
+| 关掉它，软件还能不能正常用？ | 放哪 |
+|---|---|
+| **不能** | [`extra_setups/`](extra_setups/)（必加载） |
+| **能** | 插件：[`plugins/builtin/`](plugins/AGENTS.md) 或 `scen/<包>/zml_plugin.py` |
+
+⚠️ 两者**运行环境几乎完全一样**（都在 `__console_kernel` 里、console 线程、`MainWindow`
+构造之后、都走 `gui.xxx`）—— 唯一的分界线就是上面那个「能不能关」，不是「重不重要」。
+（⚠️ 彩蛋 `tetris` 已随两个游戏搬进 `zmlx/scen/easter_eggs/`，不再从本目录挂。）
 
 ```python
-# zmlx/ui/extra_setups/xxx.py
+# zmlx/ui/extra_setups/xxx.py  —— 完整要求见 extra_setups/AGENTS.md §2
 from zmlx.system import execute_once
 
 @execute_once(file=__file__)
@@ -157,6 +172,32 @@ def setup_ui():
 `None`（**不排队**，不是「稍后重试」）。正常顺序调用只占 1 个，不会碰到；只有在一个线程里
 同时起多个 `gui.xxx` 才可能撞上。
 
+⚠️⚠️ **`gui.mark_direct(key)` 默认不要用**（2026-10-23 定，这条是被踩过一次才写下的）：
+它把某条命令登记成「**is_direct**」，于是 `gui.<key>(...)` **不在 GUI 线程执行，而是在
+调用者线程直接执行**（见 `gui_buffer.py` 的 `mark_direct` / `GuiApi.command` 的
+`is_direct` 分支）。去掉的那一步**正是**「派发到 GUI 线程」。
+
+它只对两类命令成立：
+
+| 能用 | 例子 | 为什么 |
+|---|---|---|
+| 返回一个**与窗口无关**的对象/值 | `window`（返回 `MainWindow` 实例本身） | 不建控件、不碰窗口，谁调都一样 |
+| 函数**本来就能在任意线程跑** | `edit_in_tab` / `reg_file_type` | 它们的逻辑不依赖 GUI 线程 |
+
+❌ **凡是会建控件、碰窗口、读标签容器的命令，哪怕它只是「转发」，也不能登记**：
+登记后后台线程（控制台 / 插件）调 `gui.xxx()` 就**当场在后台线程里**建控件 —— Qt 控件
+只能在 GUI 线程碰，轻则不刷新、重则崩，而且不可复现。
+
+⚠️ **「它只是转发、多绕了一跳」不构成理由**（2026-10-23 因此把 14 条插件命令登记过、
+当日撤销）：命令表里放的往往是**插件函数本身**（`gui.add_func` 后写覆盖），主窗口经
+`gui.xxx` 是「GUI 线程内直接执行 + 它自己再派发一次 `get_widget`」—— 那一跳是必须的，
+不是白跳。只有插件被禁用、命令表里仍是 `MainWindow` 的方法时才多绕一跳，代价只是一句
+`print`，不值得为它牺牲线程安全。
+
+📌 **口诀**：**要动界面就走通道（派发到 GUI 线程）；`mark_direct` 只留给「本来就不需要
+GUI 线程」的东西。** 在 GUI 线程里嫌多一跳，正确的做法是**直接调那个对象**
+（`w.show_timer()`），而不是把 `gui.show_timer` 改成直调。
+
 ### 6.3 单任务约束（硬约束，2026-10-20 实测）
 
 `Console` 只有**一个** `thread` 槽位，`start_func` 的第一件事是：
@@ -244,6 +285,7 @@ if self.is_running():
 | 点了「运行」毫无反应，只响一声 | 控制台正忙，`start_func` 直接把请求丢了（§6.3） |
 | 界面彻底冻死，「继续」也点不动 | GUI 线程被 `break_point` 挂住，或 GUI 线程在等内核线程 |
 | 控件随机不刷新 / 偶发崩溃 | 从内核线程直接碰了控件，没走 `gui.xxx` / `gui.call` |
+| 后台线程调用 `gui.xxx()` 时界面卡住 / 崩在 Qt 内部 | 那条命令被 `mark_direct` 登记过，于是**在后台线程里**建了控件（§6.2） |
 | 打印 `Gui Command Ignored: ...` | 20 个通道全被并发调用占满（§6.2） |
 | 脚本 `print` 的内容看不到 | 面板没开 —— 看左侧状态栏（只有首行）；或面板被别的标签挡住 |
 | 后一个任务覆盖/顶掉了前一个 | 单槽位；先判 `is_running()`（§6.3） |
@@ -259,6 +301,9 @@ if self.is_running():
    并按 §6.3 处理「忙」；任务里按 §6.4 动界面。
 5. **是「多个短/中任务并发」**（扫描、加载、批量小请求，**不需要**暂停/停止） →
    `zmlx.ui.utils.thread_runner`（§6.8）；不要塞给 `gui.start`，也不要新写 `QThread` 子类。
+
+⚠️ **以上五条都不会用到 `gui.mark_direct`** —— 它在第 1 条之外，是「**本来就不需要 GUI
+线程**」时才有的例外（判据与踩坑记录见 §6.2）。
 
 ### 6.8 多个短/中任务并发：`thread_runner`（2026-10-20 新增）
 

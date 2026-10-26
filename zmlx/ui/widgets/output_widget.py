@@ -4,9 +4,15 @@
 控件**不支持**的序列（擦行 / 清屏 / 光标定位 / OSC 标题……）会被**删除**，
 不会在界面上显示成乱码。
 
+保存 / 恢复（:meth:`OutputWidget.save_text` / :meth:`OutputWidget.load_text`）用 **HTML**
+（:attr:`OutputWidget.SUFFIX`）而不是纯文本：颜色、粗体等都是存在文本片段的
+``QTextCharFormat`` 里的，``toPlainText()`` 会把它们**全部丢掉** —— 早先正是这样存的，
+于是「重启后加载的历史没有颜色」（2026-10-26 修复）。旧版本留下的 ``.txt`` 仍按纯文本打开。
+
 Modified by Claude, 2026-08-12
 Modified by DeepSeek, 2026-10-07: add_text 支持 ANSI 颜色，并过滤不支持的转义序列
 Modified by DeepSeek, 2026-10-08: 「内核并行」开关移到主窗口状态栏（原 parallel_edit 属性移除）
+Modified by DeepSeek, 2026-10-26: 输出历史改存 HTML，重启后颜色不再丢失
 """
 
 import os
@@ -230,7 +236,7 @@ class OutputWidget(QtWidgets.QWidget):
         self.text_browser = TextBrowser(self)
         layout.addWidget(self.text_browser)
 
-        # ⚠️ 「内核并行」复选框（CoreParallelEdit）**已经搬到主窗口的状态栏**里了
+        # ⚠️ 「并行」复选框（CoreParallelEdit，2026-10-26 前叫「内核并行」）**已经搬到主窗口的状态栏**里了
         #    （见 MainWindow.__init__）：它是**全局**开关，而本面板可以不开 / 被收起，
         #    开关就跟着看不见了。不要在这里再放一个 —— 两个 QCheckBox 不会自动同步
         #    （各自只在构造时 setChecked 一次），会显示同一个状态却各说各话。
@@ -514,21 +520,63 @@ class OutputWidget(QtWidgets.QWidget):
         self._ansi_pending = ''
         self.add_text(text)
 
+    #: 历史文件扩展名。用 HTML 而不是 txt：颜色 / 粗体等是存在文本片段的
+    #: ``QTextCharFormat`` 里的，``toPlainText()`` 会把它们**全部丢掉**，于是重启后
+    #: 只剩无色文本（2026-10-26 修的就是这个）；``toHtml()`` 才能把它们写进文件。
+    SUFFIX = '.html'
+    #: 非 HTML 的老历史文件（旧版本存的是纯文本）
+    SUFFIX_LEGACY = '.txt'
+
     def load_text(self, filename):
+        """从历史文件恢复输出内容（``.html`` 保留颜色，``.txt`` 按纯文本解析）。
+
+        Args:
+            filename: 历史文件路径。按**扩展名**决定走富文本还是纯文本 —— 旧版本存的
+                是 ``.txt``（纯文本，颜色本就已丢失），仍要能打开。
+        """
         try:
             if os.path.isfile(filename):
-                with open(filename, 'r') as file:
-                    self.set_text(file.read())
+                # ⚠️ 必须显式 encoding='utf-8'：默认会用系统编码（中文 Windows 上是 GBK），
+                #    而文件是 UTF-8 写的，含中文时抛 UnicodeDecodeError（被下面的 except
+                #    吞成空内容，现场表现为「历史加载不出来」）。
+                if str(filename).lower().endswith(self.SUFFIX):
+                    self.set_html(filename)
+                else:
+                    with open(filename, 'r', encoding='utf-8') as file:
+                        self.set_text(file.read())
         except Exception as err2:
             print(err2)
             self.text_browser.setPlainText('')
 
     def save_text(self, filename):
+        """把当前输出保存为历史文件（``.html`` 保留颜色，其余按纯文本保存）。"""
         try:
-            with open(filename, 'w') as file:
-                file.write(self.text_browser.toPlainText())
+            text = (self.text_browser.toHtml()
+                    if str(filename).lower().endswith(self.SUFFIX)
+                    else self.text_browser.toPlainText())
+            with open(filename, 'w', encoding='utf-8') as file:
+                file.write(text)
         except Exception as err2:
             print(err2)
+
+    def get_html(self):
+        """返回当前输出的 HTML（保留颜色 / 粗体等全部字符格式）。"""
+        return self.text_browser.toHtml()
+
+    def set_html(self, filename):
+        """用历史 HTML 文件的内容替换当前输出（保留颜色 / 粗体等字符格式）。
+
+        ⚠️ 与 :meth:`set_text` 一样要复位 :attr:`_ansi_fmt` / :attr:`_ansi_pending`：
+        否则重启后第一条 ``print`` 会**继承**上一份输出残留的 ANSI 状态，把新内容
+        染成旧颜色。
+        """
+        if not os.path.isfile(filename):
+            return
+        with open(filename, 'r', encoding='utf-8') as file:
+            html = file.read()
+        self.text_browser.setHtml(html)
+        self._ansi_fmt = QtGui.QTextCharFormat()
+        self._ansi_pending = ''
 
 
 def test_1():

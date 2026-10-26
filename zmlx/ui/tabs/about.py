@@ -14,7 +14,7 @@
 慢信息只会在**首次显示**时自动查一次（:meth:`About.showEvent`）；用户想重查有两个
 入口，**它们要刷的东西不一样**：
 
-- 主窗口菜单「显示 → 刷新」进 :meth:`About.refresh`：``MainWindow.refresh`` 会
+- 主窗口菜单「操作 → 刷新」进 :meth:`About.refresh`：``MainWindow.refresh`` 会
   duck-typing 地调用**当前页面**的 ``refresh()``（``hasattr(current, "refresh")``），
   本控件的 :meth:`About.refresh` 就是那个接口。状态栏的授权状态由
   ``MainWindow.refresh`` 自己接着刷（**不必**在这里再刷一遍）。
@@ -53,7 +53,7 @@ running``）——不是异常，Python 侧兜不住。
 本页原来的「彩蛋」按钮（随机玩一局「螺螺是方块」/「连连看」）**已移除**，
 环境变量 ``show_easter_egg`` 也随之作废（不再读取）。
 
-两个游戏现在是**插件**（``plugins/builtin/tetris.py`` / ``plugins/builtin/lianliankan.py``），
+两个游戏现在是**插件**（``zmlx/scen/easter_eggs/``，入口 ``zml_plugin.py``），
 都声明了 ``# ** enabled = False`` —— **默认不加载**。想去玩的话：
 
 1. 「设置 → 插件」里勾选对应的游戏；
@@ -78,6 +78,7 @@ Modified by WorkBuddy, 2026-10-16: 「彩蛋」按钮改为默认不显示，仅
 Modified by DeepSeek, 2026-10-18: 移除「彩蛋」按钮与 show_easter_egg 环境变量 ——
     两个游戏改由插件机制管理（plugins/ 里声明 enabled = False，勾选后菜单
     「帮助 → 彩蛋」出现入口）
+Modified by DeepSeek, 2026-10-26: 「代码行数」那一行最后一列加「架构」按钮（→ 帮助 → 架构）
 """
 
 from zmlx.system import app_data
@@ -383,10 +384,18 @@ class About(QtWidgets.QTableWidget):
             elif label == "作者单位":
                 btn = QtWidgets.QPushButton("打开")
                 btn.clicked.connect(lambda checked: open_url("http://www.igg.cas.cn/"))
+            elif label == CODE_LINES_LABEL:
+                # ★ 2026-10-26：最后一列加「架构」按钮 —— 代码行数那一行正好是
+                #   「源码有多少」的信息，"想看看这些代码是怎么组织的"是紧接着的下一步。
+                #   ⚠️ 走 ``_show_architecture`` 而不是直接调 ``gui.show_architecture``：
+                #   后者是 ``extra_setups/architecture.py`` 注册的，理论上总在；但万一
+                #   没注册上，按命令名取不到就打印一句可操作提示，而不是抛异常。
+                btn = QtWidgets.QPushButton("架构")
+                btn.clicked.connect(self._show_architecture)
             elif label == "Python解释器":
                 # ★ 彩蛋**不在这里**（2026-10-18 移走）：两个游戏现在是插件
-                #   （``plugins/builtin/tetris.py`` / ``plugins/builtin/lianliankan.py``），
-                #   都声明了 ``# ** enabled = False``（默认不加载）。用户在
+                #   （``zmlx/scen/easter_eggs/``，一个入口挂两项菜单），声明了
+                #   ``# ** enabled = False``（默认不加载）。用户在
                 #   「设置 → 插件」里勾上之后，菜单「帮助 → 彩蛋」下会出现
                 #   各自的入口 —— **菜单就是开关**，本页不必再放一个按钮、
                 #   也不必再看 ``show_easter_egg`` 环境变量。
@@ -421,6 +430,22 @@ class About(QtWidgets.QTableWidget):
         item = QtWidgets.QTableWidgetItem(text)
         item.setFlags(item.flags() & ~QtCore.Qt.ItemFlag.ItemIsEditable)
         return item
+
+    def _show_architecture(self):
+        """「代码行数」那一行的「架构」按钮：打开「帮助 → 架构」那个页面（2026-10-26）.
+
+        ⚠️ 按**命令名**取，不直接 ``gui.show_architecture()``：那条命令由
+        ``extra_setups/architecture.py`` 注册，正常情况下总在；万一没注册上
+        （导入失败 / gui 尚未接好），这里给一句可操作的提示，而不是让按钮点了抛异常。
+        """
+        try:
+            if gui.get_func('show_architecture') is None:
+                print('「架构」页面暂不可用：它由 extra_setups/architecture.py 注册，'
+                      '请检查启动日志里有没有 setup architecture 相关的错误。')
+                return
+            gui.show_architecture()
+        except Exception as err:
+            print(f'Error when show architecture: {err}')
 
     def start_code_lines_query(self):
         """启动后台线程统计代码行数（主线程调用，只会跑一次）.
@@ -464,7 +489,7 @@ class About(QtWidgets.QTableWidget):
 
         ⚠️ 这里用 :meth:`start_slow_query`（而非 :meth:`refresh`）：切标签页会
         反复触发本事件，不能每次都重新联网查一遍；用户想重查请走菜单
-        「显示 → 刷新」，那条路径进 :meth:`refresh`。
+        「操作 → 刷新」，那条路径进 :meth:`refresh`。
         """
         super(About, self).showEvent(event)
         if self._slow_started:
@@ -506,11 +531,11 @@ class About(QtWidgets.QTableWidget):
         self._code_thread = None
 
     def refresh(self):
-        """重新查一遍「慢信息」并刷新表格（**菜单「显示 → 刷新」的接口**）.
+        """重新查一遍「慢信息」并刷新表格（**菜单「操作 → 刷新」的接口**）.
 
         主窗口的 :meth:`MainWindow.refresh` 会 duck-typing 地调用**当前页面**的
         ``refresh()``（见 ``hasattr(current, "refresh")``），本方法就是那个接口 ——
-        没有它，「显示 → 刷新」在本页面什么也不会发生。
+        没有它，「操作 → 刷新」在本页面什么也不会发生。
 
         ⚠️ 与 :meth:`start_slow_query` 的分工：那个是**首次显示**时的入口
         （只启动一次，见 :meth:`showEvent`）；本方法必须**可重复调用**，否则
@@ -606,7 +631,7 @@ class About(QtWidgets.QTableWidget):
         :meth:`MainWindow.refresh` duck-typing 调用的**通用接口**，而那个接口在
         ``refresh()`` 之后**本来就会**调 ``update_system_state()``（见
         ``MainWindow.refresh`` 里紧跟着的一句）。若把状态栏刷新塞进
-        ``refresh``，从菜单「显示 → 刷新」进来时就会**连刷两次**状态栏。
+        ``refresh``，从菜单「操作 → 刷新」进来时就会**连刷两次**状态栏。
         右键菜单不经过 ``MainWindow.refresh``，所以这里需要自己补一次。
 
         ⚠️ **读缓存**（用 ``gui.update_system_state()`` 的默认 ``read_cache=True``）：

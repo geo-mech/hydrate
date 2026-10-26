@@ -37,26 +37,23 @@ def add_rc3(
     from mpl_toolkits.mplot3d.art3d import Poly3DCollection
     import numpy as np
 
-    if 'color' in deprecated_opts:
-        if face_color is None:
-            face_color = deprecated_opts['color']
-        else:
-            warn(f'Option <color> is deprecated (remove after 2026-12-9), use <face_color> instead',
-                          DeprecationWarning, stacklevel=2)
+    # 旧参数 color/alpha/cmap 的兼容：只要调用方还在用旧名字就发告警；新参数优先。
+    # ⚠️ 2026-10-21 前的写法恰好在"只有旧参数"时**不告警**、在"新旧都给"时才告警，
+    #    等于旧用法从来没有被统计到（zmlx.system.warn 的 tag 也因此查不出来）。
+    _old_to_new = dict(color='face_color', alpha='face_alpha', cmap='face_cmap')
+    for old in _old_to_new:
+        if old in deprecated_opts:
+            warn(
+                f'add_rc3 的参数 <{old}> 已弃用（remove after 2026-12-9）：'
+                f'请改用 <{_old_to_new[old]}>；旧名字只在新名字未给时生效',
+                DeprecationWarning, stacklevel=2, tag=f'add_rc3.{old}')
 
-    if 'alpha' in deprecated_opts:
-        if face_alpha is None:
-            face_alpha = deprecated_opts['alpha']
-        else:
-            warn(f'Option <alpha> is deprecated (remove after 2026-12-9), use <face_alpha> instead',
-                          DeprecationWarning, stacklevel=2)
-
-    if 'cmap' in deprecated_opts:
-        if face_cmap is None:
-            face_cmap = deprecated_opts['cmap']
-        else:
-            warn(f'Option <cmap> is deprecated (remove after 2026-12-9), use <face_cmap> instead',
-                          DeprecationWarning, stacklevel=2)
+    if face_color is None and 'color' in deprecated_opts:
+        face_color = deprecated_opts['color']
+    if face_alpha is None and 'alpha' in deprecated_opts:
+        face_alpha = deprecated_opts['alpha']
+    if face_cmap is None and 'cmap' in deprecated_opts:
+        face_cmap = deprecated_opts['cmap']
 
     if face_color is None:  # 此时用颜色来代替序号
         face_color = list(range(len(rc3)))

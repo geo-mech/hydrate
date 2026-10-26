@@ -52,6 +52,8 @@ Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统�
 Modified by DeepSeek, 2026-10-20: 补「四条通道」；``call`` / ``start`` / ``add_task``
     由动态代理改为显式方法（带 docstring，便于检索）
 Modified by DeepSeek, 2026-10-20: 补「Console 仍是长任务唯一槽位」，指向 thread_runner 的分工
+Modified by DeepSeek, 2026-10-23: ``mark_direct`` 补 docstring —— 它去掉的是「派发到 GUI 线程」，
+    默认不要用（判据与踩坑见 ``ui/AGENTS.md`` §6.2）
 """
 
 from zmlx.system import warn
@@ -339,12 +341,31 @@ class GuiBuffer:
             return self
 
     def mark_direct(self, key):
-        """
-        将函数标记为直接调用，而不是通过gui调用
+        """把 ``gui.<key>`` 登记成「**在调用者线程里直接执行**」—— 默认**不要**用.
+
+        语义：登记后 ``gui.<key>(...)`` 不再派发到 GUI 线程，而是在**调用者线程**里
+        直接运行那个函数（见 :meth:`GuiApi.command` 的 ``is_direct`` 分支）。它去掉的
+        正是「派发到 GUI 线程」这一步。
+
+        ⚠️ 因此它只对下面两类命令成立（判据与踩坑记录见 ``ui/AGENTS.md`` §6.2）：
+
+        1. 返回一个**与窗口无关**的对象/值 —— 例如 ``window``（返回 ``MainWindow``
+           实例本身）：不建控件、不碰窗口，谁调都一样；
+        2. 函数**本来就能在任意线程跑** —— 例如 ``edit_in_tab`` / ``reg_file_type``。
+
+        ❌ **凡是会建控件、碰窗口、读标签容器的命令都不能登记**，哪怕它只是「转发」：
+        一旦登记，后台线程（控制台 / 插件）调 ``gui.xxx()`` 就**当场在后台线程里**
+        建控件 —— Qt 控件只能在 GUI 线程碰，轻则不刷新、重则崩，且不可复现。
+        2026-10-23 就因为「以为转发类方法多绕了一跳」把 14 条插件命令登记过，当日撤销。
+
+        ⚠️ **「多绕了一跳」不构成理由**：命令表里放的往往是插件函数本身
+        （``gui.add_func`` 后写覆盖），主窗口经 ``gui.xxx`` 是「GUI 线程内直接执行」；
+        嫌绕就直接调那个对象（``w.show_timer()``），不要改这里的线程语义。
+
         Args:
-            key: 函数的名称
+            key: 函数的名称。
         Returns:
-            函数代理对象
+            函数代理对象（``self``）。
         """
         return self.set_agent(key, is_direct=True)
 
@@ -565,6 +586,22 @@ def add_action(
 ):
     """
     在gui菜单添加一个操作项
+
+    参数原样转给 ``MainWindow.add_action``（同步派发到 GUI 线程执行），**这里不加逻辑**；
+    完整的参数说明见那个方法的 docstring。两个要点在这里重复一次，因为最常踩：
+
+    - ``menu`` 可以是 ``str``（一级）或 ``list``（多级路径），每级标题必须与别处**逐字一致**；
+    - ``overwritable`` 管的是「**同名 action 已存在时怎么办**」，不是「能否被覆盖」：
+      ``True``（默认）→ 警告一声并**另起自动名再挂一条**（菜单里出现两条）；
+      ``False`` → **直接跳过**，什么都不挂。两者都不会替换已有的 action。
+
+    ⚠️ ``name='---'`` 是**分隔符**（2026-10-26 加）：只在菜单末尾插一条分隔线，不建
+    action —— 其余参数一个都不用给::
+
+        gui.add_action(menu='操作', name='---')
+
+    它**不判重**（连插两条就是两条线），也**不会**让分隔线出现在工具栏上
+    （``on_toolbar`` 对它不生效；工具栏的分隔符仍要自己 ``insertSeparator``）。
     """
     if gui.exists():
         gui.add_action(
@@ -607,13 +644,21 @@ def open_gui(argv=None):
 
 
 def open_gui_without_setup(argv=None):
-    """
-    打开gui
+    """打开界面，但**本次不执行任何插件**（``plugins.load_all()`` 被跳过）.
+
+    ⚠️ 这是「这一次不跑插件」的**唯一**开关 —— 它是**运行时**状态（``app_data.put``，
+    只活在内存里），不会写盘、也不会改变任何持久设置。想永久不跑某个插件，请用
+    「设置 → 插件」里那一行（``plugins.set_disabled``）。
+
+    ⚠️ 两个键都写（2026-10-22）：``run_plugins`` 是新名，``run_setup`` 是旧名
+    （``zml_gui_setup.py`` 那个文件名的残留）。``main.py`` 的 ``__console_kernel`` 先读
+    新名、取不到回落旧名 —— 两个都写是为了「万一还有别处的旧版 ``main.py`` 读旧名」。
     """
     from zmlx.system import app_data
     app_data.put('argv', argv)
     app_data.put('restore_tabs', False)
-    app_data.put('run_setup', False)
+    app_data.put('run_plugins', False)   # 新名（main.py 优先读它）
+    app_data.put('run_setup', False)     # 旧名（兼容，2027-10-22 删）
     gui.execute(func=lambda: proc_argv(argv), keep_cwd=False, close_after_done=False, add_history=False)
 
 

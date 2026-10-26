@@ -2277,7 +2277,7 @@ class FeedbacksView(QtWidgets.QWidget):
         self.get_context_menu().exec(event.globalPos())
 
     def refresh(self):
-        """重新列举一次（**菜单「显示 → 刷新」的接口**）。
+        """重新列举一次（**菜单「操作 → 刷新」的接口**）。
 
         主窗口的 ``MainWindow.refresh`` 会 duck-typing 地调用**当前页面**的
         ``refresh()``（见 ``hasattr(current, "refresh")``），本方法就是那个接口。
@@ -2345,7 +2345,7 @@ def test_1():
     """自测入口：**不联网**，用示例数据把界面填满（``python zmlx/ui/tabs/feedbacks_view.py``）.
 
     ⚠️ **刻意不联网、不落盘**：只为让人一眼看到本控件的版式与三类内容的显示
-    差别。真要看线上数据请从主窗口的「帮助 → 查询 → 反馈记录」进。
+    差别。真要看线上数据请从主窗口的「帮助 → 用户 → 反馈记录」进。
 
     ⚠️ 按 ``widget/AGENTS.md`` §4：这里**只造示例数据**，绝不改用户配置。
     """

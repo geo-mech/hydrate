@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><g transform="scale(5.33333)">
+<path d="M6.4 2.9h7.3l4.4 4.4v13.2a1.6 1.6 0 0 1-1.6 1.6H6.4a1.6 1.6 0 0 1-1.6-1.6V4.5a1.6 1.6 0 0 1 1.6-1.6z"
+      fill="#E11D48"/>
+<path d="M13.7 2.9v3.2a1.2 1.2 0 0 0 1.2 1.2h3.2z" fill="#FDA4AF"/>
+<rect x="4.5" y="13.2" width="13.2" height="7" rx="1.9" fill="#fff"/>
+<text x="11.1" y="18.6" text-anchor="middle" font-family="Microsoft YaHei, SimHei, Arial, sans-serif"
+      font-size="4.6" font-weight="700" letter-spacing=".2" fill="#E11D48">PDF</text>
+</g></svg>

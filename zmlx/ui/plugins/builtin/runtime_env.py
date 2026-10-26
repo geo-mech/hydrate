@@ -630,7 +630,7 @@ class RuntimeEnvView(QtWidgets.QWidget):
     def refresh(self, force=False):
         """按需启动一次后台检测（**立即返回，从不阻塞界面**）。
 
-        这是主窗口 duck-typing 调用的通用刷新接口（切标签页、「显示 → 刷新」
+        这是主窗口 duck-typing 调用的通用刷新接口（切标签页、「操作 → 刷新」
         都会进来），所以必须快：这里只做「要不要起线程」的判断。
 
         Args:
@@ -848,7 +848,7 @@ def check_runtime_env():
 
 @execute_once(file=__file__)
 def setup_ui():
-    """注册 GUI 函数与菜单项（本文件作为插件被 ``run_setup`` 执行时调用）.
+    """注册 GUI 函数与菜单项（本文件作为插件被 ``load_all`` 执行时调用）.
 
     ⚠️ 本函数在**控制台内核线程**里执行，``gui.add_func`` / ``gui.add_action``
     会被 GuiApi 派发到主线程执行（见 ``zmlx/ui/main.py`` 的
@@ -895,10 +895,12 @@ def test_1():
 #    test_1()``、再判断 ``_PLUGIN_FLAG in globals()`` 调 setup_ui」两段并列。当时
 #    插件路径的 ``__name__`` **也是** ``'__main__'``，于是 ``test_1()`` 被无条件
 #    执行 —— 它建第二个 ``QApplication``、在控制台内核线程上调 ``exec()``，最后
-#    ``sys.exit()`` 抛 ``SystemExit``（``BaseException``，``run_setup`` 与
+#    ``sys.exit()`` 抛 ``SystemExit``（``BaseException``，``load_all`` 与
 #    ``main.py`` 的 ``except Exception`` 都兜不住），``setup_ui()`` 永远执行不到。
 #    表现：「设置 → 插件」里勾上「运行环境」、重启后菜单里始终没有它。
 if __name__ == '__zml_plugin__':
-    setup_ui()      # 插件路径（由 run_setup exec 执行）：只注册，不开窗口
-elif __name__ == '__main__':
+    setup_ui()      # 插件路径（由 load_all exec 执行）：只注册，不开窗口
+
+if __name__ == '__main__':
     test_1()        # 直接 python runtime_env.py：开窗口自测
+    # ⚠️ 用独立的 ``if`` 而不是 ``elif``：两种运行方式的判断互不相干。

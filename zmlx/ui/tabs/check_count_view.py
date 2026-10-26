@@ -2025,7 +2025,7 @@ class CheckCountView(QtWidgets.QWidget):
             self._log(f'Error (when copy reply): {err}')
 
     def refresh(self):
-        """重新查一次（**菜单「显示 → 刷新」的接口**）。
+        """重新查一次（**菜单「操作 → 刷新」的接口**）。
 
         主窗口的 ``MainWindow.refresh`` 会 duck-typing 地调用**当前页面**的
         ``refresh()``（见 ``hasattr(current, "refresh")``），本方法就是那个接口。

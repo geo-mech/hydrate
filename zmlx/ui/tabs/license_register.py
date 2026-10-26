@@ -1745,7 +1745,7 @@ class LicenseRegister(QtWidgets.QWidget):
         no = QtWidgets.QMessageBox.StandardButton.No
         box.setStandardButtons(yes | no)
         # ⚠️ 改按钮文字而不是用 addButton(text, role)：StandardButton 是本项目
-        #    已经在用的那一套（见 style_sheet_edit.py 的「恢复默认」），
+        #    已经在用的那一套（见 plugins/builtin/style_sheet_menu.py 的「恢复默认」），
         #    ButtonRole 反而没有先例。
         box.button(yes).setText(_Logout.BUTTON)
         box.button(no).setText('取消')

@@ -9,7 +9,8 @@ C++ 内核（`zml/`）见仓库根 `AGENTS.md`。
 
 ## `desc` 是硬要求
 
-GUI 的 `DemoView`（`zmlx/ui/widget/demo_view.py`）靠 `zmlx.demos.list_demo_files()`
+GUI 的 `DemoView`（`zmlx/ui/plugins/builtin/demo_menu.py`，2026-10-22 由
+`zmlx/ui/tabs/demo_view.py` 并入）靠 `zmlx.demos.list_demo_files()`
 （`demo/__init__.py`）列出 demo：
 
 1. 用 `zmlx.algs.list_files` 扫本目录下所有 `.py`（含 `__Trash`/`debugging`，共 173 个）；
@@ -123,7 +124,7 @@ plot(on_figure, caption='Results')     # 自动适配 GUI / 无头
 ### 路径 helper
 
 - **`from zmlx.demos import get_path`** —— 取 demo 根目录。这是**当前正确**的用法
-  （`demo/__init__.py` 里的 `SelfPath(__file__)`，`demo_view.py` 就是这么 import 的）。
+  （`demo/__init__.py` 里的 `SelfPath(__file__)`，`plugins/builtin/demo_menu.py` 就是这么 import 的）。
 - `demo/opath.py` —— 输出路径：`opath`（= `get_path`）、`set_output`（= `set_path`），
   转出自 `zmlx.io.path`。
 - ⚠️ `demo/path.py` 与 `demo/get_path.py` **都是废弃的转发 shim**（各自带 `DeprecationWarning`，

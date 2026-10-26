@@ -8,8 +8,10 @@ Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统�
 from zmlx.system import warn
 from zmlx.plt.on_ui import show_trisurf as plot_trisurf
 
-warn(f'The module {__name__} will be removed after 2027-5-23',
-              DeprecationWarning, stacklevel=2)
+warn(
+    'The module zmlx.plt.trisurf 已弃用（remove after 2027-5-23）：'
+    '请改用 `from zmlx import plot_trisurf`（即 show_trisurf）',
+    DeprecationWarning, stacklevel=2)
 
 
 def test():

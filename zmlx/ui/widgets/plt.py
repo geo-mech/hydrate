@@ -27,14 +27,22 @@
 
 不做重排（2026-10-18 的决定）
 ------------------------------
-位图是定尺的：窗口被拉大后，屏幕上出现的是**拉伸过的旧图**（看着发虚），不会
-自动重渲染 —— 这正是「拖动全程跟手」的代价。两个例外：
+位图是定尺的：窗口被拉大后，屏幕上出现的是**旧的图**，不会自动重渲染 —— 这正是
+「拖动全程跟手」的代价。两个例外：
 
 * **首次显示**补一次（``showEvent`` → ``_fit_once``）。否则「只画一次」的调用
   （建标签页时控件还没被布局，用的是 ``FALLBACK_SIZE``）会永远糊着。
 * ``savefig()`` 先把 figure 的**英寸**对齐到控件当前尺寸（只改属性、不渲染），
   再由它自己按该尺寸重新渲染 —— 所以**导出的图永远清晰、宽高比永远正确**，
   与屏幕上糊不糊无关。
+
+⚠️ 2026-10-21 起，缩放时**保持比例、并铺满控件**：``paintEvent`` 默认按
+``'fill'`` 模式绘制 —— 等比放大到「盖满」，长边贴满、短边多出的部分居中裁掉；
+画面被填满，比例不变形（与浏览器把图片铺满窗口的做法一致）。
+「不重排」这条策略不变（拉伸必糊），需要清晰的新尺寸时用右键菜单「重新渲染」
+（``render_now()``，不跑回调）手动补一帧。
+另可选 ``'fill_crop'``（同效果、换一种裁切实现）、``'fit'``（完整可见、留白）与
+``'free'``（老行为：两个方向都拉满、会变形）。
 
 线程安全
 --------
@@ -46,6 +54,10 @@ Modified by Claude, 2026-08-12
 Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 Modified by DeepSeek, 2026-10-18: 画布由 FigureCanvasQTAgg 改为「Agg + 位图自绘」，
     绘制挪到调用线程；公开接口保持不变。
+Modified by DeepSeek, 2026-10-21: 窗口缩放时**不再把位图拉变形**（等比缩放居中）；
+    仍**不自动重渲染**，右键菜单新增「重新渲染」手动补一帧，并保留「强制填充」老行为。
+Modified by DeepSeek, 2026-10-22: 修复右键「缩放时保持比例」的槽取反 —— 取消勾选才会
+    切到 `free`（拉满、会变形），勾选时保持比例（`fill`）。
 """
 
 from zmlx.system import warn
@@ -79,6 +91,8 @@ class _BitmapCanvas(QtWidgets.QWidget):
         super(_BitmapCanvas, self).__init__(owner)
         self._owner = owner
         self._pixmap = None
+        #: 缩放时怎么贴图：``'fit'``（默认，完整可见+等比+尽量大）/ ``'fill'`` / ``'fill_crop'`` / ``'free'``
+        self._aspect_ratio = 'fit'
         self.setMinimumSize(self.MIN_SIZE[0], self.MIN_SIZE[1])
         self.setSizePolicy(
             QtWidgets.QSizePolicy.Policy.Expanding,
@@ -103,6 +117,23 @@ class _BitmapCanvas(QtWidgets.QWidget):
             owner.draw()
 
     def paintEvent(self, event):
+        """把位图贴上去 —— 默认**整幅可见 + 保持比例 + 尽量大**.
+
+        ⚠️ 2026-10-21 起不再无条件 ``drawPixmap(self.rect(), pixmap)``（那会把图拉成
+        控件形状，窗口一改大小就扭曲）。四种模式见 :meth:`aspect_ratio` 的说明：
+
+        * ``'fit'``（默认）：整幅可见 + 等比 + 在此前提下**最大**（一条边贴满，
+          另一边居中留白）；
+        * ``'fill'``：等比放大到**盖满控件**（短边多出的部分居中裁掉）；
+        * ``'fill_crop'``：同上，改用「源矩形取中间一块」实现裁切；
+        * ``'free'``：填满整个控件 —— 2026-10-21 之前的老行为，会变形。
+
+        ⚠️ 默认模式与 `fill` 用的是**同一套「变换 + 居中」实现**（不是目标矩形），
+        因为实测部分 Qt/PyQt 组合会把越界的目标矩形钳回控件大小 —— 那正是
+        「图缩在中间」的根因。`fit` 与 `fill` 只在「缩放系数取 min 还是 max」上不同。
+
+        尺寸恰好一致时走 1:1 贴图（最清晰，与模式无关）。
+        """
         pixmap = self._pixmap
         if pixmap is None or pixmap.isNull():
             return
@@ -113,12 +144,82 @@ class _BitmapCanvas(QtWidgets.QWidget):
                        and round(pixmap.height() / dpr) == self.height())
             if matched:  # 尺寸正好：1:1 贴，不经插值
                 painter.drawPixmap(0, 0, pixmap)
-            else:  # 控件缩放后的拉伸（会发虚 —— 这是 2026-10-18 接受的代价）
+                return
+            if self._aspect_ratio == 'free':  # 老行为：强制填满（两个方向都变形）
                 painter.setRenderHint(
                     QtGui.QPainter.RenderHint.SmoothPixmapTransform, True)
                 painter.drawPixmap(self.rect(), pixmap)
+                return
+            W, H = self.width(), self.height()
+            pw, ph = float(pixmap.width()), float(pixmap.height())
+            if pw <= 0 or ph <= 0 or W <= 0 or H <= 0:
+                return
+            if self._aspect_ratio == 'fill_crop':
+                # src / dst 宽高比相同 ⇔ 不拉伸；dst 是**整个控件** ⇒ 铺满。
+                # 同比例的 src 只能取原图中间的一块（控件更扁就裁高，更高就裁宽）。
+                painter.setRenderHint(
+                    QtGui.QPainter.RenderHint.SmoothPixmapTransform, True)
+                if W / H >= pw / ph:  # 控件更扁：裁掉一部分高度
+                    src_h = max(1, round(pw * H / W))
+                    src = QtCore.QRect(0, round((ph - src_h) // 2), round(pw),
+                                       src_h)
+                else:  # 控件更高：裁掉一部分宽度
+                    src_w = max(1, round(ph * W / H))
+                    src = QtCore.QRect(round((pw - src_w) // 2), 0, src_w,
+                                       round(ph))
+                painter.drawPixmap(QtCore.QRect(0, 0, W, H), pixmap, src)
+                return
+            # 'fit'（默认）与 'fill'：**同一套实现**。把位图按等比缩放系数 k
+            # 放大/缩小后**居中**放在控件上：
+            #   'fit' 取 k = min(W/pw, H/ph) —— 整幅放得下的最大尺寸（一边贴满）；
+            #   'fill' 取 k = max(W/pw, H/ph) —— 盖满控件（多出的短边被裁掉）。
+            # ⚠️ 用 painter 的变换而不是「目标矩形」：实测部分 Qt/PyQt 组合会把
+            #    越界的目标矩形钳回控件大小，结果就是「图仍缩在中间」。
+            painter.setRenderHint(
+                QtGui.QPainter.RenderHint.SmoothPixmapTransform, True)
+            sx, sy = W / pw, H / ph
+            if self._aspect_ratio == 'fill':
+                k = max(sx, sy)
+            else:
+                k = min(sx, sy)
+            painter.setTransform(
+                QtGui.QTransform(k, 0, 0, k,
+                                 (W - pw * k) / 2.0, (H - ph * k) / 2.0))
+            painter.drawPixmap(QtCore.QRectF(0.0, 0.0, pw, ph), pixmap,
+                               QtCore.QRectF(0.0, 0.0, pw, ph))
         finally:
             painter.end()
+
+    def aspect_ratio(self):
+        """当前的贴图方式：``'fit'``（默认）/ ``'fill'`` / ``'fill_crop'`` / ``'free'``."""
+        return self._aspect_ratio
+
+    def set_aspect_ratio(self, mode):
+        """设置贴图方式（非法值按 ``'fit'``），并立即重绘.
+
+        Args:
+            mode: ``'fit'``（默认）—— 等比缩放到**整幅图完整可见**，居中、留白；
+                另一边留白，但已尽可能地大（长边贴满控件），且绝不裁切、不变形；
+                ``'fill'`` —— 按比例放大到**盖满控件**（短边多出的部分居中裁掉），
+                画面填满但可能有一边看不全；
+                ``'fill_crop'`` —— 同上，但裁切通过「源矩形取中间一块」实现；
+                ``'free'`` —— 拉满控件（2026-10-21 之前的老行为，两个方向都变形）。
+        """
+        mode = self._normalize_aspect_ratio(mode)
+        if mode != self._aspect_ratio:
+            self._aspect_ratio = mode
+            self.update()
+
+    @staticmethod
+    def _normalize_aspect_ratio(mode):
+        """把任意输入归一化成 ``'fit'`` / ``'fill'`` / ``'fill_crop'`` / ``'free'``."""
+        if isinstance(mode, str):
+            mode = mode.strip().lower()
+            if mode == 'keep':  # 2026-10-21 早先的写法，等同现在的 'fill'
+                mode = 'fill'
+            if mode in ('fill', 'fit', 'fill_crop', 'free'):
+                return mode
+        return 'fit'
 
     def resizeEvent(self, event):
         super(_BitmapCanvas, self).resizeEvent(event)
@@ -533,10 +634,62 @@ class MatplotWidget(QtWidgets.QWidget):
         from zmlx.ui.alg import set_plt_export_dpi as impl
         impl()
 
+    # ============================================================ 贴图方式 / 手动重渲染
+    def aspect_ratio(self):
+        """窗口缩放时的贴图方式：``'keep'``（默认，等比）/ ``'free'``（填满，会变形）."""
+        return self.__canvas.aspect_ratio()
+
+    def set_aspect_ratio(self, mode):
+        """设置窗口缩放时的贴图方式（立即重绘**当前位图**，不重渲染）.
+
+        Args:
+            mode: ``'keep'``（默认）= 等比缩放、居中，图不会变形；
+                ``'free'`` = 拉满控件（2026-10-21 之前的老行为，会变形）。
+        """
+        self.__canvas.set_aspect_ratio(mode)
+
+    def render_now(self):
+        """按**当前控件尺寸**立刻重画一遍（**不跑回调**），用于窗口缩放后补一帧.
+
+        ⚠️ 与本类的 ``plot_on_figure`` 同一套线程契约：它**同步**渲染（拿锁排队），
+        在 GUI 线程调用时重图期间界面会短暂停住。重图很慢时请从其它线程调用，
+        或者干脆不调 —— 下一次 ``plot_on_figure`` 本来就会按新尺寸画。
+
+        ⚠️ 只重画已有的 figure，**不会重跑** ``on_figure`` 回调，所以 ``clear=False``
+        的叠加不会被叠两遍；代价是：若原图是按旧比例手工摆的布局（tight_layout 等），
+        它会按新尺寸重新排布一次。
+        """
+        self.draw()
+
+    def _toggle_keep_ratio(self, keep):
+        """右键菜单槽：切换「缩放时保持比例」（取消 = 老行为：拉满并变形）."""
+        self.set_aspect_ratio('fill' if keep else 'free')
+
     # ============================================================ 右键菜单
     def get_context_menu(self):
         from zmlx.ui.alg import set_plt_export_dpi
         menu = QtWidgets.QMenu(self)
+        # 按当前尺寸重画一帧（不跑回调）—— 窗口缩放后点一下就是清晰的
+        menu.addAction(
+            create_action(
+                self, '重新渲染', icon='refresh',
+                slot=self.render_now))
+        # 缩放时是否允许变形：默认勾选（等比、不裁切、整幅可见）；取消 = 老行为（拉满）
+        action_keep = create_action(
+            self, '缩放时保持比例',
+            slot=lambda: self._toggle_keep_ratio(action_keep.isChecked()))
+        action_keep.setCheckable(True)
+        action_keep.setChecked(self.aspect_ratio() != 'free')
+        menu.addAction(action_keep)
+        # 「完整显示」：等比缩到整幅可见（另一边留白）—— 与「铺满」互斥，默认勾选
+        action_fit = create_action(
+            self, '完整显示（留白）',
+            slot=lambda: self.set_aspect_ratio(
+                'fit' if action_fit.isChecked() else 'fill'))
+        action_fit.setCheckable(True)
+        action_fit.setChecked(self.aspect_ratio() == 'fit')
+        menu.addAction(action_fit)
+        menu.addSeparator()
         menu.addAction(
             create_action(
                 self, '设置导出图的DPI', icon='set',

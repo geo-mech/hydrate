@@ -1,11 +1,11 @@
 """插件列表编辑器（「设置 → 插件」里的那个列表）.
 
-每一行 = 一个插件，七列分别是「启用」「优先级」「名称」「描述」「来源」「状态」「临时加载」：
+每一行 = 一个插件，七列分别是「默认加载」「优先级」「名称」「描述」「来源」「状态」「临时加载」：
 
 ==========  ==============================================================
 列           能做什么
 ==========  ==============================================================
-**启用**     ☑ / ☐ —— 禁用的插件**启动时不执行**（这段代码整个不跑）
+**默认加载** ☑ / ☐ —— 取消勾选的插件**启动时不执行**（这段代码整个不跑）
 **优先级**   高 / 正常 / 低 —— 只决定**执行**先后，任何档位都不改列表顺序
 **名称**     插件自报的名字；**鼠标悬停显示完整文件路径**
 **描述**     插件自报的一句话说明
@@ -14,16 +14,22 @@
 **临时加载** 按钮：**当场**执行这个插件，不必勾选、不必重启
 ==========  ==============================================================
 
-⚠️ **「临时加载」与「启用」是两件事**：勾选决定**下次启动**跑不跑（持久设置，
+⚠️ **「临时加载」与「默认加载」是两件事**：勾选决定**下次启动**跑不跑（持久设置，
 写进 ``zml_plugins``）；「加载」只管**现在**跑一次（运行时事实，不写盘）。
 所以一个「已禁用」的插件照样可以临时加载 —— 重启之后它仍然不会自己跑。
+
+⚠️ 第一列 2026-10-25 由「启用」改名为「**默认加载**」：它管的正是「**启动时要不要
+自动加载**」，而「启用」听起来像「这个插件现在能不能用」—— 实际不是（禁用的插件照样
+能临时加载，见上一段）。⚠️ **机制侧的称呼没变**（``is_disabled`` /「禁用」= 仅启动
+过滤，见 ``plugins/AGENTS.md`` §3）：改的只是这一列的显示文字，设置文件
+``zml_plugins`` 里的标记、函数名一个都没动。
 
 ⚠️ **每个插件在本次运行里只加载一次**：``plugins.load_now`` 用进程级的
 ``_loaded`` 表拦住第二次（成功了按钮就变成「已加载」并置灰）。失败**不**拦截 ——
 用户改完文件可以再点一次重试，失败原因在按钮的 tooltip 里。
 
 ⚠️ **执行通道**：按钮**不自己起线程**，而是 ``gui.start(...)`` —— 跑在界面自己的
-**控制台线程**里（与启动时 ``run_setup`` 同一条通道）；界面更新经 ``post_task``
+**控制台线程**里（与启动时 ``load_all`` 同一条通道）；界面更新经 ``post_task``
 回到 GUI 线程。控制台当时正忙（在跑别的脚本）时会先提示、不排队。
 
 ⚠️ **没有「文件」列**（2026-10-19 移除）：路径动辄上百字符，占掉近一半宽度，却只在
@@ -33,14 +39,14 @@
 
 ⚠️ **「来源」决定能不能移除**：只有**手动**登记的才能移除（与
 :func:`zmlx.ui.plugins.add_file` 成对）；**自动**发现的移除了也会在下次启动
-扫描时自己回来，所以不允许移除 —— 不想让它跑请**取消勾选「启用」**。
+扫描时自己回来，所以不允许移除 —— 不想让它跑请**取消勾选「默认加载」**。
 
-⚠️ **没有拖动排序**：用户控制的是「启用与否」与「优先级」，不排顺序。列表顺序
+⚠️ **没有拖动排序**：用户控制的是「是否默认加载」与「优先级」，不排顺序。列表顺序
 = 用户登记的（按加入先后）在前、自动发现的在后。理由见
 :mod:`zmlx.ui.plugins` 的模块文档。
 
-⚠️ 「状态」列来自 ``app_data`` 里的 ``gui_setup_logs``（上次启动时 ``run_setup``
-的逐条记录）。改了启用状态**必须重启**才生效，所以这里只如实显示「上次启动时
+⚠️ 「状态」列来自 ``app_data`` 里的 ``gui_setup_logs``（上次启动时 ``load_all``
+的逐条记录）。改了「默认加载」**必须重启**才生效，所以这里只如实显示「上次启动时
 发生了什么」，不假装「现在改了就马上跑」。
 
 旧的类名 ``SetupFileEdit`` 与文件名 ``setup_file_edit.py`` 已改为
@@ -70,6 +76,21 @@ from zmlx.ui.pyqt import QtCore, QtGui, QtWidgets
 # 优先级的显示顺序与文字（值本身是英文，见 plugins 模块文档）
 _PRIORITY_TEXT = {'high': '高', 'normal': '正常', 'low': '低'}
 _PRIORITY_ORDER = ['high', 'normal', 'low']
+
+#: 优先级色块（``None`` = 不画色块，即「正常」保持默认外观）。
+#:
+#: ⚠️ **亮色 / 暗色各一套**：暗色下用浅一档的色，否则深红 / 深绿在深色背景上
+#: 对比度不足（见 ``widgets/AGENTS.md`` 的「控件里的颜色」一节）。
+#: ⚠️ **只画 ``QIcon`` 色块，不给文字 ``setStyleSheet('color: ...')``**：那样会
+#: 盖掉用户可编辑的 ``zml_window_style.qss``，且 ``QComboBox`` 的弹出列表未必跟着变。
+_PRIORITY_COLOR = {
+    'high': ('#c62828', '#ef9a9a'),      # 红：亮色 / 暗色
+    'normal': None,
+    'low': ('#2e7d32', '#a5d6a7'),       # 绿：亮色 / 暗色
+}
+
+#: 优先级色块的边长（像素）。
+_PRIORITY_DOT = 10
 
 # 列的编号（改列顺序时只改这里）
 _COL_ENABLED = 0
@@ -122,19 +143,26 @@ class _StateLog:
         return result
 
     @staticmethod
-    def text(path, log):
+    def text(path, log, disabled=None):
         """给一个插件算状态文字.
 
         Args:
             path: 插件文件路径。
             log: :meth:`get` 的返回值。
+            disabled: 这个插件是否禁用；``None`` 表示现场算。
+                ⚠️ 传进来是为了**避免重复解析名单** —— ``plugins.is_disabled``
+                内部要整份解析 ``zml_plugins``，逐个插件各调一次会明显变慢
+                （实测 19 个插件 1.6 ms）。调用方通常在 :func:`collect_states` 里
+                已经算过一次，直接传进来即可。
 
         Returns:
             str: 例如 ``'已执行'`` / ``'失败：...'`` / ``'已禁用（不执行）'``。
         """
         if not os.path.isfile(path):
             return '文件不存在'
-        if plugins.is_disabled(path):
+        if disabled is None:
+            disabled = plugins.is_disabled(path)
+        if disabled:
             return '已禁用（不执行）'
         found = log.get(_norm_key(path))
         if found is not None:
@@ -142,12 +170,24 @@ class _StateLog:
         return '未执行（重启后执行）'
 
     @staticmethod
-    def is_normal(path, log):
-        """这条记录是不是「一切正常」（决定状态列要不要加警告图标）."""
-        if not os.path.isfile(path) or plugins.is_disabled(path):
+    def is_normal(path, log, disabled=None, state=None):
+        """这条记录是不是「一切正常」（决定状态列要不要加警告图标）.
+
+        Args:
+            path: 插件文件路径。
+            log: :meth:`get` 的返回值。
+            disabled: 是否禁用（``None`` = 现场算；理由同 :meth:`text`）。
+            state: :meth:`text` 已算出的状态文字（``None`` = 现场算）。
+        """
+        if not os.path.isfile(path):
             return False
-        found = log.get(_norm_key(path))
-        return found is None or '失败' not in found
+        if disabled is None:
+            disabled = plugins.is_disabled(path)
+        if disabled:
+            return False
+        if state is None:
+            state = _StateLog.text(path, log, disabled)
+        return '失败' not in state
 
 
 #: 正在跑的扫描线程（模块级强引用）.
@@ -205,7 +245,7 @@ def _is_deleted(obj):
 class _ScanWorker(QtCore.QThread):
     """在后台线程里收集插件列表与各插件的元信息（**绝不碰界面**）.
 
-    ⚠️ **为什么必须放线程**：``refresh()`` 里最贵的一步是 ``plugins.get_meta()`` ——
+    ⚠️ **为什么必须放线程**：``update_items()`` 里最贵的一步是 ``plugins.get_meta()`` ——
     它要**读每个插件文件的正文**再交给 ``code_config`` 解析 ``# **`` 配置。实测
     50 个插件约 **700 ms**（每个 ~14 ms，其中 ``read_text`` 占 ~11 ms，是真实 I/O，
     优化不掉）。插件数量取决于自动扫描找到多少外部 ``zml_plugin.py``，在别人的机器
@@ -277,14 +317,23 @@ def collect_states(paths):
     ``plugins.get_meta()`` 本身已经按 ``(路径, mtime)`` 缓存。于是「再看一眼列表」
     真正会变的东西只有三样：
 
-    - **启用 / 优先级**：用户可能刚勾过、刚改过；
+    - **默认加载 / 优先级**：用户可能刚勾过、刚改过；
     - **状态**：``plugins.is_loaded()``（临时加载过没有）、上次执行的结果
       （``app_data`` 的 ``gui_setup_logs``）、以及文件有没有被删掉；
     - **临时加载按钮**：由上面两项决定（见 ``_sync_load_button``）。
 
     ``name`` / ``desc`` / ``standard`` **不在这里重算** —— 它们要么来自插件文件
     （mtime 没变就不会变），要么来自名单标记（本控件一改就自己刷那一格）。
-    所以这里只读 ``app_data`` 与 ``os.path.isfile``，实测 19 个插件 **< 1 ms**。
+
+    ⚠️⚠️ **必须批量取状态，不要逐个调 ``is_disabled`` / ``get_priority``**（2026-10-22）：
+    这两个函数内部各自调 ``_registry.find()`` → ``get_entries()``，而那一步要
+    **读名单字符串并整份解析**。逐个查 19 个插件 = 解析 4×19 次 —— 实测
+    ``collect_states`` **6.5 ms**，其中 76% 耗在这上面。而 ``get_state_list()``
+    只解析**一次**、返回全部记录，再按路径查字典。
+
+    ⚠️ 这个函数在**切标签页的路径上**（``MainWindow.refresh`` → 控件 ``update_items``
+    → :meth:`PluginListEdit._refresh_states` → 本函数），所以省下来的就是
+    用户切回插件页时感觉到的那一下卡顿。
 
     Args:
         paths: 要重算的插件路径（**顺序即表格的行序**）。
@@ -294,23 +343,46 @@ def collect_states(paths):
         ``normal``（键是 :func:`collect_rows` 的子集）。
     """
     log = _StateLog.get()
+    # ★ 一次取全部记录：避免「每个插件都把名单重新解析一遍」
+    by_key = {_norm_key(item['path']): item
+              for item in plugins._registry.get_state_list()}
     rows = []
     for path in paths:
+        item = by_key.get(_norm_key(path), None)
+        if item is None:
+            # 不在名单里（例如尚未迁移的老登记表）：退回逐个查，语义不变
+            disabled = plugins.is_disabled(path)
+            priority = plugins.get_priority(path)
+        else:
+            priority = item['priority']
+            # 三态判定，与 ``_registry.is_disabled`` **完全一致**：
+            #   · 用户表过态（``choice`` 非 None）→ 名单里的 ``disabled`` 标记；
+            #   · 没表过态 → 插件自报的默认值。
+            # ⚠️ 这里**不能**再调 ``plugins.is_disabled(path)`` 做回落 —— 它内部
+            #    又会 ``find()`` 重新解析一遍名单。实测 19 个插件**全部**走这条
+            #    回落（用户没表过态），等于白优化。``get_state_list`` 已经告诉我们
+            #    「有没有表态」，而「默认值」只是读插件文件头（``get_meta``，
+            #    按 mtime 缓存，很便宜）。
+            if item['choice'] is not None:
+                disabled = item['disabled']
+            else:
+                disabled = not plugins.get_meta(path)['enabled']
+        state = _StateLog.text(path, log, disabled)
         rows.append({
             'path': path,
-            'disabled': plugins.is_disabled(path),
-            'priority': plugins.get_priority(path),
-            'state': _StateLog.text(path, log),
-            'normal': _StateLog.is_normal(path, log),
+            'disabled': disabled,
+            'priority': priority,
+            'state': state,
+            'normal': _StateLog.is_normal(path, log, disabled, state),
         })
     return rows
 
 
 class PluginListEdit(QtWidgets.QTableWidget):
-    """插件列表（七列：启用 / 优先级 / 名称 / 描述 / 来源 / 状态 / 临时加载）.
+    """插件列表（七列：默认加载 / 优先级 / 名称 / 描述 / 来源 / 状态 / 临时加载）.
 
     ⚠️ **构造时不出数据**：本控件不在 ``__init__`` 里扫描 —— 使用方在**显示之后**
-    调 :meth:`refresh`（「设置 → 插件」由 ``main.edit_setup_files`` 的 ``oper`` 调）。
+    调 :meth:`update_items`（「设置 → 插件」由 ``main.edit_setup_files`` 的 ``oper`` 调）。
     理由见 ``__init__`` 末尾的注释（两处都调会扫两遍并重建表格）。
     """
 
@@ -318,7 +390,7 @@ class PluginListEdit(QtWidgets.QTableWidget):
         super().__init__(parent)
         self.setColumnCount(7)
         self.setHorizontalHeaderLabels(
-            ['启用', '优先级', '名称', '描述', '来源', '状态', '临时加载'])
+            ['默认加载', '优先级', '名称', '描述', '来源', '状态', '临时加载'])
         self.setSelectionBehavior(
             QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
         self.setEditTriggers(
@@ -352,12 +424,12 @@ class PluginListEdit(QtWidgets.QTableWidget):
 
         self.doubleClicked.connect(self._on_double_clicked)
 
-        # ⚠️ **构造时完全不读数据**（也**不**扫目录）：这里**刻意不调 refresh()** ——
+        # ⚠️ **构造时完全不读数据**（也**不**扫目录）：这里**刻意不调 update_items()** ——
         #    打开「设置 → 插件」时，``TabWidget.get_widget`` 的 ``oper`` 已经会调一次
         #    （见 ``main.edit_setup_files``），两处都调就会**扫两遍**：第二次 ``_apply``
         #    会 ``_clear_cells()`` 把刚铺好的行（含按钮）全部销毁重建，用户看到的是
         #    「列表闪一下」，实测还会让刚点下去的按钮变成悬空引用。
-        #    数据由使用方在**显示之后**调 :meth:`refresh` 拉取；本类的 ``test_1`` 也是这么做的。
+        #    数据由使用方在**显示之后**调 :meth:`update_items` 拉取；本类的 ``test_1`` 也是这么做的。
 
     def resizeEvent(self, event):
         """窗口尺寸变化时重新分配「名称 / 描述」两列的宽度."""
@@ -396,8 +468,15 @@ class PluginListEdit(QtWidgets.QTableWidget):
             self._resizing = False
 
     # ---------------------------------------------------------------- 读
-    def refresh(self):
+    def update_items(self):
         """重新收集插件数据并在**后台线程**里算好，算完再**就地更新**界面.
+
+        ⚠️⚠️ **刻意不叫 ``refresh``**（2026-10-22 改名）：``MainWindow.update_items()``
+        会在**每次切到这个标签页**时调 ``get_current_widget().refresh()``（它挂在
+        ``TabWidget.currentChanged`` 上）。本控件的状态**全都由自己的交互触发**
+        —— 勾选、改优先级、点「临时加载」、以及打开时的 ``oper`` —— 一个都不依赖
+        「切回来时自动刷一遍」。叫 ``refresh`` 只会让用户每次切到这一页都白算一遍
+        （19 行 × 重算状态 + 重写状态格），表现出来就是**切到这个标签时有卡顿**。
 
         ⚠️ **不在 UI 线程里直接算**：``collect_rows()`` 要给每个插件调
         ``plugins.get_meta()``，那一步**读文件正文**，实测 50 个插件约 700 ms。
@@ -419,21 +498,21 @@ class PluginListEdit(QtWidgets.QTableWidget):
 
         改之前：结果一到就 ``_clear_cells()`` 把整张表连按钮一起销毁，再逐行重建
         （并先把表格清成一行「正在扫描…」）—— 用户看到「内容全部消失再重建」。
-        而打开插件页这一个动作本来就会招来两次 ``refresh()``
+        而打开插件页这一个动作本来就会招来两次 ``update_items()``
         （``MainWindow.get_widget`` 一次、``oper`` 一次），于是那一下**发生两次**。
 
         ⚠️ 重复调用是安全的：**新的扫描会让旧的作废**（见 :attr:`_scan_seq`）——
         用户连点几次「刷新」不该让几次扫描的结果轮流覆盖界面。
 
         ⚠️ **「正在跑的时候又被要求刷新」不进新的一轮，只记一笔**：打开「设置 → 插件」
-        这一个动作会招来好几处刷新请求（``MainWindow.get_widget`` 里的 ``refresh()``、
+        这一个动作会招来好几处刷新请求（``MainWindow.get_widget`` 里的 ``update_items()``、
         ``TabWidget`` 的 ``oper``）。若每来一次就起一个 ``_ScanWorker``，同一份数据
         就会被算好几遍。这里改成：扫描期间只置 :attr:`_refresh_again`，这一轮铺完
         再补一次 —— 既不会丢请求，也不会叠出好几轮。
 
         ⚠️⚠️ **插件集合固定时，根本不用「重扫」**（2026-10-21 加）：
         表格里已经有内容时，走的是 :meth:`_refresh_states` —— 只按**现有行**重算
-        启用 / 优先级 / 状态（:func:`collect_states`，实测 19 个插件 < 1 ms，就在
+        默认加载 / 优先级 / 状态（:func:`collect_states`，实测 19 个插件 < 1 ms，就在
         UI 线程里同步做完），**不起线程、不扫目录、不读文件正文、不动表格结构**。
         理由很直接：自动发现的插件总是那几个，能变的只是「刚才临时加载了什么、
         执行成功没有、文件还在不在」。
@@ -455,7 +534,7 @@ class PluginListEdit(QtWidgets.QTableWidget):
         """只重算各插件**会变的状态**并就地更新（同步、极轻、不碰表格结构）.
 
         见 :func:`collect_states` 的说明：插件集合固定时，唯一会变的就是
-        「启用 / 优先级 / 状态」。这里连 ``_show_scanning`` 都不调 —— 没有异步、
+        「默认加载 / 优先级 / 状态」。这里连 ``_show_scanning`` 都不调 —— 没有异步、
         没有中间态，用户点一下看到的只是勾选框 / 状态文字被更到最新值，
         表单本身**一个控件都不重建**。
         """
@@ -539,7 +618,7 @@ class PluginListEdit(QtWidgets.QTableWidget):
         # 扫描期间收到的刷新请求：现在补一轮（见 refresh 的说明）
         if self._refresh_again:
             self._refresh_again = False
-            self.refresh()
+            self.update_items()
 
     def _apply_changes(self, rows):
         """把扫描结果写进表格：**能就地改的就只改，只有行结构变了才重建**.
@@ -565,7 +644,7 @@ class PluginListEdit(QtWidgets.QTableWidget):
             self._loading = False
         self._fit_columns()   # 名称 / 描述的文字变了，列宽可能跟着变
 
-        # ★ 「扫描完成后选中某一行」在这里兑现（``refresh()`` 是异步的，见
+        # ★ 「扫描完成后选中某一行」在这里兑现（``update_items()`` 是异步的，见
         #   select_after_refresh）。⚠️ 无论找没找到都要清掉 pending —— 否则它会一直
         #   挂到下一次刷新，在用户完全没预期的时刻突然选中一行。
         path, self._pending_select = self._pending_select, None
@@ -586,7 +665,7 @@ class PluginListEdit(QtWidgets.QTableWidget):
         return True
 
     def _update_row(self, row, data):
-        """**就地**更新一行里「会变的那几格」：启用 / 优先级 / 状态 / 临时加载按钮.
+        """**就地**更新一行里「会变的那几格」：默认加载 / 优先级 / 状态 / 临时加载按钮.
 
         ⚠️ **只碰会变的格子**（2026-10-21 定）：名称、描述、来源三列来自插件文件头
         （``get_meta``，按 mtime 缓存）与名单标记，**重新看一遍列表不会让它们变**；
@@ -621,11 +700,22 @@ class PluginListEdit(QtWidgets.QTableWidget):
                 check.blockSignals(False)
 
         holder = self.cellWidget(row, _COL_PRIORITY)
-        combo = holder.findChild(QtWidgets.QComboBox) if holder else None
+        # ⚠️ 优先级格里**直接**放的就是 ``QComboBox``（见 ``_make_row``），不是容器 ——
+        #    所以 ``findChild`` 找不到它（它不会在自己的子树里找到自己）。
+        #    这里先认「就是 combo」，再退回 ``findChild``（兼容以后若真包一层容器）。
+        combo = holder if isinstance(holder, QtWidgets.QComboBox) else (
+            holder.findChild(QtWidgets.QComboBox) if holder else None)
         if combo is not None and combo.currentData() != data['priority']:
             combo.blockSignals(True)
             try:
-                combo.setCurrentIndex(_PRIORITY_ORDER.index(data['priority']))
+                # ★ 连图标一起换：``setCurrentIndex`` 只换文字，**不改**该项的图标 ——
+                #   跟着「高 / 低」走的色块必须在这里重画，否则色块会停在旧优先级上。
+                index = _PRIORITY_ORDER.index(data['priority'])
+                # ⚠️ ``setItemIcon`` **不接受 None**：切回「正常」时要用**空 QIcon**
+                #    显式清掉色块，否则会抛 TypeError。
+                icon = self._priority_icon(data['priority'], self._is_dark(self))
+                combo.setItemIcon(index, icon if icon is not None else QtGui.QIcon())
+                combo.setCurrentIndex(index)
             finally:
                 combo.blockSignals(False)
 
@@ -651,7 +741,7 @@ class PluginListEdit(QtWidgets.QTableWidget):
         ``QTableWidgetItem``、有时是 ``setCellWidget`` 放的控件（异常状态带警告图标）。
         ``setRowCount`` **不会**移除已放置的 cell widget —— 只是把多余的行删掉、
         把留下的行原样保留。于是「已禁用（不执行）」那个 label 会赖在格子里，盖住
-        之后写进去的新 ``item``：勾选「启用」后，状态列仍然显示旧的「已禁用」。
+        之后写进去的新 ``item``：勾选「默认加载」后，状态列仍然显示旧的「已禁用」。
 
         这正是 2026-10-18 用户报告的现象。教训：**一个格子要么放 item、要么放
         widget，切换时必须显式移走另一个**，不能指望表格帮忙。
@@ -670,7 +760,7 @@ class PluginListEdit(QtWidgets.QTableWidget):
             self._loading = False
         self._fit_columns()  # 行变了，其余列（按内容自适应）的宽度也会变
 
-        # ★ 「扫描完成后选中某一行」只能在这里兑现：``refresh()`` 是异步的，
+        # ★ 「扫描完成后选中某一行」只能在这里兑现：``update_items()`` 是异步的，
         #   调用它的那一刻表格还是「正在扫描…」占位行（见 select_after_refresh）。
         #   ⚠️ 无论找没找到都要清掉 pending —— 否则它会一直挂到下一次刷新，
         #   在用户完全没预期的时刻突然选中一行。
@@ -701,14 +791,22 @@ class PluginListEdit(QtWidgets.QTableWidget):
 
         enabled = QtWidgets.QCheckBox()
         enabled.setChecked(not data['disabled'])
-        enabled.setToolTip('取消勾选 = 禁用：启动时不执行这段代码（重启后生效）')
+        enabled.setToolTip('取消勾选 = 启动时不自动加载这段代码（重启后生效）。\n'
+                           '不影响「临时加载」，也不影响被其它插件作为依赖拉起。')
         enabled.toggled.connect(
             lambda checked, p=path: self._on_enabled_changed(p, checked))
         self.setCellWidget(row, _COL_ENABLED, self._center(enabled))
 
         combo = QtWidgets.QComboBox()
+        # ★ 每项带一个色块（高=红、低=绿，正常不画）—— 只影响**显示**，
+        #   取值仍走 itemData，`_on_priority_changed` 拿到的还是英文值。
+        dark = self._is_dark(self)
         for value in _PRIORITY_ORDER:
-            combo.addItem(_PRIORITY_TEXT[value], value)
+            icon = self._priority_icon(value, dark)
+            if icon is None:
+                combo.addItem(_PRIORITY_TEXT[value], value)
+            else:
+                combo.addItem(icon, _PRIORITY_TEXT[value], value)
         combo.setCurrentIndex(_PRIORITY_ORDER.index(data['priority']))
         combo.setToolTip('高优先级整段提前执行、低优先级整段延后 —— 不改列表顺序')
         combo.currentIndexChanged.connect(
@@ -737,7 +835,7 @@ class PluginListEdit(QtWidgets.QTableWidget):
         standard = data['standard']
         source = self._make_item('自动' if standard else '手动')
         source.setToolTip(
-            '由目录扫描发现：不能移除，不想执行请取消「启用」'
+            '由目录扫描发现：不能移除，不想执行请取消「默认加载」'
             if standard else '用「添加」手动登记的：可以移除')
         self.setItem(row, _COL_SOURCE, source)
 
@@ -748,7 +846,7 @@ class PluginListEdit(QtWidgets.QTableWidget):
                                self._state_widget(data['state']))
 
         # 临时加载：按钮自带状态（可加载 / 已加载 / 文件不存在）。
-        # ⚠️ 它与「启用」勾选**无关** —— 勾选决定的是**下次启动**跑不跑，这里只管
+        # ⚠️ 它与「默认加载」勾选**无关** —— 勾选决定的是**下次启动**跑不跑，这里只管
         #    「现在跑一次」，且不写任何设置（见 plugins.load_now）。
         self.setCellWidget(row, _COL_LOAD,
                            self._center(self._make_load_button(path)))
@@ -767,6 +865,48 @@ class PluginListEdit(QtWidgets.QTableWidget):
         label.setText(' ' + text)
         label.setToolTip(text)
         return label
+
+    @staticmethod
+    def _is_dark(widget):
+        """当前是否暗色主题（决定优先级色块取深色还是浅色那一套）.
+
+        ⚠️ **不调 ``gui.in_dark_mode()``**：那要经过 GuiApi 的通道往返，而本方法在
+        建表的循环里被逐行调用。直接读控件自己的调色板就够了（与
+        ``output_widget._dark()`` 同一做法）。
+        """
+        base = widget.palette().color(QtGui.QPalette.ColorRole.Base)
+        return base.lightness() < 128
+
+    @staticmethod
+    def _priority_icon(value, dark=False):
+        """优先级色块（``QIcon``）；``normal`` 返回 ``None``（不画）.
+
+        ⚠️ **用 ``QIcon`` 画，不给文字 ``setStyleSheet('color: ...')``**：写死的
+        文字颜色会盖掉用户可编辑的 ``zml_window_style.qss``，而且在暗色主题下可能
+        看不清；图标不受样式表与主题影响（见 ``widgets/AGENTS.md`` 的「控件里的
+        颜色」一节，``plugins/builtin/style_sheet_menu.py`` 的 ``_ColorButton`` 是同一做法）。
+
+        Args:
+            value: 优先级（``'high'`` / ``'normal'`` / ``'low'``）。
+            dark: 是否暗色主题（决定取深色还是浅色那一套）。
+
+        Returns:
+            QtGui.QIcon | None: 色块图标；``normal``（或未知值）返回 ``None``。
+        """
+        colors = _PRIORITY_COLOR.get(value)
+        if colors is None:
+            return None
+        pixmap = QtGui.QPixmap(_PRIORITY_DOT, _PRIORITY_DOT)
+        pixmap.fill(QtCore.Qt.GlobalColor.transparent)
+        painter = QtGui.QPainter(pixmap)
+        try:
+            painter.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing)
+            painter.setBrush(QtGui.QColor(colors[1] if dark else colors[0]))
+            painter.setPen(QtCore.Qt.PenStyle.NoPen)
+            painter.drawEllipse(0, 0, _PRIORITY_DOT - 1, _PRIORITY_DOT - 1)
+        finally:
+            painter.end()
+        return QtGui.QIcon(pixmap)
 
     @staticmethod
     def _center(widget):
@@ -803,16 +943,26 @@ class PluginListEdit(QtWidgets.QTableWidget):
         if plugins.is_loaded(path):
             button.setText('已加载')
             button.setEnabled(False)
-            button.setToolTip('本次运行已经加载过（重复执行会重复挂菜单），重启后按「启用」勾选决定')
+            button.setToolTip('本次运行已经加载过（重复执行会重复挂菜单），重启后按「默认加载」勾选决定')
             return
         error = plugins.get_load_error(path)
         button.setText('加载')
         button.setEnabled(True)
         button.setToolTip(
             '立即执行这个插件（临时加载）：当场出现它加的菜单；'
-            '**不改**「启用」设置，重启后要不要执行仍只看左边的勾选\n'
+            '**不改**「默认加载」设置，重启后要不要执行仍只看左边的勾选\n'
             '每个插件在本次运行里只会加载一次'
             + (f'\n\n上次加载失败：{error}' if error else ''))
+        if plugins.is_disabled(path):
+            # ⚠️ 禁用**不**挡住临时加载（2026-10-22 定稿）：启用的插件启动时早就跑过、
+            #    按钮是「已加载」点不动 —— 所以能点的恰好是禁用的这一批。两者若绑在
+            #    一起，这个按钮对谁都无效。这里只把两个概念的差别说清楚。
+            button.setToolTip(
+                '临时加载：**现在**就跑一次，当场出现它加的菜单\n'
+                '⚠️ 本插件当前是「禁用」（下次启动不会自动加载），但这不影响临时加载：\n'
+                '临时加载不写任何设置，重启后仍按左边的「默认加载」勾选决定\n'
+                '每个插件在本次运行里只会加载一次'
+                + (f'\n\n上次加载失败：{error}' if error else ''))
 
     def _on_load_clicked(self, path, button):
         """点「加载」：交给**界面体系自己的控制台线程**执行（``gui.start``）.
@@ -820,14 +970,14 @@ class PluginListEdit(QtWidgets.QTableWidget):
         ⚠️ 为什么用 ``gui.start`` 而不是自己起 ``QThread``：插件体里那句
         ``gui.add_action(...)`` 本来就设计成「任意线程发起、由 gui 缓冲区派发到 GUI
         线程」；而控制台线程（``ConsoleThread``）是界面**自己**的执行通道 —— 启动时的
-        ``plugins.run_setup()`` 就跑在同一个线程里（``main.py`` 的 ``__console_kernel``）。
+        ``plugins.load_all()`` 就跑在同一个线程里（``main.py`` 的 ``__console_kernel``）。
         用它有三个好处：不用自己管线程生命周期；与按钮共用同一套「忙闲」判断（控制台
         同一时刻只跑一个任务）；执行过程会照常出现在输出面板里。
 
         ⚠️ 界面更新（按钮状态、状态栏）放在 ``post_task`` 里：``Console.__kernel_exited``
         是 GUI 线程上的槽，它在那里调用 ``post_task``，所以可以安全地碰控件。
 
-        ⚠️ ``button`` 可能在执行期间被 ``refresh()`` 重建掉（用户同时改了勾选），
+        ⚠️ ``button`` 可能在执行期间被 ``update_items()`` 重建掉（用户同时改了勾选），
         因此回写前用 :func:`_is_deleted` 判一下，别在已销毁的控件上操作。
         """
         if self._loading_plugin:
@@ -854,7 +1004,10 @@ class PluginListEdit(QtWidgets.QTableWidget):
                 self._sync_load_button(b, p)
             name = os.path.basename(p)
             if plugins.is_loaded(p):
-                gui.status(f'已临时加载：{name}（重启后按「启用」勾选决定）')
+                note = '（临时加载，不改变「默认加载」设置；重启后仍按勾选决定）'
+                if plugins.is_disabled(p):
+                    note = '（临时加载；本插件仍是「禁用」，重启后不会自动加载）'
+                gui.status(f'已临时加载：{name}{note}')
             elif plugins.get_load_error(p) is not None:
                 gui.status(f'加载失败：{name}（原因见消息区）')
 
@@ -889,14 +1042,14 @@ class PluginListEdit(QtWidgets.QTableWidget):
 
     # ---------------------------------------------------------------- 写
     def _on_enabled_changed(self, path, checked):
-        """勾选 / 取消勾选「启用」—— 只改这一条的标记与状态格，**不重建整张表**.
+        """勾选 / 取消勾选「默认加载」—— 只改这一条的标记与状态格，**不重建整张表**.
 
-        ⚠️⚠️ **这里刻意不调 ``refresh()``**（2026-10-19 改）：
+        ⚠️⚠️ **这里刻意不调 ``update_items()``**（2026-10-19 改）：
 
-        1. **没有任何列需要重算**。六列里只有「状态」列会随启用状态变
-           （「已启用」↔「已禁用（不执行）」），其余五列（启用 / 优先级 / 名称 /
+        1. **没有任何列需要重算**。六列里只有「状态」列会随勾选状态变
+           （「已启用」↔「已禁用（不执行）」），其余五列（默认加载 / 优先级 / 名称 /
            描述 / 来源）与勾选无关 —— 原地改那一格即可；
-        2. **整表刷新会让行序跳变**。``refresh()`` 走 :func:`collect_rows`，它按
+        2. **整表刷新会让行序跳变**。``update_items()`` 走 :func:`collect_rows`，它按
            ``plugins.get_files()`` 的顺序排；而 ``set_disabled`` 对**尚未登记**的
            内置插件会调 ``_ensure_in_list`` **把它补登进名单** —— 于是这个插件从
            「名单外的内置插件」区（``get_files`` 的末尾）挪进名单的正常位置，
@@ -960,7 +1113,7 @@ class PluginListEdit(QtWidgets.QTableWidget):
         if self._loading or value not in _PRIORITY_ORDER:
             return
         plugins.set_priority(path, value)
-        self.refresh()   # refresh() 在已有内容时只重算状态，见其说明
+        self.update_items()   # 已有内容时只重算状态，见其说明
 
     def _on_double_clicked(self, index):
         """双击任意一行：用代码编辑器打开该插件（路径取自 :meth:`_row_path`）."""
@@ -990,7 +1143,7 @@ class PluginListEdit(QtWidgets.QTableWidget):
             return
         # ⚠️ **先登记、再重扫**：``_rescan_and_apply`` 是异步的，返回时表格里还没有
         #    这一行。若紧跟 ``_select_path(file_path)``，选中会静默失效（2026-10-19
-        #    实测选中 0 行）。⚠️ 插件集合变了，必须**强制重扫** —— ``refresh()`` 在
+        #    实测选中 0 行）。⚠️ 插件集合变了，必须**强制重扫** —— ``update_items()`` 在
         #    已有内容时只重算状态，发现不了新行。
         self.select_after_refresh(file_path)
         self._rescan_and_apply()
@@ -998,7 +1151,7 @@ class PluginListEdit(QtWidgets.QTableWidget):
     def select_after_refresh(self, path):
         """登记「**扫描完成之后**选中这个路径所在的行」.
 
-        为什么需要它：``refresh()`` 立刻返回，表格此刻还是占位行 —— 所有「刷新完
+        为什么需要它：``update_items()`` 立刻返回，表格此刻还是占位行 —— 所有「刷新完
         顺便选一下」的写法都必须走这里，在 :meth:`_apply` 铺完行之后才兑现。
 
         Args:
@@ -1009,7 +1162,7 @@ class PluginListEdit(QtWidgets.QTableWidget):
     def _select_path(self, path):
         """选中某个路径所在的行（添加后让用户看见它加到了哪）.
 
-        ⚠️ 只能对**已经铺好行**的表格调用。紧跟在 ``refresh()`` 后面调用是无效的，
+        ⚠️ 只能对**已经铺好行**的表格调用。紧跟在 ``update_items()`` 后面调用是无效的，
         那种场景请用 :meth:`select_after_refresh`。
         """
         key = _norm_key(path)
@@ -1046,7 +1199,7 @@ class PluginListEdit(QtWidgets.QTableWidget):
                 '不能移除自动发现的插件',
                 '下面这些插件是目录扫描发现的，移除了下次启动也会自己回来：\n\n'
                 + '\n'.join('  · ' + name for name in refused)
-                + '\n\n不想让它们执行，请**取消勾选「启用」**。')
+                + '\n\n不想让它们执行，请**取消勾选「默认加载」**。')
         elif removed > 0:
             gui.status(f'已移除 {removed} 个插件（磁盘文件未删除）')
 
@@ -1105,7 +1258,7 @@ class PluginListEdit(QtWidgets.QTableWidget):
         stay = create_action(self, '恢复默认', slot=self.reset_files)
         if len(rows) > 0 and not any(removable):
             action.setEnabled(False)
-            action.setToolTip('自动发现的插件不能移除；不想执行请取消勾选「启用」')
+            action.setToolTip('自动发现的插件不能移除；不想执行请取消勾选「默认加载」')
         menu.addAction(action)
         menu.addSeparator()
         menu.addAction(stay)
@@ -1136,7 +1289,7 @@ def test_1():
     w.resize(960, 420)
     w.setWindowTitle('插件列表（临时目录里的假插件）')
     w.show()
-    w.refresh()   # 构造时不再自动加载（见 __init__ 末尾），这里显式拉一次数据
+    w.update_items()   # 构造时不再自动加载（见 __init__ 末尾），这里显式拉一次数据
     sys.exit(app.exec())
 
 

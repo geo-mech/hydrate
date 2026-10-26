@@ -7,24 +7,46 @@
 --------------------
 
 ==============  ==============================  ===========================================
-概念             变量（三个独立的环境变量）       回答什么问题
+概念             存在哪                           回答什么问题
 ==============  ==============================  ===========================================
-**名单 / 顺序**  ``zml_plugins``                有哪些插件、按什么顺序显示与执行
-**优先级**       ``zml_plugin_priority``        谁先执行（让高优先级**整体**插到前面）
-**禁用**         ``zml_plugin_disabled``        哪个插件**不执行**（默认全部启用）
+**名单 / 顺序**  ``zml_plugins``（主体）          有哪些插件、按什么顺序显示与执行
+**优先级**       ``zml_plugins`` 的标记里          谁先执行（让高优先级**整体**插到前面）
+                （兼容键 ``zml_plugin_priority``
+                只读不写，见下）
+**禁用**         ``zml_plugins`` 的标记里          哪个插件**不执行**（默认全部启用）
+                （兼容键 ``zml_plugin_disabled``
+                只读不写，见下）
 ==============  ==============================  ===========================================
+
+⚠️ **优先级与禁用都存在 ``zml_plugins`` 的标记里**，上表的 ``zml_plugin_priority`` /
+``zml_plugin_disabled`` 是**旧版本**用的键 —— 现在只为兼容老记录保留（迁移时读一次，
+之后不再写）。下面「三者刻意不合并」一节说明细节。
 
 ⚠️⚠️ **三者刻意不合并**。旧实现用「浮点 rank」一个变量同时表达顺序、纳入与排除
-（排除 = rank 置成 1e20），于是「排最后」和「不要它」在数据上长得一模一样，用户
-拖动一次还要给**每个**文件写一条环境变量。现在：
+（排除 = rank 置成 1e20），于是「排最后」和「不要它」在数据上长得一模一样，调整一次
+顺序还要给**每个**文件写一条环境变量。现在：
 
-- **拖动顺序只改 ``zml_plugins`` 一个键**（一次写盘），不碰优先级、不碰禁用；
+- **名单顺序只存在 ``zml_plugins`` 一个键里**（一次写盘），不碰优先级、不碰禁用；
 - **习惯用法**：优先级与禁用存在 ``zml_plugins`` 的标记里；'zml_plugin_priority' /
   ``zml_plugin_disabled`` 两个键只为**兼容老记录**保留（迁移时读一次，之后不写）；
 - 三件事各自独立可解释，谁也不会被另一个顺手改写。
 
-⚠️ 优先级**不参与列表排序**：列表顺序永远 = 名单顺序。执行时按「高 → 正常 → 低」
-分三段跑，**段内仍按名单顺序** —— 「拖动」永远精确，「插队」是另一件显式的事
+⚠️⚠️ **顺序不是用户能调的**：界面「设置 → 插件」**没有拖动排序**
+（`plugin_list_edit` 的 `setDragDropMode(NoDragDrop)`），也没有「上移 / 下移」接口。
+名单顺序由**加入的先后**决定：
+
+======================  ==============================================
+插件从哪来               排在什么位置
+======================  ==============================================
+用户 ``add_file()`` 登记  追加到**末尾**（按添加先后）
+自动发现并入（首次扫描）   扫描顺序，接在已有记录之后
+``builtin/`` 内置插件     按**文件名**排序
+（上述任一）旧名 ``zml_gui_setup.py``  在同段内沉到最后
+======================  ==============================================
+
+⚠️ **优先级是唯一能改执行先后的旋钮**（也是用户唯一可调的「顺序相关」设置）：
+执行时按「高 → 正常 → 低」分**三段**跑，段内**仍按上面的名单顺序**；它**不改变列表里
+行的位置**（列表顺序永远 = 名单顺序）——「插队」是另一件显式的事
 （与线程调度里「调线程优先级不改变它被创建的先后」同一个道理）。
 
 ``zml_plugins`` 的格式
@@ -347,7 +369,7 @@ def merge(paths, *, standard=False):
 def add_file(path):
     """手动登记一个插件文件：追加到名单末尾.
 
-    ⚠️ 只登记、**不执行**：执行发生在下次 :func:`zmlx.ui.plugins.run_setup`
+    ⚠️ 只登记、**不执行**：执行发生在下次 :func:`zmlx.ui.plugins.load_all`
     （即重启界面）时。已在名单里的文件不会被重复添加，它的优先级与禁用状态保持不动。
 
     Args:
@@ -431,14 +453,21 @@ def migrate_builtin_paths():
 
     ⚠️⚠️ **2026-10-19 内置插件下沉到 ``builtin/`` 之后，这一步是必需的**：名单里存的是
     **绝对路径**，文件一搬，旧记录就指向不存在的文件 ——
-    :func:`zmlx.ui.plugins.run_setup` 会把它当成「文件缺失」跳过（不会报错），
+    :func:`zmlx.ui.plugins.load_all` 会把它当成「文件缺失」跳过（不会报错），
     而新路径在名单里**没有任何记录** ⇒ :func:`is_disabled` 退回插件自报的默认值。
     结果：用户手动勾开过的彩蛋（默认 ``enabled = False``）会**静默**变回关闭，
     表现为「我明明开过，怎么又没了」，且没有任何提示。
 
-    只改写「父目录恰好是本包目录、且 ``builtin/`` 下确实存在同名文件」的记录：其余
-    记录（外部插件、用户已删除的文件）原样保留 —— 这条规则让函数**幂等**，重复调用
-    不会产生第二次改写。
+    只改写「父目录恰好是本包目录、且 ``builtin/`` 下确实存在同名文件」的记录，以及
+    :data:`_relocated_paths` 点名的几条；其余记录（外部插件、用户已删除的文件）原样
+    保留 —— 这条规则让函数**幂等**，重复调用不会产生第二次改写。
+
+    ⚠️ **2026-10-22 起还负责第二类搬迁**（见 :func:`_relocated_paths` 的表）：
+    数据编辑器的两个内置插件合并成 ``builtin/editors.py``（先经过
+    ``zmlx/scen/editors/``，同日再合并进一个文件），两个彩蛋
+    （``tetris.py`` + ``lianliankan.py``）合并搬到 ``zmlx/scen/easter_eggs/``。
+    规则与上面同一套 —— 标记原样保留、新旧记录合并成一条，否则用户勾过的状态丢失、
+    或插件被执行两次。
 
     ⚠️ 若新旧两条记录同时存在（例如搬迁后用户又在新路径上勾过一次），合并成一条：
     否则插件会被**执行两次**（:func:`zmlx.ui.plugins.get_files` 会给出两个路径）。
@@ -449,15 +478,18 @@ def migrate_builtin_paths():
     """
     folder = os.path.dirname(os.path.abspath(__file__))
     builtin = os.path.join(folder, 'builtin')
+    moved = _relocated_paths()
     result = []
     pos = {}  # 规范化路径 -> 在 result 里的下标
     changed = False
     for path, flags in get_entries():
-        target = path
-        if norm(os.path.dirname(path)) == norm(folder):
+        target = moved.get(norm(path), None)
+        if target is None and norm(os.path.dirname(path)) == norm(folder):
             candidate = os.path.join(builtin, os.path.basename(path))
             if os.path.isfile(candidate):
                 target = candidate
+        if target is None:
+            target = path
         key = norm(target)
         if key in pos:  # 新旧两条记录指向同一个插件：合并，别让它执行两次
             idx = pos[key]
@@ -471,6 +503,62 @@ def migrate_builtin_paths():
     if changed:
         _write_state(result)
     return changed
+
+
+def _relocated_paths():
+    """``{规范化(旧路径): 新路径}`` —— 「合并搬迁」的内置插件.
+
+    ⚠️ 为什么需要它：名单 ``zml_plugins`` 存的是**绝对路径**。只要插件文件挪了位置，
+    旧记录就指向不存在的文件 —— ``load_all`` 会把它当成「文件缺失」**静默跳过**，而
+    新路径没有任何记录，于是用户的启用选择凭空消失。
+
+    目前有两条规则（都是 2026-10-22 的搬迁，都是「几个旧文件 → 一个插件」）：
+
+    ==========================  ==================================================
+    旧路径（``builtin/`` 下）     新入口
+    ==========================  ==================================================
+    ``editors_menu.py`` +        ``builtin/editors.py``（经 ``zmlx/scen/editors/``
+    ``seepage_menu.py``          ，同日再合并进一个文件）
+    ``tetris.py`` +              ``zmlx/scen/easter_eggs/zml_plugin.py``
+    ``lianliankan.py``
+    ==========================  ==================================================
+
+    数据编辑器那批另外还认 ``zmlx/scen/editors/zml_plugin.py``（2026-10-22 的中间形态，
+    该目录已删除）：名单里指向它的记录也要改写到现在的 ``builtin/editors.py``，
+    否则用户在这期间勾过的状态会随文件一起消失。
+
+    ⚠️ 同一批里两个旧文件都映射到**同一个**新路径时，调用方（:func:`migrate_builtin_paths`）
+    会把两条记录**合并成一条** —— 这是必需的，否则插件会被执行两次。
+
+    ⚠️ 新文件不存在时**不写**这条规则：否则旧路径会被改到另一个同样不存在的路径上，
+    用户连「文件缺失」都看不出来。此时保持原记录不动，让它照常显示为缺失。
+
+    Returns:
+        dict: ``{规范化的旧路径: 新路径}``（新文件不存在的规则已略去）。
+    """
+    folder = os.path.dirname(os.path.abspath(__file__))
+    builtin = os.path.join(folder, 'builtin')
+    # zmlx/ui/plugins -> zmlx/ui -> zmlx -> zmlx/scen/<包>/zml_plugin.py
+    scen = os.path.join(folder, os.pardir, os.pardir, 'scen')
+    batches = [
+        # 数据编辑器：两个旧内置插件 + 中途那个自包含插件的入口
+        (('editors_menu.py', 'seepage_menu.py'), builtin, 'editors.py'),
+        ((os.path.join(scen, 'editors', PLUGIN_NAME),), builtin, 'editors.py'),
+        (('tetris.py', 'lianliankan.py'), os.path.join(scen, 'easter_eggs'),
+         PLUGIN_NAME),
+    ]
+    result = {}
+    for old_names, new_folder, new_name in batches:
+        target = os.path.abspath(os.path.join(new_folder, new_name))
+        if not os.path.isfile(target):
+            continue
+        for name in old_names:
+            if os.path.isabs(name):
+                source = name
+            else:
+                source = os.path.join(builtin, name)
+            result[norm(source)] = target
+    return result
 
 
 def find(path):
@@ -507,6 +595,21 @@ def is_standard(path):
 def is_disabled(path):
     """该插件是否**不启用** —— **用户的选择优先，否则看插件自己的默认**.
 
+    ⚠️⚠️ **一句话定义（2026-10-24 定稿）：禁用 = 「启动时不自动加载它」。**
+    它**不是**「禁止执行」，也**不是**执行许可。下面三件事都**不受**它影响：
+
+    ==========================  ==============================================
+    场景                         被禁用时的行为
+    ==========================  ==============================================
+    ``load_now``（临时加载）      **照常执行**（默认 ``ignore_disabled=True``）
+    被其它插件作为依赖拉起         **照常执行**（依赖递归一律不看禁用）
+    已经派生的东西                不回收（菜单项、后台线程归插件自己）
+    ==========================  ==============================================
+
+    ⇒ 它过滤的**只有** :func:`zmlx.ui.plugins.load_all` 那一层「启动时自动加载」。
+    名字窄于字面这件事**是已知的**，改名（如 ``auto_loadable``）被评估后放弃
+    （PLAN ``T-20261023-11``：持久化格式属 L2、``not auto_loadable(...)`` 是双重否定）。
+
     判定顺序（三态）：
 
     ==========================  ==========================================
@@ -529,6 +632,7 @@ def is_disabled(path):
     ⚠️ 「禁用了」不等于「它做过的事被撤销」：插件是一段启动时执行的代码，一旦
     执行过，它派生的东西（挂在菜单上的项、起的后台线程）就归它自己，不由本系统
     回收。所以改了启用状态**重启才生效** —— 界面上的「状态」列也是这么写的。
+    同理，它也不阻止**临时加载**与**被依赖拉起**（见上面的定义）。
 
     Args:
         path: 插件文件路径（``None`` 表示不在任何插件里 → 永远不禁用）。
@@ -730,20 +834,33 @@ def get_state_list():
     ⚠️ 顺序**不是**用户可调的：用户登记的排在前面（按加入先后），自动发现的
     排在后面；真正的执行先后由优先级决定（见 :func:`zmlx.ui.plugins.get_files`）。
 
+    ⚠️ **``choice`` 直接从手上的 ``flags`` 取，不再调 ``get_choice(path)``**
+    （2026-10-22 改）：后者内部要 ``find(path)`` → ``get_entries()``，也就是
+    **每个插件都把整份名单重新解析一遍**（19 个插件 = 19 次读盘 + 字符串切分）。
+    本函数在**切标签页的路径上**（``plugin_list_edit`` 的 ``update_items``），实测这一步
+    占 ``collect_states`` 的大头，改成内联后整体从 6.6 ms 降到 2 ms。
+
     Returns:
         list[dict]: 每项含 ``path`` / ``priority`` / ``disabled`` /
-        ``standard``（是否自动发现）/ ``exists``（文件是否还在）。
+        ``standard``（是否自动发现）/ ``exists``（文件是否还在）/
+        ``choice``（``'disabled'`` / ``'enabled'`` / ``None`` = 用户没表过态）。
     """
     result = []
     for path, flags in get_entries():
+        # 「用户表过态吗」：None = 跟随插件自报的默认值（界面上会注明）。
+        # ⚠️ 与 :func:`get_choice` 的判定**同一顺序**（先 DISABLED 后 ENABLED）。
+        choice = None
+        for flag in (_Flags.DISABLED, _Flags.ENABLED):
+            if flag in flags:
+                choice = flag
+                break
         result.append({
             'path': path,
             'priority': _Flags.parse_priority(flags),
             'disabled': _Flags.DISABLED in flags,
             'standard': _Flags.STANDARD in flags,
             'exists': os.path.isfile(path),
-            # 「用户表过态吗」：None = 跟随插件自报的默认值（界面上会注明）
-            'choice': get_choice(path),
+            'choice': choice,
         })
     return result
 
@@ -776,7 +893,8 @@ def list_all(*, only_existing=False, include_disabled=True):
     # 两个稳定排序串起来（先按文件名档次、再按优先级），等价于
     # ``key = (优先级, 文件名档次)``，但**只降不升**：旧名（兼容名）永远沉到
     # 同段的最后，而推荐的 ``zml_plugin.py`` **不会**被提到普通文件之前 ——
-    # 名单顺序就是用户拖动出来的顺序，不能被「文件名好看」改写。
+    # 名单顺序就是名单里记着的顺序（用户不可调，见模块文档），不能被
+    # 「文件名好看」改写。
     entries.sort(key=lambda item: plugin_name_rank(item[0]))
     order = {value: idx for idx, value in enumerate(PRIORITIES)}
     entries.sort(key=lambda item: order[item[1]['priority']])

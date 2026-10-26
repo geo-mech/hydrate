@@ -6,7 +6,7 @@
 Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
 # 版本号：必须与 pyproject.toml 中的 version 保持一致（提交时同步更新，见 AGENTS.md）
-__version__ = '1.9.0'
+__version__ = '1.9.1'
 
 # 导入其它的内容，兼容之前的代码
 from zmlx.system import warn

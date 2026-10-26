@@ -10,5 +10,7 @@ from zmlx.plt.on_axes import add_legend
 _keep = [add_legend]
 
 
-warn(f'The module {__name__} will be removed after 2027-5-23',
-              DeprecationWarning, stacklevel=2)
+warn(
+    'The module zmlx.plt.legend 已弃用（remove after 2027-5-23）：'
+    '请改用 `from zmlx import add_legend`',
+    DeprecationWarning, stacklevel=2)

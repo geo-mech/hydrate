@@ -1,9 +1,18 @@
 # ** name = '图片浏览'
 # ** desc = '扫描工作路径下的图片，左侧缩略图相册 + 右侧大图预览，支持连续播放'
-"""「图片浏览」菜单动作（菜单「文件 → 图片浏览」）.
+"""「图片」菜单动作（菜单「文件 → 浏览 → 图片」）.
 
-把 :class:`~zmlx.ui.tabs.image_browser.ImageBrowser` 挂到界面上：菜单项在
-**「文件」**下，点击即打开（或切到）那个标签页。
+把 :class:`~zmlx.ui.tabs.image_browser.ImageBrowser` 挂到界面上：点菜单即打开
+（或切到）那个标签页。
+
+⚠️ **2026-10-26 起菜单项是「文件 → 浏览」的子菜单项**（原先直接挂在「文件 → 图片浏览」）：
+「工作目录」浏览（插件 ``viewers`` 的 ``view_cwd``）与「图片」都是「看文件」的入口，
+两者合成一个子菜单，用户不必在两个位置各找一次。
+
+⚠️ 位置由**本插件**（而不是 ``viewers``）决定：子菜单 `['文件', '浏览']` 由
+``MainWindow.get_menu`` **按标题、缺则新建**，所以两个插件谁先加载都能并进同一个
+「浏览」；而本插件被禁用时，「工作目录」那一项照样出现（``viewers`` 自己建出这个
+子菜单）。
 
 为什么是插件（``plugins/``）而不是 ``extra_setups/``
 --------------------------------------------------
@@ -17,15 +26,21 @@
 ``vtk_view.py`` / ``zip_files.py``）。两者的分工见 :mod:`zmlx.ui.plugins`：
 **产品功能**（授权查询、用户管理）留 ``extra_setups``，**可关闭的扩展**放这里。
 
+⚠️⚠️ **``open_image`` 与 ``ImageView`` 2026-10-22 一度搬进本文件，同日又还原**：
+欢迎页在 ``MainWindow.__init_actions`` 里就要用它，``gui.open_image`` 是**底层能力**，
+不该随插件开关而消失。现在它们分别回到 ``MainWindow.open_image`` 与
+``ui/tabs/img.py``（``ImageView``），``.png/.jpg`` 文件类型也回到 ``main.py`` 的
+``__init_actions`` 里注册。本插件**只管「相册浏览」这一件事**。
+
 挂出来的两个入口
 ----------------
 
-========================  ============================================
+=======================  ============================================
 入口                       调用
-========================  ============================================
-菜单「文件 → 图片浏览」      :func:`show_image_browser`
+=======================  ============================================
+菜单「文件 → 浏览 → 图片」    :func:`show_image_browser`
 GUI 命令                  ``gui.show_image_browser()``
-========================  ============================================
+=======================  ============================================
 
 ⚠️ **``gui.show_image_browser()`` 是给 ``gui_restore`` 用的**：标签页被存进标签
 状态后，重启时按这串原文重放，所以命令名一旦发布就**不能再改**（照
@@ -47,6 +62,12 @@ GUI 命令                  ``gui.show_image_browser()``
 触发），两处口径一致：**重建视图只发生在真的新建标签页时**。
 
 Created by DeepSeek, 2026-10-16
+Modified by DeepSeek, 2026-10-22: ``ImageView`` 与 ``open_image`` 一度并入本文件
+Modified by DeepSeek, 2026-10-22: 同日**还原** —— ``open_image`` 是底层能力（欢迎页在
+    ``MainWindow`` 构造期就要用），控件回 ``ui/tabs/img.py``、命令回 ``MainWindow``；
+    本插件只留「相册浏览」
+Modified by DeepSeek, 2026-10-26: 菜单项搬到「文件 → 浏览」子菜单下（文字「图片」）；
+    命令名 ``gui.show_image_browser`` 与 action name 均未变
 """
 
 from zmlx.system import execute_once
@@ -96,7 +117,7 @@ def _open():
 
 @execute_once(file=__file__)
 def setup_ui():
-    """注册 GUI 命令与菜单项（由 ``plugins.run_setup`` 执行本文件时触发）."""
+    """注册 GUI 命令与菜单项（由 ``plugins.load_all`` 执行本文件时触发）."""
     from zmlx.ui import gui
 
     # 先注册命令：gui.show_image_browser() 与菜单项指向**同一个**函数，
@@ -104,15 +125,21 @@ def setup_ui():
     gui.add_func('show_image_browser', _open)
 
     gui.add_action(
-        menu='文件',
+        # ⚠️ 2026-10-26：菜单路径由 ``'文件'`` 改为 ``['文件', '浏览']``（子菜单合并，
+        #    见模块文档）。``name='image_browser'`` 与 ``gui.show_image_browser()``
+        #    **都不变** —— 那是 ribbon 配置 / 已保存的界面布局 / 历史标签页的定位依据。
+        menu=['文件', '浏览'],
         name='image_browser',
-        text='图片浏览',
+        text='图片',
         slot=show_image_browser,
         overwritable=False,
     )
 
 
-# ⚠️ 作为**插件**被 ``run_setup`` 执行时，没人会替我们调 ``setup_ui()``：
-#    插件文件必须在**顶层自己调**（``extra_setups/*.py`` 则由
-#    ``extra_setups/__init__.py`` 统一调用 —— 这是两者唯一的区别）。
-setup_ui()
+# ⚠️ 插件的标准形式：**注册写在这个分支里**。
+#    插件机制用 ``exec`` 执行本文件时，命名空间里的 ``__name__`` 被设成
+#    ``'__zml_plugin__'``，于是这里成立 —— 只注册，不开窗口。
+#    ⚠️ **不要**在顶层裸写 ``setup_ui()``：那样「插件加载」与「直接运行本文件」
+#    走同一段代码，既无法区分两种意图，也无法在 ``python image_browser.py`` 时自测。
+if __name__ == '__zml_plugin__':
+    setup_ui()

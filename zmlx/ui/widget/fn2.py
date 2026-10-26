@@ -1,11 +1,12 @@
-"""旧模块名（兼容层，**已弃用**）：``fn2`` -> :mod:`zmlx.ui.tabs.fn2`.
+"""旧模块名（兼容层，**已弃用**）：``fn2`` -> :mod:`zmlx.ui.plugins.builtin.fn2_view`.
 
-⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/ui/tabs/fn2.py`` 里 ——
-本文件除了下面那几行 import / 别名不该再有任何内容。
+⚠️ **本模块只是一层转发**，真正的实现在插件 ``zmlx/ui/plugins/builtin/fn2_view.py``
+里（2026-10-22 随 ``show_fn2`` 一起搬入）—— 本文件除了下面那几行 import / 别名不该再有
+任何内容。
 
 ⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
-会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.ui.tabs import Fn2Widget``
-（或 ``from zmlx.ui.tabs.fn2 import Fn2Widget``）。
+会发出 :class:`DeprecationWarning`。**新代码请写**
+``from zmlx.ui.plugins.builtin.fn2_view import Fn2Widget``。
 
 为什么留着而不删
 ----------------
@@ -29,15 +30,15 @@ from zmlx.system import warn
 
 
 warn(
-    '``zmlx.ui.widgets.fn2`` 已弃用（2026-10-16）：控件 ``Fn2Widget`` 已迁至 '
-    '``zmlx.ui.tabs.fn2``；本转发层将于 **2027-10-16** 删除。'
-    '请改用 ``from zmlx.ui.tabs import Fn2Widget``。',
+    '``zmlx.ui.widgets.fn2`` 已弃用（2026-10-16）：控件 ``Fn2Widget`` 已随插件搬到 '
+    '``zmlx.ui.plugins.builtin.fn2_view``；本转发层将于 **2027-10-16** 删除。'
+    '请改用 ``from zmlx.ui.plugins.builtin.fn2_view import Fn2Widget``。',
     DeprecationWarning,
     stacklevel=2,
 )
 
-from zmlx.ui.tabs.fn2 import *  # noqa: F401,F403
-from zmlx.ui.tabs.fn2 import (  # noqa: F401
+from zmlx.ui.plugins.builtin.fn2_view import *  # noqa: F401,F403
+from zmlx.ui.plugins.builtin.fn2_view import (  # noqa: F401
     Fn2Widget,
     GraphicsView,
     Hf2ColorMap,

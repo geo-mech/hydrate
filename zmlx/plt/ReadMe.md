@@ -150,6 +150,31 @@ fig.show(
 | `zmlx/ui/gui_buffer.py` | 无 GUI 模式绘图工具（`_plot_no_gui`）|
 | `_save.py` | 图形路径管理 |
 
+### 旧路径垫片（已声明弃用，**保留不删除**）
+
+早期把 `plt` 拆成 `on_axes / on_figure / on_ui` 三层之前的老路径，至今仍可导入，
+导入即发一条 `DeprecationWarning`。**它们不会被删除**（留着没有害处），但新代码请一律
+用 `zmlx` 顶层或 `on_axes / on_figure / on_ui` 里的函数：
+
+| 旧路径 | 替代 |
+|---|---|
+| `zmlx.plt.cbar` | `from zmlx import add_cbar` |
+| `zmlx.plt.cells` | `from zmlx import show_cells`（实现在 `zmlx.tfc`）|
+| `zmlx.plt.contourf` / `tricontourf` | `from zmlx import contourf` / `add_contourf`（后者同理加 `add_`）|
+| `zmlx.plt.curve2` / `plotxy` | `from zmlx import plot_xy`（即 `show_xy`）|
+| `zmlx.plt.dfn2` / `fn2` / `field2` / `rc3` / `trimesh` / `trisurf` | `from zmlx import show_dfn2`（其余同理 `show_xxx`）|
+| `zmlx.plt.legend` / `surf` | `from zmlx import add_legend` / `add_surf` |
+| `zmlx.plt.get_cm` / `get_color` | `from zmlx.plt import get_cm / get_color`（`zmlx` 顶层**没有**这两个）|
+| `zmlx.plt.plot_on_axes` / `plot_on_figure` / `plot_trisurf` | `from zmlx import plot_on_axes`（其余同理）|
+| `zmlx.plt.subplot_layout` | `from zmlx import calculate_subplot_layout` |
+| `zmlx.plt.seepage_mesh` | `from zmlx import add_seepage_mesh` |
+| `zmlx.plt.plot2` | `zmlx.fig` 的声明式 API |
+| `zmlx.plt.item` / `plot2d` / `plot3d` | `zmlx.fig.item` / `fig.plot2d` / `fig.plot3d` |
+| `zmlx.plt.data` | `zmlx.data.example_fn2` / `zmlx.data.surf` |
+
+⚠️ `add_*` 系列函数只吃 `ax.plot` 的参数；`cbar`、`caption`、`tight_layout` 这类
+**绘图框架**参数不要直接透传给底层 `ax.plot`（2026-10-21 已让 `add_dfn2` 吸收它们）。
+
 ---
 
 ## 与其他模块的关系

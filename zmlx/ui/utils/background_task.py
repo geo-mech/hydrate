@@ -74,7 +74,7 @@
    会**连同子对象**一起删 —— parent 指向别处的 ``QThread`` 在运行中被析构会让进程
    直接崩（``QThread: Destroyed while thread is still running``，**不是** Python 异常，
    ``try/except`` 兜不住）。
-2. **用模块级列表 ``_RUNNING`` 持强引用**（与 ``tabs/demo_view.py`` 同一写法），
+2. **用模块级列表 ``_RUNNING`` 持强引用**（与 ``plugins/builtin/demo_menu.py`` 同一写法），
    跑完由 ``finished`` 摘表。这样即使调用方把 ``BackgroundTask`` 丢掉，也不会出现
    「QThread 还在跑却被回收」。
 3. ⚠️ 线程体持有的是宿主的 **weakref**（不是强引用）：于是「宿主被回收」能被线程自己
@@ -122,7 +122,7 @@ if QtCore is None:  # 无头模式（或 Qt 绑定导入失败）
 #:
 #: ⚠️ 线程**不设 parent**（见模块 docstring），所以必须由别的东西持着它，否则
 #: QThread 在运行中被回收 = 进程直接崩。跑完由 ``finished`` 摘表。
-#: 这与 ``tabs/demo_view.py`` 的 ``_RUNNING`` 是同一套写法。
+#: 这与 ``plugins/builtin/demo_menu.py`` 的 ``_RUNNING`` 是同一套写法。
 _RUNNING = []
 
 

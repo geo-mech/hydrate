@@ -36,43 +36,50 @@
 
 | 类别 | 判据 | 例子 |
 |---|---|---|
-| **底层控件** | 会被别的控件 `addWidget()` 进去、或被继承 | `CodeEdit` / `TextBrowser` / `MarkdownView` / `MatplotWidget` / `Label` / `AttrView` / `ImageView` 之外的那些；`ObjEditByText`；`editors.py`（被 `seepage.py` 用） |
-| **宿主不是标签页的常驻控件** | 宿主是状态栏 / 右侧栏 / 标签容器，不是"打开一个页面" | `LicenseButton` / `VersionButton` / `_parallel.py` 的 `CoreParallelEdit`（状态栏）、`OutputWidget`（右侧栏常驻，`closeable=False`）、`TabWidget`（标签容器） |
+| **底层控件** | 会被别的控件 `addWidget()` 进去、或被继承 | `CodeEdit` / `TextBrowser` / `MarkdownView` / `MatplotWidget` / `Label` / `AttrView` 之外的那些；`ObjEditByText`；`editors.py`（被 `seepage.py` 用） |
+| **宿主不是标签页的常驻控件** | 宿主是状态栏 / 右侧栏 / 标签容器，不是"打开一个页面" | `LicenseButton` / `VersionButton` / `RunStateLight` / `_parallel.py` 的 `CoreParallelEdit`（状态栏）、`OutputWidget`（右侧栏常驻，`closeable=False`）、`TabWidget`（标签容器） |
 | **对话框 / 表单组件集** | 通过 `setup_ui()` 注册成「信息对话框」里的一行，不是页面 | `seepage.py` / `editors.py` / `float_edit.py` |
 
-## 3. 当前成员（27 个）
+## 3. 当前成员（表中 18 个有效；2026-10-22 另有 9 个随各插件移出，见表内划掉项）
 
 | 控件 | 模块 | 生命周期钩子 |
 |---|---|---|
 | `About` | `about.py` | `cleanup_before_tab_close` + `refresh` + `showEvent` |
-| `AppPathEdit` | `app_path_edit.py` | —— |
+| ~~`AppPathEdit`~~ | **已搬走**（2026-10-22）→ `plugins/builtin/viewers.py` | 只有「设置 → 路径」入口在用 |
 | `CheckCountView` | `check_count_view.py` | `cleanup_before_tab_close` + `refresh` + `showEvent` |
 | `CodeHistoryView` | `code_history_view.py` | —— |
-| `CwdView` | `cwd_view.py` | `refresh` |
-| `DemoView` | `demo_view.py` | `refresh`（扫描走后台线程） |
+| ~~`CwdView`~~ | **已搬走**（2026-10-22）→ `plugins/builtin/viewers.py` | 只有「文件 → 浏览 → 工作目录」入口在用 |
+| ~~`DemoView`~~ | **已搬走**（2026-10-22）→ `plugins/builtin/demo_menu.py` | 只有「示例浏览」插件在用，随 `show_demo` 并入插件 |
 | `EnvEdit` | `env_edit.py` | —— |
 | `FeedbackTool` | `feedback_tool.py` | `cleanup_before_tab_close` + `save_file` + `need_save` + `showEvent` |
 | `FeedbacksView` | `feedbacks_view.py` | `cleanup_before_tab_close` + `refresh` + `showEvent` |
-| `Fn2Widget` | `fn2.py` | —— |
+| ~~`Fn2Widget`~~ | **已搬走**（2026-10-22）→ `plugins/builtin/fn2_view.py` | 只有「二维裂缝查看」插件在用，随 `show_fn2` 并入插件（连同 `GraphicsView` / `Hf2ColorMap` / `Hf2Data` / `Hf2FracView`） |
 | `GuiIteratorEdit` | `gui_iter_edit.py` | `refresh` |
-| `ImageView` | `img.py` | —— |
-| `ImageBrowser` | `image_browser.py` | `cleanup_before_tab_close` + `hideEvent`/`showEvent`（3 个后台线程；⚠️ **故意不实现 `refresh()`**，刷新只由界面上的按钮触发；⚠️ **未**注册进本包 `__init__.py`，但**已挂到菜单**「文件 → 图片浏览」，挂载点在 `../plugins/builtin/image_browser.py`） |
+| `ImageView` | `img.py` | ——（⚠️ 2026-10-22 曾随 `gui.open_image` 并入插件，**同日还原**：`open_image` 是底层能力，欢迎页在 `MainWindow` 构造期就要用） |
+| `ImageBrowser` | `image_browser.py` | `cleanup_before_tab_close` + `hideEvent`/`showEvent`（3 个后台线程；⚠️ **故意不实现 `refresh()`**，刷新只由界面上的按钮触发；⚠️ **未**注册进本包 `__init__.py`，但**已挂到菜单**「文件 → 浏览 → 图片」，挂载点在 `../plugins/builtin/image_browser.py`） |
 | `LicenseRegister` | `license_register.py` | `cleanup_before_tab_close` + `showEvent` |
 | `MemView` | `mem_view.py` | `refresh` |
 | `MessageEdit` | `message.py` | `refresh` |
 | `OutputHistoryView` | `output_history_view.py` | —— |
-| `PgConsole` | `pg.py` | ——（可选依赖：没装 pyqtgraph 时这个名字是 `None`） |
+| ~~`PgConsole`~~ | **已搬走**（2026-10-22）→ `plugins/builtin/pg_console.py` | 只有「Python 控制台」插件在用，随 `show_pg_console` 并入插件（⚠️ 缺 pyqtgraph 时那里是 `None`） |
 | `ReadMeBrowser` | `readme_browser.py` | —— |
 | `RegTool` | `reg_tool.py` | ——（已废弃；留作「离线授权码」那条老路） |
-| `PluginListEdit` | `plugin_list_edit.py` | `cleanup_before_tab_close`（旧名 `SetupFileEdit` / `setup_file_edit.py`，2026-10-18 改名，**不留转发层**；扫描走后台线程 `_ScanWorker`，`refresh()` 因此是**异步**的；⚠️ **构造时不加载数据**，由打开时的 `oper` 调 `refresh()`；扫描期间再来刷新请求只记一笔、铺完补一轮，避免反复重建表格） |
-| `SolverSelector` | `solver_selector.py` | `refresh` |
+| `PluginListEdit` | `plugin_list_edit.py` | `cleanup_before_tab_close`（旧名 `SetupFileEdit` / `setup_file_edit.py`，2026-10-18 改名，**不留转发层**；扫描走后台线程 `_ScanWorker`，`update_items()` 因此是**异步**的；⚠️ **构造时不加载数据**，由打开时的 `oper` 调 `update_items()`；扫描期间再来刷新请求只记一笔、铺完补一轮，避免反复重建表格）。⚠️ 方法名是 **`update_items` 而非 `refresh`**（2026-10-22）：`MainWindow.refresh()` 会在**每次切到这个标签页**时调 `get_current_widget().refresh()`，叫 `refresh` 会让这一页每次切回来都白算一遍（实测即「切标签卡顿」）。本控件的状态全由自己的交互触发（勾选 / 改优先级 / 临时加载 / 打开时的 `oper`），不依赖「切回时自动刷新」 |
+| ~~`SolverSelector`~~ | **已搬走**（2026-10-22）→ `plugins/builtin/solver_menu.py` | 只有「求解器」插件在用（随 `gui.show_solver_selector` 并入插件）。⚠️ 老路径 `from zmlx.ui.tabs import SolverSelector` 仍可用 —— 本包末尾的 PEP 562 `__getattr__` **惰性**转发到插件 |
 | `StringTable` | `string_table.py` | —— |
-| `StyleSheetEdit` | `style_sheet_edit.py` | —— |
-| `TabDetailView` | `tab_detail_view.py` | `refresh` + `showEvent`/`hideEvent`（开在右侧栏，自己定时刷） |
+| ~~`StyleSheetEdit`~~ | **已搬走**（2026-10-22）→ `plugins/builtin/style_sheet_menu.py` | 只有「样式表」插件在用，随 `show_style_sheet` 并入插件 |
+| ~~`TabDetailView`~~ | **已搬走**（2026-10-22）→ `plugins/builtin/viewers.py` | 只有「显示 → 标签列表」入口在用 |
 | `TextFileEdit` | `text_file_edit.py` | —— |
-| `TimerView` | `timer_view.py` | `refresh`（自带 `QTimer`） |
+| ~~`TimerView`~~ | **已搬走**（2026-10-22）→ `plugins/builtin/viewers.py` | 只有「显示 → 耗时」入口在用 |
 
 外加 `_test_feedbacks_view.py`（`feedbacks_view` 的离线自测，与所测控件同行）。
+
+⚠️ **上表划掉的 9 个控件仍可由本包按名字取用**：它们随插件搬走后，`tabs/__init__.py`
+末尾用 PEP 562 `__getattr__` 做**惰性**转发（与 `SolverSelector` 同一套写法），所以
+`from zmlx.ui.tabs import TimerView`（或 `DemoView` / `StyleSheetEdit` / `TabDetailView` /
+`CwdView` / `AppPathEdit` / `Fn2Widget` / `PgConsole`）照常可用、2027-10-16 前不会断。
+⚠️ 只有真正取用时才会 import 插件模块；新代码请直接用
+`from zmlx.ui.plugins.builtin.<插件> import <类>`。
 
 ⚠️ **上表与「有没有被 `tabs/__init__.py` 转发」无关**：2026-10-16 起，新增控件**默认不**在
 `__init__.py` 里转发（要按子模块路径导入），`ImageBrowser` 就是没登记的那个。完整规则见
@@ -174,7 +181,7 @@ from zmlx.ui.widget.about import About            # ⚠️ 老路径，发 Depre
   `gui.show_image_browser()`。⚠️ **挂载点不在 `main.py`，而在**
   [`../plugins/builtin/image_browser.py`](../plugins/builtin/image_browser.py) —— 这正是
   §1 那句「只被**装配层**打开成标签页」的实例：装配层包括 `extra_setups/`，所以
-  「新增一个入口」不该去动那个 2600 多行的主窗口文件。`tabs/__init__.py` 依旧**没有**
+  「新增一个入口」不该去动那个 2760 行的主窗口文件。`tabs/__init__.py` 依旧**没有**
   收它（挂载走子模块路径直接 import），这不影响它是顶层控件。
   同日连带修掉一个**空引用竞态**：扫描是异步的，「关标签时结果还在路上」是常态，
   而 `_on_scan_found` / `_on_thumb` / `_on_loaded` 三个回调没有像 `rescan()` 那样先判

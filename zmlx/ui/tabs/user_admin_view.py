@@ -709,7 +709,7 @@ class UserAdminView(QtWidgets.QWidget):
                    '写明需求（会自动带上本机信息），或直接联系管理员：%s')
 
     #: **未绑定**（或授权已失效）时给出的出路：这时该先去登录，而不是急着反馈。
-    DENIED_HINT_UNBOUND = ('本机还没有绑定邮箱，或授权已失效。请先通过「帮助 → 用户 → 登录」'
+    DENIED_HINT_UNBOUND = ('本机还没有绑定邮箱，或授权已失效。请先通过「帮助 → 登录」'
                            '绑定邮箱；如需修改姓名、单位、到期时间或功能清单，'
                            '请联系管理员：%s')
 
@@ -897,7 +897,7 @@ class UserAdminView(QtWidgets.QWidget):
         return page
 
     def _open_feedback(self):
-        """打开「帮助 → 用户 → 反馈」那一页（**不自己造一个反馈入口**）.
+        """打开「帮助 → 反馈」那一页（**不自己造一个反馈入口**）.
 
         ⚠️ 走 ``gui.show_feedback()``（``MainWindow.show_feedback`` 自动注册的
         命令）而不是直接建 ``FeedbackTool``：反馈正文的拼装、落盘、去重都在那个
@@ -1525,7 +1525,7 @@ class UserAdminView(QtWidgets.QWidget):
         self._check_admin()
 
     def refresh(self):
-        """GUI 刷新钩子（切到本页 / 菜单「显示 → 刷新」）.
+        """GUI 刷新钩子（切到本页 / 菜单「操作 → 刷新」）.
 
         ⚠️ **必须快**：只补一次「名单还没取到」的初始加载，绝不重放上一次查询。
         名单要服务端逐用户读许可（可能好几秒），在这里无条件重拉的话，每切一次

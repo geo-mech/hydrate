@@ -37,14 +37,49 @@
 
 ⚠️ 作为插件，顶层**必须自己调** ``setup_ui()``（见文件末尾）—— 没有谁会替它调。
 
+搬入的方法（2026-10-22）
+-----------------------
+
+``show_calendar`` 原来以 ``MainWindow.show_calendar`` 的形式常驻在界面骨架里：
+它只是「开一个 Qt 自带的 ``QCalendarWidget`` 标签页」，而这个功能的**条目**本来就在
+本插件里（「帮助 → 显示 → 日历」）。现在方法与条目都在这里，命令
+``gui.show_calendar`` 由 :func:`setup_ui` 用 ``gui.add_func`` **显式注册**
+（它原来靠 ``MainWindow`` 的「所有公开方法自动注册」）。
+
+⚠️ **代价（刻意接受）**：本插件默认不加载，所以 ``gui.show_calendar`` 默认**不存在**；
+历史标签页里的 ``gui.show_calendar()`` 也只在启用本插件后能恢复。日历本来就被
+本文件的 ``# ** desc`` 列为 admin / 调试类入口，随插件开关走是合理的。
+
 Modified by Claude, 2026-08-12
 Modified by DeepSeek, 2026-10-18: 由 ``extra_setups/testing.py`` 移入插件；
     去掉「帮助 → 加载 → Admin功能」中间层，并默认不加载
+Modified by DeepSeek, 2026-10-22: ``MainWindow.show_calendar`` 方法搬入本文件
+    （连同它那条菜单项的 slot），并显式注册 ``gui.show_calendar``
 """
 
 import os
 
 from zmlx.system import execute_once
+
+
+def show_calendar():
+    """显示一个「日历」标签页（就是 Qt 自带的 ``QCalendarWidget``）.
+
+    ⚠️ **命令名不能改**：历史标签页的 ``gui_restore`` 里存着 ``gui.show_calendar()``，
+    重启时按原文重放。⚠️ 本插件**默认不加载**，所以这个命令默认**不存在** ——
+    启用本插件后才有（历史标签页也只在启用后能恢复）。这是 2026-10-22 搬入时的
+    已知取舍：日历本来就被列为 admin / 调试类入口（见文件顶的 ``# ** desc``）。
+
+    ⚠️ 只通过 ``gui.get_widget`` 打开 —— 标签页只会一个，重复调用只是切到前面。
+    """
+    from zmlx.ui import gui
+    from zmlx.ui.pyqt import QtWidgets
+
+    def oper(w):
+        w.gui_restore = 'gui.show_calendar()'
+
+    gui.get_widget(
+        the_type=QtWidgets.QCalendarWidget, caption='日历', on_top=True, oper=oper)
 
 
 @execute_once(file=__file__)
@@ -57,6 +92,12 @@ def setup_ui():
         open_gitee_geomech_hydrate, open_iggcas, open_new_issue,
         open_my_publications, play_images)
     from zmlx.ui.gui_buffer import add_action, gui
+
+    # ⚠️ ``show_calendar`` 原来是 ``MainWindow`` 的公开方法，靠
+    #    「所有公开方法自动注册」当上 ``gui.show_calendar``。方法搬到这里后，
+    #    那串命令名**必须显式注册**，否则下面那条「日历」菜单项点了会报
+    #    ``gui function <show_calendar> not found``。
+    gui.add_func('show_calendar', show_calendar)
 
     def not_running():
         return not gui.is_running()
@@ -112,7 +153,7 @@ def setup_ui():
     add_action(
         menu=['帮助', '显示'],
         text='日历',
-        slot=gui.show_calendar,
+        slot=show_calendar,
         overwritable=False,
     )
 
@@ -204,7 +245,7 @@ def setup_ui():
     )
 
 
-# ⚠️ 插件路径：由 run_setup exec 执行，**没人会替我们调 setup_ui()**，所以本文件
+# ⚠️ 插件路径：由 load_all exec 执行，**没人会替我们调 setup_ui()**，所以本文件
 #    把调用写在**模块顶层**（``extra_setups/*.py`` 则由 ``extra_setups/__init__.py``
 #    统一调用 —— 这是两者唯一的区别）。插件机制执行时 ``__name__`` 是
 #    ``'__zml_plugin__'``；直接 ``python admin_menu.py`` 时才是 ``'__main__'``

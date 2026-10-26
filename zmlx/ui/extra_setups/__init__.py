@@ -18,27 +18,26 @@ def setup_ui():
     except Exception as err:
         print(f"Error when setup mem_view: {err}")
 
+    # ⚠️ 数据编辑器的「文件类型 / 打开 / 新建」与「帮助 → 其它 → 生成测试数据」**在插件里**
+    #    ``zmlx/ui/plugins/builtin/editors.py``（2026-10-22，默认启用）：编辑器是一个可
+    #    关闭的单元，它的装配代码也一起搬走了（原 ``extra_setups/editors.py`` 已删，
+    #    中途那个 ``zmlx/scen/editors/`` 插件包也已取消、控件退回 ``ui/widgets/editors/``）。
+    #    于是「文件 → 打开 / 新建」里那 7 种类型由**插件**注册，而不是这里的常驻调用。
+    #
+    # ⚠️ 顺序：本函数在 ``main.py`` 的 ``__console_kernel`` 里**先于**
+    #    ``plugins.load_all()`` 执行，而 ``__restore_tabs()`` 在它俩之后 —— 所以重启
+    #    恢复标签页时，插件注册的 ``gui.open_xxx`` 一定已经在了。
+
     try:
-        # ⚠️ 只注册**文件类型**（``gui.open_numpy_array`` 等），不再挂菜单：
-        #    「文件 → 生成测试数据」那五个**示例数据**条目已搬进插件
-        #    ``plugins/builtin/editors_menu.py``（默认不加载，见那边说明）。
-        #    打开已有文件是常规能力，与插件是否启用无关，所以留在这里。
-        from zmlx.ui.widgets.editors import setup_ui
+        # ⚠️ **必须排在本函数最前面**（比下面那些 setup 都早，更在插件之前）：
+        #    它挂的是**插件命令的占位**（``get_vtk_view`` / ``show_style_sheet`` …），
+        #    插件启用后要用同名 ``gui.add_func`` 覆盖它们 —— 顺序反了，占位就会顶掉插件。
+        #    顺序契约见 ``extra_setups/AGENTS.md`` §3；理由见该模块文档。
+        from zmlx.ui.extra_setups.plugin_placeholders import setup_ui
 
         setup_ui()
     except Exception as err:
-        print(f"Error when setup editors: {err}")
-
-    try:
-        # ⚠️ 只注册**文件类型**（``gui.open_seepage`` / ``gui.open_fludef``），
-        #    不再挂菜单：「文件 → 生成测试数据」里那条造 ``Example.fludef`` 的
-        #    示例数据已搬进插件 ``plugins/builtin/seepage_menu.py``（默认不加载）。
-        #    打开已有 .seepage 文件是常规能力，与插件是否启用无关，所以留在这里。
-        from zmlx.ui.widgets.seepage import setup_ui
-
-        setup_ui()
-    except Exception as err:
-        print(f"Error when setup seepage: {err}")
+        print(f"Error when setup plugin_placeholders: {err}")
 
     # ⚠️ 「帮助 → 加载 → Admin功能」那一批已整体移入插件
     #    ``plugins/builtin/admin_menu.py``（默认不加载）—— 里面多数是开发 / 调试用的入口，

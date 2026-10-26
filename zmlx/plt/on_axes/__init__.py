@@ -17,7 +17,6 @@ from zmlx.plt.on_axes._surf import add_surf
 from zmlx.plt.on_axes._tricontourf import add_tricontourf as tricontourf, add_tricontourf
 from zmlx.plt.on_axes._trimesh import add_trimesh
 from zmlx.plt.on_axes._trisurf import add_trisurf as trisurf3, add_trisurf
-from zmlx.system import deprecated
 
 _keep = [contourf, trisurf3, tricontourf, scatter3]
 
@@ -115,20 +114,8 @@ def add_curve(ax, *args, **kwargs):
 curve = add_curve
 add_curve2 = add_curve
 
-
-@deprecated(remove_after='2027-6-1', alternative='zmlx.fig.item')
-def item(*args, **kwargs):
-    from zmlx.fig import item as impl
-    return impl(*args, **kwargs)
-
-
-@deprecated(remove_after='2027-6-1', alternative='zmlx.fig.plot3d')
-def plot3d(*args, **kwargs):
-    from zmlx.fig import plot3d as impl
-    return impl(*args, **kwargs)
-
-
-@deprecated(remove_after='2027-6-1', alternative='zmlx.fig.plot2d')
-def plot2d(*args, **kwargs):
-    from zmlx.fig import plot2d as impl
-    return impl(*args, **kwargs)
+# 注意：这里曾经还定义了一份 `item` / `plot2d` / `plot3d`（转发到 zmlx.fig），与
+# ``zmlx.plt.__init__`` 里的同名垫片完全重复（两份独立对象，各发一条告警）。
+# 2026-10-21 只保留 ``zmlx.plt`` 那一份；本子包不再定义同名函数 ——
+# 否则它会在 ``zmlx.plt.plot_on_axes.py`` 转发 ``from zmlx.plt.on_axes import
+# plot_on_axes`` 时被同名属性遮蔽（会拿到这里的 plot2d）。

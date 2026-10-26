@@ -1,11 +1,14 @@
-"""旧模块名（兼容层，**已弃用**）：``pg`` -> :mod:`zmlx.ui.tabs.pg`.
+"""旧模块名（兼容层，**已弃用**）：``pg`` -> :mod:`zmlx.ui.plugins.builtin.pg_console`.
 
-⚠️ **本模块只是一层转发**，真正的实现全在 ``zmlx/ui/tabs/pg.py`` 里 ——
-本文件除了下面那几行 import / 别名不该再有任何内容。
+⚠️ **本模块只是一层转发**，真正的实现在插件 ``zmlx/ui/plugins/builtin/pg_console.py``
+里（2026-10-22 随 ``show_pg_console`` 一起搬入）—— 本文件除了下面那几行 import / 别名
+不该再有任何内容。
 
 ⚠️⚠️ **本转发层将于 2027-10-16 删除**（2026-10-16 起弃用，保留一年）。导入本模块时
-会发出 :class:`DeprecationWarning`。**新代码请写** ``from zmlx.ui.tabs import PgConsole``
-（或 ``from zmlx.ui.tabs.pg import PgConsole``）。
+会发出 :class:`DeprecationWarning`。**新代码请写**
+``from zmlx.ui.plugins.builtin.pg_console import PgConsole``。
+
+⚠️ **没装 pyqtgraph 时 ``PgConsole`` 是 ``None``** —— 这条约定搬迁前后不变。
 
 为什么留着而不删
 ----------------
@@ -29,14 +32,14 @@ from zmlx.system import warn
 
 
 warn(
-    '``zmlx.ui.widgets.pg`` 已弃用（2026-10-16）：控件 ``PgConsole`` 已迁至 '
-    '``zmlx.ui.tabs.pg``；本转发层将于 **2027-10-16** 删除。'
-    '请改用 ``from zmlx.ui.tabs import PgConsole``。',
+    '``zmlx.ui.widgets.pg`` 已弃用（2026-10-16）：控件 ``PgConsole`` 已随插件搬到 '
+    '``zmlx.ui.plugins.builtin.pg_console``；本转发层将于 **2027-10-16** 删除。'
+    '请改用 ``from zmlx.ui.plugins.builtin.pg_console import PgConsole``。',
     DeprecationWarning,
     stacklevel=2,
 )
 
-from zmlx.ui.tabs.pg import *  # noqa: F401,F403
-from zmlx.ui.tabs.pg import (  # noqa: F401
+from zmlx.ui.plugins.builtin.pg_console import *  # noqa: F401,F403
+from zmlx.ui.plugins.builtin.pg_console import (  # noqa: F401
     PgConsole
 )
