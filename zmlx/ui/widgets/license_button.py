@@ -23,6 +23,7 @@
 :class:`~zmlx.ui.widgets.version_button.VersionButton`（那件事和登录状态无关）。
 
 Created by DeepSeek, 2026-10-08: 从 system_state_label.py 拆出
+Modified by DeepSeek, 2026-10-29: 本机版本号改读 core.version（zmlx.exts.version 已弃用）
 """
 
 from zmlx.ui.gui_buffer import gui
@@ -72,14 +73,18 @@ LATEST_TAG = 'LatestVersion:'
 def _get_local_version():
     """取本机软件的版本号（6 位整数，``yymmdd``，例如 ``260928`` = 2026-09-28）。
 
-    就是 ``zmlx.version``（由内核导出，与 ``zmlx.exts.lic`` 同源）。
+    就是 ``core.version``（由内核导出，与 ``zmlx.exts.lic`` 同源）。
+
+    ⚠️ 2026-10-29 起改读 :attr:`core.version`：模块级的 ``zmlx.exts.version``
+    已弃用（2027-10-29 删除）。⚠️ 它**不是** ``zmlx.__version__`` —— 后者是包
+    版本（如 ``'1.9.3'``），服务端比较用的是前者这套 ``yymmdd`` 整数。
 
     Returns:
         int: 版本号；取不到时返回 ``None``（那时一律不提示更新）。
     """
     try:
-        from zmlx.exts import version
-        return int(version)
+        from zmlx.exts import core
+        return int(core.version)
     except Exception:
         return None
 

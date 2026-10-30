@@ -2,10 +2,12 @@
 
 Modified by Claude, 2026-08-12
 """
-from zmlx.io.base import append_file
-from zmlx.io.base import load_txt
-from zmlx.io.base import load_txt as loadtxt
-from zmlx.io.path import get_path as opath, set_path
 
-if __name__ == '__main__':
+from zmlx.io.base import append_file, load_txt
+from zmlx.io.base import load_txt as loadtxt
+from zmlx.io.path import get_path as opath
+from zmlx.io.path import set_path
+from zmlx.io.python import read_py, write_py
+
+if __name__ == "__main__":
     print(opath())

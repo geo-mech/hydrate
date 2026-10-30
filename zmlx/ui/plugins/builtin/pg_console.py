@@ -149,7 +149,7 @@ def setup_ui():
     没有入口，等于装了看不见。菜单项与命令指向**同一个** :func:`show_pg_console`，
     所以 ``gui_restore`` 恢复标签页的路径不受影响。
 
-    ⚠️ **``overwritable=False`` 在这里的含义**（别按字面理解，见 ``MainWindow.add_action``
+    ⚠️ **``overwrite=False`` 在这里的含义**（别按字面理解，见 ``MainWindow.add_action``
     的 docstring）：不是「不许被覆盖」，而是「**同名 action 已存在就直接跳过**」。这条条目
     只由本插件挂、``setup_ui`` 又有 ``@execute_once``，所以正常情况下同名不存在、
     **照常挂上**；只有当另一个插件 / ``extra_setups`` 抢先注册了同名 ``pg_console`` 时
@@ -171,7 +171,7 @@ def setup_ui():
                     '耗时的代码请用工具栏的「运行」）',
             text='控制台(pg)',
             slot=show_pg_console,
-            overwritable=False,
+            overwrite=False,
         )
     except Exception as err:
         print(f'Error when add_action(pg_console): {err}')

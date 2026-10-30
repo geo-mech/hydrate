@@ -18,38 +18,68 @@ Modified by DeepSeek, 2026-10-16: 包名由 ``zmlx.alg`` 改为 ``zmlx.algs``.
 Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
 
-from zmlx.system import warn
 from zmlx.algs._code_config import code_config
 from zmlx.algs._slowdown import get_velocity_after_slowdown_by_viscosity
 from zmlx.algs._startfile import startfile  # 替代os.startfile, 实现跨平台的文件打开
 from zmlx.algs._update_by_git import update_by_git  # 基于 git 的安全更新
 from zmlx.algs.base import (
-    year_to_seconds, rand_dir3, make_index, clamp, linspace, mean, divide_list, less, is_sorted,
-    join_cols, join_rows, mass2str, time2str, fsize2str,
+    clamp,
+    divide_list,
+    fsize2str,
+    is_sorted,
+    join_cols,
+    join_rows,
+    less,
+    linspace,
+    make_index,
+    mass2str,
+    mean,
+    rand_dir3,
+    time2str,
+    year_to_seconds,
 )
-from zmlx.algs.fsys import first_only, print_tag, join_paths, make_fname, count_lines, list_files, get_last_file
-from zmlx.algs.interp import create_interp1d
-from zmlx.algs.interp import interp1
-from zmlx.algs.multi_proc import create_async, apply_async
-from zmlx.algs.sys import sbatch, timing_show, pip_install, install_dep
+from zmlx.algs.fsys import (
+    count_lines,
+    first_only,
+    get_last_file,
+    has_tag,
+    is_time_string,
+    join_paths,
+    list_files,
+    make_fname,
+    make_fpath,
+    prepare_dir,
+    print_tag,
+    time_string,
+)
+from zmlx.algs.interp import create_interp1d, interp1
+from zmlx.algs.multi_proc import apply_async, create_async
+from zmlx.algs.sys import install_dep, pip_install, sbatch, timing_show
 from zmlx.exts import SelfPath
+from zmlx.system import warn
 
 
 def get_cell_mask(*args, **kwargs):
     """已弃用，请改用 ``zmlx.exts.get_cell_mask``（2027-5-23 后移除）."""
     from zmlx.exts import get_cell_mask as impl
+
     warn(
         "get_cell_mask is deprecated (will be removed after 2027-5-23). Please use zmlx.exts.get_cell_mask instead.",
-        DeprecationWarning, stacklevel=2)
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return impl(*args, **kwargs)
 
 
 def get_pos_range(*args, **kwargs):
     """已弃用，请改用 ``zmlx.exts.get_pos_range``（2027-5-23 后移除）."""
     from zmlx.exts import get_pos_range as impl
+
     warn(
         "get_pos_range is deprecated (will be removed after 2027-5-23). Please use zmlx.exts.get_pos_range instead.",
-        DeprecationWarning, stacklevel=2)
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return impl(*args, **kwargs)
 
 

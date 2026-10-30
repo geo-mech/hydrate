@@ -3,6 +3,7 @@
 Modified by Claude, 2026-08-12
 
 Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
+Modified by DeepSeek, 2026-10-29: 弃用模块级 ``version``（改用 ``core.version``，2027-10-29 删除）
 """
 from zmlx.system import log, warn
 import ctypes
@@ -543,8 +544,19 @@ dll = load_cdll('zml.dll' if in_windows() else 'zml.so', first=os.path.dirname(o
 core = DllCore(dll_obj=dll)
 
 # Version of the zml module (date represented by six digits)
-try:
-    version = core.version
-except Exception as version_error:
-    version = 110101
-    warn(f'Meet error when get version: {version_error}', stacklevel=2)
+#
+# 内核版本（= 编译日期，yymmdd 六位整数）：**直接读 ``core.version``**，
+# 这里不再定义模块级的 ``version``。
+#
+# ⚠️ 2026-10-29 弃用：原先这里的 ``version = core.version`` 已删除 —— 它与
+#    ``zmlx.__version__``（**包**版本，如 ``'1.9.3'``）同名不同义，又被
+#    ``zmlx.exts`` / ``zmlx`` 的 ``import *`` 一起漏了出去，极易混用。
+#    旧路径（``zmlx.exts.version`` / ``zmlx.version``）保留为转发别名，
+#    **2027-10-29 删除**，见 ``zmlx/exts/__init__.py`` 的 ``__getattr__``。
+# ⚠️ 取不到时（DLL 没加载成）**不再**回退到写死的 ``110101``：那个默认值会让
+#    调用方把「内核是 2021 年 1 月 1 日编译的」当真。现在 ``core.version``
+#    原样返回（取不到就是 ``None``），由调用方自己决定怎么处理 —— 需要默认值的
+#    只有 ``_ver.py``（内建数据版本），那里已经自己兜了 ``FALLBACK_VERSION``。
+# ⚠️ 原先这里那句 ``warn(f'Meet error when get version: ...')`` 一并删除：
+#    ``DllCore.__getattr__`` 不会抛异常（取不到就返回 ``None``），这段
+#    try/except 实际上**永远不触发**，留着只会误导读代码的人。

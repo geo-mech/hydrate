@@ -11,7 +11,12 @@ import math
 from ctypes import c_double, c_void_p, c_size_t, c_bool, c_char_p, POINTER, c_int64
 from typing import Optional, Iterable, Tuple, List, Union, Any
 
-from zmlx.exts import web_license
+# ⚠️ 2026-10-29：原先写 ``from zmlx.exts import web_license``，即**经由包属性**
+#    取这个名字。包 ``__init__`` 现在有了模块级 ``__getattr__``（弃用名字转发），
+#    在 ``zmlx.exts`` 自身还没导入完时，这个写法会走到 ``__getattr__`` 里去，
+#    与 ``_seepage`` 的导入过程撞成循环导入（实测 ``partially initialized module``）。
+#    改为直接从**定义处** ``_lic`` 导入，不再依赖包的属性查找顺序。
+from zmlx.exts._lic import web_license
 from zmlx.exts._dll import core, make_c_char_p
 from zmlx.exts._fmap import FileMap
 from zmlx.exts._interp import Interp1, Interp2

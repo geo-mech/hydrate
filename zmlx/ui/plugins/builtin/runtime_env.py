@@ -874,7 +874,7 @@ def setup_ui():
         icon='set',
         tooltip='检查 zmlx 依赖的第三方包是否已安装，缺失的可一键安装',
         slot=check_runtime_env,
-        overwritable=False,
+        overwrite=False,
     )
 
 

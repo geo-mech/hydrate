@@ -1618,9 +1618,9 @@ python script.py --headless     # 等效
 | `gui.get_widget(...)` | 打开（或切到）一个标签页 —— **同一类型 + 同一标题只开一个** |
 | `gui.add_func(name, fn)` | 注册一个命令，之后 `gui.name()` 就能调 |
 | `gui.add_action(...)` | 往菜单加一项 |
-| `gui.add_action(menu='操作', name='---')` | **插一条分隔线**（`name='---'` 是分隔符的专用写法，其余参数都不用给；2026-10-26 加） |
+| `gui.add_action(menu='操作', text='---')` | **插一条分隔线**（`text='---'` 是分隔符的专用写法，其余参数都不用给；2026-10-26 加） |
 
-⚠️ **分隔符只能加在菜单里**：`name='---'` 不建 action、不带名字、不判重（连插两条就是两条线），
+⚠️ **分隔符只能加在菜单里**：`text='---'` 不建 action、不带名字、不判重（连插两条就是两条线），
 `on_toolbar=True` 对它**不生效** —— 想给工具栏分隔，仍要自己 `QToolBar.insertSeparator`。
 
 ### 三条最容易踩的界面规矩
@@ -1905,7 +1905,7 @@ gui.command('some_func', arg)   # 派发任意命令（返回值与异常都能�
 ```python
 gui.add_func('my_command', my_function)     # 之后 gui.my_command() 可用
 gui.add_action(menu='显示', name='my_view', text='我的面板',
-               slot=show_my_view, overwritable=False)
+               slot=show_my_view, overwrite=False)
 ```
 
 ### 不知道有哪些命令？
@@ -2110,7 +2110,7 @@ def setup_ui():
     from zmlx.ui import gui
     gui.add_func('show_my_feature', _open)
     gui.add_action(menu='显示', name='my_feature', text='我的功能',
-                   slot=show_my_feature, overwritable=False,
+                   slot=show_my_feature, overwrite=False,
                    is_enabled=lambda: not gui.is_running(),
                    is_visible=lambda: True)      # ← 见下面第 3 条
 ```
@@ -2188,7 +2188,7 @@ from zmlx.system import execute_once
 def setup_ui():
     gui.add_action(menu='帮助', name='my_note', text='我的备忘',
                    slot=lambda: gui.information('备忘', '记得改渗透率'),
-                   overwritable=False)
+                   overwrite=False)
 
 
 if __name__ == '__zml_plugin__':
@@ -4098,7 +4098,7 @@ def provide_gui_setup():
         # ⚠️ **必须显式给 is_visible**：Action.update_view 里 is_visible 缺省时**跟随**
         #    is_enabled —— 不写这一行，仿真跑起来时这一项是"消失"而不是"置灰"。
         is_visible=lambda: True,
-        overwritable=False,
+        overwrite=False,
     )
     return True
 

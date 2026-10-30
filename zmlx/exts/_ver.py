@@ -1,8 +1,16 @@
 """版本信息.
 
 Modified by Claude, 2026-08-12
+Modified by DeepSeek, 2026-10-29: 默认版本号改读 ``core.version``（模块级 ``version`` 已弃用）
 """
-from zmlx.exts._dll import version
+from zmlx.exts._dll import core
+
+#: 取不到内核版本（没有 DLL）时内建的数据版本。
+#:
+#: ⚠️ 这就是原先 ``_dll`` 里 ``version`` 的兜底值 ``110101``，只是**不再**冒充
+#: 「内核版本」：它只作为 :class:`_DataVersion` 的默认值，用来决定流体数据的
+#: 「解析到哪个版本的格式」，与「本机装的是哪一版内核」无关。
+FALLBACK_VERSION = 110101
 
 
 class _DataVersion:
@@ -15,15 +23,20 @@ class _DataVersion:
         __versions (dict): 各键值对应的版本号字典（受保护的属性）
     """
 
-    def __init__(self, value=version):
+    def __init__(self, value=None):
         """初始化数据版本管理器。
 
         Args:
-            value (int, optional): 默认版本号，必须为6位整数。默认使用全局version值
-
-        Raises:
-            AssertionError: 当value不是整数或不在[100000, 999999]范围内时抛出
+            value (int, optional): 默认版本号，必须为6位整数。默认使用内核版本
+                ``core.version``；取不到（没有 DLL）时退回 :data:`FALLBACK_VERSION`。
         """
+        if value is None:
+            # ⚠️ ``core.version`` 在内核没加载成时是 ``None``（旧 DLL 的导出是空函数，
+            #    返回 ``None`` 而不是整数），那时不能拿它当默认值 —— 下面的范围校验
+            #    会直接炸掉整个 ``zmlx.exts`` 的导入。
+            value = getattr(core, 'version', None)
+            if not isinstance(value, int):
+                value = FALLBACK_VERSION
         assert isinstance(value, int)
         assert 100000 <= value <= 999999
         self.__versions = {}

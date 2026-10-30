@@ -18,9 +18,9 @@
 需要用它时，写**子模块路径**直接导入：
 
 ```python
-from zmlx.ui.tabs.image_browser import ImageBrowser        # ✅ 子模块路径（默认这样写）
-from zmlx.ui.plugins.image_browser import show_image_browser   # ✅
-from zmlx.ui.tabs import ImageBrowser                       # ❌ 新元素不要靠这条
+from zmlx.ui.tabs.about import About                       # ✅ 子模块路径（默认这样写）
+from zmlx.ui.plugins.builtin.image_browser import ImageBrowser  # ✅
+from zmlx.ui.tabs import About                             # ❌ 新元素不要靠这条
 ```
 
 ### 为什么
@@ -34,8 +34,10 @@ from zmlx.ui.tabs import ImageBrowser                       # ❌ 新元素不�
 
 ⚠️ **注意「不转发」不等于「不能是顶层控件」。** 归属判据（顶层性 vs 底层组件）看的是
 **它会不会被别的控件当子控件用**，与「有没有被 `__init__` 转发」**无关**。
-`ImageBrowser` 就是现成范例：它是顶层控件、归 `tabs/`、**已挂菜单**，
-但**没有**进 `tabs/__init__.py` —— 挂载点 `plugins/builtin/image_browser.py` 按子模块路径导入它。
+`ImageBrowser` 就是现成范例：它是顶层控件、**已挂菜单**，也**没有**进 `tabs/__init__.py`。
+⚠️ 2026-10-30 起它连 `tabs/` 都不在了 —— 控件与入口一起住进
+`plugins/builtin/image_browser.py`（只服务那一个可关闭的插件 ⇒ 按 `plugins/AGENTS.md`
+§0.2「独立、完整」并入）。**它的归属变了，但「不转发」这条规矩没变**。
 
 ## 2. 那什么时候才转发
 
@@ -80,8 +82,20 @@ def setup_ui():
     from zmlx.ui import gui
     gui.add_func('show_xxx', _open)                     # 命令（给 gui_restore 重放用）
     gui.add_action(menu='显示', name='xxx', text='……',
-                   slot=show_xxx, overwritable=False)   # 菜单项
+                   slot=show_xxx, overwrite=False)    # 菜单项：已存在就跳过
 ```
+
+⚠️ **`overwrite` 的含义**（2026-10-27 由 `overwritable` 改名，完整说明见
+[`plugins/AGENTS.md`](plugins/AGENTS.md) 的「`overwrite` 到底管什么」）：
+
+| 取值 | `name` 已被占用时 |
+|---|---|
+| `True`（默认） | **就地覆盖**已有那条（重设槽 / 图标 / 提示 / 文字 / 快捷键），菜单里始终只有一条 |
+| `False` | 发一条 `UserWarning` 并**跳过**，已有那条**保持原样** |
+
+本目录的 setup **建议显式写 `overwrite=False`**：它表达「**只挂一次**」，与上面的
+`@execute_once` 互为保险 —— 万一被「临时加载」和「启动」各跑一遍，也不会把条目改掉
+或挂出第二条。
 
 写完**还要**在 [`extra_setups/__init__.py`](extra_setups/__init__.py) 里按现有
 `try/except` 风格加一段调用（那里是**唯一**需要登记的地方 —— 那不算「转发公共 API」，
@@ -121,6 +135,10 @@ def setup_ui():
   路径导入 `zmlx.ui.tabs.image_browser.ImageBrowser`，**没有**动 `tabs/__init__.py`。
   此前 `widgets/AGENTS.md` §2「注册」一节写的是相反的规则（「想让
   `from zmlx.ui.widget import XxxView` 可用就追加一行 import」），已改为指向本文件。
+- **2026-10-30**：`ImageBrowser` 连同它的 `tabs/image_browser.py` **整体并入插件**
+  `plugins/builtin/image_browser.py`，原文件删除、**不留垫片**（已核实全仓与外部工作区
+  都没有别处 import 它）。⚠️ 这条不影响 §1 的规矩，反而印证它：控件「归 `tabs/`」从来
+  不是「不转发」的对立面 —— 归属看顶层性，转发看是否需要不断老路径，与住址无关。
 
 ## 6. 控制台与线程模型（2026-10-20 实测补写）
 

@@ -49,8 +49,8 @@
 |---|---|---|---|
 | **完全自含**：控件 + 算法 + 资源都在插件文件里 | 9 | `runtime_env` / `fractal_demo` / `easter_eggs`（两个游戏各是一个自含模块）/ `demo_menu`（连 `DemoView` 一起）/ `style_sheet_menu`（连 `StyleSheetEdit` 一起）/ `fn2_view`（连 `Fn2Widget` 一起）/ `pg_console`（连 `PgConsole` 一起）/ `viewers`（连 `TimerView` / `CwdView` / `TabDetailView` / `AppPathEdit` 四个小控件一起）/ `doc_view`（2026-10-22 由 `MainWindow.show_changelog` / `show_roadmap` / `_show_md` 搬来；自含，但没自带控件）—— 后几个都是 2026-10-22 由 `ui/tabs/` 或 `MainWindow` 并入 | ✅ |
 | **半自含**：算法在文件内，界面借用 `gui` 的通用控件 | 2 | `zip_files` / `pdf_view`（借用 QtWebEngine） | ✅ |
-| **只有入口**：控件在 `main.py` / `ui/widgets/` / `ui/tabs/`，文件里只有装配代码 | 3 | `admin_menu` / `editors`（全是 `gui.reg_file_type` + `gui.add_action`，控件在 `ui/widgets/editors/`）/ `image_browser`（只挂「文件 → 浏览 → 图片」） | ✅ |
-| **入口 + 控件**：本来是「只有入口」，后来把「只有它在用」的控件也并了进来 | 1 | `solver_menu`（`SolverSelector`，2026-10-22） | ✅ |
+| **只有入口**：控件在 `main.py` / `ui/widgets/` / `ui/tabs/`，文件里只有装配代码 | 2 | `admin_menu` / `editors`（全是 `gui.reg_file_type` + `gui.add_action`，控件在 `ui/widgets/editors/`） | ✅ |
+| **入口 + 控件**：本来是「只有入口」，后来把「只有它在用」的控件也并了进来 | 2 | `solver_menu`（`SolverSelector`，2026-10-22）/ `image_browser`（`ImageBrowser` 连同 3 个后台线程，2026-10-30 由 `ui/tabs/image_browser.py` 整体并入，原模块删除、不留垫片） | ✅ |
 
 **后两种同样合法**，而且在某些情况下**更正确**：
 
@@ -305,30 +305,43 @@ zmlx/ui/plugins/
 
 `gui.add_action(slot=...)` 在**调用那一刻**就把那个 callable 绑到 `QAction` 上了；
 插件后来 `gui.add_func` 只能换掉**命令表**里的一项，**换不掉已经连上的槽**。想让占位
-菜单项在插件加载后变「活」，只能靠 `add_action` 的 `overwritable` —— 而那是个**冒烟枪**
-（真正的语义见下一节）。何况一条占位菜单项也只是「插件关掉时菜单里多一行」，
+菜单项在插件加载后变「活」，就得靠 `add_action` 的覆盖能力把那条 action 就地改掉
+（语义见下一节）—— 但**仍然不建议**这么做：一条占位菜单项只是「插件关掉时菜单里多一行」，
 **收益很小、风险很大**。规则一句话：
 
 > **菜单项由插件自己挂；插件关掉，那一行就该消失。插件没启用时，用户调
 > `gui.xxx()` 得到的是一句可操作的提示 —— 那才是占位存在的理由。**
 
-### `overwritable` 到底管什么（2026-10-25 实测更正）
+### `overwrite` 到底管什么（2026-10-25 初版，2026-10-26 重写，2026-10-27 由 `overwritable` 改名）
 
-⚠️ **它不是「能不能被别人覆盖」**，而是「**同名 action 已经存在时怎么办**」：
+⚠️ **它是「`name` 已经被占用时怎么做」，不是「能不能被别人覆盖」这个反问**：
 
-| `overwritable` | 同名 action 已存在 | 同名不存在 |
+| `overwrite` | `name` 已被占用 | `name` 不存在 |
 |---|---|---|
-| `True`（默认） | 发一条 `UserWarning`，然后**另起一个自动名**（`unnamed_001`…）再挂一条 —— 菜单里于是出现**两条** | 正常挂上 |
-| `False` | **直接 `return`**：什么都不做，新旧都不挂（占位先挂上时，插件的真条目**根本进不来**） | 正常挂上 |
+| `True`（默认） | **就地覆盖**：用本次参数重设那个已有 action（槽、图标、提示、文字、快捷键、动态回调），它**留在原来的菜单位置**，菜单里**始终只有一条** | 正常挂上 |
+| `False` | 发一条 `UserWarning`（说明撞的是哪个菜单项）并**直接 `return`**，已有那条**保持原样** | 正常挂上 |
 
-⚠️ 两条都**不会**「替换、覆盖、去重」已有的 action —— 名字里那个 "overwritable" 极具误导性。
+⚠️ **参数名为什么改**（2026-10-27）：`overwritable` 是形容词
+（「（这个 action）**可被**覆盖」），说的是**别人对我**的操作；而它实际管的是**这一次调用
+要不要覆盖已经存在的那条**，说的是**本次调用的动作** —— 视角正好反了。旧名仍可用，但会发
+`DeprecationWarning`，**2027-10-27 删除**；两个都给且含义相反时直接抛 `TypeError`。
+
+⚠️ **判据是 `name`**：显式给了就用它；没给时 `add_action` 会按「`menu` 路径 + `text`」
+自动生成（`text` 是函数时按其身份，**不调用它**），所以「同 menu + 同 text」的第二次
+注册同样会命中覆盖。
+
 所以：
 
-- `overwritable=False` ≠ 「不许被覆盖」，而是「**有了就跳过，别再挂第二条**」—— 适合
-  「**只挂一次**」的条目（插件自己 `# ** enabled` 有开关，`setup_ui` 又有
-  `@execute_once`，本来就只跑一次）；
-- 想让「后注册的**取代**先注册的」在这套 API 里**做不到** —— 唯一稳妥的做法是
-  **别让前一个存在**（即：不挂占位菜单项）。
+- `overwrite=False` 是「**只挂一次**」—— 适合插件自己的条目（`# ** enabled` 有开关、
+  `setup_ui` 又有 `@execute_once`，本来就只跑一次；`False` 是双保险，防止临时加载 +
+  启动都跑过时挂出第二条）；
+- `overwrite=True` 是「**后来者胜**」—— 同一段注册代码跑第二遍时，菜单不会变成两条，
+  而且**只有最新的槽生效**（历史槽会被替换掉，不会一次点击跑一串）；
+- 两者都**不会**在菜单里留下重复条目。
+
+⚠️ **覆盖时哪些参数会被继承**：``icon`` / ``tooltip`` / ``shortcut`` / ``is_enabled`` /
+``is_visible`` 传 ``None``（或不传）就**保持原值**；只有 ``text`` 与 ``slot`` **一定**会被
+本次的值替换。别指望「不传图标就变默认图标」—— 那是**新建**时的行为。
 
 ```python
 # extra_setups/plugin_placeholders.py —— 占位：只给指引，不 import 可选库

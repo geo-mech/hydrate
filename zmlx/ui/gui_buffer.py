@@ -582,7 +582,8 @@ def add_action(
         on_toolbar=None,
         is_enabled=None,
         is_visible=None,
-        overwritable=True
+        overwritable=None,
+        overwrite=None
 ):
     """
     在gui菜单添加一个操作项
@@ -591,14 +592,17 @@ def add_action(
     完整的参数说明见那个方法的 docstring。两个要点在这里重复一次，因为最常踩：
 
     - ``menu`` 可以是 ``str``（一级）或 ``list``（多级路径），每级标题必须与别处**逐字一致**；
-    - ``overwritable`` 管的是「**同名 action 已存在时怎么办**」，不是「能否被覆盖」：
-      ``True``（默认）→ 警告一声并**另起自动名再挂一条**（菜单里出现两条）；
-      ``False`` → **直接跳过**，什么都不挂。两者都不会替换已有的 action。
+    - ``overwrite`` 管的是「**``name`` 已被占用时怎么办**」：
+      ``True``（默认）→ **就地覆盖**：用本次参数重设那个已有 action（菜单里始终只有一条）；
+      ``False`` → 发一条 ``UserWarning`` 并**跳过**，已有那条保持原样。
 
-    ⚠️ ``name='---'`` 是**分隔符**（2026-10-26 加）：只在菜单末尾插一条分隔线，不建
-    action —— 其余参数一个都不用给::
+    ⚠️ ``overwritable`` 是 ``overwrite`` 的**弃用别名**（2026-10-27 改名，2027-10-27 删除）：
+    传它会发一条 ``DeprecationWarning``，行为与 ``overwrite`` 完全等价。新代码请用 ``overwrite``。
 
-        gui.add_action(menu='操作', name='---')
+    ⚠️ ``text='---'`` 是**分隔符**（2026-10-26 加；判据是 ``text`` 而非 ``name``）：
+    只在菜单末尾插一条分隔线，不建 action —— 其余参数一个都不用给::
+
+        gui.add_action(menu='操作', text='---')
 
     它**不判重**（连插两条就是两条线），也**不会**让分隔线出现在工具栏上
     （``on_toolbar`` 对它不生效；工具栏的分隔符仍要自己 ``insertSeparator``）。
@@ -610,7 +614,8 @@ def add_action(
             on_toolbar=on_toolbar,
             is_enabled=is_enabled,
             is_visible=is_visible,
-            overwritable=overwritable
+            overwritable=overwritable,
+            overwrite=overwrite
         )
 
 

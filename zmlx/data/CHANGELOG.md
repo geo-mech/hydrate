@@ -1,7 +1,41 @@
 # CHANGELOG
 
+## v1.9.7 (2026-10-30)
+图片浏览器 `ImageBrowser` 由 `ui/tabs/image_browser.py` 整体并入插件 `plugins/builtin/image_browser.py`，原模块删除、不留转发垫片。
+
+- 插件从此**单文件自足**（控件 + 3 个后台线程 + 菜单入口都在一处），关掉「图片浏览」插件时它的代码也一并关掉；
+- **命令名与控件的公开接口均未变**：`gui.show_image_browser()`、action name `image_browser`、`set_folder` / `follow_cwd` / `rescan` / `play` / `pause` / `step` 照旧，历史标签页能正常恢复；
+- 删除前已核实全仓与外部工作区都没有别处 import 该模块（唯一引用就是本插件）；
+- 新路径：`from zmlx.ui.plugins.builtin.image_browser import ImageBrowser`。
+
+## v1.9.6 (2026-10-29)
+AI 辅助可写脚本、执行脚本并读回控制台输出（可自己调试代码）；用户气泡底色改为按主题取色；控制台输出可通过 `MainWindow.get_output_text()` 读取。
+
+## v1.9.5 (2026-10-29)
+新增场景侧插件包 `scen/ai_assistant`：与 DeepSeek 对话的右侧标签页（「帮助 → AI辅助」）。
+
+## v1.9.4 (2026-10-29)
+弃用 `zmlx.version`（LazyImport 改由模块级 `__getattr__` 转发），并新增 `zmlx.version_at_least(version)` 按数字比较版本号。
+
+## v1.9.3 (2026-10-28)
+删除从未执行过的「启动即打开欢迎页」分支，并修好标签页重启恢复时带字符串参数会生成坏代码的问题。
+
+- **删除欢迎页**：`MainWindow` 构造期一直在找 `welcome` 图标，而 `zml_icons/` 里从未有过这个文件（git 历史也查不到），该分支永久不执行；整段移除，相关解释移到 `open_image` 的 docstring。
+- **修复 `gui_restore` 生成**：`open_image` / `open_code` / `open_text` 保存重启参数时没加 `!r`，`caption` 等字符串被拼成不带引号的裸值（路径里的反斜杠也会被写坏），重启重放时抛 `NameError`。
+
+## v1.9.2 (2026-10-26)
+菜单项的注册体系一次收敛：`add_action` 不再受 `name` 摆布 —— 名字缺省时按「菜单路径 + 文字」自动生成，`overwrite` 撞名时真正**就地覆盖**，分隔线改用 `text='---'` 声明；`get_action` 不再凭空造空 action，且只认 `add_action` 创建的菜单项。
+
+- **自动命名与判重**：`name` 缺省时按「菜单路径 + 文字」生成（文字是函数则按其身份，不调用它），「同菜单 + 同文字」的重复注册会得到同一个名字，判重对所有调用方式一致生效；文字传函数时标识里带上定义行号与绑定实例，不再把不同的函数认成同一个（此前后注册的会静默覆盖前一条）。
+- **`overwrite`**（原 `overwritable`，旧名保留为弃用别名、2027-10-27 删除）：`True`（默认）撞名时就地覆盖已有那条并留在原位置，菜单里始终只有一条；`False` 只注册一次，撞了发警告并跳过。覆盖时没给 `icon` / `tooltip` / `shortcut` / 动态回调就保持原值。
+- **`text`**：必填（`str` 或返回 `str` 的 callable），类型不符抛 `TypeError`；多级 `menu`（`list` / `tuple`）可省略它，直接弹最后一级当文字；分隔线用 `text='---'` 声明，没给 `menu` 时不再凭空建「其它」菜单。
+- **`get_action` / `list_actions`**：只查 `add_action` 创建的菜单项；`get_action` 的 `create_empty` 已弃用（2027-10-26 删除），找不到一律返回 `None`，`trigger` 找不到时明确告警。
+- **菜单分组**：「操作」菜单按内核控制 / 控制台栏 / 历史与页面分成三段，「文件」菜单按打开新建 / 数据操作 / 退出分成三段，分别加了分隔线 —— 11 项平铺在一栏里太乱，误点的后果也完全不同。
+- 重复注册不再让一次点击跑多个历史槽（点击改为转发到 `Action.slot_func`，覆盖时整体替换）；新建条目后立即刷新一次视图，文字传函数时首帧不再为空。
+- 顺带清理：删除从未被调用的 `MainWindow._push_sub_menus_to_end`，几处多余的嵌套 `if` 合并，`add_action` 签名改为紧凑排版。
+
 ## v1.9.1 (2026-10-26)
-界面、菜单与控制台的一组改进。以下要点汇总 v1.9.1 ~ v1.9.8 的全部改动。
+界面、菜单与控制台的一组改进。
 
 **界面**
 

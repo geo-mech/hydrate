@@ -578,6 +578,9 @@ class OutputWidget(QtWidgets.QWidget):
         self._ansi_fmt = QtGui.QTextCharFormat()
         self._ansi_pending = ''
 
+    def get_plain_text(self):
+        return self.text_browser.toPlainText()
+
 
 def test_1():
     import sys

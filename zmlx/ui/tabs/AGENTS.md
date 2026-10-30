@@ -40,7 +40,7 @@
 | **宿主不是标签页的常驻控件** | 宿主是状态栏 / 右侧栏 / 标签容器，不是"打开一个页面" | `LicenseButton` / `VersionButton` / `RunStateLight` / `_parallel.py` 的 `CoreParallelEdit`（状态栏）、`OutputWidget`（右侧栏常驻，`closeable=False`）、`TabWidget`（标签容器） |
 | **对话框 / 表单组件集** | 通过 `setup_ui()` 注册成「信息对话框」里的一行，不是页面 | `seepage.py` / `editors.py` / `float_edit.py` |
 
-## 3. 当前成员（表中 18 个有效；2026-10-22 另有 9 个随各插件移出，见表内划掉项）
+## 3. 当前成员（表中 17 个有效；2026-10-22 有 9 个、2026-10-30 有 1 个随各插件移出，见表内划掉项）
 
 | 控件 | 模块 | 生命周期钩子 |
 |---|---|---|
@@ -56,7 +56,7 @@
 | ~~`Fn2Widget`~~ | **已搬走**（2026-10-22）→ `plugins/builtin/fn2_view.py` | 只有「二维裂缝查看」插件在用，随 `show_fn2` 并入插件（连同 `GraphicsView` / `Hf2ColorMap` / `Hf2Data` / `Hf2FracView`） |
 | `GuiIteratorEdit` | `gui_iter_edit.py` | `refresh` |
 | `ImageView` | `img.py` | ——（⚠️ 2026-10-22 曾随 `gui.open_image` 并入插件，**同日还原**：`open_image` 是底层能力，欢迎页在 `MainWindow` 构造期就要用） |
-| `ImageBrowser` | `image_browser.py` | `cleanup_before_tab_close` + `hideEvent`/`showEvent`（3 个后台线程；⚠️ **故意不实现 `refresh()`**，刷新只由界面上的按钮触发；⚠️ **未**注册进本包 `__init__.py`，但**已挂到菜单**「文件 → 浏览 → 图片」，挂载点在 `../plugins/builtin/image_browser.py`） |
+| ~~`ImageBrowser`~~ | **已搬走**（2026-10-30）→ `plugins/builtin/image_browser.py` | 控件与入口合进**同一个**自含插件文件（原先入口在插件、控件在本目录），原模块删除、**不留垫片**。只服务那一个可关闭的插件 ⇒ 按 `../plugins/AGENTS.md` §0.2「独立、完整」并入。生命周期钩子（`cleanup_before_tab_close` + `hideEvent`/`showEvent`、3 个后台线程、**故意不实现 `refresh()`**）一字未改 |
 | `LicenseRegister` | `license_register.py` | `cleanup_before_tab_close` + `showEvent` |
 | `MemView` | `mem_view.py` | `refresh` |
 | `MessageEdit` | `message.py` | `refresh` |
@@ -82,7 +82,8 @@
 `from zmlx.ui.plugins.builtin.<插件> import <类>`。
 
 ⚠️ **上表与「有没有被 `tabs/__init__.py` 转发」无关**：2026-10-16 起，新增控件**默认不**在
-`__init__.py` 里转发（要按子模块路径导入），`ImageBrowser` 就是没登记的那个。完整规则见
+`__init__.py` 里转发（要按子模块路径导入），`ImageBrowser` 就是没登记的那个（它后来更
+整个搬去了插件，见上表划掉项）。完整规则见
 [`../AGENTS.md`](../AGENTS.md) §1–§2；归属判据仍是本文件 §1 的「顶层性」。
 
 ⚠️ `closeEvent` **不在**上表里：关标签走 `deleteLater()`，**不发** `closeEvent`，
@@ -172,8 +173,11 @@ from zmlx.ui.widget.about import About            # ⚠️ 老路径，发 Depre
   - 同日，`license_register.py` 的「答复解析与查询」工具段也已下沉为 `../lic_utils.py`。
 - **2026-10-16（同日）新增** `ImageBrowser`（`image_browser.py`，图片浏览器）—— 本目录第一个
   **不是从 `widget/` 迁来、而是新写**的顶层控件，也是「顶层性」判据的现成范例：它只被装配层
-  打开成标签页、不被任何控件复用，所以归这里。单文件自足（只依赖 `zmlx.ui.pyqt`），三个
+  打开成标签页、不被任何控件复用。单文件自足（只依赖 `zmlx.ui.pyqt`），三个
   后台线程全部压低 OS 优先级。⚠️ **未**进 `__init__.py`，但**已挂到菜单**（见下方「同日：挂上菜单」）。
+  ⚠️ **2026-10-30 已整体搬出本目录**（控件 + 入口合进 `../plugins/builtin/image_browser.py`，
+  原模块删除、不留垫片）—— 它只服务那一个可关闭的插件，按「关掉功能时代码也一起关掉」
+  并入才是对的住址。本节保留这段记录，是因为它当初正是「顶层性」判据的第一个实例。
 - 迁移规模：`widget/` 原有 46 个 `.py` / 881 KB，其中绝大多数是顶层页面；迁移后
   `widget/` 只剩底层控件、宿主非标签页的常驻控件、对话框组件集，以及为这 26 个模块
   保留的转发层。

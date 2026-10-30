@@ -1110,7 +1110,7 @@ def setup_ui():
         icon='set',
         tooltip='设置窗口样式表：可视化选择字体/配色/圆角，也可以直接编辑 QSS 文本',
         slot=show_style_sheet,
-        overwritable=False,
+        overwrite=False,
     )
 
 

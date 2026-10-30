@@ -575,7 +575,7 @@ def setup_ui():
         menu='设置', name='solver',
         text='求解器',
         slot=show_solver_selector,
-        overwritable=False,
+        overwrite=False,
     )
 
 

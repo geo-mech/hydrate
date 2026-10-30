@@ -166,7 +166,7 @@ def setup_ui():
         tooltip='查看某个邮箱对应用的许可查询次数（按天统计）',
         slot=show_check_count_view,
         is_enabled=not_running,
-        overwritable=False,
+        overwrite=False,
     )
 
     gui.add_action(
@@ -177,5 +177,5 @@ def setup_ui():
         tooltip='查看某个用户某一天的反馈内容（本人或管理员）',
         slot=show_feedbacks_view,
         is_enabled=not_running,
-        overwritable=False,
+        overwrite=False,
     )

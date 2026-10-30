@@ -12,7 +12,6 @@ Modified by DeepSeek, 2026-10-07: sys.stderr 包装成 _RedStderr（异常钩子
 
 Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统计）
 """
-from zmlx.system import warn
 
 import datetime
 import io
@@ -22,7 +21,7 @@ from typing import List, Optional, Tuple, Union
 
 from zmlx.algs.fsys import has_permission, samefile, time_string
 from zmlx.exts import contain_chinese, core, get_dir, lic
-from zmlx.system import app_data, get_hash, log
+from zmlx.system import app_data, get_hash, log, warn
 from zmlx.ui import settings
 from zmlx.ui.alg import (
     add_exec_history,
@@ -39,7 +38,6 @@ from zmlx.ui.pyqt import (
     QtGui,
     QtMultimedia,
     QtWidgets,
-    QWebEngineSettings,
     QWebEngineView,
     is_pyqt6,
 )
@@ -55,13 +53,33 @@ from zmlx.ui.widgets.run_state_light import (
 )
 from zmlx.ui.widgets.version_button import VersionButton
 
+
 class Action(QAction):
-    """可更新视图的 QAction（支持动态 enabled/visible/text）。"""
+    """可更新视图的 QAction（支持动态 enabled / visible / text / slot）。
+
+    ★ 2026-10-26 新增 ``slot_func``：点击时执行的动作**不再是直接连上去的槽**，
+    而是先存进这个属性、再由 :meth:`_on_triggered` 转发。
+
+    为什么这样做（方案见 ``add_action``）：``overwrite=True`` 撞名时是**就地覆盖**
+    同一个 action，如果每次注册都 ``triggered.connect(新槽)``，旧槽并不会自动消失 ——
+    实测 Qt 允许重复连接，且 ``disconnect()`` 不带参数断不干净，于是一次点击会依次
+    跑完**所有**历史槽（占位函数 + 插件函数 + …）。而“只连一次 + 换属性”从结构上
+    根除了这个问题：无论覆盖多少次，``triggered`` 永远只有一条连接，执行时读到的
+    永远是最新的那个槽。
+    """
 
     def __init__(self, parent):
         super().__init__(parent)
         self.is_enabled = None  # 检查是否是可执行的
         self.is_visible = None  # 检查是否是可见的
+        self.get_text = None
+        self.slot_func = None  # 点击时执行的槽（覆盖注册时直接替换）
+        self.triggered.connect(self._on_triggered)  # 整个生命周期只连这一次
+
+    def _on_triggered(self):
+        """``triggered`` 的唯一入口：转发到当前的 :attr:`slot_func`."""
+        if callable(self.slot_func):
+            self.slot_func()
 
     def update_view(self):
         """
@@ -73,10 +91,11 @@ class Action(QAction):
         )
         self.setEnabled(is_enabled)
         self.setVisible(is_visible)
-        if callable(get_text := getattr(self, "get_text", None)):
-            text = get_text()
+        if callable(self.get_text):
+            text = self.get_text()
             if isinstance(text, str):
                 self.setText(text)
+
 
 class MainWindow(QtWidgets.QMainWindow):
     """zmlx 主窗口。
@@ -85,18 +104,12 @@ class MainWindow(QtWidgets.QMainWindow):
     状态栏和文件处理器（FileHandler）。是 GUI 应用的核心窗口类。
     """
 
-    #: :meth:`add_action` 里表示「**在这里插一条分隔线**」的 magic name（2026-10-26 加）。
-    #: 见 :meth:`add_action` 的 Note：它不建 action，只在菜单末尾 ``addSeparator()``。
-    #: ⚠️ 只有 ``---`` 这一个取值；不要扩展成 ``'----'`` 之类（需求只要一条线，多一种写法
-    #: 就多一处要解释的地方）。
-    SEPARATOR_NAME = "---"
-
     sig_cwd_changed = QtCore.pyqtSignal(str)
     sig_do_task = QtCore.pyqtSignal()
     sig_play_sound = QtCore.pyqtSignal(str)
 
     def __init__(self, parent=None):
-        super(MainWindow, self).__init__(parent)
+        super().__init__(parent)
         self.setWindowIcon(settings.load_icon("app"))
         self.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         self.task_proc = TaskProc(self)
@@ -113,23 +126,23 @@ class MainWindow(QtWidgets.QMainWindow):
                 pass
 
         for opt in [
-            dict(
-                desc="Python文件",
-                exts=[".py"],
-                func=dict(open_file=self.open_code, new_file=_do_nothing),
-            ),
-            dict(
-                desc="文本文件",
-                exts=[".txt", ".json", ".xml", ".qss"],
-                func=dict(open_file=self.open_text, new_file=new_empty_file),
-            ),
+            {
+                "desc": "Python文件",
+                "exts": [".py"],
+                "func": {"open_file": self.open_code, "new_file": _do_nothing},
+            },
+            {
+                "desc": "文本文件",
+                "exts": [".txt", ".json", ".xml", ".qss"],
+                "func": {"open_file": self.open_text, "new_file": new_empty_file},
+            },
             # ⚠️ 「二维裂缝」(.fn2) 2026-10-22 **已移出**：它指向的 ``show_fn2`` 连同
             #    ``Fn2Widget`` 控件都搬进了插件 ``plugins/builtin/fn2_view.py``，
             #    ``.fn2`` 文件类型由那个插件自己注册（默认启用，所以「文件 → 打开」
             #    照常能选到 .fn2）。
             # ⚠️ 「图片」走 ``self.open_image``：它是**底层能力**（欢迎页在构造期就要用），
             #    2026-10-22 曾短暂搬进插件，同日还原 —— 文件类型不必随插件开关。
-            dict(desc="图片", exts=[".png", ".jpg"], func=self.open_image),
+            {"desc": "图片", "exts": [".png", ".jpg"], "func": self.open_image},
             # ⚠️ 「PDF文件」(.pdf) 2026-10-22 **已移除**：它指向的 ``open_pdf`` 需要可选库
             #    ``QWebEngineView``，不该常驻在骨架里。``.pdf`` 因此不再有专门的处理器 ——
             #    「文件 → 打开」选到 .pdf 时会走 ``FileHandler.show_info``（显示文件信息），
@@ -262,16 +275,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.sig_play_sound.connect(play)
 
-        try:
-            filename = settings.find_icon_file("welcome")
-            if filename is not None:
-                if os.path.isfile(filename):
-                    # ⚠️ 欢迎页在 ``MainWindow`` **构造期**就要显示 —— 这正是
-                    #    ``open_image`` 必须是**底层方法**、不能做成插件的原因
-                    #    （2026-10-22 曾搬进插件，同日还原）。
-                    self.open_image(filename, caption="Welcome")
-        except Exception as err:
-            print(f"Error: {err}")
+        # ⚠️ 「启动即打开欢迎页」那一段已于 2026-10-28 **删除**：它一直在找 ``welcome``
+        #    图标（``settings.find_icon_file("welcome")``），而 ``zml_icons/`` 里**从来
+        #    没有**这个文件，git 历史里也查不到它曾经存在过 —— 于是 ``if`` 分支永久不执行。
+        #    它留下的那条理由（「``open_image`` 必须是底层方法、不能做成插件」）仍然成立，
+        #    已写进 :meth:`open_image` 的 docstring。要恢复欢迎页，请先真的往
+        #    ``zmlx/ui/data/zml_icons/`` 放一张 ``welcome.png``，再在这里重新加回调用。
 
         # ⚠️ 启动时**不再**做「本机 USB 授权」的检查（用户 2026-10-05 要求）：
         #    新的 web 授权（web_license / 状态栏右下角）已经取代它，而这一项
@@ -291,7 +300,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     #: 对外**声称**的编码。控件内部是 Unicode，写进来的 str 不会被真正编码；声明 utf-8
     #: 是给库里的 `getattr(stream, 'encoding', None)` 用的（否则它们会退回系统编码 GBK）。
-    encoding = 'utf-8'
+    encoding = "utf-8"
 
     def write(self, text):
         # ⚠️ **整段都必须投递到 GUI 线程**：本方法被设为 ``sys.stdout``，而用户脚本
@@ -336,7 +345,7 @@ class MainWindow(QtWidgets.QMainWindow):
         / ``msvcrt``，伪造的 fd 会指向**真正的**控制台（GUI 模式下可能是 ``None`` 甚至无效），
         得到的结论和真实行为完全对不上。抛标准异常才能让它们走「不是文件」的回退分支。
         """
-        raise io.UnsupportedOperation('fileno')
+        raise io.UnsupportedOperation("fileno")
 
     def isatty(self):
         """本控制台**不是**真正的终端（``sys.stdout`` / ``sys.stderr`` 指向本对象）。
@@ -365,11 +374,11 @@ class MainWindow(QtWidgets.QMainWindow):
             on_close()  # 在确定要关闭之前执行的操作
 
     def showEvent(self, event):
-        super(MainWindow, self).showEvent(event)
+        super().showEvent(event)
         # ⚠️ 第一次显示时才恢复右侧栏宽度（2026-10-26）：``QSplitter.setSizes`` 必须在
         #    窗口**已有真实尺寸**之后设，否则会被随后的布局计算覆盖。只做一次 ——
         #    之后用户拖出来的宽度由 ``resizeEvent`` 跟踪，不该被再次覆盖。
-        if not getattr(self, '_splitter_restored', False):
+        if not getattr(self, "_splitter_restored", False):
             self._splitter_restored = True
             self.init_splitter_sizes()
         self.refresh()
@@ -387,7 +396,7 @@ class MainWindow(QtWidgets.QMainWindow):
         ``self._last_console_width``**。关窗时由 ``__on_close`` 交给
         ``settings.save_console_width`` 存盘；隐藏状态下不会用 0 把已记的宽度覆盖掉。
         """
-        super(MainWindow, self).resizeEvent(event)
+        super().resizeEvent(event)
         try:
             if not self.right_tabs.isVisible():
                 return
@@ -498,6 +507,16 @@ class MainWindow(QtWidgets.QMainWindow):
         #    菜单里其余条目（工作路径 → 打开 → 新建 → 脚本 → 导入 → 保存 → 导出）一个字没动。
         #    ⚠️ action name ``quit`` 不变。
 
+        # ★ 分隔线 1（2026-10-28，``text='---'``）：上面是**打开 / 新建 / 切工作路径**，
+        #    下面「导入 / 保存 / 导出」都是**当前这一页的数据操作** —— 而且它们的
+        #    ``is_visible`` 都跟「当前页有没有这个能力」绑定，会一起出现 / 消失，
+        #    分成两段才看得出这不是同一类东西。
+        #    ⚠️ 分隔线只能**插在末尾**（``get_menu(menu).addSeparator()``），所以它的位置
+        #    就是「注册到这里」的位置：这条必须在「导入」**之前**注册。
+        #    ⚠️ 本菜单插件不会往里挂条目（唯一相关的是「文件 → 浏览」那个**子菜单**，
+        #    由 ``image_browser`` 插件建），所以线不会被后挂的条目挤到下面。
+        self.add_action(menu="文件", text="---")
+
         def import_data():
             widget = self.get_current_widget()
             if callable(f := getattr(widget, "import_data", None)):
@@ -578,6 +597,10 @@ class MainWindow(QtWidgets.QMainWindow):
             ),
         )
 
+        # ★ 分隔线 2（2026-10-28）：上面是**数据操作**，下面是**退出程序** ——
+        #    「退出」不该和「保存 / 导出」挤在一起（误点的后果完全不同）。
+        self.add_action(menu="文件", text="---")
+
         # 「退出」放最后（历史顺序，见上面那段说明）
         self.add_action(
             menu="文件",
@@ -618,7 +641,7 @@ class MainWindow(QtWidgets.QMainWindow):
             name="reset_layout",
             icon="refresh",
             tooltip="把右侧栏的宽度与显示状态恢复成默认"
-                    "（窗口大小、样式表、已打开的标签页都不受影响）",
+            "（窗口大小、样式表、已打开的标签页都不受影响）",
             text="重置布局",
             slot=self.reset_layout,
         )
@@ -629,6 +652,14 @@ class MainWindow(QtWidgets.QMainWindow):
         #    而 ``load_icon`` 对找不到的名字会返回**空图标**（不报错、只是没图形）；
         #    与其拿一个语义无关的图（如 ``variables`` 的 (x)）凑数，不如不画。
         #    将来若补了合适的图，在这里加一个 ``icon=`` 即可。
+        # ★ 分隔线（2026-10-28，``text='---'``）：「刷新」是**独立动作**（重设标题、
+        #    刷新当前页、重算所有菜单项的灰/亮），与内核运行**无关**；下面一整组
+        #    （运行 / 暂停 / 继续 / 停止 / 强制结束）才是**内核控制**。11 项平铺太乱，
+        #    这里用线分出第一段。
+        #    ⚠️ 「操作」菜单**没有插件往里挂条目**（插件挂的是显示 / 帮助 / 文件→浏览），
+        #    所以这条线不会被后挂的条目挤到下面。
+        self.add_action(menu="操作", text="---")
+
         def exec_enabled():
             if self.is_running():
                 return False
@@ -716,6 +747,10 @@ class MainWindow(QtWidgets.QMainWindow):
             is_enabled=self.is_running,
         )
 
+        # ★ 分隔线（2026-10-28）：上面是**内核控制**（运行 / 暂停 / 继续 / 停止 / 强制结束），
+        #    下面是**右侧控制台栏**与**历史 / 页面**——三组语义完全不同，分开才看得清。
+        self.add_action(menu="操作", text="---")
+
         # ⚠️ 「隐藏」与「显示」是一对**互斥**的开关（``is_enabled`` 互为取反），所以
         #    它们**共用** ``Ctrl+H`` 是对的：任何时刻只有一项可用，不会真的竞争。
         #    ⚠️ 这里**刻意写字符串**：本机 PyQt6 6.9.1 的 ``QKeySequence.StandardKey``
@@ -746,6 +781,10 @@ class MainWindow(QtWidgets.QMainWindow):
             on_toolbar=True,
             is_enabled=lambda: not self.right_tabs.isVisible(),
         )
+
+        # ★ 分隔线（2026-10-28）：上面是「隐藏 / 显示控制台栏」，下面
+        #    「再次运行 / 清除历史 / 关闭所有页面」是**历史与页面**的杂项。
+        self.add_action(menu="操作", text="---")
 
         self.add_action(
             menu="操作",
@@ -801,8 +840,11 @@ class MainWindow(QtWidgets.QMainWindow):
         # 外部脚本和已保存的界面布局都按 name 定位这个动作，改名会让它们失效。
         # 见 zmlx/ui/ReadMe.md「命名遗留」一节。
         self.add_action(
-            menu="设置", name="setup_files", icon="plugin", text="插件",
-            slot=self.edit_setup_files
+            menu="设置",
+            name="setup_files",
+            icon="plugin",
+            text="插件",
+            slot=self.edit_setup_files,
         )
 
         # ★ 「设置 → 求解器」**不在这里**（2026-10-18 移）：那一行 ``add_action``
@@ -914,12 +956,12 @@ class MainWindow(QtWidgets.QMainWindow):
             is_enabled=not_running,
         )
 
-    # ⚠️ 「帮助 → 示例」2026-10-22 **已搬到插件** ``plugins/builtin/demo_menu.py``
-    #    （默认启用）：菜单项与 ``gui.show_demo`` 命令都由那边的 ``setup_ui()`` 注册。
-    #    ⚠️ 这里**不要再加菜单项** —— 加回来会出现**两个**「帮助 → 示例」。
-    #    ``gui.show_demo`` 的**占位**在 ``extra_setups/plugin_placeholders.py`` 里。
+        # ⚠️ 「帮助 → 示例」2026-10-22 **已搬到插件** ``plugins/builtin/demo_menu.py``
+        #    （默认启用）：菜单项与 ``gui.show_demo`` 命令都由那边的 ``setup_ui()`` 注册。
+        #    ⚠️ 这里**不要再加菜单项** —— 加回来会出现**两个**「帮助 → 示例」。
+        #    ``gui.show_demo`` 的**占位**在 ``extra_setups/plugin_placeholders.py`` 里。
 
-    # ---- 第 4 组：「用户」子菜单（条目在 extra_setups；位置 = 紧跟「反馈」之后）----
+        # ---- 第 4 组：「用户」子菜单（条目在 extra_setups；位置 = 紧跟「反馈」之后）----
         self.get_menu(["帮助", "用户"])
 
         # ★ 「管理 / 登录记录 / 反馈记录」三项都注册在「帮助 → 用户」下（2026-10-24
@@ -1021,14 +1063,15 @@ class MainWindow(QtWidgets.QMainWindow):
         ⚠️ 窗口比 ``MIN_CONSOLE_WIDTH`` 还窄时，按 :data:`settings.MAX_CONSOLE_RATIO` 夹断，
         免得把左边挤没。
         """
-        splitter = getattr(self, 'splitter', None)
+        splitter = getattr(self, "splitter", None)
         if splitter is None:
             return
         total = self._splitter_target_width()
         if total <= 0:
             return
-        default = max(settings.MIN_CONSOLE_WIDTH,
-                      int(total * settings.DEFAULT_CONSOLE_RATIO))
+        default = max(
+            settings.MIN_CONSOLE_WIDTH, int(total * settings.DEFAULT_CONSOLE_RATIO)
+        )
         default = min(default, max(1, int(total * settings.MAX_CONSOLE_RATIO)))
         self._last_console_width = int(default)
         splitter.setSizes([max(1, total - default), int(default)])
@@ -1039,7 +1082,7 @@ class MainWindow(QtWidgets.QMainWindow):
         Returns:
             int: 宽度（像素）；算不出来返回 0。
         """
-        splitter = getattr(self, 'splitter', None)
+        splitter = getattr(self, "splitter", None)
         if splitter is None:
             return 0
         width = splitter.width()
@@ -1050,8 +1093,12 @@ class MainWindow(QtWidgets.QMainWindow):
                 layout = parent.layout()
                 if layout is not None:
                     margins = layout.contentsMargins()
-                    computed = (parent.width() - margins.left() - margins.right()
-                                - splitter.handleWidth())
+                    computed = (
+                        parent.width()
+                        - margins.left()
+                        - margins.right()
+                        - splitter.handleWidth()
+                    )
                     if computed > 0:
                         return computed
         except Exception as err:
@@ -1076,15 +1123,16 @@ class MainWindow(QtWidgets.QMainWindow):
         （2026-10-26 由 0.30 调成 0.22）；用户拖过之后以存盘值为准，这个比例**只在
         没有记录时**生效。
         """
-        splitter = getattr(self, 'splitter', None)
+        splitter = getattr(self, "splitter", None)
         if splitter is None:
             return
         total = splitter.width()
         if total <= 0:
             # 还没布局：用窗口宽度估算（``QSplitter`` 会按比例分）
             total = max(self.width(), 800)
-        default = max(settings.MIN_CONSOLE_WIDTH,
-                      int(total * settings.DEFAULT_CONSOLE_RATIO))
+        default = max(
+            settings.MIN_CONSOLE_WIDTH, int(total * settings.DEFAULT_CONSOLE_RATIO)
+        )
         default = min(default, max(1, int(total * settings.MAX_CONSOLE_RATIO)))
         width = settings.load_console_width(self, default_width=default)
         if width is None:
@@ -1125,7 +1173,7 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         返回给定name的菜单
         """
-        assert name is not None, f"Error: name is None when get_menu"
+        assert name is not None, "Error: name is None when get_menu"
         if isinstance(name, str):
             keys = [name]
         else:
@@ -1137,10 +1185,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
         menu = None
         for action in self.menuBar().actions():
-            if isinstance(action.menu(), QtWidgets.QMenu):
-                if action.menu().title() == keys[0]:
-                    menu = action.menu()
-                    break
+            if isinstance(action.menu(), QtWidgets.QMenu) and action.menu().title() == keys[0]:
+                menu = action.menu()
+                break
 
         if menu is None:
             menu = QtWidgets.QMenu(self.menuBar())
@@ -1152,10 +1199,9 @@ class MainWindow(QtWidgets.QMainWindow):
             key = keys[idx]
             sub_menu = None
             for action in menu.actions():
-                if isinstance(action.menu(), QtWidgets.QMenu):
-                    if action.menu().title() == key:
-                        sub_menu = action.menu()
-                        break
+                if isinstance(action.menu(), QtWidgets.QMenu) and action.menu().title() == key:
+                    sub_menu = action.menu()
+                    break
             if sub_menu is None:
                 sub_menu = QtWidgets.QMenu(menu)
                 sub_menu.setTitle(key)
@@ -1186,7 +1232,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 #    菜单里只能出现一次，那样 Qt 会把它**直接挪**到末尾、连带打乱别的顺序
                 #    （实测「文件」的固有条目因此被整块甩到了「浏览」之后）。
                 menu.insertAction(
-                    self._sub_menu_insert_after(menu), sub_menu.menuAction())
+                    self._sub_menu_insert_after(menu), sub_menu.menuAction()
+                )
             menu = sub_menu  # 设置为当前层级的目录
         # 完成了所有的遍历，找到对应的menu
         return menu
@@ -1222,7 +1269,7 @@ class MainWindow(QtWidgets.QMainWindow):
             return None
         idx = actions.index(last_builtin)
         # 找「构造期最后一条」之后的第一条 —— 新子菜单就插在它前面（没有就插到末尾）
-        for action in actions[idx + 1:]:
+        for action in actions[idx + 1 :]:
             if action.menu() is not None:
                 continue  # 跳过已有的子菜单
             return action
@@ -1243,7 +1290,7 @@ class MainWindow(QtWidgets.QMainWindow):
         Returns:
             bool: 是构造期注册的返回 True。
         """
-        return id(action) in getattr(self, '_builtin_actions', ())
+        return id(action) in getattr(self, "_builtin_actions", ())
 
     def _record_builtin_actions(self):
         """记下**当前**菜单栏里的全部 action（＝骨架在 ``__init_actions`` 里注册的）.
@@ -1269,32 +1316,6 @@ class MainWindow(QtWidgets.QMainWindow):
             print(f"Error when record builtin actions: {err}")
         self._builtin_actions = actions
 
-    @staticmethod
-    def _push_sub_menus_to_end(menu):
-        """把菜单里的**子菜单组**整体挪到末尾（组内先后不变，普通条目顺序不变）.
-
-        ⚠️ 2026-10-26：``get_menu`` 与 ``add_action`` 已**不再调用**它 —— 子菜单改成
-        夹在「骨架条目」与「插件条目」之间（见 :meth:`_sub_menu_insert_after`）。
-        方法保留，供外部脚本 / 调试一次性把子菜单收到底部。
-
-        ``insertAction(None, action)`` 会把该 action 移到末尾；按原顺序逐个挪一遍，
-        子菜单之间的相对顺序就保持不变。对「本来就在末尾」的菜单是空操作。
-
-        Args:
-            menu: 父菜单（``QMenu``）。
-        """
-        sub_actions = [a for a in menu.actions() if a.menu() is not None]
-        if not sub_actions:
-            return
-        ordered = menu.actions()
-        # 已经全在末尾（最后一个子菜单后面没有普通条目）就不用动
-        last_sub = sub_actions[-1]
-        idx = ordered.index(last_sub)
-        if idx == len(ordered) - 1:
-            return
-        for action in sub_actions:
-            menu.insertAction(None, action)
-
     def get_toolbar(self, name: str):
         """
         返回对应的菜单的工具栏
@@ -1306,17 +1327,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def add_action(
         self,
-        menu=None,
-        text=None,
-        name=None,
-        slot=None,
-        icon=None,
-        tooltip=None,
-        shortcut=None,
-        on_toolbar=None,
-        is_enabled=None,
-        is_visible=None,
-        overwritable=True,
+        menu=None, text=None, name=None, slot=None,
+        icon=None, tooltip=None, shortcut=None, on_toolbar=None,
+        is_enabled=None, is_visible=None, overwritable=None, overwrite=None,
     ):
         """
         添加一个Action. 这是一个新的版本，将替代后续的直接基于File的ActionX的创建方法，
@@ -1324,14 +1337,30 @@ class MainWindow(QtWidgets.QMainWindow):
         Since 2026-6-9.
 
         Args:
-            menu: 菜单路径。``str`` 表示一级菜单名（``'显示'``），``list`` 表示多级路径
-                （``['帮助', '用户']``）。⚠️ 每一级的标题必须与别处注册时**逐字一致**，
+            menu: 菜单路径。``str`` 表示一级菜单名（``'显示'``），``list`` / ``tuple``
+                表示多级路径（``['帮助', '用户']`` / ``('帮助', '用户')``）。
+                ⚠️ 每一级的标题必须与别处注册时**逐字一致**，
                 否则 :meth:`get_menu` 会另建一个同名菜单。省略时归到「其它」。
+                ★ 2026-10-28：``text`` 省略时，**长度 ≥ 2** 的序列（``list`` / ``tuple``）
+                会把它**最后一级**当作菜单文字
+                （``['帮助', '用户', '管理']`` ⇔ 在「帮助 → 用户」下挂「管理」），
+                不必把最后一级再写一遍。⚠️ 内部先转成新 list，调用者传进来的对象不会被改动。
             text: 菜单文字。可以是 ``str``，也可以是一个**返回文字的 callable**
-                （每次刷新时重新取，用于带计数的标题）。省略时用 ``name``。
-            name: action 的 objectName，用于 :meth:`get_action` 按名字查重。
-                省略时：``overwritable=False`` 会按 menu + text 生成一个 ``auto_<hash>`` 名字
-                用来判重；``overwritable=True`` 时由下面的 ``unnamed_001`` 递增分配。
+                （每次刷新时重新取，用于带计数的标题）。**必填**（分隔符除外）：
+                两者都不是会抛 ``ValueError`` —— 它不是可选装饰，而是菜单项的正文，
+                也是自动命名与判重的依据，没有合理的默认值。
+                ⚠️ 唯一的例外是上面那条：多级 ``menu`` 的最后一级可以充当它。
+                传 ``'---'`` 表示插**分隔线**（见下面的 Note）。
+            name: action 的 ``objectName``，也是 :meth:`get_action` 的查找键。
+                省略时**任何情况下**都由 :meth:`_auto_action_name` 按 ``menu`` + ``text``
+                自动生成（不是只在某个 ``overwrite`` 取值下才算）：
+
+                - ``text`` 是 str → ``auto_<sha256(menu 路径 + text)>``；
+                - ``text`` 是 callable → 按函数的**身份**（模块名 + 限定名 + 定义行号，
+                  绑定方法再加实例）生成，**不调用它**；见 :meth:`_callable_id`。
+
+                于是「同一菜单 + 同一文字」的两次注册会得到**同一个**名字，判重因此对
+                所有调用方式一致生效（见下面的 ``overwrite``）。
             slot: 点击后执行的动作（经 :meth:`parse_value` 解析，见那里的三种形态）。
             icon: 图标名（``zml/ui/data/zml_icons/`` 下的文件名，不带扩展名）。
                 ⚠️ 名字不存在时**静默**得到空图标，不会报错。
@@ -1340,78 +1369,231 @@ class MainWindow(QtWidgets.QMainWindow):
             on_toolbar: 为真时同时把该 action 挂到同名工具栏上（用 ``menu`` 的第一级命名）。
             is_enabled: 可选的 callable，动态决定该项是否可用。
             is_visible: 可选的 callable，动态决定该项是否可见。
-            overwritable: **「同名 action 已经存在时怎么办」**，与字面「能否被覆盖」无关：
+            overwrite: **「``name`` 已经被占用时怎么办」**：
 
-                - ``True``（默认）：已存在就发出一个 ``UserWarning``，然后**另起自动名**
-                  （``unnamed_001`` …）再挂一条 —— 于是菜单里出现**两条**；
-                - ``False``：已存在就**直接 ``return``**，什么都不挂。
+                - ``True``（默认）：**就地覆盖** —— 找到那个已有的 action，用本次的
+                  ``slot`` / ``icon`` / ``tooltip`` / ``text`` / ``shortcut`` / 动态回调
+                  把它**重新设置**一遍，它**留在原来的菜单位置**，菜单里**始终只有一条**。
+                  于是「先挂一条占位、插件加载后用同名再挂一次」就能真正生效。
+                - ``False``：只注册一次 —— 撞了就发出 ``UserWarning``（说明撞的是哪个
+                  菜单项）并**直接 ``return``**，已有那条**保持原样**。
 
-                两种取值都**不会**替换 / 合并已存在的 action。想让「后挂的」显示出来，
-                正确的做法是**让先挂的那条不存在**（例如：插件菜单项不要做占位）。
+                ★ 2026-10-27 由 ``overwritable`` 改名而来（旧名仍可用，见下一条）：
+                那个名字是**形容词**（「（这个 action）可被覆盖」），描述的是**别人对我**
+                的操作；而本参数管的是**这一次调用要不要覆盖已经存在的那条**，描述的是
+                **本次调用的动作** —— 视角正好反了。
 
-                ⚠️ 2026-10-25 实测更正：此前这里的注释写成「同名时直接返回」，
-                实际行为见上面两条；``show_pg_console`` 的菜单一度因此「命令是真的、
-                点菜单却只打印提示」。
+                ⚠️ 命中的判据是 ``name``：显式给了就用它；没给时由
+                :meth:`_auto_action_name` 按 ``menu`` + ``text`` 自动算出同一个名字，
+                所以「同 menu + 同 text」的第二次注册同样会走覆盖。
+
+                ⚠️ 历史（阅读旧代码时别被注释误导）：2026-10-25 之前，``True`` 会
+                **另挂一条**（``unnamed_XXX`` / ``<原名>_001``，菜单里出现两条），
+                ``False`` 是静默跳过。``show_pg_console`` 的菜单一度因此「命令是真的、
+                点菜单却只打印提示」—— 现在的覆盖语义正是为这类场景准备的。
+            overwritable: **已弃用（2026-10-27 改名，2027-10-27 删除）**，请改用
+                ``overwrite``。给了它就会发一条 ``DeprecationWarning``，然后把它当作
+                ``overwrite`` 使用，**行为完全等价**；两个都给且含义相反时抛 ``TypeError``
+                （不替调用者猜）。保留原名只为过渡。
 
         Note:
-            **分隔符**：``name='---'``（即 :attr:`SEPARATOR_NAME`）时本函数**不建 action**，
-            只在 `menu` 末尾插一条分隔线，其余参数全部忽略（`text` / `slot` / `shortcut` /
-            `on_toolbar` / `overwritable` 一个都不用给）。用法::
+            **分隔符**：``text='---'`` 时本函数**不建 action**，只在 `menu` 末尾插一条
+            分隔线，其余参数全部忽略（`slot` / `shortcut` / `on_toolbar` /
+            `overwrite` 一个都不用给）。用法::
 
-                gui.add_action(menu='操作', name='---')
-                gui.add_action(menu='操作', name='my_cmd', text='我的命令', slot=...)
+                gui.add_action(menu='操作', text='---')
+                gui.add_action(menu='操作', text='我的命令', slot=...)
 
+            - 判据是 **``text``**（2026-10-26 改；此前是 ``name='---'``）—— 分隔符没有
+              名字，也不会走下面的自动命名；
+            - **必须给 ``menu``**：``menu is None`` 时直接返回，不插线、也不会为了它
+              凭空造一个「其它」菜单（2026-10-26 改）；
             - 只用于**菜单**：``on_toolbar`` 在这里不生效（工具栏的分隔符仍要用
               ``QToolBar.insertSeparator`` 自己插）；
-            - **不判重**：连插两条就是两条分隔线，也不会占 ``unnamed_XXX`` 的序号
-              （它根本没有 action，菜单项列表里只是多了一条分隔）；
+            - **不判重**：连插两条就是两条分隔线（它根本没有 action，菜单项列表里只是
+              多了一条分隔）；
             - 无界面时（``gui.exists()`` 为假）整个调用 no-op，与 :func:`zmlx.ui.gui_buffer.add_action` 一致。
         """
-        if name == self.SEPARATOR_NAME:
+        # ★ 2026-10-28：``menu`` 给多级列表、``text`` 却省略时，把 menu 的**最后一级**
+        #    当作菜单文字。这是「写法自然」的典型：::
+        #
+        #        add_action(menu=['帮助', '用户', '管理'], slot=...)
+        #
+        #    读起来就是「在『帮助 → 用户』下挂一个『管理』」，不必把「管理」再写一遍。
+        #
+        #    ⚠️ 这段放在**函数最前面**（2026-10-28 从 ``menu is None`` 之后挪来）：
+        #    它是**参数规整**，不是处理逻辑 —— 规整完的参数才交给后面的分支去判断。
+        #    放最前面有三个好处：
+        #      ① 后来的读代码的人一眼就看到「这里会动参数」，不会在下面就着
+        #         ``text: None`` 的谜题读半屏才找到答案；
+        #      ② 与后面的 ``menu is None → "其它"``、``text`` 校验一起构成完整的前置
+        #         规整段（先规整、再校验、最后才建 action），顺序一目了然；
+        #      ③ 不必再论证「为什么必须在分隔符之后」—— ``text`` 本为 ``None`` 时
+        #         不可能等于 ``'---'``，这段根本改变不了分隔符分支的走向。
+        #
+        #    只对**长度 ≥ 2** 的序列生效：
+        #      - 长度 1（``['操作']``）没有「最后一级」可弹 —— 弹完 menu 就空了，
+        #        那正是旧写法 ``add_action(menu='操作')`` 缺 text 的情形，应当照常报错；
+        #      - **``tuple`` 同样支持**（2026-10-28 补）：``get_menu`` 对 menu 根本不做
+        #        类型检查（只对 str 特判，其余原样当序列用），``_auto_action_name`` 也
+        #        是 ``(list, tuple)`` 都认 —— 这里只写 list 会漏掉 tuple。
+        #    ⚠️ ``list(menu)`` 一步两用：tuple 没有 ``pop``，且副本保证不改调用者的
+        #    对象（否则同一份常量被反复注册时会越弹越短）。
+        if (
+            text is None
+            and isinstance(menu, (list, tuple))
+            and len(menu) >= 2
+        ):
+            menu = list(menu)   # 转 list（tuple 无 pop）+ 副本（不改调用者对象）
+            text = menu.pop()   # 最后一级即菜单文字
+
+        if text == "---":
             # 分隔符：只影响菜单，不建 action（见 docstring 的 Note）。
-            # ⚠️ 这里**不能**走到下面的 ``get_action(name=...)`` 判重 —— 那是按 objectName
-            #    查找，分隔符没有名字，查不到却会走一遍全树的 findChildren（白费）。
-            if menu is None:
-                menu = "其它"
-            self.get_menu(menu).addSeparator()
+            # ⚠️ 没有 menu 就什么都不做 —— 分隔符必须挂在某个菜单里，不为它凭空造「其它」。
+            if menu is not None:
+                self.get_menu(menu).addSeparator()
             return
 
-        if not overwritable:
-            if name is None:  # 此时，需要给定一个name (仅仅用于判断是否已存在)
-                if isinstance(text, str):  # 此时，给定一个默认的name
-                    if menu is None:
-                        name = "auto_" + get_hash("_".join(["其它"] + [text]))
-                    elif isinstance(menu, str):
-                        name = "auto_" + get_hash("_".join([menu, text]))
-                    elif isinstance(menu, list):
-                        name = "auto_" + get_hash("_".join(menu + [text]))
+        if menu is None:
+            menu = "其它"
 
-        if self.get_action(name=name, create_empty=False) is not None:
-            # 同名 action 已经存在 —— 见 docstring 的 ``overwritable`` 两条：
-            #   False → 什么都不挂，直接返回；
-            #   True  → 警告一声、把 name 置 None，下面另起 unnamed_XXX 再挂一条
-            #           （所以菜单里会出现**两条**，不是「替换」）。
-            if not overwritable:
-                assert name is not None, (
-                    f"Error: name should not be None when action not overwritable"
-                )
-                return
-            warn(
-                f"The action already exists: {name}", UserWarning, stacklevel=2
+        # ★ 2026-10-27：``overwrite`` 取代 ``overwritable``（旧名 2027-10-27 删除）。
+        #    两条规矩：
+        #    ① 两个都给且**含义相反** → 抛 ``TypeError``，不替调用者猜他想保留哪个
+        #       （先判这一步：既然要报错，就不必再发一条与之无关的弃用警告）；
+        #    ② 只传旧名 → 发弃用警告，行为与 ``overwrite`` **完全一致**（不改语义）。
+        #    ⚠️ 用 ``None`` 作哨兵（而不是默认 ``True``）才能区分「没传」与「传了 False」。
+        if (
+            overwrite is not None
+            and overwritable is not None
+            and bool(overwrite) != bool(overwritable)
+        ):
+            raise TypeError(
+                f'add_action 的 overwrite 与 overwritable 不能同时给定且含义相反：'
+                f'overwrite={overwrite!r}, overwritable={overwritable!r}'
             )
-            name = None
+        if overwritable is not None:
+            warn(
+                '``add_action(overwritable=...)`` 已弃用（2026-10-27），'
+                '请改用 ``overwrite=...``；原名将于 2027-10-27 删除。',
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            if overwrite is None:
+                overwrite = overwritable
+        if overwrite is None:
+            overwrite = True
+
+        # ⚠️ ``text`` 必须是「str」或「返回 str 的 callable」—— 它是菜单项的**文字**，
+        #    也是自动命名与判重的依据，没有合理的兜底值（旧版会退化成显示 'unnamed'，
+        #    那不是给人看的东西）。所以这里**直接抛异常**，不做静默降级，也**不**回落
+        #    到 ``name`` 当显示文字（2026-10-26 明确：``text`` 必填；旧写法
+        #    ``add_action(menu=..., name='cmd')`` 会当场报错 —— 见 docstring 的 ``text`` 条）。
+        #    分隔符（text='---'）已经在上面返回，不会走到这里。
+        if not (isinstance(text, str) or callable(text)):
+            raise TypeError(
+                f'add_action 的 text 是必填项（str 或返回 str 的 callable），'
+                f'缺省不再回落到 name 当显示文字；分隔线请用 text="---"：'
+                f'menu={menu}, name={name}, text={text!r}'
+            )
 
         if name is None:
-            index = 1
-            while (
-                self.get_action(name="unnamed_%03d" % index, create_empty=False)
-                is not None
-            ):
-                index += 1
-            name = "unnamed_%03d" % index
+            name = self._auto_action_name(menu, text)
+
+        # 撞名处理（只查一次），2026-10-26 起 overwrite=True 的语义是「**就地更新**」：
+        #   overwrite=True  → 复用找到的那个 action，按本次参数**重新设置**它的
+        #                     slot / icon / tooltip / text / shortcut / 动态回调等，
+        #                     不再另挂一条重复条目（菜单里始终只有一条）；
+        #   overwrite=False → 只注册一次：撞了就发警告并跳过。
+        # ⚠️ 命中的判据是 ``name``（显式给的名字，或按 menu+text 自动算出来的名字），
+        #    所以「同名」与「同 menu + 同 text」两种情况都会走到这里。
+        existing = self.get_action(name=name)
+        if existing is not None:
+            if not overwrite:
+                warn(
+                    f"菜单项已存在，跳过本次注册：menu={menu}, text={text}, name={name}",
+                    UserWarning,
+                    stacklevel=2,
+                )
+                return
+            else:
+                self._update_action(
+                    action=existing, menu=menu, text=text, slot=slot, icon=icon,
+                    tooltip=tooltip, shortcut=shortcut, on_toolbar=on_toolbar,
+                    is_enabled=is_enabled, is_visible=is_visible,
+                )
+                return
 
         action = Action(self)
         action.setObjectName(name)
+        self._configure_action(
+            action=action, menu=menu, text=text, slot=slot, icon=icon,
+            tooltip=tooltip, shortcut=shortcut,
+            is_enabled=is_enabled, is_visible=is_visible,
+            default_icon=True,  # 新建：没给图标就回落到默认图标
+        )
+
+        if on_toolbar:
+            toolbar_name = menu if isinstance(menu, str) else menu[0]
+            self.get_toolbar(toolbar_name).addAction(action)
+
+        target = self.get_menu(menu)
+        target.addAction(action)
+        # ⚠️ 子菜单的**位置**由 ``get_menu`` 负责（夹在「骨架条目」与「插件后挂条目」
+        #    之间，见 :meth:`_sub_menu_insert_after`）；普通条目一律追加到末尾，两者
+        #    天然不冲突，这里不需要再挪任何东西。
+
+        # ⚠️ 2026-10-27：新建后也**立即刷新一次视图**，与 :meth:`_update_action` 的收尾
+        #    对齐。不刷的话有两处不对：
+        #    ① ``text`` 是 callable 时只写了 ``action.get_text``、没 ``setText``，
+        #       首帧标题是**空字符串**，要等下一次 ``refresh()`` 才有字；
+        #    ② 动态的 ``is_visible`` / ``is_enabled`` 也不会立即生效（``update_view``
+        #       才去调它们），新建的条目会带着默认的「可用 + 可见」显示出来。
+        #    启动期有 ``refresh()`` 兜底所以看不出来，但运行期由插件新挂的条目会一直
+        #    错到下一次刷新为止。⚠️ 用 try 包住：``is_visible`` 等回调是用户代码。
+        try:
+            action.update_view()
+        except Exception as err:
+            print(f"Error when update_view after add <{name}>: {err}")
+
+    def _configure_action(
+        self, *, action, menu, text, slot, icon, tooltip, shortcut,
+        is_enabled, is_visible, default_icon=False,
+    ):
+        """把「本次 add_action 的参数」应用到 action 上（**新建**与**就地更新**共用）.
+
+        2026-10-26 抽出：``overwrite=True`` 撞名时不再另挂一条，而是把已有 action
+        交给本方法**重新设置**，所以这段逻辑只有一份。
+
+        做的事：
+
+        1. 动态回调 ``is_enabled`` / ``is_visible``（传 callable 才设，否则继承原值）；
+        2. 图标：给了 ``icon`` 就用它；没给时**只有** ``default_icon=True``（新建）
+           才回落到设置里的 ``default_action_icon``，覆盖时保持原图标（见下方 ⚠️）；
+        3. ``tooltip`` / ``text`` / ``shortcut``：**给了才覆盖**（``None`` = 保持原样）；
+        4. ``slot``：写进 ``action.slot_func``（**替换**，不是追加）—— 见下方的 ⚠️。
+
+        ⚠️ **``default_icon`` 为什么存在**（2026-10-26 修）：新建的 action 没图标难看，
+        所以 ``icon=None`` 时给它一个默认图标；但**就地覆盖**时如果也这么做，一个原本
+        精心设置了图标的条目会被悄悄换成 ``python`` 图标 —— 与其他参数「``None`` 就
+        保持原样」的约定不一致。于是把「要不要回落默认图标」显式化。
+
+        ⚠️ ``text`` 为 str 时顺手清掉 ``action.get_text``：上一次注册可能留下动态标题，
+        不清掉的话 :meth:`Action.update_view` 会继续用旧 callable 覆盖新文字。
+
+        Args:
+            action: 目标 ``Action``（新建的，或已挂在菜单上的）。
+            menu: 菜单路径（只用于日志标签）。
+            text: 菜单文字（``str`` 或 callable；已在 ``add_action`` 入口校验过）。
+            slot: 点击后执行的动作（经 :meth:`parse_value` 解析）。
+            icon: 图标名；``None`` 时**保持原样**（``default_icon=True`` 时回落到默认图标）。
+            tooltip: 悬停提示；``None`` 时保持原样。
+            shortcut: 快捷键（``str`` 或 ``QKeySequence``）；``None`` 时保持原样。
+            is_enabled: 可选的动态回调；不是 callable 时保持原样。
+            is_visible: 可选的动态回调；不是 callable 时保持原样。
+            default_icon: ``icon`` 为 ``None`` 时是否回落到默认图标（只有**新建**时为 True）。
+        """
+        name = action.objectName()
 
         if callable(is_enabled):  # 作为一个函数，动态地判断是否可用
             action.is_enabled = is_enabled
@@ -1421,7 +1603,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         if icon is not None:
             action.setIcon(settings.load_icon(icon))
-        else:
+        elif default_icon:  # 新建：没给图标就用设置里的默认图标
             icon = app_data.getenv(key="default_action_icon", default="python")
             if icon is not None:
                 action.setIcon(settings.load_icon(icon))
@@ -1429,14 +1611,12 @@ class MainWindow(QtWidgets.QMainWindow):
         if tooltip is not None:
             action.setToolTip(settings.get_text(tooltip))
 
-        if text is not None:
-            if isinstance(text, str):
-                action.setText(settings.get_text(text))
-            else:
-                assert callable(text)
-                setattr(action, "get_text", text)
+        # text 已在 add_action 入口校验过：一定是 str 或 callable。
+        if isinstance(text, str):
+            action.get_text = None  # 清掉旧注册可能留下的动态标题
+            action.setText(settings.get_text(text))
         else:
-            action.setText(name)
+            action.get_text = text
 
         if shortcut is not None:
             if isinstance(shortcut, str):
@@ -1454,47 +1634,202 @@ class MainWindow(QtWidgets.QMainWindow):
                 print(info)
                 log(info, tag=info)
 
-        action.triggered.connect(slot_x)
+        # ⚠️⚠️ **不要**在这里 ``triggered.connect(slot_x)``：就地覆盖时同一个 action
+        #    会被反复注册，每 connect 一次就多挂一个历史槽（Qt 允许重复连接，且
+        #    ``disconnect()`` 不带参数断不干净）—— 实测一次点击会把占位函数与插件
+        #    函数**全部**跑一遍。做法改为：``Action`` 在构造时只连一条 ``_on_triggered``，
+        #    这里只**替换**它的 ``slot_func`` 属性 —— 无论覆盖多少次，都只跑最新的槽。
+        action.slot_func = slot_x
 
-        if menu is None:
-            menu = "其它"
+    def _update_action(
+        self, *, action, menu, text, slot, icon, tooltip, shortcut,
+        on_toolbar, is_enabled, is_visible,
+    ):
+        """``overwrite=True`` 撞名时：**就地更新**已有的 action，不新建条目.
+
+        2026-10-26 改：此前撞名会另起一个 ``<原名>_001`` 再挂一条，菜单里出现两个
+        一模一样的条目 —— 那不是「覆盖」，只是一次意外重复。现在的语义是真正的覆盖：
+
+        - 用本次参数重设 action 的 slot / icon / tooltip / text / shortcut / 动态回调；
+        - 它**留在原来的菜单位置**（不移动、不重复挂载）；
+        - 若本次要求 ``on_toolbar`` 而它还没在工具栏上，就补挂上去。
+
+        Args:
+            action: 已存在的 ``Action``（``get_action(name=...)`` 找到的那个）。
+            menu: 本次调用的菜单路径。
+            text: 本次调用的菜单文字。
+            slot: 本次调用的槽。
+            icon: 本次调用的图标名。
+            tooltip: 本次调用的悬停提示。
+            shortcut: 本次调用的快捷键。
+            on_toolbar: 本次是否要求挂到工具栏。
+            is_enabled: 本次的动态回调（可用）。
+            is_visible: 本次的动态回调（可见）。
+        """
+        self._configure_action(
+            action=action, menu=menu, text=text, slot=slot, icon=icon,
+            tooltip=tooltip, shortcut=shortcut,
+            is_enabled=is_enabled, is_visible=is_visible,
+        )
 
         if on_toolbar:
             toolbar_name = menu if isinstance(menu, str) else menu[0]
-            self.get_toolbar(toolbar_name).addAction(action)
+            toolbar = self.get_toolbar(toolbar_name)
+            # ⚠️ 同一个 action 往同一个工具栏加两次，Qt 会把它挪到末尾 —— 先查一遍。
+            if action not in toolbar.actions():
+                toolbar.addAction(action)
 
-        target = self.get_menu(menu)
-        target.addAction(action)
-        # ⚠️ 2026-10-26：**不再在这里把子菜单归位**。子菜单现在夹在「骨架条目」与
-        #    「插件后挂条目」之间（见 ``get_menu`` / ``_sub_menu_insert_after``），
-        #    而普通条目一律追加到末尾 —— 两者天然不冲突：插件追加的普通条目本来就在
-        #    子菜单之后，不需要再挪。⚠️ 之前这里调 ``_push_sub_menus_to_end`` 会把子菜单
-        #    一路顶到底，导致「帮助 → 用户」跑到「示例」之后。
+        # 让「动态启用 / 可见 / 标题」立即体现，而不是等下一次 refresh()。
+        try:
+            action.update_view()
+        except Exception as err:
+            print(f"Error when update_view after overwrite <{action.objectName()}>: {err}")
 
-    def get_action(self, name, create_empty=True):
+    @staticmethod
+    def _callable_id(obj):
+        """返回一个 callable 的**稳定标识**字符串（用于生成自动 action 名）.
+
+        优先用 ``__module__ + __qualname__``（同一份代码重复执行时不变），取不到时
+        退回 ``id(obj)``（只在本次进程内稳定）。⚠️ **绝不能调用这个 callable** ——
+        像「通知(3)」这种标题每次刷新都会变，一旦拿返回值当名字，判重就时灵时不灵。
+
+        ⚠️ **``__qualname__`` 本身不唯一**（2026-10-27 修）：同一函数体内定义的多个
+        lambda，``__qualname__`` 全是 ``f.<locals>.<lambda>``；不同实例的同名绑定方法
+        也全是 ``C.label``。只按限定名生成标识，会让它们在**同一个菜单**里撞成同一个
+        名字 —— 后注册的那条于是静默覆盖前一条（菜单里只剩一项，点击跑的是后者的槽，
+        且不发任何警告）。所以再拼两段区分信息：
+
+        - ``__code__.co_firstlineno``：同一函数体内**不同行**的 lambda 因此区分得开；
+          同一个 lambda 被重复执行（插件 setup 跑两遍）行号不变，判重照常生效；
+        - ``id(__self__)``：只有**绑定方法**带 ``__self__``，用来区分不同实例
+          （同一实例在同一进程内 id 稳定，判重仍成立）。
+
+        ⚠️ ``functools.partial`` 之类既没有 ``__qualname__`` 也没有 ``__code__``，
+        会退回 ``id(obj)`` —— 那种标识**只在本次进程内**稳定，每次新建一个 partial
+        再注册都会被当成新条目，无法判重。
+
+        Args:
+            obj: 任意 callable。
+
+        Returns:
+            str: 标识字符串。
         """
-        返回给定name的菜单action
+        qualname = getattr(obj, "__qualname__", None)
+        if isinstance(qualname, str) and len(qualname) > 0:
+            parts = [f"{getattr(obj, '__module__', '')}.{qualname}"]
+            code = getattr(obj, "__code__", None)
+            if code is not None:
+                parts.append(f"L{code.co_firstlineno}")
+            self_obj = getattr(obj, "__self__", None)
+            if self_obj is not None:
+                parts.append(f"self_{id(self_obj)}")
+            return ".".join(parts)
+        return f"id_{id(obj)}"
+
+    def _auto_action_name(self, menu, text):
+        """没有给 ``name`` 时，按 ``menu`` + ``text`` 自动算一个 action 名字.
+
+        ★ 2026-10-26 新增，被 :meth:`add_action` 在**函数最前面**调用（任何情况下
+        ``name is None`` 都会先走这里），于是后续流程（判重、``setObjectName``）
+        拿到的永远是一个字符串，不再有「名字可能为空」的分支。
+
+        规则：
+
+        ============  ========================================  ==================
+        ``text``       生成的 ``objectName``                      稳定性
+        ============  ========================================  ==================
+        ``str``         ``auto_<sha256(menu 路径 + text) 前 30 位>``   同 menu + 同文字 → 同名
+        callable        ``auto_<sha256(menu 路径 + callable 标识)>``   同 menu + 同函数 → 同名
+        ============  ========================================  ==================
+
+        ⚠️ 其它取值（包括 ``None``）**直接抛 ``ValueError``** —— 不做 ``'unnamed'`` 之类的
+        兜底（2026-10-26 改）：菜单文字没有合理的默认值，``:meth:`add_action` 在入口
+        已经把这种情况挡掉了，这里再兜一次是为了防止有人绕过入口调用本方法。
+
+        ⚠️ **callable 分支用的是「身份」（模块名 + 限定名 + 定义行号 [+ 绑定实例]），
+        绝不是调用它** —— 见 :meth:`_callable_id`：带计数的标题每刷新一次就变一次，
+        用返回值当名字会让判重失效。⚠️ 只取限定名**不够**（2026-10-27 修）：同一函数体
+        内的多个 lambda 限定名相同，会被错认成同一个，后者静默覆盖前者。
+
+        ⚠️ **进哈希的是 ``menu`` 的原文，不做 ``settings.get_text`` 翻译**（2026-10-26
+        更正）：翻译是**有损**的（多个原文可能翻成同一个译文），拿它生成唯一标识会让
+        两个不同的菜单路径撞成同一个名字、判重时误丢条目；而「同一次调用」的原文是
+        固定的，不翻译反而恒等。何况 ``ui_text`` 运行期可改 —— 翻译过的名字会随它漂移。
+
+        Args:
+            menu: 菜单路径（``None`` / ``str`` / ``list``）。
+            text: 菜单文字（``str`` / callable）。
+
+        Returns:
+            str: 自动生成的名字。
+
+        Raises:
+            ValueError: ``text`` 既不是 ``str`` 也不是 callable。
         """
+        if menu is None:
+            keys = ["其它"]
+        elif isinstance(menu, str):
+            keys = [menu]
+        elif isinstance(menu, (list, tuple)):
+            keys = list(menu)
+        else:
+            keys = [str(menu)]
+
+        if isinstance(text, str):
+            return "auto_" + get_hash("_".join(keys + [text]))
+        if callable(text):
+            return "auto_" + get_hash("_".join(keys + [self._callable_id(text)]))
+        raise ValueError(f"无法根据 text={text!r} 生成 action 名字（menu={menu}）")
+
+    def get_action(self, name, create_empty=None):
+        """
+        返回给定 name（即 ``QAction.objectName()``）的菜单 action.
+
+        Args:
+            name: action 的 ``objectName``。⚠️ 为了兼容历史写法，除了精确匹配，
+                也接受 ``name + '.py'``（同一动作在旧代码里有过这两种名字）。
+            create_empty: **已弃用（2026-10-26，2027-10-26 删除）**。
+
+                - 旧版为 ``True``（默认）时：找不到就**发一条警告并返回一个从未
+                  挂到任何菜单上的空 ``Action``** —— 调用者拿到它再 ``trigger()``
+                  什么也不会发生，属于误导性的默认行为；
+                - 现在**统一**为「只查找」：找不到就返回 ``None``。
+
+                该分支在全仓**从未被真实使用**（唯一的默认值消费者
+                :meth:`trigger` 本身零调用），所以直接改了默认值。为了给外部脚本
+                留出过渡期，**只要显式传了这个参数**（传 ``True`` 或 ``False`` 都算）
+                就发一条 ``DeprecationWarning``；``zmlx`` 内部已全部改为不传。
+
+        Returns:
+            Action | None: 找到返回 action，找不到返回 ``None``。
+        """
+        if create_empty is not None:
+            warn(
+                "``get_action(create_empty=...)`` 已弃用（2026-10-26）：找不到时"
+                "现在总是返回 None，不可再创建空 action；该参数将于 2027-10-26 "
+                "删除，请直接调用 ``get_action(name)``。",
+                DeprecationWarning,
+                stacklevel=2,
+            )
         if isinstance(name, str):
-            for action in self.findChildren(QAction):
+            # ⚠️ 只查 ``Action``（即 add_action 创建的菜单项），不查全部 QAction
+            #    （2026-10-26 改）：``findChildren(QAction)`` 还会带上**菜单自身**的
+            #    menuAction（'文件' / '操作' …）与工具栏按钮 —— 它们的 objectName 全是
+            #    空串，于是 ``get_action('')`` 会命中一个菜单 action；而且那不是
+            #    add_action 建的对象，既没有 update_view 也没有 slot_func。
+            for action in self.findChildren(Action):
                 if action.objectName() == name or action.objectName() == name + ".py":
                     return action
-        if create_empty:
-            warn(
-                f"cannot find the action with name: <{name}>", UserWarning, stacklevel=2
-            )
-            action = Action(self)
-            if name is not None:
-                action.setText(name)
-            else:
-                action.setText("unnamed")
-            return action
-        else:
-            return None
+        return None
 
     def list_actions(self):
+        """返回所有由 :meth:`add_action` 创建的 action 的名字（``objectName``）.
+
+        ⚠️ 只列 ``Action``（2026-10-26 改）：菜单自身的 menuAction 与工具栏按钮
+        都不是 ``add_action`` 建的，不该出现在这份清单里。
+        """
         names = []
-        for action in self.findChildren(QAction):
+        for action in self.findChildren(Action):
             name = action.objectName()
             if isinstance(name, str):
                 if len(name) > 0:
@@ -1503,10 +1838,20 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def trigger(self, name):
         """
-        触发给定的Action
+        触发给定的Action（按 ``objectName`` 查找）.
+
+        ⚠️ 找不到时**明确发一条警告**：``get_action`` 现在找不到就返回 ``None``
+        （2026-10-26 起不再创建空 action），若这里静默返回，用户看到的会是
+        「调了 trigger 却毫无反应」，无从判断是名字写错还是 action 不存在。
         """
         action = self.get_action(name)
-        if hasattr(action, "trigger"):
+        if action is None:
+            warn(
+                f"cannot find the action with name: <{name}>",
+                UserWarning,
+                stacklevel=2,
+            )
+        elif hasattr(action, "trigger"):
             action.trigger()
 
     def show_next(self, position=None):
@@ -1545,8 +1890,8 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         self.get_tab_widget(position=position).setTabText(index, caption)
 
-    def exec_tab_func(self, name):
-        widget = self.get_current_widget()
+    def exec_tab_func(self, name, *, position=None):
+        widget = self.get_current_widget(position=position)
         if hasattr(widget, name):
             f = getattr(widget, name)
             f()
@@ -1569,7 +1914,6 @@ class MainWindow(QtWidgets.QMainWindow):
             stacklevel: 调用栈的深度(用于正确的定位调用者)
         """
         try:
-
             warn(message, UserWarning, stacklevel=stacklevel)
         except Exception:
             pass
@@ -1723,7 +2067,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.right_tabs.setVisible(visible)
         if visible:
             try:
-                width = getattr(self, '_last_console_width', None)
+                width = getattr(self, "_last_console_width", None)
                 if isinstance(width, int) and width > 0:
                     total = self.splitter.width()
                     if total > 0:
@@ -1799,7 +2143,7 @@ class MainWindow(QtWidgets.QMainWindow):
                     except Exception as err:
                         print(err)
         else:
-            action = self.get_action(name=name, create_empty=False)
+            action = self.get_action(name=name)
             if callable(update_view := getattr(action, "update_view", None)):
                 try:
                     update_view()
@@ -1824,12 +2168,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
         if not _gui.exists():
             return
-        if _gui.get_func('view_cwd') is None:
+        if _gui.get_func("view_cwd") is None:
             return  # gui 不可用（正常启动后插件命令或占位总有一个）
         try:
             _gui.view_cwd()
         except Exception as err:
-            print(f'Error when refresh cwd view: {err}')
+            print(f"Error when refresh cwd view: {err}")
 
     def refresh(self):
         """
@@ -1965,7 +2309,8 @@ class MainWindow(QtWidgets.QMainWindow):
             绘图控件（`MatplotWidget`），创建失败时为 None
         """
         return self.get_tab_widget(
-            position=position, at_side=at_side).get_figure_widget(**kwargs)
+            position=position, at_side=at_side
+        ).get_figure_widget(**kwargs)
 
     def plot(
         self,
@@ -2098,7 +2443,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 def oper(x):
                     x.open(fname)
                     kwds = dict(fname=fname, caption=caption, position=position)
-                    x.gui_restore = f"""gui.open_code(**{kwds})"""  # 用于重启
+                    x.gui_restore = f"""gui.open_code(**{kwds!r})"""  # 用于重启
 
                 if caption is None:
                     caption = os.path.basename(fname)
@@ -2126,7 +2471,7 @@ class MainWindow(QtWidgets.QMainWindow):
             def oper(x: TextFileEdit):
                 x.set_fname(fname)
                 kwds = dict(fname=fname, caption=caption, position=position)
-                x.gui_restore = f"""gui.open_text(**{kwds})"""  # 用于重启
+                x.gui_restore = f"""gui.open_text(**{kwds!r})"""  # 用于重启
 
             tab_widget = self.get_tab_widget(position=position)
 
@@ -2157,8 +2502,11 @@ class MainWindow(QtWidgets.QMainWindow):
             on_top: 是否置顶。
 
         ⚠️ **本方法 2026-10-22 曾搬进插件** ``plugins/builtin/image_browser.py``，
-        同日**还原**：欢迎页（``__init_actions`` 里那段）在 ``MainWindow`` 构造期就要用它
-        —— 它是**底层能力**，不该随插件开关而消失。
+        同日**还原**：它是**底层能力**，不该随插件开关而消失 —— 打开标签页 / 恢复标签页
+        这类「主窗口骨架本来就要有」的动作，不能被插件是否启用左右。
+        （它当年的一项**使用者**「启动即显示欢迎页」已于 2026-10-28 删除，但理由不变：
+        ``readme_browser`` 显示二维码、``plugins/builtin/image_browser.py``、以及
+        ``gui_restore`` 的重放都依赖它。）
 
         ⚠️ ``gui_restore`` 里写的是 ``gui.open_image(**{...})``：命令名与参数名都不能改。
         """
@@ -2169,7 +2517,11 @@ class MainWindow(QtWidgets.QMainWindow):
                 def oper(x):
                     x.set_image(fname)
                     kwds = dict(fname=fname, caption=caption, on_top=on_top)
-                    x.gui_restore = f"""gui.open_image(**{kwds})"""  # 用于重启
+                    # ⚠️ 必须 ``!r``：``caption`` 是**字符串**，直接插进 f-string 会生成
+                    #    不带引号的 ``caption=Welcome``（路径里的反斜杠也会被写坏），
+                    #    下次启动 ``gui_restore`` 重放时就抛 ``NameError``。
+                    #    ``open_code`` / ``open_text`` 同此（2026-10-28 一并修正）。
+                    x.gui_restore = f"""gui.open_image(**{kwds!r})"""  # 用于重启
 
                 if caption is None:
                     caption = os.path.basename(fname)
@@ -2255,6 +2607,18 @@ class MainWindow(QtWidgets.QMainWindow):
         )
         return self.__output_widget
 
+    def get_output_text(self):
+        if self.__output_widget is not None:
+            return self.__output_widget.get_plain_text()
+        else:
+            return ""
+
+    def get_output_html(self):
+        if self.__output_widget is not None:
+            return self.__output_widget.get_html()
+        else:
+            return ""
+
     def add_task(self, task):
         self.task_proc.add(task)
 
@@ -2275,10 +2639,12 @@ class MainWindow(QtWidgets.QMainWindow):
         离线时可能被判过期 —— 这正是它被弃用的原因之一。
         """
         warn(
-            'MainWindow.check_license() is deprecated (will be removed after 2027-10-05), '
-            'the license is now checked by the web license '
-            '(see zmlx.exts.web_license and the status bar). This method will be removed.',
-            DeprecationWarning, stacklevel=2)
+            "MainWindow.check_license() is deprecated (will be removed after 2027-10-05), "
+            "the license is now checked by the web license "
+            "(see zmlx.exts.web_license and the status bar). This method will be removed.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         try:
             while core.has_log():
                 core.pop_log()
@@ -2300,7 +2666,7 @@ class MainWindow(QtWidgets.QMainWindow):
             from zmlx.ui.tabs import About
 
             def oper(widget):
-                widget.gui_restore = f"""gui.show_about()"""
+                widget.gui_restore = """gui.show_about()"""
 
             self.get_widget(
                 the_type=About, caption="关于", on_top=True, icon="info", oper=oper
@@ -2352,7 +2718,7 @@ class MainWindow(QtWidgets.QMainWindow):
         from zmlx.ui.tabs import OutputHistoryView
 
         def oper(w):
-            w.gui_restore = f"""gui.show_output_history()"""
+            w.gui_restore = """gui.show_output_history()"""
             w.set_folder()
 
         self.get_widget(
@@ -2369,7 +2735,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         def oper(w):
             w.refresh()
-            w.gui_restore = f"""gui.show_memory()"""
+            w.gui_restore = """gui.show_memory()"""
 
         self.get_widget(
             the_type=MemView, caption="变量", on_top=True, icon="variables", oper=oper
@@ -2404,7 +2770,7 @@ class MainWindow(QtWidgets.QMainWindow):
         from zmlx.ui.tabs import EnvEdit
 
         def oper(w):
-            w.gui_restore = f"""gui.show_env_edit()"""
+            w.gui_restore = """gui.show_env_edit()"""
 
         self.get_widget(
             the_type=EnvEdit,
@@ -2464,7 +2830,7 @@ class MainWindow(QtWidgets.QMainWindow):
         from zmlx.ui.tabs.plugin_list_edit import PluginListEdit
 
         def oper(w):
-            w.gui_restore = f"""gui.edit_setup_files()"""
+            w.gui_restore = """gui.edit_setup_files()"""
             # 每次打开都拉一次最新数据（插件可能刚被执行过）。
             # ⚠️ 方法叫 ``update_items`` 而不是 ``refresh`` —— 后者会被
             #    ``MainWindow.refresh()`` 在**每次切到这个标签页**时调用，
@@ -2487,7 +2853,7 @@ class MainWindow(QtWidgets.QMainWindow):
             from zmlx.ui.tabs import ReadMeBrowser
 
             def oper(w):
-                w.gui_restore = f"""gui.show_readme()"""
+                w.gui_restore = """gui.show_readme()"""
 
             self.get_widget(
                 the_type=ReadMeBrowser,
@@ -2539,7 +2905,7 @@ class MainWindow(QtWidgets.QMainWindow):
         from zmlx.ui.tabs import LicenseRegister
 
         def oper(w):
-            w.gui_restore = f"""gui.show_reg_tool()"""
+            w.gui_restore = """gui.show_reg_tool()"""
 
         self.get_widget(
             the_type=LicenseRegister, caption="登录", on_top=True, icon="reg", oper=oper
@@ -2575,15 +2941,19 @@ class MainWindow(QtWidgets.QMainWindow):
         caption = f"反馈{get_hash(text, 15)}" if text else "反馈"
 
         def oper(w: FeedbackTool):  # 每次调用都会执行（含控件已存在时）
-            w.gui_restore = f"""gui.show_feedback()"""
+            w.gui_restore = """gui.show_feedback()"""
 
         def init(w: FeedbackTool):  # 只在新建控件时执行（显示之前）
-            if text is not None:    # 设置显示的反馈文本
+            if text is not None:  # 设置显示的反馈文本
                 w.set_text(text)
 
         self.get_widget(
-            the_type=FeedbackTool, caption=caption, on_top=True, icon="info",
-            oper=oper, init=init,
+            the_type=FeedbackTool,
+            caption=caption,
+            on_top=True,
+            icon="info",
+            oper=oper,
+            init=init,
         )
 
     def open_url(self, url, caption=None, on_top=None, zoom_factor=None, icon=None):
@@ -2723,9 +3093,11 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         self.license_button.update_license_state(read_cache=read_cache)
 
+
 class MySplashScreen(QtWidgets.QSplashScreen):
     def mousePressEvent(self, event):
         pass
+
 
 def __make_splash(app):
     splash_fig = settings.load_pixmap("splash")
@@ -2750,6 +3122,7 @@ def __make_splash(app):
     else:
         return None
 
+
 class _RedStderr:
     """把写入 stderr 的内容在送进控制台之前**整段染红**。
 
@@ -2766,15 +3139,15 @@ class _RedStderr:
     ``OutputWidget.add_text`` 过滤掉，不会显示成乱码。
     """
 
-    COLOR = '\033[31m'  # 红色（ANSI SGR）
-    RESET = '\033[0m'
+    COLOR = "\033[31m"  # 红色（ANSI SGR）
+    RESET = "\033[0m"
 
     def __init__(self, target):
         self._target = target
 
     def write(self, text):
         if text:  # 空写入不产生任何颜色码（控制台的状态栏提示靠这个保持干净）
-            self._target.write(f'{self.COLOR}{text}{self.RESET}')
+            self._target.write(f"{self.COLOR}{text}{self.RESET}")
 
     def flush(self):
         self._target.flush()
@@ -2784,9 +3157,10 @@ class _RedStderr:
 
     def __getattr__(self, name):
         # 其余属性（encoding 等）透传给被包装的对象
-        if name == '_target':  # 理论上到不了这里，避免拷贝 / 反序列化时递归
+        if name == "_target":  # 理论上到不了这里，避免拷贝 / 反序列化时递归
             raise AttributeError(name)
         return getattr(self._target, name)
+
 
 def __exception_hook(the_type, value, tb):
     message = f"""Exception Type: {the_type}
@@ -2796,6 +3170,7 @@ still unresolved, please contact the author (email: 'zhangzhaobin@mail.iggcas.ac
     # 走 stderr：__on_init 把 stderr 换成了 _RedStderr，于是这条消息在控制台里是**红色**的
     # （这是「真正的异常」最主要的出口）。⚠️ 别用 print(message)：那是 stdout，不会有颜色。
     print(message, file=sys.stderr)
+
 
 def __restore_history(win):
     # 恢复窗口的输出历史
@@ -2825,12 +3200,15 @@ def __restore_history(win):
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     win.write(f"\033[34m====== {now} ======\033[0m \n")
 
+
 def __save_history(win):
     # 保存输出历史（扩展名取 OutputWidget.SUFFIX 即 .html —— 只有 HTML 才带得上颜色）
     from zmlx.ui.widgets.output_widget import OutputWidget
+
     win.get_output_widget().save_text(
         app_data.root("output_history", f"{time_string()}{OutputWidget.SUFFIX}")
     )
+
 
 def __on_init(win):
     # step 1
@@ -2849,6 +3227,7 @@ def __on_init(win):
     # step 5. stdout and stderr
     sys.stdout = win
     sys.stderr = _RedStderr(win)  # stderr 的内容统一显示成红色（见 _RedStderr）
+
 
 def __on_exit(win):
     # step 5. stdout and stderr (此时，界面不应该再接收print，这是首先要做的)
@@ -2869,6 +3248,7 @@ def __on_exit(win):
     if callable(sys_excepthook):
         sys.excepthook = sys_excepthook  # 恢复原来的异常处理函数
 
+
 def __on_show(win):
     """
     在首次显示窗口之后执行的操作
@@ -2880,9 +3260,12 @@ def __on_show(win):
     # ⚠️ **必须在 load_window_size 之后**：先有窗口尺寸，splitter 才分得出宽度；
     # ⚠️ 只有「明确存了 No」才隐藏；**没存过**（首次运行 / 老版本升级上来）保持显示。
     try:
-        if app_data.getenv(
-            key="console_visible", encoding="utf-8", default="", ignore_empty=True
-        ) == "No":
+        if (
+            app_data.getenv(
+                key="console_visible", encoding="utf-8", default="", ignore_empty=True
+            )
+            == "No"
+        ):
             win.set_side_tabs_visible(False)
     except Exception as err:
         print(f"Error: {err}")
@@ -2911,6 +3294,7 @@ def __on_show(win):
     except Exception as err:
         print(f"Error: {err}")
 
+
 def __add_code_history():
     try:  # 在尝试调用gui执行的时候，添加代码执行历史
         if len(sys.argv) == 1:
@@ -2921,6 +3305,7 @@ def __add_code_history():
                 add_code_history(filepath)
     except Exception as err:
         print(f"Error: {err}")
+
 
 def __check():
     messages = []
@@ -2939,6 +3324,7 @@ def __check():
             for i in range(len(messages)):
                 text += f"{i + 1}. {messages[i]}\n"
             gui.information("注意", text)
+
 
 def __restore_tabs(filename=None):
     """
@@ -2965,6 +3351,7 @@ def __restore_tabs(filename=None):
         if gui.count_tabs() == 0:
             gui.show_readme()
 
+
 def __console_kernel(code):
     """
     在控制台线程执行的工作
@@ -2974,6 +3361,7 @@ def __console_kernel(code):
 
     try:
         from zmlx.ui.extra_setups import setup_ui
+
         setup_ui()
     except Exception as err:
         print(f"Error when setup action: {err}")
@@ -2993,6 +3381,7 @@ def __console_kernel(code):
     if app_data.get("run_plugins", app_data.get("run_setup", True)):
         try:
             from zmlx.ui import plugins
+
             plugins.load_all()
         except Exception as err:
             print(f"Error when loading plugins: {err}")
@@ -3008,6 +3397,7 @@ def __console_kernel(code):
     else:
         return None
 
+
 def __console_done(win, code, close_after_done):
     """
     在控制台线程结束之后执行的操作
@@ -3015,6 +3405,7 @@ def __console_done(win, code, close_after_done):
     app_data.put("console_result", win.get_console().result)  # 获得结果
     if close_after_done and code is not None:
         win.close()
+
 
 def __save_tabs(filename=None):
     """
@@ -3032,6 +3423,7 @@ def __save_tabs(filename=None):
         filename = app_data.temp("tab_start_code.json")
     write_json(filename, data)
 
+
 def __save_tab_files():
     for tabs in gui.get_tab_widgets():
         for idx in range(tabs.count()):
@@ -3041,6 +3433,7 @@ def __save_tab_files():
                     f()
                 except Exception as e:
                     print(e)
+
 
 def __on_close(win):
     # 存储是否显示控制台（⚠️ 判断的是**整个右侧栏**：``right_tabs`` 才是 splitter 里的那一栏，
@@ -3081,6 +3474,7 @@ def __on_close(win):
 
     except Exception as err2:
         print(f"Error: {err2}")
+
 
 def execute(code=None, keep_cwd=True, close_after_done=True, add_history=True):
     """启动 zmlx GUI 应用程序。
@@ -3151,6 +3545,7 @@ def execute(code=None, keep_cwd=True, close_after_done=True, add_history=True):
 
     # 返回运行的结果
     return app_data.get("console_result", None)
+
 
 def get_window():
     """返回当前 MainWindow 实例（可能为 None）。"""

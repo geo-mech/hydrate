@@ -2078,7 +2078,7 @@ def setup_ui():
         text='经典分形',
         tooltip='分形图案逐代演化：空格演化、↑↓ 换图案、A 自动播放、S 存图',
         slot=show_classic_fractal,
-        overwritable=False,
+        overwrite=False,
     )
 
 

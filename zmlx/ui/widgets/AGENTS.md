@@ -40,7 +40,8 @@
 （现成的例子是 `../utils/lic_utils.py`），不要横向互相引用。
 
 ⚠️ **唯一例外**：本目录下那 26 个**转发 shim**（`about.py` / `img.py` / …）**确实** import
-了 `tabs/`（2026-10-22 起 `img.py` 改指插件 `plugins/builtin/image_browser.py`）—— 它们是
+了 `tabs/`（`img.py` 转发的是 `tabs/img.py` 的 `ImageView`；⚠️ 2026-10-22 它一度改指插件，
+**同日已还原** —— `ImageView` 是 `gui.open_image` 用的底层能力，不随插件开关）—— 它们是
 兼容层，**不是控件**，属于预期。检查「有没有反向依赖」时要把它们
 排除掉，否则会产生噪音。
 
@@ -457,7 +458,7 @@ self.setIcon(QtGui.QIcon(pixmap))                     # ✅ 不受样式表 / �
 
 | 想学什么 | 看哪个文件 |
 |---|---|
-| 最小控件 + 缩放/交互 | `../plugins/builtin/image_browser.py`（`ImageView`，QGraphicsView；2026-10-22 由 `tabs/img.py` 并入「图片浏览」插件） |
+| 最小控件 + 缩放/交互 | `../tabs/img.py`（`ImageView`，QGraphicsView，滚轮缩放 + 拖拽平移）。⚠️ 2026-10-22 它一度被并入插件 `plugins/builtin/image_browser.py`，**同日已还原** —— 它由 `gui.open_image` 使用、是底层能力 |
 | 上下文菜单 + 状态栏提示 + 导出 | `text_browser.py`（本目录多数控件的基类） |
 | 可选依赖 + 整套回退 | `code_edit.py`（QsciScintilla → QTextEdit） |
 | 后台线程 + 信号回主线程 | `demo_view.py`（`DemoScanThread`）、`tabs/about.py`（`AboutThread`） |

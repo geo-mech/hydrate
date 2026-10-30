@@ -182,7 +182,7 @@ plot(on_figure, caption="图标题")
 | `CodeEdit` | Python 代码编辑器（QsciScintilla） |
 | `MatplotWidget` | matplotlib 嵌入式显示（**复杂图**用它；简单展示图见「图表控件」一节） |
 | `TabWidget` | 可关闭标签页管理器（⚠️ 销毁前依次调 `save_file()` 与 `cleanup_before_tab_close()`；用 `deleteLater()` 销毁，故控件的 `closeEvent` **不会**被调 —— 见「销毁前的两次清理」） |
-| `OutputWidget` | 输出面板（文本 + 属性 + 进度条）；文本支持 **ANSI 颜色**：`print` 里的 `\033[3xm` 等转义码会被上色，控件不支持的序列（擦行 / 清屏 / 光标定位 / OSC）一律**删除**而不是显示成乱码，`sys.stderr` 的内容显示成红色，控制台的**系统提示**（时间戳分隔行、`Start` / `Done` / `Time used`）显示成蓝色（浅色主题深蓝 / 暗色主题浅蓝） |
+| `OutputWidget` | 输出面板（文本 + 属性 + 进度条）；文本支持 **ANSI 颜色**：`print` 里的 `\033[3xm` 等转义码会被上色，控件不支持的序列（擦行 / 清屏 / 光标定位 / OSC）一律**删除**而不是显示成乱码，`sys.stderr` 的内容显示成红色，控制台的**系统提示**（时间戳分隔行、`Start` / `Done` / `Time used`）显示成蓝色（浅色主题深蓝 / 暗色主题浅蓝）；可用 `get_plain_text()` / `get_html()` 取到当前内容，`MainWindow` 上对应 `get_output_text()` / `get_output_html()` |
 | `MarkdownView` | Markdown 查看器（表格 / 代码块 / 可点链接）；公开方法只有 `set_markdown()` 与 `set_link_callback()`；**默认优先用第三方 `markdown` 库**渲染（未装则提示一次并回退 Qt 自带 `setMarkdown`；设置键 `md_by_html` 写成 `No` 可强制 Qt） |
 | `AttrView` | 属性键值表格查看器 |
 | `RunStateLight` | 状态栏（**「并行」复选框左边**）：**运行状态灯**——圆点 + 文字，在「○ 空闲 / ● 运行中 / ⏸ 已暂停」之间切换，状态由 `MainWindow.refresh()` 按 `is_running()` / `is_paused()` 设置。⚠️ 2026-10-26 新加：把原先**借**版本按钮显示的控制台状态接了过来。★ 它是**按钮**（`QToolButton`）：**点击 = `gui.show_console()`** —— 把右侧栏（控制台）显示出来 / 切过去，悬停提示末尾也写了这句。圆点是**字符**（`●`/`○`/`⏸`）而不是 `QPixmap`（`QLabel.setText()` 会 `clearContents()` 把 pixmap 清掉，实测） |
@@ -223,7 +223,7 @@ plot(on_figure, caption="图标题")
 | `StringTable` | 字符串表格查看器 |
 | `StyleSheetEdit` | 窗口样式表(QSS)编辑器（「设置 → 样式表」）：可选字体/配色/圆角等参数实时生成，也可直接用自定义文本；应用走转接出来的 `gui.set_style_sheet(text)`，**落盘与参数记忆都由控件自己负责**（写入 `zml_window_style.qss`）。⚠️ **2026-10-22 不在 `ui/tabs/` 了**：它只有「样式表」插件在用，已随 `gui.show_style_sheet` 整体并入 `plugins/builtin/style_sheet_menu.py`；老路径 `from zmlx.ui.widget import StyleSheetEdit` 仍可用（弃用垫片已改指新位置） |
 | `TextFileEdit` | 可编辑文本文件视图 |
-| `ImageBrowser` | **图片浏览器**：打开即扫描「工作路径」及其下 2 层子目录的图片（格式以 Qt 图片插件为准，默认不收 `pdf`），左侧缩略图相册（手机相册式），点哪张右侧显示大图；支持上一张/下一张、按帧率连续播放（进度条 + 循环开关）、以及显式「刷新」按钮。⚠️ **故意不实现 `refresh()`**（切标签不自动重扫）；三个后台线程（扫描/缩略图/解码）全部压低 OS 优先级，解码**按显示尺寸**；关标签走 `cleanup_before_tab_close()`；播放中切走标签会自动暂停并亮出「继续播放」。单文件自足（只依赖 `zmlx.ui.pyqt`）。**入口**：菜单「文件 → 浏览 → 图片」或命令 `gui.show_image_browser()`（挂载点 `plugins/builtin/image_browser.py`，不动 `main.py`） |
+| `ImageBrowser` | **图片浏览器**：打开即扫描「工作路径」及其下 2 层子目录的图片（格式以 Qt 图片插件为准，默认不收 `pdf`），左侧缩略图相册（手机相册式），点哪张右侧显示大图；支持上一张/下一张、按帧率连续播放（进度条 + 循环开关）、以及显式「刷新」按钮。⚠️ **故意不实现 `refresh()`**（切标签不自动重扫）；三个后台线程（扫描/缩略图/解码）全部压低 OS 优先级，解码**按显示尺寸**；关标签走 `cleanup_before_tab_close()`；播放中切走标签会自动暂停并亮出「继续播放」。单文件自足（只依赖 `zmlx.ui.pyqt`）。⚠️ **2026-10-30 起不在 `ui/tabs/` 了**：控件连同入口整体并入 `plugins/builtin/image_browser.py`（原 `tabs/image_browser.py` 删除、**不留垫片**），新代码请 `from zmlx.ui.plugins.builtin.image_browser import ImageBrowser`。**入口**：菜单「文件 → 浏览 → 图片」或命令 `gui.show_image_browser()`（不动 `main.py`） |
 
 ### extra_setups/ —— 额外菜单动作自带的页面
 
@@ -249,7 +249,9 @@ plot(on_figure, caption="图标题")
 > 相互独立）。
 
 ⚠️ **新增界面元素（控件 / 对话框 / 工具模块 / 菜单动作）默认不要在任何 `__init__.py` 里
-转发** —— 直接按**子模块路径**导入，例如 `from zmlx.ui.tabs.image_browser import ImageBrowser`。
+转发** —— 直接按**子模块路径**导入，例如 `from zmlx.ui.tabs.about import About`
+（已随插件搬走的控件写 `from zmlx.ui.plugins.builtin.<插件> import <类>`，
+如 `ImageBrowser` → `plugins/builtin/image_browser.py`）。
 给界面加**入口**（菜单项、命令）请放 `extra_setups/`，**不要**改 `main.py`。
 完整规则与理由（导入期副作用、循环导入、无头模式、API 只增不改）见
 [`AGENTS.md`](AGENTS.md)。
@@ -351,7 +353,7 @@ from zmlx.ui import gui
 @execute_once(file=__file__)      # 一次运行里可能被调多次，防止重复挂菜单
 def setup_ui():
     gui.add_action(menu='帮助', text='我的功能', slot=...)
-    gui.add_action(menu='帮助', name='---')          # 分隔线（专用写法，不用给其它参数）
+    gui.add_action(menu='帮助', text='---')          # 分隔线（专用写法，不用给其它参数）
     gui.add_action(menu='帮助', text='我的另一项', slot=...)
 
 
@@ -362,8 +364,8 @@ if __name__ == '__main__':
     setup_ui()                    # 直接 python 运行：方便自测
 ```
 
-⚠️ `name='---'` 是**分隔符**（2026-10-26 加）：它不建 action、不占名字、不判重，
-只在菜单末尾插一条线；`on_toolbar=True` 对它不生效（工具栏的分隔符仍要自己
+⚠️ `text='---'` 是**分隔符**（2026-10-26 加；判据是 `text`，不是 `name`）：它不建
+action、不占名字、不判重，只在菜单末尾插一条线；`on_toolbar=True` 对它不生效（工具栏的分隔符仍要自己
 `QToolBar.insertSeparator`）。
 
 放在哪：外部插件的标准文件名是 `zml_plugin.py`，放在项目目录即可（**首次启动自动发现**，

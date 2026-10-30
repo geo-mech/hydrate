@@ -106,21 +106,21 @@ def setup_ui():
         menu='操作', name='play_images',
         text='播放图片',
         slot=play_images,
-        overwritable=False
+        overwrite=False
     )
 
     add_action(
         menu='帮助', name='create_lnk',
         text='创建快捷方式',
         slot=create_ui_lnk_on_desktop,
-        overwritable=False
+        overwrite=False
     )
 
     add_action(
         menu=['帮助', '打开'], name='papers',
         text='已发表文章',
         slot=open_my_publications,
-        overwritable=False
+        overwrite=False
     )
 
     add_action(
@@ -129,7 +129,7 @@ def setup_ui():
         icon='issues',
         slot=open_new_issue,
         is_enabled=not_running,
-        overwritable=False
+        overwrite=False
     )
 
     add_action(
@@ -138,7 +138,7 @@ def setup_ui():
         icon='iggcas',
         slot=open_iggcas,
         is_enabled=not_running,
-        overwritable=False,
+        overwrite=False,
     )
 
     add_action(
@@ -147,21 +147,21 @@ def setup_ui():
         icon='home',
         slot=open_gitee_geomech_hydrate,
         is_enabled=not_running,
-        overwritable=False,
+        overwrite=False,
     )
 
     add_action(
         menu=['帮助', '显示'],
         text='日历',
         slot=show_calendar,
-        overwritable=False,
+        overwrite=False,
     )
 
     add_action(
         menu='帮助', name='print_tag',
         text='时间标签',
         slot=print_tag,
-        overwritable=False,
+        overwrite=False,
     )
 
     def print_funcs():
@@ -176,14 +176,14 @@ def setup_ui():
         menu=['帮助', '显示'],
         text='命令列表',
         slot=lambda: gui.start_func(print_funcs),
-        overwritable=False,
+        overwrite=False,
     )
 
     add_action(
         menu=['帮助', '显示'],
         text='Action列表',
         slot=lambda: gui.start_func(print_actions),
-        overwritable=False,
+        overwrite=False,
     )
 
     def print_gui_setup_logs():
@@ -194,7 +194,7 @@ def setup_ui():
         menu=['帮助', '显示'],
         text='Setup日志',
         slot=print_gui_setup_logs,
-        overwritable=False,
+        overwrite=False,
     )
 
     def print_sys_folders():
@@ -206,7 +206,7 @@ def setup_ui():
         menu=['帮助', '显示'],
         text='系统路径',
         slot=print_sys_folders,
-        overwritable=False,
+        overwrite=False,
     )
 
     def open_cwd():
@@ -218,7 +218,7 @@ def setup_ui():
         menu=['帮助', '打开'], name='open_cwd',
         text='工作路径',
         slot=open_cwd,
-        overwritable=False,
+        overwrite=False,
     )
 
     def open_opath():
@@ -231,7 +231,7 @@ def setup_ui():
         menu=['帮助', '打开'], name='open_opath',
         text='数据目录(zmlx.io.opath)',
         slot=open_opath,
-        overwritable=False,
+        overwrite=False,
     )
 
     from zmlx.algs import startfile
@@ -241,7 +241,7 @@ def setup_ui():
         text='AppData',
         slot=lambda: startfile(app_data.root()),
         is_enabled=lambda: lic.is_admin,
-        overwritable=False,
+        overwrite=False,
     )
 
 

@@ -1615,7 +1615,7 @@ def setup_ui():
         tooltip='按用户查看并修改授权的到期日与功能清单（仅管理员）',
         slot=show_user_admin,
         is_enabled=not_running,
-        overwritable=False,
+        overwrite=False,
     )
 
 
