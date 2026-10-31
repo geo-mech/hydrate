@@ -85,20 +85,67 @@ from zmlx.ui.widgets.version_button import VersionButton  # noqa: F401
 #: 名字 -> 所属的 ``zmlx.ui.tabs`` 模块名。
 #:
 #: ⚠️ 只收**当年 ``widget/__init__.py`` 就导出过**的那些名字，**不扩大 API 面**。
+#:
+#: ⚠️ ``CheckCountView`` 2026-10-31 **已移出**：它随插件并入
+#: ``plugins/builtin/user_admin.py``，本包对应的子模块 shim
+#: (``widget/check_count_view.py`` 与更早的 ``widget/license_count.py``) 一并删除、
+#: **不留垫片** —— 老路径 ``from zmlx.ui.widget import CheckCountView`` 现在会抛
+#: ``AttributeError``，请改用 ``from zmlx.ui.plugins.builtin.user_admin import CheckCountView``。
+#:
+#: ⚠️ ``FeedbacksView`` 同日**也已移出**：子模块 shim ``widget/feedbacks_view.py`` 与
+#: 更早的 ``widget/license_feedback.py`` 一并删除、**不留垫片**。
+#:
+#: ⚠️ ``MessageEdit`` 同日**也已移出**：通知消息中心搬去 ``setups/message.py``
+#: （与 ``gui.show_messages`` 一起），子模块 shim ``widget/message.py`` 删除、
+#: **不留垫片** —— 本表里本来就没有它，所以包级老路径本来也不可用。
+#:
+#: ⚠️ ``MemView`` 同日**也已移出**：变量浏览器搬去 ``setups/mem_view.py``
+#: （连带「显示 → 变量」与 ``gui.show_memory``），子模块 shim
+#: ``widget/mem_view.py`` 删除、**不留垫片**。
+#:
+#: ⚠️ ``CodeHistoryView`` 同日**也已移出**：脚本执行历史搬去
+#: ``setups/code_history_view.py``（连同 ``gui.show_code_history``），子模块 shim
+#: ``widget/code_history_view.py`` 删除、**不留垫片** —— 请改用
+#: ``from zmlx.ui.setups.code_history_view import CodeHistoryView``。
+#:
+#: ⚠️ ``OutputHistoryView`` 同日**也已移出**：控制台输出历史搬去
+#: ``setups/output_history_view.py``（连同 ``gui.show_output_history``），子模块 shim
+#: ``widget/output_history_view.py`` 删除、**不留垫片**。
+#:
+#: ⚠️ ``EnvEdit`` 同日**也已移出**：「设置 → 系统」搬去 ``setups/env_edit.py``
+#: （连同 ``gui.show_env_edit`` 与 ``Ctrl+E`` 菜单项），子模块 shim
+#: ``widget/env_edit.py`` 删除、**不留垫片**。
+#:
+#: ⚠️ ``StringTable`` 同日**也已移出**：通用字符串表格搬去
+#: ``setups/string_table.py``（连同 ``gui.show_string_table``），子模块 shim
+#: ``widget/string_table.py`` 删除、**不留垫片**。
+#:
+#: ⚠️ ``PluginListEdit`` 同日**也已移出**：「设置 → 插件」搬去
+#: ``setups/plugin_list_edit.py``（连同 ``gui.edit_setup_files``）——
+#: 本表里本来就没有对应子模块 shim，包级老路径随之不可用。
+#:
+#: ⚠️ ``ReadMeBrowser`` 同日**也已移出**：「帮助 → ReadMe」搬去
+#: ``setups/readme_browser.py``（连同 ``gui.show_readme``、``F1`` 与工具栏按钮），
+#: 子模块 shim ``widget/readme_browser.py`` 删除、**不留垫片**。
+#:
+#: ⚠️ ``LicenseRegister`` 同日**也已移出**：「帮助 → 登录」搬去
+#: ``setups/license_register.py``（连同 ``gui.show_reg_tool``），子模块 shim
+#: ``widget/license_register.py`` 删除、**不留垫片**。
+#:
+#: ⚠️ ``FeedbackTool`` 同日**也已移出**：「帮助 → 反馈」搬去
+#: ``setups/feedback_tool.py``（连同 ``gui.show_feedback``），子模块 shim
+#: ``widget/feedback_tool.py`` 删除、**不留垫片**。
+#:
+#: ⚠️ ``About`` 同日**也已移出**：「帮助 → 关于」搬去 ``setups/about.py``
+#: （连同 ``gui.show_about`` 与 ``Ctrl+Shift+A``），子模块 shim
+#: ``widget/about.py`` 删除、**不留垫片**。
+#:
+#: ⚠️ ``RegTool`` **仍然留在** ``tabs/``：``show_reg_tool`` 打开的是
+#: ``LicenseRegister``，而 ``RegTool`` 是已下线、只留作「离线授权码」的那条旧路 ——
+#: 两者不是一回事，别把它们一起搬。
 _TABS = {
-    'About': 'about',
-    'CheckCountView': 'check_count_view',
-    'CodeHistoryView': 'code_history_view',
-    'EnvEdit': 'env_edit',
-    'FeedbackTool': 'feedback_tool',
-    'FeedbacksView': 'feedbacks_view',
     'ImageView': 'img',
-    'LicenseRegister': 'license_register',
-    'MemView': 'mem_view',
-    'OutputHistoryView': 'output_history_view',
-    'ReadMeBrowser': 'readme_browser',
     'RegTool': 'reg_tool',
-    'PluginListEdit': 'plugin_list_edit',
     'TextFileEdit': 'text_file_edit',
 }
 

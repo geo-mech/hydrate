@@ -20,7 +20,9 @@ import sys
 from typing import List, Optional, Tuple, Union
 
 from zmlx.algs.fsys import has_permission, samefile, time_string
-from zmlx.exts import contain_chinese, core, get_dir, lic
+# ⚠️ ``core`` / ``lic`` 2026-10-31 起**不再在这里导入**：唯一用到它们的是
+#    ``check_license``，已搬到 ``setups/check_license.py``（那边自己导入）。
+from zmlx.exts import contain_chinese, get_dir
 from zmlx.system import app_data, get_hash, log, warn
 from zmlx.ui import settings
 from zmlx.ui.alg import (
@@ -38,12 +40,13 @@ from zmlx.ui.pyqt import (
     QtGui,
     QtMultimedia,
     QtWidgets,
-    QWebEngineView,
+    # ⚠️ ``QWebEngineView`` 2026-10-31 起**不再在本文件导入**：唯一用到它的
+    #    ``open_url`` 已搬到 ``setups/open_url.py``（那边直接从 ``pyqt`` 取）。
+    #    ⚠️ ``is_pyqt6`` 仍要留着 —— 文件末尾还有一处用到它。
     is_pyqt6,
 )
 from zmlx.ui.utils import FileHandler, GuiApi, TaskProc
-from zmlx.ui.widgets import CodeEdit, OutputWidget, TabWidget
-from zmlx.ui.widgets._parallel import CoreParallelEdit
+from zmlx.ui.widgets import CodeEdit, CoreParallelEdit, OutputWidget, TabWidget
 from zmlx.ui.widgets.license_button import LicenseButton
 from zmlx.ui.widgets.run_state_light import (
     STATE_IDLE,
@@ -105,7 +108,11 @@ class MainWindow(QtWidgets.QMainWindow):
     """
 
     sig_cwd_changed = QtCore.pyqtSignal(str)
-    sig_do_task = QtCore.pyqtSignal()
+    # ⚠️ 这里**没有** ``sig_do_task``：主窗口的「稍后在 GUI 线程跑一下」由
+    #    :attr:`task_proc`（``TaskProc``，见 ``utils/task_proc.py``）自己的私有信号
+    #    驱动。``MainWindow`` 曾定义过一个同名 ``pyqtSignal()``，但全仓既无 ``emit``
+    #    也无 ``connect``（外部工作区亦无引用）—— 2026-10-30 已删除，避免读代码时
+    #    误以为两条路都在用。
     sig_play_sound = QtCore.pyqtSignal(str)
 
     def __init__(self, parent=None):
@@ -286,8 +293,9 @@ class MainWindow(QtWidgets.QMainWindow):
         #    新的 web 授权（web_license / 状态栏右下角）已经取代它，而这一项
         #    在有效期不是远期时会去取网络时间，失败即判过期、还会弹一句红字
         #    「此电脑未授权」—— 对已用 web 授权注册的用户纯属误报。
-        #    :meth:`check_license` 已随之**弃用**（见它的 docstring），且不再有
-        #    任何自动触发点（原先的启动检查与「关于」页面里的调用都已移除）。
+        #    ``check_license`` 已随之**弃用**，且不再有任何自动触发点（原先的启动检查
+        #    与「关于」页面里的调用都已移除）。⚠️ 2026-10-31 那个方法连同它的
+        #    ``DeprecationWarning`` 一起搬到了 ``setups/check_license.py``。
 
         self.refresh()
 
@@ -433,15 +441,23 @@ class MainWindow(QtWidgets.QMainWindow):
         try:
             from zmlx.ui.alg import edit_in_tab, reg_file_type
 
+            # ⚠️ 这两个**不再** ``gui.mark_direct``（2026-10-30 撤）：
+            #    ``edit_in_tab`` 的全部工作就是调 ``gui.get_widget(...)``，登记成 direct
+            #    等于「在后台线程里调用一个 GUI 命令」，绕一圈没有任何收益；而
+            #    ``reg_file_type`` 只做注册、不建控件，放在 GUI 线程执行一样是毫秒级。
+            #    ``is_direct`` 的唯一正当收益是让延迟上界变成常数（见
+            #    ``gui_buffer.mark_direct`` 的 docstring），而它们换不到这个收益，
+            #    只会多一份「在后台线程执行」的风险面。
             for key, func in [
                 ("reg_file_type", reg_file_type),
                 ("edit_in_tab", edit_in_tab),
             ]:
                 self.gui_api.add_func(key, func)
-                gui.mark_direct(key)  # 直接调用的函数
         except Exception as err:
             print(err)
 
+        # ⚠️ 全仓**只有 window** 登记为直接调用：它就是 ``lambda: self``，只返回
+        #    ``MainWindow`` 实例本身，不建控件、不读标签容器 ⇒ 与线程无关。
         for key in ["window"]:
             gui.mark_direct(key)
 
@@ -449,6 +465,10 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         初始化内置的菜单动作
         """
+
+        # 这几个主要菜单，先get一次，固定顺序
+        for name in ['文件', '显示', '操作', '设置', '帮助']:
+            self.get_menu(name)
 
         def not_running():
             return not self.is_running()
@@ -620,13 +640,10 @@ class MainWindow(QtWidgets.QMainWindow):
             menu="操作", name="refresh", icon="refresh", text="刷新", slot=self.refresh
         )
 
-        self.add_action(
-            menu="显示",
-            name="memory",
-            icon="variables",
-            text="变量",
-            slot=self.show_memory,
-        )
+        # ⚠️ 「显示 → 变量」2026-10-31 **已搬到** ``setups/mem_view.py``：
+        #    菜单项（name='memory'、icon='variables'、text='变量'）与命令
+        #    ``gui.show_memory`` 都在那边的 ``setup_ui()`` 里注册。搬走的原因是它
+        #    连带维护 ``app_data`` 的编辑器键 —— 属必加载的装配，而不是骨架条目。
 
         # ★ 「显示 → 重置布局」（2026-10-26 新加）：布局现在可调（右侧栏可拖、宽度与
         #    可见性都会记住），这是"改乱了怎么办"的出口。槽指向本类的公开方法
@@ -827,25 +844,17 @@ class MainWindow(QtWidgets.QMainWindow):
             is_enabled=lambda: self.count_tabs() > 0,
         )
 
-        self.add_action(
-            menu="设置",
-            name="env",
-            icon="set",
-            text="系统",
-            shortcut="Ctrl+E",
-            slot=self.show_env_edit,
-        )
+        # ⚠️ 「设置 → 系统」（name='env'、Ctrl+E）2026-10-31 **已搬到**
+        #    ``setups/env_edit.py``：菜单项、命令 ``gui.show_env_edit`` 与 ``EnvEdit``
+        #    控件都在那边。搬走的原因是它改的是**全局配置**、属产品功能，
+        #    且带着菜单项与快捷键 —— 不是「只被打开成页面」的普通标签页控件。
 
-        # 显示文字是「插件」，但 name 仍沿用 'setup_files'：ribbon 配置、
-        # 外部脚本和已保存的界面布局都按 name 定位这个动作，改名会让它们失效。
-        # 见 zmlx/ui/ReadMe.md「命名遗留」一节。
-        self.add_action(
-            menu="设置",
-            name="setup_files",
-            icon="plugin",
-            text="插件",
-            slot=self.edit_setup_files,
-        )
+        # ⚠️ 「设置 → 插件」（name='setup_files'、icon='plugin'）2026-10-31 **已搬到**
+        #    ``setups/plugin_list_edit.py``：菜单项、命令 ``gui.edit_setup_files`` 与
+        #    ``PluginListEdit`` 控件都在那边。搬走的原因是它是**插件机制的开关面板本身** ——
+        #    做成插件就成了「关掉『开关』」的循环，用户一旦取消勾选就再也找不回这个入口。
+        #    ⚠️ 显示文字是「插件」，但 **name 仍是 'setup_files'**（ribbon 配置、外部脚本与
+        #    已保存的界面布局都按 name 定位这个动作）—— 见 ``ReadMe.md``「命名遗留」一节。
 
         # ★ 「设置 → 求解器」**不在这里**（2026-10-18 移）：那一行 ``add_action``
         #    已搬进插件 ``plugins/builtin/solver_menu.py``（默认不加载）。
@@ -853,19 +862,18 @@ class MainWindow(QtWidgets.QMainWindow):
         #    命令由那边 `gui.add_func` 注册；本类**不留**同名方法 —— 见
         #    「``show_solver_selector`` 已搬到插件」那段注释。
 
-        self.add_action(
-            menu="设置",
-            name="gui_iter",
-            text="迭代器",
-            slot=lambda: self.show_gui_iter(on_top=True),
-        )
+        # ⚠️ 「设置 → 迭代器」（``name='gui_iter'``）2026-10-31 **已搬到**
+        #    ``setups/gui_iter_edit.py``：菜单项、命令 ``gui.show_gui_iter`` 与
+        #    ``GuiIteratorEdit`` 控件都在那边。
+        #    ⚠️ 菜单那一项的 slot 原来是 ``lambda: self.show_gui_iter(on_top=True)``，
+        #    现在在那边写成 ``lambda: show_gui_iter(on_top=True)`` —— 语义不变。
 
         # ★ 「设置 → 样式表」**不在这里**（2026-10-18 移）：那一行 ``add_action``
         #    已搬进插件 ``plugins/builtin/style_sheet_menu.py``（**默认启用** —— 样式是用户
         #    随时会调的外观设置，做成插件只是为了**可被禁用**，不是为了藏起来）。
         #    ⚠️ 2026-10-22 起 ``show_style_sheet`` 方法与 ``StyleSheetEdit`` 控件也一并搬到
         #    那个插件了（它只有这个插件在用 → 完全自含）。命令 ``gui.show_style_sheet``
-        #    由插件显式注册；插件没启用时由 ``extra_setups/plugin_placeholders.py`` 的
+        #    由插件显式注册；插件没启用时由 ``setups/plugin_placeholders.py`` 的
         #    占位给出一句提示（所以命令**总是存在**，历史标签页照常重放）。
 
         # ---- 「帮助」菜单 ----
@@ -878,7 +886,7 @@ class MainWindow(QtWidgets.QMainWindow):
         #           ├─ 反馈
         #           ├─ ▸ 用户 → 管理 · 登录记录 · 反馈记录   ← 构造期建，紧跟「反馈」
         #           ├─ 示例                ← 插件「示例浏览」注册（构造后追加，排在子菜单后）
-        #           └─ ▸ 其它 / 架构        ← extra_setups 后注册
+        #           └─ ▸ 其它 / 架构        ← 插件「架构」注册（2026-10-31 前在 setups）
         #
         # ★ 2026-10-26：「用户」子菜单排在「反馈」**正下方**（用户点名的顺序）。
         #   上一版（2026-10-24）为了「高频操作别点两下」把登录 / 反馈提到一级、并把关于
@@ -904,8 +912,8 @@ class MainWindow(QtWidgets.QMainWindow):
         #   ⚠️ 「示例」不在这里：它由插件 ``demo_menu`` 在**控制台内核**里注册，
         #   晚于 ``__init_actions`` —— 所以它是「插件条目」，排在子菜单之后。
         #
-        # ⚠️⚠️ **菜单路径必须逐字一致**：``extra_setups/user_admin.py`` 与
-        #   ``extra_setups/license_query.py`` 注册时写的是 ``['帮助', '用户']``。
+        # ⚠️⚠️ **菜单路径必须逐字一致**：``plugins/builtin/user_admin.py`` 注册那三条
+        #   条目时写的是 ``['帮助', '用户']``。
         #   任何一处写成别的（例如旧的 ``['帮助', '查询']``），``get_menu`` 就会**另建**
         #   一个同名子菜单，界面上出现两个「用户」。
         #
@@ -913,63 +921,50 @@ class MainWindow(QtWidgets.QMainWindow):
         #    ribbon 配置、已保存的界面布局、外部脚本都按 name 定位，改名会让它们失效。
 
         # ---- 第 1 组：关于（历史顺序里排第一）----
-        def about():
-            print(lic.desc)
-            self.show_about()
+        # ⚠️ 2026-10-31 **已搬到** ``setups/about.py``：菜单项（``name='about'``、
+        #    ``Ctrl+Shift+A``）、它那个 ``about()`` 包装（先 ``print(lic.desc)`` 再开页）、
+        #    命令 ``gui.show_about`` 与 ``About`` 控件都在那边。
+        #    ⚠️ 因此「关于」现在排在「帮助」其它条目之后（由 ``setups`` 按登记顺序注册）。
 
-        self.add_action(
-            menu="帮助",
-            name="about",
-            text="关于",
-            shortcut="Ctrl+Shift+A",
-            icon="info",
-            slot=about,
-            is_enabled=not_running,
-        )
-
-        # ---- 第 2 组：ReadMe（最常用的文档入口，紧跟在关于之后）----
-        self.add_action(
-            menu="帮助",
-            name="readme",
-            icon="info",
-            text="ReadMe",
-            shortcut="F1",
-            slot=self.show_readme,
-            on_toolbar=True,
-        )
+        # ---- 第 2 组：ReadMe ----
+        # ⚠️ 2026-10-31 **已搬到** ``setups/readme_browser.py``：菜单项（``name='readme'``、
+        #    ``F1``、**在工具栏上**）、命令 ``gui.show_readme`` 与 ``ReadMeBrowser`` 控件
+        #    都在那边。搬走的原因是它是**欢迎页**（``__on_show`` 启动时自动打开）且带菜单项 /
+        #    快捷键 / 工具栏按钮 —— 不是「只被打开成页面」的普通标签页控件。
+        #    ⚠️ 因此它现在排在「设置」「帮助」其它条目之后（由 ``setups`` 按登记顺序注册）。
 
         # ---- 第 3 组：登录 / 反馈（一级，点一次就到）----
-        self.add_action(
-            menu="帮助",
-            name="reg",
-            icon="reg",
-            text="登录",
-            slot=self.show_reg_tool,
-        )
+        # ⚠️ 「帮助 → 登录」（``name='reg'``、``icon='reg'``）2026-10-31 **已搬到**
+        #    ``setups/license_register.py``：菜单项、命令 ``gui.show_reg_tool`` 与
+        #    ``LicenseRegister`` 控件都在那边。登录与授权检查是**软件本身**的一部分，
+        #    做成插件没有意义，所以归 ``setups/``。
+        #    ⚠️ 名字是历史叫法：``show_reg_tool`` 打开的是 ``LicenseRegister``，不是
+        #    ``RegTool``（后者早已不挂界面，留在 ``tabs/reg_tool.py`` 作离线授权码的备份）。
 
-        self.add_action(
-            menu="帮助",
-            name="feedback",
-            text="反馈",
-            icon="info",
-            slot=self.show_feedback,
-            is_enabled=not_running,
-        )
+        # ⚠️ 「帮助 → 反馈」（``name='feedback'``、``icon='info'``）2026-10-31 **已搬到**
+        #    ``setups/feedback_tool.py``：菜单项、命令 ``gui.show_feedback`` 与
+        #    ``FeedbackTool`` 控件都在那边。搬走的原因是它是**出问题时的唯一出口**
+        #    （ReadMe 的「新建Issue」链接指向它，别处也用它预填现场信息）。
+        #    ⚠️ 它的 ``is_enabled`` 原来是这里的 ``not_running`` 闭包；搬过去后改用
+        #    ``not gui.is_running()`` —— ``is_running`` 本来就会被自动注册成同名命令，
+        #    所以两者是同一个函数，语义不变。
 
         # ⚠️ 「帮助 → 示例」2026-10-22 **已搬到插件** ``plugins/builtin/demo_menu.py``
         #    （默认启用）：菜单项与 ``gui.show_demo`` 命令都由那边的 ``setup_ui()`` 注册。
         #    ⚠️ 这里**不要再加菜单项** —— 加回来会出现**两个**「帮助 → 示例」。
-        #    ``gui.show_demo`` 的**占位**在 ``extra_setups/plugin_placeholders.py`` 里。
+        #    ``gui.show_demo`` 的**占位**在 ``setups/plugin_placeholders.py`` 里。
 
-        # ---- 第 4 组：「用户」子菜单（条目在 extra_setups；位置 = 紧跟「反馈」之后）----
+        # ---- 第 4 组：「用户」子菜单（条目在插件；位置 = 紧跟「反馈」之后）----
         self.get_menu(["帮助", "用户"])
 
         # ★ 「管理 / 登录记录 / 反馈记录」三项都注册在「帮助 → 用户」下（2026-10-24
-        #    起「查询」不再单独存在）。它们**不在这里注册**：分别在
-        #    ``extra_setups/user_admin.py`` 与 ``extra_setups/license_query.py``。
+        #    起「查询」不再单独存在）。它们**不在这里注册**：全部在插件
+        #    ``plugins/builtin/user_admin.py``（2026-10-31 起；此前分散在
+        #    ``setups/user_admin.py`` 与 ``setups/license_query.py``，
+        #    后两者都已并入该插件并删除）。
         #
         #    ⚠️ 它们的命令（``gui.show_user_admin`` / ``gui.show_check_count_view`` /
-        #    ``gui.show_feedbacks_view``）也由各自文件用 ``gui.add_func`` 注册 ——
+        #    ``gui.show_feedbacks_view``）也由那个插件用 ``gui.add_func`` 注册 ——
         #    原先靠 ``__init_gui_api`` 扫描本类的公开方法来注册，方法搬走之后必须
         #    由那边补上。旧名（``show_license_count`` / ``show_license_feedback``）
         #    作为**别名**也一并注册，好让老标签页的 ``gui_restore`` 还能恢复。
@@ -1220,7 +1215,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 #
                 #    ★ 所以判据是「**这一段**是菜单自己注册的、还是插件后来追加的」：
                 #    ``MainWindow`` **构造完成**时，菜单里已有的条目 = 骨架自己注册的
-                #    （动画顺序就是代码里的书写顺序）；构造之后新增的 = 插件 / extra_setups
+                #    （动画顺序就是代码里的书写顺序）；构造之后新增的 = 插件 / setups
                 #    后挂的。子菜单插在「构造期最后一条」之后 —— 即**夹在两段之间**。
                 #    构造期创建的菜单（例如「帮助 → 用户」）：那时菜单里还没有任何插件条目，
                 #    于是它落在所有条目之后；插件随后追加的条目排在它后面。两种情形都对。
@@ -1279,7 +1274,7 @@ class MainWindow(QtWidgets.QMainWindow):
         """判断一个 action 是不是**骨架（``MainWindow``）自己在构造期注册的**.
 
         做法：``__init_actions`` 跑完时把当时已有的 action 记进
-        ``self._builtin_actions``（id 集合），之后新增的（插件 / extra_setups）不在里面。
+        ``self._builtin_actions``（id 集合），之后新增的（插件 / setups）不在里面。
 
         ⚠️ 用 **id()** 而不是 objectName：后者可空、可重复，而 ``QAction`` 是 Qt 对象，
         在界面存活期间 id 稳定。
@@ -1295,7 +1290,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def _record_builtin_actions(self):
         """记下**当前**菜单栏里的全部 action（＝骨架在 ``__init_actions`` 里注册的）.
 
-        在 ``__init_actions`` 的最后调用一次（见那里）。插件与 ``extra_setups`` 在
+        在 ``__init_actions`` 的最后调用一次（见那里）。插件与 ``setups`` 在
         ``MainWindow`` 构造**之后**才挂条目 —— 它们都不在这个集合里，于是
         :meth:`_sub_menu_insert_after` 能把「骨架条目」与「插件条目」分开。
         """
@@ -2158,7 +2153,7 @@ class MainWindow(QtWidgets.QMainWindow):
         :attr:sig_cwd_changed 连的是本函数，由它**按命令名**去调 ——
 
         ⚠️ 插件未加载 / 被禁用时，``gui.view_cwd`` 由
-        ``extra_setups/plugin_placeholders.py`` 的**占位**顶上：它只打印一句「请先启用
+        ``setups/plugin_placeholders.py`` 的**占位**顶上：它只打印一句「请先启用
         插件」的提示、**什么都不做**，所以这里不会再报 `not found`，也不会误开标签页。
         ⚠️ 但仍然用 `gui.get_func` 判断、**不要** `try: gui.view_cwd() except`：
         后者会把命令内部真正的异常也一起吞掉，排查时看不出是「没这个命令」还是
@@ -2371,12 +2366,12 @@ class MainWindow(QtWidgets.QMainWindow):
     #    那个插件现在**完全自含**。
     #    ⚠️ 它**一直是弃用的**（方法体里有 ``warn('gui.show_fn2 will be removed after
     #    2026-3-5, please use zmlx.plt.show_fn2 instead')``）—— 那条警告搬过去时**原样保留**。
-    #    ⚠️ 本类**不留方法**；占位在 ``extra_setups/plugin_placeholders.py``。
+    #    ⚠️ 本类**不留方法**；占位在 ``setups/plugin_placeholders.py``。
 
     # ⚠️ `view_cwd` 2026-10-22 **已搬到插件** `plugins/builtin/viewers.py`
     #    （默认启用）：方法、`CwdView` 控件与「文件 → 浏览 → 工作目录」菜单项都在那边
     #    （2026-10-26 起收进「浏览」子菜单，与「图片」并列）；本类**不留方法**；
-    #    占位在 ``extra_setups/plugin_placeholders.py``。
+    #    占位在 ``setups/plugin_placeholders.py``。
 
     def progress(
         self,
@@ -2625,52 +2620,25 @@ class MainWindow(QtWidgets.QMainWindow):
     def get_gui_api(self):
         return self.gui_api
 
-    def check_license(self):
-        """
-        检查本机授权（旧的「USB / 序列号」授权），未授权时在工具栏弹一句红字警告。
+    # ⚠️ ``check_license`` 2026-10-31 **已搬到** ``setups/check_license.py``：
+    #    那个已弃用的命令（含它的 ``DeprecationWarning`` 与红字警告逻辑）住在那边。
+    #    ⚠️ **命令名 ``check_license`` 不能改**：它原先是公开方法、自动注册成
+    #    ``gui.check_license``，外部脚本可能在调；搬走时显式补了 ``gui.add_func``，
+    #    否则外部调用会从「一条弃用警告」变成「找不到命令」—— 那是更糟的破坏。
+    #    ⚠️ **不要**把它挂到任何菜单 / 启动流程上：2026-10-05 之所以弃用，正是因为它
+    #    会误报、还会取网络时间。弃用期到 **2027-10-05**，届时整体删除。
+    #    ⚠️ 本类**不留方法**。
 
-        ⚠️ **已弃用**（用户 2026-10-05 要求）：授权已迁移到 web 授权
-        （``zmlx.exts.web_license``，见状态栏右下角与「关于」页面），本方法读的
-        ``lic.valid`` 是**旧的**本机授权判据，对已用 web 授权注册的用户会误报。
-        因此它**不再有任何自动触发点**（原先的启动检查与 ``show_about`` 里的调用
-        都已移除），保留只是为了不破坏既有调用方。
-
-        ⚠️ 本方法还会取网络时间（``lic.valid`` → ``is_expired`` → ``os::webtime``），
-        离线时可能被判过期 —— 这正是它被弃用的原因之一。
-        """
-        warn(
-            "MainWindow.check_license() is deprecated (will be removed after 2027-10-05), "
-            "the license is now checked by the web license "
-            "(see zmlx.exts.web_license and the status bar). This method will be removed.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        try:
-            while core.has_log():
-                core.pop_log()
-            if not lic.valid:
-                while core.has_log():
-                    print(core.pop_log())
-                print("\n\n")
-                self.toolbar_warning(
-                    "此电脑未登录，请确保: 1、使用最新版；2、本机联网!"
-                )
-        except Exception as err:
-            print(f"Error: {err}")
-
-    def show_about(self):
-        f = app_data.get("show_about")
-        if callable(f):
-            f()
-        else:
-            from zmlx.ui.tabs import About
-
-            def oper(widget):
-                widget.gui_restore = """gui.show_about()"""
-
-            self.get_widget(
-                the_type=About, caption="关于", on_top=True, icon="info", oper=oper
-            )
+    # ⚠️ ``show_about`` 2026-10-31 **已搬到** ``setups/about.py``：
+    #    方法、命令 ``gui.show_about``、菜单项「帮助 → 关于」（``name='about'``、
+    #    ``Ctrl+Shift+A``）与 ``About`` 控件都在那边。
+    #    ⚠️ **命令名 ``show_about`` 不能改**：状态栏的版本按钮
+    #    （``widgets/version_button.py``）、``setups/readme_browser.py`` 的右键菜单、
+    #    ``scen/ai_assistant`` 与 ``zmlx://gui/show_about`` 文档链接都按名字用它。
+    #    ⚠️ 那层 ``app_data.get('show_about')`` 的**可替换实现**间接也一并搬走了。
+    #    ⚠️ 命令原本靠「本类所有公开方法被自动注册」得来，方法搬走后由那边的
+    #    ``setup_ui()`` 用 ``gui.add_func('show_about', ...)`` 显式补上。
+    #    ⚠️ 本类**不留方法**。
 
     def play_sound(self, filename):
         """
@@ -2686,64 +2654,44 @@ class MainWindow(QtWidgets.QMainWindow):
 
     # ⚠️ `show_tab_details` 2026-10-22 **已搬到插件** `plugins/builtin/viewers.py`
     #    （默认启用）：方法与 `TabDetailView` 控件、「显示 → 标签列表」菜单项都在那边；
-    #    本类**不留方法**；占位在 ``extra_setups/plugin_placeholders.py``。
+    #    本类**不留方法**；占位在 ``setups/plugin_placeholders.py``。
     #    ⚠️ 插件用 `gui.get_tab_widgets()`（本类的**公开方法**，自动注册成命令）
     #    取标签容器 —— 所以 `get_tab_widgets` 必须留在本类，别搬走。
 
-    def show_code_history(self, folder, caption=None):
-        from zmlx.ui.tabs import CodeHistoryView
+    # ⚠️ ``show_code_history`` 2026-10-31 **已搬到** ``setups/code_history_view.py``：
+    #    那个控件与「开标签页」的入口一起住在那儿（它被控制台和代码编辑器的**右键菜单**
+    #    按命令名调用 ⇒ 属必加载的装配，不是可关闭的插件）。
+    #    ⚠️ 命令原本靠「本类所有公开方法被自动注册」得来，方法搬走后由那边的
+    #    ``setup_ui()`` 用 ``gui.add_func('show_code_history', ...)`` 显式补上 ——
+    #    所以 ``gui.show_code_history(folder=...)`` 与历史标签页的 ``gui_restore``
+    #    （存的是 ``gui.show_code_history(**{...})`` 原文）都照旧可用。
+    #    ⚠️ 本类**不留方法**。
 
-        if not isinstance(folder, str):
-            return
-
-        if os.path.isdir(folder):
-            kwds = dict(folder=folder, caption=caption)
-
-            if caption is None:
-                caption = os.path.basename(folder)
-
-            def oper(widget):
-                widget.set_folder(folder=folder)
-                widget.gui_restore = f"""gui.show_code_history(**{kwds})"""
-
-            self.get_widget(
-                the_type=CodeHistoryView,
-                caption=caption,
-                on_top=True,
-                oper=oper,
-                icon="python",
-            )
-
-    def show_output_history(self):
-        from zmlx.ui.tabs import OutputHistoryView
-
-        def oper(w):
-            w.gui_restore = """gui.show_output_history()"""
-            w.set_folder()
-
-        self.get_widget(
-            the_type=OutputHistoryView, caption="输出历史", on_top=True, oper=oper
-        )
+    # ⚠️ ``show_output_history`` 2026-10-31 **已搬到** ``setups/output_history_view.py``：
+    #    控件与「开标签页」的入口一起住在那儿（它与 ``show_code_history`` 是**同一条链** ——
+    #    控制台右键菜单里两项并列、都按**命令名**调用 ⇒ 必加载的装配，不是可关闭的插件）。
+    #    ⚠️ 命令原本靠「本类所有公开方法被自动注册」得来，方法搬走后由那边的
+    #    ``setup_ui()`` 用 ``gui.add_func('show_output_history', ...)`` 显式补上 ——
+    #    所以 ``gui.show_output_history()`` 与历史标签页的 ``gui_restore`` 都照旧可用。
+    #    ⚠️ 本类**不留方法**。
 
     # ⚠️ ``show_demo`` 2026-10-22 **已搬到插件** ``plugins/builtin/demo_menu.py``
     #    （默认启用）：它只是在「开一个 DemoView 标签页」，控件本体在 ``ui/tabs/``，
     #    与主窗口骨架无关。命令 ``gui.show_demo`` 由那边的 ``setup_ui()`` 用
-    #    ``gui.add_func`` 注册；本类**不留方法**，占位在 ``extra_setups/plugin_placeholders.py``。
+    #    ``gui.add_func`` 注册；本类**不留方法**，占位在 ``setups/plugin_placeholders.py``。
 
-    def show_memory(self):
-        from zmlx.ui.tabs import MemView
-
-        def oper(w):
-            w.refresh()
-            w.gui_restore = """gui.show_memory()"""
-
-        self.get_widget(
-            the_type=MemView, caption="变量", on_top=True, icon="variables", oper=oper
-        )
+    # ⚠️ ``show_memory`` 2026-10-31 **已搬到** ``setups/mem_view.py``：
+    #    那个控件与「显示 → 变量」菜单项、命令 ``gui.show_memory`` 一起住在那儿
+    #    （它连带维护 ``app_data_edits`` / ``default_app_data_edit`` 两个全局键，
+    #    属**必加载**的装配，不是可关闭的插件）。
+    #    ⚠️ 命令原本靠「本类所有公开方法被自动注册」得来，方法搬走后由那边的
+    #    ``setup_ui()`` 用 ``gui.add_func('show_memory', ...)`` 显式补上 —— 所以
+    #    ``gui.show_memory()`` 与历史标签页的 ``gui_restore`` 都照旧可用。
+    #    ⚠️ 本类**不留方法**（连同「显示 → 变量」那条 ``add_action`` 一起搬走）。
 
     # ⚠️ `show_timer` 2026-10-22 **已搬到插件** `plugins/builtin/viewers.py`
     #    （默认启用）：方法、`TimerView` 控件与「显示 → 耗时」菜单项都在那边；
-    #    本类**不留方法**；占位在 ``extra_setups/plugin_placeholders.py``。
+    #    本类**不留方法**；占位在 ``setups/plugin_placeholders.py``。
 
     # ⚠️ ``show_pg_console`` 2026-10-22 **已搬到插件**
     #    ``plugins/builtin/pg_console.py``（默认启用）：方法、``PgConsole`` 控件都在那边，
@@ -2752,41 +2700,35 @@ class MainWindow(QtWidgets.QMainWindow):
     #    （它原来靠的是本类「所有公开方法自动注册」）。
     #    ⚠️ 与旧实现的一处差别：缺 ``pyqtgraph`` 时**会打印一句 pip 提示**，而旧代码是
     #    静默 ``return``（点了没反应，无从排查）。
-    #    ⚠️ 本类**不留方法**；占位在 ``extra_setups/plugin_placeholders.py``。
+    #    ⚠️ 本类**不留方法**；占位在 ``setups/plugin_placeholders.py``。
 
     # ⚠️ `show_file_finder` 2026-10-22 **已搬到插件** `plugins/builtin/viewers.py`
     #    （默认启用）：方法、`AppPathEdit` 控件与「设置 → 路径」菜单项都在那边；
-    #    本类**不留方法**；占位在 ``extra_setups/plugin_placeholders.py``。
+    #    本类**不留方法**；占位在 ``setups/plugin_placeholders.py``。
 
     # ⚠️ ``show_solver_selector`` 2026-10-22 **已搬到插件** ``plugins/builtin/solver_menu.py``：
     #    方法、控件 ``SolverSelector``（原 ``ui/tabs/solver_selector.py``）与
     #    「设置 → 求解器」菜单项都在那边，合成一个可关闭的单元。命令
     #    ``gui.show_solver_selector`` 由那边的 ``setup_ui()`` 显式注册（它原来靠本类
     #    「所有公开方法自动注册」）。⚠️ 本类**不再提供**同名方法 —— 有它的话自动注册会
-    #    把插件（或 ``extra_setups/plugin_placeholders.py`` 的占位）悄悄顶掉。
+    #    把插件（或 ``setups/plugin_placeholders.py`` 的占位）悄悄顶掉。
     #    ⚠️ 插件默认**不加载**，所以默认只有占位在给出「请先启用它」的提示。
 
-    def show_env_edit(self):
-        from zmlx.ui.tabs import EnvEdit
-
-        def oper(w):
-            w.gui_restore = """gui.show_env_edit()"""
-
-        self.get_widget(
-            the_type=EnvEdit,
-            caption="系统设置",
-            on_top=True,
-            icon="set",
-            oper=oper,
-            type_kw=dict(items=settings.get_env_items()),
-        )
+    # ⚠️ ``show_env_edit`` 2026-10-31 **已搬到** ``setups/env_edit.py``：
+    #    方法、命令 ``gui.show_env_edit``、菜单项「设置 → 系统」（``name='env'``、
+    #    ``Ctrl+E``）与 ``EnvEdit`` 控件都在那边。
+    #    ⚠️ 命令原本靠「本类所有公开方法被自动注册」得来，方法搬走后由那边的
+    #    ``setup_ui()`` 用 ``gui.add_func('show_env_edit', ...)`` 显式补上 ——
+    #    所以历史标签页的 ``gui_restore``、ReadMe 里的 ``zmlx://gui/show_env_edit``
+    #    链接、界面桥的示例命令 ``client.show('show_env_edit')`` 都照旧可用。
+    #    ⚠️ 本类**不留方法**。
 
     # ⚠️ ``show_style_sheet`` 2026-10-22 **已搬到插件**
     #    ``plugins/builtin/style_sheet_menu.py``（默认启用）：方法与「设置 → 样式表」
     #    菜单项、以及控件 ``StyleSheetEdit`` 都在那边，那个插件现在**完全自含**。
     #    ⚠️ 命令 ``gui.show_style_sheet`` 仍可用 —— 由插件 ``setup_ui()`` 用
     #    ``gui.add_func`` 显式注册（它原来靠的是本类「所有公开方法自动注册」）。
-    #    ⚠️ 本类**不留方法**；占位在 ``extra_setups/plugin_placeholders.py``。
+    #    ⚠️ 本类**不留方法**；占位在 ``setups/plugin_placeholders.py``。
     #    ⚠️ 注意 ``gui.set_style_sheet`` / ``gui.get_style_sheet`` **仍在**
     #    ``__init_gui_api`` 里（它们直接转接 Qt 的 ``setStyleSheet`` / ``styleSheet``，
     #    与插件无关）—— 所以禁用插件时已落盘的样式照常生效，只是没有可视化编辑器。
@@ -2797,72 +2739,43 @@ class MainWindow(QtWidgets.QMainWindow):
     #    ⚠️ 命令 ``gui.show_calendar`` 由插件 ``setup_ui()`` 用 ``gui.add_func`` 显式注册 ——
     #    它原来靠的是本类「所有公开方法自动注册」。
     #    ⚠️ 那个插件默认**不加载**（``# ** enabled = False``）：所以默认只有本类的
-    #    **占位**（``extra_setups/plugin_placeholders.py``）在给出「请先启用它」的提示；
+    #    **占位**（``setups/plugin_placeholders.py``）在给出「请先启用它」的提示；
     #    启用插件后命令才真正打开日历。
 
-    def show_string_table(self, data, caption=None, data_columns=3):
-        from zmlx.ui.tabs.string_table import StringTable
+    # ⚠️ ``show_string_table`` 2026-10-31 **已搬到** ``setups/string_table.py``：
+    #    控件 ``StringTable`` 与「开标签页」的入口一起住在那儿。
+    #    ⚠️ 它是给插件 / scen / 脚本用的**通用出口**（``plugins/builtin/admin_menu.py``
+    #    4 处、``scen/ai_assistant/action.py`` 按命令名调用），做成插件就会让这些
+    #    调用方在插件关掉时报「找不到命令」⇒ 归 ``setups/``。
+    #    ⚠️ 命令原本靠「本类所有公开方法被自动注册」得来，方法搬走后由那边的
+    #    ``setup_ui()`` 用 ``gui.add_func('show_string_table', ...)`` 显式补上 ——
+    #    所以 ``gui.show_string_table(data, caption, data_columns)`` 与历史标签页的
+    #    ``gui_restore`` 都照旧可用。
+    #    ⚠️ **返回值也照旧**（原方法 ``return widget``），别因为「反正没人用」就丢掉。
+    #    ⚠️ 本类**不留方法**。
 
-        opts = dict(data=data, caption=caption, data_columns=data_columns)
+    # ⚠️ ``edit_setup_files`` 2026-10-31 **已搬到** ``setups/plugin_list_edit.py``：
+    #    方法、命令 ``gui.edit_setup_files``、菜单项「设置 → 插件」与 ``PluginListEdit``
+    #    控件都在那边。
+    #    ⚠️ **命令名 ``edit_setup_files`` 与 action ``name='setup_files'`` 一个字都没改**
+    #    （「命名遗留」）：前者是 ``zmlx://gui/edit_setup_files`` 文档链接、标签页存档串、
+    #    外部脚本与 ``scen/ai_assistant`` 引用的原文；后者是 ribbon 配置与已保存界面布局的
+    #    定位依据。显示文字一直是「插件」。
+    #    ⚠️ 命令原本靠「本类所有公开方法被自动注册」得来，方法搬走后由那边的
+    #    ``setup_ui()`` 用 ``gui.add_func('edit_setup_files', ...)`` 显式补上。
+    #    ⚠️ 本类**不留方法**。
 
-        def oper(w):
-            w.gui_restore = f"""gui.show_string_table(**{opts})"""
-            w.set_data(data)
-
-        widget = self.get_widget(
-            StringTable,
-            caption="文本表格" if caption is None else caption,
-            type_kw=dict(data_columns=data_columns),
-            set_parent=True,
-            oper=oper,
-        )
-
-        return widget
-
-    def edit_setup_files(self):
-        """打开插件列表（「设置 → 插件」）。
-
-        ⚠️ 方法名与 action name 仍沿用 ``setup_files``：它们被
-        ``zmlx://gui/edit_setup_files`` 文档链接、标签页的 ``gui_restore``
-        存档串（``gui.edit_setup_files()``）和外部脚本引用，改名会破坏这些入口。
-        控件本身已改名为 ``PluginListEdit``（文件 ``plugin_list_edit.py``）。
-        """
-        from zmlx.ui.tabs.plugin_list_edit import PluginListEdit
-
-        def oper(w):
-            w.gui_restore = """gui.edit_setup_files()"""
-            # 每次打开都拉一次最新数据（插件可能刚被执行过）。
-            # ⚠️ 方法叫 ``update_items`` 而不是 ``refresh`` —— 后者会被
-            #    ``MainWindow.refresh()`` 在**每次切到这个标签页**时调用，
-            #    白白重算一遍（见该方法的说明）。
-            w.update_items()
-
-        self.get_widget(
-            the_type=PluginListEdit,
-            caption="插件",
-            on_top=True,
-            icon="plugin",
-            oper=oper,
-        )
-
-    def show_readme(self):
-        f = app_data.get("show_readme")
-        if callable(f):
-            f()
-        else:
-            from zmlx.ui.tabs import ReadMeBrowser
-
-            def oper(w):
-                w.gui_restore = """gui.show_readme()"""
-
-            self.get_widget(
-                the_type=ReadMeBrowser,
-                caption="ReadMe",
-                on_top=True,
-                icon="info",
-                oper=oper,
-                tooltip="显示ReadMe信息，与IGG-Hydrate网站首页的ReadMe保持一致",
-            )
+    # ⚠️ ``show_readme`` 2026-10-31 **已搬到** ``setups/readme_browser.py``：
+    #    方法、命令 ``gui.show_readme``、菜单项「帮助 → ReadMe」（``name='readme'``、
+    #    ``F1``、工具栏按钮）与 ``ReadMeBrowser`` 控件都在那边。
+    #    ⚠️ **命令名 ``show_readme`` 不能改**：启动时的 ``__on_show``（本文件下面）、
+    #    历史标签页的 ``gui_restore``、ReadMe 正文里的 ``zmlx://gui/show_readme`` 链接、
+    #    ``tabs/about.py`` 的按钮 / 菜单、``scen/ai_assistant`` 都按这个名字用它。
+    #    ⚠️ 命令原本靠「本类所有公开方法被自动注册」得来，方法搬走后由那边的
+    #    ``setup_ui()`` 用 ``gui.add_func('show_readme', ...)`` 显式补上。
+    #    ⚠️ 那层 ``app_data.get('show_readme')`` 的**可替换实现**间接也一并搬走了
+    #    （它与 ``getenv('show_readme')`` 是两个不同的键）。
+    #    ⚠️ 本类**不留方法**。
 
     # ⚠️ ``show_changelog`` / ``show_roadmap`` / ``_show_md`` 2026-10-22 **已搬到插件**
     #    ``plugins/builtin/doc_view.py``（默认启用）：它们只是「读包内 md → 开一个
@@ -2893,112 +2806,42 @@ class MainWindow(QtWidgets.QMainWindow):
     # ⚠️ ``_show_md`` 2026-10-22 随 ``show_changelog`` / ``show_roadmap`` 一起搬进了
     #    插件 ``plugins/builtin/doc_view.py``（见上方那段注释）。
 
-    def show_reg_tool(self):
-        """显示登录控件（邮箱验证码 + 登录本机硬件码）。
+    # ⚠️ ``show_reg_tool`` 2026-10-31 **已搬到** ``setups/license_register.py``：
+    #    方法、命令 ``gui.show_reg_tool``、菜单项「帮助 → 登录」与 ``LicenseRegister``
+    #    控件都在那边。
+    #    ⚠️ **名字是历史叫法**：命令 / action 叫 ``show_reg_tool`` / ``"reg"``，但它打开的
+    #    是 ``LicenseRegister``（邮箱验证码登录），**不是** ``tabs/reg_tool.py`` 的 ``RegTool``
+    #    （USB 序列号 + 授权码那条旧路，早已不挂界面）。
+    #    ⚠️ **这两个名字都不能改**：``exts/_lic.py``（授权失败引导）、
+    #    ``widgets/license_button.py``（状态栏按钮）、``setups/readme_browser.py`` 与
+    #    ``tabs/about.py`` 都按名字调它。
+    #    ⚠️ 命令原本靠「本类所有公开方法被自动注册」得来，方法搬走后由那边的
+    #    ``setup_ui()`` 用 ``gui.add_func('show_reg_tool', ...)`` 显式补上。
+    #    ⚠️ 本类**不留方法**。
 
-        登录入口一律打开 LicenseRegister（联网登录：邮箱收验证码、把本机硬件码
-        登记到该邮箱）。原先的 RegTool（USB 序列号 + 作者返回的授权码）已不再
-        挂到界面上，但模块仍在 zmlx/ui/tabs/reg_tool.py，需要时可直接 import。
+    # ⚠️ ``show_feedback`` 2026-10-31 **已搬到** ``setups/feedback_tool.py``：
+    #    方法、命令 ``gui.show_feedback``、菜单项「帮助 → 反馈」与 ``FeedbackTool``
+    #    控件都在那边。
+    #    ⚠️ **命令名 ``show_feedback`` 不能改**：ReadMe 的「新建Issue」链接、
+    #    ``plugins/builtin/user_admin.py`` 的「反馈」按钮按名字调它；
+    #    ``scen/gui_bridge`` 与 ``scen/ai_assistant`` 把它列进**黑名单**（会往开发者邮箱
+    #    发东西）—— 那也是按名字排除的。
+    #    ⚠️ ``text`` 参数与「每段 text 各占一个标签页 / 只在 init 里填」的语义原样保留。
+    #    ⚠️ 命令原本靠「本类所有公开方法被自动注册」得来，方法搬走后由那边的
+    #    ``setup_ui()`` 用 ``gui.add_func('show_feedback', ...)`` 显式补上。
+    #    ⚠️ 本类**不留方法**。
 
-        帮助菜单、关于对话框、ReadMe 右键菜单都走这一个入口。
-        """
-        from zmlx.ui.tabs import LicenseRegister
-
-        def oper(w):
-            w.gui_restore = """gui.show_reg_tool()"""
-
-        self.get_widget(
-            the_type=LicenseRegister, caption="登录", on_top=True, icon="reg", oper=oper
-        )
-
-    def show_feedback(self, text=None):
-        """打开「反馈」控件；给了 ``text`` 就先把它填进输入框。
-
-        Args:
-            text: 预先填好的反馈正文。``None``（默认）表示**不动**输入框。
-
-        用途：别处发现异常时，可以把自己收集到的现场信息（操作步骤、报错原文、
-        版本…）先塞进输入框，用户补两句话就能提交::
-
-            gui.show_feedback(text='打开渗流模型时报错：\\nKeyError: ...')
-
-        ⚠️ **每一段不同的 text 各占一个标签页**：标签名由 text 的哈希派生
-        （``反馈<hash>``），所以同一个来源重复调用只会复用同一个标签、而不同来源
-        打开的是**各自独立的**控件。这样多份反馈互不干扰 —— 也正是
-        ``FeedbackTool`` 删掉自动保存草稿的原因（单槽位草稿会让它们互相覆盖）。
-        ``text`` 为空时用固定的「反馈」，那是用户自己敲的场景，只留一个。
-
-        ⚠️ **只在 ``init`` 里填**（``init`` 仅在**新建**控件时执行）。控件已经存在
-        时 ``get_widget`` 直接返回旧实例、``init`` 不跑，于是这次的 ``text``
-        被忽略 —— 这正是我们要的：那个输入框里可能是**用户正在写的东西**，
-        为了塞一段新文本而把它覆盖掉，比「这次没预填上」糟糕得多。
-        （``oper`` 每次调用都会执行，所以**绝不能**把预填放那里。）
-        """
-        from zmlx.ui.tabs import FeedbackTool
-
-        # 用 text 的哈希区分不同来源：同一来源反复打开复用同一标签页，
-        # 不同来源各开各的（见上面 docstring）
-        caption = f"反馈{get_hash(text, 15)}" if text else "反馈"
-
-        def oper(w: FeedbackTool):  # 每次调用都会执行（含控件已存在时）
-            w.gui_restore = """gui.show_feedback()"""
-
-        def init(w: FeedbackTool):  # 只在新建控件时执行（显示之前）
-            if text is not None:  # 设置显示的反馈文本
-                w.set_text(text)
-
-        self.get_widget(
-            the_type=FeedbackTool,
-            caption=caption,
-            on_top=True,
-            icon="info",
-            oper=oper,
-            init=init,
-        )
-
-    def open_url(self, url, caption=None, on_top=None, zoom_factor=None, icon=None):
-        """
-        显示一个html文件或者网址
-        """
-        if not isinstance(url, str):
-            return
-
-        if QWebEngineView is None:
-            if os.path.isfile(url):
-                from zmlx.algs import startfile
-
-                startfile(url)
-            else:
-                from webbrowser import open_new_tab
-
-                open_new_tab(url)
-            return
-
-        kwds = dict(
-            url=url, caption=caption, on_top=on_top, zoom_factor=zoom_factor, icon=icon
-        )
-
-        if zoom_factor is None:
-            zoom_factor = 1.0 if is_pyqt6 else 1.5
-
-        def oper(widget):
-            widget.page().setZoomFactor(zoom_factor)
-            if os.path.isfile(url):
-                widget.load(QtCore.QUrl.fromLocalFile(url))
-            else:
-                widget.load(QtCore.QUrl(url))
-            widget.gui_restore = f"""gui.open_url(**{kwds})"""
-
-        if icon is None:
-            icon = "web"
-
-        self.get_widget(
-            the_type=QWebEngineView,
-            caption=caption,
-            on_top=on_top,
-            oper=oper,
-            icon=icon,
-        )
+    # ⚠️ ``open_url`` 2026-10-31 **已搬到** ``setups/open_url.py``：
+    #    命令 ``gui.open_url`` 与它的 GUI 实现都在那边。
+    #    ⚠️ 它与 ``zmlx.ui.alg.open_url``（**同名但两回事**）分工如下：
+    #      - ``zmlx.ui.alg.open_url``：对外**统一入口**，判断 ``use_web_engine`` /
+    #        有没有界面，决定「开标签页」还是「降级到系统浏览器」；
+    #      - ``gui.open_url``（本方法原先提供的那个）：**GUI 标签页实现**，
+    #        ``alg.open_url`` 在需要开标签页时就调它。
+    #    所以**两个名字都不能改**，`alg.open_url` 里那句 ``gui.open_url(...)`` 是真实调用。
+    #    ⚠️ 命令原本靠「本类所有公开方法被自动注册」得来，方法搬走后由那边的
+    #    ``setup_ui()`` 用 ``gui.add_func('open_url', ...)`` 显式补上。
+    #    ⚠️ 本类**不留方法**。
 
     def in_dark_mode(self):
         """
@@ -3007,56 +2850,36 @@ class MainWindow(QtWidgets.QMainWindow):
         bg_color = self.palette().color(QtGui.QPalette.ColorRole.Window)
         return bg_color.lightness() < 128
 
-    def show_text_in_tab(self, text, caption=None, on_top=None):
-        """
-        在一个标签页中显示文本
-        Args:
-            text: 要显示的文本
-            caption: 标签页的标题
-            on_top: 是否将标签页置顶
-
-        Returns:
-            None
-        """
-        from zmlx.ui.widgets import TextBrowser
-
-        opts = dict(text=text, caption=caption, on_top=on_top)
-
-        def oper(w: TextBrowser):
-            w.gui_restore = f"""gui.show_text_in_tab(**{opts})"""
-            w.setPlainText(text)
-
-        self.get_widget(the_type=TextBrowser, caption=caption, on_top=on_top, oper=oper)
+    # ⚠️ ``show_text_in_tab`` 2026-10-31 **已搬到** ``setups/text_in_tab.py``：
+    #    命令 ``gui.show_text_in_tab`` 与它的「开标签页」实现都在那边。
+    #    ⚠️ **控件本体没搬**：显示文本的是 ``zmlx.ui.widgets.TextBrowser``（底层控件），
+    #    仍留在 ``widgets/`` —— 装配层只管「开页面」。
+    #    ⚠️ 命令名 ``show_text_in_tab`` 不能改：``scen/ai_assistant/action.py`` 按名字调它，
+    #    历史标签页的 ``gui_restore`` 也存的是那串原文。
+    #    ⚠️ 命令原本靠「本类所有公开方法被自动注册」得来，方法搬走后由那边的
+    #    ``setup_ui()`` 用 ``gui.add_func('show_text_in_tab', ...)`` 显式补上。
+    #    ⚠️ 本类**不留方法**。
 
     # ⚠️ **插件命令的「占位」不在本类里**（2026-10-22）：`get_vtk_view`、
     #    `show_style_sheet`、`show_demo`、`show_fn2`、`show_pg_console`、`open_pdf`、
     #    `show_solver_selector`、`show_timer`、`view_cwd`、`show_tab_details`、
     #    `show_file_finder`、`show_calendar`、`show_changelog`、`show_roadmap` 这 14 条命令
     #    的实现都在插件里；「插件没启用时给一句可操作提示」的占位函数放在
-    #    ``extra_setups/plugin_placeholders.py`` —— 它**恰好在插件之前**执行
-    #    （``extra_setups.setup_ui()`` → ``plugins.load_all()``），所以「先挂占位、
+    #    ``setups/plugin_placeholders.py`` —— 它**恰好在插件之前**执行
+    #    （``setups.setup_ui()`` → ``plugins.load_all()``），所以「先挂占位、
     #    插件再覆盖」是同一根顺序链上的一前一后，不依赖本类的自动注册。
     #    ⚠️ **不要在本类里再加同名方法**：自动注册会把插件（或占位）的版本覆盖掉，
     #    而且读代码时看不出这层关系 —— 规则见 ``plugins/AGENTS.md`` §2。
 
-    def show_gui_iter(self, data=None, caption=None, on_top=None):
-        if data is None:
-            from zmlx.utils import get_gui_iter
-
-            data = get_gui_iter()
-
-        if caption is None:
-            caption = "迭代器"
-
-        from zmlx.ui.tabs.gui_iter_edit import GuiIteratorEdit
-
-        def oper(w: GuiIteratorEdit):
-            w.gui_restore = "gui.show_gui_iter()"
-            w.set_data(data)
-
-        return self.get_widget(
-            the_type=GuiIteratorEdit, caption=caption, on_top=on_top, oper=oper
-        )
+    # ⚠️ ``show_gui_iter`` 2026-10-31 **已搬到** ``setups/gui_iter_edit.py``：
+    #    方法、命令 ``gui.show_gui_iter``、菜单项「设置 → 迭代器」与
+    #    ``GuiIteratorEdit`` 控件都在那边。
+    #    ⚠️ **命令名 ``show_gui_iter`` 不能改**：``GuiIterator._plot_timing()``
+    #    （``zmlx/utils/gui_iterator.py``）会在第一次绘图时**自动调用它**建标签页，
+    #    ``zmlx://gui/show_gui_iter`` 文档链接与 ``scen/ai_assistant`` 也按名字用它。
+    #    ⚠️ 命令原本靠「本类所有公开方法被自动注册」得来，方法搬走后由那边的
+    #    ``setup_ui()`` 用 ``gui.add_func('show_gui_iter', ...)`` 显式补上。
+    #    ⚠️ 本类**不留方法**。
 
     def update_system_state(self, read_cache=True):
         """
@@ -3360,7 +3183,7 @@ def __console_kernel(code):
     __add_code_history()
 
     try:
-        from zmlx.ui.extra_setups import setup_ui
+        from zmlx.ui.setups import setup_ui
 
         setup_ui()
     except Exception as err:

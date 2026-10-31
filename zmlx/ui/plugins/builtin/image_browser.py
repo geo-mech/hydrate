@@ -137,15 +137,15 @@ GUI 命令                  ``gui.show_image_browser()``
 「浏览」；而本插件被禁用时，「工作目录」那一项照样出现（``viewers`` 自己建出这个
 子菜单）。
 
-为什么是插件（``plugins/``）而不是 ``extra_setups/``
+为什么是插件（``plugins/``）而不是 ``setups/``
 --------------------------------------------------
 
 图片浏览是**工具型、非核心**的功能，不该出现在「必须提供」的菜单里 ——
 所以做成插件，用户不需要时可以在「设置 → 插件」里关掉，菜单项随之消失。
 
-⚠️ 2026-10-18 由 ``extra_setups/image_browser.py`` 移到这里（同理还有
+⚠️ 2026-10-18 由 ``setups/image_browser.py`` 移到这里（同理还有
 ``vtk_view.py`` / ``zip_files.py``）。两者的分工见 :mod:`zmlx.ui.plugins`：
-**产品功能**（授权查询、用户管理）留 ``extra_setups``，**可关闭的扩展**放这里。
+**产品功能**（授权查询、用户管理）留 ``setups``，**可关闭的扩展**放这里。
 
 ⚠️⚠️ **``open_image`` 与 ``ImageView`` 2026-10-22 一度搬进本文件，同日又还原**：
 欢迎页在 ``MainWindow.__init_actions`` 里就要用它，``gui.open_image`` 是**底层能力**，
@@ -159,7 +159,7 @@ GUI 命令                  ``gui.show_image_browser()``
 
 ⚠️ **``gui.show_image_browser()`` 是给 ``gui_restore`` 用的**：标签页被存进标签
 状态后，重启时按这串原文重放，所以命令名一旦发布就**不能再改**（照
-``license_query.py`` 末尾那两条旧名别名的既定纪律）。
+``user_admin.py`` 末尾那几条旧名别名的既定纪律）。
 
 ⚠️ 命令名**必须与 ``MainWindow`` 已有的方法名不撞车**：``__init_gui_api`` 会把主窗口
 的所有公开方法自动注册进命令表，撞名就会把那个方法悄悄顶掉。``show_image_browser``

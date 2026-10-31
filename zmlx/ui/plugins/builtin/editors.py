@@ -30,7 +30,7 @@
 ======================  ========================================================
 原来                     现在
 ======================  ========================================================
-``ui/extra_setups/editors.py``（常驻注册 7 种文件类型）   本文件的 ``setup_file_types()``
+``ui/setups/editors.py``（常驻注册 7 种文件类型）   本文件的 ``setup_file_types()``
 ``builtin/editors_menu.py``（5 个 numpy 示例，默认不加载）  本文件的 ``setup_actions()``
 ``builtin/seepage_menu.py``（1 个流体定义示例，默认不加载）  同上（合并）
 ``zmlx/scen/editors/__init__.py + _setup.py + zml_plugin.py``  本文件（原先的插件包已删除）
@@ -53,7 +53,7 @@
 的单元。代价：禁用后 ``gui.open_seepage`` 等命令不再存在（见 ``ui/ReadMe.md``）。
 
 Created by DeepSeek, 2026-10-22: 由 ``ui/plugins/builtin/editors_menu.py`` +
-    ``seepage_menu.py`` + ``ui/extra_setups/editors.py`` 合并而成
+    ``seepage_menu.py`` + ``ui/setups/editors.py`` 合并而成
 Modified by DeepSeek, 2026-10-22: 与 ``zmlx/scen/editors/`` 的 ``_setup.py`` +
     ``zml_plugin.py`` 再合成这一个文件；控件退回 ``ui/widgets/editors/``
 Modified by DeepSeek, 2026-10-25: 「生成测试数据」由「文件」下沉到「帮助 → 其它」，

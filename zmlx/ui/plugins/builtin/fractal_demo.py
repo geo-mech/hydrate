@@ -785,7 +785,7 @@ class _Theme:
     """
     一套界面配色，全部从当前 ``QPalette`` 推导。
 
-    取色规则与 zmlx 其它控件一致（见 ``check_count_view._colors``）：背景取
+    取色规则与 zmlx 其它控件一致（见 ``_BarChart._colors``）：背景取
     ``Base`` / ``Window`` 里**较亮**的那个（暗色主题下 ``Base`` 可能比
     ``Window`` 还暗），文字取 ``WindowText``，强调色取 ``Highlight``；这样
     暗色主题、亮色主题以及用户自定义的 ``zml_window_style.qss`` 都能跟上，

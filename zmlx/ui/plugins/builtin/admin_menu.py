@@ -51,7 +51,7 @@
 本文件的 ``# ** desc`` 列为 admin / 调试类入口，随插件开关走是合理的。
 
 Modified by Claude, 2026-08-12
-Modified by DeepSeek, 2026-10-18: 由 ``extra_setups/testing.py`` 移入插件；
+Modified by DeepSeek, 2026-10-18: 由 ``setups/testing.py`` 移入插件；
     去掉「帮助 → 加载 → Admin功能」中间层，并默认不加载
 Modified by DeepSeek, 2026-10-22: ``MainWindow.show_calendar`` 方法搬入本文件
     （连同它那条菜单项的 slot），并显式注册 ``gui.show_calendar``
@@ -246,7 +246,7 @@ def setup_ui():
 
 
 # ⚠️ 插件路径：由 load_all exec 执行，**没人会替我们调 setup_ui()**，所以本文件
-#    把调用写在**模块顶层**（``extra_setups/*.py`` 则由 ``extra_setups/__init__.py``
+#    把调用写在**模块顶层**（``setups/*.py`` 则由 ``setups/__init__.py``
 #    统一调用 —— 这是两者唯一的区别）。插件机制执行时 ``__name__`` 是
 #    ``'__zml_plugin__'``；直接 ``python admin_menu.py`` 时才是 ``'__main__'``
 #    （见 plugins/__init__.py 的说明）。

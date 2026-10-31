@@ -1,7 +1,7 @@
 """许可登录工具 widget（旧的 USB 序列号 + 授权码方式，已不再挂到界面上）.
 
 2026-09-24 起，界面上的登录入口（帮助菜单 / 关于对话框 / ReadMe 右键菜单）一律
-打开 :class:`zmlx.ui.tabs.license_register.LicenseRegister`（联网登录：邮箱收
+打开 :class:`zmlx.ui.setups.license_register.LicenseRegister`（联网登录：邮箱收
 验证码、再把本机硬件码登记到该邮箱）。本模块保留的原因只有一个：
 ``zmlx.exts.reg`` 仍在，需要「离线授权码」那条老路时可以直接 import 使用。
 

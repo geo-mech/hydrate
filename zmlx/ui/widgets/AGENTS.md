@@ -35,7 +35,7 @@
 
 ⚠️ **本目录不得 import `zmlx.ui.tabs.*`** —— 一旦有人这么做，就说明那个 tabs 控件**正在
 被别人当组件用**，它就不再是顶层控件，**该搬回本目录**。反向是允许的：`tabs/` 可以复用
-本目录的控件（如 `MemView` 用 `edit_by_text`、`MessageEdit` 用 `label`、
+本目录的控件（如 `MemView` 用 `edit_by_text`、（原 `MessageEdit`，现已搬去 `../setups/`）用 `label`、
 `ReadMeBrowser` 继承 `md_view`）。确有共用的东西时，把它**下沉**到底层模块
 （现成的例子是 `../utils/lic_utils.py`），不要横向互相引用。
 
@@ -46,7 +46,7 @@
 排除掉，否则会产生噪音。
 
 ⚠️ **这些转发层已弃用**（2026-10-16 起，**2027-10-16 删除**）：26 个模块级 shim、
-`__init__.py` 的惰性转发、`license_count.py` / `license_feedback.py` 都会在导入时发
+`__init__.py` 的惰性转发、`license_feedback.py` 都会在导入时发
 :class:`DeprecationWarning`。新代码请用 `from zmlx.ui.tabs import X`（无警告）。
 内部代码**不得**再走老路径 —— 判据是「`MainWindow` 构建全程 0 条弃用警告」。
 
@@ -266,7 +266,7 @@ thread is still running` / 退出码 `0xC0000409`，**不是异常**，`try/exce
 
 ⚠️ **lambda 连的槽不会被 Qt 自动断连**（lambda 没有接收者 QObject）：控件销毁后迟到结果仍会调到
 它，碰子控件即抛 `RuntimeError: wrapped C/C++ object ... has been deleted`。这类槽开头先判
-`_is_deleted(self)`（实现见 `tabs/check_count_view.py`）；写成**绑定方法**则 Qt 会自动断连，更好。
+`_is_deleted(self)`（实现见 `plugins/builtin/user_admin.py`）；写成**绑定方法**则 Qt 会自动断连，更好。
 
 ### 跨线程调用 GUI
 
@@ -279,7 +279,7 @@ thread is still running` / 退出码 `0xC0000409`，**不是异常**，`try/exce
 | 只是稍后在 GUI 线程跑一下 | `gui.add_task(func)`（异步、无结果） |
 | 长任务 | `gui.start(func, post_task=...)`（**单任务**，忙时会被丢弃） |
 
-⚠️ 完整规则（单任务约束、`post_task` 在异常时也会执行、死锁禁忌、20 个通道的上限、
+⚠️ 完整规则（单任务约束、`post_task` 在异常时也会执行、死锁禁忌、
 排查表）见 [`../AGENTS.md`](../AGENTS.md) §6 —— 那里是**唯一**的权威描述，本节只是入口。
 
 ### 要主窗口的能力：**转接 Qt 现成的接口**，别往 `MainWindow` 加方法
@@ -412,7 +412,7 @@ except Exception:
 ### 控件里的颜色：用图标 / 调色板，别在控件里写 `color` / `background`
 
 本程序会加载用户可编辑的 `zml_window_style.qss`，还有暗色模式；控件里一旦写死色值，要么在暗色
-下看不清，要么把用户主题盖掉（`system_state_label.py` / `tabs/license_register.py` / `tabs/check_count_view.py`
+下看不清，要么把用户主题盖掉（`system_state_label.py` / `tabs/license_register.py` / `plugins/builtin/user_admin.py`
 的模块文档里各记了一遍）。**要在控件里显示一个颜色**（例如取色按钮的色块），用 `QIcon` 画：
 
 ```python
@@ -462,8 +462,9 @@ self.setIcon(QtGui.QIcon(pixmap))                     # ✅ 不受样式表 / �
 | 上下文菜单 + 状态栏提示 + 导出 | `text_browser.py`（本目录多数控件的基类） |
 | 可选依赖 + 整套回退 | `code_edit.py`（QsciScintilla → QTextEdit） |
 | 后台线程 + 信号回主线程 | `demo_view.py`（`DemoScanThread`）、`tabs/about.py`（`AboutThread`） |
-| 原生 `QPainter` 绘图（简单展示图别用 matplotlib） | `gui_iter_edit.py`、`tabs/check_count_view.py` |
-| `app_data` 开关 + 复选框 | `_parallel.py`、`env_edit.py` |
+| 原生 `QPainter` 绘图（简单展示图别用 matplotlib） | `gui_iter_edit.py`、`plugins/builtin/user_admin.py` |
+| `app_data` 开关 + 复选框 | `_parallel.py`（`CoreParallelEdit`）、`env_edit.py` |
+| 从**包级**路径取本目录的控件 | `from zmlx.ui.widgets import CodeEdit, CoreParallelEdit, OutputWidget, TabWidget` —— ⚠️ `CoreParallelEdit` 2026-10-31 起**也**在包级转发里了（原只能走子模块路径 `widgets._parallel`） |
 | Markdown / 可选库 / 设置键 / 右键勾选项 | `md_view.py` |
 | 模块级「干净」的样板（常量与生成器装进私有命名空间类） | `style_sheet_menu.py`（`_Qss`） |
 | 参数 + 产物双模式的落盘判据 / 取色按钮（图标画色块） / 转接 gui API 而不动 `MainWindow` | `style_sheet_menu.py`（`StyleSheetEdit`、`_ColorButton`） |

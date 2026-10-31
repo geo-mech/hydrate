@@ -13,8 +13,8 @@
 ------------
 
 在此之前，界面上每处需要后台工作的地方都自己写一遍 ``QThread`` 子类：
-``tabs/image_browser``、``tabs/plugin_list_edit``、``tabs/check_count_view``、
-``tabs/feedbacks_view``、``tabs/license_register``、``plugins/builtin/runtime_env`` …
+``tabs/image_browser``、``tabs/plugin_list_edit``、``plugins/builtin/user_admin``、
+``plugins/builtin/user_admin``、``tabs/license_register``、``plugins/builtin/runtime_env`` …
 （全仓 17 个文件）。重复的其实是**同样四件事**：
 
 1. 建线程、起线程；

@@ -168,14 +168,14 @@ edit.get_data()           # 返回 model 本身（引用模型型）
 
    ⚠️ 那个插件的**函数体**才是注册发生的地方；它的**模块顶层什么都不做** ——
    「导入即注册」会让只 `import` 它的人意外触发注册。⚠️ 注册由该文件自己的
-   `__name__ == '__zml_plugin__'` 分支调用，**不在** `extra_setups` 里。
+   `__name__ == '__zml_plugin__'` 分支调用，**不在** `setups` 里。
 4. **在 [`__init__.py`](__init__.py) 补两处**：import 区 + `__all__`（若新增了公开类）。
    ⚠️ 本包是**显式转发**，不做 `import *` 兜底 —— 漏一处，老路径
    `from zmlx.ui.widgets.editors import X` 就断。
 5. **更新 [`../../ReadMe.md`](../../ReadMe.md) 里 `editors/` 那一行**（约第 151 行，唯一清单）。
 6. 若有外部复用，改动前先搜：`plugins/builtin/editors.py` 是**唯一**的装配包装方
    （2026-10-22 起 `plugins/builtin/editors_menu.py` / `seepage_menu.py`、
-   `ui/extra_setups/editors.py` 与 `zmlx/scen/editors/` 都已删除）。
+   `ui/setups/editors.py` 与 `zmlx/scen/editors/` 都已删除）。
 
 ## 3. 本子包特有的硬性规范
 
@@ -186,7 +186,7 @@ edit.get_data()           # 返回 model 本身（引用模型型）
 | Qt 导入 | 一律 `from zmlx.ui.pyqt import ...`，不写 `from PyQt6 import ...` |
 | 构造签名 | `def __init__(self, parent=None)`；需要更多参数时全部 **keyword-only**（`*,`） |
 | 信号 | `sig_changed = QtCore.pyqtSignal()` 的语义是「**用户改了值**」（不是「值变了」、也不是「编辑完成」）：用户改 → 发；`set_data()` → **不发**。详见 §4.0 / §4.1 / §4.1a |
-| 依赖方向 | 可用 [`../plt.py`](../plt.py) 的 `MatplotWidget`；**不得** import `zmlx.ui.tabs.*`；**不得** import `zmlx.ui.extra_setups.*`（装配在上层）；**不得**被 `widgets/` 根目录反向依赖 |
+| 依赖方向 | 可用 [`../plt.py`](../plt.py) 的 `MatplotWidget`；**不得** import `zmlx.ui.tabs.*`；**不得** import `zmlx.ui.setups.*`（装配在上层）；**不得**被 `widgets/` 根目录反向依赖 |
 | 模块级内容 | 只有 import / 类 / `test_xxx()` / `if __name__`；常量与工具函数收进类里 |
 | 文件头 | docstring 末行 `Modified by <名字>, <YYYY-MM-DD>[: 原因]`；新建写 `Created by ...` |
 
@@ -262,7 +262,7 @@ finally:
 - 不需要 `except` —— 只负责复位，异常照常往上抛，由调用方决定是否处理；
 - 若要「恢复原状」更严格，可 `old = self.blockSignals(True)` 再 `blockSignals(old)`，
   别一律写 `False`（会误开原本就屏蔽的对象）。本子包内都用同一对象的瞬时开关，写 `False` 即可。
-- 现成范例：`../env_edit.py` 的 `_set_raw`、`../plugin_list_edit.py`、`../feedbacks_view.py`。
+- 现成范例：`../env_edit.py` 的 `_set_raw`、`../plugin_list_edit.py`、`../../plugins/builtin/user_admin.py`。
 
 ⚠️ **声明了 `sig_changed` 不等于会发**。2026-10-22 审计发现 `Interp1Edit` 右键
 「转化为均匀间隔的数据」改了数据却**既不重绘也不发信号**（lambda 直接调

@@ -30,7 +30,7 @@ GUI 命令                  ``gui.show_solver_selector()``
 它仍然随包分发 —— 需要在「设置 → 插件」里勾上，重启后「设置 → 求解器」才出现。
 
 ⚠️ 本插件被禁用时 ``gui.show_solver_selector()`` 由
-``extra_setups/plugin_placeholders.py`` 的**占位**兜底（只打印一句提示），历史标签页
+``setups/plugin_placeholders.py`` 的**占位**兜底（只打印一句提示），历史标签页
 不会报 ``gui function <...> not found``。
 
 ⚠️ 作为插件，顶层**必须自己调** ``setup_ui()``（见文件末尾）—— 没有谁会替它调。
@@ -580,7 +580,7 @@ def setup_ui():
 
 
 # ⚠️ 插件路径：由 load_all exec 执行，**没人会替我们调 setup_ui()**，所以本文件
-#    把调用写在**模块顶层**（``extra_setups/*.py`` 则由 ``extra_setups/__init__.py``
+#    把调用写在**模块顶层**（``setups/*.py`` 则由 ``setups/__init__.py``
 #    统一调用 —— 这是两者唯一的区别）。插件机制执行时 ``__name__`` 是
 #    ``'__zml_plugin__'``；直接 ``python solver_menu.py`` 时才是 ``'__main__'``
 #    （见 plugins/__init__.py 的说明）。

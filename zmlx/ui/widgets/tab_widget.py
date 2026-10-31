@@ -12,13 +12,11 @@ from zmlx.ui import settings
 from zmlx.ui.alg import create_action
 from zmlx.ui.gui_buffer import gui
 from zmlx.ui.pyqt import QtCore, QtGui, QtWidgets
-from zmlx.ui.utils import TaskProc
 
 
 class TabWidget(QtWidgets.QTabWidget):
     def __init__(self, parent=None):
         super(TabWidget, self).__init__(parent)
-        self.task_proc = TaskProc(self)
         self.setTabsClosable(True)
         self.tabCloseRequested.connect(self.close_tab)
         self.setMovable(True)
@@ -36,7 +34,7 @@ class TabWidget(QtWidgets.QTabWidget):
                 create_action(self, '关闭所有', slot=self.close_all_tabs))
             # ⚠️ 「列出标签」（``gui.show_tab_details``）2026-10-22 起由插件
             #    ``plugins/builtin/viewers.py`` 提供；插件被禁用时由
-            #    ``extra_setups/plugin_placeholders.py`` 的**占位**顶上（只打印提示）。
+            #    ``setups/plugin_placeholders.py`` 的**占位**顶上（只打印提示）。
             #    这里仍按命令存在性决定要不要加这一项 —— 菜单项点了要「开标签页」，
             #    给一条只会打印提示的菜单项没有意义。
             if gui.get_func('show_tab_details') is not None:
@@ -82,7 +80,7 @@ class TabWidget(QtWidgets.QTabWidget):
 
         ⚠️ **本方法用 ``deleteLater()`` 销毁控件，所以 ``closeEvent`` 不会被触发**
         （那是 ``close()`` 才发的）。控件里为「关闭」写的 ``closeEvent`` 在这条路径上是
-        **死代码**（``license_register`` / ``check_count_view`` / ``feedback_tool`` 都写了，
+        **死代码**（``license_register`` / ``user_admin`` / ``feedback_tool`` 都写了，
         但点标签页的关闭按钮时一次都不会执行）—— 要在关闭前做点什么，只能用上面两个钩子。
 
         ⚠️ **两个钩子都必须快、都不许阻塞**（尤其别 ``wait()``）：关标签路径上界面正等着，
@@ -134,7 +132,7 @@ class TabWidget(QtWidgets.QTabWidget):
         ⚠️ **契约是「摘引用」而不是「等待」**：钩子里只清引用，**绝不要 ``wait()``** ——
         同步等 60 秒会把「关标签」这件本该瞬间完成的事变成冻结界面。控件销毁后 Qt 会自动
         断开绑定方法的信号连接，迟到结果被安全丢弃（lambda 连的槽除外，见
-        ``check_count_view.py`` 的 ``_is_deleted``）。
+        ``plugins/builtin/user_admin.py`` 的 ``_is_deleted``）。
 
         ⚠️ 钩子自身出错也不能阻断关闭流程（否则控件会关不掉），只打印出来。
         没定义这个方法的控件行为不变。
@@ -195,8 +193,33 @@ class TabWidget(QtWidgets.QTabWidget):
         else:
             return False
 
-    def add_task(self, task):
-        self.task_proc.add(task)
+    # ⚠️ 这里**没有** ``add_task``：本容器不再持有自己的任务队列（2026-10-30 删除，
+    #    连同 ``TaskProc`` 实例一起）。删之前的唯一使用者是 :meth:`get_widget` 的
+    #    ``oper``，而那条路在 GUI 线程内是直连、就地执行，与直接调用完全等价，详见
+    #    :meth:`_apply_oper`。要「稍后在 GUI 线程跑一下」请用 ``gui.add_task(func)``。
+    #    删除前已核对：全仓与外部工作区均无 ``TabWidget.add_task`` 的调用方
+    #    （``.add_task`` 的其它命中全部指向 ``MainWindow.add_task`` / ``gui.add_task``）。
+
+    @staticmethod
+    def _apply_oper(oper, widget):
+        """在控件**已加入标签栏之后、``get_widget`` 返回之前**同步执行 ``oper(widget)``。
+
+        为什么是同步（三个事实，别改）：
+
+        1. ``oper`` 的调用方依赖它同步 —— ``zmlx/pg/plot2.py`` 与 ``plot3.py`` 的
+           ``make_fn`` / ``get_widget`` 把结果塞进闭包列表后**立刻**读取
+           （``if len(result) > 0: return result[0]``），延后会让它们全部返回 ``None``。
+        2. 这里曾经是 ``self.add_task(lambda: oper(widget))``，而 ``TaskProc.add`` 的
+           ``emit`` 是 ``AutoConnection``：在 GUI 线程内**直连**，就地执行。所以「改成
+           直接调用」不改变任何时序（2026-10-30 实测两分支顺序均为 ``oper`` 先于返回）。
+        3. 异常照旧**吞掉并打印**（消息与 ``TaskProc.__do_task`` 完全一致）—— ``oper``
+           出错不该打断「开标签页」这个动作，也不该让异常冒到 ``gui.get_widget`` 的调用方。
+        """
+        try:
+            oper(widget)
+        except Exception as err:
+            print(f'meet error {err}')
+
 
     def find_widgets(self, the_type=None, text=None, is_ok=None):
         """
@@ -265,7 +288,11 @@ class TabWidget(QtWidgets.QTabWidget):
             on_top: 是否将控件设置为当前的控件
             init: 首次生成控件，在显示之前所做的操作
             type_kw: 用于创建控件的关键字参数
-            oper: 每次调用都会执行，且在控件显示之后执行
+            oper: 每次调用都会执行（新建与复用两条分支都跑）。时机是「已 ``addTab``
+                + 切为当前页之后、本函数**返回之前**」—— 由 :meth:`_apply_oper`
+                **同步**调用（异常吞掉并打印，见该方法的说明）。
+                ⚠️ 它**不是**「下一轮事件循环才执行」：``zmlx.pg.plot2`` / ``plot3``
+                正是靠这个同步性从闭包里取返回值，改成延后会全部返回 ``None``。
             icon: 图标
             caption_color: 标题的颜色
             set_parent: 是否将控件的父对象设置为当前的窗口
@@ -317,13 +344,21 @@ class TabWidget(QtWidgets.QTabWidget):
                     index, QtGui.QColor(caption_color)
                 )
             if oper is not None:
-                self.add_task(lambda: oper(widget))
+                # ⚠️ **直接调用**，不要再包 ``add_task`` / ``QTimer.singleShot``：
+                #    ``oper`` 必须在本函数**返回之前**跑完 —— ``zmlx/pg/plot2.py`` 与
+                #    ``plot3.py`` 的 ``make_fn`` / ``get_widget`` 都把它的结果塞进
+                #    闭包列表后**立刻**读取（``if len(result) > 0: return result[0]``），
+                #    改延后会让它们全部返回 None（2026-10-30 实测）。
+                #    历史上的 ``self.add_task(...)`` 在 GUI 线程内也是直连、就地执行，
+                #    与这里的直接调用等价（详见 ``_apply_oper``）。
+                self._apply_oper(oper, widget)
             return widget
         else:
             if on_top:
                 self.setCurrentWidget(widget)
             if oper is not None:
-                self.add_task(lambda: oper(widget))
+                # 同上：复用分支同样要求**同步**执行。
+                self._apply_oper(oper, widget)
             return widget
 
     def get_tab_index(self, widget):

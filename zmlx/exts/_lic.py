@@ -920,7 +920,7 @@ Thanks for using.
 
         ⚠️ **段数不固定**，解析请**按段名找**，别按下标取。⚠️ ``Files:`` 段是
         裸文件名串（不是 JSON）。本方法**原样返回**；要解析请用
-        ``zmlx.ui.tabs.feedbacks_view`` 里的解析器。
+        ``plugins/builtin/user_admin.py`` 里的解析器（原 ``zmlx.ui.tabs.feedbacks_view``）。
 
         ⚠️ **本方法不抛异常**：连不上、超时、越权……一律以一句文本返回。
 

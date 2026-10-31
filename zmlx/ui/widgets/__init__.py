@@ -38,3 +38,14 @@ from zmlx.ui.widgets.plt import MatplotWidget
 from zmlx.ui.widgets.tab_widget import TabWidget
 from zmlx.ui.widgets.text_browser import TextBrowser
 from zmlx.ui.widgets.version_button import VersionButton
+
+# ⚠️ ``CoreParallelEdit`` 2026-10-31 **新加**（用户明确要求）：
+#    原先只能按子模块路径 ``from zmlx.ui.widgets._parallel import CoreParallelEdit`` 取，
+#    现在 ``from zmlx.ui.widgets import CoreParallelEdit`` 也可用。
+#
+#    ⚠️ 它是本包**唯一带下划线前缀**的模块（``_parallel.py``）导出的名字 ——
+#    下划线表示「内部实现」，所以这个转发略显反常；之所以照用户要求补上，
+#    是因为 ``main.py`` 等装配层要拿它挂状态栏开关，走包级路径更好读。
+#    ⚠️ 它**只依赖** ``zmlx.system`` / ``zmlx.ui.pyqt`` / ``zmlx.exts``，
+#    不 import 本包任何子模块，因此**不会**在本 ``__init__`` 里造成循环导入。
+from zmlx.ui.widgets._parallel import CoreParallelEdit

@@ -168,7 +168,11 @@ class GuiIterator:
         绘图显示迭代耗时的历史记录
         """
         if gui.exists():
-            from zmlx.ui.tabs.gui_iter_edit import GuiIteratorEdit
+            # ⚠️ 2026-10-31：``GuiIteratorEdit`` 已搬到 ``setups/gui_iter_edit.py``。
+            #    这里**直接 import 控件类**（不走 ``gui.show_gui_iter`` 命令），
+            #    因为要传 ``oper`` 把**本对象自己**绑进去 —— 走命令的话 ``data``
+            #    参数得序列化过 gui 缓冲区，没必要。
+            from zmlx.ui.setups.gui_iter_edit import GuiIteratorEdit
             gui.get_widget(
                 the_type=GuiIteratorEdit, caption='迭代器',
                 on_top=False, oper=lambda w: w.set_data(self)

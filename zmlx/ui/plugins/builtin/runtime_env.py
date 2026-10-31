@@ -866,7 +866,7 @@ def setup_ui():
     #   ⚠️ 菜单标题与 `main.py` 里那几处**逐字一致**（都写 ``'设置'``），
     #   否则 `get_menu` 会另建一个同名的新顶层菜单，界面上出现两个「设置」。
     #   ⚠️ 那几项的定义在 ``main.py``（主窗口自己的 action），本项在
-    #   ``extra_setups``（可选扩展），两处都可能先执行 —— 但 ``get_menu`` 是
+    #   ``setups``（可选扩展），两处都可能先执行 —— 但 ``get_menu`` 是
     #   **按标题查找、缺则新建**，所以先来后到都不影响它们并进同一个菜单。
     gui.add_action(
         menu='设置', name='check_runtime_env',

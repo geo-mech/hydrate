@@ -12,8 +12,8 @@
 调用方，分处两个包::
 
     zmlx/ui/tabs/license_register.py     登录表单：绑定状态、机器码、答复耗时
-    zmlx/ui/tabs/check_count_view.py     查询记录页：表单初值（已绑定的邮箱）
-    zmlx/ui/tabs/feedbacks_view.py       反馈记录页：同上
+    zmlx/ui/plugins/builtin/user_admin.py  查询记录页：表单初值（已绑定的邮箱）
+    zmlx/ui/plugins/builtin/user_admin.py 反馈记录页：同上
     zmlx/ui/tabs/about.py                「关于」页：管理员权限判定
     zmlx/ui/widget/license_button.py     状态栏：这一格该显示哪句话
 
@@ -90,7 +90,7 @@ ADMIN_EMAIL = 'zhangzhaobin@mail.iggcas.ac.cn'
 
 #: ``user_list`` 接口的成功记号。
 #:
-#: ⚠️ **与 ``check_count_view.COUNT_TAG``（``'Count:'``）刻意分开** —— 两者都是 6 个
+#: ⚠️ **与 ``user_admin.COUNT_TAG``（``'Count:'``）刻意分开** —— 两者都是 6 个
 #:    字符、都带冒号，只差前面那个词；拿混了会把**成功读成失败**（最容易踩的一类事故）。
 #:    判据见 :func:`is_user_list`。
 USER_LIST_TAG = 'Users:'
@@ -580,8 +580,8 @@ def parse_user_list(reply):
     Returns:
         list | None: 邮箱列表；不是成功答复时返回 ``None``。
 
-    Moved here by DeepSeek, 2026-10-16: 自 ``zmlx/ui/tabs/check_count_view.py`` 下沉 ——
-    原先 ``ui/tabs/feedbacks_view.py`` 要跨控件 import 它，违反「tabs 内控件相互独立」。
+    Moved here by DeepSeek, 2026-10-16: 自原 ``zmlx/ui/tabs/check_count_view.py`` 下沉 ——
+    原先 ``ui/tabs/feedbacks_view.py``（现并入插件）要跨控件 import 它，违反「tabs 内控件相互独立」。
     """
     text = str(reply if reply is not None else '').strip()
     if not is_user_list(text):
@@ -679,7 +679,7 @@ def parse_user_list_detail(reply):
     （它们没有对应的邮箱，留着也没有用）。
 
     ⚠️ 占位 ``(none)`` 还原成**空串** —— 那是服务端的「没写姓名」，不是一个人的
-    名字叫 ``(none)``。界面据此只显示邮箱（见 ``check_count_view._refresh_email_list``）。
+    名字叫 ``(none)``。界面据此只显示邮箱（见 ``CheckCountView._refresh_email_list``）。
 
     ⚠️ 返回 ``None`` 与返回 ``[]`` 含义不同：``None`` = 「这次没拿到」（越权 /
     故障 / 老服务端），``[]`` = 「拿到了，但名单是空的」。

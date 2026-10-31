@@ -13,7 +13,7 @@
 
 ## 1. 默认**不**转发（2026-10-16 起）
 
-⚠️⚠️ **新增的界面元素 —— 控件、对话框、工具模块、`extra_setups` 动作 —— 默认一律
+⚠️⚠️ **新增的界面元素 —— 控件、对话框、工具模块、`setups` 动作 —— 默认一律
 不在任何 `__init__.py` 里转发（不追加 import、不加 `__getattr__`、不进 `__all__`）。**
 需要用它时，写**子模块路径**直接导入：
 
@@ -52,21 +52,21 @@ from zmlx.ui.tabs import About                             # ❌ 新元素不要
 - 会（老路径已被外部脚本 / 历史 `gui_restore` 用着）→ 才考虑加，且要写明弃用日期；
 - 不会（**新元素**）→ **一律不加**。
 
-## 3. 挂到界面上：走 `extra_setups/`，不动 `main.py`
+## 3. 挂到界面上：走 `setups/`，不动 `main.py`
 
 给界面新增一个**入口**（菜单项、命令）时，**不要**去改 `main.py`（那个文件 2760 行，
-是所有界面的共用枢纽）。放到 [`extra_setups/`](extra_setups/)：它就是「**必须加载**的装配」
+是所有界面的共用枢纽）。放到 [`setups/`](setups/)：它就是「**必须加载**的装配」
 的落脚处。
 
 ⚠️ **本章只讲「放哪」**。**怎么放**（`@execute_once`、模块顶层不许有语句、必须登记到
 `__init__.py`、启动顺序契约、加菜单项前的三问）在
-[`extra_setups/AGENTS.md`](extra_setups/AGENTS.md) —— 那里是唯一来源，本节不复制。
+[`setups/AGENTS.md`](setups/AGENTS.md) —— 那里是唯一来源，本节不复制。
 
 ⚠️ **先判一次「能不能关」**（判据与完整对照表见那份文档 §1）：
 
 | 关掉它，软件还能不能正常用？ | 放哪 |
 |---|---|
-| **不能** | [`extra_setups/`](extra_setups/)（必加载） |
+| **不能** | [`setups/`](setups/)（必加载） |
 | **能** | 插件：[`plugins/builtin/`](plugins/AGENTS.md) 或 `scen/<包>/zml_plugin.py` |
 
 ⚠️ 两者**运行环境几乎完全一样**（都在 `__console_kernel` 里、console 线程、`MainWindow`
@@ -74,7 +74,7 @@ from zmlx.ui.tabs import About                             # ❌ 新元素不要
 （⚠️ 彩蛋 `tetris` 已随两个游戏搬进 `zmlx/scen/easter_eggs/`，不再从本目录挂。）
 
 ```python
-# zmlx/ui/extra_setups/xxx.py  —— 完整要求见 extra_setups/AGENTS.md §2
+# zmlx/ui/setups/xxx.py  —— 完整要求见 setups/AGENTS.md §2
 from zmlx.system import execute_once
 
 @execute_once(file=__file__)
@@ -97,9 +97,9 @@ def setup_ui():
 `@execute_once` 互为保险 —— 万一被「临时加载」和「启动」各跑一遍，也不会把条目改掉
 或挂出第二条。
 
-写完**还要**在 [`extra_setups/__init__.py`](extra_setups/__init__.py) 里按现有
+写完**还要**在 [`setups/__init__.py`](setups/__init__.py) 里按现有
 `try/except` 风格加一段调用（那里是**唯一**需要登记的地方 —— 那不算「转发公共 API」，
-而是「让装配层知道有这个 setup」，正是 `extra_setups` 的用途）。
+而是「让装配层知道有这个 setup」，正是 `setups` 的用途）。
 
 ⚠️ **三个必须注意的点**（都是真踩过的，细节见 `plugins/builtin/image_browser.py` 的模块文档）：
 
@@ -107,7 +107,7 @@ def setup_ui():
    方法自动注册**进命令表，撞名会把那个方法悄悄顶掉；
 2. **命令名一旦发布就不能改** —— 标签页状态里存的就是 `gui.show_xxx()` 这串原文，
    重启时按原文重放（`gui_restore`）。要改就得照
-   [`extra_setups/license_query.py`](extra_setups/license_query.py) 末尾那样留旧名别名；
+   [`plugins/builtin/user_admin.py`](plugins/builtin/user_admin.py) 末尾那样留旧名别名；
 3. **`oper` 里不要放有副作用的动作** —— `get_widget` 每次调用都会跑到它（点菜单也不例外），
    放个 `refresh()` 就等于「点一次菜单重扫一次」。
 
@@ -116,11 +116,11 @@ def setup_ui():
 | 位置 | 是否转发 | 说明 |
 |---|---|---|
 | `ui/__init__.py` | 转发**极少**（`gui` / `plot` / `break_point` …） | 这是**门面**，外部唯一该用的入口；**只增不改**，新元素别往里塞 |
-| `ui/widgets/__init__.py` | 静态转发底层控件（**真控件在这儿**） | 新代码用它 |
+| `ui/widgets/__init__.py` | 静态转发底层控件（**真控件在这儿**） | 新代码用它。⚠️ 例外：`CoreParallelEdit`（2026-10-31 按用户要求加入包级转发，原只能走 `widgets._parallel` 子模块路径） |
 | `ui/widget/`（整个包） | **纯兼容垫片**：转发到 `widgets/` 与 `tabs/` | ⚠️ 导入即发 `DeprecationWarning`，**2027-10-16 删**；zmlx 内部**不得**再从这里导入 |
 | `ui/tabs/__init__.py` | 静态转发 27 个顶层控件中的一部分 | ⚠️ 同为**兼容层**；**新控件不要加进去**（`ImageBrowser` 就没加） |
 | `ui/utils/__init__.py` | 转发需要 Qt 的基础设施 | 见该文件 docstring：「三条转发」与「两条不转发」 |
-| `ui/extra_setups/*` | **不**转发 | 靠 `extra_setups/__init__.py` 的 `setup_ui()` 登记 |
+| `ui/setups/*` | **不**转发 | 靠 `setups/__init__.py` 的 `setup_ui()` 登记 |
 | [`ui/plugins/`](plugins/AGENTS.md) | **不**转发 | 机制（`_alg` / `_registry`）不对外暴露；`builtin/` 里的插件由启动时 `exec` 加载，不走 `import`。加插件的规范见 [`plugins/AGENTS.md`](plugins/AGENTS.md) |
 
 ## 5. 历史
@@ -168,7 +168,7 @@ def setup_ui():
 | `Console` | `console.py` | GUI 线程（`QObject`，`parent=MainWindow`） |
 | `ConsoleThread`（`QThread`） | `console.py` | **内核线程**：用户脚本/长任务真正跑的地方 |
 | `GuiApi` | `utils/gui_api.py` | GUI 线程；**命令桥**：非 GUI 线程的调用在这里被搬到 GUI 线程 |
-| `TaskProc` | `utils/task_proc.py` | GUI 线程；**异步队列**（丢下就走，拿不到结果） |
+| `TaskProc` | `utils/task_proc.py` | GUI 线程；**异步队列**（丢下就走，拿不到结果）。⚠️ 全仓**只剩一个实例**：`MainWindow.task_proc`（`gui.add_task` 的落地）。`TabWidget` 曾经也各有一个，2026-10-30 已删（理由见 §6.2 末条） |
 | `OutputWidget` | `widgets/output_widget.py` | GUI 线程；右侧常驻的「控制台」标签（§6.5） |
 | `ThreadRunner` | `utils/thread_runner.py` | 无 Qt 依赖；**daemon 线程**（不是 `QThread`），每个任务一条，完成回调由信号泵回投 GUI 线程（§6.8） |
 
@@ -181,26 +181,51 @@ def setup_ui():
 | 跑长任务（脚本、仿真） | `gui.start(func, post_task=...)` | **内核线程** | ❌ 立刻返回 | 结果在 `Console.result` |
 | 只是「稍后在 GUI 线程跑一下」 | `gui.add_task(func)` | GUI 线程 | ❌ | ❌（异常只打印） |
 
-`gui.xxx` / `gui.call` 走的都是 `GuiApi.command`：把「命令名 + 参数」塞进一个通道，
-`emit` 一个信号，由 Qt 的信号/槽把执行搬到 GUI 线程；调用线程**阻塞等待**，返回值与
-异常原样带回（实测：`gui.call` 与 `gui.command` 的 `QThread.currentThreadId()` 都与主窗口
-相同，而内核线程是另一个 id）。
+`gui.xxx` / `gui.call` 走的都是 `GuiApi.command`：**为这次调用就地新建一个通道**，把
+「命令名 + 参数」写进去，`emit` 一个**携带该通道对象**的信号，由 Qt 的信号/槽把执行搬到
+GUI 线程；调用线程**阻塞等待**，返回值与异常原样带回（实测：`gui.call` 与 `gui.command`
+的 `QThread.currentThreadId()` 都与主窗口相同，而内核线程是另一个 id）。
 
-⚠️ **通道池上限 20 个**：每个并发调用占一个，用满后打印 `Gui Command Ignored: ...` 并返回
-`None`（**不排队**，不是「稍后重试」）。正常顺序调用只占 1 个，不会碰到；只有在一个线程里
-同时起多个 `gui.xxx` 才可能撞上。
+⚠️ **没有并发上限**（2026-10-30 起）：通道一次调用一个、用完即弃，既不进池也不复用，
+因此不需要「是否被占用」的检查，也不存在「用满就丢」。旧实现是 20 个通道的池，用满时打印
+`Gui Command Ignored: ...` 并返回 `None`；该路径已删除，**现在不会再有这条打印**。
+附带好处是**嵌套天然安全**：外层与内层调用是两个不同对象，互不干扰（实测 48 线程 0 丢弃，
+且 `a` 内部调 `b` 正常返回）。
+
+⚠️ **这条仍然成立**：`command` 是**同步**的，所以 GUI 线程内调用是「直连就地执行」，
+跨线程则是「后台线程单向等 GUI 线程」。由此推出一条禁忌 —— 别在持有锁时调 `gui.xxx`，
+也别让 GUI 线程去等一个正在调 `gui.xxx` 的后台线程。
+
+⚠️ `gui.channel_n()` **已弃用**（2026-10-30，恒返回 0，2027-10-30 删除）：
+它原本返回通道池大小，池没了就没有意义。
 
 ⚠️⚠️ **`gui.mark_direct(key)` 默认不要用**（2026-10-23 定，这条是被踩过一次才写下的）：
 它把某条命令登记成「**is_direct**」，于是 `gui.<key>(...)` **不在 GUI 线程执行，而是在
 调用者线程直接执行**（见 `gui_buffer.py` 的 `mark_direct` / `GuiApi.command` 的
 `is_direct` 分支）。去掉的那一步**正是**「派发到 GUI 线程」。
 
-它只对两类命令成立：
+⚠️ **判据只有一条：函数体不触碰任何 Qt 对象。** 目前全仓**只有 `window`** 符合
+（`lambda: self`，只返回 `MainWindow` 实例本身）。
 
-| 能用 | 例子 | 为什么 |
-|---|---|---|
-| 返回一个**与窗口无关**的对象/值 | `window`（返回 `MainWindow` 实例本身） | 不建控件、不碰窗口，谁调都一样 |
-| 函数**本来就能在任意线程跑** | `edit_in_tab` / `reg_file_type` | 它们的逻辑不依赖 GUI 线程 |
+⚠️ **它只在「非 GUI 线程调用」时才有差别**：GUI 线程内调用，正常路径本来就是直连、
+就地执行，登不登记一样。所以 `is_direct` 的全部意义都落在后台线程那条路上 ——
+而那正是最危险的一条。
+
+它换来的是**确定的延迟上界**（2026-10-30 实测：GUI 线程在槽里阻塞 1.5 s 期间，
+从后台线程调 `gui.window()`）：
+
+| 走法 | 耗时 |
+|---|---|
+| `is_direct`（登记后） | **0.023 ms** |
+| 正常派发 | **1200 ms**（一直等到 GUI 回到事件循环） |
+
+两者拿到的是**同一个窗口对象** ⇒ 正确性无差别，差别只在延迟。而「GUI 忙」须指
+**阻塞了事件循环**（长槽里的计算 / IO）；模态对话框自带事件循环，不会拖住排队的调用。
+
+⚠️ **2026-10-30 撤掉了 `edit_in_tab` / `reg_file_type` 两条登记**：前者全部工作就是调
+`gui.get_widget(...)`（登记成 direct = 在后台线程里调 GUI 命令，绕一圈没有收益），
+后者只做注册、GUI 线程执行一样快 —— **它们换不到上表那个延迟收益，只会多一份
+「在后台线程执行」的风险面**。通道池取消后（v1.9.9），连「省一个通道」也不再是理由。
 
 ❌ **凡是会建控件、碰窗口、读标签容器的命令，哪怕它只是「转发」，也不能登记**：
 登记后后台线程（控制台 / 插件）调 `gui.xxx()` 就**当场在后台线程里**建控件 —— Qt 控件
@@ -215,6 +240,16 @@ def setup_ui():
 📌 **口诀**：**要动界面就走通道（派发到 GUI 线程）；`mark_direct` 只留给「本来就不需要
 GUI 线程」的东西。** 在 GUI 线程里嫌多一跳，正确的做法是**直接调那个对象**
 （`w.show_timer()`），而不是把 `gui.show_timer` 改成直调。
+
+⚠️ **`TabWidget` 曾经的「每个容器一个 `TaskProc`」已于 2026-10-30 删除**（`top_tabs` /
+`right_tabs` 各一个），`TabWidget.add_task` 一并**直接删除**（复核过：全仓与外部工作区无调用方，
+`.add_task` 的其它命中都指向 `MainWindow.add_task` / `gui.add_task`）。
+理由不是「省一个对象」，而是**它是假的异步**：两处投递都在 `get_widget` 里，而 `TaskProc.add`
+的 `emit` 是 `AutoConnection` —— GUI 线程内是**直连、就地执行**，和直接调 `oper(widget)`
+一模一样（实测两条分支都是 `oper` 先于函数返回）。留着只会让人以为「标签容器也有自己的
+异步通道」，从而误判时序。⚠️ **反过来说：`get_widget` 的 `oper` 必须是同步的** ——
+`zmlx/pg/plot2.py`、`plot3.py` 的 `make_fn` / `get_widget` 都靠它立刻拿到结果，改成
+`QTimer.singleShot(0, ...)` 会让它们全部返回 `None`（实测）。
 
 ### 6.3 单任务约束（硬约束，2026-10-20 实测）
 
@@ -304,7 +339,7 @@ if self.is_running():
 | 界面彻底冻死，「继续」也点不动 | GUI 线程被 `break_point` 挂住，或 GUI 线程在等内核线程 |
 | 控件随机不刷新 / 偶发崩溃 | 从内核线程直接碰了控件，没走 `gui.xxx` / `gui.call` |
 | 后台线程调用 `gui.xxx()` 时界面卡住 / 崩在 Qt 内部 | 那条命令被 `mark_direct` 登记过，于是**在后台线程里**建了控件（§6.2） |
-| 打印 `Gui Command Ignored: ...` | 20 个通道全被并发调用占满（§6.2） |
+| 打印 `Gui Command Ignored: ...` | **旧版本才有**（20 通道池满）。2026-10-30 起该路径已删除；若仍出现，说明跑的是旧代码 |
 | 脚本 `print` 的内容看不到 | 面板没开 —— 看左侧状态栏（只有首行）；或面板被别的标签挡住 |
 | 后一个任务覆盖/顶掉了前一个 | 单槽位；先判 `is_running()`（§6.3） |
 | 暂停按了没效果 | 脚本里没放 `gui.break_point()`，它停不下来 |

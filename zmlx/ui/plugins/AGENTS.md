@@ -42,15 +42,15 @@
 - **独立** —— 自己的代码、自己的资源，不依赖"别的插件先执行过"；
 - **完整** —— 一个文件（以及它自己 import 的模块）就能实现整个功能。
 
-这是**努力方向**，不是准入门槛。现有内置插件（`builtin/` 里 **15 个**，外加住在 `scen/`
+这是**努力方向**，不是准入门槛。现有内置插件（`builtin/` 里 **17 个**，外加住在 `scen/`
 下的**自包含**插件 `zmlx/scen/easter_eggs/`）的实际形态：
 
 | 形态 | 数量 | 代表 | 是否合法 |
 |---|---|---|---|
-| **完全自含**：控件 + 算法 + 资源都在插件文件里 | 9 | `runtime_env` / `fractal_demo` / `easter_eggs`（两个游戏各是一个自含模块）/ `demo_menu`（连 `DemoView` 一起）/ `style_sheet_menu`（连 `StyleSheetEdit` 一起）/ `fn2_view`（连 `Fn2Widget` 一起）/ `pg_console`（连 `PgConsole` 一起）/ `viewers`（连 `TimerView` / `CwdView` / `TabDetailView` / `AppPathEdit` 四个小控件一起）/ `doc_view`（2026-10-22 由 `MainWindow.show_changelog` / `show_roadmap` / `_show_md` 搬来；自含，但没自带控件）—— 后几个都是 2026-10-22 由 `ui/tabs/` 或 `MainWindow` 并入 | ✅ |
+| **完全自含**：控件 + 算法 + 资源都在插件文件里 | 10 | `runtime_env` / `fractal_demo` / `easter_eggs`（两个游戏各是一个自含模块）/ `demo_menu`（连 `DemoView` 一起）/ `style_sheet_menu`（连 `StyleSheetEdit` 一起）/ `fn2_view`（连 `Fn2Widget` 一起）/ `pg_console`（连 `PgConsole` 一起）/ `viewers`（连 `TimerView` / `CwdView` / `TabDetailView` / `AppPathEdit` 四个小控件一起）/ `doc_view`（2026-10-22 由 `MainWindow.show_changelog` / `show_roadmap` / `_show_md` 搬来；自含，但没自带控件）/ `architecture`（2026-10-31 由 `setups/` 搬来；自含的文档页）—— 后几个都是 2026-10-22 / 10-31 由 `ui/tabs/`、`MainWindow` 或 `setups/` 并入 | ✅ |
 | **半自含**：算法在文件内，界面借用 `gui` 的通用控件 | 2 | `zip_files` / `pdf_view`（借用 QtWebEngine） | ✅ |
 | **只有入口**：控件在 `main.py` / `ui/widgets/` / `ui/tabs/`，文件里只有装配代码 | 2 | `admin_menu` / `editors`（全是 `gui.reg_file_type` + `gui.add_action`，控件在 `ui/widgets/editors/`） | ✅ |
-| **入口 + 控件**：本来是「只有入口」，后来把「只有它在用」的控件也并了进来 | 2 | `solver_menu`（`SolverSelector`，2026-10-22）/ `image_browser`（`ImageBrowser` 连同 3 个后台线程，2026-10-30 由 `ui/tabs/image_browser.py` 整体并入，原模块删除、不留垫片） | ✅ |
+| **入口 + 控件**：本来是「只有入口」，后来把「只有它在用」的控件也并了进来 | 3 | `solver_menu`（`SolverSelector`，2026-10-22）/ `image_browser`（`ImageBrowser` 连同 3 个后台线程，2026-10-30 由 `ui/tabs/image_browser.py` 整体并入，原模块删除、不留垫片）/ `user_admin`（`UserAdminView` 连同 `_Jobs` / `_Worker` 后台线程，2026-10-31 由 `setups/user_admin.py` + `ui/tabs/user_admin_view.py` + `ui/tabs/check_count_view.py` 合并，原模块删除、不留垫片；现住 `UserAdminView` 与 `CheckCountView` 两个控件） | ✅ |
 
 **后两种同样合法**，而且在某些情况下**更正确**：
 
@@ -58,7 +58,7 @@
   `data_edit.py` 与 `interp_edit.py` 用）→ 搬进插件会把复用关系拆散；
 - 控件是 `MainWindow` 的公开方法、且 `gui_restore` 依赖它的命令名（`show_solver_selector` /
   `show_style_sheet`）→ 搬走时**命令名必须保持不变**（插件里 `gui.add_func` 显式注册 +
-  `extra_setups/plugin_placeholders.py` 的占位兜底），已保存的标签页才能照常恢复。
+  `setups/plugin_placeholders.py` 的占位兜底），已保存的标签页才能照常恢复。
   ⚠️ 2026-10-22 起这两个都已连同控件并入插件，可作为「命令名不变」的范例。
 
 ⚠️ 所以：**不能拿「它不够独立」当作拒绝一个插件的理由。** 判据只有 §0.1 那一条。
@@ -197,7 +197,7 @@ zmlx/ui/plugins/
 ├── _registry.py     名单 / 优先级 / 禁用 —— 状态的唯一真相
 └── builtin/         随包分发的插件：这里每个 .py 都是一个插件
     ├── __init__.py  包标记 + 「目录即语义」的说明（**不是**插件）
-    └── image_browser.py …（15 个）
+    └── image_browser.py …（17 个）
 ```
 
 ⚠️ 2026-10-22 起「内置插件」有**两个位置**：`builtin/`（本目录），以及 **`zmlx/scen/<包>/`**
@@ -264,7 +264,7 @@ zmlx/ui/plugins/
    3. **依赖失败只警告**：主插件已经执行、无法回滚，`load_now` 仍返回 True。
 3. **注册函数用 `@execute_once(file=__file__)` 包住** —— `load_all` 在一次运行里可能
    被调用多次，没有它就会重复挂菜单。
-4. **文件末尾自己调**（**没有人**会替你调，这与 `extra_setups/*.py` 不同）：
+4. **文件末尾自己调**（**没有人**会替你调，这与 `setups/*.py` 不同）：
 
    ```python
    if __name__ == '__zml_plugin__':
@@ -293,7 +293,7 @@ zmlx/ui/plugins/
 > 显式 `gui.add_func('旧命令名', 新函数)` 补回来，否则原来的调用方（很可能就是本插件
 > 自己的菜单 slot）会报 `gui function <xxx> not found`，而插件默认不加载、**极容易漏测**。
 
-⚠️ **推荐的补救形态：占位函数放在 `../extra_setups/plugin_placeholders.py`，插件
+⚠️ **推荐的补救形态：占位函数放在 `../setups/plugin_placeholders.py`，插件
 `add_func` 覆盖它。**（2026-10-22 定；现有 **15 条**：`get_vtk_view`、
 `show_style_sheet`、`show_demo`、`show_fn2`、`show_pg_console`、`open_pdf`、
 `show_solver_selector`、`show_timer`、`view_cwd`、`show_image_browser`、`show_tab_details`、
@@ -344,7 +344,7 @@ zmlx/ui/plugins/
 本次的值替换。别指望「不传图标就变默认图标」—— 那是**新建**时的行为。
 
 ```python
-# extra_setups/plugin_placeholders.py —— 占位：只给指引，不 import 可选库
+# setups/plugin_placeholders.py —— 占位：只给指引，不 import 可选库
 def get_vtk_view(*args, **kwargs):
     _say('get_vtk_view', 'VtkView')
 
@@ -357,10 +357,10 @@ def setup_ui():
         gui.add_func(name, func)
 ```
 
-⚠️⚠️ **为什么放 `extra_setups/` 而不是留在 `MainWindow`**（2026-10-22 从 `main.py` 搬出）：
+⚠️⚠️ **为什么放 `setups/` 而不是留在 `MainWindow`**（2026-10-22 从 `main.py` 搬出）：
 
-1. **顺序天然正确**：`extra_setups.setup_ui()` 与 `plugins.load_all()` 在
-   `__console_kernel` 里**顺序执行**（先 `extra_setups`、后插件），而两者都在 `gui.set(api)`
+1. **顺序天然正确**：`setups.setup_ui()` 与 `plugins.load_all()` 在
+   `__console_kernel` 里**顺序执行**（先 `setups`、后插件），而两者都在 `gui.set(api)`
    之后 —— 「先挂占位、插件再覆盖」是**同一根顺序链**上的一前一后，不依赖「控台线程 vs
    GUI 线程」这种跨线程的时序巧合；
 2. **`main.py` 保持骨架**：这些占位一个参数都不读、只打一句话，留在 `MainWindow` 里
@@ -374,8 +374,8 @@ def setup_ui():
 
 这么做的前提是**两条都已核实**（别凭印象）：
 
-1. **后写者胜**：`extra_setups.setup_ui()` 在 `plugins.load_all()` **之前**执行
-   （`__console_kernel` 的顺序，见 [`../extra_setups/AGENTS.md`](../extra_setups/AGENTS.md) §3）；
+1. **后写者胜**：`setups.setup_ui()` 在 `plugins.load_all()` **之前**执行
+   （`__console_kernel` 的顺序，见 [`../setups/AGENTS.md`](../setups/AGENTS.md) §3）；
    `GuiApi.add_func` 落到的 `funcs` 是普通 `SharedDict`，`set` 就是赋值、不合并 ——
    所以插件里的 `add_func` 一定**覆盖**占位。⚠️ 改 `__console_kernel` 的顺序时要重新确认；
 2. **不注销命令**：**不要**用 `gui.add_func(name, None)` 去「删掉」占位（`GuiApi.add_func`
@@ -419,9 +419,9 @@ def setup_ui():
 `gui.*` 的每次调用都由 gui 缓冲区派发到 GUI 线程。代价是控制台同一时刻只跑一个任务 ——
 加载期间它在「忙」，别的脚本会被拒。
 
-**不需要**改 `main.py`、`extra_setups/__init__.py` 或任何 `__init__.py` —— 加文件就够了。
+**不需要**改 `main.py`、`setups/__init__.py` 或任何 `__init__.py` —— 加文件就够了。
 （⚠️ 唯一的例外是「搬走主窗口方法后要留占位」：那要去
-[`../extra_setups/plugin_placeholders.py`](../extra_setups/plugin_placeholders.py) 加一行，
+[`../setups/plugin_placeholders.py`](../setups/plugin_placeholders.py) 加一行，
 见本节上方。）
 
 ## 3. 五条硬约束
@@ -440,16 +440,26 @@ def setup_ui():
 是**双重否定**，并不更好读；③ 语义还要等依赖功能稳定后再审视一次。
 详见 PLAN `T-20261023-11`。**定义以本表这一行为准**：禁用 = 仅启动过滤。
 
-## 4. 别放错地方：`plugins/` 还是 `extra_setups/`
+## 4. 别放错地方：`plugins/` 还是 `setups/`
 
 判据：**关掉它，软件还能不能正常用？**
 
 | 放哪 | 收什么 | 用户能关掉吗 |
 |---|---|---|
-| `builtin/`（本目录） | 可关闭的**非核心功能**：工具、演示、彩蛋 | ✅ 能 |
-| [`../extra_setups/`](../extra_setups/) | **产品功能**：授权查询、用户管理 | ❌ 不能 |
+| `builtin/`（本目录） | 可关闭的**非核心功能**：工具、演示、彩蛋、文档页、管理 / 查询页 | ✅ 能 |
+| [`../setups/`](../setups/) | **必加载**的装配：目前只剩「插件命令的占位」（`plugin_placeholders.py`） | ❌ 不能 |
 
-把「授权查询」做成插件 = 允许用户关掉产品功能，是错的。
+把「必须存在、否则界面上会出现悬空命令」的东西做成插件，是错的 —— 这也正是
+`plugin_placeholders.py` 留在 `setups/` 的理由（它必须**先于**插件注册）。
+
+⚠️ **2026-10-31 有两条搬了进来，判据的写法值得对照**（别再把它们搬回去）：
+- `architecture`：纯文档页，关掉只少一个菜单项 ⇒ 明显可关。
+- `user_admin`：2026-10-18 曾以「这是产品功能」为由**搬出去**，2026-10-31 **按同一判据
+  重判后搬回来** —— 因为关掉它，建模 / 求解 / 绘图照样能用；随后 `license_query.py`
+  （登录记录 / 反馈记录两条命令）也并了进来，「帮助 → 用户」整个子菜单因此整块归本插件。
+- ⚠️ 判据问的是「**关掉还能不能用**」，不是「重不重要」，也不是「是不是产品功能」。
+  真正关不掉的是**登录与授权检查本身**（`MainWindow` / `tabs/license_register.py` /
+  `widgets/license_button.py`）—— 它们本来就不在这两个目录里。
 
 ## 5. 三份文档各管一件事
 
@@ -478,7 +488,7 @@ def setup_ui():
 4. **`gui.add_func` 的命令名不能与 `MainWindow` 方法同名**，也不能事后改名（标签页状态
    里存的就是那串原文）。详见 [`../AGENTS.md`](../AGENTS.md) §3。
    ⚠️ **准确的例外**（2026-10-22 定）：把一个方法搬进插件后，**不要**在 `MainWindow`
-   里留同名方法，而是把占位放进 [`../extra_setups/plugin_placeholders.py`](../extra_setups/plugin_placeholders.py)，
+   里留同名方法，而是把占位放进 [`../setups/plugin_placeholders.py`](../setups/plugin_placeholders.py)，
    由插件的 `add_func` 覆盖它 —— 前提与做法见本节上方「把 `MainWindow` 的方法搬进插件」。
    除此之外，撞名一律算 bug：后注册者会**悄悄**顶掉主窗口方法。
 5. **`builtin/__init__.py` 不要删**：它是包标记，`pyproject.toml` 的 `packages.find`
@@ -487,7 +497,7 @@ def setup_ui():
 ## 7. 验收清单
 
 ```bash
-# 1. 内置插件计数（应为 15；另有 scen/easter_eggs/ 一个自包含插件在该目录外）
+# 1. 内置插件计数（应为 17；另有 scen/easter_eggs/ 一个自包含插件在该目录外）
 ls zmlx/ui/plugins/builtin/*.py | grep -v __init__ | wc -l
 
 # 2. 名单 / 排序 / 禁用 / 路径往返的离线自检（不需要 Qt，会打印 test_1 passed）

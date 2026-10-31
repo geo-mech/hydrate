@@ -91,7 +91,7 @@
 依赖方向：本子包可以 import 上层的 ``widgets/plt.py``（``MatplotWidget``）、
 ``widgets/code_edit.py``；反过来**不允许** —— 与 ``widgets/`` 不得 import ``tabs/``
 是同一条纪律（见 ``widgets/AGENTS.md``）。⚠️ 也**不得** import
-``zmlx.ui.extra_setups`` / ``zmlx.ui.plugins`` / ``zmlx.scen``（那是装配层 / 更上层的插件）。
+``zmlx.ui.setups`` / ``zmlx.ui.plugins`` / ``zmlx.scen``（那是装配层 / 更上层的插件）。
 
 ⚠️ **已知例外（唯一一处）**：``seepage_edit.py`` import ``zmlx.tfc``（第 4 层），而本子包
 在第 3 层 —— 那是从 ``widgets/seepage.py`` 时代就有的越界，记录在 ``AGENTS.md`` §4.6。

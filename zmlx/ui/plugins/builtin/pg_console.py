@@ -152,7 +152,7 @@ def setup_ui():
     ⚠️ **``overwrite=False`` 在这里的含义**（别按字面理解，见 ``MainWindow.add_action``
     的 docstring）：不是「不许被覆盖」，而是「**同名 action 已存在就直接跳过**」。这条条目
     只由本插件挂、``setup_ui`` 又有 ``@execute_once``，所以正常情况下同名不存在、
-    **照常挂上**；只有当另一个插件 / ``extra_setups`` 抢先注册了同名 ``pg_console`` 时
+    **照常挂上**；只有当另一个插件 / ``setups`` 抢先注册了同名 ``pg_console`` 时
     才会被跳过（那时也**不应该**再多出一条来顶替它）。
 
     ⚠️ **菜单项不要做占位**（2026-10-25 定）：``gui.add_action`` 在调用那一刻就把 slot
@@ -178,8 +178,8 @@ def setup_ui():
 
 
 # ⚠️ 插件路径：由 load_all exec 执行，**没人会替我们调 setup_ui()**，所以本文件
-#    把调用写在**模块顶层**的这个分支里（``extra_setups/*.py`` 则由
-#    ``extra_setups/__init__.py`` 统一调用 —— 这是两者唯一的区别）。
+#    把调用写在**模块顶层**的这个分支里（``setups/*.py`` 则由
+#    ``setups/__init__.py`` 统一调用 —— 这是两者唯一的区别）。
 #    插件机制执行时 ``__name__`` 是 ``'__zml_plugin__'``；直接 ``python pg_console.py``
 #    时才是 ``'__main__'``（见 plugins/__init__.py 的说明）。
 if __name__ == '__zml_plugin__':
