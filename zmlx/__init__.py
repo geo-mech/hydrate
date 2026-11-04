@@ -1,4 +1,4 @@
-﻿"""
+"""
 说明：
     1. 优先从zmlx中import，只有当zmlx中没有定义，再考虑从次一级文件夹import；
     2. 用户可添加文件，但勿修改现有文件内容；
@@ -7,7 +7,7 @@ Modified by DeepSeek, 2026-10-17: warnings.warn -> zmlx.system.warn（弃用统�
 """
 
 # 版本号：必须与 pyproject.toml 中的 version 保持一致（提交时同步更新，见 AGENTS.md）
-__version__ = "1.9.22"
+__version__ = "1.9.23"
 
 
 def version_at_least(version):
