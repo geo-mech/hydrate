@@ -1,15 +1,23 @@
 # ** name = '地热'
-# ** desc = '地热算例集：井截面取热（Case2）挂到一级菜单「地热」'
+# ** desc = '地热算例集：井截面取热（参数界面 + 高渗 / 近不可渗两个工况）挂到一级菜单「地热」'
 # ** enabled = False
 """地热场景的**插件入口**（菜单栏一级菜单「地热」）.
 
-挂了一个入口（「地热」是**一级菜单**，不在「帮助」之下）：
+挂了三个入口（「地热」是**一级菜单**，不在「帮助」之下）：
 
 ========================================  ===========================================
 菜单                                       执行
 ========================================  ===========================================
-地热 → 测试 → Case2                         ``cases.case_02.test``
+地热 → 井截面取热                         打开**参数界面**（``widgets/well_cross_section.py``），
+                                          填完点「开始求解」走同一条 create / solve
+地热 → 测试 → 高渗                         ``cases.case_02.test_high_perm``
+地热 → 测试 → 近不可渗                      ``cases.case_02.test_low_perm``
 ========================================  ===========================================
+
+「井截面取热」是**交互式**入口：把 ``create`` 的 9 个参数摆成表单，空着就用默认值；
+「测试」下两项是**固定工况**，区别只在渗透率（``1e-11`` vs ``1e-20`` m²）——
+高渗时对流补热明显，近不可渗时基本只靠导热，放在一起便于对比。
+三者最终跑的都是同一套 ``create`` + ``solve``。
 
 经**控制台线程**（``gui.start``）执行；初始状态与实时状态都走 ``_show.show()``
 （``plt`` 绘图：界面里开标签页，无界面时存文件）。
@@ -43,6 +51,9 @@ Modified by DeepSeek, 2026-11-04: 加「地热 → 测试 → Case1」（调用 
 Modified by DeepSeek, 2026-11-04: 「地热」由「帮助 → 地热」改为**一级菜单**
 Modified by DeepSeek, 2026-11-04: 删除「热-流自然对流」与「测试 → Case1」两项
     （``_create.py`` 与 ``cases/case_01.py`` 已移除），只保留 Case2
+Modified by DeepSeek, 2026-11-04: 把「测试 → Case2」拆成「高渗」与「近不可渗」两项，
+    对应 ``case_02`` 里重命名后的 ``test_high_perm`` / ``test_low_perm``；
+    接线逻辑抽成 ``_run_case_02(func_name, label)`` 供两项共用
 """
 
 from zmlx.system import execute_once
@@ -51,12 +62,12 @@ from zmlx.ui import gui
 #: 菜单路径与文字。⚠️ 菜单名一旦发布就不能改：标签页状态里存的就是这串原文。
 #: ⚠️ 「地热」是**一级菜单**（挂在菜单栏根部），不在「帮助」之下 —— 地热是一个
 #: 独立的应用场景，算例会越加越多，埋在「帮助 → 地热」里既难找也压不住层级。
-MENU = '地热'
+MENU = "地热"
 
 #: 「地热 → 测试」子菜单。
 #: ⚠️ 一级菜单 ``MENU`` 是 ``str``，拼子菜单要显式写成 list（``str + list`` 会报错）。
 #: ⚠️ 测试算例放在该子菜单下，不和平时的算例混在一层。
-CASE_MENU = [MENU, '测试']
+CASE_MENU = [MENU, "测试"]
 
 
 def _start(func, *, text_beg, text_end, busy_hint):
@@ -78,36 +89,79 @@ def _start(func, *, text_beg, text_end, busy_hint):
     """
     if gui.exists() and gui.is_running():
         gui.information(
-            '控制台正忙',
-            '控制台已经在执行其它任务，请等它结束后再运行「{0}」。\n'
-            '（控制台同一时刻只能跑一个任务，这是为了避免两个求解互相抢占。）'.format(
-                busy_hint))
+            "控制台正忙",
+            "控制台已经在执行其它任务，请等它结束后再运行「{0}」。\n"
+            "（控制台同一时刻只能跑一个任务，这是为了避免两个求解互相抢占。）".format(
+                busy_hint
+            ),
+        )
         return False
     gui.start(func, text_beg=text_beg, text_end=text_end)
     return True
 
 
-def run_case_02():
-    """点「地热 → 测试 → Case2」时执行：在控制台线程里跑 ``cases.case_02.test``.
+def _run_case_02(func_name, label):
+    """把「地热 → 测试 → <label>」接到 ``cases.case_02.<func_name>`` 上（内部共用）.
 
-    ⚠️ **只接线到算例自己的 ``test()``**：网格、时长、渗透率、参考圆
-    都由 ``case_02`` 决定（它画圆心 (0, 0)、半径 2 的绿圈），插件不替它设参。
+    ⚠️ **只接线到算例自己的函数**：网格、时长、渗透率、参考圆都由 ``case_02`` 决定，
+    插件不替它设参 —— 两个工况的区别（渗透率）也完全由算例那边表达。
 
     ⚠️ 模块在**函数内**才 import：``case_02`` 会顺手拉起 ``tfc`` 与绘图栈，
     放在插件加载期会把这段时间加到界面启动的关键路径上
     （``plugins/AGENTS.md`` §0.5「加载期只接线，不干活」）。
 
-    Returns:
-        None。真正的求解交给 :func:`_start` 派发到控制台线程；
-        控制台忙时不提交，只弹提示。
+    Args:
+        func_name: ``case_02`` 里的函数名，如 ``'test_high_perm'``。
+        label: 菜单文字与控制台提示里用的短名，如 ``'高渗'``。
     """
     from zmlx.scen.geothermal.cases import case_02
 
     _start(
-        case_02.test,
-        text_beg='开始求解：地热 Case2（井截面）',
-        text_end='求解结束：地热 Case2',
-        busy_hint='Case2',
+        getattr(case_02, func_name),
+        text_beg="开始求解：地热 Case2（井截面，{0}）".format(label),
+        text_end="求解结束：地热 Case2（{0}）".format(label),
+        busy_hint="Case2 " + label,
+    )
+
+
+def run_high_perm():
+    """点「地热 → 测试 → 高渗」时执行：在控制台线程里跑 ``case_02.test_high_perm``."""
+    _run_case_02("test_high_perm", "高渗")
+
+
+def run_low_perm():
+    """点「地热 → 测试 → 近不可渗」时执行：在控制台线程里跑 ``case_02.test_low_perm``."""
+    _run_case_02("test_low_perm", "近不可渗")
+
+
+def open_widget():
+    """点「地热 → 井截面取热」时执行：打开参数界面（一个标签页）.
+
+    ⚠️ 用 ``gui.get_widget`` 而不是自己建控件：它保证**同一标题只开一个**，
+    重复点菜单只是切到已经打开的那个。
+
+    ⚠️ 控件构造时**不做任何求解**，只摆出参数表单 —— 求解要在用户点
+    「开始求解」后才经 ``gui.start`` 进控制台线程
+    （见 :class:`zmlx.scen.geothermal.widgets.well_cross_section.WellCrossSectionWidget`）。
+
+    ⚠️ 写 ``gui_restore``：这串会被存盘、重启时按原文用 ``gui.xxx(...)`` 重放，
+    所以命令名 ``show_geothermal_widget`` **一旦发布不能改**。
+    """
+    from zmlx.scen.geothermal.widgets.well_cross_section import WellCrossSectionWidget
+
+    def oper(widget):
+        """``get_widget`` 每次调用都会执行：记下 ``gui_restore`` 以便重启后自动恢复.
+
+        ⚠️ 写的命令名一旦发布不能改 —— 这串会被原样存盘、重启时按原文重放。
+        """
+        widget.gui_restore = "gui.show_geothermal_widget()"
+
+    return gui.get_widget(
+        the_type=WellCrossSectionWidget,
+        caption=WellCrossSectionWidget.CAPTION,
+        icon="matplotlib",
+        oper=oper,
+        tooltip="井截面取热：填参数后求解（等效于跑一遍 case_02）",
     )
 
 
@@ -115,10 +169,15 @@ def run_case_02():
 def setup_ui():
     """挂菜单 + 注册命令（**加载期只接线，不干活**）.
 
-    做两件事，都在加载期完成、不碰任何控件：
+    挂三项菜单、注册三条命令，都在加载期完成、不碰任何控件：
 
-    1. ``gui.add_action`` 挂「地热 → 测试 → Case2」；
-    2. ``gui.add_func`` 注册命令 ``gui.show_geothermal_case_02()``。
+    ==============================  ==========================  ===================================
+    菜单                              命令                         执行
+    ==============================  ==========================  ===================================
+    地热 → 井截面取热                 ``show_geothermal_widget``   打开参数界面（``widgets/well_cross_section.py``）
+    地热 → 测试 → 高渗                ``show_geothermal_case_02``  ``case_02.test_high_perm``
+    地热 → 测试 → 近不可渗             ``..._case_02_low_perm``     ``case_02.test_low_perm``
+    ==============================  ==========================  ===================================
 
     由 :func:`zmlx.system.execute_once` 保证只执行一次 ——
     ``load_all`` 在一次运行里可能被调用多次（启动 + 临时加载）。
@@ -127,26 +186,45 @@ def setup_ui():
         None。
     """
     gui.add_action(
-        menu=CASE_MENU,
-        text='Case2',
-        slot=run_case_02,
-        icon='matplotlib',
-        tooltip='井截面取热（含半径 2 的参考圆）—— 地热测试算例 Case2',
+        menu=MENU,
+        text="井截面取热",
+        slot=open_widget,
+        icon="matplotlib",
+        tooltip="打开参数界面：填完后按同样的 create / solve 流程求解",
         overwrite=False,
     )
-    gui.add_func('show_geothermal_case_02', run_case_02)
+    gui.add_action(
+        menu=CASE_MENU,
+        text="高渗",
+        slot=run_high_perm,
+        icon="matplotlib",
+        tooltip="井截面取热：高渗（perm=1e-11 m²），对流补热明显",
+        overwrite=False,
+    )
+    gui.add_action(
+        menu=CASE_MENU,
+        text="近不可渗",
+        slot=run_low_perm,
+        icon="matplotlib",
+        tooltip="井截面取热：近不可渗（perm=1e-20 m²），基本只靠导热",
+        overwrite=False,
+    )
+    gui.add_func("show_geothermal_widget", open_widget)
+    gui.add_func("show_geothermal_case_02", run_high_perm)
+    gui.add_func("show_geothermal_case_02_low_perm", run_low_perm)
 
 
-if __name__ == '__zml_plugin__':
+if __name__ == "__zml_plugin__":
     # 插件机制执行时 ``__name__`` 是 ``'__zml_plugin__'``：只注册，不开窗口。
     setup_ui()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # ``python zml_plugin.py`` 直接运行：开一个界面，菜单里能看到这一项。
     # ⚠️ 用独立的 ``if`` 而不是 ``elif``：两种运行方式的判断互不相干。
 
     def main():
         """直接运行本文件时的入口：挂菜单（供 ``gui.execute`` 调用）."""
         setup_ui()
+        gui.show_geothermal_widget()
 
     gui.execute(main, close_after_done=False)

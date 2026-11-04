@@ -31,26 +31,32 @@
 两个工况（只有渗透率不同）
 --------------------------
 
-- :func:`test`：``perm = 1e-11`` m² —— 高渗，对流补热明显；
-- :func:`test_02`：``perm = 1e-20`` m² —— 近不可渗，基本只靠导热；
-  ``__main__`` 分支默认运行它。
+- :func:`test_high_perm`：``perm = 1e-11`` m² —— 高渗，对流补热明显；
+- :func:`test_low_perm`：``perm = 1e-20`` m² —— 近不可渗，基本只靠导热。
+
+两者在插件里各占一个菜单项（「地热 → 测试 → 高渗 / 近不可渗」），
+``__main__`` 分支默认运行 :func:`test_high_perm`。
 """
 
 from zmlx import gui
 from zmlx.scen.geothermal._well_cross_section import create, solve
 
 
-def test():
-    """跑一遍**高渗**工况（``perm = 1e-11`` m²），最大时间步 1 天."""
+def test_high_perm():
+    """跑一遍**高渗**工况（``perm = 1e-11`` m²，约 10 Darcy），最大时间步 7 天.
+
+    渗透率足够高，介质内对流明显，岩石到井的补热由**对流 + 导热**共同完成 ——
+    与 :func:`test_low_perm` 对比即可看出对流的影响。
+    """
     jx, jz = 100, 100
     model = create(jx=jx, jz=jz, perm=1.0e-11, dt_max=3600 * 24 * 7)
     solve(model, jx=jx, jz=jz)
 
 
-def test_02():
-    """跑一遍**近不可渗**工况（``perm = 1e-20`` m²），最大时间步 1 天.
+def test_low_perm():
+    """跑一遍**近不可渗**工况（``perm = 1e-20`` m²），最大时间步 7 天.
 
-    与 :func:`test` 只差渗透率：渗透率极低时介质内几乎没有对流，
+    与 :func:`test_high_perm` 只差渗透率：渗透率极低时介质内几乎没有对流，
     岩石向井的补热基本只靠导热，可与高渗工况对比看对流的影响。
     """
     jx, jz = 100, 100
@@ -60,4 +66,4 @@ def test_02():
 
 if __name__ == "__main__":
     # 通过GUI执行主函数；--no-gui参数用于无图形界面运行
-    gui.execute(test, close_after_done=False)
+    gui.execute(test_high_perm, close_after_done=False)

@@ -10,7 +10,11 @@
 文件                   职责
 ====================  ==========================================================
 ``zml_plugin.py``     **插件入口**（``# ** enabled = False``）：挂**一级菜单**「地热」——
-                      「地热 → 测试 → Case2」，命令名 ``gui.show_geothermal_case_02()``
+                      「地热 → 井截面取热」（参数界面）与
+                      「地热 → 测试 → 高渗 / 近不可渗」两项固定工况
+``widgets/``          **控件集**（每个文件一个控件）：目前只有
+                      ``well_cross_section.WellCrossSectionWidget`` —— 参数界面，把 ``create`` 的参数
+                      摆成表单，填完点「开始求解」走同一条 ``create`` + ``solve``
 ``_well_cross_section.py``  井截面取热的建模与求解：``create(...)`` / ``solve(...)``；
                       另含 ``update_power(model)`` 统计采热功率
 ``_mesh.py``          ``mesh_xz(...)`` 建 x–z 剖面网格；
@@ -18,7 +22,8 @@
 ``_fludefs.py``       ``create_fludefs()`` 流体定义（液态水）及其物性表范围
 ``_show.py``          ``show(model, jx, jz, *, circles=None)``：画岩石温度 / 流体温度 /
                       密度 / 流体 z0 四张子图，并可叠加任意多个参考圆
-``cases/``            算例集：``case_02.py`` 的 ``test()`` 由插件挂成「测试 → Case2」，
+``cases/``            算例集：``case_02.py`` 的 ``test_high_perm`` / ``test_low_perm``
+                      由插件挂成「测试 → 高渗 / 近不可渗」，
                       仍可 ``python -m zmlx.scen.geothermal.cases.case_02`` 直接跑
 ====================  ==========================================================
 

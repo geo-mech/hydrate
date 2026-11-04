@@ -64,17 +64,21 @@
 ```
 zmlx/scen/geothermal/
 ├── zml_plugin.py        插件入口（一级菜单「地热」，默认不加载）
+├── widgets/             控件集（每个文件一个控件）
+│   └── well_cross_section.py  参数界面 WellCrossSectionWidget（填参数后 create + solve）
 ├── _mesh.py             网格：mesh_xz(jx, jz)
 ├── _fludefs.py          流体：create_fludefs()
 ├── _show.py             绘图：show(model, jx, jz, *, circles=None)
 ├── _well_cross_section.py  井截面取热建模：create(...) / solve(...)
-├── cases/               算例，每个文件一个（case_02.py 的 test()）
+├── cases/               算例，每个文件一个（case_02.py 的 test_high_perm / test_low_perm）
 ├── CHANGELOG.md         本包的改动记录
 └── AGENTS.md            本文件
 ```
 
 - **分层**：`_mesh` / `_fludefs` / `_show` 只做自己那一件事，`_well_cross_section` 组装，`cases/` 串接。
   加新算例时**新建一个 `cases/case_XX.py`**，不要往已有算例里塞分支。
+- **算例的函数名要说明该工况的特点**（`test_high_perm` / `test_low_perm`），不要用
+  `test_02` 这种纯编号 —— 插件菜单直接用函数名做标签，用户从菜单就该看出区别。
 - **导入**：一律显式导入用到的名字，**禁止** `from zmlx import *`。
 - **插件入口**：菜单项、`gui.add_func` 的命令名**一旦发布不能改名**（标签页状态里存的是原文）。
   求解一律经 `gui.start` 走控制台线程，并先判 `gui.is_running()`（控制台单槽位，忙时会静默丢弃请求）。
