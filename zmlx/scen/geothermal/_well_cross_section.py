@@ -18,6 +18,53 @@ from zmlx.scen.geothermal._fludefs import create_fludefs
 from zmlx.scen.geothermal._mesh import equivalent_area, get_average_area, mesh_xz
 from zmlx.system import warn
 
+def _clamp_heat_cond(value):
+    """把岩石热导率**截断**到 ``[0.01, 100]`` W/(m·K).
+
+    Args:
+        value: 岩石热导率（W/(m·K)）。传场时请用 :func:`_wrap_heat_cond`。
+
+    Returns:
+        float: 截断后的值 —— 越界取边界值，**不报错**。
+
+    Raises:
+        ValueError: ``value`` 无法转成数值（不是「越界」——越界是截断）。
+
+    Note:
+        区间取的依据：常见岩石 / 土的热导率大致在 ``0.1``（干砂、泥岩）到
+        ``5``（石英岩、花岗岩）之间，少数高导热材料可到几十；
+        而 ``1e-3`` 量级以下（接近真空隔热）在地热取热问题里没有物理意义。
+        太小的值会让「岩石 → 井」的换热几乎停滞（温度看似不变），
+        太大的值会让时间步剧烈收缩 —— 两者都更像「单位填错了」而不是真实工况，
+        所以给一个宽但有限的区间，主要挡住 0、负数、以及量纲写错这类误填。
+    """
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        raise ValueError(
+            '岩石热导率必须是数值或 f(x, y, z) 形式的场，当前为 {0!r}'.format(value)) from None
+    return min(max(v, 0.01), 100.0)
+
+
+def _wrap_heat_cond(field):
+    """把「热导率场」包一层，使**每次求值**都截断到允许范围内.
+
+    Args:
+        field: 场 ``f(x, y, z) -> 数值``。
+
+    Returns:
+        callable: 新的场，返回值已截断到 ``[0.01, 100]``。
+
+    Note:
+        传场时无法在建模前枚举全部坐标，所以把截断放进回调里 —— 开销是一次比较，
+        但保证了不管场在哪个位置返回什么，进入模型的热导率都在合法区间内。
+    """
+    def wrapped(x, y, z):
+        """按坐标求值热导率，并把结果截断到允许范围内."""
+        return _clamp_heat_cond(field(x, y, z))
+
+    return wrapped
+
 
 def create(
     *,
@@ -32,6 +79,8 @@ def create(
     rock_heat_cond=None,
     perm=None,
     porosity=None,
+    reservoir_temp=None,
+    well_temp=None,
     dt_max=None,
 ):
     """
@@ -51,18 +100,44 @@ def create(
             （先用 :func:`equivalent_area` 求井筒截面与该面之间的等效面积，
             再用 :func:`get_average_area` 与两侧各半段长度合成）。
         rock_density: 岩石密度（kg/m³），默认 ``2650``（花岗岩典型值）。
+            **可以是场**：传 ``f(x, y, z) -> float`` 则逐单元按坐标取值。
         rock_heat_capacity: 岩石比热（J/(kg·K)），默认 ``790``（花岗岩典型值）。
+            **可以是场**：传 ``f(x, y, z) -> float`` 则逐单元按坐标取值。
         rock_heat_cond: 岩石热导率（W/(m·K)），默认 ``3.0``（花岗岩典型值）。
+            **可以是场**：传 ``f(x, y, z) -> float``。⚠️ 与另两个物性参数不同，
+            它**按面**取值（每个面调用一次），传场时可用来表达各向异性的分层导热。
+            ⚠️ 取值会被**截断**到 ``[0.01, 100]`` W/(m·K)：超出即取边界值、
+            不报错 —— 理由见下面那条 ⚠️。
         perm: 渗透率（m²），默认 ``1e-12``（约 1 Darcy）。
+            **可以是场**：传 ``f(x, y, z) -> float``。⚠️ **按面**取值（每个面调用一次），
+            坐标是该面的位置 —— 想让「裂隙」只出现在某些面附近时正是这样写的。
         porosity: 孔隙度（无量纲，``0 < porosity < 1``），默认 ``0.2``。
             它决定单元里流体所占的孔隙体积，从而影响热容与流动的响应速度。
+            **可以是场**：传 ``f(x, y, z) -> float`` 则逐单元按坐标取值。
+        reservoir_temp: **原始储层温度**（K），默认 ``320``。即井以外整个岩石区域的
+            初始温度 —— 说「地热储层有多热」用的就是它。
+        well_temp: **井底温度**（K），默认 ``280``。井单元（井筒所在的那一个单元）的
+            初始温度；它低于储层温度，于是热量从岩石持续流向井，形成取热过程。
         dt_max: 最大时间步长（s）。给定时调 ``tfc.set_dt_max(model, dt_max)``；
             默认 ``None`` 表示不改动。
+
+    Note:
+        **「标量或场」的通用写法**：上表中标注「可以是场」的 5 个参数，既接受一个数
+        （``rock_density=2650``），也接受一个函数 ``f(x, y, z) -> 数值``。
+        于是「上软下硬」「井附近渗透率更高」这类非均质情形不必改函数签名::
+
+            # 随深度变密、变致密的花岗岩
+            create(rock_density=lambda x, y, z: 2400 - 0.5 * z)
+
+        ⚠️ **按单元 vs 按面**：``denc`` / ``porosity`` / ``temperature`` 一类
+        是**逐单元**求值（每单元一次），而 ``perm`` / ``heat_cond`` 是**逐面**求值
+        （每面一次，坐标为该面位置）—— 由 ``tfc.create`` 内部决定，不是本函数的约定。
+        写场时别假设它一定按单元调用。
 
     Returns:
         Seepage: 配好的渗流-热耦合模型。井单元上同时设了：
 
-            - 初始温度 280 K（其余区域 320 K）；
+            - 井单元初始温度 ``well_temp``（其余区域 ``reservoir_temp``）；
             - 体积热容放大 ``1e6`` 倍（当作恒温储热体）；
             - 文本 ``well_cell_id`` 记下井单元的下标，供 :func:`update_power` 使用。
 
@@ -74,8 +149,14 @@ def create(
         （``(-0.6, 0.6)`` / ``(-1, 1)``）**不同** —— 后者只是通用默认，
         井截面算例用前者。
 
-    ⚠️ ``dist`` 传的是常量 ``0.2``（流体与固体之间的换热距离），
-        不是热扩散率 —— 单位/语义请以 ``tfc.create`` 的 ``dist`` 文档为准。
+    ⚠️ **热导率越界是「截断」不是「报错」**：``rock_heat_cond`` 超出
+        ``[0.01, 100]`` W/(m·K) 时会被改成边界值（传场时**逐次求值**都截断）。
+        理由是越界几乎都是单位填错（0、负数），截断能让求解继续跑完，
+        比中途抛异常更省事；代价是**不告诉你改过** —— 若取值可疑，请自己先核对。
+
+    ⚠️ ``dist`` 传的是**函数**：井单元 ``0.01``、其余单元 ``0.2``（流体与固体之间的
+        换热距离，不是热扩散率）—— 单位/语义请以 ``tfc.create`` 的 ``dist`` 文档为准，
+        取值理由见 ``dist`` 自己的说明。
     """
     if xr is None:
         xr = (-50, 50)
@@ -125,27 +206,69 @@ def create(
     if rock_heat_cond is None:
         rock_heat_cond = 3.0
 
-    # 密度和比热的乘积
-    denc = rock_density * rock_heat_capacity
+    # 热导率截断到 [0.01, 100] W/(m·K)：
+    # 越界多半是「单位填错了」（0、负数、或把 W/(m·K) 写成了别的量纲），
+    # 截断比报错省事，同时也不至于让离谱的值把求解拖成怪结果。
+    if callable(rock_heat_cond):
+        # 场：包一层，让**每次求值**都截断（开销是一次比较）
+        rock_heat_cond = _wrap_heat_cond(rock_heat_cond)
+    else:
+        rock_heat_cond = _clamp_heat_cond(rock_heat_cond)
+
+    if reservoir_temp is None:
+        reservoir_temp = 320.0
+
+    if well_temp is None:
+        well_temp = 280.0
+
+    def eval_field(value, x, y, z):
+        """把「标量或场」统一成当前坐标下的**数值**.
+
+        Args:
+            value: 标量（``2650``），或场（``f(x, y, z) -> 数值``）。
+            x, y, z: 当前单元 / 面的坐标。
+
+        Returns:
+            float: 该坐标下的取值。
+        """
+        return value(x, y, z) if callable(value) else value
 
     def get_denc(x, y, z):
+        """获取体积热容（密度乘以比热），单位 J/(m³·K).
+
+        ⚠️ 必须写成函数、且**在函数体内**才把两个场相乘：``rock_density`` /
+        ``rock_heat_capacity`` 都可以是 ``f(x, y, z)``，若在 ``create`` 的函数体里
+        先做 ``rock_density * rock_heat_capacity``，传函数进来就会直接
+        ``TypeError: unsupported operand type(s) for *``。
         """
-        获取体积热容（密度乘以比热容）。
-        """
-        return denc * 1e6 if is_well_cell(x, y, z) else denc
+        v = eval_field(rock_density, x, y, z) * eval_field(rock_heat_capacity, x, y, z)
+        # 井单元的体积热容放大 1e6 倍，当作恒温储热体
+        return v * 1e6 if is_well_cell(x, y, z) else v
 
     def get_temp(x, y, z):
-        """
-        获取初始温度分布函数：井单元 280 K，其余区域 320 K。
+        """获取初始温度分布：井单元取 ``well_temp``，其余区域取 ``reservoir_temp``.
+
+        ⚠️ 两者都是**数值**（K），不支持传场 —— 要空间变化的初始温度，
+        请直接改这里，而不要试图把函数传给这两个参数。
         """
         if is_well_cell(x, y, z):
-            return 280
+            return well_temp
         else:
-            return 320
+            return reservoir_temp
 
     def dist(x, y, z):
-        """流体和固体之间的换热距离（常量 0.2 m）"""
-        return 0.2
+        """流体和固体之间的换热距离（m），**按单元给不同值**.
+
+        - 井单元：``0.01`` —— 井筒尺寸远小于网格，取更小的距离让「岩石 → 井」
+          这一跳的换热更强，等价于给井筒附近更高的换热系数；
+        - 其余单元：``0.2``。
+
+        ⚠️ 它的语义是**换热距离**，不是热扩散率 —— 见 ``create`` 文档里那条说明。
+        """
+        if is_well_cell(x, y, z):
+            return 0.01
+        else:
+            return 0.2
 
     if perm is None:
         perm = 1e-12
@@ -250,6 +373,64 @@ def update_power(model: Seepage):
         model.set_text(key="time2pow", text=repr(time2pow))
 
 
+def _power_ylim(x, y):
+    """按数据算纵轴范围，但**忽略最开始 10 天**的数据点.
+
+    Args:
+        x: 时间序列（年）。
+        y: 对应的采热功率序列（瓦）。
+
+    Returns:
+        tuple: ``(0, ymax)``；``ymax`` 取「10 天之后」那段的最大值。
+        若所有点都还在前 10 天内（或为空），则退化为全部数据的最大值；
+        全为空或最大值非正时返回 ``None``（表示交给 matplotlib 自动缩放）。
+
+    Note:
+        ⚠️ **为什么要跳过前 10 天**：求解刚开始时井单元与周围岩石的温差最大，
+        采热功率会出现一个很高的**起始瞬态尖峰**（可达稳态的数倍）。
+        把那个尖峰算进 ``ylim`` 会把后面整个稳态段压成一条贴底的线，
+        曲线反而看不出变化。
+
+        ⚠️ 数据点仍**全部画出**（包括尖峰）：只是纵轴按「10 天之后」定标，
+        尖峰会超出画面顶部 —— 这是刻意的取舍，因为关心的是长期取热能力。
+    """
+    # 10 天换算成年
+    after = 10.0 / 365.0
+    values = [p for t, p in zip(x, y) if t >= after]
+    if len(values) == 0:
+        # 全都还在前 10 天内（例如只跑了几天的短算例）：只能按全部数据定标
+        values = list(y)
+    if len(values) == 0:
+        return None
+    ymax = max(values)
+    if not ymax > 0:
+        return None
+    return 0, ymax
+
+
+def _show_power_curve(x, y):
+    """画「采热功率 ~ 时间」曲线，纵轴按数据定标（跳过起始 10 天）.
+
+    Args:
+        x: 时间（年）。
+        y: 对应的采热功率（瓦）。
+
+    Note:
+        ``ylim`` 经 ``show_xy(x, y, ylim=...)`` 传下去，调用链是
+        ``show_xy`` → ``plot_on_axes`` → ``plot_on_figure`` → ``add_subplot``；
+        后者把 ``ylim`` 从 ``**kwargs`` 里**显式取出来**执行 ``ax.set_ylim(ylim)``
+        （见 ``zmlx/plt/on_figure/_subplot.py`` 的 ``add_subplot`` 签名与函数体），
+        所以它不会被当成 ``ax.plot`` 的参数。
+    """
+    from zmlx.plt import show_xy
+
+    ylim = _power_ylim(x, y)
+    opts = dict(caption='采热功率', xlabel='时间 / 年', ylabel='功率 / 瓦')
+    if ylim is not None:
+        opts['ylim'] = ylim
+    show_xy(x, y, **opts)
+
+
 def _is_inside_package(path):
     """判断 ``path`` 是否落在 **zmlx 包目录内部**（含包目录本身）.
 
@@ -274,7 +455,9 @@ def _is_inside_package(path):
 
         root = os.path.realpath(os.path.dirname(zmlx.__file__))
         target = os.path.realpath(path)
-        return os.path.normcase(os.path.commonpath([target, root])) == os.path.normcase(root)
+        return os.path.normcase(os.path.commonpath([target, root])) == os.path.normcase(
+            root
+        )
     except (ValueError, OSError):
         # commonpath 在不同盘符时抛 ValueError；取不到路径时**按包外处理**
         # （宁可放行也不误拦用户真正的输出目录）
@@ -288,8 +471,9 @@ def solve(model, jx, jz, time_max=3600 * 24 * 365 * 10, folder=None):
 
     1. :func:`zmlx.scen.geothermal._show.show` 画当前状态（叠加以井单元为中心、
        半径 2 m 的黑色参考圆）；
-    2. 若已有 ``time2pow`` 记录，用 ``plt.show_xy`` 画「采热功率」随时间的曲线
-       （横轴由秒换算成年）。
+    2. 若已有 ``time2pow`` 记录，用 :func:`_show_power_curve` 画「采热功率」随时间的
+       曲线（横轴由秒换算成年）；纵轴按数据定标，但**算最大值时跳过最开始 10 天**，
+       以免起始瞬态的高尖峰把稳态段压成一条贴底的线。
 
     Args:
         model: :func:`create` 建好的模型。
@@ -309,14 +493,13 @@ def solve(model, jx, jz, time_max=3600 * 24 * 365 * 10, folder=None):
         功率的收集由 ``slots={"update_power": update_power}`` 完成 ——
         与 :func:`create` 里注册的 ``tfc.step_iteration`` 槽是同一件事的两处登记。
     """
-    from zmlx.plt import show_xy
     from zmlx.scen.geothermal._show import show
 
     if folder is not None and _is_inside_package(folder):
         # ⚠️ 明确告警而不是静默改写：用户以为在保存、实际没保存，是最难查的那类问题。
         warn(
-            '结果保存目录 {0!r} 位于 zmlx 包目录内部，已改为不保存（folder=None）——'
-            '计算数据不该写进代码/发布目录。请改到包外的目录。'.format(folder),
+            "结果保存目录 {0!r} 位于 zmlx 包目录内部，已改为不保存（folder=None）——"
+            "计算数据不该写进代码/发布目录。请改到包外的目录。".format(folder),
             stacklevel=2,
         )
         folder = None
@@ -340,7 +523,7 @@ def solve(model, jx, jz, time_max=3600 * 24 * 365 * 10, folder=None):
             assert isinstance(time2pow, list)
             x = [t / (3600 * 24 * 365) for t, p in time2pow]
             y = [p for t, p in time2pow]
-            show_xy(x, y, caption="采热功率", xlabel="时间 / 年", ylabel="功率 / 瓦")
+            _show_power_curve(x, y)
 
     tfc.solve(
         model,

@@ -85,6 +85,8 @@ _PARAMS = (
     ('rock_heat_cond', '岩石热导率', 'W/(m·K)', 'float，默认 3.0（花岗岩）', float),
     ('perm', '渗透率', 'm²', 'float，默认 1e-12（约 1 Darcy）', float),
     ('porosity', '孔隙度', '', '0~1 的小数，默认 0.2', float),
+    ('reservoir_temp', '原始储层温度', 'K', 'float，默认 320（井以外的岩石）', float),
+    ('well_temp', '井底温度', 'K', 'float，默认 280（井单元初始温度）', float),
     ('dt_max', '最大时间步', 's', 'float，默认不改动；如 604800 表示 7 天', float),
 )
 
