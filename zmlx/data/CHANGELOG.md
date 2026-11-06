@@ -1,7 +1,17 @@
 # CHANGELOG
 
+## v1.9.25 (2026-11-06)
+地热场景插件包 `zmlx/scen/geothermal/` **移出本仓**，整体迁至 `https://gitee.com/geomech/thermal` 仓库的 `geothermal/` 目录；本仓只保留通用能力。
+
+- **移出的内容**（13 个文件）：插件入口（`zml_plugin.py`，一级菜单「地热」）、建模 / 网格 / 绘图
+  （`_well_cross_section.py`、`_mesh.py`、`_show.py`、`_fludefs.py`）、参数界面（`widgets/`）、
+  算例（`cases/case_02.py`），连同该包自己的 `AGENTS.md` 与 `CHANGELOG.md`。
+- **本仓不再自带「地热」菜单**：菜单与命令随插件移出，需要从该仓库装载。
+- **文档**：`v1.9.23` / `v1.9.24` 两条里的路径指向改为仓库地址 `https://gitee.com/geomech/thermal`，
+  不写本机路径（`igg-hydrate-works/...` 会随工作区变化，发布版里也解析不了）。
+
 ## v1.9.24 (2026-11-04)
-`zmlx/scen/geothermal/` 新增**参数界面**与**实时模型示意图**，并把建模里几处写死的常量改成可自定义参数。菜单栏「地热」下现在有四个入口：**井截面取热**（交互式）、**测试 → 高渗 / 近不可渗**（固定工况）。
+`https://gitee.com/geomech/thermal` 的 `geothermal/` 新增**参数界面**与**实时模型示意图**，并把建模里几处写死的常量改成可自定义参数。菜单栏「地热」下现在有四个入口：**井截面取热**（交互式）、**测试 → 高渗 / 近不可渗**（固定工况）。
 
 - **参数界面**（`widgets/well_cross_section.py`，`WellCrossSectionWidget`）：把
   `create` 的参数摆成表单，填完点「开始求解」走与算例**完全相同**的路径
@@ -30,7 +40,7 @@
 - **新增 `widgets/` 子包**：控件集中放置，与建模代码分开；`__init__.py` 写明后续加控件的约定。
 
 ## v1.9.23 (2026-11-04)
-新增**地热场景插件包** `zmlx/scen/geothermal/`：模拟水平井一个横截面附近的取热（岩石向井筒传热），在菜单栏挂**一级菜单「地热 → 测试 → Case2」**，默认不加载。
+新增**地热场景插件包**（现位于 `https://gitee.com/geomech/thermal` 的 `geothermal/`）：模拟水平井一个横截面附近的取热（岩石向井筒传热），在菜单栏挂**一级菜单「地热 → 测试 → Case2」**，默认不加载。
 
 - **插件入口**（`zml_plugin.py`，`# ** enabled = False`）：一级菜单 `'地热'`，
   命令 `gui.show_geothermal_case_02()`。求解经 `gui.start` 进控制台线程

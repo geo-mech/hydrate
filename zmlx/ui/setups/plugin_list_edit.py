@@ -27,6 +27,7 @@
 项                          值
 =========================  ==================================================
 菜单                        设置 → 插件（``name='setup_files'``、``icon='plugin'``）
+工具栏按钮                  「设置」工具栏（``on_toolbar=True``）
 命令                        ``gui.edit_setup_files()``
 标签页                      标题「插件」，``gui_restore = 'gui.edit_setup_files()'``
 =========================  ==================================================
@@ -1345,13 +1346,19 @@ def edit_setup_files():
 
 @execute_once(file=__file__)
 def setup_ui():
-    """注册命令 ``gui.edit_setup_files`` + 菜单项「设置 → 插件」.
+    """注册命令 ``gui.edit_setup_files`` + 菜单项「设置 → 插件」（并挂一个工具栏按钮）.
 
     ⚠️ **``menu="设置"`` 必须与 ``main.py`` 里那一处逐字相同**，否则 ``get_menu`` 会另建
     一个同名顶层菜单，界面上出现两个「设置」。
 
     ⚠️ **``name='setup_files'`` 保持原样**：它是 ribbon 配置与已保存界面布局的定位依据。
     显示文字是「插件」、图标是 ``plugin`` —— 这两个改了不影响定位，但也别乱动。
+
+    ⚠️ **``on_toolbar=True`` 不能丢**（2026-11-06 用户要求「插件菜单放到工具栏上」）：
+    工具栏按 ``menu`` 的**第一级**命名，所以这一项落进「设置」那条工具栏
+    （``get_toolbar('设置')`` 懒创建）。它与菜单项是**同一个 action** ——
+    ``is_enabled`` / ``is_visible`` / 文字 / 图标天然同步，不会出现「菜单灰了按钮还亮」。
+    去掉这个参数，工具栏上那个按钮就消失（菜单项照旧在）。
     """
     gui.add_func('edit_setup_files', edit_setup_files)
 
@@ -1360,7 +1367,9 @@ def setup_ui():
         name="setup_files",
         icon="plugin",
         text="插件",
+        tooltip="插件列表：启用 / 禁用、临时加载（设置 → 插件）",
         slot=edit_setup_files,
+        on_toolbar=True,
         overwrite=False,
     )
 

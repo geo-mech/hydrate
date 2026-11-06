@@ -57,7 +57,7 @@
 
 1. 确保操作系统为Windows 10/11, x64<sup>①</sup>; Linux
    系统参考 [issues/IJWXWF](https://gitee.com/geomech/hydrate/issues/IJWXWF);
-2. 安装[Python](https://www.python.org/) (64位, 3.8+, 推荐3.12+)<sup>②</sup> 并安装
+2. 安装[Python](https://www.python.org/) (64位, 3.9+, 推荐3.12+)<sup>②</sup> 并安装
    `PyQt6, pyqt6-qscintilla, PyQt6-WebEngine, numpy, scipy, matplotlib`等Python包<sup>③</sup>;
 3. 安装[git](https://git-scm.com/)并确保`git`命令可用;
 4. 使用[git](https://git-scm.com/)来拉取代码 (首次安装：`git clone https://gitee.com/geomech/hydrate.git`; 后续更新:

@@ -7,13 +7,17 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "IggHydrate"
-version = "1.9.24"
+version = "1.9.25"
 description = "IggHydrate - Comprehensive hydrate simulation tool (import as 'zmlx', conflicts with other zmlx packages - uninstall them first)"
 authors = [
     { name = "Zhaobin Zhang", email = "zhangzhaobin@mail.iggcas.ac.cn" }
 ]
 readme = "README.md"
-requires-python = ">=3.8"
+# 最低 Python 3.9（2026-11-06 起由 3.8 上调）：
+#   - 3.8 已于 2024-10 EOL，不再有安全更新；
+#   - 3.8 的 f-string **不允许表达式里出现反斜杠**（3.12 才放开），这类写法会让整个模块
+#     在导入期 SyntaxError，而 GUI 又会把导入异常吞成「没有界面」，排错代价很高。
+requires-python = ">=3.9"
 
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -23,7 +27,6 @@ classifiers = [
     "Operating System :: POSIX :: Linux",
     "Environment :: X11 Applications :: Qt",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",

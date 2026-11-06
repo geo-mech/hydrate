@@ -3245,8 +3245,13 @@ class MainWindow(QtWidgets.QMainWindow):
         if len(opened) > 0:
             parts.append(f'已打开 {len(opened)} 个文件')
         if len(dirs) > 0:
-            folder = dirs[-1]
-            parts.append(f'已切换工作目录: {os.path.basename(folder.rstrip("/\\")) or folder}')
+            # ⚠️ 不能写成 f'...{folder.rstrip("/\\")}...'：Python 3.12 之前，f-string 的
+            #    表达式部分**不许出现反斜杠**，那样写会让整个 main.py 在 3.8 下直接
+            #    SyntaxError（表现为启动时 `call gui failed: f-string expression part
+            #    cannot include a backslash`，然后静默降级成无界面）。
+            #    ``normpath`` 去掉尾部/重复的分隔符，效果与 rstrip 相同。
+            folder = os.path.normpath(dirs[-1])
+            parts.append(f'已切换工作目录: {os.path.basename(folder) or folder}')
         if len(skipped) > 0:
             parts.append(f'{len(skipped)} 个打开失败（详见控制台）')
         if len(unknown) > 0:
