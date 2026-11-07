@@ -1,0 +1,94 @@
+{
+  "schema": "sandstone-parallel-wells-2d-v1",
+  "branch_count": 4,
+  "depth_m": 2960.0,
+  "permeability_m2": 3e-13,
+  "conductivity_w_mk": 3.0153191489361704,
+  "head_gradient": 0.0,
+  "hydraulic_boundary": "closed",
+  "sealed_well": true,
+  "lateral_thermal_buffer": true,
+  "parameters": {
+    "days": 3650,
+    "spacing_m": 20.0,
+    "half_width_m": 50.0,
+    "grid_count": 101,
+    "depth_m": 2960.0,
+    "temperature_c": 85.8,
+    "gradient_k_m": 0.0235,
+    "permeability_m2": 3e-13,
+    "conductivity_w_mk": 3.0153191489361704,
+    "rock_density_kg_m3": 2600.0,
+    "rock_cp_j_kgk": 825.0,
+    "porosity": 0.22,
+    "well_temperature_k": 280.0,
+    "well_diameter_m": 0.2,
+    "pressure_center_pa": 29000000.0,
+    "gravity_m_s2": 10.0,
+    "dt_max_s": 86400.0
+  },
+  "well_positions_requested_xz_m": [
+    [
+      -30.0,
+      0.0
+    ],
+    [
+      -10.0,
+      0.0
+    ],
+    [
+      10.0,
+      0.0
+    ],
+    [
+      30.0,
+      0.0
+    ]
+  ],
+  "well_positions_actual_xz_m": [
+    [
+      -29.7029702970297,
+      0.0
+    ],
+    [
+      -9.900990099009903,
+      0.0
+    ],
+    [
+      9.9009900990099,
+      0.0
+    ],
+    [
+      29.7029702970297,
+      0.0
+    ]
+  ],
+  "actual_spacing_m": [
+    19.8019801980198,
+    19.801980198019802,
+    19.801980198019802
+  ],
+  "well_indices": [
+    2070,
+    4090,
+    6110,
+    8130
+  ],
+  "minimum_lateral_boundary_distance_m": 20.2970297029703,
+  "geometry": "parallel_y_horizontal_wells_xz_cross_section",
+  "axial_thickness_m": 1.0,
+  "normalization": "sum across branches per shared axial metre; mean=sum/N",
+  "days": 3650,
+  "last_day_power_w_per_m": 899.8216276041667,
+  "well_temperature_rise_k": 0.04054338716218808,
+  "power_method": "original well mc*T storage gain",
+  "last_day_mean_branch_power_w_per_m": 224.95540690104167,
+  "cumulative_heat_kwh_per_m": 92402.28540697916,
+  "mean_branch_heat_kwh_per_m": 23100.57135174479,
+  "well_temperature_rises_k": [
+    0.04054338716218808,
+    0.0385556415484416,
+    0.03855562312782013,
+    0.040543230136847797
+  ]
+}
